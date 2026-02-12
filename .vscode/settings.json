@@ -1,0 +1,75 @@
+{
+  // ========================
+  // GLOBAL
+  // ========================
+  "editor.formatOnSave": true,
+  "editor.tabSize": 2,
+  "editor.insertSpaces": true,
+  "editor.detectIndentation": false,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+
+  // ========================
+  // ESLINT CONTROLS FORMATTING
+  // ========================
+  "editor.codeActionsOnSave": {
+    "source.fixAll.prettier": "always"
+  },
+
+  "eslint.validate": [
+    "javascript",
+    "javascriptreact",
+    "typescript",
+    "typescriptreact"
+  ],
+
+  // IMPORTANT: disable prettier as formatter
+  "prettier.enable": true,
+
+  // ========================
+  // LANGUAGE OVERRIDES
+  // ========================
+  "[javascript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[javascriptreact]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[typescript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[typescriptreact]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+
+  // ========================
+  // PHP / LARAVEL
+  // ========================
+  "[php]": {
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "bmewburn.vscode-intelephense-client"
+  },
+
+  // ========================
+  // BLADE (OPTIONAL)
+  // ========================
+  "[blade]": {
+    "editor.formatOnSave": false,
+    "editor.defaultFormatter": "DEVSENSE.phptools-vscode"
+  },
+
+  // ========================
+  // INERTIA / VITE
+  // ========================
+  "files.associations": {
+    "*.jsx": "javascriptreact",
+    "*.tsx": "typescriptreact"
+  },
+
+  // ========================
+  // MISC
+  // ========================
+  "files.eol": "\n",
+  "[csharp]": {
+    "editor.defaultFormatter": "ms-dotnettools.csharp"
+  }
+}
