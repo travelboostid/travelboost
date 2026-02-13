@@ -109,17 +109,30 @@ export function Header() {
           </div>
 
           {/* MOBILE TOGGLE */}
-          <button
-            type="button"
-            className="md:hidden p-2"
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
-          >
-            {isMenuOpen ? (
-              <XIcon className="w-6 h-6" />
-            ) : (
-              <MenuIcon className="w-6 h-6" />
-            )}
-          </button>
+          <div className="flex gap-2 items-center">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={toggleTheme}
+              className="text-foreground hover:bg-muted md:hidden"
+              title="Toggle theme"
+            >
+              <SunIcon className="h-[1.2rem] w-[1.2rem] scale-100 rotate-0 transition-all dark:scale-0 dark:-rotate-90" />
+              <MoonIcon className="absolute h-[1.2rem] w-[1.2rem] scale-0 rotate-90 transition-all dark:scale-100 dark:rotate-0" />
+              <span className="sr-only">Toggle theme</span>
+            </Button>
+            <button
+              type="button"
+              className="md:hidden p-2"
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+            >
+              {isMenuOpen ? (
+                <XIcon className="w-6 h-6" />
+              ) : (
+                <MenuIcon className="w-6 h-6" />
+              )}
+            </button>
+          </div>
         </div>
 
         {/* MOBILE MENU */}
@@ -152,12 +165,31 @@ export function Header() {
               </a>
 
               <div className="flex flex-col gap-2 pt-4">
-                <Button asChild variant="ghost" className="w-full">
-                  <Link href="/login">Masuk</Link>
-                </Button>
-                <Button asChild className="w-full">
-                  <Link href="/register">Daftar Gratis</Link>
-                </Button>
+                {auth?.user ? (
+                  <Link href={'/dashboard'} className="flex items-center gap-2">
+                    <Avatar>
+                      <AvatarImage
+                        src={auth.user.photo_url || DEFAULT_PHOTO}
+                        alt={auth.user.name}
+                      />
+                      <AvatarFallback>
+                        <UserIcon />
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="font-semibold text-foreground">
+                      {auth?.user?.name}
+                    </span>
+                  </Link>
+                ) : (
+                  <>
+                    <Button asChild variant="ghost" className="w-full">
+                      <Link href="/login">Masuk</Link>
+                    </Button>
+                    <Button asChild className="w-full">
+                      <Link href="/register">Daftar Gratis</Link>
+                    </Button>
+                  </>
+                )}
               </div>
             </nav>
           </div>
