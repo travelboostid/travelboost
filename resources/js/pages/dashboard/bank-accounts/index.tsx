@@ -38,7 +38,7 @@ function BankAccountCard({ account }: { account: BankAccountResource }) {
       pending: 'Pending',
       rejected: 'Rejected',
     };
-    return labels[status as any] || 'Unknown';
+    return labels[status as keyof typeof labels] || 'Unknown';
   };
 
   const getStatusColor = (status: string) => {
@@ -146,6 +146,13 @@ function BankAccountCard({ account }: { account: BankAccountResource }) {
 export default function BankAccountsPage({ bank_accounts }: any) {
   return (
     <DashboardLayout
+      openMenuIds={['funds']}
+      activeMenuIds={[`funds.bank-accounts`]}
+      breadcrumb={[
+        { title: 'Dashboard', url: '/dashboard' },
+        { title: 'Funds' },
+        { title: 'Bank Accounts' },
+      ]}
       applet={
         <CreateBankAccountDialog>
           <Button>
@@ -154,7 +161,7 @@ export default function BankAccountsPage({ bank_accounts }: any) {
         </CreateBankAccountDialog>
       }
     >
-      <div className="p-4">
+      <div className="p-4 grid gap-4">
         {/* Accounts List */}
         {bank_accounts.length === 0 ? (
           <EmptyBankAccounts />
@@ -167,7 +174,7 @@ export default function BankAccountsPage({ bank_accounts }: any) {
         )}
 
         {/* Info Section */}
-        <Card className="border-0 shadow-md mt-8 bg-secondary/30">
+        <Card>
           <CardHeader>
             <CardTitle className="text-base">About Account Status</CardTitle>
           </CardHeader>

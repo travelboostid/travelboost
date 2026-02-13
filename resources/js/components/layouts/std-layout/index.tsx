@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
-import { StdNavbar } from './std-navbar';
+import { Footer } from 'react-day-picker';
+import { Header } from './header';
 
 type StdLayoutProps = {
   children: ReactNode;
@@ -8,8 +9,9 @@ type StdLayoutProps = {
 export default function StdLayout({ children }: StdLayoutProps) {
   return (
     <div className="min-h-screen bg-background text-foreground transition-colors duration-300">
-      <StdNavbar />
-      <main className="container mx-auto">{children}</main>
+      <Header />
+      <main>{children}</main>
+      <Footer />
     </div>
   );
 }

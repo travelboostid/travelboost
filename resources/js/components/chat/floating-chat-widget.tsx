@@ -12,6 +12,7 @@ import {
   AvatarImage,
 } from '../ui/avatar';
 import { Button } from '../ui/button';
+import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
 import ChatBox from './chat-box';
 import ChatInput from './chat-input';
 import ChatList from './chat-list';
@@ -118,15 +119,22 @@ export default function FloatingChatWidget() {
   const { open, setOpen, roomId } = useFloatingChatWidgetContext();
   return (
     <>
-      <Button
-        onClick={() => setOpen(true)}
-        className={cn(
-          'fixed right-4 bottom-4 h-12 w-12 rounded-full p-4!',
-          open && 'hidden',
-        )}
-      >
-        <MessageSquareIcon />
-      </Button>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            onClick={() => setOpen(true)}
+            className={cn(
+              'fixed right-4 lg:right-6 bottom-4 lg:bottom-6 h-12 lg:w-16 w-12 lg:h-16 rounded-full',
+              open && 'hidden',
+            )}
+          >
+            <MessageSquareIcon />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>Chat</p>
+        </TooltipContent>
+      </Tooltip>
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent className="flex min-h-screen flex-col gap-0">
           <ChatHeader />

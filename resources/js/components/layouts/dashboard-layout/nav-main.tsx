@@ -8,6 +8,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 
+import { useGetUsers } from '@/api/user/user';
 import {
   Collapsible,
   CollapsibleContent,
@@ -27,7 +28,7 @@ import type { SharedData } from '@/types';
 import { usePage } from '@inertiajs/react';
 import type { HTMLAttributeAnchorTarget } from 'react';
 import { useMemo } from 'react';
-import type { DashboardLayoutProps } from './dashboard-layout';
+import type { DashboardLayoutProps } from '.';
 
 type MenuItem = {
   id: string;
@@ -40,6 +41,8 @@ type MenuItem = {
 
 export function NavMain({ activeMenuIds, openMenuIds }: DashboardLayoutProps) {
   const { auth } = usePage<SharedData>().props;
+  const { data: dataVendor } = useGetUsers({ role: 'vendor' });
+  const vendors = dataVendor?.data || [];
   const openState = useMemo<Record<string, boolean>>(
     () => (openMenuIds || []).reduce((a, c) => ({ ...a, [c]: true }), {}),
     [openMenuIds],
@@ -62,18 +65,11 @@ export function NavMain({ activeMenuIds, openMenuIds }: DashboardLayoutProps) {
         title: 'Vendor Catalogs',
         urlOrAction: '#',
         icon: BuildingIcon,
-        items: [
-          {
-            id: 'vendor-tour-catalogs.root',
-            title: 'Root',
-            urlOrAction: '/dashboard/vendors/root/tours',
-          },
-          {
-            id: 'vendor-tour-catalogs.john',
-            title: 'John',
-            urlOrAction: '/dashboard/vendors/john/tours',
-          },
-        ],
+        items: vendors.map((vendor) => ({
+          id: `vendor-tour-catalogs.${vendor.username}`,
+          title: vendor.name,
+          urlOrAction: `/dashboard/vendors/${vendor.username}/tours`,
+        })),
       },
       {
         id: 'tours',
@@ -156,7 +152,7 @@ export function NavMain({ activeMenuIds, openMenuIds }: DashboardLayoutProps) {
         ],
       },
     ].filter(Boolean) as MenuItem[];
-  }, [auth]);
+  }, [auth, vendors]);
 
   return (
     <SidebarGroup>

@@ -19,7 +19,7 @@ class UserSeeder extends Seeder
       'phone' => '0',
       'password' => Hash::make('root'),
     ]);
-    $root->assignRole('admin');
+    $root->assignRole('superadmin', 'vendor');
     $john = User::factory()->create([
       'name' => 'John',
       'email' => 'john@travelboost.co.id',
@@ -29,6 +29,6 @@ class UserSeeder extends Seeder
       'phone' => '0',
       'password' => Hash::make('john'),
     ]);
-    $john->assignRole('admin');
+    $john->assignRole('admin', 'agent');
   }
 }

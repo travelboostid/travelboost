@@ -24,6 +24,7 @@ type TopupDialogProps = {
 };
 
 export function TopupDialog({ children }: TopupDialogProps) {
+  const [open, setOpen] = useState(false);
   const [amount, setAmount] = useState<number | null>(null);
   const [ongoing, setOngoing] = useState(false);
   const isValid = amount !== null && amount >= MIN_AMOUNT;
@@ -35,6 +36,7 @@ export function TopupDialog({ children }: TopupDialogProps) {
       { data: { amount } },
       {
         onSuccess: (payment) => {
+          setOpen(false);
           const snapToken = (payment.data.payload as any)?.snap_token as string;
           (window as any).snap.pay(snapToken, {
             onSuccess: () => setOngoing(false),
@@ -49,7 +51,7 @@ export function TopupDialog({ children }: TopupDialogProps) {
   const loaading = topup.isPending || ongoing;
 
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
 
       <DialogContent className="sm:max-w-sm">

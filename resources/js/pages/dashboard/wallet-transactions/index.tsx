@@ -14,6 +14,7 @@ import dayjs from 'dayjs';
 import { ArrowDownLeft, ArrowUpRight, CalendarIcon } from 'lucide-react';
 import { useState } from 'react';
 import type { DateRange } from 'react-day-picker';
+import EmptyWalletTransactions from './empty-wallet-transactions';
 
 // Type definitions for better type safety
 type TransactionType = 'all' | 'in' | 'out';
@@ -258,14 +259,7 @@ function SummaryCard({ title, value, variant }: SummaryCardProps) {
 
 function TransactionsList({ transactions }: any) {
   if (transactions.length === 0) {
-    return (
-      <div className="text-center py-12">
-        <p className="text-muted-foreground">No transactions found</p>
-        <p className="text-sm text-muted-foreground mt-1">
-          Try adjusting your filters
-        </p>
-      </div>
-    );
+    return <EmptyWalletTransactions />;
   }
 
   return (

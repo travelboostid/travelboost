@@ -5,6 +5,7 @@ import { usePage } from '@inertiajs/react';
 import type { Data } from '@puckeditor/core';
 import { Puck } from '@puckeditor/core';
 import '@puckeditor/core/puck.css';
+import { ThemeProvider } from 'next-themes';
 import type { BasePuckProps } from './templates/base/base.puck.config';
 import { TEMPLATES } from './templates/templates';
 
@@ -27,10 +28,12 @@ export default function Page({ user }: Props) {
     });
   };
   return (
-    <Puck
-      config={template.config}
-      data={JSON.parse(templatedData || '{}')}
-      onPublish={handlePublish}
-    />
+    <ThemeProvider forcedTheme="light" attribute="class">
+      <Puck
+        config={template.config}
+        data={JSON.parse(templatedData || '{}')}
+        onPublish={handlePublish}
+      />
+    </ThemeProvider>
   );
 }

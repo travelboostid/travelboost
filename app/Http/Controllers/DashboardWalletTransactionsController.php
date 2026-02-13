@@ -72,7 +72,7 @@ class DashboardWalletTransactionsController extends Controller
         'created_at' => $t->created_at,
       ]);
 
-    return Inertia::render('dashboard/wallet/transactions', [
+    return Inertia::render('dashboard/wallet-transactions/index', [
       'from' => $from->toDateString(),
       'to' => $to->toDateString(),
       'transaction_count' => $transactionCount,

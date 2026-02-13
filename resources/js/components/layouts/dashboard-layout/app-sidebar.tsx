@@ -7,7 +7,7 @@ import {
   SidebarHeader,
   SidebarRail,
 } from '@/components/ui/sidebar';
-import type { DashboardLayoutProps } from './dashboard-layout';
+import type { DashboardLayoutProps } from '.';
 import { NavMain } from './nav-main';
 import { NavSecondary } from './nav-secondary';
 import { NavUser } from './nav-user';
@@ -18,7 +18,7 @@ export function AppSidebar(props: DashboardLayoutProps) {
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
-        <div className="flex gap-2 p-2">
+        <a className="flex gap-2 p-2" href="/">
           <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
             <GalleryVerticalEnd className="size-4" />
           </div>
@@ -26,7 +26,7 @@ export function AppSidebar(props: DashboardLayoutProps) {
             <span className="truncate font-bold">TravelBoost.co.id</span>
             <span className="truncate text-xs">Platform Promosi Agent</span>
           </div>
-        </div>
+        </a>
       </SidebarHeader>
       <SidebarContent>
         <NavMain {...props} />

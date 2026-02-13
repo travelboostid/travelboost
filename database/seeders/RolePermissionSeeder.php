@@ -20,7 +20,18 @@ class RolePermissionSeeder extends Seeder
       'create users',
       'edit users',
       'delete users',
-      // TODO: Add more permissions as needed
+
+      // Tours
+      'view tours',
+      'create tours',
+      'edit tours',
+      'delete tours',
+
+      // Funds
+      'create wallet',
+      'view wallet',
+      'create transactions',
+      'view transactions',
     ];
 
     foreach ($permissions as $permission) {
@@ -28,43 +39,24 @@ class RolePermissionSeeder extends Seeder
     }
 
     // Create roles and assign permissions
-    $roleAdmin = Role::create(['name' => 'admin']);
-    $roleAdmin->givePermissionTo(Permission::all());
+    $superadmin = Role::create(['name' => 'superadmin']);
+    $admin = Role::create(['name' => 'admin']);
+    $vendor = Role::create(['name' => 'vendor']);
+    $agent = Role::create(['name' => 'agent']);
+    $generic = Role::create(['name' => 'generic']);
 
-    $roleGeneric = Role::create(['name' => 'generic']);
+    $superadmin->givePermissionTo(Permission::all());
+    $admin->givePermissionTo(Permission::all());
+    $vendor->givePermissionTo(Permission::all());
+    $agent->givePermissionTo(Permission::all());
+    $generic->givePermissionTo(Permission::all());
+
     $userPermissions = [
       'view users',
       'create users',
       'edit users',
       'delete users',
     ];
-    $roleGeneric->givePermissionTo($userPermissions);
-
-    // // Create super admin user
-    // $admin = \App\Models\User::create([
-    //     'name' => 'Super Admin',
-    //     'email' => 'admin@example.com',
-    //     'password' => bcrypt('password'),
-    //     'email_verified_at' => now(),
-    // ]);
-    // $admin->assignRole('admin');
-
-    // // Create editor user
-    // $editor = \App\Models\User::create([
-    //     'name' => 'Editor User',
-    //     'email' => 'editor@example.com',
-    //     'password' => bcrypt('password'),
-    //     'email_verified_at' => now(),
-    // ]);
-    // $editor->assignRole('editor');
-
-    // // Create regular user
-    // $user = \App\Models\User::create([
-    //     'name' => 'Regular User',
-    //     'email' => 'user@example.com',
-    //     'password' => bcrypt('password'),
-    //     'email_verified_at' => now(),
-    // ]);
-    // $user->assignRole('user');
+    $generic->givePermissionTo($userPermissions);
   }
 }
