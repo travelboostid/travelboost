@@ -1,6 +1,8 @@
 import type { Config } from '@puckeditor/core';
 import type { ButtonComponentProps } from './blocks/button';
 import { ButtonComponentConfig } from './blocks/button';
+import type { GridComponentProps } from './blocks/grid';
+import { GridComponentConfig } from './blocks/grid';
 import { InputComponentConfig, type InputComponentProps } from './blocks/input';
 import type { LinkComponentProps } from './blocks/link';
 import { LinkComponentConfig } from './blocks/link';
@@ -12,6 +14,7 @@ export type BasePuckProps = {
   Input: InputComponentProps;
   Button: ButtonComponentProps;
   Link: LinkComponentProps;
+  Grid: GridComponentProps;
 };
 
 export const BasePuckConfig: Config<BasePuckProps> = {
@@ -20,5 +23,6 @@ export const BasePuckConfig: Config<BasePuckProps> = {
     Input: InputComponentConfig,
     Button: ButtonComponentConfig,
     Link: LinkComponentConfig,
+    Grid: GridComponentConfig,
   },
 };

@@ -45,6 +45,8 @@ Route::prefix('dashboard')->middleware(['auth'])->group(function () {
     Route::resource('withdrawals', DashboardWithdrawalController::class);
     Route::put('withdrawals/{withdrawal}/cancel', [DashboardWithdrawalController::class, 'cancel'])
       ->name('withdrawals.cancel');
+    Route::put('payments/{payment}/cancel', [DashboardPaymentController::class, 'cancel'])
+      ->name('payments.cancel');
     Route::get('wallets', [DashboardWalletController::class, 'show']);
     Route::get('wallet-transactions', [DashboardWalletTransactionsController::class, 'index']);
   });

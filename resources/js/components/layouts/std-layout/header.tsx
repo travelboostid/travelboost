@@ -1,18 +1,12 @@
 'use client';
 
+import AppLogoIcon from '@/components/app-logo-icon';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { DEFAULT_PHOTO } from '@/config';
 import type { SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
-import {
-  MenuIcon,
-  MoonIcon,
-  PlaneIcon,
-  SunIcon,
-  UserIcon,
-  XIcon,
-} from 'lucide-react';
+import { MenuIcon, MoonIcon, SunIcon, UserIcon, XIcon } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { useState } from 'react';
 
@@ -31,9 +25,7 @@ export function Header() {
         <div className="flex items-center justify-between h-16">
           {/* LOGO */}
           <Link href="/" className="flex items-center gap-2">
-            <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
-              <PlaneIcon className="w-6 h-6 text-primary-foreground" />
-            </div>
+            <AppLogoIcon className="w-9 h-9 text-primary-foreground" />
             <span className="text-xl font-bold text-foreground">
               TravelBoost
             </span>

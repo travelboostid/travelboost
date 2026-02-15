@@ -9,6 +9,7 @@ import {
   ItemTitle,
 } from '@/components/ui/item';
 import { ShieldAlertIcon } from 'lucide-react';
+import CancelPayment from '../payments/cancel-payment';
 
 export default function PendingTopup() {
   const { data, refetch } = useGetPayments();
@@ -24,9 +25,6 @@ export default function PendingTopup() {
       onClose: () => refetch(),
     });
   };
-
-  const handleCancel = () => {};
-
   return pendingTopup ? (
     <Item variant="outline">
       <ItemMedia variant="icon">
@@ -39,9 +37,11 @@ export default function PendingTopup() {
         </ItemDescription>
       </ItemContent>
       <ItemActions>
-        <Button size="sm" variant="outline" onClick={handleCancel}>
-          Cancel
-        </Button>
+        <CancelPayment payment={pendingTopup}>
+          <Button size="sm" variant="outline">
+            Cancel
+          </Button>
+        </CancelPayment>
         <Button size="sm" variant="default" onClick={handlePay}>
           Pay
         </Button>

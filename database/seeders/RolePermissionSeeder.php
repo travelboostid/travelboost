@@ -15,6 +15,9 @@ class RolePermissionSeeder extends Seeder
 
     // Create permissions
     $permissions = [
+      // telescope
+      'access telescope',
+
       // User permissions
       'view users',
       'create users',

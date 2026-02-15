@@ -1,13 +1,19 @@
-import { Button } from '@/components/ui/button';
-import type { ComponentConfig } from '@puckeditor/core';
-import { ArrowRight, Plane } from 'lucide-react';
+import type { ComponentConfig, Slot, SlotComponent } from '@puckeditor/core';
+import { Plane } from 'lucide-react';
+
+type HeroProps = {
+  header: string;
+  description: string;
+  actions: SlotComponent;
+};
 
 export type HeroComponentProps = {
   header: string;
   description: string;
+  actions: Slot;
 };
 
-export function Hero({ header, description }: HeroComponentProps) {
+export function Hero({ header, description, actions: Actions }: HeroProps) {
   return (
     <section className="relative px-4 py-20 sm:px-6 md:py-32 lg:px-8">
       <div className="mx-auto max-w-7xl">
@@ -20,15 +26,7 @@ export function Hero({ header, description }: HeroComponentProps) {
               {description}
             </p>
             <div className="flex flex-col gap-4 sm:flex-row">
-              <Button
-                size="lg"
-                className="bg-primary text-primary-foreground hover:bg-primary/90"
-              >
-                Browse Destinations <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-              <Button size="lg" variant="outline">
-                Learn More
-              </Button>
+              <Actions />
             </div>
             <div className="grid grid-cols-3 gap-4 pt-4">
               <div>
@@ -61,13 +59,27 @@ export const HeroComponentConfig: ComponentConfig<HeroComponentProps> = {
   fields: {
     header: { type: 'text', contentEditable: true },
     description: { type: 'text', contentEditable: true },
+    actions: { type: 'slot' },
   },
-  render: ({ header, description }) => (
-    <Hero header={header} description={description} />
+  render: ({ header, description, actions }) => (
+    <Hero header={header} description={description} actions={actions} />
   ),
   defaultProps: {
     header: 'Explore the World Your Way',
     description:
       'Discover extraordinary destinations with personalized travel packages curated by expert guides. Your adventure starts here.',
+    actions: [
+      {
+        type: 'Grid',
+        props: {
+          columns: 3,
+          gap: 16,
+          content: [
+            { type: 'Button', variant: 'primary', text: 'Browse Destinations' },
+            { type: 'Button', variant: 'outline', text: 'Learn More' },
+          ],
+        },
+      },
+    ],
   },
 };
