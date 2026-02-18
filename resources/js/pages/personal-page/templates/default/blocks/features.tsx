@@ -41,6 +41,7 @@ export function Features({
 
 export const FeaturesComponentConfig: ComponentConfig<FeaturesComponentProps> =
   {
+    label: 'Features',
     fields: {
       header: { type: 'text', contentEditable: true },
       description: { type: 'richtext', contentEditable: true },

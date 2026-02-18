@@ -23,25 +23,21 @@ export const GridComponentConfig: ComponentConfig<GridComponentProps> = {
     gap: { type: 'number' },
     content: { type: 'slot' },
   },
-  render: ({ columns = 1, gap, content: Content }) => (
-    <Grid
-      columns={columns}
-      gap={gap}
-      content={
-        <Content
-          style={{
-            // Use CSS grid in this slot
-            display: 'grid',
-            gridTemplateColumns: `repeat(${columns || 1}, 1fr)`,
-            gap,
-          }}
-        />
-      }
-    />
-  ),
   defaultProps: {
     columns: 1,
     gap: 16,
     content: [],
   },
+  render: ({ columns = 1, gap, content: Content }) => (
+    <div style={{ display: 'grid', columns, gap }}>
+      <Content
+        style={{
+          // Use CSS grid in this slot
+          display: 'grid',
+          gridTemplateColumns: `repeat(${columns || 1}, 1fr)`,
+          gap,
+        }}
+      />
+    </div>
+  ),
 };

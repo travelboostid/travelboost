@@ -1,5 +1,4 @@
 import { update } from '@/actions/App/Http/Controllers/DashboardSettingsPreferencesController';
-import { edit } from '@/actions/App/Http/Controllers/PersonalPageController';
 import InputError from '@/components/input-error';
 import DashboardLayout from '@/components/layouts/dashboard-layout';
 import { Button } from '@/components/ui/button';
@@ -13,19 +12,10 @@ import {
 } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Spinner } from '@/components/ui/spinner';
 import { Switch } from '@/components/ui/switch';
 import type { SharedData } from '@/types';
-import { Form, Head, Link, usePage } from '@inertiajs/react';
+import { Form, Head, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 
 export default function Preferences({ preference }: { preference: any }) {
@@ -62,37 +52,6 @@ export default function Preferences({ preference }: { preference: any }) {
                     defaultValue={preference.meta_pixel_id}
                   />
                   <InputError message={errors.meta_pixel_id} />
-                </div>
-
-                <div className="grid gap-2">
-                  <Label htmlFor="landing_page_template_id">
-                    Landing Page Theme
-                  </Label>
-                  <div className="flex gap-2">
-                    <Select
-                      name="landing_page_template_id"
-                      required
-                      autoComplete="landing_page_template_id"
-                      defaultValue={preference.landing_page_template_id || ''}
-                    >
-                      <SelectTrigger className="w-full max-w-48">
-                        <SelectValue placeholder="Select Landing Page Theme" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectGroup>
-                          <SelectLabel>Landing Page Theme</SelectLabel>
-                          <SelectItem value="default">Default</SelectItem>
-                          <SelectItem value="unique">Unique</SelectItem>
-                          <SelectItem value="cool">Cool</SelectItem>
-                        </SelectGroup>
-                      </SelectContent>
-                    </Select>
-                    <Link href={edit({ username: auth.user.username })}>
-                      <Button>Customize</Button>
-                    </Link>
-                  </div>
-
-                  <InputError message={errors.landing_page_template_id} />
                 </div>
 
                 <FieldGroup className="w-full max-w-sm">

@@ -1,62 +1,64 @@
 import { Link } from '@inertiajs/react';
-import type { ComponentConfig, Slot } from '@puckeditor/core';
+import type { ComponentConfig, Fields, Slot } from '@puckeditor/core';
 
 export type LinkComponentProps = {
   href: string;
   method: 'get' | 'post' | 'put' | 'patch' | 'delete';
   target: string;
   className: string;
-  children: Slot;
+  content: Slot;
+};
+
+export const LinkComponentFields: Fields<LinkComponentProps> = {
+  href: {
+    type: 'text',
+    label: 'URL',
+  },
+  method: {
+    type: 'select',
+    label: 'HTTP Method',
+    options: [
+      { value: 'get', label: 'GET' },
+      { value: 'post', label: 'POST' },
+      { value: 'put', label: 'PUT' },
+      { value: 'delete', label: 'DELETE' },
+    ],
+  },
+  target: {
+    type: 'select',
+    label: 'Target',
+    options: [
+      { value: '_self', label: 'Same Tab' },
+      { value: '_blank', label: 'New Tab' },
+    ],
+  },
+  className: {
+    type: 'text',
+    label: 'CSS Classes',
+  },
+  content: {
+    type: 'slot',
+    label: 'Link Content',
+  },
 };
 
 export const LinkComponentConfig: ComponentConfig<LinkComponentProps> = {
-  fields: {
-    href: {
-      type: 'text',
-      label: 'URL',
-    },
-    method: {
-      type: 'select',
-      label: 'HTTP Method',
-      options: [
-        { value: 'get', label: 'GET' },
-        { value: 'post', label: 'POST' },
-        { value: 'put', label: 'PUT' },
-        { value: 'delete', label: 'DELETE' },
-      ],
-    },
-    target: {
-      type: 'select',
-      label: 'Target',
-      options: [
-        { value: '_self', label: 'Same Tab' },
-        { value: '_blank', label: 'New Tab' },
-      ],
-    },
-    className: {
-      type: 'text',
-      label: 'CSS Classes',
-    },
-    children: {
-      type: 'slot',
-      label: 'Link Content',
-    },
-  },
-  render: ({ children: SlotComp, ...props }) => (
-    <Link {...props}>
-      <SlotComp />
-    </Link>
-  ),
+  fields: LinkComponentFields,
   defaultProps: {
     href: '#',
     method: 'get',
     target: '_self',
     className: '',
-    children: [
+    content: [
       {
         type: 'PlainText',
         props: { text: 'Link' },
       },
     ],
   },
+  render: ({ content: SlotComp, ...props }) => (
+    <Link {...props}>
+      <SlotComp />
+    </Link>
+  ),
 };

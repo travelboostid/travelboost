@@ -8,6 +8,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 
+import { edit } from '@/actions/App/Http/Controllers/PersonalPageController';
 import { useGetUsers } from '@/api/user/user';
 import {
   Collapsible,
@@ -148,6 +149,12 @@ export function NavMain({ activeMenuIds, openMenuIds }: DashboardLayoutProps) {
             id: 'settings.preferences',
             title: 'Preferences',
             urlOrAction: '/dashboard/settings/preferences',
+          },
+          {
+            id: 'settings.customize-landing-page',
+            title: 'Customize Landing Page',
+            urlOrAction: edit({ username: auth.user.username }).url,
+            target: '_blank',
           },
         ],
       },

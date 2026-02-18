@@ -22,6 +22,7 @@ use App\Http\Controllers\DashboardWalletTransactionsController;
 use App\Http\Controllers\PersonalPageController;
 use App\Http\Controllers\DefaultController;
 use App\Http\Controllers\Webapi\TourController;
+use App\Http\Controllers\Webapi\UserPreferenceController;
 use App\Http\Controllers\Webapi\WalletController;
 use App\Http\Controllers\Webapi\WithdrawalController;
 use App\Http\Controllers\Webhooks\MidtransWebhookController;
@@ -61,6 +62,8 @@ Route::prefix('webapi')->group(function () {
     Route::apiResource('medias', MediaController::class);
     Route::apiResource('wallets', WalletController::class);
     Route::apiResource('categories', TourCategoryController::class)->only(['store', 'update', 'destroy']);
+    Route::singleton('users.preference', UserPreferenceController::class)
+      ->only(['update']);
     // Rooms
     Route::apiResource('chat/rooms', ChatRoomController::class);
     Route::post('chat/rooms/open', [ChatRoomController::class, 'open']);

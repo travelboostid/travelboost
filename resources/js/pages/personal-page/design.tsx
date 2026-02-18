@@ -1,4 +1,4 @@
-import { useUserPreferenceUpdate } from '@/api/user-preference/user-preference';
+import { useUpdateUserPreference } from '@/api/user-preference/user-preference';
 import type { SharedData } from '@/types';
 import { type User } from '@/types';
 import { usePage } from '@inertiajs/react';
@@ -19,20 +19,23 @@ export default function Page({ user }: Props) {
   const templatedData = user.preference.landing_page_template_data;
   const template = TEMPLATES[templatedId] || TEMPLATES.default;
 
-  const updater = useUserPreferenceUpdate();
+  const updater = useUpdateUserPreference();
 
   const handlePublish = (data: Data<BasePuckProps, any>) => {
     updater.mutate({
       user: auth.user.id,
-      data: { landing_page_template_data: JSON.stringify(data) },
+      data: {
+        landing_page_template_data: JSON.stringify(data),
+        landing_page_template_id: templatedId,
+      },
     });
   };
   return (
-    <ThemeProvider forcedTheme="light" attribute="class">
+    <ThemeProvider defaultTheme="light" attribute="class">
       <Puck
         config={template.config}
         data={JSON.parse(templatedData || '{}')}
-        onPublish={handlePublish}
+        onPublish={handlePublish as any}
       />
     </ThemeProvider>
   );

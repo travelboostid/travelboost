@@ -208,6 +208,7 @@ export * from './updateChatMessageRequestAttachmentType';
 export * from './updateChatRoom200';
 export * from './updateChatRoomRequest';
 export * from './updateChatRoomRequestType';
+export * from './updateUserPreference200';
 export * from './updateUserPreferenceRequest';
 export * from './updateUserPreferenceRequestLandingPageTemplateData';
 export * from './updateUserPreferenceRequestLandingPageTemplateId';

@@ -33,6 +33,7 @@ export function Steps({ steps, header, description }: StepsComponentProps) {
 }
 
 export const StepsComponentConfig: ComponentConfig<StepsComponentProps> = {
+  label: 'Steps',
   fields: {
     header: { type: 'text', contentEditable: true },
     description: { type: 'richtext', contentEditable: true },
@@ -54,19 +55,19 @@ export const StepsComponentConfig: ComponentConfig<StepsComponentProps> = {
     steps: [
       {
         title: 'Choose Destination',
-        desc: 'Browse and select your dream location',
+        description: 'Browse and select your dream location',
       },
       {
         title: 'Pick Dates',
-        desc: 'Select your preferred travel dates',
+        description: 'Select your preferred travel dates',
       },
       {
         title: 'Customize Package',
-        desc: 'Add activities and preferences',
+        description: 'Add activities and preferences',
       },
       {
         title: 'Book & Go',
-        desc: 'Complete booking and start exploring',
+        description: 'Complete booking and start exploring',
       },
     ],
   },
