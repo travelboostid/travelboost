@@ -1,8 +1,7 @@
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import { Link } from '@inertiajs/react';
 import type { Config } from '@puckeditor/core';
-import { ArrowRight, Plane } from 'lucide-react';
+import { Plane } from 'lucide-react';
 import { ThemeProvider } from 'next-themes';
 import type { BasePuckProps } from '../base/base.puck.config';
 import { BasePuckConfig } from '../base/base.puck.config';
@@ -134,78 +133,6 @@ const DefaultThemePuckConfig: Config<DefaultThemePuckProps> = {
               </div>
             </header>
             {children}
-
-            {/* Promo Section */}
-            <section className="bg-gradient-to-r from-primary/5 to-secondary/5 px-4 py-20 sm:px-6 lg:px-8">
-              <div className="mx-auto max-w-7xl">
-                <div className="grid gap-8 md:grid-cols-3">
-                  {[
-                    { value: '30%', label: 'Summer Discount' },
-                    { value: '100%', label: 'Satisfaction Guarantee' },
-                    { value: '0%', label: 'Hidden Fees' },
-                  ].map((promo, i) => (
-                    <Card key={i} className="bg-white/50 p-8 text-center">
-                      <p className="mb-2 text-4xl font-bold text-primary">
-                        {promo.value}
-                      </p>
-                      <p className="font-medium text-foreground">
-                        {promo.label}
-                      </p>
-                    </Card>
-                  ))}
-                </div>
-              </div>
-            </section>
-
-            {/* CTA Section */}
-            <section className="bg-primary px-4 py-20 text-primary-foreground sm:px-6 lg:px-8">
-              <div className="mx-auto max-w-4xl space-y-6 text-center">
-                <h2 className="text-4xl font-bold md:text-5xl">
-                  Ready for Your Adventure?
-                </h2>
-                <p className="text-lg opacity-90">
-                  Join thousands of travelers exploring the world with
-                  TravelSync
-                </p>
-                <Button size="lg" variant="secondary">
-                  Start Your Journey Now <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </div>
-            </section>
-
-            {/* Footer */}
-            <footer className="bg-foreground px-4 py-12 text-primary-foreground sm:px-6 lg:px-8">
-              <div className="mx-auto max-w-7xl">
-                <div className="mb-8 grid gap-8 md:grid-cols-4">
-                  <div>
-                    <h4 className="mb-4 font-semibold">TravelSync</h4>
-                    <p className="text-sm opacity-75">
-                      Your gateway to unforgettable adventures
-                    </p>
-                  </div>
-                  {['Company', 'Resources', 'Legal'].map((col, i) => (
-                    <div key={i}>
-                      <h4 className="mb-4 font-semibold">{col}</h4>
-                      <ul className="space-y-2 text-sm opacity-75">
-                        <li>
-                          <Link href="#" className="hover:opacity-100">
-                            Link One
-                          </Link>
-                        </li>
-                        <li>
-                          <Link href="#" className="hover:opacity-100">
-                            Link Two
-                          </Link>
-                        </li>
-                      </ul>
-                    </div>
-                  ))}
-                </div>
-                <div className="border-t border-primary-foreground/20 pt-8 text-center text-sm opacity-75">
-                  <p>&copy; 2025 TravelSync. All rights reserved.</p>
-                </div>
-              </div>
-            </footer>
           </div>
         </ThemeProvider>
       );
