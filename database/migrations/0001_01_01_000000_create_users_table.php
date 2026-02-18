@@ -46,7 +46,7 @@ return new class extends Migration
       $table->string('meta_pixel_id')->default('');
       $table->boolean('use_chatbot')->default(false);
       $table->string('landing_page_template_id')->default("default");
-      $table->string('landing_page_template_data')->default("");
+      $table->text('landing_page_template_data')->default("");
       $table->foreignId('user_id')
         ->constrained('users')
         ->cascadeOnDelete();
