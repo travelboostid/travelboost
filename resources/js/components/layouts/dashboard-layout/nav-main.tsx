@@ -171,7 +171,8 @@ export function NavMain({ activeMenuIds, openMenuIds }: DashboardLayoutProps) {
           if (menu.items?.length) {
             return (
               <Collapsible
-                key={menu.title}
+                /* key={menu.title} // change key to id */
+                key={menu.id}
                 asChild
                 defaultOpen={openState[menu.id]}
                 className="group/collapsible"

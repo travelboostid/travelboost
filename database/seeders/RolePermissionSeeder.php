@@ -5,6 +5,8 @@ namespace Database\Seeders;
 use Illuminate\Database\Seeder;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
+// add for permission 19022026
+use Spatie\Permission\PermissionRegistrar;
 
 class RolePermissionSeeder extends Seeder
 {
@@ -41,8 +43,9 @@ class RolePermissionSeeder extends Seeder
       Permission::create(['name' => $permission]);
     }
 
-    // Create roles and assign permissions
-    $superadmin = Role::create(['name' => 'superadmin']);
+    // Create roles and assign permissions 
+    // remarked 19022026
+    /* $superadmin = Role::create(['name' => 'superadmin']);
     $admin = Role::create(['name' => 'admin']);
     $vendor = Role::create(['name' => 'vendor']);
     $agent = Role::create(['name' => 'agent']);
@@ -60,6 +63,33 @@ class RolePermissionSeeder extends Seeder
       'edit users',
       'delete users',
     ];
-    $generic->givePermissionTo($userPermissions);
+    $generic->givePermissionTo($userPermissions); */
+
+    //changed with this rule 19022026
+    // ======================
+        // ROLES
+        // ======================
+        $superadmin = Role::firstOrCreate(['name' => 'superadmin']);
+        $admin      = Role::firstOrCreate(['name' => 'admin']);
+        $vendor     = Role::firstOrCreate(['name' => 'vendor']);
+        $agent      = Role::firstOrCreate(['name' => 'agent']);
+        $generic    = Role::firstOrCreate(['name' => 'generic']);
+
+        // ======================
+        // ASSIGN PERMISSIONS
+        // ======================
+        $allPermissions = Permission::all();
+
+        $superadmin->syncPermissions($allPermissions);
+        $admin->syncPermissions($allPermissions);
+        $vendor->syncPermissions($allPermissions);
+        $agent->syncPermissions($allPermissions);
+
+        $generic->syncPermissions([
+            'view users',
+            'create users',
+            'edit users',
+            'delete users',
+        ]);
   }
 }

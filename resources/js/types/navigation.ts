@@ -7,6 +7,9 @@ export type BreadcrumbItem = {
 };
 
 export type NavItem = {
+    //add for unique id 19022025
+    id: string;
+    //
     title: string;
     href: NonNullable<InertiaLinkProps['href']>;
     icon?: LucideIcon | null;

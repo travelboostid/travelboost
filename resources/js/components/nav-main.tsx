@@ -17,7 +17,8 @@ export function NavMain({ items = [] }: { items: NavItem[] }) {
             <SidebarGroupLabel>Platform</SidebarGroupLabel>
             <SidebarMenu>
                 {items.map((item) => (
-                    <SidebarMenuItem key={item.title}>
+                    /* <SidebarMenuItem key={item.title}> */
+                    <SidebarMenuItem key={item.id}>
                         <SidebarMenuButton
                             asChild
                             isActive={isCurrentUrl(item.href)}
