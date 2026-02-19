@@ -35,7 +35,11 @@ class User extends Authenticatable implements Customer, Wallet
     'phone',
     'address',
     'type',
-    'photo_id'
+    'photo_id',
+    'active',
+    'actived_date',
+    'logo_image',
+    'catalog_link'
   ];
 
   /**
