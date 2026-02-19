@@ -22,10 +22,14 @@ export interface TourResource {
   description: TourResourceDescription;
   duration_days: number;
   status: TourStatus;
-  continent: string;
-  region: string;
-  country: string;
+  continent?: string;
+  region?: string;
+  country?: string;
+  price: string;
   destination: string;
+  showprice: string;
+  earlybird: string;
+  earlybird_note: string;
   company_id: number;
   category_id: TourResourceCategoryId;
   image_id: TourResourceImageId;

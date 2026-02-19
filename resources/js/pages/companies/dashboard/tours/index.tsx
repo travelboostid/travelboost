@@ -110,16 +110,18 @@ export const columns: ColumnDef<TourResource>[] = [
   },
   {
     accessorFn: (row) =>
-      `${row.continent} - ${row.country} - ${row.destination}`,
+      //`${row.continent} - ${row.country} - ${row.destination}`,
+      `${row.destination}`,
     header: 'Destination',
     cell: ({ row }) => (
-      <div>{`${row.original.continent} - ${row.original.country} - ${row.original.destination}`}</div>
+      //<div>{`${row.original.continent} - ${row.original.country} - ${row.original.destination}`}</div>
+      <div>{`${row.original.destination}`}</div>
     ),
   },
   {
     header: 'Image',
     cell: ({ row }) => {
-      const { src } = extractImageSrc((row.original as any).image as any);
+      const { src } = extractImageSrc(row.original.image as any);
       return (
         <div>
           <img src={src} className="aspect-video w-16 object-cover" />

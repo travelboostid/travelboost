@@ -59,7 +59,7 @@ export default function TourCard({ tour }: { tour: TourResource }) {
   const handleMessage = async () => {
     try {
       setStartingPrivateChat(true);
-      floatingChat.setAttachment({ type: 'tour', data: tour });
+      floatingChat.setAttachment({ type: 'tour-code', data: tour.code });
       await floatingChat.startPrivateChat({
         type: 'company',
         id: tour.company_id,
@@ -68,6 +68,22 @@ export default function TourCard({ tour }: { tour: TourResource }) {
       setStartingPrivateChat(false);
     }
   };
+
+  //03032026
+  const formattedPrice = new Intl.NumberFormat('id-ID', {
+    style: 'currency',
+    currency: 'IDR',
+    maximumFractionDigits: 0,
+  }).format(tour.showprice ?? 0);
+
+  const formattedEarlybird =
+    tour.earlybird && tour.earlybird > 0
+      ? new Intl.NumberFormat('id-ID', {
+          style: 'currency',
+          currency: 'IDR',
+          maximumFractionDigits: 0,
+        }).format(tour.earlybird)
+      : null;
 
   return (
     <Card className="relative mx-auto flex w-full flex-col overflow-hidden pt-0">
@@ -79,8 +95,35 @@ export default function TourCard({ tour }: { tour: TourResource }) {
       />
       <CardHeader>
         <CardTitle>{tour.name}</CardTitle>
-        <CardDescription>{tour.description}</CardDescription>
+        <CardDescription>{tour.destination}</CardDescription>
       </CardHeader>
+      {/* ✅ HARGA */}
+      <div className="px-6 pb-2">
+        {formattedEarlybird ? (
+          <div className="flex flex-col">
+            {/* Harga normal dicoret */}
+            <span className="text-sm text-muted-foreground line-through">
+              {formattedPrice}
+            </span>
+
+            {/* Harga earlybird */}
+            <span className="text-xs bg-blue-600 text-white px-2 py-1 rounded w-fit">
+              EARLY BIRD
+            </span>
+            <span className="text-xl font-bold text-blue-600">
+              {formattedEarlybird}
+            </span>
+            {/* ✅ Earlybird Note */}
+            {tour.earlybird_note && (
+              <span className="text-sm text-muted-foreground">
+                {tour.earlybird_note}
+              </span>
+            )}
+          </div>
+        ) : (
+          <div className="text-lg font-bold text-primary">{formattedPrice}</div>
+        )}
+      </div>
       <div className="flex-1" />
       <CardFooter className="flex gap-2">
         <Button

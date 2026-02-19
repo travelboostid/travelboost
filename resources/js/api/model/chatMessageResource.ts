@@ -6,6 +6,7 @@
  */
 import type { ChatMessageResourceSenderType } from './chatMessageResourceSenderType';
 import type { ChatMessageResourceSenderId } from './chatMessageResourceSenderId';
+import type { ChatMessageResourceUserId } from './chatMessageResourceUserId';
 import type { ChatMessageResourceAttachment } from './chatMessageResourceAttachment';
 import type { ChatMessageResourceAttachmentType } from './chatMessageResourceAttachmentType';
 import type { ChatMessageResourceReplyTo } from './chatMessageResourceReplyTo';
@@ -20,17 +21,16 @@ export interface ChatMessageResource {
   room_id: number;
   sender_type: ChatMessageResourceSenderType;
   sender_id: ChatMessageResourceSenderId;
-  user_id: number;
+  user_id: ChatMessageResourceUserId;
   message: string;
   attachment: ChatMessageResourceAttachment;
   attachment_type: ChatMessageResourceAttachmentType;
-  is_bot: number;
+  is_bot: string;
   reply_to: ChatMessageResourceReplyTo;
   created_at: ChatMessageResourceCreatedAt;
   updated_at: ChatMessageResourceUpdatedAt;
   /** Relationships */
   sender?: ChatMessageResourceSender;
   room?: ChatMessageResourceRoom;
-  replyTo?: ChatMessageResourceReplyTo;
   replies_count: ChatMessageResourceRepliesCount;
 }

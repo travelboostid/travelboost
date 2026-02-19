@@ -26,18 +26,9 @@ class TourFactory extends Factory
         TourStatus::Active,
         TourStatus::Inactive,
       ]),
-
-      'continent' => 'Asia',
-      'region' => $this->faker->randomElement([
-        'Southeast Asia',
-        'East Asia',
-      ]),
-      'country' => $this->faker->randomElement([
-        'Indonesia',
-        'Japan',
-        'Thailand',
-        'Vietnam',
-      ]),
+      'continent_id' => 1,
+      'region_id' => 1,
+      'country_id' => 1,
       'destination' => $this->faker->city(),
 
       'category_id' => null,

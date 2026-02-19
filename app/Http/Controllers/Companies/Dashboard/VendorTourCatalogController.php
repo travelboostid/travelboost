@@ -5,20 +5,37 @@ namespace App\Http\Controllers\Companies\Dashboard;
 use App\Http\Controllers\Controller;
 use App\Models\Tour;
 use App\Models\Company;
+use App\Models\TourCategory;
 use Inertia\Inertia;
 
 class VendorTourCatalogController extends Controller
 {
-  public function index(Company $company, string $vendor)
+  public function index(Company $company, string $username)
   {
-    $vendor = Company::where('username', $vendor)->firstOrFail();
-    $tours = $vendor->tours()->get()->map(function ($tour) use ($company) {
-      $tour->has_copied = $company->agentTours()->where('tour_id', $tour->id)->exists();
-      return $tour;
-    });
+    $vendor = Company::where('username', $username)->firstOrFail();
+    $categories = TourCategory::where('company_id', $vendor->id)
+      ->orderBy('position_no')
+      ->get();
+    $vendor = Company::where('username', $username)->firstOrFail();
+    $tours = $vendor->tours()
+      ->when(request('category'), function ($query, $categoryId) {
+        $query->where('category_id', $categoryId);
+      })
+      ->when(request('search'), function ($query, $search) {
+        $query->where('name', 'ilike', "%{$search}%");
+      })
+      ->get()
+      ->map(function ($tour) use ($company) {
+        $tour->has_copied = $company->agentTours()->where('tour_id', $tour->id)->exists();
+        return $tour;
+      });
+
 
     return Inertia::render('companies/dashboard/vendor-tours/index', [
       'data' => $tours,
+      'filters'    => request()->only(['category', 'search']),
+      'categories' => $categories,
+      'username' => $username,
     ]);
   }
 

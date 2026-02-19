@@ -11,7 +11,7 @@ import type { CompanySettingsUpdatedAt } from './companySettingsUpdatedAt';
 export interface CompanySettings {
   id: number;
   company_id: number;
-  enable_chatbot: number;
+  enable_chatbot: string;
   landing_page_data: CompanySettingsLandingPageData;
   created_at: CompanySettingsCreatedAt;
   updated_at: CompanySettingsUpdatedAt;

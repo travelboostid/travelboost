@@ -7,6 +7,8 @@
 import type { CompanyRememberToken } from './companyRememberToken';
 import type { CompanyCreatedAt } from './companyCreatedAt';
 import type { CompanyUpdatedAt } from './companyUpdatedAt';
+import type { CompanyLogoId } from './companyLogoId';
+import type { CompanyPhotoId } from './companyPhotoId';
 
 export interface Company {
   id: number;
@@ -19,4 +21,7 @@ export interface Company {
   remember_token: CompanyRememberToken;
   created_at: CompanyCreatedAt;
   updated_at: CompanyUpdatedAt;
+  logo_id: CompanyLogoId;
+  photo_id: CompanyPhotoId;
+  photo_url: string;
 }

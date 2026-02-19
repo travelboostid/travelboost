@@ -12,6 +12,7 @@ class TourCategory extends Model
   protected $fillable = [
     'name',
     'description',
+    'position_no',
     'company_id',
   ];
 

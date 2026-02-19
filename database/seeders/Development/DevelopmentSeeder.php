@@ -15,6 +15,9 @@ class DevelopmentSeeder extends Seeder
       RolePermissionSeeder::class,
       UserSeeder::class,
       CompanySeeder::class,
+      ContinentSeeder::class,
+      RegionSeeder::class,
+      CountrySeeder::class,
       TourSeeder::class,
     ]);
   }

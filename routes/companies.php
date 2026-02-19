@@ -20,7 +20,7 @@ use Illuminate\Support\Facades\Route;
 Route::middleware('auth')->prefix('companies/{company:username}/dashboard')->name('company.')->group(function () {
   Route::get('/', [HomeController::class, 'index'])->name('index');
   Route::group(['prefix' => 'vendors/{vendor}', 'as' => 'vendor.'], function () {
-    Route::resource('tours', VendorTourCatalogController::class);
+    Route::get('/tours', [VendorTourCatalogController::class, 'index'])->name('tours.index');
     Route::post('/tours/{tour}/copy', [VendorTourCatalogController::class, 'copy'])->name('tour.copy');
     Route::get('/tours/{tour}/brochure', [VendorTourCatalogController::class, 'viewBrochure'])->name('tour.view-brochure');
   });

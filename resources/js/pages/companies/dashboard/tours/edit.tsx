@@ -26,13 +26,30 @@ import { Textarea } from '@/components/ui/textarea';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { extractImageSrc } from '@/lib/utils';
 import { Form } from '@inertiajs/react';
+import { useRef, useState } from 'react';
 import { toast } from 'sonner';
 import SelectCategory from './components/select-category';
+import SelectContinent from './components/select-continent';
+import SelectCountry from './components/select-country';
+import SelectRegion from './components/select-region';
 
 type Props = {
   tour: any;
 };
 export default function Page({ tour }: Props) {
+  const formRef = useRef<any>(null);
+  const [continentId, setContinentId] = useState<number | null>(
+    tour.continent_id ?? null,
+  );
+  const [regionId, setRegionId] = useState<number | null>(
+    tour.region_id ?? null,
+  );
+  const [countryId, setCountryId] = useState<number | null>(
+    tour.country_id ?? null,
+  );
+  const [categoryId, setCategoryId] = useState<number | null>(
+    tour.category_id ?? null,
+  );
   const { company } = usePageSharedDataProps();
   const handleSuccess = () => {
     toast.success('Success', {
@@ -53,19 +70,22 @@ export default function Page({ tour }: Props) {
     >
       <Form
         {...update.form({ company: company.username, tour: tour.id })}
+        ref={formRef}
         className="space-y-4"
         onSuccess={handleSuccess}
       >
         {({ errors, processing }) => (
           <div className="container mx-auto space-y-4 p-4">
-            <div className="grid gap-6">
+            {/* <div className="grid gap-6"> changed for show in 2 column */}
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
               {/* Image */}
-              <div className="grid gap-2">
+              {/* <div className="grid gap-2"> */}
+              <div className="grid gap-2 md:col-span-2">
                 <Label htmlFor="name">Image</Label>
                 <MediaPicker
+                  type="image"
                   params={{ owner_type: 'company', owner_id: company.id }}
                   uploadParams={{ owner_type: 'company', owner_id: company.id }}
-                  type="image"
                   defaultValue={tour.image}
                 >
                   {(media, change) => (
@@ -145,43 +165,48 @@ export default function Page({ tour }: Props) {
                 <InputError message={errors.duration_days} />
               </div>
 
-              {/* Continent */}
               <div className="grid gap-2">
-                <Label htmlFor="continent">Continent</Label>
-                <Input
-                  id="continent"
-                  type="text"
-                  name="continent"
-                  placeholder="Continent"
-                  defaultValue={tour.continent}
+                <Label htmlFor="continent_id">Continent</Label>
+                <SelectContinent
+                  name="continent_id"
+                  value={continentId || 0}
+                  onChange={(val) => {
+                    setContinentId(Number(val));
+                    setRegionId(null);
+                    setCountryId(null);
+                  }}
                 />
-                <InputError message={errors.continent} />
+
+                <InputError message={errors.continent_id} />
               </div>
 
-              {/* Region */}
               <div className="grid gap-2">
-                <Label htmlFor="region">Region</Label>
-                <Input
-                  id="region"
-                  type="text"
-                  name="region"
-                  placeholder="Region"
-                  defaultValue={tour.region}
+                <Label htmlFor="region_id">Region</Label>
+                <SelectRegion
+                  name="region_id"
+                  continentId={continentId}
+                  value={regionId || 0}
+                  onChange={(val) => {
+                    setRegionId(Number(val));
+                    setCountryId(null);
+                  }}
                 />
-                <InputError message={errors.region} />
+                <InputError message={errors.region_id} />
               </div>
 
-              {/* Country */}
               <div className="grid gap-2">
-                <Label htmlFor="country">Country</Label>
-                <Input
-                  id="country"
-                  type="text"
-                  name="country"
-                  placeholder="Country"
-                  defaultValue={tour.country}
+                <Label htmlFor="country_id">Country</Label>
+                <SelectCountry
+                  name="country_id"
+                  continentId={continentId}
+                  regionId={regionId}
+                  value={countryId || 0}
+                  onChange={(val) => {
+                    setCountryId(Number(val));
+                  }}
                 />
-                <InputError message={errors.country} />
+
+                <InputError message={errors.country_id} />
               </div>
 
               {/* Destination */}
@@ -202,7 +227,10 @@ export default function Page({ tour }: Props) {
                 <Label htmlFor="category_id">Category</Label>
                 <SelectCategory
                   name="category_id"
-                  defaultValue={tour.category_id}
+                  value={categoryId ?? undefined}
+                  onChange={(val) => {
+                    setCategoryId(Number(val));
+                  }}
                 />
 
                 <InputError message={errors.category_id} />
@@ -212,10 +240,10 @@ export default function Page({ tour }: Props) {
               <div className="grid gap-2">
                 <Label htmlFor="name">Document</Label>
                 <MediaPicker
-                  params={{ owner_type: 'company', owner_id: company.id }}
-                  uploadParams={{ owner_type: 'company', owner_id: company.id }}
                   type="document"
                   defaultValue={tour.document}
+                  params={{ owner_type: 'company', owner_id: company.id }}
+                  uploadParams={{ owner_type: 'company', owner_id: company.id }}
                 >
                   {(media, change) => (
                     <Item variant="outline">

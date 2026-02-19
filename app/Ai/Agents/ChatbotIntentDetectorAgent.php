@@ -26,15 +26,30 @@ class ChatbotIntentDetectorAgent implements Agent, Conversational, HasStructured
    */
   public function instructions(): Stringable|string
   {
-    return "Analyze the user message and:
+
+    $latestMessageWithTourAttachment = $this->message->room->messages()
+      ->whereIn('attachment_type', ['tour-code'])
+      ->latest()
+      ->first();
+
+    $latestAttachedTourCode = '';
+    if ($latestMessageWithTourAttachment) {
+      $latestAttachedTourCode = $latestMessageWithTourAttachment->attachment;
+    }
+
+    $prompt = "Analyze the user message and:
 
 1. Detect intent:
-   - detail → asking about a specific tour or following up on a tour
+   - detail → asking about a specific tour or following up on a tour. Tour code may be provided in the message or inferred from recent chat context. Never go to detail intent if you cannot find a tour code in the message or recent chat context. Ask for clarification if you cannot find a tour code.
    - search → looking for tours based on criteria
-   - general → general travel question
+   - general → general travel questions or chit-chat
 
 2. Extract structured arguments if available.
 ";
+    if ($latestAttachedTourCode !== '') {
+      $prompt .= "\nRecent chat context: A tour with code '{$latestAttachedTourCode}' was mentioned.\n";
+    }
+    return $prompt;
   }
 
   /**

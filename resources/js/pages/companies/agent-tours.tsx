@@ -38,7 +38,10 @@ function TourCard({ agentTour }: { agentTour: AgentTour }) {
   const handleMessage = async () => {
     try {
       setStartingPrivateChat(true);
-      floatingChat.setAttachment({ type: 'agent-tour', data: agentTour });
+      floatingChat.setAttachment({
+        type: 'tour-code',
+        data: agentTour.tour.code,
+      });
       await floatingChat.startPrivateChat({
         type: 'company',
         id: agentTour.company_id,

@@ -9,11 +9,11 @@ import { useFloatingChatWidgetContext, useSendMessage } from './state';
 
 function RenderAttachment({ attachment }: { attachment: any }) {
   const { type, data } = attachment;
-  if (type === 'tour') {
+  if (type === 'tour-code') {
     return (
       <div className="p-4">
         <div>You want to asking about:</div>
-        <div>{data.name}</div>
+        <div>{data}</div>
       </div>
     );
   }
@@ -51,9 +51,9 @@ export default function ChatInput({
       sender_id: actor?.id || 0,
     };
     if (!attachment) return data;
-    if (attachment.type === 'tour') {
-      data.attachment_type = 'tour';
-      data.attachment = String(attachment.data.id);
+    if (attachment.type === 'tour-code') {
+      data.attachment_type = 'tour-code';
+      data.attachment = String(attachment.data);
     }
     return data;
   };

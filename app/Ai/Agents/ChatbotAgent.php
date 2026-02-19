@@ -34,11 +34,11 @@ class ChatbotAgent implements Agent, Conversational, HasTools
   {
     return 'You are an AI chatbot assisting users in a private chat.
 Rules:
-- Use the provided knowledge base when relevant.
-- If the answer is not in the knowledge base, respond based on chat context.
 - If you are unsure, say you are unsure and ask for clarification.
 - Keep answers short, clear, and friendly.
-- Do not mention embeddings, vectors, or internal systems.';
+- Do not mention embeddings, vectors, or internal systems.
+- Include tour code if available when discussing a tour to make follow-up easier.
+- If the user asks about a tour but no code is provided, ask for the tour code or details to identify the tour.';
   }
 
   /**
@@ -76,15 +76,15 @@ Rules:
     }
 
     $receiver = $this->getReceiver();
-    if (! $receiver || ! $this->chatbotEnabled($receiver)) {
-      return;
-    }
+    // if (! $receiver || ! $this->chatbotEnabled($receiver)) {
+    //   return;
+    // }
 
     $detected = $this->detectIntent();
 
     match ($detected['intent']) {
       'search' => $this->handleSearchIntent($detected, $receiver),
-      'detail' => $this->handleDetailIntent($receiver),
+      'detail' => $this->handleDetailIntent($detected, $receiver),
       'general' => $this->handleGeneralIntent($receiver),
       default => null,
     };
@@ -105,7 +105,7 @@ Rules:
   private function chatbotEnabled(?object $receiver): bool
   {
     return $receiver?->member_type === 'company'
-      && $receiver->member->settings?->use_chatbot !== false;
+      && $receiver->member->settings?->use_chatbot === true;
   }
 
   private function detectIntent(): AgentResponse
@@ -121,37 +121,47 @@ Rules:
   {
     $query = Tour::query()
       ->where('company_id', $receiver->member_id)
-      ->when(!empty($detected['filters']['continents'] ?? []), fn($q) => $q->whereIn('continent', $detected['filters']['continents']))
-      ->when(!empty($detected['filters']['countries'] ?? []), fn($q) => $q->whereIn('country', $detected['filters']['countries']))
-      ->when(!empty($detected['filters']['duration_days'] ?? []), fn($q) => $q->whereIn('duration_days', $detected['filters']['duration_days']))
-      ->when(($detected['filters']['duration_min'] ?? 0) !== 0, fn($q) => $q->where('duration_days', '>=', $detected['filters']['duration_min']))
-      ->when(($detected['filters']['duration_max'] ?? 0) !== 0, fn($q) => $q->where('duration_days', '<=', $detected['filters']['duration_max']))
-      ->when(($detected['filters']['price_min'] ?? 0) !== 0, fn($q) => $q->where('price', '>=', $detected['filters']['price_min']))
-      ->when(($detected['filters']['price_max'] ?? 0) !== 0, fn($q) => $q->where('price', '<=', $detected['filters']['price_max']))
+      ->when(!empty($detected['search']['continents'] ?? []), fn($q) => $q->whereIn('continent_name', $detected['search']['continents']))
+      ->when(!empty($detected['search']['countries'] ?? []), fn($q) => $q->whereIn('country_name', $detected['search']['countries']))
+      ->when(!empty($detected['search']['duration_days'] ?? []), fn($q) => $q->whereIn('duration_days', $detected['search']['duration_days']))
+      ->when(($detected['search']['duration_min'] ?? 0) !== 0, fn($q) => $q->where('duration_days', '>=', $detected['search']['duration_min']))
+      ->when(($detected['search']['duration_max'] ?? 0) !== 0, fn($q) => $q->where('duration_days', '<=', $detected['search']['duration_max']))
+      ->when(($detected['search']['price_min'] ?? 0) !== 0, fn($q) => $q->where('showprice', '>=', $detected['search']['price_min']))
+      ->when(($detected['search']['price_max'] ?? 0) !== 0, fn($q) => $q->where('showprice', '<=', $detected['search']['price_max']))
       ->limit(5)
       ->get();
-    $response = $this->prompt("Respond to the user's search query for tours based on the following filters: " . json_encode($detected['filters']) . ". Here are some matching tours:\n" . $query->map(fn($tour) => "- {$tour->name} in {$tour->country} ({$tour->duration_days} days, {$tour->status})\n  Destination: {$tour->destination}\n  Region: {$tour->region}\n  Continent: {$tour->continent}\n  Price: \${$tour->price}")->implode("\n") . "\nIf no tours match, say 'No tours found matching your criteria.'");
-
+    $response = $this->prompt("Respond to the user's search query for tours based on the following filters: " . json_encode($detected['search']) . ". Here are some matching tours:\n" . $query->map(fn($tour) => "- {$tour->name} in {$tour->country_name} ({$tour->duration_days} days)\n  Destination: {$tour->destination}\n  Region: {$tour->region_name}\n  Continent: {$tour->continent_name}\n  Price: \${$tour->showprice}")->implode("\n") . "\nIf no tours match, say 'No tours found matching your criteria.'");
     $this->saveBotMessage($response->text, $receiver);
   }
 
-  private function handleDetailIntent(object $receiver): void
+  private function handleDetailIntent(AgentResponse $detected, object $receiver): void
   {
-    $embedded = Embeddings::for([$this->message->message])
-      ->cache()
-      ->generate();
+    $tourCode = $detected['detail']['tour_code'] ?? null;
+    $contextOfDetail = '';
+    $tour = Tour::query()
+      ->where('code', $tourCode)
+      ->first();
+    if ($tour === null) {
+      $contextOfDetail = "The user asked about a tour with code '{$tourCode}', but it was not found in the database.";
+    } else {
+      $contextOfDetail = "The user asked about the tour '{$tour->name}' (code: {$tour->code}). It is a {$tour->duration_days}-day tour in {$tour->country_name}, {$tour->region_name}, {$tour->continent_name}. The destination is {$tour->destination} and the price is \${$tour->showprice}.";
+      $embedded = Embeddings::for([$this->message->message])
+        ->cache()
+        ->generate();
 
-    $relevantDocuments = TourDocumentKnowledgeBase::query()
-      ->whereVectorSimilarTo('embedding', $embedded->embeddings[0] ?? null, minSimilarity: 0.1)
-      ->limit(3)
-      ->get();
+      $relevantDocuments = TourDocumentKnowledgeBase::query()
+        ->whereVectorSimilarTo('embedding', $embedded->embeddings[0] ?? null, minSimilarity: 0.1)
+        ->where('tour')
+        ->limit(3)
+        ->get();
 
-    Log::info("ChatbotAgent relevant documents", ['documents' => $relevantDocuments]);
+      Log::info("ChatbotAgent relevant documents", ['documents' => $relevantDocuments]);
 
-    $response = $this->prompt(
-      "You are a helpful assistant in a chat application. Respond to the user's message in a friendly and concise manner. If the user asks a question, provide a clear answer. If the user shares information, acknowledge it and offer assistance if needed. Always maintain a positive and supportive tone."
-        . "\n\nRelevant information:\n" . $relevantDocuments->pluck('content')->implode("\n\n---\n")
-    );
+      $response = $this->prompt(
+        "You are a helpful assistant in a chat application. Respond to the user's message in a friendly and concise manner. If the user asks a question, provide a clear answer. If the user shares information, acknowledge it and offer assistance if needed. Always maintain a positive and supportive tone."
+          . "\n\nContext of the user's query:\n" . $contextOfDetail . "\n\nRelevant tour document from database:\n" . $relevantDocuments->pluck('content')->implode("\n\n---\n")
+      );
+    }
 
     $this->saveBotMessage($response->text, $receiver);
   }

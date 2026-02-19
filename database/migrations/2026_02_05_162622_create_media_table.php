@@ -29,6 +29,10 @@ return new class extends Migration
         ->nullOnDelete();
     });
     Schema::table('companies', function (Blueprint $table) {
+      $table->foreignId('logo_id')
+        ->nullable()
+        ->constrained('medias')
+        ->nullOnDelete();
       $table->foreignId('photo_id')
         ->nullable()
         ->constrained('medias')

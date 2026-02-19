@@ -24,9 +24,9 @@ class UpdateTourRequest extends FormRequest
         TourStatus::Active->value,
         TourStatus::Inactive->value
       ])],
-      'continent'    => 'nullable|string|max:100',
-      'region'       => 'nullable|string|max:100',
-      'country'      => 'nullable|string|max:100',
+      'continent_id'    => 'nullable|exists:continents,id',
+      'region_id'       => 'nullable|exists:regions,id',
+      'country_id'      => 'nullable|exists:countries,id',
       'destination'  => 'nullable|string|max:100',
       'category_id'  => 'nullable|exists:tour_categories,id',
       'parent_id'    => 'nullable|exists:tours,id',

@@ -18,15 +18,24 @@ class Tour extends Model
     'description',
     'duration_days',
     'status',
-    'continent',
-    'region',
-    'country',
+    'continent_id',
+    'region_id',
+    'country_id',
     'destination',
     'category_id',
     'parent_id',
     'company_id',
     'image_id',
-    'document_id'
+    'document_id',
+    'showprice',
+    'earlybird',
+    'earlybird_note'
+  ];
+
+  protected $guarded = [
+    'continent_name',
+    'region_name',
+    'country_name',
   ];
 
   protected $casts = [
@@ -37,13 +46,31 @@ class Tour extends Model
     'image',
     'document',
     'category',
-    'company'
+    'company',
   ];
 
   protected $dispatchesEvents = [
     'created' => TourCreated::class,
     'updated' => TourUpdated::class,
   ];
+
+  protected static function booted()
+  {
+    static::saving(function ($tour) {
+
+      if ($tour->isDirty('continent_id')) {
+        $tour->continent_name = optional($tour->continent)->name;
+      }
+
+      if ($tour->isDirty('region_id')) {
+        $tour->region_name = optional($tour->region)->name;
+      }
+
+      if ($tour->isDirty('country_id')) {
+        $tour->country_name = optional($tour->country)->name;
+      }
+    });
+  }
 
   /*
     |--------------------------------------------------------------------------
@@ -79,5 +106,20 @@ class Tour extends Model
   public function copies()
   {
     return $this->hasMany(Tour::class, 'parent_id');
+  }
+
+  public function continent()
+  {
+    return $this->belongsTo(Continent::class, 'continent_id');
+  }
+
+  public function region()
+  {
+    return $this->belongsTo(Region::class, 'region_id');
+  }
+
+  public function country()
+  {
+    return $this->belongsTo(Country::class, 'country_id');
   }
 }

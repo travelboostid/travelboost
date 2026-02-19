@@ -12,6 +12,7 @@ export interface TourCategoryResource {
   id: number;
   name: string;
   description: TourCategoryResourceDescription;
+  position_no: number;
   company_id: number;
   created_at: TourCategoryResourceCreatedAt;
   updated_at: TourCategoryResourceUpdatedAt;

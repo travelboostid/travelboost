@@ -36,12 +36,6 @@ class ChatMessageResource extends JsonResource
         'id' => $this->room->id,
         'name' => $this->room->name,
       ]),
-
-      'replyTo' => $this->whenLoaded('replyTo', fn() => [
-        'id' => $this->replyTo->id,
-        'message' => $this->replyTo->message,
-      ]),
-
       'replies_count' => $this->replies_count ?? $this->replies()->count(),
     ];
   }
