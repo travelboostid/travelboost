@@ -9,7 +9,7 @@ import type { UserPreferenceResourceUpdatedAt } from './userPreferenceResourceUp
 export interface UserPreferenceResource {
   id: number;
   meta_pixel_id: string;
-  use_chatbot: number;
+  use_chatbot: string;
   landing_page_template_id: string;
   landing_page_template_data: string;
   updated_at: UserPreferenceResourceUpdatedAt;

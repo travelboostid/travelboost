@@ -9,6 +9,8 @@ import type { UserCreatedAt } from './userCreatedAt';
 import type { UserUpdatedAt } from './userUpdatedAt';
 import type { UserTwoFactorConfirmedAt } from './userTwoFactorConfirmedAt';
 import type { UserPhotoId } from './userPhotoId';
+import type { UserActivedDate } from './userActivedDate';
+import type { UserLogoImage } from './userLogoImage';
 
 export interface User {
   id: number;
@@ -23,5 +25,9 @@ export interface User {
   updated_at: UserUpdatedAt;
   two_factor_confirmed_at: UserTwoFactorConfirmedAt;
   photo_id: UserPhotoId;
+  active: string;
+  actived_date: UserActivedDate;
+  logo_image: UserLogoImage;
+  catalog_link: string;
   photo_url: string;
 }

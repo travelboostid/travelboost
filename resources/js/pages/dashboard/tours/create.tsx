@@ -44,9 +44,11 @@ export default function Page() {
       <Form {...store.form()} className="space-y-4" onSuccess={handleSuccess}>
         {({ errors, processing }) => (
           <div className="container mx-auto space-y-4 p-4">
-            <div className="grid gap-6">
+            {/* <div className="grid gap-6"> changed for show in 2 column */}
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
               {/* Image */}
-              <div className="grid gap-2">
+              {/* <div className="grid gap-2"> */}
+              <div className="grid gap-2 md:col-span-2">
                 <Label htmlFor="name">Image</Label>
                 <MediaPicker type="image">
                   {(media, change) => (
@@ -100,11 +102,23 @@ export default function Page() {
 
               {/* Description */}
               <div className="grid gap-2">
+              {/* <div className="grid gap-2 md:col-span-2"> */}
                 <Label htmlFor="description">Description</Label>
+                { /*<Textarea
+                  id="description"
+                  name="description"
+                  placeholder="Tour description"
+                /> */ }
                 <Textarea
                   id="description"
                   name="description"
                   placeholder="Tour description"
+                  className="min-h-[65px] resize-none"
+                  onInput={(e) => {
+                    const el = e.currentTarget;
+                    el.style.height = 'auto';
+                    el.style.height = el.scrollHeight + 'px';
+                  }}
                 />
                 <InputError message={errors.description} />
               </div>
@@ -180,6 +194,7 @@ export default function Page() {
 
               {/* Document */}
               <div className="grid gap-2">
+              {/* <div className="grid gap-2 md:col-span-2"> */}
                 <Label htmlFor="name">Document</Label>
                 <MediaPicker type="document">
                   {(media, change) => (
