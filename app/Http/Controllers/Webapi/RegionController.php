@@ -3,23 +3,23 @@
 namespace App\Http\Controllers\Webapi;
 
 use App\Http\Controllers\Controller;
-use App\Http\Resources\ContinentResource;
-use App\Models\Continent;
+use App\Http\Resources\RegionResource;
+use App\Models\Region;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 
-class ContinentController extends Controller
+class RegionController extends Controller
 {
   /**
    * Display a listing of the resource.
-   * @operationId getContinents
+   * @operationId getRegions
    */
   public function index(Request $request): JsonResponse
   {
     // Validate query parameters
     $validated = $request->validate([
-      'user_id'  => ['nullable', 'integer', 'exists:users,id'],
+      'continent_id' => ['nullable', 'integer', 'exists:continents,id'],
       'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
       'page'     => ['nullable', 'integer', 'min:1'],
     ]);
@@ -27,77 +27,77 @@ class ContinentController extends Controller
     $perPage = $validated['per_page'] ?? 15; // Changed to more standard 15
 
     // Build query
-    $query = Continent::query();
+    $query = Region::query();
 
-    /* if (!empty($validated['user_id'])) {
-      $query->where('user_id', $validated['user_id']);
-    }*/
+     if (!empty($validated['continent_id'])) {
+      $query->where('continent_id', $validated['continent_id']);
+    }
 
     // Order by creation date by default
     $query->orderBy('created_at', 'desc');
 
     // Paginate
-    $continents = $query->paginate($perPage);
+    $regions = $query->paginate($perPage);
 
     // Return paginated resource
-    return ContinentResource::collection($continents)->response();
+    return RegionResource::collection($regions)->response();
   }
 
   /**
    * Store a newly created resource in storage.
-   * @operationId createContinent
+   * @operationId createRegion
    */
   public function store(Request $request): JsonResponse
   {
     $validated = $request->validate([
-      'continent'        => 'required|string|max:255',
-      'user_id'     => 'sometimes|nullable|integer|exists:users,id', // Added user_id validation
+      'continent_id' => ['required', 'integer', 'exists:continents,id'],
+      'region'        => 'required|string|max:255',
     ]);
 
-    $continents = Continent::create($validated);
+    $regions = Region::create($validated);
 
-    return (new ContinentResource($continents))
+    return (new RegionResource($regions))
       ->response()
       ->setStatusCode(Response::HTTP_CREATED);
   }
 
   /**
    * Display the specified resource.
-   * @operationId getContinentById
+   * @operationId getRegionById
    */
   public function show(string $id): JsonResponse
   {
-    $continents = Continent::findOrFail($id);
+    $regions = Region::findOrFail($id);
 
-    return (new ContinentResource($continents))->response();
+    return (new RegionResource($regions))->response();
   }
 
   /**
    * Update the specified resource in storage.
-   * @operationId updateContinent
+   * @operationId updateRegion
    */
   public function update(Request $request, string $id): JsonResponse
   {
-    $continents = Continent::findOrFail($id);
+    $regions = Region::findOrFail($id);
 
     $validated = $request->validate([
-      'continent'        => 'sometimes|required|string|max:255',
-      'user_id'     => 'sometimes|nullable|integer|exists:users,id',
+      'continent_id' => ['sometimes', 'integer', 'exists:continents,id'],
+      'region'        => 'sometimes|required|string|max:255',
     ]);
 
-    $continents->update($validated);
+    $regions->update($validated);
 
-    return (new ContinentResource($continents))->response();
+    return (new RegionResource($regions))->response();
   }
 
   /**
    * Remove the specified resource from storage.
-   * @operationId deleteContinent
+   * @operationId deleteRegion
    */
   public function destroy(string $id): JsonResponse
   {
-    $continents = Continent::findOrFail($id);
-    $continents->delete();
+    $regions = Region::findOrFail($id);
+    $regions->delete();
 
     return response()->json(null, Response::HTTP_NO_CONTENT);
   }

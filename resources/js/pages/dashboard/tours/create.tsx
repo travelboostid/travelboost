@@ -26,6 +26,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { extractImageSrc } from '@/lib/utils';
 import { Form, router } from '@inertiajs/react';
 import SelectCategory from '../../../components/select-category';
+import SelectContinent from '../../../components/select-continent';
 
 export default function Page() {
   const handleSuccess = () => {
@@ -137,7 +138,7 @@ export default function Page() {
               </div>
 
               {/* Continent */}
-              <div className="grid gap-2">
+              {/* <div className="grid gap-2">
                 <Label htmlFor="continent">Continent</Label>
                 <Input
                   id="continent"
@@ -146,6 +147,13 @@ export default function Page() {
                   placeholder="Continent"
                 />
                 <InputError message={errors.continent} />
+              </div> */}
+              {/* Category */}
+              <div className="grid gap-2">
+                <Label htmlFor="continent_id">Continent</Label>
+                <SelectContinent name="continent_id" />
+
+                <InputError message={errors.continent_id} />
               </div>
 
               {/* Region */}

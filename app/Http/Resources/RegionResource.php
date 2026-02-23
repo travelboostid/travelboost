@@ -5,14 +5,14 @@ namespace App\Http\Resources;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
-class ContinentResource extends JsonResource
+class RegionResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
         return [
         'id'        => $this->id,
-        'continent' => $this->continent,
-        'user_id'   => $this->user_id,
+        'region' => $this->region,
+        'continent_id'   => $this->continent_id,
     ];
     }
 }

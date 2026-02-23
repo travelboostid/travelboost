@@ -5,13 +5,13 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
-class Continent extends Model
+class Region extends Model
 {
   use HasFactory;
 
   protected $fillable = [
-    'continent',
-    'user_id',
+    'region',
+    'continent_id',
   ];
 
   /*
@@ -20,12 +20,12 @@ class Continent extends Model
     |--------------------------------------------------------------------------
     */
 
-  public function continents()
+  public function regions()
   {
-    return $this->hasMany(Tour::class, 'continent');
+    return $this->hasMany(Tour::class, 'region');
   }
-  public function user()
+  public function continent()
   {
-    return $this->belongsTo(User::class, 'user_id');
+    return $this->belongsTo(User::class, 'continent_id');
   }
 }

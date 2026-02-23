@@ -7,6 +7,9 @@ use App\Http\Controllers\Webapi\ChatRoomController;
 use App\Http\Controllers\Webapi\MediaController;
 use App\Http\Controllers\Webapi\PaymentController;
 use App\Http\Controllers\Webapi\TourCategoryController;
+//23022026 add for continent options
+use App\Http\Controllers\Webapi\ContinentController;
+use App\Http\Controllers\Webapi\RegionController;
 use App\Http\Controllers\Webapi\UserController;
 use App\Http\Controllers\DashboardBankAccountController;
 use App\Http\Controllers\DashboardTourController;
@@ -62,6 +65,9 @@ Route::prefix('webapi')->group(function () {
     Route::apiResource('medias', MediaController::class);
     Route::apiResource('wallets', WalletController::class);
     Route::apiResource('categories', TourCategoryController::class)->only(['store', 'update', 'destroy']);
+    //23022026 add for continent options
+    Route::apiResource('continents', ContinentController::class)->only(['store', 'update', 'destroy']);
+    Route::apiResource('regions', RegionController::class)->only(['store', 'update', 'destroy']);
     Route::singleton('users.preference', UserPreferenceController::class)
       ->only(['update']);
     // Rooms
@@ -74,6 +80,9 @@ Route::prefix('webapi')->group(function () {
     Route::post('payments/topup', [PaymentController::class, 'topup']);
   });
   Route::apiResource('categories', TourCategoryController::class)->only(methods: ['index', 'show']);
+  //23022026 add for continent options
+  Route::apiResource('continents', ContinentController::class)->only(methods: ['index', 'show']);
+  Route::apiResource('regions', RegionController::class)->only(methods: ['index', 'show']);
 });
 
 Route::prefix('webhooks')->group(function () {
