@@ -11,6 +11,7 @@ class UpdateTourCategoryRequest extends FormRequest
     return [
       'name' => ['nullable', 'string', 'max:255'],
       'description' => ['nullable', 'string'],
+      'position_no' => ['nullable', 'string'],
     ];
   }
 

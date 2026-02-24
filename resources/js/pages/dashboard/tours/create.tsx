@@ -27,8 +27,15 @@ import { extractImageSrc } from '@/lib/utils';
 import { Form, router } from '@inertiajs/react';
 import SelectCategory from '../../../components/select-category';
 import SelectContinent from '../../../components/select-continent';
+import SelectRegion from '../../../components/select-region';
+import SelectCountry from '../../../components/select-country';
+import { useState } from 'react';
 
 export default function Page() {
+  const [continentId, setContinentId] = useState<number | null>(null);
+  const [regionId, setRegionId] = useState<number | null>(null);
+  const [countryId, setCountryId] = useState<number | null>(null);
+  
   const handleSuccess = () => {
     router.visit('/dashboard/tours', { replace: true });
   };
@@ -149,15 +156,32 @@ export default function Page() {
                 <InputError message={errors.continent} />
               </div> */}
               {/* Category */}
-              <div className="grid gap-2">
+              {/* <div className="grid gap-2">
                 <Label htmlFor="continent_id">Continent</Label>
                 <SelectContinent name="continent_id" />
+
+                <InputError message={errors.continent_id} />
+              </div> */}
+              <div className="grid gap-2">
+                <Label htmlFor="continent_id">Continent</Label>
+                <SelectContinent
+                  name="continent_id"
+                  value={continentId ?? undefined}
+                  onChange={(val) => {
+                    setContinentId(Number(val));
+                    setRegionId(null);
+                    setCountryId(null);
+                  }}
+                />
+
+                {/* SEND TO SERVER */}
+                <input type="hidden" name="continent" value={continentId ?? ''} />
 
                 <InputError message={errors.continent_id} />
               </div>
 
               {/* Region */}
-              <div className="grid gap-2">
+              {/* <div className="grid gap-2">
                 <Label htmlFor="region">Region</Label>
                 <Input
                   id="region"
@@ -166,10 +190,33 @@ export default function Page() {
                   placeholder="Region"
                 />
                 <InputError message={errors.region} />
+              </div> */}
+              {/*<div className="grid gap-2">
+                <Label htmlFor="region_id">Region</Label>
+                <SelectRegion name="region_id" />
+
+                <InputError message={errors.region_id} />
+              </div> */}
+              <div className="grid gap-2">
+                <Label htmlFor="region_id">Region</Label>
+                <SelectRegion
+                  name="region_id"
+                  continentId={continentId}
+                  value={regionId ?? undefined}
+                  onChange={(val) => {
+                    setRegionId(Number(val));
+                    setCountryId(null);
+                  }}
+                />
+
+                {/* SEND TO SERVER */}
+                <input type="hidden" name="region" value={regionId ?? ''} />
+
+                <InputError message={errors.region_id} />
               </div>
 
               {/* Country */}
-              <div className="grid gap-2">
+              {/* <div className="grid gap-2">
                 <Label htmlFor="country">Country</Label>
                 <Input
                   id="country"
@@ -178,6 +225,21 @@ export default function Page() {
                   placeholder="Country"
                 />
                 <InputError message={errors.country} />
+              </div> */}
+              <div className="grid gap-2">
+                <Label htmlFor="country_id">Country</Label>
+                <SelectCountry
+                  name="country_id"
+                  continentId={continentId}
+                  regionId={regionId}
+                  value={countryId ?? undefined}
+                  onChange={(val) => setCountryId(Number(val))}
+                />
+
+                {/* SEND TO SERVER */}
+                <input type="hidden" name="country" value={countryId ?? ''} />
+
+                <InputError message={errors.country_id} />
               </div>
 
               {/* Destination */}

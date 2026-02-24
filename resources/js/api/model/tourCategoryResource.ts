@@ -15,4 +15,5 @@ export interface TourCategoryResource {
   user_id: number;
   created_at: TourCategoryResourceCreatedAt;
   updated_at: TourCategoryResourceUpdatedAt;
+  position_no: string;
 }

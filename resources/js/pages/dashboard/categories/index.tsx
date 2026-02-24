@@ -71,6 +71,11 @@ export const columns: ColumnDef<Category>[] = [
     cell: ({ row }) => <div className="">{row.getValue('description')}</div>,
   },
   {
+    accessorKey: 'position_no',
+    header: 'Position No',
+    cell: ({ row }) => <div className="">{row.getValue('position_no')}</div>,
+  },
+  {
     id: 'actions',
     enableHiding: false,
     cell: ({ row }) => <RowAction category={row.original} />,

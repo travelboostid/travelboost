@@ -5,15 +5,14 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
-class TourCategory extends Model
+class Country extends Model
 {
   use HasFactory;
 
   protected $fillable = [
-    'name',
-    'description',
-    'user_id',
-    'position_no',
+    'country',
+    'region_id',
+    'continent_id',
   ];
 
   /*
@@ -22,12 +21,16 @@ class TourCategory extends Model
     |--------------------------------------------------------------------------
     */
 
-  public function tours()
+  public function countries()
   {
-    return $this->hasMany(Tour::class, 'category_id');
+    return $this->hasMany(Tour::class, 'country');
   }
-  public function user()
+  public function region()
   {
-    return $this->belongsTo(User::class, 'user_id');
+    return $this->belongsTo(User::class, 'region_id');
+  }
+  public function continent()
+  {
+    return $this->belongsTo(User::class, 'continent_id');
   }
 }

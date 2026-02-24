@@ -29,11 +29,30 @@ import { Textarea } from '@/components/ui/textarea';
 import { extractImageSrc } from '@/lib/utils';
 import { Form, router } from '@inertiajs/react';
 import SelectCategory from '../../../components/select-category';
+import SelectContinent from '../../../components/select-continent';
+import SelectRegion from '../../../components/select-region';
+import SelectCountry from '../../../components/select-country';
+import { useState } from 'react';
 
 type Props = {
   tour: any;
 };
 export default function Page({ tour }: Props) {
+  //console.log('tour.continent_id', tour.continent);
+
+  const [continentId, setContinentId] = useState<number | null>(
+    tour.continent ?? null
+  );
+  const [regionId, setRegionId] = useState<number | null>(
+    tour.region ?? null
+  );
+  const [countryId, setCountryId] = useState<number | null>(
+    tour.country ?? null
+  );
+  const [categoryId, setCategoryId] = useState<number | null>(
+    tour.category_id ?? null
+  );
+
   const handleSuccess = () => {
     router.visit(index(), { replace: true });
   };
@@ -54,9 +73,11 @@ export default function Page({ tour }: Props) {
       >
         {({ errors, processing }) => (
           <div className="container mx-auto space-y-4 p-4">
-            <div className="grid gap-6">
+            {/* <div className="grid gap-6"> changed for show in 2 column */}
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
               {/* Image */}
-              <div className="grid gap-2">
+              {/* <div className="grid gap-2"> */}
+              <div className="grid gap-2 md:col-span-2">
                 <Label htmlFor="name">Image</Label>
                 <MediaPicker type="image" defaultValue={tour.image}>
                   {(media, change) => (
@@ -137,7 +158,7 @@ export default function Page({ tour }: Props) {
               </div>
 
               {/* Continent */}
-              <div className="grid gap-2">
+              {/* <div className="grid gap-2">
                 <Label htmlFor="continent">Continent</Label>
                 <Input
                   id="continent"
@@ -147,10 +168,26 @@ export default function Page({ tour }: Props) {
                   defaultValue={tour.continent}
                 />
                 <InputError message={errors.continent} />
+              </div> */}
+              <div className="grid gap-2">
+                <Label htmlFor="continent_id">Continent</Label>
+                <SelectContinent
+                  name="continent_id"
+                  value={continentId ?? undefined}
+                  onChange={(val) => {
+                    setContinentId(Number(val));
+                    setRegionId(null);
+                    setCountryId(null);
+                  }}
+                />
+
+                <input type="hidden" name="continent" value={continentId ?? ''} />
+
+                <InputError message={errors.continent_id} />
               </div>
 
               {/* Region */}
-              <div className="grid gap-2">
+              {/* <div className="grid gap-2">
                 <Label htmlFor="region">Region</Label>
                 <Input
                   id="region"
@@ -160,10 +197,27 @@ export default function Page({ tour }: Props) {
                   defaultValue={tour.region}
                 />
                 <InputError message={errors.region} />
+              </div> */}
+              <div className="grid gap-2">
+                <Label htmlFor="region_id">Region</Label>
+                  <SelectRegion
+                    name="region_id"
+                    continentId={continentId}
+                    value={regionId ?? undefined}
+                    onChange={(val) => {
+                      setRegionId(Number(val));
+                      setCountryId(null);
+                    }}
+                  />
+              
+                  {/* SEND TO SERVER */}
+                <input type="hidden" name="region" value={regionId ?? ''} />
+              
+                <InputError message={errors.region_id} />
               </div>
 
               {/* Country */}
-              <div className="grid gap-2">
+              {/* <div className="grid gap-2">
                 <Label htmlFor="country">Country</Label>
                 <Input
                   id="country"
@@ -173,6 +227,21 @@ export default function Page({ tour }: Props) {
                   defaultValue={tour.country}
                 />
                 <InputError message={errors.country} />
+              </div> */}
+              <div className="grid gap-2">
+                <Label htmlFor="country_id">Country</Label>
+                <SelectCountry
+                  name="country_id"
+                  continentId={continentId}
+                  regionId={regionId}
+                  value={countryId ?? undefined}
+                  onChange={(val) => setCountryId(Number(val))}
+                />
+              
+               {/* SEND TO SERVER */}
+                <input type="hidden" name="country" value={countryId ?? ''} />
+              
+                <InputError message={errors.country_id} />
               </div>
 
               {/* Destination */}
@@ -191,7 +260,12 @@ export default function Page({ tour }: Props) {
               {/* Category */}
               <div className="grid gap-2">
                 <Label htmlFor="category_id">Category</Label>
-                <SelectCategory name="category_id" />
+                <SelectCategory name="category_id" 
+                  value={categoryId ?? undefined}
+                  onChange={(val) => {
+                    setCategoryId(Number(val));
+                  }}
+                />
 
                 <InputError message={errors.category_id} />
               </div>

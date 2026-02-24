@@ -10,6 +10,7 @@ use App\Http\Controllers\Webapi\TourCategoryController;
 //23022026 add for continent options
 use App\Http\Controllers\Webapi\ContinentController;
 use App\Http\Controllers\Webapi\RegionController;
+use App\Http\Controllers\Webapi\CountryController;
 use App\Http\Controllers\Webapi\UserController;
 use App\Http\Controllers\DashboardBankAccountController;
 use App\Http\Controllers\DashboardTourController;
@@ -68,6 +69,7 @@ Route::prefix('webapi')->group(function () {
     //23022026 add for continent options
     Route::apiResource('continents', ContinentController::class)->only(['store', 'update', 'destroy']);
     Route::apiResource('regions', RegionController::class)->only(['store', 'update', 'destroy']);
+    Route::apiResource('countries', CountryController::class)->only(['store', 'update', 'destroy']);
     Route::singleton('users.preference', UserPreferenceController::class)
       ->only(['update']);
     // Rooms
@@ -83,6 +85,7 @@ Route::prefix('webapi')->group(function () {
   //23022026 add for continent options
   Route::apiResource('continents', ContinentController::class)->only(methods: ['index', 'show']);
   Route::apiResource('regions', RegionController::class)->only(methods: ['index', 'show']);
+  Route::apiResource('countries', CountryController::class)->only(methods: ['index', 'show']);
 });
 
 Route::prefix('webhooks')->group(function () {

@@ -51,6 +51,7 @@ class TourCategoryController extends Controller
     $validated = $request->validate([
       'name'        => 'required|string|max:255',
       'description' => 'nullable|string',
+      'position_no' => 'required|string',
       'user_id'     => 'sometimes|nullable|integer|exists:users,id', // Added user_id validation
     ]);
 
@@ -81,6 +82,7 @@ class TourCategoryController extends Controller
     $validated = $request->validate([
       'name'        => 'sometimes|required|string|max:255',
       'description' => 'sometimes|nullable|string',
+      'position_no' => 'sometimes|string',
       'user_id'     => 'sometimes|nullable|integer|exists:users,id',
     ]);
 

@@ -18,6 +18,7 @@ class StoreTourCategoryRequest extends FormRequest
     return [
       'name' => ['required', 'string', 'max:255'],
       'description' => ['nullable', 'string'],
+      'position_no' => ['required', 'string'],
     ];
   }
 
@@ -26,6 +27,7 @@ class StoreTourCategoryRequest extends FormRequest
     return [
       'name' => 'category name',
       'description' => 'description',
+      'position_no' => 'position_no',
     ];
   }
 }

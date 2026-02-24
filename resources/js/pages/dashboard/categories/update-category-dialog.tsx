@@ -32,6 +32,7 @@ export default function UpdateCategoryDialog({
   const form = useForm({
     name: category.name,
     description: category.description,
+    position_no: category.position_no,
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -77,6 +78,16 @@ export default function UpdateCategoryDialog({
               placeholder="Category Description"
             />
             <InputError message={form.errors.description} />
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="position_no">Position No</Label>
+            <Input
+              id="position_no"
+              value={form.data.position_no}
+              onChange={(e) => form.setData('position_no', e.target.value)}
+              placeholder="Position No"
+            />
+            <InputError message={form.errors.position_no} />
           </div>
           <DialogFooter>
             <DialogClose asChild>
