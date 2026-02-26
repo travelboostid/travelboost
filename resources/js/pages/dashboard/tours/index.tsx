@@ -121,10 +121,12 @@ export const columns: ColumnDef<Tour>[] = [
   },
   {
     accessorFn: (row) =>
-      `${row.continent} - ${row.country} - ${row.destination}`,
+      //`${row.continent} - ${row.country} - ${row.destination}`,
+      `${row.destination}`,
     header: 'Destination',
     cell: ({ row }) => (
-      <div>{`${row.original.continent} - ${row.original.country} - ${row.original.destination}`}</div>
+      //<div>{`${row.original.continent} - ${row.original.country} - ${row.original.destination}`}</div>
+      <div>{`${row.original.destination}`}</div>
     ),
   },
   {

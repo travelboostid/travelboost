@@ -16,7 +16,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { extractImageSrc } from '@/lib/utils';
 import type { Auth } from '@/types';
 import { router, usePage } from '@inertiajs/react';
-import { IconPdf } from '@tabler/icons-react';
+import { IconPdf, IconBrandFacebook } from '@tabler/icons-react';
 import { MessageSquareIcon, SaveIcon } from 'lucide-react';
 import { useState } from 'react';
 
@@ -73,6 +73,32 @@ export default function TourCard({ tour }: { tour: TourResource }) {
     }
   };
 
+  //26022026 share to fb
+  const shareUrl = `${window.location.origin}/@${tour.name}/tours/${tour.id}`;
+  //console.log('shareUrl:', shareUrl);
+
+  const handleShareFacebook = () => {
+    const fbUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(
+      shareUrl,
+    )}`;
+    window.open(fbUrl, '_blank', 'noopener,noreferrer');
+  };
+
+  const handleShareFacebookPdf = () => {
+    if (!hasDocument) return;
+
+    const pdfUrl = brochure({ username, tour: tour.id }).url;
+
+    console.log('PDF URL:', pdfUrl);
+
+    const fbUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(
+      pdfUrl,
+    )}`;
+
+    window.open(fbUrl, '_blank', 'noopener,noreferrer');
+  };
+  //
+
   return (
     <Card className="relative mx-auto flex w-full flex-col overflow-hidden pt-0">
       <img
@@ -86,31 +112,45 @@ export default function TourCard({ tour }: { tour: TourResource }) {
         <CardDescription>{tour.description}</CardDescription>
       </CardHeader>
       <div className="flex-1" />
-      <CardFooter className="flex gap-2">
+      {/* fix screen for desktop and mobile */}
+      {/*<CardFooter className="flex gap-2"> */}
+      <CardFooter className="grid grid-cols-2 lg:grid-cols-4 gap-2">
         <Button
           variant="secondary"
-          className="flex-1"
+          //className="flex-1"
           disabled={!hasDocument}
           onClick={handleViewBrochure}
         >
           <IconPdf />
-          <span className="hidden md:inline">Brochures</span>
+          {/*<span className="hidden md:inline">Brochures</span> */}
         </Button>
         <Button
           disabled={tour.has_copied}
           onClick={handleCopy}
-          className="flex-1"
+          //className="flex-1"
         >
           <SaveIcon />
-          <span className="hidden md:inline">Save Tour</span>
+          {/* <span className="hidden md:inline">Save Tour</span> */}
         </Button>
         <Button
           onClick={handleMessage}
           disabled={startingPrivateChat}
           variant="secondary"
-          className="flex-1"
+          //className="flex-1"
         >
           {startingPrivateChat ? <Spinner /> : <MessageSquareIcon />}
+        </Button>
+
+        {/* ✅ SHARE FACEBOOK */}
+        <Button
+          variant="secondary"
+          //onClick={handleShareFacebook}
+          onClick={handleShareFacebookPdf}
+          disabled={!hasDocument}
+          //className="flex-1"
+        >
+          <IconBrandFacebook />
+          {/* <span className="hidden md:inline">Share</span> */}
         </Button>
       </CardFooter>
     </Card>
