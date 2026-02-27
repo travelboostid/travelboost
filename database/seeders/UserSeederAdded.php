@@ -35,5 +35,18 @@ class UserSeederAdded extends Seeder
             ]
         );
         $synergy->assignRole('admin', 'agent');
+
+        $root = User::updateOrCreate(
+            ['email' => 'root2@travelboost.co.id'],
+            [
+                'name' => 'Root2',
+                'username' => 'root2',
+                'type' => 'vendor',
+                'address' => "Jakarta",
+                'phone' => '0',
+                'password' => Hash::make('root2'),
+            ]
+        );
+        $root->assignRole('superadmin', 'vendor');
   }
 }

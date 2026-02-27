@@ -141,7 +141,8 @@ export function MediaPicker({
       open={open}
     >
       {children(internalValue, handleOpen)}
-      <DialogContent className="sm:max-w-[425px]">
+      {/* <DialogContent className="sm:max-w-[425px]"> */}
+      <DialogContent className="sm:max-w-[425px] max-h-[80vh] overflow-hidden">
         <DialogHeader>
           <DialogTitle>Edit Photo</DialogTitle>
           <DialogDescription>
@@ -216,7 +217,7 @@ export function MediaPicker({
               onChange={handleFileChange}
             />
 
-            <div className="mt-4 space-y-4">
+            {/*<div className="mt-4 space-y-4">
               <div className="text-sm text-muted-foreground">
                 Or select from your existing photos
               </div>
@@ -229,6 +230,24 @@ export function MediaPicker({
                 }
                 onChange={handleSelectedMedia}
               />
+            </div>*/}
+            <div className="mt-4 space-y-2">
+              <div className="text-sm text-muted-foreground">
+                Or select from your existing photos or files
+              </div>
+
+              {/* 🔽 SCROLL AREA */}
+              <div className="max-h-[45vh] overflow-y-auto pr-2">
+                <MediaSelector
+                  type={type}
+                  value={
+                    typeof internalValue === 'object'
+                      ? (internalValue as MediaResource)
+                      : undefined
+                  }
+                  onChange={handleSelectedMedia}
+                />
+              </div>
             </div>
           </>
         )}

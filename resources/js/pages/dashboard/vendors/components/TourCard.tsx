@@ -16,7 +16,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { extractImageSrc } from '@/lib/utils';
 import type { Auth } from '@/types';
 import { router, usePage } from '@inertiajs/react';
-import { IconPdf, IconBrandFacebook } from '@tabler/icons-react';
+import { IconPdf, IconBrandFacebook, IconBrandWhatsapp } from '@tabler/icons-react';
 import { MessageSquareIcon, SaveIcon } from 'lucide-react';
 import { useState } from 'react';
 
@@ -99,6 +99,19 @@ export default function TourCard({ tour }: { tour: TourResource }) {
   };
   //
 
+  const handleChatWhatsApp = () => {
+    //const phone = tour.user_phone; // contoh: "628123456789"
+    const phone = tour.user?.phone;
+    if (!phone) return;
+
+    const message = encodeURIComponent(
+      `Halo, saya tertarik dengan tour *${tour.name}*. Bisa info lebih lanjut?`
+    );
+
+    const waUrl = `https://wa.me/${phone}?text=${message}`;
+    window.open(waUrl, '_blank', 'noopener,noreferrer');
+  };
+
   return (
     <Card className="relative mx-auto flex w-full flex-col overflow-hidden pt-0">
       <img
@@ -142,16 +155,25 @@ export default function TourCard({ tour }: { tour: TourResource }) {
         </Button>
 
         {/* ✅ SHARE FACEBOOK */}
-        <Button
+        {/*<Button
           variant="secondary"
           //onClick={handleShareFacebook}
           onClick={handleShareFacebookPdf}
           disabled={!hasDocument}
           //className="flex-1"
         >
-          <IconBrandFacebook />
+          <IconBrandFacebook />*/}
           {/* <span className="hidden md:inline">Share</span> */}
-        </Button>
+        {/* </Button> */}
+
+        <Button
+        variant="secondary"
+        onClick={handleChatWhatsApp}
+        //className="flex-1"
+      >
+        <IconBrandWhatsapp />
+        {/* <span className="hidden md:inline">WhatsApp</span> */}
+      </Button>
       </CardFooter>
     </Card>
   );
