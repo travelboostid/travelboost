@@ -1,19 +1,16 @@
-'use client';
-
 import AppLogoIcon from '@/components/app-logo-icon';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { DEFAULT_PHOTO } from '@/config';
-import type { SharedData } from '@/types';
-import { Link, usePage } from '@inertiajs/react';
-import { MenuIcon, MoonIcon, SunIcon, UserIcon, XIcon } from 'lucide-react';
+import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
+import { Link } from '@inertiajs/react';
+import { MenuIcon, MoonIcon, SunIcon, XIcon } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { useState } from 'react';
+import { NavUser } from './nav-user';
 
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-  const { auth } = usePage<SharedData>().props;
+  const { auth } = usePageSharedDataProps();
   const { resolvedTheme, setTheme } = useTheme();
   const toggleTheme = () => {
     setTheme(resolvedTheme === 'light' ? 'dark' : 'light');
@@ -74,20 +71,7 @@ export function Header() {
 
           <div className="hidden md:flex items-center gap-4">
             {auth?.user ? (
-              <Link href={'/dashboard'} className="flex items-center gap-2">
-                <Avatar>
-                  <AvatarImage
-                    src={auth.user.photo_url || DEFAULT_PHOTO}
-                    alt={auth.user.name}
-                  />
-                  <AvatarFallback>
-                    <UserIcon />
-                  </AvatarFallback>
-                </Avatar>
-                <span className="font-semibold text-foreground">
-                  {auth?.user?.name}
-                </span>
-              </Link>
+              <NavUser />
             ) : (
               <>
                 <Button asChild variant="ghost">
@@ -158,20 +142,7 @@ export function Header() {
 
               <div className="flex flex-col gap-2 pt-4">
                 {auth?.user ? (
-                  <Link href={'/dashboard'} className="flex items-center gap-2">
-                    <Avatar>
-                      <AvatarImage
-                        src={auth.user.photo_url || DEFAULT_PHOTO}
-                        alt={auth.user.name}
-                      />
-                      <AvatarFallback>
-                        <UserIcon />
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="font-semibold text-foreground">
-                      {auth?.user?.name}
-                    </span>
-                  </Link>
+                  <NavUser />
                 ) : (
                   <>
                     <Button asChild variant="ghost" className="w-full">

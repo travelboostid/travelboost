@@ -21,7 +21,9 @@ import type {
 
 import type {
   AuthenticationExceptionResponse,
-  GetBankAccounts200
+  GetBankAccounts200,
+  GetBankAccountsParams,
+  ValidationExceptionResponse
 } from '.././model';
 
 import { apiInstance } from '.././api-instance';
@@ -35,13 +37,14 @@ type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
  * @summary Display a listing of the resource
  */
 export const getBankAccounts = (
-    
+    params?: GetBankAccountsParams,
  options?: SecondParameter<typeof apiInstance>,signal?: AbortSignal
 ) => {
       
       
       return apiInstance<GetBankAccounts200>(
-      {url: `/bank-accounts`, method: 'GET', signal
+      {url: `/bank-accounts`, method: 'GET',
+        params, signal
     },
       options);
     }
@@ -49,23 +52,23 @@ export const getBankAccounts = (
 
 
 
-export const getGetBankAccountsQueryKey = () => {
+export const getGetBankAccountsQueryKey = (params?: GetBankAccountsParams,) => {
     return [
-    `/bank-accounts`
+    `/bank-accounts`, ...(params ? [params]: [])
     ] as const;
     }
 
     
-export const getGetBankAccountsQueryOptions = <TData = Awaited<ReturnType<typeof getBankAccounts>>, TError = AuthenticationExceptionResponse>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getBankAccounts>>, TError, TData>>, request?: SecondParameter<typeof apiInstance>}
+export const getGetBankAccountsQueryOptions = <TData = Awaited<ReturnType<typeof getBankAccounts>>, TError = AuthenticationExceptionResponse | ValidationExceptionResponse>(params?: GetBankAccountsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getBankAccounts>>, TError, TData>>, request?: SecondParameter<typeof apiInstance>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getGetBankAccountsQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getGetBankAccountsQueryKey(params);
 
   
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getBankAccounts>>> = ({ signal }) => getBankAccounts(requestOptions, signal);
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getBankAccounts>>> = ({ signal }) => getBankAccounts(params, requestOptions, signal);
 
       
 
@@ -75,11 +78,11 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type GetBankAccountsQueryResult = NonNullable<Awaited<ReturnType<typeof getBankAccounts>>>
-export type GetBankAccountsQueryError = AuthenticationExceptionResponse
+export type GetBankAccountsQueryError = AuthenticationExceptionResponse | ValidationExceptionResponse
 
 
-export function useGetBankAccounts<TData = Awaited<ReturnType<typeof getBankAccounts>>, TError = AuthenticationExceptionResponse>(
-  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getBankAccounts>>, TError, TData>> & Pick<
+export function useGetBankAccounts<TData = Awaited<ReturnType<typeof getBankAccounts>>, TError = AuthenticationExceptionResponse | ValidationExceptionResponse>(
+ params: undefined |  GetBankAccountsParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getBankAccounts>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof getBankAccounts>>,
           TError,
@@ -88,8 +91,8 @@ export function useGetBankAccounts<TData = Awaited<ReturnType<typeof getBankAcco
       >, request?: SecondParameter<typeof apiInstance>}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetBankAccounts<TData = Awaited<ReturnType<typeof getBankAccounts>>, TError = AuthenticationExceptionResponse>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getBankAccounts>>, TError, TData>> & Pick<
+export function useGetBankAccounts<TData = Awaited<ReturnType<typeof getBankAccounts>>, TError = AuthenticationExceptionResponse | ValidationExceptionResponse>(
+ params?: GetBankAccountsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getBankAccounts>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof getBankAccounts>>,
           TError,
@@ -98,20 +101,20 @@ export function useGetBankAccounts<TData = Awaited<ReturnType<typeof getBankAcco
       >, request?: SecondParameter<typeof apiInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetBankAccounts<TData = Awaited<ReturnType<typeof getBankAccounts>>, TError = AuthenticationExceptionResponse>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getBankAccounts>>, TError, TData>>, request?: SecondParameter<typeof apiInstance>}
+export function useGetBankAccounts<TData = Awaited<ReturnType<typeof getBankAccounts>>, TError = AuthenticationExceptionResponse | ValidationExceptionResponse>(
+ params?: GetBankAccountsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getBankAccounts>>, TError, TData>>, request?: SecondParameter<typeof apiInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Display a listing of the resource
  */
 
-export function useGetBankAccounts<TData = Awaited<ReturnType<typeof getBankAccounts>>, TError = AuthenticationExceptionResponse>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getBankAccounts>>, TError, TData>>, request?: SecondParameter<typeof apiInstance>}
+export function useGetBankAccounts<TData = Awaited<ReturnType<typeof getBankAccounts>>, TError = AuthenticationExceptionResponse | ValidationExceptionResponse>(
+ params?: GetBankAccountsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getBankAccounts>>, TError, TData>>, request?: SecondParameter<typeof apiInstance>}
  , queryClient?: QueryClient 
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const queryOptions = getGetBankAccountsQueryOptions(options)
+  const queryOptions = getGetBankAccountsQueryOptions(params,options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 

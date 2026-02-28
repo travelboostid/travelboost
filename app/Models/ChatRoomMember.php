@@ -15,7 +15,8 @@ class ChatRoomMember extends Model
 
   protected $fillable = [
     'room_id',
-    'user_id',
+    'member_type',
+    'member_id',
     'role',
     'joined_at',
     'last_read_at',
@@ -23,17 +24,17 @@ class ChatRoomMember extends Model
 
   public $timestamps = false; // karena pakai joined_at manual
 
-  /* =====================
-     |  Relationships
-     ===================== */
+  protected $with = [
+    'member'
+  ];
 
   public function room()
   {
     return $this->belongsTo(ChatRoom::class, 'room_id');
   }
 
-  public function user()
+  public function member()
   {
-    return $this->belongsTo(User::class);
+    return $this->morphTo();
   }
 }

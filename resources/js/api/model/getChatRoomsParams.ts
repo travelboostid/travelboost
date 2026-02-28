@@ -6,9 +6,13 @@
  */
 
 export type GetChatRoomsParams = {
+member_type?: 'user' | 'company' | null;
+/**
+ * Make sure these match your actual types
+ */
+member_id?: number | null;
 cursor?: string | null;
 /**
- * Laravel cursor is always a string
  * @minimum 1
  * @maximum 100
  */

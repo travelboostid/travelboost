@@ -5,12 +5,11 @@
  * OpenAPI spec version: 0.0.1
  */
 import type { ChatRoomResourceMembersItemRole } from './chatRoomResourceMembersItemRole';
-import type { ChatRoomResourceMembersItemJoinedAt } from './chatRoomResourceMembersItemJoinedAt';
 import type { ChatRoomResourceMembersItemUser } from './chatRoomResourceMembersItemUser';
 
 export type ChatRoomResourceMembersItem = {
   id: number;
   role: ChatRoomResourceMembersItemRole;
-  joined_at: ChatRoomResourceMembersItemJoinedAt;
+  joined_at: string;
   user: ChatRoomResourceMembersItemUser;
 };

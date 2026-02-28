@@ -7,6 +7,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import '../css/app.css';
 import { Toaster } from './components/ui/sonner';
+import { TooltipProvider } from './components/ui/tooltip';
 import { initializeTheme } from './hooks/use-appearance';
 
 const queryClient = new QueryClient();
@@ -64,18 +65,25 @@ createInertiaApp({
   setup({ el, App, props }) {
     const root = createRoot(el);
 
+    // work around. need more proper solution
+    const isOnDesignerPage =
+      window.location.pathname.match(/^\/([^/]+)\/design/);
+
     root.render(
       <StrictMode>
         <ThemeProvider
           attribute="class"
           defaultTheme="light"
+          forcedTheme={isOnDesignerPage ? 'light' : undefined} // design page must light theme!
           enableSystem
           disableTransitionOnChange
         >
-          <QueryClientProvider client={queryClient}>
-            <App {...props} />
-            <Toaster />
-          </QueryClientProvider>
+          <TooltipProvider>
+            <QueryClientProvider client={queryClient}>
+              <App {...props} />
+              <Toaster />
+            </QueryClientProvider>
+          </TooltipProvider>
         </ThemeProvider>
       </StrictMode>,
     );

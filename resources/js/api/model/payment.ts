@@ -12,7 +12,8 @@ import type { PaymentUpdatedAt } from './paymentUpdatedAt';
 
 export interface Payment {
   id: number;
-  user_id: number;
+  owner_type: string;
+  owner_id: number;
   payable_type: string;
   payable_id: number;
   provider: string;

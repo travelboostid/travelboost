@@ -25,7 +25,8 @@
     "laravel/wayfinder": "^0.1.9",
     "midtrans/midtrans-php": "*",
     "spatie/laravel-permission": "*",
-    "theodo-group/llphant": "*"
+    "theodo-group/llphant": "*",
+    "tpetry/laravel-postgresql-enhanced": "*"
   },
   "require-dev": {
     "fakerphp/faker": "^1.23",

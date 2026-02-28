@@ -1,16 +1,14 @@
+import type { CreateMediaMutationBody } from '@/api/media/media';
 import { useCreateMedia } from '@/api/media/media';
-import type { MediaResource } from '@/api/model';
+import type { GetMediasParams, Media, MediaResource } from '@/api/model';
 import {
   Dialog,
   DialogClose,
   DialogContent,
-  DialogDescription,
   DialogFooter,
-  DialogHeader,
-  DialogTitle,
 } from '@/components/ui/dialog';
 import { Slider } from '@/components/ui/slider';
-import { UploadCloudIcon } from 'lucide-react';
+import { RotateCwIcon, UploadCloudIcon, ZoomInIcon } from 'lucide-react';
 import type { ChangeEvent, ReactNode } from 'react';
 import { useEffect, useRef, useState } from 'react';
 import type { Area } from 'react-easy-crop';
@@ -18,24 +16,30 @@ import Cropper from 'react-easy-crop';
 import { MediaSelector } from './media-selector';
 import { Button } from './ui/button';
 
+type MediaPickerProps = {
+  children: (
+    value: MediaResource | Media | string | null | undefined,
+    change: () => void,
+  ) => ReactNode;
+  onChange?: (data?: MediaResource | string | null) => void;
+  value?: MediaResource | string | null;
+  defaultValue?: MediaResource | Media | string | null;
+  type: 'image' | 'photo' | 'document';
+  params?: GetMediasParams;
+  uploadParams?: Partial<CreateMediaMutationBody>;
+};
+
 export function MediaPicker({
   children,
   value,
   defaultValue,
   onChange,
   type = 'photo',
-}: {
-  children: (
-    value: MediaResource | string | null | undefined,
-    change: () => void,
-  ) => ReactNode;
-  onChange?: (data?: MediaResource | string | null) => void;
-  value?: MediaResource | string | null;
-  defaultValue?: MediaResource | string | null;
-  type: 'image' | 'photo' | 'document';
-}) {
+  params,
+  uploadParams,
+}: MediaPickerProps) {
   const [internalValue, setInternalValue] = useState<
-    MediaResource | string | null | undefined
+    MediaResource | Media | string | null | undefined
   >(value || defaultValue);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [open, setOpen] = useState(false);
@@ -65,7 +69,7 @@ export function MediaPicker({
     if (type === 'document') {
       await uploader.mutateAsync(
         {
-          data: { data: file, type: type },
+          data: { ...uploadParams, data: file, type: type } as any,
         },
         {
           onSuccess: (data) => {
@@ -104,7 +108,7 @@ export function MediaPicker({
       );
       await uploader.mutateAsync(
         {
-          data: { data: croppedImage!, type: type },
+          data: { ...uploadParams, data: croppedImage!, type: type } as any,
         },
         {
           onSuccess: (data) => {
@@ -141,15 +145,9 @@ export function MediaPicker({
       open={open}
     >
       {children(internalValue, handleOpen)}
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>Edit Photo</DialogTitle>
-          <DialogDescription>
-            Make changes to your profile here. Click save when you&apos;re done.
-          </DialogDescription>
-        </DialogHeader>
+      <DialogContent className="w-full max-w-200">
         {selectedImage ? (
-          <div>
+          <div className="grid gap-4">
             <div className="relative h-50 w-full">
               <Cropper
                 image={selectedImage}
@@ -163,9 +161,9 @@ export function MediaPicker({
                 onZoomChange={setZoom}
               />
             </div>
-            <div className="grid grid-cols-2">
-              <div>
-                <div>Zoom</div>
+            <div className="grid gap-4">
+              <div className="flex gap-2">
+                <ZoomInIcon className="w-4 h-4" />
                 <Slider
                   defaultValue={[1]}
                   min={1}
@@ -175,8 +173,8 @@ export function MediaPicker({
                   onValueChange={(v) => setZoom(v[0])}
                 />
               </div>
-              <div>
-                <div>Rotate</div>
+              <div className="flex gap-2">
+                <RotateCwIcon className="w-4 h-4" />
                 <Slider
                   defaultValue={[0]}
                   min={0}
@@ -218,9 +216,10 @@ export function MediaPicker({
 
             <div className="mt-4 space-y-4">
               <div className="text-sm text-muted-foreground">
-                Or select from your existing photos
+                Or select from your existing...
               </div>
               <MediaSelector
+                params={params}
                 type={type}
                 value={
                   typeof internalValue === 'object'

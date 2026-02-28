@@ -8,5 +8,5 @@
 export type ChatMessageResourceReplyToAnyOf = {
   id: number;
   message: string;
-  user_id: string;
+  user_id: number;
 };

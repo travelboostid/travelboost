@@ -4,6 +4,7 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 
+use App\Traits\HasBankAccounts;
 use Bavix\Wallet\Interfaces\Customer;
 use Bavix\Wallet\Interfaces\Wallet;
 use Bavix\Wallet\Traits\CanPay;
@@ -20,7 +21,7 @@ use Spatie\Permission\Traits\HasRoles;
 class User extends Authenticatable implements Customer, Wallet
 {
   /** @use HasFactory<\Database\Factories\UserFactory> */
-  use HasFactory, Notifiable, TwoFactorAuthenticatable, HasRoles, HasPermissions, CanPay, HasWallet, HasWallets;
+  use HasFactory, Notifiable, TwoFactorAuthenticatable, HasRoles, HasPermissions, CanPay, HasWallet, HasWallets, HasBankAccounts;
 
   /**
    * The attributes that are mass assignable.
@@ -34,7 +35,6 @@ class User extends Authenticatable implements Customer, Wallet
     'password',
     'phone',
     'address',
-    'type',
     'photo_id'
   ];
 
@@ -86,6 +86,13 @@ class User extends Authenticatable implements Customer, Wallet
     return $this->hasOne(UserPreference::class);
   }
 
+  public function companies()
+  {
+    return $this->belongsToMany(Company::class, 'company_members')
+      ->withPivot('role')
+      ->withTimestamps();
+  }
+
   protected function photoUrl(): Attribute
   {
     return Attribute::make(
@@ -95,5 +102,9 @@ class User extends Authenticatable implements Customer, Wallet
         return data_get($file, 'url');
       }
     );
+  }
+  public function medias()
+  {
+    return $this->morphMany(Media::class, 'owner');
   }
 }

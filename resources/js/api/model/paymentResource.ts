@@ -10,7 +10,7 @@ import type { PaymentResourcePayable } from './paymentResourcePayable';
 
 export interface PaymentResource {
   id: number;
-  user_id: number;
+  user_id: string;
   provider: string;
   payment_method: PaymentResourcePaymentMethod;
   amount: number;

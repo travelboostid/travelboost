@@ -5,21 +5,18 @@
  * OpenAPI spec version: 0.0.1
  */
 import type { ChatRoomResourceName } from './chatRoomResourceName';
-import type { ChatRoomResourceCreatedBy } from './chatRoomResourceCreatedBy';
 import type { ChatRoomResourceCreatedAt } from './chatRoomResourceCreatedAt';
 import type { ChatRoomResourceUpdatedAt } from './chatRoomResourceUpdatedAt';
-import type { ChatRoomResourceCreator } from './chatRoomResourceCreator';
 import type { ChatRoomResourceLastMessage } from './chatRoomResourceLastMessage';
-import type { ChatRoomResourceMembersItem } from './chatRoomResourceMembersItem';
+import type { ChatRoomMember } from './chatRoomMember';
 
 export interface ChatRoomResource {
   id: number;
   name: ChatRoomResourceName;
   type: string;
-  created_by: ChatRoomResourceCreatedBy;
+  created_by: string;
   created_at: ChatRoomResourceCreatedAt;
   updated_at: ChatRoomResourceUpdatedAt;
-  creator?: ChatRoomResourceCreator;
   last_message?: ChatRoomResourceLastMessage;
-  members?: ChatRoomResourceMembersItem[];
+  members?: ChatRoomMember[];
 }

@@ -5,31 +5,21 @@
  * OpenAPI spec version: 0.0.1
  */
 import {
-  useMutation,
   useQuery
 } from '@tanstack/react-query';
 import type {
   DataTag,
   DefinedInitialDataOptions,
   DefinedUseQueryResult,
-  MutationFunction,
   QueryClient,
   QueryFunction,
   QueryKey,
   UndefinedInitialDataOptions,
-  UseMutationOptions,
-  UseMutationResult,
   UseQueryOptions,
   UseQueryResult
 } from '@tanstack/react-query';
 
 import type {
-  AuthenticationExceptionResponse,
-  CategoriesShow200,
-  CategoriesStore201,
-  CategoriesStoreBody,
-  CategoriesUpdate200,
-  CategoriesUpdateBody,
   GetTourCategories200,
   GetTourCategoriesParams,
   ValidationExceptionResponse
@@ -43,70 +33,6 @@ type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 
 /**
- * @summary Store a newly created resource in storage
- */
-export const categoriesStore = (
-    categoriesStoreBody: CategoriesStoreBody,
- options?: SecondParameter<typeof apiInstance>,signal?: AbortSignal
-) => {
-      
-      
-      return apiInstance<CategoriesStore201>(
-      {url: `/categories`, method: 'POST',
-      headers: {'Content-Type': 'application/json', },
-      data: categoriesStoreBody, signal
-    },
-      options);
-    }
-  
-
-
-export const getCategoriesStoreMutationOptions = <TError = AuthenticationExceptionResponse | ValidationExceptionResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof categoriesStore>>, TError,{data: CategoriesStoreBody}, TContext>, request?: SecondParameter<typeof apiInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof categoriesStore>>, TError,{data: CategoriesStoreBody}, TContext> => {
-
-const mutationKey = ['categoriesStore'];
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-      
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof categoriesStore>>, {data: CategoriesStoreBody}> = (props) => {
-          const {data} = props ?? {};
-
-          return  categoriesStore(data,requestOptions)
-        }
-
-        
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type CategoriesStoreMutationResult = NonNullable<Awaited<ReturnType<typeof categoriesStore>>>
-    export type CategoriesStoreMutationBody = CategoriesStoreBody
-    export type CategoriesStoreMutationError = AuthenticationExceptionResponse | ValidationExceptionResponse
-
-    /**
- * @summary Store a newly created resource in storage
- */
-export const useCategoriesStore = <TError = AuthenticationExceptionResponse | ValidationExceptionResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof categoriesStore>>, TError,{data: CategoriesStoreBody}, TContext>, request?: SecondParameter<typeof apiInstance>}
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof categoriesStore>>,
-        TError,
-        {data: CategoriesStoreBody},
-        TContext
-      > => {
-
-      const mutationOptions = getCategoriesStoreMutationOptions(options);
-
-      return useMutation(mutationOptions, queryClient);
-    }
-    /**
  * @summary Display a listing of the resource
  */
 export const getTourCategories = (
@@ -188,223 +114,6 @@ export function useGetTourCategories<TData = Awaited<ReturnType<typeof getTourCa
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
   const queryOptions = getGetTourCategoriesQueryOptions(params,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  query.queryKey = queryOptions.queryKey ;
-
-  return query;
-}
-
-
-
-
-/**
- * @summary Update the specified resource in storage
- */
-export const categoriesUpdate = (
-    id: string,
-    categoriesUpdateBody: CategoriesUpdateBody,
- options?: SecondParameter<typeof apiInstance>,) => {
-      
-      
-      return apiInstance<CategoriesUpdate200>(
-      {url: `/categories/${id}`, method: 'PUT',
-      headers: {'Content-Type': 'application/json', },
-      data: categoriesUpdateBody
-    },
-      options);
-    }
-  
-
-
-export const getCategoriesUpdateMutationOptions = <TError = AuthenticationExceptionResponse | ValidationExceptionResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof categoriesUpdate>>, TError,{id: string;data: CategoriesUpdateBody}, TContext>, request?: SecondParameter<typeof apiInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof categoriesUpdate>>, TError,{id: string;data: CategoriesUpdateBody}, TContext> => {
-
-const mutationKey = ['categoriesUpdate'];
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-      
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof categoriesUpdate>>, {id: string;data: CategoriesUpdateBody}> = (props) => {
-          const {id,data} = props ?? {};
-
-          return  categoriesUpdate(id,data,requestOptions)
-        }
-
-        
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type CategoriesUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof categoriesUpdate>>>
-    export type CategoriesUpdateMutationBody = CategoriesUpdateBody
-    export type CategoriesUpdateMutationError = AuthenticationExceptionResponse | ValidationExceptionResponse
-
-    /**
- * @summary Update the specified resource in storage
- */
-export const useCategoriesUpdate = <TError = AuthenticationExceptionResponse | ValidationExceptionResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof categoriesUpdate>>, TError,{id: string;data: CategoriesUpdateBody}, TContext>, request?: SecondParameter<typeof apiInstance>}
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof categoriesUpdate>>,
-        TError,
-        {id: string;data: CategoriesUpdateBody},
-        TContext
-      > => {
-
-      const mutationOptions = getCategoriesUpdateMutationOptions(options);
-
-      return useMutation(mutationOptions, queryClient);
-    }
-    /**
- * @summary Remove the specified resource from storage
- */
-export const categoriesDestroy = (
-    id: string,
- options?: SecondParameter<typeof apiInstance>,) => {
-      
-      
-      return apiInstance<void>(
-      {url: `/categories/${id}`, method: 'DELETE'
-    },
-      options);
-    }
-  
-
-
-export const getCategoriesDestroyMutationOptions = <TError = AuthenticationExceptionResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof categoriesDestroy>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof apiInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof categoriesDestroy>>, TError,{id: string}, TContext> => {
-
-const mutationKey = ['categoriesDestroy'];
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-      
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof categoriesDestroy>>, {id: string}> = (props) => {
-          const {id} = props ?? {};
-
-          return  categoriesDestroy(id,requestOptions)
-        }
-
-        
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type CategoriesDestroyMutationResult = NonNullable<Awaited<ReturnType<typeof categoriesDestroy>>>
-    
-    export type CategoriesDestroyMutationError = AuthenticationExceptionResponse
-
-    /**
- * @summary Remove the specified resource from storage
- */
-export const useCategoriesDestroy = <TError = AuthenticationExceptionResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof categoriesDestroy>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof apiInstance>}
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof categoriesDestroy>>,
-        TError,
-        {id: string},
-        TContext
-      > => {
-
-      const mutationOptions = getCategoriesDestroyMutationOptions(options);
-
-      return useMutation(mutationOptions, queryClient);
-    }
-    /**
- * @summary Display the specified resource
- */
-export const categoriesShow = (
-    id: string,
- options?: SecondParameter<typeof apiInstance>,signal?: AbortSignal
-) => {
-      
-      
-      return apiInstance<CategoriesShow200>(
-      {url: `/categories/${id}`, method: 'GET', signal
-    },
-      options);
-    }
-  
-
-
-
-export const getCategoriesShowQueryKey = (id?: string,) => {
-    return [
-    `/categories/${id}`
-    ] as const;
-    }
-
-    
-export const getCategoriesShowQueryOptions = <TData = Awaited<ReturnType<typeof categoriesShow>>, TError = unknown>(id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof categoriesShow>>, TError, TData>>, request?: SecondParameter<typeof apiInstance>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getCategoriesShowQueryKey(id);
-
-  
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof categoriesShow>>> = ({ signal }) => categoriesShow(id, requestOptions, signal);
-
-      
-
-      
-
-   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof categoriesShow>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type CategoriesShowQueryResult = NonNullable<Awaited<ReturnType<typeof categoriesShow>>>
-export type CategoriesShowQueryError = unknown
-
-
-export function useCategoriesShow<TData = Awaited<ReturnType<typeof categoriesShow>>, TError = unknown>(
- id: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof categoriesShow>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof categoriesShow>>,
-          TError,
-          Awaited<ReturnType<typeof categoriesShow>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof apiInstance>}
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useCategoriesShow<TData = Awaited<ReturnType<typeof categoriesShow>>, TError = unknown>(
- id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof categoriesShow>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof categoriesShow>>,
-          TError,
-          Awaited<ReturnType<typeof categoriesShow>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof apiInstance>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useCategoriesShow<TData = Awaited<ReturnType<typeof categoriesShow>>, TError = unknown>(
- id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof categoriesShow>>, TError, TData>>, request?: SecondParameter<typeof apiInstance>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-/**
- * @summary Display the specified resource
- */
-
-export function useCategoriesShow<TData = Awaited<ReturnType<typeof categoriesShow>>, TError = unknown>(
- id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof categoriesShow>>, TError, TData>>, request?: SecondParameter<typeof apiInstance>}
- , queryClient?: QueryClient 
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getCategoriesShowQueryOptions(id,options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 

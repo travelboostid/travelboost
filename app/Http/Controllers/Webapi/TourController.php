@@ -14,12 +14,25 @@ class TourController extends Controller
 {
   /**
    * Display a listing of the resource.
-   * @operationId getTours
+   * @operationId getTrips
    */
   public function index(TourIndexRequest $request): JsonResponse
   {
-    $perPage = $request->get('per_page', 10);
-    $tours = Tour::paginate($perPage);
+    $tours = Tour::query()
+      ->when($request->company_id, function ($q) use ($request) {
+        $q->where('company_id', $request->company_id);
+      })
+      ->when($request->category_id, function ($q) use ($request) {
+        $q->where('category_id', $request->category_id);
+      })
+      ->when($request->duration_min, function ($q) use ($request) {
+        $q->where('duration', '>=', $request->duration_min);
+      })
+      ->when($request->duration_max, function ($q) use ($request) {
+        $q->where('duration', '<=', $request->duration_max);
+      })
+      ->orderBy($request->sort_by, $request->sort_order)
+      ->paginate();
 
     return TourResource::collection($tours)->response();
   }

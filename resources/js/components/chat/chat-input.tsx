@@ -28,7 +28,7 @@ export default function ChatInput({
   className?: string;
 }) {
   const sendMessage = useSendMessage();
-  const { message, setMessage, attachment, setAttachment } =
+  const { message, setMessage, attachment, setAttachment, actor } =
     useFloatingChatWidgetContext();
   const [sending, setSending] = useState(false);
 
@@ -45,7 +45,11 @@ export default function ChatInput({
   };
 
   const buildData = () => {
-    const data: StoreChatMessageRequest = { message: message.trim() };
+    const data: StoreChatMessageRequest = {
+      message: message.trim(),
+      sender_type: actor?.type || '',
+      sender_id: actor?.id || 0,
+    };
     if (!attachment) return data;
     if (attachment.type === 'tour') {
       data.attachment_type = 'tour';

@@ -4,8 +4,6 @@ namespace App\Http\Controllers\Webapi;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\OpenChatRequest;
-use App\Http\Requests\StoreChatRoomRequest;
-use App\Http\Requests\UpdateChatRoomRequest;
 use App\Http\Resources\ChatRoomResource;
 use App\Models\ChatRoom;
 use App\Models\ChatRoomMember;
@@ -21,38 +19,30 @@ class ChatRoomController extends Controller
    */
   public function index(Request $request)
   {
-    $request->validate([
-      'cursor' => 'nullable|string', // Laravel cursor is always a string
+    $validated = $request->validate([
+      'member_type' => 'nullable|in:user,company', // Make sure these match your actual types
+      'member_id' => 'nullable|integer',
+      'cursor' => 'nullable|string',
       'per_page' => 'nullable|integer|min:1|max:100',
     ]);
-    $perPage = $request->input('per_page', 10);
 
-    $chatRooms = ChatRoom::whereHas('members', function ($query) use ($request) {
-      $query->where('user_id', $request->user()->id);
+    // Merge defaults
+    $validated = array_merge([
+      'member_type' => 'user',
+      'member_id' => Auth::id(),
+      'per_page' => 10,
+    ], $validated);
+
+    $chatRooms = ChatRoom::whereHas('members', function ($query) use ($validated) {
+      $query->where('member_id', $validated['member_id'])
+        ->where('member_type', $validated['member_type']);
     })
-      ->with(['creator', 'lastMessage', 'members.user'])
+      ->with(['members', 'lastMessage'])
       ->orderBy('created_at', 'desc')
-      ->cursorPaginate($perPage)
+      ->cursorPaginate()
       ->withQueryString();
 
     return ChatRoomResource::collection($chatRooms);
-  }
-
-  /**
-   * Store a new chat room.
-   * @operationId createChatRoom
-   */
-  public function store(StoreChatRoomRequest $request)
-  {
-    $chatRoom = ChatRoom::create([
-      'name' => $request->name,
-      'created_by' => $request->user()->id,
-      'type' => $request->type ?? 'group',
-    ]);
-
-    return new ChatRoomResource(
-      $chatRoom->load(['creator', 'lastMessage', 'members.user'])
-    );
   }
 
   /**
@@ -62,34 +52,8 @@ class ChatRoomController extends Controller
   public function show(ChatRoom $room)
   {
     return new ChatRoomResource(
-      $room->load(['creator', 'lastMessage', 'members.user'])
+      $room->load(['lastMessage', 'members'])
     );
-  }
-
-  /**
-   * Update a chat room.
-   * @operationId updateChatRoom
-   */
-  public function update(UpdateChatRoomRequest $request, ChatRoom $room)
-  {
-    $room->update($request->only(['name', 'type']));
-
-    return new ChatRoomResource(
-      $room->load(['creator', 'lastMessage', 'members.user'])
-    );
-  }
-
-  /**
-   * Delete a chat room.
-   * @operationId deleteChatRoom
-   */
-  public function destroy(ChatRoom $room)
-  {
-    $room->delete();
-
-    return response()->json([
-      'message' => 'Chat room deleted',
-    ]);
   }
 
   /**
@@ -98,46 +62,61 @@ class ChatRoomController extends Controller
    */
   public function open(OpenChatRequest $request)
   {
-    $authUserId = Auth::id();
-    $otherUserId = (int) $request->user_id;
-
-    if ($authUserId === $otherUserId) {
-      abort(400, 'Cannot chat with yourself');
-    }
+    $validated = $request->validated();
 
     // Find existing private room with exactly 2 members
     $room = ChatRoom::where('type', 'private')
-      ->whereHas('members', fn($q) => $q->where('user_id', $authUserId))
-      ->whereHas('members', fn($q) => $q->where('user_id', $otherUserId))
+      ->whereHas('members', function ($query) use ($validated) {
+        $query->where('member_id', $validated['sender_id'])
+          ->where('member_type', $validated['sender_type']);
+      })
+      ->whereHas('members', function ($query) use ($validated) {
+        $query->where('member_id', $validated['recipient_id'])
+          ->where('member_type', $validated['recipient_type']);
+      })
+      ->withCount('members')
+      ->get()
+      ->filter(function ($chatRoom) {
+        return $chatRoom->members_count === 2;
+      })
       ->first();
 
     // If not exists, create new room
-    if (! $room) {
-      DB::transaction(function () use (&$room, $authUserId, $otherUserId) {
+    if (!$room) {
+      $room = DB::transaction(function () use ($validated) {
         $room = ChatRoom::create([
           'type' => 'private',
-          'created_by' => $authUserId,
         ]);
 
+        // Add both members
         ChatRoomMember::insert([
           [
             'room_id' => $room->id,
-            'user_id' => $authUserId,
+            'member_type' => $validated['sender_type'],
+            'member_id' => $validated['sender_id'],
             'role' => 'owner',
             'joined_at' => now(),
+            'created_at' => now(),
+            'updated_at' => now(),
           ],
           [
             'room_id' => $room->id,
-            'user_id' => $otherUserId,
+            'member_type' => $validated['recipient_type'],
+            'member_id' => $validated['recipient_id'],
             'role' => 'member',
             'joined_at' => now(),
+            'created_at' => now(),
+            'updated_at' => now(),
           ],
         ]);
+
+        return $room;
       });
     }
 
-    return new ChatRoomResource(
-      $room->load(['creator', 'lastMessage', 'members.user'])
-    );
+    // Load relationships for the resource
+    $room->load(['members', 'lastMessage']);
+
+    return new ChatRoomResource($room);
   }
 }

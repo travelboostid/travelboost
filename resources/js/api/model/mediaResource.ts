@@ -15,7 +15,7 @@ export interface MediaResource {
   description: MediaResourceDescription;
   type: MediaResourceType;
   data: MediaResourceData;
-  user_id: number;
+  user_id: string;
   created_at: string;
   updated_at: string;
   /** kalau perlu user info */

@@ -25,18 +25,12 @@ import type {
 
 import type {
   AuthenticationExceptionResponse,
-  CreateChatRoom200,
-  DeleteChatRoom200,
   GetChatRoom200,
   GetChatRooms200,
   GetChatRoomsParams,
   ModelNotFoundExceptionResponse,
   OpenChatRequest,
   OpenChatRoom200,
-  OpenChatRoom400,
-  StoreChatRoomRequest,
-  UpdateChatRoom200,
-  UpdateChatRoomRequest,
   ValidationExceptionResponse
 } from '.././model';
 
@@ -141,70 +135,6 @@ export function useGetChatRooms<TData = Awaited<ReturnType<typeof getChatRooms>>
 
 
 /**
- * @summary Store a new chat room
- */
-export const createChatRoom = (
-    storeChatRoomRequest: StoreChatRoomRequest,
- options?: SecondParameter<typeof apiInstance>,signal?: AbortSignal
-) => {
-      
-      
-      return apiInstance<CreateChatRoom200>(
-      {url: `/chat/rooms`, method: 'POST',
-      headers: {'Content-Type': 'application/json', },
-      data: storeChatRoomRequest, signal
-    },
-      options);
-    }
-  
-
-
-export const getCreateChatRoomMutationOptions = <TError = AuthenticationExceptionResponse | ValidationExceptionResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createChatRoom>>, TError,{data: StoreChatRoomRequest}, TContext>, request?: SecondParameter<typeof apiInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof createChatRoom>>, TError,{data: StoreChatRoomRequest}, TContext> => {
-
-const mutationKey = ['createChatRoom'];
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-      
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createChatRoom>>, {data: StoreChatRoomRequest}> = (props) => {
-          const {data} = props ?? {};
-
-          return  createChatRoom(data,requestOptions)
-        }
-
-        
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type CreateChatRoomMutationResult = NonNullable<Awaited<ReturnType<typeof createChatRoom>>>
-    export type CreateChatRoomMutationBody = StoreChatRoomRequest
-    export type CreateChatRoomMutationError = AuthenticationExceptionResponse | ValidationExceptionResponse
-
-    /**
- * @summary Store a new chat room
- */
-export const useCreateChatRoom = <TError = AuthenticationExceptionResponse | ValidationExceptionResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createChatRoom>>, TError,{data: StoreChatRoomRequest}, TContext>, request?: SecondParameter<typeof apiInstance>}
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof createChatRoom>>,
-        TError,
-        {data: StoreChatRoomRequest},
-        TContext
-      > => {
-
-      const mutationOptions = getCreateChatRoomMutationOptions(options);
-
-      return useMutation(mutationOptions, queryClient);
-    }
-    /**
  * @summary Show a single chat room by model
  */
 export const getChatRoom = (
@@ -297,131 +227,6 @@ export function useGetChatRoom<TData = Awaited<ReturnType<typeof getChatRoom>>, 
 
 
 /**
- * @summary Update a chat room
- */
-export const updateChatRoom = (
-    room: number,
-    updateChatRoomRequest: UpdateChatRoomRequest,
- options?: SecondParameter<typeof apiInstance>,) => {
-      
-      
-      return apiInstance<UpdateChatRoom200>(
-      {url: `/chat/rooms/${room}`, method: 'PUT',
-      headers: {'Content-Type': 'application/json', },
-      data: updateChatRoomRequest
-    },
-      options);
-    }
-  
-
-
-export const getUpdateChatRoomMutationOptions = <TError = AuthenticationExceptionResponse | ModelNotFoundExceptionResponse | ValidationExceptionResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateChatRoom>>, TError,{room: number;data: UpdateChatRoomRequest}, TContext>, request?: SecondParameter<typeof apiInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof updateChatRoom>>, TError,{room: number;data: UpdateChatRoomRequest}, TContext> => {
-
-const mutationKey = ['updateChatRoom'];
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-      
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateChatRoom>>, {room: number;data: UpdateChatRoomRequest}> = (props) => {
-          const {room,data} = props ?? {};
-
-          return  updateChatRoom(room,data,requestOptions)
-        }
-
-        
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type UpdateChatRoomMutationResult = NonNullable<Awaited<ReturnType<typeof updateChatRoom>>>
-    export type UpdateChatRoomMutationBody = UpdateChatRoomRequest
-    export type UpdateChatRoomMutationError = AuthenticationExceptionResponse | ModelNotFoundExceptionResponse | ValidationExceptionResponse
-
-    /**
- * @summary Update a chat room
- */
-export const useUpdateChatRoom = <TError = AuthenticationExceptionResponse | ModelNotFoundExceptionResponse | ValidationExceptionResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateChatRoom>>, TError,{room: number;data: UpdateChatRoomRequest}, TContext>, request?: SecondParameter<typeof apiInstance>}
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof updateChatRoom>>,
-        TError,
-        {room: number;data: UpdateChatRoomRequest},
-        TContext
-      > => {
-
-      const mutationOptions = getUpdateChatRoomMutationOptions(options);
-
-      return useMutation(mutationOptions, queryClient);
-    }
-    /**
- * @summary Delete a chat room
- */
-export const deleteChatRoom = (
-    room: number,
- options?: SecondParameter<typeof apiInstance>,) => {
-      
-      
-      return apiInstance<DeleteChatRoom200>(
-      {url: `/chat/rooms/${room}`, method: 'DELETE'
-    },
-      options);
-    }
-  
-
-
-export const getDeleteChatRoomMutationOptions = <TError = AuthenticationExceptionResponse | ModelNotFoundExceptionResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteChatRoom>>, TError,{room: number}, TContext>, request?: SecondParameter<typeof apiInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof deleteChatRoom>>, TError,{room: number}, TContext> => {
-
-const mutationKey = ['deleteChatRoom'];
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-      
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteChatRoom>>, {room: number}> = (props) => {
-          const {room} = props ?? {};
-
-          return  deleteChatRoom(room,requestOptions)
-        }
-
-        
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type DeleteChatRoomMutationResult = NonNullable<Awaited<ReturnType<typeof deleteChatRoom>>>
-    
-    export type DeleteChatRoomMutationError = AuthenticationExceptionResponse | ModelNotFoundExceptionResponse
-
-    /**
- * @summary Delete a chat room
- */
-export const useDeleteChatRoom = <TError = AuthenticationExceptionResponse | ModelNotFoundExceptionResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteChatRoom>>, TError,{room: number}, TContext>, request?: SecondParameter<typeof apiInstance>}
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof deleteChatRoom>>,
-        TError,
-        {room: number},
-        TContext
-      > => {
-
-      const mutationOptions = getDeleteChatRoomMutationOptions(options);
-
-      return useMutation(mutationOptions, queryClient);
-    }
-    /**
  * @summary Open a private chat with another user
  */
 export const openChatRoom = (
@@ -440,7 +245,7 @@ export const openChatRoom = (
   
 
 
-export const getOpenChatRoomMutationOptions = <TError = OpenChatRoom400 | AuthenticationExceptionResponse | ValidationExceptionResponse,
+export const getOpenChatRoomMutationOptions = <TError = AuthenticationExceptionResponse | ValidationExceptionResponse,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof openChatRoom>>, TError,{data: OpenChatRequest}, TContext>, request?: SecondParameter<typeof apiInstance>}
 ): UseMutationOptions<Awaited<ReturnType<typeof openChatRoom>>, TError,{data: OpenChatRequest}, TContext> => {
 
@@ -467,12 +272,12 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type OpenChatRoomMutationResult = NonNullable<Awaited<ReturnType<typeof openChatRoom>>>
     export type OpenChatRoomMutationBody = OpenChatRequest
-    export type OpenChatRoomMutationError = OpenChatRoom400 | AuthenticationExceptionResponse | ValidationExceptionResponse
+    export type OpenChatRoomMutationError = AuthenticationExceptionResponse | ValidationExceptionResponse
 
     /**
  * @summary Open a private chat with another user
  */
-export const useOpenChatRoom = <TError = OpenChatRoom400 | AuthenticationExceptionResponse | ValidationExceptionResponse,
+export const useOpenChatRoom = <TError = AuthenticationExceptionResponse | ValidationExceptionResponse,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof openChatRoom>>, TError,{data: OpenChatRequest}, TContext>, request?: SecondParameter<typeof apiInstance>}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof openChatRoom>>,

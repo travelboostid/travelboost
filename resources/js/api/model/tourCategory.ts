@@ -12,7 +12,7 @@ export interface TourCategory {
   id: number;
   name: string;
   description: TourCategoryDescription;
-  user_id: number;
+  company_id: number;
   created_at: TourCategoryCreatedAt;
   updated_at: TourCategoryUpdatedAt;
 }

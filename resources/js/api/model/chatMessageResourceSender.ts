@@ -4,9 +4,12 @@
  * Travelboost
  * OpenAPI spec version: 0.0.1
  */
-import type { ChatMessageResourceSenderAnyOf } from './chatMessageResourceSenderAnyOf';
 
 /**
  * Relationships
  */
-export type ChatMessageResourceSender = ChatMessageResourceSenderAnyOf | null;
+export type ChatMessageResourceSender = {
+  id: number;
+  name: string;
+  photo_url: string;
+};

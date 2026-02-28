@@ -15,13 +15,16 @@ type Props = {
   status?: string;
   canResetPassword: boolean;
   canRegister: boolean;
+  company: any;
 };
 
 export default function Login({
   status,
   canResetPassword,
   canRegister,
+  company,
 }: Props) {
+  console.log('Company in Login component:', company);
   return (
     <AuthLayout
       title="Log in to your account"
@@ -38,18 +41,18 @@ export default function Login({
           <>
             <div className="grid gap-6">
               <div className="grid gap-2">
-                <Label htmlFor="usernameOrEmail">Username or Email</Label>
+                <Label htmlFor="username_or_email">Username or Email</Label>
                 <Input
-                  id="usernameOrEmail"
+                  id="username_or_email"
                   type="text"
-                  name="usernameOrEmail"
+                  name="username_or_email"
                   required
                   autoFocus
                   tabIndex={1}
-                  autoComplete="usernameOrEmail"
+                  autoComplete="username_or_email"
                   placeholder="john_doe or john@doe.com"
                 />
-                <InputError message={errors.usernameOrEmail} />
+                <InputError message={errors.username_or_email} />
               </div>
 
               <div className="grid gap-2">

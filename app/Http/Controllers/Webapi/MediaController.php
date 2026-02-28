@@ -3,17 +3,17 @@
 namespace App\Http\Controllers\Webapi;
 
 use App\Enums\MediaType;
+use App\Http\Requests\StoreMediaRequest;
 use App\Models\Media;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\MediaIndexRequest;
+use App\Http\Requests\MediaUpdateRequest;
 use App\Http\Resources\MediaResource;
-use Dedoc\Scramble\Attributes\QueryParameter;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Validation\Rules\Enum;
 use Illuminate\Support\Facades\Storage;
 use Intervention\Image\Encoders\JpegEncoder;
-use Intervention\Image\Facades\Image;
 use Intervention\Image\ImageManager;
 
 class MediaController extends Controller
@@ -28,17 +28,17 @@ class MediaController extends Controller
    * @return JsonResource
    * @operationId getMedias
    * */
-  public function index(Request $request)
+  public function index(MediaIndexRequest $request)
   {
-    $request->validate([
-      'page' => ['sometimes', 'integer', 'min:1'],
-      'page_size' => ['sometimes', 'integer', 'min:1', 'max:100'],
-      'type' => ['sometimes', new Enum(MediaType::class)],
-    ]);
     $pageSize = (int) $request->query('page_size', 20);
 
     $medias = Media::query()
-      ->where('user_id', Auth::id())
+      ->when($request->input('owner_type'), function ($query, $ownerType) {
+        $query->where('owner_type', $ownerType);
+      })
+      ->when($request->input('owner_id'), function ($query, $ownerId) {
+        $query->where('owner_id', $ownerId);
+      })
       ->when(
         $request->filled('type'),
         fn($q) => $q->where('type', $request->query('type'))
@@ -51,21 +51,13 @@ class MediaController extends Controller
 
   /**
    * Create media
-   * @param Request $request
-   * @throws \Exception
-   * @return MediaResource
    * @operationId createMedia
    * @requestMediaType multipart/form-data
    */
-  public function store(Request $request)
+  public function store(StoreMediaRequest $request)
   {
     // Validasi request
-    $validated = $request->validate([
-      'name' => ['nullable', 'string', 'max:255'],
-      'description' => ['nullable', 'string'],
-      'type' => ['required', 'in:image,photo,document'],
-      'data' => ['required', 'file'], // hanya satu file, bisa ganti 'array' kalau multi
-    ]);
+    $validated = $request->validated();
     $file = $request->file('data');
     // Dispatch to correct private method
     switch ($validated['type']) {
@@ -84,11 +76,12 @@ class MediaController extends Controller
 
     // Save media
     $media = Media::create([
+      'owner_type' => $validated['owner_type'],
+      'owner_id' => $validated['owner_id'],
       'name' => $validated['name'] ?? $file->getClientOriginalName(),
       'description' => $validated['description'] ?? "",
       'type' => $validated['type'],
       'data' => $data,
-      'user_id' => Auth::id(),
     ]);
 
     return new MediaResource($media);
@@ -103,15 +96,11 @@ class MediaController extends Controller
     );
   }
 
-  public function update(Request $request, Media $media)
+  public function update(MediaUpdateRequest $request, Media $media)
   {
     $this->authorizeMedia($media);
 
-    $validated = $request->validate([
-      'name' => ['sometimes', 'string', 'max:255'],
-      'description' => ['nullable', 'string'],
-    ]);
-
+    $validated = $request->validated();
     $media->update($validated);
 
     return new MediaResource($media);

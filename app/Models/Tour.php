@@ -22,7 +22,7 @@ class Tour extends Model
     'destination',
     'category_id',
     'parent_id',
-    'user_id',
+    'company_id',
     'image_id',
     'document_id'
   ];
@@ -35,7 +35,7 @@ class Tour extends Model
     'image',
     'document',
     'category',
-    'user'
+    'company'
   ];
 
   /*
@@ -59,9 +59,9 @@ class Tour extends Model
     return $this->belongsTo(Media::class, 'document_id');
   }
 
-  public function user()
+  public function company()
   {
-    return $this->belongsTo(User::class, 'user_id');
+    return $this->belongsTo(Company::class, 'company_id');
   }
 
   public function parent()
@@ -72,16 +72,5 @@ class Tour extends Model
   public function copies()
   {
     return $this->hasMany(Tour::class, 'parent_id');
-  }
-
-  /*
-    |--------------------------------------------------------------------------
-    | Query Scopes
-    |--------------------------------------------------------------------------
-    */
-
-  public function scopeActive($query)
-  {
-    return $query->where('status', TourStatus::Active);
   }
 }

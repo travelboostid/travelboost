@@ -14,9 +14,7 @@ return new class extends Migration {
       /**
        * Owner of the wallet
        */
-      $table->foreignId('user_id')
-        ->constrained()
-        ->cascadeOnDelete();
+      $table->morphs('owner'); // creates owner_id + owner_type
 
       /**
        * Destination payout account
@@ -65,7 +63,6 @@ return new class extends Migration {
       /**
        * Indexes for performance
        */
-      $table->index(['user_id', 'status']);
       $table->index(['bank_account_id']);
       $table->index(['wallet_id']);
     });

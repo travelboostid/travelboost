@@ -18,10 +18,21 @@ return new class extends Migration
       $table->string('description', 1000)->nullable();
       $table->enum('type', MediaType::cases()); // Enum will be stored as string
       $table->json('data')->nullable();
-      $table->foreignId('user_id')
-        ->constrained()
-        ->cascadeOnDelete();
+      $table->morphs('owner'); // creates owner_id + owner_type
       $table->timestamps();
+    });
+
+    Schema::table('users', function (Blueprint $table) {
+      $table->foreignId('photo_id')
+        ->nullable()
+        ->constrained('medias')
+        ->nullOnDelete();
+    });
+    Schema::table('companies', function (Blueprint $table) {
+      $table->foreignId('photo_id')
+        ->nullable()
+        ->constrained('medias')
+        ->nullOnDelete();
     });
   }
 
@@ -30,6 +41,14 @@ return new class extends Migration
    */
   public function down(): void
   {
+    Schema::table('companies', function (Blueprint $table) {
+      $table->dropForeign(['photo_id']);
+      $table->dropColumn('photo_id');
+    });
+    Schema::table('users', function (Blueprint $table) {
+      $table->dropForeign(['photo_id']);
+      $table->dropColumn('photo_id');
+    });
     Schema::dropIfExists('media');
   }
 };

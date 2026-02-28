@@ -5,10 +5,15 @@
  * OpenAPI spec version: 0.0.1
  */
 import type { ChatRoomResourceLastMessageCreatedAt } from './chatRoomResourceLastMessageCreatedAt';
+import type { ChatRoomResourceLastMessageAttachment } from './chatRoomResourceLastMessageAttachment';
+import type { ChatRoomResourceLastMessageAttachmentType } from './chatRoomResourceLastMessageAttachmentType';
 
 export type ChatRoomResourceLastMessage = {
   id: number;
   message: string;
-  user_id: string;
+  user_id: number;
   created_at: ChatRoomResourceLastMessageCreatedAt;
+  is_bot: number;
+  attachment: ChatRoomResourceLastMessageAttachment;
+  attachment_type: ChatRoomResourceLastMessageAttachmentType;
 };

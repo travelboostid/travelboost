@@ -45,6 +45,10 @@ trait ProfileValidationRules
         'string',
         'max:500',
       ],
+      'photo_id' => [
+        'nullable',
+        'int'
+      ]
     ];
   }
 }

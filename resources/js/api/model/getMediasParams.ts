@@ -17,4 +17,9 @@ page?: number;
  */
 page_size?: number;
 type?: MediaType;
+/**
+ * @minimum 1
+ */
+owner_id?: number;
+owner_type?: string;
 };

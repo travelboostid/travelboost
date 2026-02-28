@@ -16,7 +16,8 @@ export interface Media {
   description: MediaDescription;
   type: MediaType;
   data: MediaData;
-  user_id: number;
+  owner_type: string;
+  owner_id: number;
   created_at: MediaCreatedAt;
   updated_at: MediaUpdatedAt;
 }

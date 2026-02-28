@@ -13,12 +13,8 @@ return new class extends Migration
   {
     Schema::create('chat_rooms', function (Blueprint $table) {
       $table->id();
-      $table->string('name')->nullable(); // For group chats
       $table->enum('type', ['private', 'group'])->default('private');
-      $table->foreignId('created_by')
-        ->nullable()
-        ->constrained('users')
-        ->nullOnDelete();
+      $table->string('name')->nullable(); // For group chats
       $table->timestamps();
     });
 
@@ -28,15 +24,16 @@ return new class extends Migration
       $table->foreignId('room_id')
         ->constrained('chat_rooms')
         ->cascadeOnDelete();
-      $table->foreignId('user_id')
-        ->constrained('users')
-        ->cascadeOnDelete();
+
+      // Polymorphic member (User, Vendor, or Agent)
+      $table->morphs('member'); // member_id + member_type
+
       $table->enum('role', ['member', 'admin', 'owner'])->default('member');
       $table->timestamp('joined_at')->useCurrent();
-      $table->timestamp('last_read_at')->nullable(); // Last time user read messages
+      $table->timestamp('last_read_at')->nullable();
       $table->timestamps();
 
-      $table->unique(['room_id', 'user_id']); // Prevent duplicate memberships
+      $table->unique(['room_id', 'member_id', 'member_type']); // Prevent duplicate memberships
     });
 
     Schema::create('chat_messages', function (Blueprint $table) {
@@ -49,24 +46,21 @@ return new class extends Migration
       $table->foreignId('room_id')
         ->constrained('chat_rooms')
         ->cascadeOnDelete();
-
-      $table->foreignId('sender_id')
+      $table->foreignId('user_id')
         ->constrained('users')
         ->cascadeOnDelete();
+      $table->nullableMorphs('sender'); // sender_type + sender_id
 
       $table->foreignId('reply_to')
         ->nullable()
         ->constrained('chat_messages')
         ->nullOnDelete();
-
-
       $table->index(['room_id', 'created_at']); // For faster room message queries
     });
 
     Schema::table('chat_rooms', function (Blueprint $table) {
       $table->foreignId('last_message_id')
         ->nullable()
-        ->after('created_by')
         ->constrained('chat_messages')
         ->nullOnDelete();
     });

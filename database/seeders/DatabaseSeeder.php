@@ -2,6 +2,10 @@
 
 namespace Database\Seeders;
 // use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+
+use Database\Seeders\Development\DevelopmentSeeder;
+use Database\Seeders\Local\LocalSeeder;
+use Database\Seeders\Production\ProductionSeeder;
 use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
@@ -11,11 +15,27 @@ class DatabaseSeeder extends Seeder
    */
   public function run(): void
   {
-    $this->call([
-      RolePermissionSeeder::class,
-      UserSeeder::class,
-      TourSeeder::class,
-      ChatSeeder::class,
-    ]);
+    switch (app()->environment()) {
+      case 'local':
+        $this->call(LocalSeeder::class);
+        break;
+      case 'development':
+      case 'dev':
+        $this->call(DevelopmentSeeder::class);
+        break;
+      case 'production':
+      case 'prod':
+        $this->call(ProductionSeeder::class);
+        break;
+      default:
+        $this->call(DevelopmentSeeder::class);
+        break;
+    }
+    // $this->call([
+    //   RolePermissionSeeder::class,
+    //   UserSeeder::class,
+    //   TourSeeder::class,
+    //   ChatSeeder::class,
+    // ]);
   }
 }

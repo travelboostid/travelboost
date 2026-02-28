@@ -9,8 +9,9 @@ use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Log;
 
-class ChatMessageCreated implements ShouldBroadcast
+class ChatMessageCreated  implements ShouldBroadcast
 {
   use Dispatchable, InteractsWithSockets, SerializesModels;
 
@@ -21,6 +22,7 @@ class ChatMessageCreated implements ShouldBroadcast
    */
   public function __construct(public ChatMessage $chat)
   {
+    Log::info("ChatMessageCreated event instantiated for chat message ID: {$chat->id}");
     // The chat message is passed to the event for broadcasting
   }
 
@@ -35,11 +37,25 @@ class ChatMessageCreated implements ShouldBroadcast
     $channels = [];
 
     // 1️⃣ Room channel - for updating chat detail view
-    $channels[] = new PrivateChannel('rooms.' . $this->chat->room_id);
+    $channels[] = new PrivateChannel("rooms.{$this->chat->room_id}");
 
     // 2️⃣ User channels - for updating chat list sidebar for each member
+    $this->chat->load('room.members');
     foreach ($this->chat->room->members as $member) {
-      $channels[] = new PrivateChannel('users.' . $member->user_id);
+      if ($member->member_type === 'user') {
+        Log::debug("Adding channel for member", ['member_id' => $member->id, 'member_type' => $member->member_type]);
+        $channels[] = new PrivateChannel("users.{$member->member_id}");
+      } else if ($member->member_type === 'company') {
+        /** @var \App\Models\Company $company */
+        $company = $member->member;
+        $company->load('members'); // Eager load members to avoid N+1 queries
+
+        Log::debug("Adding channels for company member", ['company' => $company]);
+        $companyMembers = $company->members; // Assuming a company has many users
+        foreach ($companyMembers as $cm) {
+          $channels[] = new PrivateChannel("users.{$cm->id}");
+        }
+      }
     }
 
     return $channels;

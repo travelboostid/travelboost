@@ -8,6 +8,13 @@ export type User = {
   created_at: string;
   updated_at: string;
   photo_url: string;
+  companies: {
+    id: number;
+    name: string;
+    username: string;
+    photo_url: string | null;
+    [key: string]: any;
+  }[];
   [key: string]: unknown;
 };
 

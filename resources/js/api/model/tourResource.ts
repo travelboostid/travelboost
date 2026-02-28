@@ -7,14 +7,13 @@
 import type { TourResourceDescription } from './tourResourceDescription';
 import type { TourStatus } from './tourStatus';
 import type { TourResourceCategoryId } from './tourResourceCategoryId';
-import type { TourResourceParentId } from './tourResourceParentId';
 import type { TourResourceImageId } from './tourResourceImageId';
 import type { TourResourceDocumentId } from './tourResourceDocumentId';
 import type { TourResourceCreatedAt } from './tourResourceCreatedAt';
 import type { TourResourceUpdatedAt } from './tourResourceUpdatedAt';
 import type { TourCategory } from './tourCategory';
 import type { Media } from './media';
-import type { User } from './user';
+import type { Company } from './company';
 
 export interface TourResource {
   id: number;
@@ -27,9 +26,8 @@ export interface TourResource {
   region: string;
   country: string;
   destination: string;
-  user_id: number;
+  company_id: number;
   category_id: TourResourceCategoryId;
-  parent_id: TourResourceParentId;
   image_id: TourResourceImageId;
   document_id: TourResourceDocumentId;
   created_at: TourResourceCreatedAt;
@@ -37,5 +35,5 @@ export interface TourResource {
   category?: TourCategory;
   image?: Media;
   document?: Media;
-  user?: User;
+  company?: Company;
 }

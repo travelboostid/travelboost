@@ -5,7 +5,7 @@ namespace App\Actions\Fortify;
 use App\Concerns\PasswordValidationRules;
 use App\Concerns\ProfileValidationRules;
 use App\Models\User;
-use App\Models\UserPreference;
+// use App\Models\UserPreference;
 use Illuminate\Support\Facades\Validator;
 use Laravel\Fortify\Contracts\CreatesNewUsers;
 
@@ -34,9 +34,9 @@ class CreateNewUser implements CreatesNewUsers
       'password' => $input['password'],
     ]);
 
-    UserPreference::create([
-      'user_id' => $user->id,
-    ]);
+    // UserPreference::create([
+    //   'user_id' => $user->id,
+    // ]);
 
     return $user;
   }

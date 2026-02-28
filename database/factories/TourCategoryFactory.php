@@ -2,8 +2,10 @@
 
 namespace Database\Factories;
 
+use App\Models\Company;
 use App\Models\TourCategory;
 use App\Models\User;
+use App\Models\Vendor;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -18,7 +20,15 @@ class TourCategoryFactory extends Factory
     return [
       'name' => $this->faker->unique()->words(2, true),
       'description' => $this->faker->sentence(),
-      'user_id' => User::factory(),
     ];
+  }
+
+  public function forCompany(Company $company)
+  {
+    return $this->state(function () use ($company) {
+      return [
+        'company_id' => $company->id,
+      ];
+    });
   }
 }

@@ -6,7 +6,7 @@
  */
 
 export type ChatRoomResourceMembersItemUserAnyOf = {
-  id: number;
+  id: string;
   name: string;
   photo_url: string;
 };

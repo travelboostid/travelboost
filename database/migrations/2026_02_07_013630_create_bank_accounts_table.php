@@ -15,9 +15,7 @@ return new class extends Migration
     Schema::create('bank_accounts', function (Blueprint $table) {
       $table->id();
 
-      $table->foreignId('user_id')
-        ->constrained()
-        ->cascadeOnDelete();
+      $table->morphs('owner'); // creates owner_id + owner_type
 
       // bank / e-wallet provider code
       $table->string('provider'); // BCA, BNI, MANDIRI, OVO, GOPAY
@@ -35,8 +33,6 @@ return new class extends Migration
       $table->boolean('is_default')->default(false);
 
       $table->timestamps();
-
-      $table->index(['user_id', 'provider']);
     });
   }
 

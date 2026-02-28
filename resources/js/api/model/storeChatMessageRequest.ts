@@ -4,12 +4,22 @@
  * Travelboost
  * OpenAPI spec version: 0.0.1
  */
+import type { StoreChatMessageRequestUserId } from './storeChatMessageRequestUserId';
+import type { StoreChatMessageRequestSenderType } from './storeChatMessageRequestSenderType';
+import type { StoreChatMessageRequestSenderId } from './storeChatMessageRequestSenderId';
 import type { StoreChatMessageRequestAttachment } from './storeChatMessageRequestAttachment';
 import type { StoreChatMessageRequestAttachmentType } from './storeChatMessageRequestAttachmentType';
-import type { StoreChatMessageRequestReplyTo } from './storeChatMessageRequestReplyTo';
 
 export interface StoreChatMessageRequest {
-  /** @maxLength 2000 */
+  user_id?: StoreChatMessageRequestUserId;
+  /** @maxLength 50 */
+  sender_type?: StoreChatMessageRequestSenderType;
+  /** e.g., 'user', 'vendor', 'agent */
+  sender_id?: StoreChatMessageRequestSenderId;
+  /**
+   * ID of the sender type
+   * @maxLength 2000
+   */
   message: string;
   /** @maxLength 2000 */
   attachment?: StoreChatMessageRequestAttachment;
@@ -18,6 +28,4 @@ export interface StoreChatMessageRequest {
    * @maxLength 50
    */
   attachment_type?: StoreChatMessageRequestAttachmentType;
-  /** e.g., image, video, file */
-  reply_to?: StoreChatMessageRequestReplyTo;
 }

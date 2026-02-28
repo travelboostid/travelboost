@@ -4,10 +4,12 @@ namespace App\Providers;
 
 use App\Actions\Fortify\CreateNewUser;
 use App\Actions\Fortify\ResetUserPassword;
+use App\Models\Company;
 use App\Models\User;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
@@ -31,13 +33,30 @@ class FortifyServiceProvider extends ServiceProvider
   public function boot(): void
   {
     Fortify::authenticateUsing(function (Request $request) {
-      $usernameOrEmail = $request->input('usernameOrEmail');
+      $validated = $request->validate([
+        'username_or_email' => ['required', 'string'],
+        'password' => ['required', 'string'],
+      ]);
 
-      $user = User::where('email', $usernameOrEmail)
-        ->orWhere('username', $usernameOrEmail)
-        ->first();
+      $tenant = $request->attributes->get('tenant');
+      Log::info("Attempting authentication for username/email", ['x' => $tenant]);
 
-      if ($user && Hash::check($request->password, $user->password)) {
+      $usernameOrEmail = $validated['username_or_email'];
+
+      $query = User::where(function ($q) use ($usernameOrEmail) {
+        $q->where('email', $usernameOrEmail)
+          ->orWhere('username', $usernameOrEmail);
+      });
+
+      if ($tenant != null) {
+        $query->where('company_id', $tenant->id);
+      } else {
+        $query->whereNull('company_id');
+      }
+
+      $user = $query->first();
+
+      if ($user && Hash::check($validated['password'], $user->password)) {
         return $user;
       }
 
@@ -63,9 +82,10 @@ class FortifyServiceProvider extends ServiceProvider
   private function configureViews(): void
   {
     Fortify::loginView(fn(Request $request) => Inertia::render('auth/login', [
+      'company' => null,
       'canResetPassword' => Features::enabled(Features::resetPasswords()),
       'canRegister' => Features::enabled(Features::registration()),
-      'status' => $request->session()->get('status'),
+      'status' => $request->session()->get('status')
     ]));
 
     Fortify::resetPasswordView(fn(Request $request) => Inertia::render('auth/reset-password', [

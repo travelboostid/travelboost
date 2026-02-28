@@ -11,9 +11,7 @@ return new class extends Migration {
     Schema::create('payments', function (Blueprint $table) {
       $table->id();
 
-      $table->foreignId('user_id')
-        ->constrained()
-        ->cascadeOnDelete();
+      $table->morphs('owner'); // creates owner_id + owner_type
 
       // polymorphic: order, wallet_topup, etc
       $table->morphs('payable');
@@ -44,7 +42,6 @@ return new class extends Migration {
 
     Schema::create('wallet_topups', function (Blueprint $table) {
       $table->id();
-      $table->foreignId('user_id')->constrained()->cascadeOnDelete();
       $table->decimal('amount', 14, 2);
       $table->timestamps();
     });

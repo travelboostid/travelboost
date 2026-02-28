@@ -5,31 +5,24 @@
  * OpenAPI spec version: 0.0.1
  */
 import {
-  useMutation,
   useQuery
 } from '@tanstack/react-query';
 import type {
   DataTag,
   DefinedInitialDataOptions,
   DefinedUseQueryResult,
-  MutationFunction,
   QueryClient,
   QueryFunction,
   QueryKey,
   UndefinedInitialDataOptions,
-  UseMutationOptions,
-  UseMutationResult,
   UseQueryOptions,
   UseQueryResult
 } from '@tanstack/react-query';
 
 import type {
   AuthenticationExceptionResponse,
-  AuthorizationExceptionResponse,
   GetUsers200,
   GetUsersParams,
-  UpdateUserRequest,
-  UsersUpdate200,
   ValidationExceptionResponse
 } from '.././model';
 
@@ -133,68 +126,3 @@ export function useGetUsers<TData = Awaited<ReturnType<typeof getUsers>>, TError
 
 
 
-/**
- * @summary Update current user profile
- */
-export const usersUpdate = (
-    user: string,
-    updateUserRequest: UpdateUserRequest,
- options?: SecondParameter<typeof apiInstance>,) => {
-      
-      
-      return apiInstance<UsersUpdate200>(
-      {url: `/users/${user}`, method: 'PUT',
-      headers: {'Content-Type': 'application/json', },
-      data: updateUserRequest
-    },
-      options);
-    }
-  
-
-
-export const getUsersUpdateMutationOptions = <TError = AuthenticationExceptionResponse | AuthorizationExceptionResponse | ValidationExceptionResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof usersUpdate>>, TError,{user: string;data: UpdateUserRequest}, TContext>, request?: SecondParameter<typeof apiInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof usersUpdate>>, TError,{user: string;data: UpdateUserRequest}, TContext> => {
-
-const mutationKey = ['usersUpdate'];
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-      
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof usersUpdate>>, {user: string;data: UpdateUserRequest}> = (props) => {
-          const {user,data} = props ?? {};
-
-          return  usersUpdate(user,data,requestOptions)
-        }
-
-        
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type UsersUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof usersUpdate>>>
-    export type UsersUpdateMutationBody = UpdateUserRequest
-    export type UsersUpdateMutationError = AuthenticationExceptionResponse | AuthorizationExceptionResponse | ValidationExceptionResponse
-
-    /**
- * @summary Update current user profile
- */
-export const useUsersUpdate = <TError = AuthenticationExceptionResponse | AuthorizationExceptionResponse | ValidationExceptionResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof usersUpdate>>, TError,{user: string;data: UpdateUserRequest}, TContext>, request?: SecondParameter<typeof apiInstance>}
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof usersUpdate>>,
-        TError,
-        {user: string;data: UpdateUserRequest},
-        TContext
-      > => {
-
-      const mutationOptions = getUsersUpdateMutationOptions(options);
-
-      return useMutation(mutationOptions, queryClient);
-    }
-    

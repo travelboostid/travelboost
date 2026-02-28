@@ -50,7 +50,6 @@ class AppServiceProvider extends ServiceProvider
     });
   }
 
-
   /**
    * Bootstrap any application services.
    */
@@ -58,6 +57,8 @@ class AppServiceProvider extends ServiceProvider
   {
     Relation::morphMap([
       'wallet-topup' => WalletTopup::class,
+      'company' => \App\Models\Company::class,
+      'user' => \App\Models\User::class,
     ]);
 
     $this->configureDefaults();

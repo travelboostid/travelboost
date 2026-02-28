@@ -1,8 +1,7 @@
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { DEFAULT_PHOTO } from '@/config';
+import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { cn } from '@/lib/utils';
-import type { SharedData } from '@/types';
-import { usePage } from '@inertiajs/react';
 import { IconUsersGroup } from '@tabler/icons-react';
 import { ChevronLeftIcon, MessageSquareIcon, UserIcon } from 'lucide-react';
 import {
@@ -47,15 +46,18 @@ function GroupChatHeader() {
 }
 
 function PrivateChatHeader() {
-  const { auth } = usePage<SharedData>().props;
+  const { actor } = useFloatingChatWidgetContext();
   const { setAttachment, roomId, setRoomId } = useFloatingChatWidgetContext();
   const room = useChatRoom(roomId);
 
   const partner = room?.members?.find(
-    (member) => member?.user?.id !== auth.user.id,
-  );
+    (member) =>
+      member?.member_type !== actor?.type || member?.member_id !== actor?.id,
+  ) as any;
 
-  const partnerPhoto = partner?.user?.photo_url || DEFAULT_PHOTO;
+  console.log('partner', room.members, actor);
+
+  const partnerPhoto = partner?.member?.photo_url || DEFAULT_PHOTO;
 
   const handleExitRoom = () => {
     setRoomId(0);
@@ -75,7 +77,7 @@ function PrivateChatHeader() {
         </Avatar>
       </div>
       <div className="flex-1">
-        <div className="font-bold">{partner?.user?.name || 'User'}</div>
+        <div className="font-bold">{partner?.member?.name || 'User'}</div>
         <div className="flex items-center gap-1 text-xs text-green-500">
           Online
         </div>
@@ -85,7 +87,7 @@ function PrivateChatHeader() {
 }
 
 function ChatListHeader() {
-  const { auth } = usePage<SharedData>().props;
+  const { auth } = usePageSharedDataProps();
   const photoUrl = auth?.user?.photo_url || DEFAULT_PHOTO;
   return (
     <div className="flex flex-0 items-center gap-2 border-b p-4">

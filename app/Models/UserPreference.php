@@ -19,7 +19,6 @@ class UserPreference extends Model
     'meta_pixel_id',          // Facebook/Meta Pixel ID for tracking conversions
     'use_chatbot',            // Boolean flag to enable/disable chatbot functionality
     'user_id',                // Foreign key linking to the users table
-    'landing_page_template_id', // Reference to which landing page template is selected
     'landing_page_template_data' // JSON data storing customizations for the landing page template
   ];
 

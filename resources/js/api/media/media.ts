@@ -25,13 +25,13 @@ import type {
 
 import type {
   AuthenticationExceptionResponse,
-  CreateMediaBody,
   GetMedias200,
   GetMediasParams,
   MediaResource,
+  MediaUpdateRequest,
   MediasDestroy200,
-  MediasUpdateBody,
   ModelNotFoundExceptionResponse,
+  StoreMediaRequest,
   ValidationExceptionResponse
 } from '.././model';
 
@@ -139,19 +139,21 @@ export function useGetMedias<TData = Awaited<ReturnType<typeof getMedias>>, TErr
  * @summary Create media
  */
 export const createMedia = (
-    createMediaBody: CreateMediaBody,
+    storeMediaRequest: StoreMediaRequest,
  options?: SecondParameter<typeof apiInstance>,signal?: AbortSignal
 ) => {
       
       const formData = new FormData();
-if(createMediaBody.name !== undefined && createMediaBody.name !== null) {
- formData.append(`name`, createMediaBody.name)
+formData.append(`owner_id`, storeMediaRequest.owner_id.toString())
+formData.append(`owner_type`, storeMediaRequest.owner_type)
+if(storeMediaRequest.name !== undefined && storeMediaRequest.name !== null) {
+ formData.append(`name`, storeMediaRequest.name)
  }
-if(createMediaBody.description !== undefined && createMediaBody.description !== null) {
- formData.append(`description`, createMediaBody.description)
+if(storeMediaRequest.description !== undefined && storeMediaRequest.description !== null) {
+ formData.append(`description`, storeMediaRequest.description)
  }
-formData.append(`type`, createMediaBody.type)
-formData.append(`data`, createMediaBody.data)
+formData.append(`type`, storeMediaRequest.type)
+formData.append(`data`, storeMediaRequest.data)
 
       return apiInstance<MediaResource>(
       {url: `/medias`, method: 'POST',
@@ -164,8 +166,8 @@ formData.append(`data`, createMediaBody.data)
 
 
 export const getCreateMediaMutationOptions = <TError = AuthenticationExceptionResponse | ValidationExceptionResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createMedia>>, TError,{data: CreateMediaBody}, TContext>, request?: SecondParameter<typeof apiInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof createMedia>>, TError,{data: CreateMediaBody}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createMedia>>, TError,{data: StoreMediaRequest}, TContext>, request?: SecondParameter<typeof apiInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof createMedia>>, TError,{data: StoreMediaRequest}, TContext> => {
 
 const mutationKey = ['createMedia'];
 const {mutation: mutationOptions, request: requestOptions} = options ?
@@ -177,7 +179,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createMedia>>, {data: CreateMediaBody}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createMedia>>, {data: StoreMediaRequest}> = (props) => {
           const {data} = props ?? {};
 
           return  createMedia(data,requestOptions)
@@ -189,18 +191,18 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type CreateMediaMutationResult = NonNullable<Awaited<ReturnType<typeof createMedia>>>
-    export type CreateMediaMutationBody = CreateMediaBody
+    export type CreateMediaMutationBody = StoreMediaRequest
     export type CreateMediaMutationError = AuthenticationExceptionResponse | ValidationExceptionResponse
 
     /**
  * @summary Create media
  */
 export const useCreateMedia = <TError = AuthenticationExceptionResponse | ValidationExceptionResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createMedia>>, TError,{data: CreateMediaBody}, TContext>, request?: SecondParameter<typeof apiInstance>}
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createMedia>>, TError,{data: StoreMediaRequest}, TContext>, request?: SecondParameter<typeof apiInstance>}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof createMedia>>,
         TError,
-        {data: CreateMediaBody},
+        {data: StoreMediaRequest},
         TContext
       > => {
 
@@ -296,14 +298,14 @@ export function useMediasShow<TData = Awaited<ReturnType<typeof mediasShow>>, TE
 
 export const mediasUpdate = (
     media: number,
-    mediasUpdateBody: MediasUpdateBody,
+    mediaUpdateRequest: MediaUpdateRequest,
  options?: SecondParameter<typeof apiInstance>,) => {
       
       
       return apiInstance<MediaResource>(
       {url: `/medias/${media}`, method: 'PUT',
       headers: {'Content-Type': 'application/json', },
-      data: mediasUpdateBody
+      data: mediaUpdateRequest
     },
       options);
     }
@@ -311,8 +313,8 @@ export const mediasUpdate = (
 
 
 export const getMediasUpdateMutationOptions = <TError = AuthenticationExceptionResponse | ModelNotFoundExceptionResponse | ValidationExceptionResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof mediasUpdate>>, TError,{media: number;data: MediasUpdateBody}, TContext>, request?: SecondParameter<typeof apiInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof mediasUpdate>>, TError,{media: number;data: MediasUpdateBody}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof mediasUpdate>>, TError,{media: number;data: MediaUpdateRequest}, TContext>, request?: SecondParameter<typeof apiInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof mediasUpdate>>, TError,{media: number;data: MediaUpdateRequest}, TContext> => {
 
 const mutationKey = ['mediasUpdate'];
 const {mutation: mutationOptions, request: requestOptions} = options ?
@@ -324,7 +326,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof mediasUpdate>>, {media: number;data: MediasUpdateBody}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof mediasUpdate>>, {media: number;data: MediaUpdateRequest}> = (props) => {
           const {media,data} = props ?? {};
 
           return  mediasUpdate(media,data,requestOptions)
@@ -336,15 +338,15 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type MediasUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof mediasUpdate>>>
-    export type MediasUpdateMutationBody = MediasUpdateBody
+    export type MediasUpdateMutationBody = MediaUpdateRequest
     export type MediasUpdateMutationError = AuthenticationExceptionResponse | ModelNotFoundExceptionResponse | ValidationExceptionResponse
 
     export const useMediasUpdate = <TError = AuthenticationExceptionResponse | ModelNotFoundExceptionResponse | ValidationExceptionResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof mediasUpdate>>, TError,{media: number;data: MediasUpdateBody}, TContext>, request?: SecondParameter<typeof apiInstance>}
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof mediasUpdate>>, TError,{media: number;data: MediaUpdateRequest}, TContext>, request?: SecondParameter<typeof apiInstance>}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof mediasUpdate>>,
         TError,
-        {media: number;data: MediasUpdateBody},
+        {media: number;data: MediaUpdateRequest},
         TContext
       > => {
 

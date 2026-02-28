@@ -20,10 +20,21 @@ class StoreChatMessageRequest extends FormRequest
   public function rules(): array
   {
     return [
+      'user_id' => 'nullable|exists:users,id',
+      'sender_type' => 'nullable|string|max:50', // e.g., 'user', 'vendor', 'agent
+      'sender_id' => 'nullable|integer', // ID of the sender type
       'message' => 'required|string|max:2000',
       'attachment' => 'nullable|string|max:2000', // max 10 MB
       'attachment_type' => 'nullable|string|max:50', // e.g., image, video, file
-      'reply_to' => 'nullable|exists:chat_messages,id', // optional reply
     ];
+  }
+
+  protected function prepareForValidation()
+  {
+    $this->merge([
+      'sender_type' => $this->input('sender_type', 'user'),
+      'sender_id'   => $this->input('sender_id', $this->user()->id),
+      'user_id'     => $this->input('user_id', $this->user()->id),
+    ]);
   }
 }

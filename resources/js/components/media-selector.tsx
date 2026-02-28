@@ -1,7 +1,6 @@
 import { getMedias } from '@/api/media/media';
-import type { MediaResource } from '@/api/model';
+import type { GetMediasParams, MediaResource } from '@/api/model';
 import { cn } from '@/lib/utils';
-import type { ImageMediaData, Media } from '@/types/media';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { FileIcon } from 'lucide-react';
 import { useEffect, useMemo } from 'react';
@@ -18,16 +17,19 @@ import {
 type MediaSelectorProps = {
   type?: 'image' | 'photo' | 'document';
   value?: MediaResource | null;
+  params?: GetMediasParams;
   onChange?: (media: MediaResource) => void;
 };
 export function MediaSelector({
   type = 'photo',
+  params,
   value,
   onChange,
 }: MediaSelectorProps) {
   const { data, hasNextPage, fetchNextPage, isFetchingNextPage } =
     useInfiniteQuery({
-      queryFn: ({ pageParam }) => getMedias({ type, page: pageParam }),
+      queryFn: ({ pageParam }) =>
+        getMedias({ ...params, type, page: pageParam }),
       initialPageParam: 1,
       getNextPageParam: (lastPage) => {
         const { current_page, last_page } = lastPage.meta || {};
@@ -83,18 +85,18 @@ export function MediaSelector({
 }
 
 type ImageMediaCardProps = {
-  media: Media;
+  media: MediaResource;
   selected?: boolean;
   onClick?: () => void;
 };
 
 function ImageMediaCard({ media, selected, onClick }: ImageMediaCardProps) {
-  const mediaData = media.data as ImageMediaData;
+  const mediaData = media.data as Record<string, any>;
   const src =
-    (mediaData.files || []).find((f) => f.code == 'medium')?.url || '';
+    (mediaData.files || []).find((f: any) => f.code == 'medium')?.url || '';
   const srcSet = (mediaData.files || [])
-    .filter((f) => f.width)
-    .map((f) => `${f.url} ${f.width}w`)
+    .filter((f: any) => f.width)
+    .map((f: any) => `${f.url} ${f.width}w`)
     .join(', ');
 
   return (
@@ -116,18 +118,18 @@ function ImageMediaCard({ media, selected, onClick }: ImageMediaCardProps) {
 }
 
 type PhotoMediaCardProps = {
-  media: Media;
+  media: MediaResource;
   selected?: boolean;
   onClick?: () => void;
 };
 
 function PhotoMediaCard({ media, selected, onClick }: PhotoMediaCardProps) {
-  const mediaData = media.data as ImageMediaData;
+  const mediaData = media.data as Record<string, any>;
 
   const src = mediaData.files?.[0]?.url ?? '';
   const srcSet = (mediaData.files ?? [])
-    .filter((f) => f.width)
-    .map((f) => `${f.url} ${f.width}w`)
+    .filter((f: any) => f.width)
+    .map((f: any) => `${f.url} ${f.width}w`)
     .join(', ');
 
   return (

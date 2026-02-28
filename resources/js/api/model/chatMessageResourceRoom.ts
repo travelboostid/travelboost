@@ -4,6 +4,9 @@
  * Travelboost
  * OpenAPI spec version: 0.0.1
  */
-import type { ChatMessageResourceRoomAnyOf } from './chatMessageResourceRoomAnyOf';
+import type { ChatMessageResourceRoomName } from './chatMessageResourceRoomName';
 
-export type ChatMessageResourceRoom = ChatMessageResourceRoomAnyOf | null;
+export type ChatMessageResourceRoom = {
+  id: number;
+  name: ChatMessageResourceRoomName;
+};

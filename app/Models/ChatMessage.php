@@ -13,7 +13,9 @@ class ChatMessage extends Model
 
   protected $fillable = [
     'room_id',
+    'sender_type',
     'sender_id',
+    'user_id',
     'message',
     'attachment',
     'attachment_type',
@@ -21,9 +23,10 @@ class ChatMessage extends Model
     'reply_to',
   ];
 
-  /* =====================
-     |  Relationships
-     ===================== */
+  protected $with = [
+    'sender',
+    'replyTo'
+  ];
 
   public function room()
   {
@@ -32,7 +35,7 @@ class ChatMessage extends Model
 
   public function sender()
   {
-    return $this->belongsTo(User::class, 'sender_id');
+    return $this->morphTo();
   }
 
   public function replyTo()

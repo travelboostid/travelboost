@@ -4,8 +4,6 @@ namespace Database\Factories;
 
 use App\Enums\TourStatus;
 use App\Models\Tour;
-use App\Models\TourCategory;
-use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -42,28 +40,8 @@ class TourFactory extends Factory
       ]),
       'destination' => $this->faker->city(),
 
-      'category_id' => TourCategory::factory(),
-      'user_id' => User::factory(),
+      'category_id' => null,
+      'company_id' => null,
     ];
-  }
-
-  /*
-    |--------------------------------------------------------------------------
-    | States
-    |--------------------------------------------------------------------------
-    */
-
-  public function active(): static
-  {
-    return $this->state(fn() => [
-      'status' => TourStatus::Active,
-    ]);
-  }
-
-  public function inactive(): static
-  {
-    return $this->state(fn() => [
-      'status' => TourStatus::Inactive,
-    ]);
   }
 }

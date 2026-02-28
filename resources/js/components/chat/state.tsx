@@ -15,15 +15,20 @@ import type {
   GetChatRoomsParams,
   StoreChatMessageRequest,
 } from '@/api/model';
-import type { SharedData } from '@/types';
-import { usePage } from '@inertiajs/react';
+import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { useEcho } from '@laravel/echo-react';
 import { MessageSquareIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { createContext, useContext, useState } from 'react';
 import { toast } from 'sonner';
 
+type ChatActor = {
+  type: 'user' | 'company';
+  id: number;
+};
+
 type ChatState = {
+  actor: ChatActor | null;
   roomById: { [id: number]: ChatRoomResource };
   messageById: { [id: number]: ChatMessageResource };
 };
@@ -42,8 +47,14 @@ type ChatContextType = ChatState & ChatActions;
 
 export const ChatContext = createContext<ChatContextType>(null!);
 
-export function ChatContextProvider({ children }: { children: ReactNode }) {
-  const { auth } = usePage<SharedData>().props;
+export function ChatContextProvider({
+  children,
+  actor,
+}: {
+  children: ReactNode;
+  actor: ChatActor;
+}) {
+  const { auth } = usePageSharedDataProps();
   const [roomById, setRoomById] = useState<Record<number, ChatRoomResource>>(
     {},
   );
@@ -106,9 +117,9 @@ export function ChatContextProvider({ children }: { children: ReactNode }) {
     }));
 
     // Toast new message notification
-    if (auth.user.id !== e.sender.id) {
+    if (actor.type !== e.sender_type || actor.id !== e.sender_id) {
       toast(e.sender.name, {
-        description: e.message || '...',
+        description: <p className="line-clamp-1">{e.message || '???'}</p>,
         icon: <MessageSquareIcon />,
         position: 'top-center',
       });
@@ -137,6 +148,7 @@ export function ChatContextProvider({ children }: { children: ReactNode }) {
   return (
     <ChatContext.Provider
       value={{
+        actor,
         loadMessages,
         loadRoom,
         loadRooms,
@@ -210,6 +222,8 @@ type Attachment = {
 };
 
 type FloatingChatWidgetContextType = {
+  actor: ChatActor | null;
+  setActor: (o: ChatActor | null) => void;
   message: string;
   setMessage: (o: string) => void;
   attachment: Attachment | undefined | null;
@@ -218,7 +232,7 @@ type FloatingChatWidgetContextType = {
   setOpen: (o: boolean) => void;
   roomId: number;
   setRoomId: (roomId: number) => void;
-  startPrivateChat: (withUserId: number) => Promise<void>;
+  startPrivateChat: (actor: ChatActor) => Promise<void>;
 };
 
 const FloatingChatWidgetContext = createContext<FloatingChatWidgetContextType>(
@@ -227,9 +241,15 @@ const FloatingChatWidgetContext = createContext<FloatingChatWidgetContextType>(
 
 export function FloatingChatWidgetContextProvider({
   children,
+  initialValue,
 }: {
   children: ReactNode;
+  initialValue?: Partial<FloatingChatWidgetContextType>;
 }) {
+  const { auth } = usePageSharedDataProps();
+  const [actor, setActor] = useState<ChatActor | null>(
+    initialValue?.actor || null,
+  );
   const openChatRoom = useOpenChatRoom();
   const [message, setMessage] = useState('');
   const [attachment, setAttachment] = useState<Attachment | undefined | null>(
@@ -238,9 +258,14 @@ export function FloatingChatWidgetContextProvider({
   const [open, setOpen] = useState(false);
   const [roomId, setRoomId] = useState(0);
 
-  const startPrivateChat = async (withUserId: number) => {
+  const startPrivateChat = async (recepient: ChatActor) => {
     const result = await openChatRoom.mutateAsync({
-      data: { user_id: withUserId },
+      data: {
+        sender_id: actor?.id || auth.user.id,
+        sender_type: actor?.type || 'user',
+        recipient_id: recepient.id,
+        recipient_type: recepient.type,
+      },
     });
     setRoomId(result.data.id);
     setOpen(true);
@@ -249,6 +274,8 @@ export function FloatingChatWidgetContextProvider({
   return (
     <FloatingChatWidgetContext.Provider
       value={{
+        actor,
+        setActor,
         open,
         setOpen,
         roomId,

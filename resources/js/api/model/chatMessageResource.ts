@@ -4,27 +4,33 @@
  * Travelboost
  * OpenAPI spec version: 0.0.1
  */
+import type { ChatMessageResourceSenderType } from './chatMessageResourceSenderType';
+import type { ChatMessageResourceSenderId } from './chatMessageResourceSenderId';
 import type { ChatMessageResourceAttachment } from './chatMessageResourceAttachment';
 import type { ChatMessageResourceAttachmentType } from './chatMessageResourceAttachmentType';
+import type { ChatMessageResourceReplyTo } from './chatMessageResourceReplyTo';
 import type { ChatMessageResourceCreatedAt } from './chatMessageResourceCreatedAt';
 import type { ChatMessageResourceUpdatedAt } from './chatMessageResourceUpdatedAt';
 import type { ChatMessageResourceSender } from './chatMessageResourceSender';
 import type { ChatMessageResourceRoom } from './chatMessageResourceRoom';
-import type { ChatMessageResourceReplyTo } from './chatMessageResourceReplyTo';
+import type { ChatMessageResourceRepliesCount } from './chatMessageResourceRepliesCount';
 
 export interface ChatMessageResource {
   id: number;
   room_id: number;
-  sender_id: number;
+  sender_type: ChatMessageResourceSenderType;
+  sender_id: ChatMessageResourceSenderId;
+  user_id: number;
   message: string;
   attachment: ChatMessageResourceAttachment;
   attachment_type: ChatMessageResourceAttachmentType;
+  is_bot: number;
+  reply_to: ChatMessageResourceReplyTo;
   created_at: ChatMessageResourceCreatedAt;
   updated_at: ChatMessageResourceUpdatedAt;
   /** Relationships */
-  sender: ChatMessageResourceSender;
-  room: ChatMessageResourceRoom;
-  replyTo: ChatMessageResourceReplyTo;
-  /** @minimum 0 */
-  replies_count: number;
+  sender?: ChatMessageResourceSender;
+  room?: ChatMessageResourceRoom;
+  replyTo?: ChatMessageResourceReplyTo;
+  replies_count: ChatMessageResourceRepliesCount;
 }

@@ -22,12 +22,9 @@ class TourIndexRequest extends FormRequest
   public function rules(): array
   {
     return [
+      'company_id' => 'nullable|integer|exists:companies,id',
       'search' => 'nullable|string|max:100',
-      'category_id' => [
-        'nullable',
-        'string',
-        Rule::in(['beach', 'mountain', 'cultural', 'adventure', 'wildlife', 'historical', 'religious', 'culinary', 'cruise', 'safari'])
-      ],
+      'category_id' => 'nullable|integer|exists:tour_categories,id',
       'duration_min' => 'nullable|integer|min:1|max:365',
       'duration_max' => 'nullable|integer|min:1|max:365|gte:duration_min',
       'sort_by' => [
@@ -48,27 +45,10 @@ class TourIndexRequest extends FormRequest
   {
     // Set default values if not provided
     $this->merge([
-      'per_page' => $this->per_page ?? 10,
-      'page' => $this->page ?? 1,
-      'sort_by' => $this->sort_by ?? 'created_at',
-      'sort_order' => $this->sort_order ?? 'desc',
-      'available_only' => $this->boolean('available_only'),
-      'featured' => $this->boolean('featured'),
+      'per_page' => $this->input('per_page', 10),
+      'page' => $this->input('page', 1),
+      'sort_by' => $this->input('sort_by', 'created_at'),
+      'sort_order' => $this->input('sort_order', 'desc'),
     ]);
-  }
-
-  /**
-   * Get validated data with defaults.
-   */
-  public function validatedData(): array
-  {
-    return array_merge([
-      'per_page' => 10,
-      'page' => 1,
-      'sort_by' => 'created_at',
-      'sort_order' => 'desc',
-      'available_only' => false,
-      'featured' => false,
-    ], $this->validated());
   }
 }

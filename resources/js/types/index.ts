@@ -5,8 +5,15 @@ export type * from './ui';
 import type { Auth } from './auth';
 
 export type SharedData = {
+  name: string;
+  auth: Auth;
+  sidebarOpen: boolean;
+  company: {
+    id: number;
     name: string;
-    auth: Auth;
-    sidebarOpen: boolean;
-    [key: string]: unknown;
+    username: string;
+    photo_url: string | null;
+    [key: string]: any;
+  };
+  [key: string]: any;
 };

@@ -1,0 +1,158 @@
+{
+  "root": {
+    "props": {
+      "title": "Travel",
+      "theme": "greenie",
+      "content": []
+    }
+  },
+  "content": [
+    {
+      "type": "Hero3",
+      "props": {
+        "header": "Jelajahi Dunia Sesuai Gaya Anda",
+        "description": "Temukan destinasi luar biasa dengan paket perjalanan yang dipersonalisasi, dirancang oleh pemandu ahli. Petualangan Anda dimulai di sini.",
+        "actions": [
+          {
+            "variant": "default",
+            "label": "Jelajahi Destinasi",
+            "size": "default",
+            "disabled": false,
+            "className": "",
+            "type": "button",
+            "href": "/tours",
+            "target": "_self"
+          },
+          {
+            "variant": "secondary",
+            "label": "Pelajari Lebih Lanjut",
+            "size": "default",
+            "disabled": false,
+            "className": "",
+            "type": "button",
+            "href": "/tours",
+            "target": "_self"
+          }
+        ],
+        "summaries": [
+          {
+            "title": "500+",
+            "subtitle": "Destinasi"
+          },
+          {
+            "title": "50k+",
+            "subtitle": "Wisatawan Bahagia"
+          },
+          {
+            "title": "24/7",
+            "subtitle": "Dukungan"
+          }
+        ],
+        "width": "w-auto",
+        "height": "h-auto",
+        "colSpan": 1,
+        "rowSpan": 1,
+        "flexGrow": 0,
+        "flexShrink": 1,
+        "flexBasis": "auto",
+        "alignSelf": "auto",
+        "order": 0,
+        "id": "Hero3-14eb541d-d51a-468e-a2d7-805e4f996f98"
+      }
+    },
+    {
+      "type": "Features",
+      "props": {
+        "header": "Mengapa Memilih Kami",
+        "description": "<p>Segala yang Anda butuhkan untuk perjalanan sempurna</p>",
+        "features": [
+          {
+            "icon": "MapPin",
+            "title": "Destinasi Eksotis",
+            "description": "Lokasi pilihan dari seluruh dunia"
+          },
+          {
+            "icon": "Users",
+            "title": "Pemandu Ahli",
+            "description": "Pemandu profesional dengan pengalaman bertahun-tahun"
+          },
+          {
+            "icon": "Clock",
+            "title": "Jadwal Fleksibel",
+            "description": "Tur yang sesuai dengan ketersediaan Anda"
+          },
+          {
+            "icon": "Shield",
+            "title": "100% Aman",
+            "description": "Asuransi perjalanan termasuk dalam semua paket"
+          },
+          {
+            "icon": "CreditCard",
+            "title": "Pembayaran Mudah",
+            "description": "Berbagai opsi dan rencana pembayaran"
+          },
+          {
+            "icon": "Plane",
+            "title": "Dukungan 24/7",
+            "description": "Bantuan kapan saja Anda membutuhkannya"
+          }
+        ],
+        "id": "Features-336073ad-e7e7-4f95-9ea1-d13f7faaf7b8"
+      }
+    },
+    {
+      "type": "Steps",
+      "props": {
+        "header": "Proses Pemesanan Mudah",
+        "description": "<p>Proses pemesanan yang sederhana</p>",
+        "steps": [
+          {
+            "title": "Pilih Destinasi",
+            "description": "Jelajahi dan pilih lokasi impian Anda"
+          },
+          {
+            "title": "Pilih Tanggal",
+            "description": "Pilih tanggal perjalanan yang Anda inginkan"
+          },
+          {
+            "title": "Sesuaikan Paket",
+            "description": "Tambahkan aktivitas dan preferensi"
+          },
+          {
+            "title": "Pesan & Berangkat",
+            "description": "Selesaikan pemesanan dan mulailah menjelajah"
+          }
+        ],
+        "id": "Steps-3f4b0d10-4d77-4bfb-a630-9b48a5fb9566"
+      }
+    },
+    {
+      "type": "Cta",
+      "props": {
+        "header": "Siap untuk Petualangan Anda?",
+        "description": "Bergabunglah dengan ribuan wisatawan yang menjelajahi dunia bersama kami",
+        "actions": [
+          {
+            "variant": "secondary",
+            "label": "Mulai Perjalanan Anda Sekarang",
+            "size": "default",
+            "disabled": false,
+            "className": "",
+            "type": "button",
+            "href": "/tours",
+            "target": "_self"
+          }
+        ],
+        "id": "Cta-88001ba6-c782-4c16-a7ac-a584a4e2e38a"
+      }
+    },
+    {
+      "type": "Footer1",
+      "props": {
+        "content": "© 2025 TravelSync. Semua hak dilindungi.",
+        "id": "Footer1-1748684f-e042-4ae1-add4-25a2793f4028"
+      }
+    }
+  ],
+  "zones": {}
+}

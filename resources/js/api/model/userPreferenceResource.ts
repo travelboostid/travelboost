@@ -4,13 +4,11 @@
  * Travelboost
  * OpenAPI spec version: 0.0.1
  */
-import type { UserPreferenceResourceUpdatedAt } from './userPreferenceResourceUpdatedAt';
 
 export interface UserPreferenceResource {
-  id: number;
+  id: string;
   meta_pixel_id: string;
-  use_chatbot: number;
-  landing_page_template_id: string;
+  use_chatbot: string;
   landing_page_template_data: string;
-  updated_at: UserPreferenceResourceUpdatedAt;
+  updated_at: string;
 }

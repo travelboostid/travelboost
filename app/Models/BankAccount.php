@@ -3,13 +3,13 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class BankAccount extends Model
 {
   protected $fillable = [
-    'user_id',
+    'owner_type',
+    'owner_id',
     'provider',
     'account_number',
     'account_name',
@@ -22,20 +22,9 @@ class BankAccount extends Model
     'is_default' => 'boolean',
   ];
 
-  /**
-   * Status constants
-   */
-  public const STATUS_PENDING  = 'pending';
-  public const STATUS_VERIFIED = 'verified';
-  public const STATUS_REJECTED = 'rejected';
-
-  /* -------------------------
-     | Relationships
-     |--------------------------*/
-
-  public function user(): BelongsTo
+  public function owner()
   {
-    return $this->belongsTo(User::class);
+    return $this->morphTo();
   }
 
   public function withdrawals(): HasMany

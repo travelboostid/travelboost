@@ -12,7 +12,7 @@ class TourCategory extends Model
   protected $fillable = [
     'name',
     'description',
-    'user_id',
+    'company_id',
   ];
 
   /*
@@ -21,12 +21,24 @@ class TourCategory extends Model
     |--------------------------------------------------------------------------
     */
 
+  /**
+   * Get the owner of the category (Vendor or Agent).
+   */
+  public function company()
+  {
+    return $this->belongsTo(Company::class, 'company_id');
+  }
+
+  /**
+   * Optional: If you have tours under this category
+   */
   public function tours()
   {
-    return $this->hasMany(Tour::class, 'category_id');
+    return $this->hasMany(Tour::class);
   }
-  public function user()
+
+  public function agentTours()
   {
-    return $this->belongsTo(User::class, 'user_id');
+    return $this->hasMany(AgentTour::class);
   }
 }

@@ -17,18 +17,12 @@ class ChatRoom extends Model
     'name',
     'type',
     'last_message_id',
-    'created_by',
   ];
 
-  /* =====================
-     |  Relationships
-     ===================== */
-
-  // Creator of the room
-  public function creator()
-  {
-    return $this->belongsTo(User::class, 'created_by');
-  }
+  protected $with = [
+    'lastMessage',
+    'members'
+  ];
 
   // Messages in the room
   public function messages()
@@ -38,7 +32,7 @@ class ChatRoom extends Model
 
   public function lastMessage()
   {
-    return $this->belongsTo(ChatMessage::class, 'last_message_id');
+    return $this->hasOne(ChatMessage::class, 'id', 'last_message_id');
   }
 
   // Pivot records

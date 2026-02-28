@@ -22,7 +22,10 @@ class OpenChatRequest extends FormRequest
   public function rules(): array
   {
     return [
-      'user_id' => ['required', 'exists:users,id'],
+      'recipient_type' => 'required|in:user,company',
+      'recipient_id' => 'required|integer',
+      'sender_type' => 'required|in:user,company',
+      'sender_id' => 'required|integer',
     ];
   }
 }

@@ -13,7 +13,7 @@ import type { WithdrawalResourceCreatedAt } from './withdrawalResourceCreatedAt'
 
 export interface WithdrawalResource {
   id: number;
-  user_id: number;
+  user_id: string;
   bank_account_id: number;
   wallet_id: WithdrawalResourceWalletId;
   amount: number;

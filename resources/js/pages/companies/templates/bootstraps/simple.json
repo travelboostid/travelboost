@@ -1,0 +1,217 @@
+{
+  "root": {
+    "props": {
+      "title": "Perjalanan",
+      "theme": "light",
+      "content": []
+    }
+  },
+  "content": [
+    {
+      "type": "Hero1",
+      "props": {
+        "header": "Jelajahi Dunia Sesuai Cara Anda",
+        "description": "Temukan destinasi luar biasa dengan paket perjalanan yang dipersonalisasi dan dikurasi oleh pemandu ahli. Petualangan Anda dimulai di sini.",
+        "actions": [
+          {
+            "variant": "default",
+            "label": "Jelajahi Destinasi",
+            "size": "default",
+            "disabled": false,
+            "className": "",
+            "type": "button",
+            "href": "/tours",
+            "target": "_self"
+          },
+          {
+            "variant": "secondary",
+            "label": "Pelajari Lebih Lanjut",
+            "size": "default",
+            "disabled": false,
+            "className": "",
+            "type": "button",
+            "href": "/tours",
+            "target": "_self"
+          }
+        ],
+        "summaries": [
+          {
+            "title": "500+",
+            "subtitle": "Destinasi"
+          },
+          {
+            "title": "50k+",
+            "subtitle": "Pelancong Puas"
+          },
+          {
+            "title": "24/7",
+            "subtitle": "Dukungan"
+          }
+        ],
+        "width": "w-auto",
+        "height": "h-auto",
+        "colSpan": 1,
+        "rowSpan": 1,
+        "flexGrow": 0,
+        "flexShrink": 1,
+        "flexBasis": "auto",
+        "alignSelf": "auto",
+        "order": 0,
+        "id": "Hero1-0bb45af8-92bc-4106-b015-6ad7e9c061db"
+      }
+    },
+    {
+      "type": "Features",
+      "props": {
+        "header": "Mengapa Memilih Kami",
+        "description": "Semua yang Anda butuhkan untuk perjalanan sempurna",
+        "features": [
+          {
+            "icon": "MapPin",
+            "title": "Destinasi Eksotis",
+            "description": "Pilih dari 500+ destinasi wisata terbaik di seluruh dunia"
+          },
+          {
+            "icon": "Users",
+            "title": "Pemandu Ahli",
+            "description": "Pemandu berpengalaman 10+ tahun di bidang pariwisata"
+          },
+          {
+            "icon": "Clock",
+            "title": "Jadwal Fleksibel",
+            "description": "Tur yang dapat disesuaikan dengan ketersediaan Anda"
+          },
+          {
+            "icon": "Shield",
+            "title": "Asuransi Perjalanan",
+            "description": "Perlindungan komprehensif untuk setiap perjalanan Anda"
+          },
+          {
+            "icon": "CreditCard",
+            "title": "Pembayaran Fleksibel",
+            "description": "Cicilan 0% tersedia untuk semua paket premium"
+          },
+          {
+            "icon": "Plane",
+            "title": "Dukungan 24/7",
+            "description": "Tim customer service siap membantu kapan saja"
+          }
+        ],
+        "id": "Features-336073ad-e7e7-4f95-9ea1-d13f7faaf7b8"
+      }
+    },
+    {
+      "type": "Steps",
+      "props": {
+        "header": "Cara Memesan Perjalanan Anda",
+        "description": "Proses booking yang mudah dalam 4 langkah sederhana",
+        "steps": [
+          {
+            "title": "Pilih Destinasi",
+            "desc": "Jelajahi katalog destinasi kami yang lengkap",
+            "description": "Cari berdasarkan benua, tipe wisata, atau budget Anda"
+          },
+          {
+            "title": "Pilih Tanggal",
+            "desc": "Tentukan waktu keberangkatan yang ideal",
+            "description": "Lihat ketersediaan dan harga untuk setiap periode"
+          },
+          {
+            "title": "Sesuaikan Paket",
+            "desc": "Tambahkan akomodasi, aktivitas, dan layanan tambahan",
+            "description": "Pilih dari berbagai opsi untuk membuat paket impian Anda"
+          },
+          {
+            "title": "Selesaikan Pemesanan",
+            "desc": "Lakukan pembayaran dan dapatkan konfirmasi",
+            "description": "Terima dokumentasi perjalanan lengkap via email"
+          }
+        ],
+        "id": "Steps-9c33bc64-1e52-4d04-99f3-c2db8a26f9df"
+      }
+    },
+    {
+      "type": "Testimonials",
+      "props": {
+        "badge": "Testimoni Pelancong",
+        "header": "Dipercaya oleh ribuan pelancong Indonesia",
+        "description": "Dari petualangan keluarga hingga liburan romantis, lihat bagaimana TravelBoost mengubah impian perjalanan mereka menjadi kenyataan.",
+        "testimonials": [
+          {
+            "name": "Budi Santoso",
+            "role": "Pengusaha dari Jakarta",
+            "avatar": "https://cdn.shadcnstudio.com/ss-assets/avatar/avatar-1.png?width=40&height=40&format=auto",
+            "content": "Paket tour ke Bali bersama TravelBoost benar-benar sempurna. Pemandu kami sangat informatif dan sangat membantu membuat liburan kami tak terlupakan."
+          },
+          {
+            "name": "Siti Nurhaliza",
+            "role": "Guru dari Bandung",
+            "avatar": "https://cdn.shadcnstudio.com/ss-assets/avatar/avatar-2.png?width=40&height=40&format=auto",
+            "content": "Pertama kali liburan ke Eropa dan TravelBoost membuat semuanya mudah. Harga sangat kompetitif dan layanan luar biasa memuaskan."
+          },
+          {
+            "name": "Ahmad Wijaya",
+            "role": "Fotografer dari Yogyakarta",
+            "avatar": "https://cdn.shadcnstudio.com/ss-assets/avatar/avatar-3.png?width=40&height=40&format=auto",
+            "content": "Paket photography tour ke Flores yang TravelBoost tawarkan sangat detail dan spot-spotnya luar biasa bagus. Highly recommended!"
+          }
+        ],
+        "id": "Testimonials-b3f3512a-2e45-4eef-a89a-1f4e4fdc00a5"
+      }
+    },
+    {
+      "type": "Cta",
+      "props": {
+        "header": "Siap untuk Petualangan Anda?",
+        "description": "Bergabunglah dengan 50,000+ pelancong yang telah merasakan pengalaman luar biasa bersama kami",
+        "actions": [
+          {
+            "variant": "secondary",
+            "label": "Mulai Perjalanan Anda Sekarang",
+            "size": "default",
+            "disabled": false,
+            "className": "",
+            "type": "button",
+            "href": "/tours",
+            "target": "_self"
+          }
+        ],
+        "id": "Cta-88001ba6-c782-4c16-a7ac-a584a4e2e38a"
+      }
+    },
+    {
+      "type": "Faq",
+      "props": {
+        "title": "Pertanyaan Umum Tentang Perjalanan",
+        "description": "Temukan jawaban atas pertanyaan Anda tentang paket tour, pemesanan, dan layanan kami.",
+        "items": [
+          {
+            "question": "Berapa lama sebelumnya saya harus melakukan pemesanan?",
+            "answer": "Kami merekomendasikan pemesanan minimal 2 minggu sebelum keberangkatan untuk memastikan ketersediaan terbaik. Untuk periode liburan nasional, sebaiknya pesan 1-2 bulan sebelumnya."
+          },
+          {
+            "question": "Apakah ada biaya pembatalan atau perubahan tanggal?",
+            "answer": "Pembatalan gratis hingga 14 hari sebelum keberangkatan. Perubahan tanggal dapat dilakukan tanpa biaya tambahan jika dilakukan minimal 7 hari sebelumnya, tergantung ketersediaan."
+          },
+          {
+            "question": "Apa saja yang sudah termasuk dalam paket tour?",
+            "answer": "Setiap paket mencakup akomodasi, transportasi lokal, pemandu wisata profesional, beberapa makanan, dan asuransi perjalanan. Detail lengkap tersedia di setiap deskripsi paket."
+          },
+          {
+            "question": "Apakah ada diskon untuk grup atau keluarga?",
+            "answer": "Ya, kami menawarkan diskon khusus untuk grup 10 orang atau lebih, dan paket keluarga dengan harga spesial. Hubungi tim sales kami untuk penawaran terbaik."
+          }
+        ],
+        "id": "Faq-2b7f574d-c033-44d4-ba90-94cb0bb23878"
+      }
+    },
+    {
+      "type": "Footer1",
+      "props": {
+        "content": "© 2025 TravelBoost. Semua hak dilindungi. | Jelajahi Dunia Bersama Kami",
+        "id": "Footer1-1748684f-e042-4ae1-add4-25a2793f4028"
+      }
+    }
+  ],
+  "zones": {}
+}

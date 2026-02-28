@@ -4,6 +4,8 @@
  * Travelboost
  * OpenAPI spec version: 0.0.1
  */
-import type { ChatMessageResourceReplyToAnyOf } from './chatMessageResourceReplyToAnyOf';
 
-export type ChatMessageResourceReplyTo = ChatMessageResourceReplyToAnyOf | null;
+export type ChatMessageResourceReplyTo = {
+  id: number;
+  message: string;
+};

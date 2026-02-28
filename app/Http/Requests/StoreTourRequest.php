@@ -38,7 +38,6 @@ class StoreTourRequest extends FormRequest
       'destination'  => 'nullable|string|max:100',
       'category_id'  => 'nullable|exists:tour_categories,id',
       'parent_id'    => 'nullable|exists:tours,id',
-      'user_id'      => 'nullable|exists:users,id',
       'image_id'  => 'nullable|exists:medias,id',
       'document_id'  => 'nullable|exists:medias,id',
     ];

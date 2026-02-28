@@ -4,7 +4,12 @@
  * Travelboost
  * OpenAPI spec version: 0.0.1
  */
+import type { OpenChatRequestRecipientType } from './openChatRequestRecipientType';
+import type { OpenChatRequestSenderType } from './openChatRequestSenderType';
 
 export interface OpenChatRequest {
-  user_id: number;
+  recipient_type: OpenChatRequestRecipientType;
+  recipient_id: number;
+  sender_type: OpenChatRequestSenderType;
+  sender_id: number;
 }

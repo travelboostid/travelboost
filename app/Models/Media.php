@@ -11,11 +11,12 @@ class Media extends Model
   protected $table = 'medias';
 
   protected $fillable = [
+    'owner_type',
+    'owner_id',
     'name',
     'description',
     'type',
     'data',
-    'user_id',
     'created_at',
     'updated_at'
   ];
@@ -28,10 +29,10 @@ class Media extends Model
   ];
 
   /**
-   * Get the user that owns the media
+   * Get the owner that owns the media
    */
-  public function user(): BelongsTo
+  public function owner()
   {
-    return $this->belongsTo(User::class);
+    return $this->morphTo();
   }
 }

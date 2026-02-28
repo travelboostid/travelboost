@@ -9,6 +9,7 @@ use App\Http\Requests\UpdateChatMessageRequest;
 use App\Http\Resources\ChatMessageResource;
 use App\Models\ChatMessage;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class ChatMessageController extends Controller
 {
@@ -40,19 +41,18 @@ class ChatMessageController extends Controller
    */
   public function store(StoreChatMessageRequest $request, $roomId)
   {
-    $message = ChatMessage::create([
-      'room_id' => $roomId,
-      'sender_id' => $request->user()->id,
-      'message' => $request->message,
-      'attachment' => $request->attachment,
-      'attachment_type' => $request->attachment_type,
-      'reply_to' => $request->reply_to,
-    ]);
+    $validated = $request->validated();
+    $validated['room_id'] = $roomId;
+    $message = ChatMessage::create($validated);
     // ✅ update last_message_id on room
     $message->room()->update([
       'last_message_id' => $message->id,
     ]);
     $message->load(['sender', 'room', 'replyTo']);
+    Log::info('ChatMessage created', [
+      'message_id' => $message->id,
+      'room_id' => $roomId,
+    ]);
     ChatMessageCreated::dispatch($message);
     return new ChatMessageResource($message);
   }

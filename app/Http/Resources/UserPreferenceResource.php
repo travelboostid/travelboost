@@ -16,7 +16,6 @@ class UserPreferenceResource extends JsonResource
       'id' => $this->id,
       'meta_pixel_id' => $this->meta_pixel_id,
       'use_chatbot' => $this->use_chatbot,
-      'landing_page_template_id' => $this->landing_page_template_id,
       'landing_page_template_data' => $this->landing_page_template_data,
       'updated_at' => $this->updated_at,
     ];
