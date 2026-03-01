@@ -20,12 +20,15 @@ class CreateNewUser implements CreatesNewUsers
    */
   public function create(array $input): User
   {
+    $tenant = request()->attributes->get('tenant');
+    $companyId = $tenant == null ? null : $tenant->id;
     Validator::make($input, [
       ...$this->profileRules(),
       'password' => $this->passwordRules(),
     ])->validate();
 
     $user = User::create([
+      'company_id' => $companyId,
       'name' => $input['name'],
       'email' => $input['email'],
       'username' => $input['username'],

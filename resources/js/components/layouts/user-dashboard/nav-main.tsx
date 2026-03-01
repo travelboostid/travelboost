@@ -1,4 +1,4 @@
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, ExternalLinkIcon } from 'lucide-react';
 
 import {
   Collapsible,
@@ -59,7 +59,7 @@ export function NavMain({
                     </SidebarMenuButton>
                   </CollapsibleTrigger>
                   <CollapsibleContent>
-                    <SidebarMenuSub>
+                    <SidebarMenuSub className="pr-0 mr-0">
                       {menu.items?.map((subItem) => (
                         <SidebarMenuSubItem key={subItem.title}>
                           {typeof subItem.urlOrAction === 'string' ? (
@@ -70,8 +70,14 @@ export function NavMain({
                               <a
                                 href={subItem.urlOrAction}
                                 target={subItem.target}
+                                className="flex"
                               >
-                                <span>{subItem.title}</span>
+                                <span className="flex-1">{subItem.title}</span>
+                                {subItem.target === '_blank' && (
+                                  <span className="text-muted-foreground">
+                                    <ExternalLinkIcon className="w-3" />
+                                  </span>
+                                )}
                               </a>
                             </SidebarMenuSubButton>
                           ) : (
@@ -98,6 +104,9 @@ export function NavMain({
                 <a href={menu.urlOrAction} target={menu.target}>
                   {menu.icon && <menu.icon />}
                   <span>{menu.title}</span>
+                  {menu.target === '_blank' && (
+                    <ExternalLinkIcon className="size-2" />
+                  )}
                 </a>
               </SidebarMenuButton>
             ) : (

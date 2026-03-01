@@ -1,5 +1,13 @@
+import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import type { LucideIcon } from 'lucide-react';
-import { HomeIcon, SettingsIcon, WalletIcon } from 'lucide-react';
+import {
+  HomeIcon,
+  MessageCircleQuestionIcon,
+  PlaneIcon,
+  SettingsIcon,
+  TicketIcon,
+  WalletIcon,
+} from 'lucide-react';
 import type { HTMLAttributeAnchorTarget } from 'react';
 
 type MenuItem = {
@@ -12,6 +20,7 @@ type MenuItem = {
 };
 
 export default function useUserDashboardNavMainMenu() {
+  const { tenant } = usePageSharedDataProps();
   return [
     {
       id: 'home',
@@ -19,7 +28,20 @@ export default function useUserDashboardNavMainMenu() {
       urlOrAction: `/me`,
       icon: HomeIcon,
     },
-    {
+    tenant && {
+      id: 'tours',
+      title: 'Tour Catalog',
+      urlOrAction: `/tours`,
+      icon: PlaneIcon,
+      target: '_blank',
+    },
+    tenant && {
+      id: 'tour-bookings',
+      title: 'Bookings',
+      urlOrAction: `/bookings`,
+      icon: TicketIcon,
+    },
+    tenant && {
       id: 'funds',
       title: 'Funds',
       urlOrAction: `/me/wallets`,
@@ -49,6 +71,31 @@ export default function useUserDashboardNavMainMenu() {
           id: 'funds.payments',
           title: 'Payment History',
           urlOrAction: `/me/payments`,
+        },
+      ],
+    },
+    tenant && {
+      id: 'cs',
+      title: 'Customer Service',
+      urlOrAction: `#`,
+      icon: MessageCircleQuestionIcon,
+      items: [
+        {
+          id: 'cs.chat',
+          title: 'Chat',
+          urlOrAction: () => {},
+        },
+        {
+          id: 'cs.whatsapp',
+          title: 'Chat on WhatsApp',
+          urlOrAction: `https://wa.me/62`,
+          target: '_blank',
+        },
+        {
+          id: 'cs.email',
+          title: 'Chat on Email',
+          urlOrAction: `mailto:${tenant?.email || ''}`,
+          target: '_blank',
         },
       ],
     },

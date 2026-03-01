@@ -16,9 +16,27 @@ class CustomerController extends Controller
    */
   public function index(Company $company)
   {
-    $customers = $company->customers()->get();
+    $customers = $company->customers()
+      ->when(request('name'), function ($query, $search) {
+        $query->where('name', 'like', "{$search}%");
+      })
+      ->when(request('email'), function ($query, $search) {
+        $query->where('email', 'like', "{$search}%");
+      })
+      ->when(request('sort'), function ($query) {
+        $sorts = explode(',', request('sort'));
+        foreach ($sorts as $sort) {
+          if (str_starts_with($sort, '-')) {
+            $query->orderBy(substr($sort, 1), 'desc');
+          } else {
+            $query->orderBy($sort, 'asc');
+          }
+        }
+      })
+      ->paginate();
+
     return Inertia::render('companies/dashboard/customers/index', [
-      'customers' => $customers,
+      'data' => $customers,
     ]);
   }
 

@@ -9,6 +9,7 @@ import '../css/app.css';
 import { Toaster } from './components/ui/sonner';
 import { TooltipProvider } from './components/ui/tooltip';
 import { initializeTheme } from './hooks/use-appearance';
+import { NuqsAdapter } from './lib/nuqs-inertia-adapter';
 
 const queryClient = new QueryClient();
 
@@ -16,11 +17,16 @@ configureEcho({
   broadcaster: 'reverb',
   key: import.meta.env.VITE_REVERB_APP_KEY,
   wsHost: import.meta.env.VITE_REVERB_HOST,
-  wsPort: import.meta.env.VITE_REVERB_PORT,
-  wssPort: import.meta.env.VITE_REVERB_PORT,
+  wsPort: import.meta.env.VITE_REVERB_PORT ?? 80,
+  wssPort: import.meta.env.VITE_REVERB_PORT ?? 443,
   forceTLS: (import.meta.env.VITE_REVERB_SCHEME ?? 'https') === 'https',
   enabledTransports: ['ws', 'wss'],
 });
+
+console.log(
+  'Echo configured with Reverb host:',
+  import.meta.env.VITE_REVERB_HOST,
+);
 
 const appName = import.meta.env.VITE_APP_NAME || 'Travelboost';
 
@@ -49,7 +55,9 @@ createInertiaApp({
         >
           <TooltipProvider>
             <QueryClientProvider client={queryClient}>
-              <App {...props} />
+              <NuqsAdapter>
+                <App {...props} />
+              </NuqsAdapter>
               <Toaster />
             </QueryClientProvider>
           </TooltipProvider>

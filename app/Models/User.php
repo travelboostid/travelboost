@@ -35,7 +35,8 @@ class User extends Authenticatable implements Customer, Wallet
     'password',
     'phone',
     'address',
-    'photo_id'
+    'photo_id',
+    'company_id'
   ];
 
   /**
@@ -106,5 +107,10 @@ class User extends Authenticatable implements Customer, Wallet
   public function medias()
   {
     return $this->morphMany(Media::class, 'owner');
+  }
+
+  public function company()
+  {
+    return $this->belongsTo(Company::class, 'company_id');
   }
 }

@@ -5,6 +5,7 @@ import {
   SidebarHeader,
   SidebarRail,
 } from '@/components/ui/sidebar';
+import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import type { CompanyDashboardLayoutProps } from '.';
 import { NavUser } from '../components/nav-user';
 import { TeamSwitcher } from '../components/team-switcher';
@@ -14,10 +15,11 @@ import { NavSecondary } from './nav-secondary';
 // This is sample data.
 
 export function SidebarSection(props: CompanyDashboardLayoutProps) {
+  const { company } = usePageSharedDataProps();
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
-        <TeamSwitcher />
+        <TeamSwitcher activeId={`company:${company.username}`} />
       </SidebarHeader>
       <SidebarContent>
         <NavMain {...props} />

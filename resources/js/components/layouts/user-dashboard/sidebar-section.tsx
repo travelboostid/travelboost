@@ -16,7 +16,7 @@ export function SidebarSection(props: UserDashboardLayoutProps) {
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
-        <TeamSwitcher />
+        <TeamSwitcher activeId="user:current" />
       </SidebarHeader>
       <SidebarContent>
         <NavMain {...props} />

@@ -24,6 +24,7 @@
     "laravel/wayfinder": "^0.1.9",
     "midtrans/midtrans-php": "*",
     "spatie/laravel-permission": "*",
+    "spatie/laravel-query-builder": "*",
     "theodo-group/llphant": "*",
     "tpetry/laravel-postgresql-enhanced": "*"
   },

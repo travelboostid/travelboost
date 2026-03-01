@@ -1,4 +1,3 @@
-import FloatingChatWidget from '@/components/chat/floating-chat-widget';
 import { Separator } from '@/components/ui/separator';
 import {
   SidebarInset,
@@ -41,7 +40,6 @@ export default function AdminDashboardLayout(props: AdminDashboardLayoutProps) {
         </header>
         <div className={containerClassName}>{children}</div>
       </SidebarInset>
-      <FloatingChatWidget />
     </SidebarProvider>
   );
 }

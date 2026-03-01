@@ -70,7 +70,8 @@ export function useCompanyDashboardNavMainMenu() {
             {
               id: 'tours.preview',
               title: 'My Catalogs',
-              urlOrAction: `${company.username}.${appHost}/tours`,
+              urlOrAction: `//${company.username}.${appHost}/tours`,
+              target: '_blank',
             },
             {
               id: 'tours.orders',
@@ -249,9 +250,15 @@ export function useCompanyDashboardNavMainMenu() {
           icon: BoltIcon,
           items: [
             {
-              id: 'marketings.landing-page',
-              title: 'My Landing Page',
+              id: 'marketings.landing-page.edit',
+              title: 'Edit Landing Page',
               urlOrAction: `/companies/${company.username}/dashboard/page/edit`,
+            },
+            {
+              id: 'marketings.landing-page.view',
+              title: 'My Landing Page',
+              urlOrAction: `//${company.username}.${appHost}`,
+              target: '_blank',
             },
             {
               id: 'marketings.socmed-analytics',

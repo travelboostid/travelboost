@@ -9,14 +9,15 @@ import { IconFolderCode } from '@tabler/icons-react';
 
 export function EmptyCustomers() {
   return (
-    <Empty className="min-h-[75vh]">
+    <Empty className="">
       <EmptyHeader>
         <EmptyMedia variant="icon">
           <IconFolderCode />
         </EmptyMedia>
-        <EmptyTitle>No Customers Yet</EmptyTitle>
+        <EmptyTitle>No Data Available</EmptyTitle>
         <EmptyDescription>
-          You haven't acquired any customers yet. Please do check later.
+          There are no customers to display. Please check back later or change
+          your filters.
         </EmptyDescription>
       </EmptyHeader>
     </Empty>
