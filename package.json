@@ -30,12 +30,10 @@
     "prettier": "^3.4.2",
     "prettier-plugin-organize-imports": "^4.3.0",
     "prettier-plugin-tailwindcss": "^0.6.11",
-    "pusher-js": "^8.4.0",
     "typescript-eslint": "^8.23.0"
   },
   "dependencies": {
     "@ably/laravel-echo": "^1.0.6",
-    "@base-ui/react": "^1.1.0",
     "@headlessui/react": "^2.2.0",
     "@hookform/resolvers": "^5.2.2",
     "@inertiajs/react": "^2.3.7",
@@ -60,7 +58,6 @@
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "@vitejs/plugin-react": "^5.0.0",
-    "ably": "~1.2.50",
     "axios": "^1.13.4",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

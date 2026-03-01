@@ -10,7 +10,6 @@
   "license": "MIT",
   "require": {
     "php": "^8.4",
-    "ably/laravel-broadcaster": "*",
     "bavix/laravel-wallet": "*",
     "dedoc/scramble": "*",
     "inertiajs/inertia-laravel": "^2.0",
