@@ -2,11 +2,11 @@ import type { ReactNode } from 'react';
 import { Footer } from './footer';
 import { Header } from './header';
 
-type StdLayoutProps = {
+type HomeLayoutProps = {
   children: ReactNode;
 };
 
-export default function StdLayout({ children }: StdLayoutProps) {
+export default function HomeLayout({ children }: HomeLayoutProps) {
   return (
     <div className="min-h-screen bg-background text-foreground transition-colors duration-300">
       <Header />

@@ -4,7 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use App\Enums\CompanyUserRole;
+use App\Enums\CompanyMemberRole;
 
 class CompanyMemberInvitation extends Model
 {
@@ -18,7 +18,7 @@ class CompanyMemberInvitation extends Model
   ];
 
   protected $casts = [
-    'role' => CompanyUserRole::class,
+    'role' => CompanyMemberRole::class,
   ];
 
   protected $with = ['user'];

@@ -217,7 +217,7 @@ export function useMessage(messageId: number) {
 }
 
 type Attachment = {
-  type: 'tour';
+  type: 'tour' | 'agent-tour';
   data: any;
 };
 

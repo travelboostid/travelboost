@@ -1,8 +1,9 @@
 <?php
 
 use App\Enums\CompanyType;
-use App\Enums\CompanyUserRole;
+use App\Enums\CompanyMemberRole;
 use App\Enums\CompanyUserStatus;
+use App\Enums\DomainStatus;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -17,10 +18,10 @@ return new class extends Migration
     Schema::create('users', function (Blueprint $table) {
       $table->id();
       $table->string('name');
-      $table->string('email')->unique();
+      $table->string('email'); //->unique() -> we handle this on separate step below;
       $table->timestamp('email_verified_at')->nullable();
       $table->string('password');
-      $table->string('username')->unique();
+      $table->string('username'); //->unique() -> we handle this on separate step below;
       $table->string(column: 'address');
       $table->string(column: 'phone');
       $table->rememberToken();
@@ -67,9 +68,18 @@ return new class extends Migration
       $table->foreignId('company_id')->constrained()->cascadeOnDelete();
       $table->foreignId('user_id')->constrained()->cascadeOnDelete();
       $table->enum('status', CompanyUserStatus::cases())->default(CompanyUserStatus::PENDING);
-      $table->enum('role', CompanyUserRole::cases())->default(CompanyUserRole::ADMIN);
+      $table->enum('role', CompanyMemberRole::cases())->default(CompanyMemberRole::ADMIN);
       $table->timestamps();
       $table->unique(['company_id', 'user_id']);
+    });
+
+    Schema::create('vendor_agencies', function (Blueprint $table) {
+      $table->id();
+      $table->foreignId('vendor_id')->constrained('companies')->cascadeOnDelete();
+      $table->foreignId('agent_id')->constrained('companies')->cascadeOnDelete();
+      $table->enum('status', CompanyUserStatus::cases())->default(CompanyUserStatus::PENDING);
+      $table->timestamps();
+      $table->unique(['vendor_id', 'agent_id']);
     });
 
     Schema::create('company_member_invitations', function (Blueprint $table) {
@@ -77,9 +87,18 @@ return new class extends Migration
       $table->foreignId('company_id')->constrained()->cascadeOnDelete();
       $table->foreignId('user_id')->nullable()->constrained()->cascadeOnDelete();
       $table->string('email');
-      $table->enum('role', CompanyUserRole::cases())->default(CompanyUserRole::ADMIN);
+      $table->enum('role', CompanyMemberRole::cases())->default(CompanyMemberRole::ADMIN);
       $table->timestamps();
       $table->unique(['company_id', 'email']);
+    });
+
+    Schema::create('domains', function (Blueprint $table) {
+      $table->id();
+      $table->foreignId('company_id')->unique()->constrained()->cascadeOnDelete();
+      $table->string('domain')->unique();
+      $table->enum('status', DomainStatus::cases())->default(DomainStatus::INACTIVE);
+      $table->uuid('verification_token')->unique();
+      $table->timestamps();
     });
 
     Schema::table('users', function (Blueprint $table) {
@@ -87,6 +106,8 @@ return new class extends Migration
         ->nullable()
         ->constrained('companies')
         ->cascadeOnDelete();
+      $table->unique(['company_id', 'email']);
+      $table->unique(['company_id', 'username']);
     });
   }
 

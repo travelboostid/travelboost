@@ -1,6 +1,6 @@
 <?php
 
-use App\Http\Middleware\DomainResolver;
+use App\Http\Middleware\TenantResolver;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\ResolveCustomDomain;
@@ -25,7 +25,7 @@ return Application::configure(basePath: dirname(__DIR__))
     $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
 
     $middleware->web(append: [
-      DomainResolver::class,
+      TenantResolver::class,
       HandleAppearance::class,
       HandleInertiaRequests::class,
       AddLinkHeadersForPreloadedAssets::class,

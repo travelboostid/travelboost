@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use App\Enums\CompanyUserStatus;
-use App\Enums\CompanyUserRole;
+use App\Enums\CompanyMemberRole;
 
 class CompanyMember extends Model
 {
@@ -20,7 +20,7 @@ class CompanyMember extends Model
 
   protected $casts = [
     'status' => CompanyUserStatus::class,
-    'role'   => CompanyUserRole::class,
+    'role'   => CompanyMemberRole::class,
   ];
 
   protected $with = [

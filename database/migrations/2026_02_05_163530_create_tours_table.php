@@ -54,6 +54,16 @@ return new class extends Migration
       $table->index('status');
     });
 
+    Schema::create('tour_document_knowledge_bases', function (Blueprint $table) {
+      $table->id();
+      $table->foreignId('tour_id')
+        ->constrained('tours')
+        ->cascadeOnDelete();
+      $table->text('content');
+      $table->vector('embedding', dimensions: 1536);
+      $table->timestamps();
+    });
+
     Schema::create('agent_tours', function (Blueprint $table) {
       $table->id();
       $table->foreignId('company_id')
@@ -77,6 +87,7 @@ return new class extends Migration
   public function down(): void
   {
     Schema::dropIfExists('agent_tours');
+    Schema::dropIfExists('knowledge_bases');
     Schema::dropIfExists('tour_categories');
     Schema::dropIfExists('tours');
   }

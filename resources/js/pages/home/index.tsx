@@ -1,4 +1,4 @@
-import StdLayout from '@/components/layouts/std-layout';
+import HomeLayout from '@/components/layouts/home-layout';
 import { BenefitsSection } from './benefits-section';
 import { CommunitySection } from './community-section';
 import { CTASection } from './cta-section';
@@ -13,7 +13,7 @@ import { VisualsSection } from './visuals-section';
 
 export default function Page() {
   return (
-    <StdLayout>
+    <HomeLayout>
       <HeroSection />
       <StepsSection />
       <BenefitsSection />
@@ -25,6 +25,6 @@ export default function Page() {
       <CommunitySection />
       <CTASection />
       <Footer />
-    </StdLayout>
+    </HomeLayout>
   );
 }

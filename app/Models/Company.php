@@ -87,6 +87,16 @@ class Company extends Model
     return $this->morphMany(Media::class, 'owner');
   }
 
+  public function customers()
+  {
+    return $this->hasMany(User::class);
+  }
+
+  public function domain()
+  {
+    return $this->hasOne(Domain::class);
+  }
+
   protected function photoUrl(): Attribute
   {
     return Attribute::make(

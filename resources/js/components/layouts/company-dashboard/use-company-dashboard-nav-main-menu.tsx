@@ -22,6 +22,7 @@ type MenuItem = {
 };
 
 export function useCompanyDashboardNavMainMenu() {
+  const appHost = import.meta.env.VITE_APP_HOST;
   const { company } = usePageSharedDataProps();
 
   return company.type === 'vendor'
@@ -69,7 +70,7 @@ export function useCompanyDashboardNavMainMenu() {
             {
               id: 'tours.preview',
               title: 'My Catalogs',
-              urlOrAction: `#`,
+              urlOrAction: `${company.username}.${appHost}/tours`,
             },
             {
               id: 'tours.orders',
@@ -81,7 +82,7 @@ export function useCompanyDashboardNavMainMenu() {
         {
           id: 'customers',
           title: 'Customers',
-          urlOrAction: '#',
+          urlOrAction: `/companies/${company.username}/dashboard/customers`,
           icon: BookUserIcon,
         },
         {
@@ -198,7 +199,8 @@ export function useCompanyDashboardNavMainMenu() {
             {
               id: 'tours.cats',
               title: 'My Catalogs',
-              urlOrAction: `#`,
+              urlOrAction: `//${company.username}.${appHost}/tours`,
+              target: '_blank',
             },
             {
               id: 'tours.bookings',
@@ -249,7 +251,7 @@ export function useCompanyDashboardNavMainMenu() {
             {
               id: 'marketings.landing-page',
               title: 'My Landing Page',
-              urlOrAction: `/${company.username}/design`,
+              urlOrAction: `/companies/${company.username}/dashboard/page/edit`,
             },
             {
               id: 'marketings.socmed-analytics',
@@ -266,7 +268,7 @@ export function useCompanyDashboardNavMainMenu() {
         {
           id: 'customers',
           title: 'Customers',
-          urlOrAction: '#',
+          urlOrAction: `/companies/${company.username}/dashboard/customers`,
           icon: BookUserIcon,
         },
         {

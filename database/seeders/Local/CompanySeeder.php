@@ -3,7 +3,7 @@
 namespace Database\Seeders\Local;
 
 use App\Enums\CompanyType;
-use App\Enums\CompanyUserRole;
+use App\Enums\CompanyMemberRole;
 use App\Enums\CompanyUserStatus;
 use App\Models\User;
 use App\Models\Company;
@@ -31,7 +31,7 @@ class CompanySeeder extends Seeder
 
       // ===== Attach user to company pivot =====
       $root->companies()->attach($rootCompany->id, [
-        'role' => CompanyUserRole::SUPERADMIN,
+        'role' => CompanyMemberRole::SUPERADMIN,
         'status' => CompanyUserStatus::ACTIVE,
       ]);
     }
@@ -48,7 +48,7 @@ class CompanySeeder extends Seeder
 
       // ===== Attach user to company pivot =====
       $john->companies()->attach($johnCompany->id, [
-        'role' => CompanyUserRole::SUPERADMIN,
+        'role' => CompanyMemberRole::SUPERADMIN,
         'status' => CompanyUserStatus::ACTIVE,
       ]);
 
