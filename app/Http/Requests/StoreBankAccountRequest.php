@@ -2,7 +2,7 @@
 
 namespace App\Http\Requests;
 
-use App\Models\BankAccount;
+use App\Enums\BankAccountStatus;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
@@ -36,9 +36,9 @@ class StoreBankAccountRequest extends FormRequest
       'branch' => 'nullable|string|max:100',
       'is_default' => 'boolean',
       'status' => 'nullable|in:' . implode(',', [
-        BankAccount::STATUS_PENDING,
-        BankAccount::STATUS_VERIFIED,
-        BankAccount::STATUS_REJECTED
+        BankAccountStatus::PENDING,
+        BankAccountStatus::VERIFIED,
+        BankAccountStatus::REJECTED
       ])
     ];
   }
@@ -70,7 +70,7 @@ class StoreBankAccountRequest extends FormRequest
 
     // Set default status if not provided
     if (!$this->has('status')) {
-      $data['status'] = BankAccount::STATUS_PENDING;
+      $data['status'] = BankAccountStatus::PENDING;
     }
 
     // If setting as default, we'll handle it in the controller
