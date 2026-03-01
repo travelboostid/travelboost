@@ -73,11 +73,6 @@ export default function useUserDashboardNavMainMenu() {
           title: 'Two Factor Auth',
           urlOrAction: `/me/settings/two-factor`,
         },
-        {
-          id: 'settings.appearance',
-          title: 'Appearance',
-          urlOrAction: `/me/settings/appearance`,
-        },
       ],
     },
   ].filter(Boolean) as MenuItem[];
