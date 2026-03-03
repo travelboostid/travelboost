@@ -2,9 +2,9 @@
 
 namespace App\Models;
 
+use App\Events\ChatMessageCreated;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Notifications\Notifiable;
 
 class ChatMessage extends Model
@@ -26,6 +26,10 @@ class ChatMessage extends Model
   protected $with = [
     'sender',
     'replyTo'
+  ];
+
+  protected $dispatchesEvents = [
+    'created' => ChatMessageCreated::class,
   ];
 
   public function room()

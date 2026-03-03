@@ -47,6 +47,7 @@ return new class extends Migration
         ->constrained('chat_rooms')
         ->cascadeOnDelete();
       $table->foreignId('user_id')
+        ->nullable()
         ->constrained('users')
         ->cascadeOnDelete();
       $table->nullableMorphs('sender'); // sender_type + sender_id

@@ -31,6 +31,7 @@ return new class extends Migration
       $table->string('continent');
       $table->string('region');
       $table->string('country');
+      $table->decimal('price', 10, 2)->default(0);
       $table->string('destination');
       $table->foreignId('company_id')
         ->constrained('companies')

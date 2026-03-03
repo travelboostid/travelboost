@@ -12,6 +12,10 @@ class TourDocumentKnowledgeBase extends Model
     'embedding',
   ];
 
+  protected $casts = [
+    'embedding' => 'array',
+  ];
+
   public function tour()
   {
     return $this->belongsTo(Tour::class);

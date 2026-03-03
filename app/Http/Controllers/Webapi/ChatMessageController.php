@@ -53,7 +53,6 @@ class ChatMessageController extends Controller
       'message_id' => $message->id,
       'room_id' => $roomId,
     ]);
-    ChatMessageCreated::dispatch($message);
     return new ChatMessageResource($message);
   }
 

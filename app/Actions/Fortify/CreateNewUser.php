@@ -26,20 +26,19 @@ class CreateNewUser implements CreatesNewUsers
       ...$this->profileRules(),
       'password' => $this->passwordRules(),
     ])->validate();
+    $data = collect($input)->only([
+      'name',
+      'email',
+      'username',
+      'phone',
+      'address',
+    ])->toArray();
 
-    $user = User::create([
-      'company_id' => $companyId,
-      'name' => $input['name'],
-      'email' => $input['email'],
-      'username' => $input['username'],
-      'phone' => $input['phone'],
-      'address' => $input['address'],
-      'password' => $input['password'],
-    ]);
+    $data['company_id'] = $companyId;
+    $data['password'] = $input['password'];
 
-    // UserPreference::create([
-    //   'user_id' => $user->id,
-    // ]);
+    $user = User::create($data);
+
 
     return $user;
   }

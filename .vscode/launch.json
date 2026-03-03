@@ -5,16 +5,21 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Laravel Artisan Serve",
+      "name": "Listen for Xdebug (Web)",
+      "type": "php",
+      "request": "launch",
+      "port": 9003
+    },
+    {
+      "name": "Debug Artisan Command",
       "type": "php",
       "request": "launch",
       "program": "${workspaceFolder}/artisan",
-      "args": ["serve"],
+      "args": ["queue:work"],
       "cwd": "${workspaceFolder}",
       "port": 9003,
       "env": {
-        "XDEBUG_MODE": "debug",
-        "XDEBUG_TRIGGER": "1"
+        "XDEBUG_MODE": "debug"
       }
     }
   ]

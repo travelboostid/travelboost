@@ -31,7 +31,6 @@ class TourController extends Controller
   public function store(StoreTourRequest $request, Company $company)
   {
     $tour = $company->tours()->create($request->validated());
-    // TourCreated::dispatch($tour);
     return back();
   }
 

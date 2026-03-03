@@ -18,11 +18,11 @@ class ChatMessageCreated  implements ShouldBroadcast
   /**
    * Create a new event instance.
    * 
-   * @param ChatMessage $chat The chat message that was created
+   * @param ChatMessage $message The chat message that was created
    */
-  public function __construct(public ChatMessage $chat)
+  public function __construct(public ChatMessage $message)
   {
-    Log::info("ChatMessageCreated event instantiated for chat message ID: {$chat->id}");
+    Log::info("ChatMessageCreated event instantiated for chat message ID: {$message->id}");
     // The chat message is passed to the event for broadcasting
   }
 
@@ -37,11 +37,11 @@ class ChatMessageCreated  implements ShouldBroadcast
     $channels = [];
 
     // 1️⃣ Room channel - for updating chat detail view
-    $channels[] = new PrivateChannel("rooms.{$this->chat->room_id}");
+    $channels[] = new PrivateChannel("rooms.{$this->message->room_id}");
 
     // 2️⃣ User channels - for updating chat list sidebar for each member
-    $this->chat->load('room.members');
-    foreach ($this->chat->room->members as $member) {
+    $this->message->load('room.members');
+    foreach ($this->message->room->members as $member) {
       if ($member->member_type === 'user') {
         Log::debug("Adding channel for member", ['member_id' => $member->id, 'member_type' => $member->member_type]);
         $channels[] = new PrivateChannel("users.{$member->member_id}");
@@ -80,10 +80,10 @@ class ChatMessageCreated  implements ShouldBroadcast
   public function broadcastWith(): array
   {
     // Eager load relationships to avoid N+1 queries
-    $this->chat->loadMissing(['sender', 'room']);
+    $this->message->loadMissing(['sender', 'room']);
 
     // Use resource to control serialized data structure
-    $resource = new ChatMessageResource($this->chat);
+    $resource = new ChatMessageResource($this->message);
 
     return $resource->resolve();
   }
