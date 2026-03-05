@@ -1,3 +1,4 @@
+import { useGetCompanies } from '@/api/company/company';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import type { LucideIcon } from 'lucide-react';
 import {
@@ -24,7 +25,9 @@ type MenuItem = {
 export function useCompanyDashboardNavMainMenu() {
   const appHost = import.meta.env.VITE_APP_HOST;
   const { company } = usePageSharedDataProps();
+  const { data } = useGetCompanies({ type: 'vendor' });
 
+  console.log('company', data);
   return company.type === 'vendor'
     ? ([
         {
@@ -173,13 +176,12 @@ export function useCompanyDashboardNavMainMenu() {
           title: 'Vendor Catalogs',
           urlOrAction: '#',
           icon: FolderSearchIcon,
-          items: [
-            {
-              id: 'vendor-tours.root',
-              title: 'Root',
-              urlOrAction: `/companies/${company.username}/dashboard/vendors/root/tours`,
-            },
-          ],
+          items:
+            (data?.data || []).map((vendor) => ({
+              id: `vendor-tours.${vendor.id}`,
+              title: vendor.name,
+              urlOrAction: `/companies/${company.username}/dashboard/vendors/${vendor.username}/tours`,
+            })) || [],
         },
         {
           id: 'tours',

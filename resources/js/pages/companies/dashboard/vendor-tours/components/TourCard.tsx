@@ -133,7 +133,6 @@ export default function TourCard({ tour }: { tour: TourResource }) {
           onClick={handleViewBrochure}
         >
           <IconPdf />
-          <span className="hidden md:inline">Brochures</span>
         </Button>
         <Button
           disabled={(tour as any).has_copied}
@@ -141,7 +140,6 @@ export default function TourCard({ tour }: { tour: TourResource }) {
           className="flex-1"
         >
           <SaveIcon />
-          <span className="hidden md:inline">Save Tour</span>
         </Button>
         <Button
           onClick={handleMessage}

@@ -37,10 +37,10 @@ export default function DefaultLayout({
             {/* DESKTOP MENU */}
             <nav className="hidden md:flex items-center gap-8">
               <a
-                href="/home"
+                href="/"
                 className="text-muted-foreground hover:text-foreground transition-colors"
               >
-                Tours
+                Home
               </a>
               <a
                 href="/tours"

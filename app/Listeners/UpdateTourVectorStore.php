@@ -29,7 +29,7 @@ class UpdateTourVectorStore
   public function handle(TourCreated|TourUpdated $event): void
   {
     $tour = $event->tour;
-    if (! $tour->document || empty($tour->document->data['url'])) {
+    if (! $tour?->document?->data['url']) {
       return;
     }
 
