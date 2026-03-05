@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Middleware\EnsureHasAdminAccess;
+use App\Http\Middleware\EnsureHasCompanyAccess;
 use App\Http\Middleware\TenantResolver;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
@@ -23,7 +25,10 @@ return Application::configure(basePath: dirname(__DIR__))
   })
   ->withMiddleware(function (Middleware $middleware): void {
     $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
-
+    $middleware->alias([
+      'company.access' => EnsureHasCompanyAccess::class,
+      'admin.access' => EnsureHasAdminAccess::class,
+    ]);
     $middleware->web(append: [
       TenantResolver::class,
       HandleAppearance::class,

@@ -7,7 +7,7 @@
 import type { StoreChatMessageRequestUserId } from './storeChatMessageRequestUserId';
 import type { StoreChatMessageRequestSenderType } from './storeChatMessageRequestSenderType';
 import type { StoreChatMessageRequestSenderId } from './storeChatMessageRequestSenderId';
-import type { StoreChatMessageRequestAttachment } from './storeChatMessageRequestAttachment';
+import type { StoreChatMessageRequestAttachmentData } from './storeChatMessageRequestAttachmentData';
 import type { StoreChatMessageRequestAttachmentType } from './storeChatMessageRequestAttachmentType';
 
 export interface StoreChatMessageRequest {
@@ -22,7 +22,7 @@ export interface StoreChatMessageRequest {
    */
   message: string;
   /** @maxLength 2000 */
-  attachment?: StoreChatMessageRequestAttachment;
+  attachment_data?: StoreChatMessageRequestAttachmentData;
   /**
    * max 10 MB
    * @maxLength 50

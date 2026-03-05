@@ -4,14 +4,14 @@
  * Travelboost
  * OpenAPI spec version: 0.0.1
  */
-import type { UpdateChatMessageRequestAttachment } from './updateChatMessageRequestAttachment';
+import type { UpdateChatMessageRequestAttachmentData } from './updateChatMessageRequestAttachmentData';
 import type { UpdateChatMessageRequestAttachmentType } from './updateChatMessageRequestAttachmentType';
 
 export interface UpdateChatMessageRequest {
   /** @maxLength 2000 */
   message?: string;
   /** @maxLength 2000 */
-  attachment?: UpdateChatMessageRequestAttachment;
+  attachment_data?: UpdateChatMessageRequestAttachmentData;
   /** @maxLength 50 */
   attachment_type?: UpdateChatMessageRequestAttachmentType;
 }

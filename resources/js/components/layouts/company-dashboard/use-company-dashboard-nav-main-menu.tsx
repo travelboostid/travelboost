@@ -149,9 +149,9 @@ export function useCompanyDashboardNavMainMenu() {
               urlOrAction: `/companies/${company.username}/dashboard/settings/profile`,
             },
             {
-              id: 'settings.members',
+              id: 'settings.teams',
               title: 'User Management',
-              urlOrAction: `/companies/${company.username}/dashboard/settings/members`,
+              urlOrAction: `/companies/${company.username}/dashboard/settings/teams`,
             },
             {
               id: 'settings.chatbot',
@@ -303,9 +303,9 @@ export function useCompanyDashboardNavMainMenu() {
               urlOrAction: `/companies/${company.username}/dashboard/settings/profile`,
             },
             {
-              id: 'settings.members',
+              id: 'settings.teams',
               title: 'User Management',
-              urlOrAction: `/companies/${company.username}/dashboard/settings/members`,
+              urlOrAction: `/companies/${company.username}/dashboard/settings/teams`,
             },
             {
               id: 'settings.chatbot',
@@ -315,7 +315,7 @@ export function useCompanyDashboardNavMainMenu() {
             {
               id: 'settings.vendor-regs',
               title: 'Vendor Registrations',
-              urlOrAction: `#`,
+              urlOrAction: `/companies/${company.username}/dashboard/vendor-registrations`,
             },
           ],
         },

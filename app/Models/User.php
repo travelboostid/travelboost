@@ -89,7 +89,7 @@ class User extends Authenticatable implements Customer, Wallet
 
   public function companies()
   {
-    return $this->belongsToMany(Company::class, 'company_members')
+    return $this->belongsToMany(Company::class, 'company_teams')
       ->withPivot('role')
       ->withTimestamps();
   }

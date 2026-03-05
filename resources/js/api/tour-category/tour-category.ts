@@ -20,6 +20,7 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  AuthenticationExceptionResponse,
   GetTourCategories200,
   GetTourCategoriesParams,
   ValidationExceptionResponse
@@ -58,7 +59,7 @@ export const getGetTourCategoriesQueryKey = (params?: GetTourCategoriesParams,) 
     }
 
     
-export const getGetTourCategoriesQueryOptions = <TData = Awaited<ReturnType<typeof getTourCategories>>, TError = ValidationExceptionResponse>(params?: GetTourCategoriesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getTourCategories>>, TError, TData>>, request?: SecondParameter<typeof apiInstance>}
+export const getGetTourCategoriesQueryOptions = <TData = Awaited<ReturnType<typeof getTourCategories>>, TError = AuthenticationExceptionResponse | ValidationExceptionResponse>(params?: GetTourCategoriesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getTourCategories>>, TError, TData>>, request?: SecondParameter<typeof apiInstance>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
@@ -77,10 +78,10 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type GetTourCategoriesQueryResult = NonNullable<Awaited<ReturnType<typeof getTourCategories>>>
-export type GetTourCategoriesQueryError = ValidationExceptionResponse
+export type GetTourCategoriesQueryError = AuthenticationExceptionResponse | ValidationExceptionResponse
 
 
-export function useGetTourCategories<TData = Awaited<ReturnType<typeof getTourCategories>>, TError = ValidationExceptionResponse>(
+export function useGetTourCategories<TData = Awaited<ReturnType<typeof getTourCategories>>, TError = AuthenticationExceptionResponse | ValidationExceptionResponse>(
  params: undefined |  GetTourCategoriesParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getTourCategories>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof getTourCategories>>,
@@ -90,7 +91,7 @@ export function useGetTourCategories<TData = Awaited<ReturnType<typeof getTourCa
       >, request?: SecondParameter<typeof apiInstance>}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetTourCategories<TData = Awaited<ReturnType<typeof getTourCategories>>, TError = ValidationExceptionResponse>(
+export function useGetTourCategories<TData = Awaited<ReturnType<typeof getTourCategories>>, TError = AuthenticationExceptionResponse | ValidationExceptionResponse>(
  params?: GetTourCategoriesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getTourCategories>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof getTourCategories>>,
@@ -100,7 +101,7 @@ export function useGetTourCategories<TData = Awaited<ReturnType<typeof getTourCa
       >, request?: SecondParameter<typeof apiInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetTourCategories<TData = Awaited<ReturnType<typeof getTourCategories>>, TError = ValidationExceptionResponse>(
+export function useGetTourCategories<TData = Awaited<ReturnType<typeof getTourCategories>>, TError = AuthenticationExceptionResponse | ValidationExceptionResponse>(
  params?: GetTourCategoriesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getTourCategories>>, TError, TData>>, request?: SecondParameter<typeof apiInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
@@ -108,7 +109,7 @@ export function useGetTourCategories<TData = Awaited<ReturnType<typeof getTourCa
  * @summary Display a listing of the resource
  */
 
-export function useGetTourCategories<TData = Awaited<ReturnType<typeof getTourCategories>>, TError = ValidationExceptionResponse>(
+export function useGetTourCategories<TData = Awaited<ReturnType<typeof getTourCategories>>, TError = AuthenticationExceptionResponse | ValidationExceptionResponse>(
  params?: GetTourCategoriesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getTourCategories>>, TError, TData>>, request?: SecondParameter<typeof apiInstance>}
  , queryClient?: QueryClient 
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {

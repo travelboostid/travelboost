@@ -25,7 +25,7 @@ class ChatRoomResource extends JsonResource
         'user_id' => $this->lastMessage->user_id,
         'created_at' => $this->lastMessage->created_at,
         'is_bot' => $this->lastMessage->is_bot,
-        'attachment' => $this->lastMessage->attachment,
+        'attachment_data' => $this->lastMessage->attachment_data,
         'attachment_type' => $this->lastMessage->attachment_type,
       ]),
 

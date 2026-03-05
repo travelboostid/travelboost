@@ -3,20 +3,18 @@
 namespace App\Http\Controllers\Companies\Dashboard;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\StoreCompanyMemberInvitationRequest;
+use App\Http\Requests\StoreCompanyTeamInvitationRequest;
 use App\Models\Company;
-use App\Models\CompanyMemberInvitation;
+use App\Models\CompanyTeamInvitation;
 use App\Models\User;
-use Illuminate\Http\Request;
-use Inertia\Inertia;
 
-class MemberInvitationController extends Controller
+class TeamInvitationController extends Controller
 {
 
   /**
    * Store a newly created resource in storage.
    */
-  public function store(StoreCompanyMemberInvitationRequest $request, Company $company)
+  public function store(StoreCompanyTeamInvitationRequest $request, Company $company)
   {
     $validated = $request->validated();
     $existingUser = User::where('email', $validated['email'])->first();
@@ -34,9 +32,9 @@ class MemberInvitationController extends Controller
   /**
    * Remove the specified resource from storage.
    */
-  public function destroy(Company $company, CompanyMemberInvitation $invitation)
+  public function destroy(Company $company, CompanyTeamInvitation $team_invitation)
   {
-    $invitation->delete(); // Delete the invitation
+    $team_invitation->delete(); // Delete the invitation
     return back();
   }
 }

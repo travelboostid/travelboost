@@ -24,7 +24,7 @@ class StoreChatMessageRequest extends FormRequest
       'sender_type' => 'nullable|string|max:50', // e.g., 'user', 'vendor', 'agent
       'sender_id' => 'nullable|integer', // ID of the sender type
       'message' => 'required|string|max:2000',
-      'attachment' => 'nullable|string|max:2000', // max 10 MB
+      'attachment_data' => 'nullable|string|max:2000', // max 10 MB
       'attachment_type' => 'nullable|string|max:50', // e.g., image, video, file
     ];
   }

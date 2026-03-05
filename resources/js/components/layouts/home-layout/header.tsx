@@ -18,10 +18,10 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-sm">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
+      <div className="max-w-7xl mx-auto">
+        <div className="flex items-center justify-between h-16 w-full px-4 sm:px-6 lg:px-8">
           {/* LOGO */}
-          <Link href="/" className="flex items-center gap-2">
+          <Link href="/" className="flex items-center gap-2 flex-none">
             <AppLogoIcon className="w-9 h-9 text-primary-foreground" />
             <span className="text-xl font-bold text-foreground">
               TravelBoost
@@ -29,7 +29,7 @@ export function Header() {
           </Link>
 
           {/* DESKTOP MENU */}
-          <nav className="hidden md:flex items-center gap-8">
+          <nav className="hidden md:flex items-center gap-8 flex-1 justify-center">
             <a
               href="#features"
               className="text-muted-foreground hover:text-foreground transition-colors"
@@ -69,7 +69,7 @@ export function Header() {
 
           {/* DESKTOP BUTTON */}
 
-          <div className="hidden md:flex items-center gap-4">
+          <div className="hidden md:flex items-center gap-4 flex-none">
             {auth?.user ? (
               <NavUser />
             ) : (
@@ -113,8 +113,22 @@ export function Header() {
 
         {/* MOBILE MENU */}
         {isMenuOpen && (
-          <div className="md:hidden py-4 border-t border-border">
+          <div className="md:hidden px-4 sm:px-6 lg:px-8 py-4 border-t border-border">
             <nav className="flex flex-col gap-4">
+              <div className="flex flex-col gap-2 pt-4">
+                {auth?.user ? (
+                  <NavUser />
+                ) : (
+                  <>
+                    <Button asChild variant="ghost" className="w-full">
+                      <Link href="/login">Masuk</Link>
+                    </Button>
+                    <Button asChild className="w-full">
+                      <Link href="/register">Daftar Gratis</Link>
+                    </Button>
+                  </>
+                )}
+              </div>
               <a
                 href="#features"
                 className="text-muted-foreground hover:text-foreground"
@@ -139,21 +153,6 @@ export function Header() {
               >
                 Kontak
               </a>
-
-              <div className="flex flex-col gap-2 pt-4">
-                {auth?.user ? (
-                  <NavUser />
-                ) : (
-                  <>
-                    <Button asChild variant="ghost" className="w-full">
-                      <Link href="/login">Masuk</Link>
-                    </Button>
-                    <Button asChild className="w-full">
-                      <Link href="/register">Daftar Gratis</Link>
-                    </Button>
-                  </>
-                )}
-              </div>
             </nav>
           </div>
         )}

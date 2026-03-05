@@ -47,10 +47,16 @@ Rules:
   public function messages(): iterable
   {
     $rawMessages = $this->message->room->messages()->latest()->take(10)->get()->reverse();
-    return Arr::map($rawMessages->toArray(), fn($rawMessage) => new Message(
-      $rawMessage['is_bot'] ? MessageRole::Assistant : MessageRole::User,
-      $rawMessage['message'],
-    ));
+    return Arr::map($rawMessages->toArray(), function ($rawMessage) {
+      $msg = $rawMessage['message'];
+      if ($rawMessage['attachment_type'] == 'tour-code') {
+        $msg .= " (\n---\n This message has context tour code: {$rawMessage['attachment_data']})";
+      }
+      return new Message(
+        $rawMessage['is_bot'] ? MessageRole::Assistant : MessageRole::User,
+        $msg,
+      );
+    });
   }
 
   /**
@@ -151,7 +157,7 @@ Rules:
 
       $relevantDocuments = TourDocumentKnowledgeBase::query()
         ->whereVectorSimilarTo('embedding', $embedded->embeddings[0] ?? null, minSimilarity: 0.1)
-        ->where('tour')
+        ->where('tour_id', $tour->id)
         ->limit(3)
         ->get();
 

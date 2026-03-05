@@ -47,7 +47,7 @@ class ChatbotIntentDetectorAgent implements Agent, Conversational, HasStructured
 2. Extract structured arguments if available.
 ";
     if ($latestAttachedTourCode !== '') {
-      $prompt .= "\nRecent chat context: A tour with code '{$latestAttachedTourCode}' was mentioned.\n";
+      $prompt .= "\n\nAdditional context for your analysis:\n- Latest attached tour code: '{$latestAttachedTourCode}' was mentioned.\n";
     }
     return $prompt;
   }
@@ -58,10 +58,16 @@ class ChatbotIntentDetectorAgent implements Agent, Conversational, HasStructured
   public function messages(): iterable
   {
     $rawMessages = $this->message->room->messages()->latest()->take(10)->get()->reverse();
-    return Arr::map($rawMessages->toArray(), fn($rawMessage) => new Message(
-      $rawMessage['is_bot'] ? MessageRole::Assistant : MessageRole::User,
-      $rawMessage['message'],
-    ));
+    return Arr::map($rawMessages->toArray(), function ($rawMessage) {
+      $msg = $rawMessage['message'];
+      if ($rawMessage['attachment_type'] == 'tour-code') {
+        $msg .= " (\n---\n This message has context tour code: {$rawMessage['attachment_data']})";
+      }
+      return new Message(
+        $rawMessage['is_bot'] ? MessageRole::Assistant : MessageRole::User,
+        $msg,
+      );
+    });
   }
 
   public function schema(JsonSchema $schema): array

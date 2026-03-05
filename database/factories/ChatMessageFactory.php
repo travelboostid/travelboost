@@ -15,7 +15,7 @@ class ChatMessageFactory extends Factory
 
     return [
       'message' => $this->generateMessage($hasAttachment, $attachmentType),
-      'attachment' => $hasAttachment ? $this->generateAttachment($attachmentType) : null,
+      'attachment_data' => $hasAttachment ? $this->generateAttachment($attachmentType) : null,
       'attachment_type' => $attachmentType,
       'reply_to' => fake()->optional(0.3)->randomElement(self::$messageIds ?? []),
       'created_at' => fake()->dateTimeBetween('-6 months', 'now'),
@@ -83,7 +83,7 @@ class ChatMessageFactory extends Factory
   {
     return $this->state(fn(array $attributes) => [
       'attachment_type' => $type,
-      'attachment' => $this->generateAttachment($type),
+      'attachment_data' => $this->generateAttachment($type),
       'message' => $this->generateMessage(true, $type),
     ]);
   }
@@ -91,7 +91,7 @@ class ChatMessageFactory extends Factory
   public function textOnly(): static
   {
     return $this->state(fn(array $attributes) => [
-      'attachment' => null,
+      'attachment_data' => null,
       'attachment_type' => null,
       'message' => fake()->paragraph(),
     ]);

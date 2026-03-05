@@ -12,7 +12,7 @@ function RenderAttachment({ attachment }: { attachment: any }) {
   if (type === 'tour-code') {
     return (
       <div className="p-4">
-        <div>You want to asking about:</div>
+        <div>You want to ask details about the tour:</div>
         <div>{data}</div>
       </div>
     );
@@ -53,7 +53,7 @@ export default function ChatInput({
     if (!attachment) return data;
     if (attachment.type === 'tour-code') {
       data.attachment_type = 'tour-code';
-      data.attachment = String(attachment.data);
+      data.attachment_data = attachment.data;
     }
     return data;
   };

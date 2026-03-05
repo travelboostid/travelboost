@@ -1,4 +1,4 @@
-import { destroy } from '@/actions/App/Http/Controllers/Companies/Dashboard/MemberInvitationController';
+import { destroy } from '@/actions/App/Http/Controllers/Companies/Dashboard/TeamInvitationController';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,7 +26,7 @@ export default function DeleteInvitationDialog({
   const form = useForm();
   const handleDelete = () => {
     form.delete(
-      destroy({ company: company.username, member_invitation: invitation.id })
+      destroy({ company: company.username, team_invitation: invitation.id })
         .url,
       {
         preserveScroll: true,

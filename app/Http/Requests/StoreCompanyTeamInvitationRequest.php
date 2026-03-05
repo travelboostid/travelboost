@@ -4,7 +4,7 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class StoreCompanyMemberInvitationRequest extends FormRequest
+class StoreCompanyTeamInvitationRequest extends FormRequest
 {
   /**
    * Determine if the user is authorized to make this request.
@@ -22,7 +22,7 @@ class StoreCompanyMemberInvitationRequest extends FormRequest
   public function rules(): array
   {
     return [
-      'email' => 'required|email|unique:company_member_invitations,email',
+      'email' => 'required|email|unique:company_team_invitations,email',
       'role' => 'required|string|in:admin,operator',
     ];
   }

@@ -6,7 +6,7 @@
  */
 import type { ChatRoomResourceLastMessageUserId } from './chatRoomResourceLastMessageUserId';
 import type { ChatRoomResourceLastMessageCreatedAt } from './chatRoomResourceLastMessageCreatedAt';
-import type { ChatRoomResourceLastMessageAttachment } from './chatRoomResourceLastMessageAttachment';
+import type { ChatRoomResourceLastMessageAttachmentData } from './chatRoomResourceLastMessageAttachmentData';
 import type { ChatRoomResourceLastMessageAttachmentType } from './chatRoomResourceLastMessageAttachmentType';
 
 export type ChatRoomResourceLastMessage = {
@@ -15,6 +15,6 @@ export type ChatRoomResourceLastMessage = {
   user_id: ChatRoomResourceLastMessageUserId;
   created_at: ChatRoomResourceLastMessageCreatedAt;
   is_bot: string;
-  attachment: ChatRoomResourceLastMessageAttachment;
+  attachment_data: ChatRoomResourceLastMessageAttachmentData;
   attachment_type: ChatRoomResourceLastMessageAttachmentType;
 };

@@ -1,9 +1,10 @@
 <?php
 
 use App\Enums\CompanyType;
-use App\Enums\CompanyMemberRole;
-use App\Enums\CompanyUserStatus;
+use App\Enums\CompanyTeamRole;
+use App\Enums\CompanyTeamStatus;
 use App\Enums\DomainStatus;
+use App\Enums\VendorAgentPartnerStatus;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -59,35 +60,35 @@ return new class extends Migration
       $table->id();
       $table->foreignId('company_id')->unique()->constrained('companies')->cascadeOnDelete();
       $table->boolean('enable_chatbot')->default(false);
-      $table->string('landing_page_data')->nullable();
+      $table->text('landing_page_data')->nullable();
       $table->timestamps();
     });
 
-    Schema::create('company_members', function (Blueprint $table) {
+    Schema::create('company_teams', function (Blueprint $table) {
       $table->id();
       $table->foreignId('company_id')->constrained()->cascadeOnDelete();
       $table->foreignId('user_id')->constrained()->cascadeOnDelete();
-      $table->enum('status', CompanyUserStatus::cases())->default(CompanyUserStatus::PENDING);
-      $table->enum('role', CompanyMemberRole::cases())->default(CompanyMemberRole::ADMIN);
+      $table->enum('status', CompanyTeamStatus::cases())->default(CompanyTeamStatus::PENDING);
+      $table->enum('role', CompanyTeamRole::cases())->default(CompanyTeamRole::ADMIN);
       $table->timestamps();
       $table->unique(['company_id', 'user_id']);
     });
 
-    Schema::create('vendor_agencies', function (Blueprint $table) {
+    Schema::create('vendor_agent_partners', function (Blueprint $table) {
       $table->id();
       $table->foreignId('vendor_id')->constrained('companies')->cascadeOnDelete();
       $table->foreignId('agent_id')->constrained('companies')->cascadeOnDelete();
-      $table->enum('status', CompanyUserStatus::cases())->default(CompanyUserStatus::PENDING);
+      $table->enum('status', VendorAgentPartnerStatus::cases())->default(VendorAgentPartnerStatus::PENDING);
       $table->timestamps();
       $table->unique(['vendor_id', 'agent_id']);
     });
 
-    Schema::create('company_member_invitations', function (Blueprint $table) {
+    Schema::create('company_team_invitations', function (Blueprint $table) {
       $table->id();
       $table->foreignId('company_id')->constrained()->cascadeOnDelete();
       $table->foreignId('user_id')->nullable()->constrained()->cascadeOnDelete();
       $table->string('email');
-      $table->enum('role', CompanyMemberRole::cases())->default(CompanyMemberRole::ADMIN);
+      $table->enum('role', CompanyTeamRole::cases())->default(CompanyTeamRole::ADMIN);
       $table->timestamps();
       $table->unique(['company_id', 'email']);
     });
@@ -120,8 +121,8 @@ return new class extends Migration
       $table->dropForeign(['company_id']);
       $table->dropColumn('company_id');
     });
-    Schema::dropIfExists('company_member_invitations');
-    Schema::dropIfExists('company_members');
+    Schema::dropIfExists('company_team_invitations');
+    Schema::dropIfExists('company_teams');
     Schema::dropIfExists('companies');
     Schema::dropIfExists('users');
     Schema::dropIfExists('user_preferences');

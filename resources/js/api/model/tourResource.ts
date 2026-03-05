@@ -6,11 +6,17 @@
  */
 import type { TourResourceDescription } from './tourResourceDescription';
 import type { TourStatus } from './tourStatus';
+import type { TourResourceContinentName } from './tourResourceContinentName';
+import type { TourResourceRegionName } from './tourResourceRegionName';
+import type { TourResourceCountryName } from './tourResourceCountryName';
 import type { TourResourceCategoryId } from './tourResourceCategoryId';
 import type { TourResourceImageId } from './tourResourceImageId';
 import type { TourResourceDocumentId } from './tourResourceDocumentId';
 import type { TourResourceCreatedAt } from './tourResourceCreatedAt';
 import type { TourResourceUpdatedAt } from './tourResourceUpdatedAt';
+import type { TourResourceContinentId } from './tourResourceContinentId';
+import type { TourResourceRegionId } from './tourResourceRegionId';
+import type { TourResourceCountryId } from './tourResourceCountryId';
 import type { TourCategory } from './tourCategory';
 import type { Media } from './media';
 import type { Company } from './company';
@@ -22,11 +28,10 @@ export interface TourResource {
   description: TourResourceDescription;
   duration_days: number;
   status: TourStatus;
-  continent?: string;
-  region?: string;
-  country?: string;
-  price: string;
   destination: string;
+  continent_name: TourResourceContinentName;
+  region_name: TourResourceRegionName;
+  country_name: TourResourceCountryName;
   showprice: string;
   earlybird: string;
   earlybird_note: string;
@@ -36,6 +41,9 @@ export interface TourResource {
   document_id: TourResourceDocumentId;
   created_at: TourResourceCreatedAt;
   updated_at: TourResourceUpdatedAt;
+  continent_id: TourResourceContinentId;
+  region_id: TourResourceRegionId;
+  country_id: TourResourceCountryId;
   category?: TourCategory;
   image?: Media;
   document?: Media;

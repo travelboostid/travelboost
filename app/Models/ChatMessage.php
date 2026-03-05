@@ -17,7 +17,7 @@ class ChatMessage extends Model
     'sender_id',
     'user_id',
     'message',
-    'attachment',
+    'attachment_data',
     'attachment_type',
     'is_bot',
     'reply_to',

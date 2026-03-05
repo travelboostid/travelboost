@@ -47,14 +47,14 @@ class Company extends Model
     });
   }
 
-  public function members()
+  public function teams()
   {
-    return $this->hasMany(CompanyMember::class);
+    return $this->hasMany(CompanyTeam::class);
   }
 
   public function invitations()
   {
-    return $this->hasMany(CompanyMemberInvitation::class);
+    return $this->hasMany(CompanyTeamInvitation::class);
   }
 
   public function tours()
@@ -95,6 +95,16 @@ class Company extends Model
   public function domain()
   {
     return $this->hasOne(Domain::class);
+  }
+
+  public function agentPartners()
+  {
+    return $this->hasMany(VendorAgentPartner::class, 'vendor_id');
+  }
+
+  public function vendorPartners()
+  {
+    return $this->hasMany(VendorAgentPartner::class, 'agent_id');
   }
 
   protected function photoUrl(): Attribute

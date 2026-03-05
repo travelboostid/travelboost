@@ -3,8 +3,8 @@
 namespace Database\Seeders\Local;
 
 use App\Enums\CompanyType;
-use App\Enums\CompanyMemberRole;
-use App\Enums\CompanyUserStatus;
+use App\Enums\CompanyTeamRole;
+use App\Enums\CompanyTeamStatus;
 use App\Models\User;
 use App\Models\Company;
 use Illuminate\Database\Seeder;
@@ -31,8 +31,8 @@ class CompanySeeder extends Seeder
 
       // ===== Attach user to company pivot =====
       $root->companies()->attach($rootCompany->id, [
-        'role' => CompanyMemberRole::SUPERADMIN,
-        'status' => CompanyUserStatus::ACTIVE,
+        'role' => CompanyTeamRole::SUPERADMIN,
+        'status' => CompanyTeamStatus::ACTIVE,
       ]);
     }
     if ($john) {
@@ -48,8 +48,8 @@ class CompanySeeder extends Seeder
 
       // ===== Attach user to company pivot =====
       $john->companies()->attach($johnCompany->id, [
-        'role' => CompanyMemberRole::SUPERADMIN,
-        'status' => CompanyUserStatus::ACTIVE,
+        'role' => CompanyTeamRole::SUPERADMIN,
+        'status' => CompanyTeamStatus::ACTIVE,
       ]);
 
       $jane = User::factory()->create([

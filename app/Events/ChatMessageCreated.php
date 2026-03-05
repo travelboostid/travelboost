@@ -48,12 +48,12 @@ class ChatMessageCreated  implements ShouldBroadcast
       } else if ($member->member_type === 'company') {
         /** @var \App\Models\Company $company */
         $company = $member->member;
-        $company->load('members'); // Eager load members to avoid N+1 queries
 
-        Log::debug("Adding channels for company member", ['company' => $company]);
-        $companyMembers = $company->members; // Assuming a company has many users
-        foreach ($companyMembers as $cm) {
-          $channels[] = new PrivateChannel("users.{$cm->id}");
+        Log::warning("---Adding channels for company member", ['company' => $company]);
+        $teams = $company->teams()->get(); // Assuming a company has many users
+        foreach ($teams as $team) {
+          Log::warning("---Adding channels for company team", ['tttt' => $team]);
+          $channels[] = new PrivateChannel("users.{$team->user_id}");
         }
       }
     }

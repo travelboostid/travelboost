@@ -71,7 +71,7 @@ class ChatMessageController extends Controller
    */
   public function update(UpdateChatMessageRequest $request, ChatMessage $message)
   {
-    $message->update($request->only(['message', 'attachment', 'attachment_type']));
+    $message->update($request->only(['message', 'attachment_data', 'attachment_type']));
 
     return new ChatMessageResource($message->load(['sender', 'room', 'replyTo']));
   }

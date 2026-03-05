@@ -4,10 +4,10 @@ namespace App\Http\Controllers\Companies\Dashboard;
 
 use App\Http\Controllers\Controller;
 use App\Models\Company;
-use App\Models\CompanyMember; // Ensure you import the CompanyMember model
+use App\Models\CompanyTeam;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
-use App\Http\Requests\UpdateCompanyMemberRequest; // Ensure you import the request class
+use App\Http\Requests\UpdateCompanyTeamRequest; // Ensure you import the request class
 
 class CustomerController extends Controller
 {
@@ -18,10 +18,10 @@ class CustomerController extends Controller
   {
     $customers = $company->customers()
       ->when(request('name'), function ($query, $search) {
-        $query->where('name', 'like', "{$search}%");
+        $query->where('name', 'ilike', "{$search}%");
       })
       ->when(request('email'), function ($query, $search) {
-        $query->where('email', 'like', "{$search}%");
+        $query->where('email', 'ilike', "{$search}%");
       })
       ->when(request('sort'), function ($query) {
         $sorts = explode(',', request('sort'));
@@ -43,7 +43,7 @@ class CustomerController extends Controller
   /**
    * Update the specified resource in storage.
    */
-  public function update(UpdateCompanyMemberRequest $request, Company $company, CompanyMember $member)
+  public function update(UpdateCompanyTeamRequest $request, Company $company, CompanyTeam $member)
   {
     $member->update($request->validated());
     return back();

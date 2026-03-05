@@ -152,7 +152,7 @@ PROMPT;
       'room_id' => $message->room_id,
       'sender_id' => $as->user_id,
       'message' => $answer,
-      'attachment' => null,
+      'attachment_data' => null,
       'attachment_type' => null,
       'reply_to' => null,
       'is_bot' => true

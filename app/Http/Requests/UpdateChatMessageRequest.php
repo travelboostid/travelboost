@@ -21,7 +21,7 @@ class UpdateChatMessageRequest extends FormRequest
   {
     return [
       'message' => 'sometimes|required|string|max:2000',
-      'attachment' => 'nullable|string|max:2000',
+      'attachment_data' => 'nullable|string|max:2000',
       'attachment_type' => 'nullable|string|max:50',
     ];
   }

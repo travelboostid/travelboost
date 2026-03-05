@@ -1,4 +1,4 @@
-import { store } from '@/actions/App/Http/Controllers/Companies/Dashboard/MemberInvitationController';
+import { store } from '@/actions/App/Http/Controllers/Companies/Dashboard/TeamInvitationController';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
 import {
@@ -69,7 +69,7 @@ export default function InviteDialog({ children }: InviteDialogProps) {
       <DialogContent className="sm:max-w-sm">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
-            <DialogTitle>Invite New User</DialogTitle>
+            <DialogTitle>Invite New Team</DialogTitle>
             <DialogDescription>
               Enter the details of the new user you want to invite. Click send
               invitation when you're done.

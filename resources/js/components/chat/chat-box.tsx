@@ -30,9 +30,10 @@ function ChatMessage({ message }: { message: ChatMessageResource }) {
         <p className="text-sm leading-relaxed">
           <MessageContentRenderer message={message} />
         </p>
-        {message.attachment && (
-          <div className="rounded-lg border bg-background/25 px-2 py-1 text-xs">
-            Tour ID {message.attachment}
+        {message.attachment_data && (
+          <div className="rounded-lg border bg-background/10 px-2 py-1 text-xs">
+            <div className="text-xs text-background/50">Attached</div>
+            <div className="text-sm">{message.attachment_data}</div>
           </div>
         )}
       </div>

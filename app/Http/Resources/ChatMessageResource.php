@@ -18,7 +18,7 @@ class ChatMessageResource extends JsonResource
       'sender_id' => $this->sender_id,
       'user_id' => $this->user_id,
       'message' => $this->message,
-      'attachment' => $this->attachment,
+      'attachment_data' => $this->attachment_data,
       'attachment_type' => $this->attachment_type,
       'is_bot' => $this->is_bot,
       'reply_to' => $this->reply_to,

@@ -27,7 +27,7 @@ type CustomersPageProps = {
   };
 };
 
-export default function CustomersPage({ data, total }: CustomersPageProps) {
+export default function CustomersPage({ data }: CustomersPageProps) {
   const columns = useMemo<ColumnDef<UserResource>[]>(
     () => [
       {
@@ -145,7 +145,7 @@ export default function CustomersPage({ data, total }: CustomersPageProps) {
     data: data.data,
     columns,
     pageCount: 1,
-    rowCount: total,
+    rowCount: data.total,
     shallow: false,
     initialState: {
       sorting: [{ id: 'id', desc: true }],
