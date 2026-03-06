@@ -6,6 +6,7 @@ import { router } from '@inertiajs/react';
 import { SearchIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import TourCard from './components/TourCard';
+import VendorPartnershipRegistrationButton from './components/vendor-partnership-register-button';
 import { EmptyTours } from './empty-tours';
 
 type PageProps = {
@@ -17,6 +18,8 @@ type PageProps = {
     search?: string;
   };
   data: TourResource[];
+  vendor: any;
+  partnership: any;
 };
 
 //export default function Page({ username, data }: PageProps) {
@@ -25,13 +28,15 @@ export default function Page({
   data,
   categories,
   filters,
+  vendor,
+  partnership,
 }: PageProps) {
   const [search, setSearch] = useState(filters.search ?? '');
   const { company } = usePageSharedDataProps();
   useEffect(() => {
     const timeout = setTimeout(() => {
       router.get(
-        index({ company: company.username, vendor: username }),
+        index({ company: company.username, vendor: vendor.username }),
         {
           category: filters.category,
           search: search || undefined,
@@ -44,12 +49,12 @@ export default function Page({
     }, 500); // 500ms delay
 
     return () => clearTimeout(timeout);
-  }, [company.username, filters.category, search, username]);
+  }, [company.username, filters.category, search, vendor.username]);
   /*const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
 
     router.get(
-      `/dashboard/vendors/${username}/tours`,
+      `/dashboard/vendors/${vendor.username}/tours`,
       {
         category: filters.category,
         search: search || undefined,
@@ -71,6 +76,12 @@ export default function Page({
         { title: username },
       ]}
       containerClassName="space-y-4"
+      applet={
+        <VendorPartnershipRegistrationButton
+          vendor={vendor}
+          partnership={partnership}
+        />
+      }
     >
       <div className="px-4 mt-4">
         <div className="relative w-full max-w-md">

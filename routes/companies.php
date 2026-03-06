@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Companies\Dashboard\AgentController;
 use App\Http\Controllers\Companies\Dashboard\AgentTourController;
 use App\Http\Controllers\Companies\Dashboard\BankAccountController;
 use App\Http\Controllers\Companies\Dashboard\CategoryController;
@@ -25,7 +26,9 @@ Route::prefix('companies/{company:username}/dashboard')->middleware(['auth', 'co
     Route::post('/tours/{tour}/copy', [VendorTourCatalogController::class, 'copy'])->name('tour.copy');
     Route::get('/tours/{tour}/brochure', [VendorTourCatalogController::class, 'viewBrochure'])->name('tour.view-brochure');
   });
+  Route::resource('agents', AgentController::class);
   Route::resource('vendor-registrations', VendorRegistrationController::class);
+  Route::post('vendor-registrations/register', [VendorRegistrationController::class, 'register'])->name('vendor-registrations.register');
   Route::resource('tours', TourController::class);
   Route::resource('agent-tours', AgentTourController::class);
   Route::resource('categories', CategoryController::class);

@@ -31,28 +31,28 @@ export default function Page({ data }: PageProps) {
   const columns = useMemo<ColumnDef<any>[]>(
     () => [
       {
-        id: 'vendor.name',
-        accessorKey: 'vendor.name',
+        id: 'agent.name',
+        accessorKey: 'agent.name',
         header: ({ column }) => (
-          <DataTableColumnHeader column={column} label="Vendor" />
+          <DataTableColumnHeader column={column} label="Agent" />
         ),
         cell: ({ row }) => {
-          const vendor = row.original.vendor;
+          const agent = row.original.agent;
           return (
             <div className="flex gap-2 items-center">
               <Avatar className="h-8 w-8 rounded-lg">
                 <AvatarImage
-                  src={vendor.photo_url || DEFAULT_PHOTO}
-                  alt={vendor.name}
+                  src={agent.photo_url || DEFAULT_PHOTO}
+                  alt={agent.name}
                 />
                 <AvatarFallback>
                   <UserIcon />
                 </AvatarFallback>
               </Avatar>
               <div>
-                <div className="font-medium">{vendor.name}</div>
+                <div className="font-medium">{agent.name}</div>
                 <div className="text-sm text-muted-foreground">
-                  {vendor.username}
+                  {agent.username}
                 </div>
               </div>
             </div>
@@ -75,6 +75,7 @@ export default function Page({ data }: PageProps) {
         cell: ({ cell }) => (
           <div className="font-medium">{cell.getValue<string>()}</div>
         ),
+
         enableColumnFilter: true,
       },
       {
@@ -137,7 +138,7 @@ export default function Page({ data }: PageProps) {
   return (
     <CompanyDashboardLayout
       containerClassName="p-4"
-      breadcrumb={[{ title: 'Settings' }, { title: 'Vendor Registrations' }]}
+      breadcrumb={[{ title: 'Settings' }, { title: 'Agents' }]}
     >
       <DataTable table={table} renderEmptyState={<EmptyRegistrations />}>
         <DataTableToolbar table={table} />

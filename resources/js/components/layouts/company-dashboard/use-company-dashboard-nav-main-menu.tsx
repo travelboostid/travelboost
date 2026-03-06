@@ -13,21 +13,36 @@ import {
 } from 'lucide-react';
 import type { HTMLAttributeAnchorTarget } from 'react';
 
-type MenuItem = {
+type MenuItemBase = {
   id: string;
   title: string;
   urlOrAction: string | (() => void);
   target?: HTMLAttributeAnchorTarget;
   icon?: LucideIcon;
-  items?: MenuItem[];
 };
+
+type MenuItem =
+  | (MenuItemBase & {
+      items?: MenuItem[];
+      actions?: never;
+    })
+  | (MenuItemBase & {
+      items?: never;
+      actions?: MenuItem[];
+    })
+  | (MenuItemBase & {
+      items?: never;
+      actions?: never;
+    });
 
 export function useCompanyDashboardNavMainMenu() {
   const appHost = import.meta.env.VITE_APP_HOST;
   const { company } = usePageSharedDataProps();
-  const { data } = useGetCompanies({ type: 'vendor' });
+  const { data } = useGetCompanies(
+    { type: 'vendor' },
+    { query: { enabled: company.type === 'agent' } },
+  );
 
-  console.log('company', data);
   return company.type === 'vendor'
     ? ([
         {
@@ -39,20 +54,8 @@ export function useCompanyDashboardNavMainMenu() {
         {
           id: 'agents',
           title: 'Agents',
-          urlOrAction: '#',
+          urlOrAction: `/companies/${company.username}/dashboard/agents`,
           icon: UsersRoundIcon,
-          items: [
-            {
-              id: 'agents.index',
-              title: 'Agent List',
-              urlOrAction: `/companies/${company.username}/dashboard/agents`,
-            },
-            {
-              id: 'agents.approvals',
-              title: 'Agent Approvals',
-              urlOrAction: `/companies/${company.username}/dashboard/agent-approvals`,
-            },
-          ],
         },
         {
           id: 'tours',

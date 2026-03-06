@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Tour;
 use App\Models\Company;
 use App\Models\TourCategory;
+use App\Models\VendorAgentPartner;
 use Inertia\Inertia;
 
 class VendorTourCatalogController extends Controller
@@ -30,12 +31,17 @@ class VendorTourCatalogController extends Controller
         return $tour;
       });
 
+    $partnership = VendorAgentPartner::where('vendor_id', $vendor->id)
+      ->where('agent_id', $company->id)
+      ->first();
 
     return Inertia::render('companies/dashboard/vendor-tours/index', [
       'data' => $tours,
       'filters'    => request()->only(['category', 'search']),
       'categories' => $categories,
       'username' => $username,
+      'partnership' => $partnership,
+      'vendor' => $vendor,
     ]);
   }
 

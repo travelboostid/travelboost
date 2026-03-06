@@ -3,21 +3,20 @@
 namespace App\Http\Controllers\Companies\Dashboard;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Companies\StoreVendorRegistrationRequest;
-use App\Http\Requests\Companies\VendorRegistrationIndexRequest;
+use App\Http\Requests\Companies\AgentIndexRequest;
 use App\Models\Company;
 use App\Models\VendorAgentPartner;
 use Inertia\Inertia;
 
-class VendorRegistrationController extends Controller
+class AgentController extends Controller
 {
-  public function index(Company $company, VendorRegistrationIndexRequest $request)
+  public function index(Company $company, AgentIndexRequest $request)
   {
     $validated = $request->validated();
-    $data = $company->vendorPartners()
-      ->with(['vendor'])
-      ->when($validated['vendor.name'] ?? null, function ($query, $name) {
-        $query->whereHas('vendor', function ($query) use ($name) {
+    $data = $company->agentPartners()
+      ->with(['agent'])
+      ->when($validated['agent.name'] ?? null, function ($query, $name) {
+        $query->whereHas('agent', function ($query) use ($name) {
           $query->where('name', 'ilike', $name . '%');
         });
       })
@@ -34,7 +33,7 @@ class VendorRegistrationController extends Controller
       ->paginate()
       ->withQueryString();
 
-    return Inertia::render('companies/vendor-registrations/index', [
+    return Inertia::render('companies/dashboard/agents/index', [
       'data' => $data,
     ]);
   }
@@ -45,14 +44,6 @@ class VendorRegistrationController extends Controller
   public function destroy(Company $company, VendorAgentPartner $vendor_registration)
   {
     $vendor_registration->delete(); // Delete the partner
-    return back();
-  }
-
-  public function register(StoreVendorRegistrationRequest $request, Company $company)
-  {
-    $validated = $request->validated();
-    $vendor = Company::where('id', $validated['vendor_id'])->first();
-    VendorAgentPartner::create(['agent_id' => $company->id, 'vendor_id' => $vendor->id]); // Register the partner
     return back();
   }
 }
