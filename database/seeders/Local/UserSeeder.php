@@ -7,6 +7,7 @@ use App\Enums\AgentUserStatus;
 use App\Enums\VendorUserRole;
 use App\Enums\VendorUserStatus;
 use App\Models\Agent;
+use App\Models\Role;
 use App\Models\User;
 use App\Models\Vendor;
 use Illuminate\Database\Seeder;
@@ -16,6 +17,7 @@ class UserSeeder extends Seeder
 {
   public function run(): void
   {
+    $superadmin = Role::where('name', 'company:0:superadmin')->first();
     $root = User::factory()->create([
       'name' => 'Root',
       'email' => 'root@travelboost.co.id',
@@ -25,7 +27,7 @@ class UserSeeder extends Seeder
       'password' => Hash::make('root'),
     ]);
 
-    $root->assignRole('superadmin');
+    $root->addRole($superadmin);
 
     $john = User::factory()->create([
       'name' => 'John',
@@ -36,6 +38,6 @@ class UserSeeder extends Seeder
       'password' => Hash::make('john'),
     ]);
 
-    $john->assignRole('admin');
+    $john->addRole($superadmin);
   }
 }

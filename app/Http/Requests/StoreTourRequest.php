@@ -29,8 +29,8 @@ class StoreTourRequest extends FormRequest
       'description'  => 'nullable|string',
       'duration_days' => 'nullable|integer|min:1',
       'status'       => ['nullable', Rule::in([
-        TourStatus::Active->value,
-        TourStatus::Inactive->value
+        TourStatus::ACTIVE->value,
+        TourStatus::INACTIVE->value
       ])],
       'continent_id'    => 'nullable|exists:continents,id',
       'region_id'       => 'nullable|exists:regions,id',

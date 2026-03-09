@@ -23,8 +23,8 @@ class TourFactory extends Factory
       'duration_days' => $this->faker->numberBetween(2, 14),
 
       'status' => $this->faker->randomElement([
-        TourStatus::Active,
-        TourStatus::Inactive,
+        TourStatus::ACTIVE,
+        TourStatus::INACTIVE,
       ]),
       'continent_id' => 1,
       'region_id' => 1,

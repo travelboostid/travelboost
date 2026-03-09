@@ -1,4 +1,3 @@
-import { destroy } from '@/actions/App/Http/Controllers/Companies/Dashboard/TeamInvitationController';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -10,24 +9,30 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { Button } from '@/components/ui/button';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
+import { update } from '@/routes/company/agent-registrations';
 import { useForm } from '@inertiajs/react';
-import { useState, type ReactNode } from 'react';
+import { UserX2Icon } from 'lucide-react';
+import { useState } from 'react';
 
-export default function DeleteInvitationDialog({
-  children,
-  invitation,
+export default function RejectRegistrationButton({
+  registration,
 }: {
-  children: ReactNode;
-  invitation: any;
+  registration: any;
 }) {
   const { company } = usePageSharedDataProps();
   const [open, setOpen] = useState(false);
   const form = useForm();
-  const handleDelete = () => {
-    form.delete(
-      destroy({ company: company.username, team_invitation: invitation.id })
-        .url,
+  const handleReject = () => {
+    form.setData({
+      status: 'rejected',
+    });
+    form.put(
+      update({
+        company: company.username,
+        agent_registration: registration.id,
+      }).url,
       {
         preserveScroll: true,
         onSuccess: () => {
@@ -38,18 +43,22 @@ export default function DeleteInvitationDialog({
   };
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
-      <AlertDialogTrigger asChild>{children}</AlertDialogTrigger>
+      <AlertDialogTrigger asChild>
+        <Button size="icon" className="text-destructive" variant="outline">
+          <UserX2Icon />
+        </Button>
+      </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Delete invitation?</AlertDialogTitle>
+          <AlertDialogTitle>Delete registration?</AlertDialogTitle>
           <AlertDialogDescription>
-            This will permanently remove the invitation. This action cannot be
+            This will permanently remove the registration. This action cannot be
             undone.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
+          <AlertDialogAction onClick={handleReject}>Delete</AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

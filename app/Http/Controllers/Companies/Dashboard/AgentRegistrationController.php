@@ -4,11 +4,12 @@ namespace App\Http\Controllers\Companies\Dashboard;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Companies\AgentIndexRequest;
+use App\Http\Requests\Companies\UpdateAgentRegistrationRequest;
 use App\Models\Company;
 use App\Models\VendorAgentPartner;
 use Inertia\Inertia;
 
-class AgentController extends Controller
+class AgentRegistrationController extends Controller
 {
   public function index(Company $company, AgentIndexRequest $request)
   {
@@ -33,17 +34,24 @@ class AgentController extends Controller
       ->paginate()
       ->withQueryString();
 
-    return Inertia::render('companies/dashboard/agents/index', [
+    return Inertia::render('companies/dashboard/agent-registrations/index', [
       'data' => $data,
     ]);
+  }
+
+  public function update(UpdateAgentRegistrationRequest $request, Company $company, VendorAgentPartner $agent_registration)
+  {
+    $validated = $request->validated();
+    $agent_registration->update($validated);
+    return back();
   }
 
   /**
    * Remove the specified resource from storage.
    */
-  public function destroy(Company $company, VendorAgentPartner $vendor_registration)
+  public function destroy(Company $company, VendorAgentPartner $agent_registration)
   {
-    $vendor_registration->delete(); // Delete the partner
+    $agent_registration->delete(); // Delete the partner
     return back();
   }
 }

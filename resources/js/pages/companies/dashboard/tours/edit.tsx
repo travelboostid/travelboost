@@ -26,7 +26,7 @@ import { Textarea } from '@/components/ui/textarea';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { extractImageSrc } from '@/lib/utils';
 import { Form } from '@inertiajs/react';
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { toast } from 'sonner';
 import SelectCategory from './components/select-category';
 import SelectContinent from './components/select-continent';
@@ -37,7 +37,6 @@ type Props = {
   tour: any;
 };
 export default function Page({ tour }: Props) {
-  const formRef = useRef<any>(null);
   const [continentId, setContinentId] = useState<number | null>(
     tour.continent_id ?? null,
   );
@@ -70,7 +69,6 @@ export default function Page({ tour }: Props) {
     >
       <Form
         {...update.form({ company: company.username, tour: tour.id })}
-        ref={formRef}
         className="space-y-4"
         onSuccess={handleSuccess}
       >

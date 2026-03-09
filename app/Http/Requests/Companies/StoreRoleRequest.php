@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Http\Requests;
+namespace App\Http\Requests\Companies;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class StoreCompanyTeamInvitationRequest extends FormRequest
+class StoreRoleRequest extends FormRequest
 {
   /**
    * Determine if the user is authorized to make this request.
@@ -22,8 +22,11 @@ class StoreCompanyTeamInvitationRequest extends FormRequest
   public function rules(): array
   {
     return [
-      'email' => 'required|email|unique:company_team_invitations,email',
-      'role' => 'required|string|in:admin,operator',
+      'name' => 'required|string|max:255',
+      'display_name' => 'required|string|max:255',
+      'description' => 'nullable|string|max:255',
+      'permissions' => 'array',
+      'permissions.*' => 'boolean',
     ];
   }
 }

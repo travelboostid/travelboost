@@ -4,9 +4,6 @@ namespace App\Http\Middleware;
 
 use App\Models\Company;
 use Closure;
-use App\Models\User;
-use Illuminate\Support\Arr;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 
@@ -17,7 +14,6 @@ class TenantResolver
     $appHost = env('APP_HOST', 'localhost');
     $currentHost = $request->getHost();
     // skip main domain
-    Log::info("cccccc", ['a' => $currentHost, 'b' => $appHost]);
     if ($currentHost == $appHost) {
       $request->attributes->set('tenant', null);
       return $next($request);
@@ -39,8 +35,6 @@ class TenantResolver
         ->toResponse($request)
         ->setStatusCode(404);
     }
-
-    Log::info("Hmmm");
     return $next($request);
   }
 }

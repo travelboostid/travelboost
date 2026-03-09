@@ -3,10 +3,11 @@
 namespace Database\Seeders\Local;
 
 use App\Enums\CompanyType;
-use App\Enums\CompanyTeamRole;
 use App\Enums\CompanyTeamStatus;
 use App\Models\User;
 use App\Models\Company;
+use App\Models\Role;
+use App\Models\Team;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
@@ -14,53 +15,48 @@ class CompanySeeder extends Seeder
 {
   public function run(): void
   {
-    // ===== Get existing Root user =====
-    $root = User::where('username', 'root')->first();
-    $john = User::where('username', 'john')->first();
-
-    if ($root) {
-      // ===== Create Company for Root =====
-      $rootCompany = Company::factory()->create([
+    $targets = [
+      [
         'username' => 'root',
-        'type' => CompanyType::VENDOR,
-        'name' => 'Root',
-        'email' => $root->email,
-        'address' => 'Jakarta',
-        'phone' => '0',
-      ]);
-
-      // ===== Attach user to company pivot =====
-      $root->companies()->attach($rootCompany->id, [
-        'role' => CompanyTeamRole::SUPERADMIN,
-        'status' => CompanyTeamStatus::ACTIVE,
-      ]);
-    }
-    if ($john) {
-      // ===== Create Company for John =====
-      $johnCompany = Company::factory()->create([
+        'company_type' => CompanyType::VENDOR,
+      ],
+      [
         'username' => 'john',
-        'type' => CompanyType::AGENT,
-        'name' => 'John Travel',
-        'email' => $john->email,
-        'address' => 'Bandung',
-        'phone' => '0',
-      ]);
+        'company_type' => CompanyType::AGENT,
+      ],
+    ];
 
-      // ===== Attach user to company pivot =====
-      $john->companies()->attach($johnCompany->id, [
-        'role' => CompanyTeamRole::SUPERADMIN,
-        'status' => CompanyTeamStatus::ACTIVE,
-      ]);
-
-      $jane = User::factory()->create([
-        'company_id' => $johnCompany->id,
-        'name' => 'Jane',
-        'email' => 'jane@travelboost.co.id',
-        'username' => 'jane',
+    foreach ($targets as $target) {
+      $user = User::where('username', $target['username'])->first();
+      if (!$user) {
+        $this->command->error("User with username '{$target['username']}' not found. Please run UserSeeder first.");
+        continue;
+      }
+      $company = Company::factory()->create([
+        'username' => $target['username'],
+        'type' => $target['company_type'],
+        'name' => ucfirst($target['username']) . ' Company',
+        'email' => $user->email,
         'address' => 'Jakarta',
-        'phone' => '0',
-        'password' => Hash::make('jane'),
+        'phone' => '',
       ]);
+      $user->companies()->attach($company->id, [
+        'status' => CompanyTeamStatus::ACTIVE,
+        'is_owner' => true,
+      ]);
+      $team = Team::where('name', "company:{$company->id}")->first();
+      $superadmin = Role::where('name', "company:{$company->id}:superadmin")->first();
+      $user->addRole($superadmin, $team);
     }
+
+    $jane = User::factory()->create([
+      'company_id' => 2,
+      'name' => 'Jane',
+      'email' => 'jane@travelboost.co.id',
+      'username' => 'jane',
+      'address' => 'Jakarta',
+      'phone' => '0',
+      'password' => Hash::make('jane'),
+    ]);
   }
 }

@@ -34,15 +34,71 @@ class Company extends Model
   protected static function booted()
   {
     static::created(function ($company) {
-
       $company->wallet()->create([
         'name' => 'Main Wallet',
         'slug' => 'main',
         'description' => 'Primary wallet for company transactions',
       ]);
       $company->settings()->create([
-        'enable_chatbot' => false,
-        'landing_page_data' => ''
+        'chatbot_enabled' => false,
+        'chatbot_tone' => 'professional',
+        'chatbot_emoji_usage' => 'minimal',
+        'chatbot_personality' => 'assistant',
+        'chatbot_default_language' => 'auto',
+        'landing_page_data' => '',
+      ]);
+      // Access group and role setup
+      $team = Team::create([
+        'name' => "company:{$company->id}",
+        'display_name' => "Company {$company->id} Team",
+        'description' => "Default team for company {$company->id}",
+      ]);
+      $superadmin = Role::create([
+        'name' => "company:{$company->id}:superadmin",
+        'display_name' => "Superadmin",
+        'description' => "Superadmin role with full permissions",
+      ]);
+      $superadmin->givePermissions([
+        'user.create',
+        'user.read',
+        'user.update',
+        'user.delete',
+
+        'company.create',
+        'company.read',
+        'company.update',
+        'company.delete',
+
+        'wallet.create',
+        'wallet.read',
+        'wallet.update',
+        'wallet.delete',
+
+        'tour.create',
+        'tour.read',
+        'tour.update',
+        'tour.delete',
+      ]);
+
+      $admin = Role::create([
+        'name' => "company:{$company->id}:admin",
+        'display_name' => "Admin",
+        'description' => "Admin role with limited permissions",
+      ]);
+      $admin->givePermissions([
+        'user.read',
+
+        'company.read',
+
+        'wallet.create',
+        'wallet.read',
+        'wallet.update',
+        'wallet.delete',
+
+        'tour.create',
+        'tour.read',
+        'tour.update',
+        'tour.delete',
       ]);
     });
   }
@@ -50,11 +106,6 @@ class Company extends Model
   public function teams()
   {
     return $this->hasMany(CompanyTeam::class);
-  }
-
-  public function invitations()
-  {
-    return $this->hasMany(CompanyTeamInvitation::class);
   }
 
   public function tours()
@@ -74,7 +125,7 @@ class Company extends Model
 
   public function settings()
   {
-    return $this->hasOne(CompanySettings::class);
+    return $this->hasOne(CompanySettings::class, 'company_id');
   }
 
   public function photo()

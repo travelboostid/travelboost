@@ -1,4 +1,4 @@
-import { update } from '@/actions/App/Http/Controllers/Companies/Dashboard/ProfileSettingsController';
+import { update } from '@/actions/App/Http/Controllers/Companies/Dashboard/ProfileController';
 import type { Company, MediaResource } from '@/api/model';
 import InputError from '@/components/input-error';
 import CompanyDashboardLayout from '@/components/layouts/company-dashboard';

@@ -4,21 +4,16 @@ import { DataTableColumnHeader } from '@/components/data-table/data-table-column
 import { DataTableToolbar } from '@/components/data-table/data-table-toolbar';
 import CompanyDashboardLayout from '@/components/layouts/company-dashboard';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
 import { DEFAULT_PHOTO } from '@/config';
 import { useDataTable } from '@/hooks/use-data-table';
 import type { ColumnDef } from '@tanstack/react-table';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
-import { TextIcon, Trash2Icon, UserIcon } from 'lucide-react';
+import { TextIcon, UserIcon } from 'lucide-react';
 import { useMemo } from 'react';
-import DeleteRegistrationDialog from './components/delete-registration-dialog';
+import ApproveRegistrationButton from './components/approve-registration-button';
 import { EmptyRegistrations } from './components/empty-registrations';
+import RejectRegistrationButton from './components/reject-registration-button';
 dayjs.extend(relativeTime);
 
 type PageProps = {
@@ -97,20 +92,10 @@ export default function Page({ data }: PageProps) {
         id: 'actions',
         cell: ({ row }) => {
           return (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <DeleteRegistrationDialog registration={row.original}>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="text-destructive"
-                  >
-                    <Trash2Icon />
-                  </Button>
-                </DeleteRegistrationDialog>
-              </TooltipTrigger>
-              <TooltipContent>Cancel</TooltipContent>
-            </Tooltip>
+            <div className="flex gap-2">
+              <ApproveRegistrationButton registration={row.original} />
+              <RejectRegistrationButton registration={row.original} />
+            </div>
           );
         },
         size: 32,

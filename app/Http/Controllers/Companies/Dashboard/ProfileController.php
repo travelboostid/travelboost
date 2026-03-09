@@ -7,14 +7,14 @@ use App\Models\Company;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
-class ProfileSettingsController extends Controller
+class ProfileController extends Controller
 {
   /**
    * Display the resource.
    */
   public function show(Company $company)
   {
-    return Inertia::render('companies/dashboard/settings/profile', [
+    return Inertia::render('companies/dashboard/profile/index', [
       'company' => $company,
     ]);
   }

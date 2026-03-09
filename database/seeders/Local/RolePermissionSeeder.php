@@ -2,60 +2,44 @@
 
 namespace Database\Seeders\Local;
 
+use App\Models\Permission;
+use App\Models\Role;
 use Illuminate\Database\Seeder;
-use Spatie\Permission\Models\Role;
-use Spatie\Permission\Models\Permission;
 
 class RolePermissionSeeder extends Seeder
 {
   public function run(): void
   {
-    // Reset cached roles and permissions
-    app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
-
-    // Create permissions
     $permissions = [
-      // telescope
-      'access telescope',
+      'user.create',
+      'user.read',
+      'user.update',
+      'user.delete',
 
-      // User permissions
-      'view users',
-      'create users',
-      'edit users',
-      'delete users',
+      'company.create',
+      'company.read',
+      'company.update',
+      'company.delete',
 
-      // Tours
-      'view tours',
-      'create tours',
-      'edit tours',
-      'delete tours',
+      'wallet.create',
+      'wallet.read',
+      'wallet.update',
+      'wallet.delete',
 
-      // Funds
-      'create wallet',
-      'view wallet',
-      'create transactions',
-      'view transactions',
+      'tour.create',
+      'tour.read',
+      'tour.update',
+      'tour.delete',
     ];
 
     foreach ($permissions as $permission) {
-      Permission::create(['name' => $permission]);
+      Permission::firstOrCreate([
+        'name' => $permission,
+      ]);
+      $superadmin = Role::firstOrCreate([
+        'name' => 'company:0:superadmin',
+        'display_name' => 'Superadmin',
+      ]);
     }
-
-    // Create roles and assign permissions
-    $superadmin = Role::create(['name' => 'superadmin']);
-    $admin = Role::create(['name' => 'admin']);
-    $generic = Role::create(['name' => 'generic']);
-
-    $superadmin->givePermissionTo(Permission::all());
-    $admin->givePermissionTo(Permission::all());
-    $generic->givePermissionTo(Permission::all());
-
-    $userPermissions = [
-      'view users',
-      'create users',
-      'edit users',
-      'delete users',
-    ];
-    $generic->givePermissionTo($userPermissions);
   }
 }

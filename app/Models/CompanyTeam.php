@@ -4,8 +4,9 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use App\Enums\CompanyTeamRole;
 use App\Enums\CompanyTeamStatus;
+use App\Events\CompanyTeamCreated;
+use function PHPUnit\Framework\returnValue;
 
 class CompanyTeam extends Model
 {
@@ -14,24 +15,37 @@ class CompanyTeam extends Model
   protected $fillable = [
     'company_id',
     'user_id',
+    'invite_email',
+    'invite_role',
+    'invite_token',
+    'invited_at',
+    'is_owner',
+    'accepted_at',
     'status',
-    'role',
   ];
 
   protected $casts = [
     'status' => CompanyTeamStatus::class,
-    'role'   => CompanyTeamRole::class,
+    'invited_at' => 'datetime',
+    'accepted_at' => 'datetime',
   ];
 
   protected $with = [
-    'user'
+    'user',
+    'user.roles',
+  ];
+
+  protected $appends = ['roles'];
+
+  protected $dispatchesEvents = [
+    'created' => CompanyTeamCreated::class
   ];
 
   /*
-    |--------------------------------------------------------------------------
-    | Relationships
-    |--------------------------------------------------------------------------
-    */
+  |--------------------------------------------------------------------------
+  | Relationships
+  |--------------------------------------------------------------------------
+  */
 
   public function company()
   {
@@ -40,6 +54,14 @@ class CompanyTeam extends Model
 
   public function user()
   {
-    return $this->belongsTo(User::class);
+    return $this->belongsTo(User::class, 'user_id');
+  }
+
+  public function getRolesAttribute()
+  {
+    if ($this->status === CompanyTeamStatus::PENDING) {
+      return Role::where('name', $this->invite_role)->get();
+    }
+    return $this->user->roles()->where('name', 'like', "company:{$this->company_id}:%")->get();
   }
 }

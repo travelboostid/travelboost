@@ -1,4 +1,3 @@
-import { destroy } from '@/actions/App/Http/Controllers/Companies/Dashboard/VendorRegistrationController';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -10,25 +9,29 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { Button } from '@/components/ui/button';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
+import { update } from '@/routes/company/agent-registrations';
 import { useForm } from '@inertiajs/react';
-import { useState, type ReactNode } from 'react';
+import { UserCheckIcon } from 'lucide-react';
+import { useState } from 'react';
 
-export default function DeleteRegistrationDialog({
-  children,
+export default function ApproveRegistrationButton({
   registration,
 }: {
-  children: ReactNode;
   registration: any;
 }) {
   const { company } = usePageSharedDataProps();
   const [open, setOpen] = useState(false);
   const form = useForm();
-  const handleDelete = () => {
-    form.delete(
-      destroy({
+  const handleApprove = () => {
+    form.setData({
+      status: 'active',
+    });
+    form.put(
+      update({
         company: company.username,
-        vendor_registration: registration.id,
+        agent_registration: registration.id,
       }).url,
       {
         preserveScroll: true,
@@ -40,18 +43,22 @@ export default function DeleteRegistrationDialog({
   };
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
-      <AlertDialogTrigger asChild>{children}</AlertDialogTrigger>
+      <AlertDialogTrigger asChild>
+        <Button size="icon" className="text-primary" variant="outline">
+          <UserCheckIcon />
+        </Button>
+      </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Delete registration?</AlertDialogTitle>
+          <AlertDialogTitle>Approve registration?</AlertDialogTitle>
           <AlertDialogDescription>
-            This will permanently remove the registration. This action cannot be
-            undone.
+            This will approve the registration and allow the agent to access
+            your tours.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
+          <AlertDialogAction onClick={handleApprove}>Approve</AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

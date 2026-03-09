@@ -1,4 +1,3 @@
-import { store } from '@/actions/App/Http/Controllers/Companies/Dashboard/TeamInvitationController';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
 import {
@@ -14,45 +13,24 @@ import { Field, FieldGroup } from '@/components/ui/field';
 import { Label } from '@/components/ui/label';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
+import { invite } from '@/routes/company/teams';
 import { useForm } from '@inertiajs/react';
-import { useState, type ReactNode } from 'react';
+import { PlusIcon } from 'lucide-react';
+import { useState } from 'react';
 import UserPicker from './user-picker';
 
-const ROLES = [
-  {
-    title: 'Admin',
-    description: 'Manage everything as you, but with limited capabilities',
-    value: 'admin',
-  },
-  {
-    title: 'Manager',
-    description: 'Manage teams and projects',
-    value: 'manager',
-  },
-  {
-    title: 'Operator',
-    description: 'Manage tours and operations',
-    value: 'operator',
-  },
-];
-
-type InviteDialogProps = {
-  children: ReactNode;
-};
-
-export default function InviteDialog({ children }: InviteDialogProps) {
+export default function InviteTeamButton({ roles }: { roles: any[] }) {
   const [open, setOpen] = useState(false);
   const { company } = usePageSharedDataProps();
 
   const form = useForm({
-    email: '',
-    role: '' as string,
+    invite_email: '',
+    invite_role: '' as string,
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-
-    form.post(store({ company: company.username }).url, {
+    form.post(invite({ company: company.username }).url, {
       preserveScroll: true,
       onError: () => setOpen(true),
       onSuccess: () => {
@@ -64,7 +42,12 @@ export default function InviteDialog({ children }: InviteDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>{children}</DialogTrigger>
+      <DialogTrigger asChild>
+        <Button>
+          <PlusIcon />
+          Invite new user
+        </Button>
+      </DialogTrigger>
 
       <DialogContent className="sm:max-w-sm">
         <form onSubmit={handleSubmit}>
@@ -78,33 +61,34 @@ export default function InviteDialog({ children }: InviteDialogProps) {
 
           <FieldGroup>
             <Field>
-              <Label htmlFor="email">User</Label>
+              <Label htmlFor="invite_email">User</Label>
               <UserPicker
-                value={form.data.email}
-                onChange={(value) => form.setData('email', value || '')}
+                value={form.data.invite_email}
+                onChange={(value) => form.setData('invite_email', value || '')}
               />
-              <InputError message={form.errors.email} />
+              <InputError message={form.errors.invite_email} />
             </Field>
 
             <Field>
-              <Label htmlFor="role">Role</Label>
+              <Label htmlFor="invite_role">Role</Label>
               <ToggleGroup
                 type="single"
                 variant="outline"
                 spacing={2}
                 size="lg"
                 className="grid grid-cols-1 gap-2 rounded-xl"
-                value={form.data.role}
-                onValueChange={(v) => form.setData('role', v)}
+                value={form.data.invite_role}
+                onValueChange={(v) => form.setData('invite_role', v)}
               >
-                {ROLES.map((role) => (
+                {roles.map((role) => (
                   <ToggleGroupItem
-                    key={role.value}
-                    value={role.value}
-                    aria-label={role.title}
+                    name="invite_role"
+                    key={role.name}
+                    value={role.name}
+                    aria-label={role.name}
                     className="block h-auto w-auto p-4 text-left"
                   >
-                    <div className="font-bold">{role.title}</div>
+                    <div className="font-bold">{role.display_name}</div>
                     <div className="text-muted-foreground text-xs">
                       {role.description}
                     </div>
@@ -112,7 +96,7 @@ export default function InviteDialog({ children }: InviteDialogProps) {
                 ))}
               </ToggleGroup>
 
-              <InputError message={form.errors.role} />
+              <InputError message={form.errors.invite_role} />
             </Field>
           </FieldGroup>
 

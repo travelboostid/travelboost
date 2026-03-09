@@ -2,7 +2,6 @@
 
 namespace Database\Factories;
 
-use App\Enums\UserType;
 use App\Models\User;
 use App\Models\UserPreference;
 use Illuminate\Database\Eloquent\Factories\Factory;

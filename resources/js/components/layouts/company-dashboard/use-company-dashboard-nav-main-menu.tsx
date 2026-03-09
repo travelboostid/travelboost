@@ -52,9 +52,9 @@ export function useCompanyDashboardNavMainMenu() {
           icon: HomeIcon,
         },
         {
-          id: 'agents',
+          id: 'agent-registrations',
           title: 'Agents',
-          urlOrAction: `/companies/${company.username}/dashboard/agents`,
+          urlOrAction: `/companies/${company.username}/dashboard/agent-registrations`,
           icon: UsersRoundIcon,
         },
         {
@@ -152,17 +152,22 @@ export function useCompanyDashboardNavMainMenu() {
             {
               id: 'settings.profile',
               title: 'Profile',
-              urlOrAction: `/companies/${company.username}/dashboard/settings/profile`,
+              urlOrAction: `/companies/${company.username}/dashboard/profile`,
             },
             {
               id: 'settings.teams',
               title: 'User Management',
-              urlOrAction: `/companies/${company.username}/dashboard/settings/teams`,
+              urlOrAction: `/companies/${company.username}/dashboard/teams`,
+            },
+            {
+              id: 'settings.roles',
+              title: 'Access Roles',
+              urlOrAction: `/companies/${company.username}/dashboard/roles`,
             },
             {
               id: 'settings.chatbot',
               title: 'Chat AI',
-              urlOrAction: `/companies/${company.username}/dashboard/settings/chatbot`,
+              urlOrAction: `/companies/${company.username}/dashboard/chatbot`,
             },
           ],
         },
@@ -305,17 +310,22 @@ export function useCompanyDashboardNavMainMenu() {
             {
               id: 'settings.profile',
               title: 'Profile',
-              urlOrAction: `/companies/${company.username}/dashboard/settings/profile`,
+              urlOrAction: `/companies/${company.username}/dashboard/profile`,
             },
             {
               id: 'settings.teams',
               title: 'User Management',
-              urlOrAction: `/companies/${company.username}/dashboard/settings/teams`,
+              urlOrAction: `/companies/${company.username}/dashboard/teams`,
+            },
+            {
+              id: 'settings.roles',
+              title: 'Access Roles',
+              urlOrAction: `/companies/${company.username}/dashboard/roles`,
             },
             {
               id: 'settings.chatbot',
               title: 'Chat AI',
-              urlOrAction: `/companies/${company.username}/dashboard/settings/chatbot`,
+              urlOrAction: `/companies/${company.username}/dashboard/chatbot`,
             },
             {
               id: 'settings.vendor-regs',

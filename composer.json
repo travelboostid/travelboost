@@ -23,7 +23,7 @@
     "laravel/tinker": "^2.10.1",
     "laravel/wayfinder": "^0.1.9",
     "midtrans/midtrans-php": "*",
-    "spatie/laravel-permission": "*",
+    "santigarcor/laratrust": "^8.5",
     "spatie/laravel-query-builder": "*",
     "theodo-group/llphant": "*",
     "tpetry/laravel-postgresql-enhanced": "*"

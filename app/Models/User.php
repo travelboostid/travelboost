@@ -14,14 +14,14 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Laratrust\Contracts\LaratrustUser;
+use Laratrust\Traits\HasRolesAndPermissions;
 use Laravel\Fortify\TwoFactorAuthenticatable;
-use Spatie\Permission\Traits\HasPermissions;
-use Spatie\Permission\Traits\HasRoles;
 
-class User extends Authenticatable implements Customer, Wallet
+class User extends Authenticatable implements Customer, Wallet, LaratrustUser
 {
   /** @use HasFactory<\Database\Factories\UserFactory> */
-  use HasFactory, Notifiable, TwoFactorAuthenticatable, HasRoles, HasPermissions, CanPay, HasWallet, HasWallets, HasBankAccounts;
+  use HasFactory, Notifiable, TwoFactorAuthenticatable, HasRolesAndPermissions, CanPay, HasWallet, HasWallets, HasBankAccounts;
 
   /**
    * The attributes that are mass assignable.
@@ -82,15 +82,9 @@ class User extends Authenticatable implements Customer, Wallet
     return $this->hasMany(BankAccount::class);
   }
 
-  public function preference()
-  {
-    return $this->hasOne(UserPreference::class);
-  }
-
   public function companies()
   {
     return $this->belongsToMany(Company::class, 'company_teams')
-      ->withPivot('role')
       ->withTimestamps();
   }
 
