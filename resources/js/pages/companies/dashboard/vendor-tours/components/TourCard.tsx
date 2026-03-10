@@ -16,7 +16,7 @@ import { Spinner } from '@/components/ui/spinner';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { extractImageSrc } from '@/lib/utils';
 import { router } from '@inertiajs/react';
-import { IconPdf } from '@tabler/icons-react';
+import { IconPdf, IconBrandFacebook } from '@tabler/icons-react';
 import { MessageSquareIcon, SaveIcon } from 'lucide-react';
 import { useState } from 'react';
 
@@ -68,6 +68,25 @@ export default function TourCard({ tour }: { tour: TourResource }) {
       setStartingPrivateChat(false);
     }
   };
+
+  //26022026 share to fb
+  const shareUrl = `${window.location.origin}/@${tour.name}/tours/${tour.id}`;
+  //console.log('shareUrl:', shareUrl);
+
+  const handleShareFacebook = () => {
+    const fbUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(
+      shareUrl,
+    )}`;
+    window.open(fbUrl, '_blank', 'noopener,noreferrer');
+  };
+
+  const handleShareFacebookPdf = () => {
+    if (!hasDocument) return;
+
+    const pdfUrl = brochure({ username, tour: tour.id }).url;
+
+    console.log('PDF URL:', pdfUrl);
+  }
 
   //03032026
   const formattedPrice = new Intl.NumberFormat('id-ID', {
@@ -125,10 +144,12 @@ export default function TourCard({ tour }: { tour: TourResource }) {
         )}
       </div>
       <div className="flex-1" />
-      <CardFooter className="flex gap-2">
+      {/* fix screen for desktop and mobile */}
+      {/*<CardFooter className="flex gap-2"> */}
+      <CardFooter className="grid grid-cols-2 lg:grid-cols-4 gap-2">
         <Button
           variant="secondary"
-          className="flex-1"
+          //className="flex-1"
           disabled={!hasDocument}
           onClick={handleViewBrochure}
         >
@@ -137,7 +158,7 @@ export default function TourCard({ tour }: { tour: TourResource }) {
         <Button
           disabled={(tour as any).has_copied}
           onClick={handleCopy}
-          className="flex-1"
+          //className="flex-1"
         >
           <SaveIcon />
         </Button>
@@ -145,9 +166,21 @@ export default function TourCard({ tour }: { tour: TourResource }) {
           onClick={handleMessage}
           disabled={startingPrivateChat}
           variant="secondary"
-          className="flex-1"
+          //className="flex-1"
         >
           {startingPrivateChat ? <Spinner /> : <MessageSquareIcon />}
+        </Button>
+
+        {/* ✅ SHARE FACEBOOK */}
+        <Button
+          variant="secondary"
+          //onClick={handleShareFacebook}
+          onClick={handleShareFacebookPdf}
+          disabled={!hasDocument}
+          //className="flex-1"
+        >
+          <IconBrandFacebook />
+          {/* <span className="hidden md:inline">Share</span> */}
         </Button>
       </CardFooter>
     </Card>
