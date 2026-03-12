@@ -16,7 +16,7 @@ import { Spinner } from '@/components/ui/spinner';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { extractImageSrc } from '@/lib/utils';
 import { router } from '@inertiajs/react';
-import { IconPdf, IconBrandFacebook } from '@tabler/icons-react';
+import { IconPdf, IconBrandFacebook, IconBrandWhatsapp } from '@tabler/icons-react';
 import { MessageSquareIcon, SaveIcon } from 'lucide-react';
 import { useState } from 'react';
 
@@ -88,6 +88,19 @@ export default function TourCard({ tour }: { tour: TourResource }) {
     console.log('PDF URL:', pdfUrl);
   }
 
+  const handleChatWhatsApp = () => {
+    //const phone = tour.user_phone; // contoh: "628123456789"
+    const phone = tour.user?.phone;
+    if (!phone) return;
+
+    const message = encodeURIComponent(
+      `Halo, saya tertarik dengan tour *${tour.name}*. Bisa info lebih lanjut?`
+    );
+
+    const waUrl = `https://wa.me/${phone}?text=${message}`;
+    window.open(waUrl, '_blank', 'noopener,noreferrer');
+  };
+
   //03032026
   const formattedPrice = new Intl.NumberFormat('id-ID', {
     style: 'currency',
@@ -104,6 +117,24 @@ export default function TourCard({ tour }: { tour: TourResource }) {
         }).format(tour.earlybird)
       : null;
 
+  const formattedpromoprice =
+    tour.promoprice && tour.promoprice > 0
+      ? new Intl.NumberFormat('id-ID', {
+          style: 'currency',
+          currency: 'IDR',
+          maximumFractionDigits: 0,
+        }).format(tour.promoprice)
+      : null;
+
+  const formattedpromoteprice =
+    tour.promote_price && tour.promote_price > 0
+      ? new Intl.NumberFormat('id-ID', {
+          style: 'currency',
+          currency: 'IDR',
+          maximumFractionDigits: 0,
+        }).format(tour.promote_price)
+      : null;
+    
   return (
     <Card className="relative mx-auto flex w-full flex-col overflow-hidden pt-0">
       <img
@@ -121,7 +152,7 @@ export default function TourCard({ tour }: { tour: TourResource }) {
         {formattedEarlybird ? (
           <div className="flex flex-col">
             {/* Harga normal dicoret */}
-            <span className="text-sm text-muted-foreground line-through">
+            <span className="text-sm text-muted-foreground">
               {formattedPrice}
             </span>
 
@@ -139,7 +170,52 @@ export default function TourCard({ tour }: { tour: TourResource }) {
               </span>
             )}
           </div>
-        ) : (
+        ) 
+
+        : formattedpromoprice ?(
+          <div className="flex flex-col">
+            {/* Harga normal dicoret */}
+            <span className="text-sm text-muted-foreground line-through">
+              {formattedPrice}
+            </span>
+
+            {/* Harga earlybird */}
+            <span className="text-xs bg-red-600 text-white px-2 py-1 rounded w-fit">
+              PROMO
+            </span>
+            <span className="text-xl font-bold text-red-600">
+              {formattedpromoprice}
+            </span>
+          </div>
+        )
+
+        : formattedpromoteprice ?(
+          <div className="flex flex-col">
+            {/* Harga normal dicoret */}
+            <span className="text-sm text-muted-foreground line-through">
+              {formattedPrice}
+            </span>
+
+            {/* Harga earlybird */}
+            {/* ✅ Earlybird Note */}
+            {tour.promote_title && (
+              <span className="text-xs bg-blue-600 text-white px-2 py-1 rounded w-fit">
+                {tour.promote_title}
+              </span>
+            )}
+            <span className="text-xl font-bold text-blue-600">
+              {formattedpromoteprice}
+            </span>
+            {/* ✅ Earlybird Note */}
+            {tour.promote_note && (
+              <span className="text-sm text-muted-foreground">
+                {tour.promote_note}
+              </span>
+            )}
+          </div>
+        )
+
+        : (
           <div className="text-lg font-bold text-primary">{formattedPrice}</div>
         )}
       </div>
@@ -172,16 +248,29 @@ export default function TourCard({ tour }: { tour: TourResource }) {
         </Button>
 
         {/* ✅ SHARE FACEBOOK */}
+        {/* hasDocument && ( */}
+          {!hasDocument && (
         <Button
           variant="secondary"
           //onClick={handleShareFacebook}
           onClick={handleShareFacebookPdf}
-          disabled={!hasDocument}
+          //disabled={!hasDocument}
+          disabled={hasDocument}
           //className="flex-1"
         >
           <IconBrandFacebook />
           {/* <span className="hidden md:inline">Share</span> */}
         </Button>
+        )}
+
+        {/*<Button
+          variant="secondary"
+          onClick={handleChatWhatsApp}
+          //className="flex-1"
+        >
+          <IconBrandWhatsapp /> */}
+          {/* <span className="hidden md:inline">WhatsApp</span> */}
+        {/* </Button> */}
       </CardFooter>
     </Card>
   );
