@@ -20,7 +20,14 @@ import { IconPdf, IconBrandFacebook, IconBrandWhatsapp } from '@tabler/icons-rea
 import { MessageSquareIcon, SaveIcon } from 'lucide-react';
 import { useState } from 'react';
 
-export default function TourCard({ tour }: { tour: TourResource }) {
+//export default function TourCard({ tour }: { tour: TourResource }) {
+export default function TourCard({
+  tour,
+  type = 'agent',
+}: {
+  tour: TourResource
+  type?: string
+}) {
   const { company } = usePageSharedDataProps();
   const floatingChat = useFloatingChatWidgetContext();
   const [startingPrivateChat, setStartingPrivateChat] = useState(false);
@@ -231,13 +238,16 @@ export default function TourCard({ tour }: { tour: TourResource }) {
         >
           <IconPdf />
         </Button>
-        <Button
-          disabled={(tour as any).has_copied}
-          onClick={handleCopy}
-          //className="flex-1"
-        >
-          <SaveIcon />
-        </Button>
+        {type === 'agent' && (
+          <Button
+            disabled={(tour as any).has_copied}
+            onClick={handleCopy}
+            //className="flex-1"
+          >
+            <SaveIcon />
+          </Button>
+        )}
+        
         <Button
           onClick={handleMessage}
           disabled={startingPrivateChat}

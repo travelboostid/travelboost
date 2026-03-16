@@ -50,6 +50,8 @@ export default function Page({
       );
     }, 500); // 500ms delay
 
+    //console.log({ company, vendor });
+
     return () => clearTimeout(timeout);
   }, [company.username, filters.category, search, vendor.username]);
   /*const handleSearch = (e: React.FormEvent) => {
