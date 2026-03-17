@@ -62,4 +62,21 @@ class VendorTourCatalogController extends Controller
       'tour' => $tour,
     ]);
   }
+
+  public function viewPublicBrochure($vendor, $tourId)
+  {
+      $tour = Tour::with('document')->findOrFail($tourId);
+
+      if (!$tour->document) {
+          abort(404);
+      }
+
+      $url = $tour->document['data']['url'] ?? null;
+
+      if (!$url) {
+          abort(404);
+      }
+
+      return redirect($url);
+  }
 }
