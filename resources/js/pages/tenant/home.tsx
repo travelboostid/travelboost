@@ -4,7 +4,7 @@ import TourCard from '@/pages/companies/dashboard/vendor-tours/components/TourCa
 import { EmptyTours } from '@/pages/companies/dashboard/vendor-tours/empty-tours'
 
 import PublicCatalogLayout from '@/layouts/PublicCatalogLayout'
-
+//
 type Props = {
   username: string
   data: any[]

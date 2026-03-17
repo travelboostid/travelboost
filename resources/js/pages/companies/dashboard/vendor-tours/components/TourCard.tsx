@@ -25,10 +25,12 @@ export default function TourCard({
   tour,
   type = 'agent',
   fromLogin = true,
+  //test = true,
 }: {
   tour: TourResource
   type?: string
   fromLogin? : boolean
+  //test?: boolean
 }) {
   const { company } = usePageSharedDataProps();
   const floatingChat = useFloatingChatWidgetContext();
@@ -268,7 +270,8 @@ export default function TourCard({
           </Button>
         )}
         
-        <Button
+        {type === 'agent' && (
+          <Button
           onClick={handleMessage}
           disabled={startingPrivateChat}
           variant="secondary"
@@ -276,6 +279,7 @@ export default function TourCard({
         >
           {startingPrivateChat ? <Spinner /> : <MessageSquareIcon />}
         </Button>
+        )}
 
         {/* ✅ SHARE FACEBOOK */}
         {/* hasDocument && ( */}
@@ -305,3 +309,4 @@ export default function TourCard({
     </Card>
   );
 }
+

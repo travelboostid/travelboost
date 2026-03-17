@@ -66,7 +66,7 @@ class VendorTourCatalogController extends Controller
   public function viewPublicBrochure($vendor, $tourId)
   {
       $tour = Tour::with('document')->findOrFail($tourId);
-
+      //
       if (!$tour->document) {
           abort(404);
       }

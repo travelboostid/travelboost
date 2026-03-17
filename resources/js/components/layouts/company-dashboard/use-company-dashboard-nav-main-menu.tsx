@@ -76,7 +76,8 @@ export function useCompanyDashboardNavMainMenu() {
             {
               id: 'tours.preview',
               title: 'My Catalogs',
-              urlOrAction: `//${company.username}.${appHost}/tours`,
+              //urlOrAction: `//${company.username}.${appHost}/tours`,
+              urlOrAction: `//${company.username}.${appHost}`,
               target: '_blank',
             },
             {

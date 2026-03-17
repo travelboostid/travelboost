@@ -61,3 +61,4 @@ Route::get(
   '/brochure/{vendor}/{tour}',
   [VendorTourCatalogController::class, 'viewPublicBrochure']
 )->name('brochure.public');
+//
