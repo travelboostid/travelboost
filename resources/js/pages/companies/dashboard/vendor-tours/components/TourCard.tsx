@@ -249,6 +249,9 @@ export default function TourCard({
         )}
       </div>
       <div className="flex-1" />
+      <div className="px-6 pb-2">
+        <div className="text-lg font-bold text-primary">Status : {tour.status}</div>
+      </div>
       {/* fix screen for desktop and mobile */}
       {/*<CardFooter className="flex gap-2"> */}
       <CardFooter className="grid grid-cols-2 lg:grid-cols-4 gap-2">
