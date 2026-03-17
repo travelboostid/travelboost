@@ -1,11 +1,14 @@
 <?php
 
+use App\Console\Commands\ProcessAiBilling;
+use App\Http\Middleware\CheckOnboarding;
+use App\Http\Middleware\CheckUserStatus;
 use App\Http\Middleware\EnsureHasAdminAccess;
 use App\Http\Middleware\EnsureHasCompanyAccess;
 use App\Http\Middleware\TenantResolver;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
-use App\Http\Middleware\ResolveCustomDomain;
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -28,6 +31,7 @@ return Application::configure(basePath: dirname(__DIR__))
     $middleware->alias([
       'company.access' => EnsureHasCompanyAccess::class,
       'admin.access' => EnsureHasAdminAccess::class,
+      'check.user.status' => CheckUserStatus::class,
     ]);
     $middleware->web(append: [
       TenantResolver::class,
@@ -35,6 +39,9 @@ return Application::configure(basePath: dirname(__DIR__))
       HandleInertiaRequests::class,
       AddLinkHeadersForPreloadedAssets::class,
     ]);
+  })
+  ->withSchedule(function (Schedule $schedule) {
+    $schedule->command(ProcessAiBilling::class)->dailyAt('00:05');
   })
   ->withExceptions(function (Exceptions $exceptions): void {
     //

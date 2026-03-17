@@ -16,8 +16,10 @@ class ChatbotController extends Controller
   public function show(Company $company)
   {
     $settings = $company->settings()->first();
+    // $credit = $company->aiCredit()->first();
     return Inertia::render('companies/dashboard/chatbot/index', [
       'settings' => $settings,
+      // 'credit' => $credit,
     ]);
   }
 

@@ -1,9 +1,10 @@
 <?php
 
 use App\Enums\CompanyType;
-use App\Enums\CompanyTeamRole;
 use App\Enums\CompanyTeamStatus;
 use App\Enums\DomainStatus;
+use App\Enums\UserGender;
+use App\Enums\UserStatus;
 use App\Enums\VendorAgentPartnerStatus;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
@@ -23,8 +24,10 @@ return new class extends Migration
       $table->timestamp('email_verified_at')->nullable();
       $table->string('password');
       $table->string('username'); //->unique() -> we handle this on separate step below;
-      $table->string(column: 'address');
-      $table->string(column: 'phone');
+      $table->string(column: 'address')->default('');
+      $table->string(column: 'phone')->default('');
+      $table->enum('gender', UserGender::cases())->default(UserGender::UNSPECIFIED);
+      $table->enum('status', UserStatus::cases())->default(UserStatus::INACTIVE);
       $table->rememberToken();
       $table->timestamps();
     });
@@ -50,8 +53,8 @@ return new class extends Migration
       $table->string('name');
       $table->string('username')->unique();
       $table->string('email')->unique();
-      $table->string(column: 'address');
-      $table->string(column: 'phone');
+      $table->string(column: 'address')->default('');
+      $table->string(column: 'phone')->default('');
       $table->rememberToken();
       $table->timestamps();
     });
@@ -69,29 +72,49 @@ return new class extends Migration
       $table->timestamps();
     });
 
-    // Schema::create('system_settings', function (Blueprint $table) {
-    //   $table->id();
-    //   $table->decimal('chatbot_topup_rate', 15, 4)->default(1); // Credit top-up rate per Rp1
-    //   $table->timestamps();
-    // });
-
-    Schema::create('chatbot_models', function (Blueprint $table) {
+    Schema::create('ai_models', function (Blueprint $table) {
       $table->id();
-      $table->boolean('code')->default(false);
-      $table->decimal('input_token_rate', 15, 4)->default(1);
-      $table->decimal('output_token_rate', 15, 4)->default(1);
+      $table->string('code')->unique();
+      $table->decimal('input_token_rate', 16, 8)->default(1);
+      $table->decimal('output_token_rate', 16, 8)->default(1);
       $table->timestamps();
     });
 
-    // Schema::create('chatbot_usage_logs', function (Blueprint $table) {
-    //   $table->id();
-    //   $table->foreignId('company_id')->unique()->constrained('companies')->cascadeOnDelete();
-    //   $table->timestamps();
-    // });
+    Schema::create('ai_credits', function (Blueprint $table) {
+      $table->id();
+      $table->foreignId('company_id')->unique()->constrained('companies')->cascadeOnDelete();
+      $table->decimal('balance', 16, 8)->default(0);
+
+      $table->timestamps();
+    });
+
+    Schema::create('ai_billing_cycles', function (Blueprint $table) {
+      $table->id();
+      $table->foreignId('company_id')->constrained('companies')->cascadeOnDelete();
+      $table->timestamp('start_at');
+      $table->timestamp('end_at')->nullable();
+      $table->unsignedInteger('input_tokens')->default(0);
+      $table->unsignedInteger('output_tokens')->default(0);
+      $table->decimal('cost', 16, 8)->default(0);
+      $table->timestamps();
+    });
+
+    Schema::create('ai_usage_logs', function (Blueprint $table) {
+      $table->id();
+      $table->foreignId('company_id')->constrained('companies')->cascadeOnDelete();
+      $table->string('model')->nullable();
+      $table->unsignedInteger('input_tokens')->default(0);
+      $table->unsignedInteger('output_tokens')->default(0);
+      $table->decimal('cost', 16, 8);
+      $table->string('feature')->nullable();
+      $table->json('meta')->nullable();
+      $table->foreignId('billing_cycle_id')->nullable()->constrained('ai_billing_cycles')->nullOnDelete();
+      $table->timestamps();
+      $table->index(['company_id']);
+    });
 
     Schema::create('company_teams', function (Blueprint $table) {
       $table->id();
-
       $table->foreignId('company_id')->constrained()->cascadeOnDelete();
       $table->foreignId('user_id')->nullable()->constrained()->cascadeOnDelete();
       $table->boolean('is_owner')->default(false);
@@ -114,6 +137,8 @@ return new class extends Migration
       $table->foreignId('vendor_id')->constrained('companies')->cascadeOnDelete();
       $table->foreignId('agent_id')->constrained('companies')->cascadeOnDelete();
       $table->enum('status', VendorAgentPartnerStatus::cases())->default(VendorAgentPartnerStatus::PENDING);
+      $table->timestamp('applied_at')->nullable();
+      $table->timestamp('accepted_at')->nullable();
       $table->timestamps();
       $table->unique(['vendor_id', 'agent_id']);
     });

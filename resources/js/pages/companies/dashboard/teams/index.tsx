@@ -70,7 +70,10 @@ function TeamRow({ team, roles }: { team: any; roles: any[] }) {
         <Badge>{team.status}</Badge>
       </TableCell>
       <TableCell className="h-16 px-4 text-sm text-muted-foreground">
-        {dayjs(team.created_at).fromNow()}
+        {dayjs(team.invited_at).fromNow()}
+      </TableCell>
+      <TableCell className="h-16 px-4 text-sm text-muted-foreground">
+        {team.accepted_at ? dayjs(team.accepted_at).fromNow() : '-'}
       </TableCell>
       <TableCell className="h-16 px-4">
         <div className="flex items-center gap-1">
@@ -111,6 +114,9 @@ export default function Teams({
               <TableHead className="h-12 px-4 font-medium">Status</TableHead>
               <TableHead className="h-12 px-4 font-medium">
                 Invited Date
+              </TableHead>
+              <TableHead className="h-12 px-4 font-medium">
+                Accepted Date
               </TableHead>
               <TableHead className="h-12 px-4 font-medium w-45">
                 Actions

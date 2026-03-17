@@ -12,12 +12,16 @@ class VendorAgentPartner extends Model
     'vendor_id',
     'agent_id',
     'status',
+    'applied_at',
+    'accepted_at',
   ];
 
   protected function casts(): array
   {
     return [
       'status' => VendorAgentPartnerStatus::class,
+      'applied_at' => 'datetime',
+      'accepted_at' => 'datetime',
     ];
   }
 

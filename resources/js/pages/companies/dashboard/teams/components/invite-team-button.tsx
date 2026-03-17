@@ -10,6 +10,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Field, FieldGroup } from '@/components/ui/field';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
@@ -17,7 +18,6 @@ import { invite } from '@/routes/company/teams';
 import { useForm } from '@inertiajs/react';
 import { PlusIcon } from 'lucide-react';
 import { useState } from 'react';
-import UserPicker from './user-picker';
 
 export default function InviteTeamButton({ roles }: { roles: any[] }) {
   const [open, setOpen] = useState(false);
@@ -62,9 +62,11 @@ export default function InviteTeamButton({ roles }: { roles: any[] }) {
           <FieldGroup>
             <Field>
               <Label htmlFor="invite_email">User</Label>
-              <UserPicker
+              <Input
+                id="invite_email"
+                placeholder="Email..."
                 value={form.data.invite_email}
-                onChange={(value) => form.setData('invite_email', value || '')}
+                onChange={(e) => form.setData('invite_email', e.target.value)}
               />
               <InputError message={form.errors.invite_email} />
             </Field>

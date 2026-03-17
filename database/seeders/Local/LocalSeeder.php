@@ -2,6 +2,7 @@
 
 namespace Database\Seeders\Local;
 
+use Database\Seeders\Common\AiModelSeeder;
 use Illuminate\Database\Seeder;
 
 class LocalSeeder extends Seeder
@@ -12,6 +13,7 @@ class LocalSeeder extends Seeder
   public function run(): void
   {
     $this->call([
+      AiModelSeeder::class,
       RolePermissionSeeder::class,
       UserSeeder::class,
       CompanySeeder::class,

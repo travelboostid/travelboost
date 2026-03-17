@@ -1,4 +1,3 @@
-import type { Company } from '@/api/model';
 import { DataTable } from '@/components/data-table/data-table';
 import { DataTableColumnHeader } from '@/components/data-table/data-table-column-header';
 import { DataTableToolbar } from '@/components/data-table/data-table-toolbar';
@@ -78,16 +77,31 @@ export default function Page({ data }: PageProps) {
         enableColumnFilter: true,
       },
       {
-        id: 'created_at',
-        accessorKey: 'created_at',
+        id: 'applied_at',
+        accessorKey: 'applied_at',
         header: ({ column }) => (
-          <DataTableColumnHeader column={column} label="Join Date" />
+          <DataTableColumnHeader column={column} label="Applied At" />
         ),
         cell: ({ cell }) => {
-          const createdAt = cell.getValue<Company['created_at']>();
+          const appliedAt = cell.getValue<string>();
           return (
             <div className="text-sm text-muted-foreground">
-              {dayjs(createdAt).fromNow()}
+              {dayjs(appliedAt).fromNow()}
+            </div>
+          );
+        },
+      },
+      {
+        id: 'accepted_at',
+        accessorKey: 'accepted_at',
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} label="Accepted At" />
+        ),
+        cell: ({ cell }) => {
+          const acceptedAt = cell.getValue<string>();
+          return (
+            <div className="text-sm text-muted-foreground">
+              {dayjs(acceptedAt).fromNow()}
             </div>
           );
         },

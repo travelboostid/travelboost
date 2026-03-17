@@ -22,8 +22,15 @@ class InviteCompanyTeamRequest extends FormRequest
   public function rules(): array
   {
     return [
-      'invite_email' => 'required|email',
-      'invite_role' => 'required|string',
+      'invite_email' => [
+        'required',
+        'email',
+        'unique:users,email',
+      ],
+      'invite_role' => [
+        'required',
+        'string',
+      ],
     ];
   }
 }

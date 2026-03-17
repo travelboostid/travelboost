@@ -2,17 +2,14 @@
 
 namespace App\Http\Controllers\Companies\Dashboard;
 
-use App\Enums\CompanyTeamRole;
 use App\Enums\CompanyTeamStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Companies\InviteCompanyTeamRequest;
-use App\Http\Requests\Companies\StoreCompanyTeamRequest;
 use App\Models\Company;
 use App\Models\CompanyTeam;
 use Inertia\Inertia;
 use App\Http\Requests\UpdateCompanyTeamRequest; // Ensure you import the request class
 use App\Models\Role;
-use App\Models\Team;
 use App\Models\User;
 use App\Notifications\TeamInvitationNotification;
 use Illuminate\Support\Facades\Notification;

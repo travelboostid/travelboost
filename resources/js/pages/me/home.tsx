@@ -9,7 +9,11 @@ export default function Home() {
     <UserDashboardLayout breadcrumb={[{ title: 'Home' }]}>
       <Head title="Home" />
       <div className="p-4">
-        Hello, {auth.user.name}. Welcome to your profile
+        Hello, {auth.user.name}. Welcome to Travelboost!
+      </div>
+      <div className="p-4">
+        Continue registration of your company and start boosting your travel
+        business.
       </div>
     </UserDashboardLayout>
   );

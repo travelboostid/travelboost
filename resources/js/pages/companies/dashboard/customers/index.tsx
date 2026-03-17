@@ -61,7 +61,7 @@ export default function CustomersPage({ data }: CustomersPageProps) {
         header: ({ column }: { column: Column<UserResource, unknown> }) => (
           <DataTableColumnHeader column={column} label="Name" />
         ),
-        cell: ({ cell }) => <div>{cell.getValue<UserResource['name']>()}</div>,
+        cell: ({ cell }) => <div>{cell.getValue<string>()}</div>,
         meta: {
           label: 'Name',
           placeholder: 'Search names...',
@@ -76,7 +76,7 @@ export default function CustomersPage({ data }: CustomersPageProps) {
         header: ({ column }: { column: Column<UserResource, unknown> }) => (
           <DataTableColumnHeader column={column} label="Email" />
         ),
-        cell: ({ cell }) => <div>{cell.getValue<UserResource['email']>()}</div>,
+        cell: ({ cell }) => <div>{cell.getValue<string>()}</div>,
         meta: {
           label: 'Email',
           placeholder: 'Search email...',
@@ -86,14 +86,20 @@ export default function CustomersPage({ data }: CustomersPageProps) {
         enableColumnFilter: true,
       },
       {
-        id: 'roles',
-        accessorKey: 'roles',
+        id: 'phone',
+        accessorKey: 'phone',
         header: ({ column }: { column: Column<UserResource, unknown> }) => (
-          <DataTableColumnHeader column={column} label="Roles" />
+          <DataTableColumnHeader column={column} label="Phone" />
         ),
-        cell: ({ cell }) => (
-          <div>{cell.getValue<UserResource['roles']>()?.toString()}</div>
+        cell: ({ cell }) => <div>{cell.getValue<string>()?.toString()}</div>,
+      },
+      {
+        id: 'gender',
+        accessorKey: 'gender',
+        header: ({ column }: { column: Column<UserResource, unknown> }) => (
+          <DataTableColumnHeader column={column} label="Gender" />
         ),
+        cell: ({ cell }) => <div>{cell.getValue<string>()?.toString()}</div>,
       },
       {
         id: 'created_at',
@@ -102,7 +108,7 @@ export default function CustomersPage({ data }: CustomersPageProps) {
           <DataTableColumnHeader column={column} label="Join Date" />
         ),
         cell: ({ cell }) => {
-          const createdAt = cell.getValue<UserResource['created_at']>();
+          const createdAt = cell.getValue<string>();
 
           return (
             <div className="flex items-center gap-1">

@@ -2,14 +2,9 @@
 
 namespace Database\Seeders\Local;
 
-use App\Enums\AgentUserRole;
-use App\Enums\AgentUserStatus;
-use App\Enums\VendorUserRole;
-use App\Enums\VendorUserStatus;
-use App\Models\Agent;
+use App\Enums\UserStatus;
 use App\Models\Role;
 use App\Models\User;
-use App\Models\Vendor;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
@@ -23,7 +18,8 @@ class UserSeeder extends Seeder
       'email' => 'root@travelboost.co.id',
       'username' => 'root',
       'address' => 'Jakarta',
-      'phone' => '0',
+      'phone' => '',
+      'status' => UserStatus::ACTIVE,
       'password' => Hash::make('root'),
     ]);
 
@@ -34,7 +30,8 @@ class UserSeeder extends Seeder
       'email' => 'john@travelboost.co.id',
       'username' => 'john',
       'address' => 'Jakarta',
-      'phone' => '0',
+      'phone' => '',
+      'status' => UserStatus::ACTIVE,
       'password' => Hash::make('john'),
     ]);
 

@@ -22,9 +22,7 @@ export default function Login({
   status,
   canResetPassword,
   canRegister,
-  company,
 }: Props) {
-  console.log('Company in Login component:', company);
   return (
     <AuthLayout
       title="Log in to your account"

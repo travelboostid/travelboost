@@ -4,6 +4,8 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 
+use App\Enums\UserGender;
+use App\Enums\UserStatus;
 use App\Traits\HasBankAccounts;
 use Bavix\Wallet\Interfaces\Customer;
 use Bavix\Wallet\Interfaces\Wallet;
@@ -36,7 +38,9 @@ class User extends Authenticatable implements Customer, Wallet, LaratrustUser
     'phone',
     'address',
     'photo_id',
-    'company_id'
+    'company_id',
+    'gender',
+    'status',
   ];
 
   /**
@@ -63,6 +67,8 @@ class User extends Authenticatable implements Customer, Wallet, LaratrustUser
       'email_verified_at' => 'datetime',
       'password' => 'hashed',
       'two_factor_confirmed_at' => 'datetime',
+      'status' => UserStatus::class,
+      'gender' => UserGender::class,
     ];
   }
 

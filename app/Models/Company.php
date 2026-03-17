@@ -47,6 +47,12 @@ class Company extends Model
         'chatbot_default_language' => 'auto',
         'landing_page_data' => '',
       ]);
+
+      // AI
+      $company->aiCredit()->create([
+        'balance' => 10, // Default AI free credit balance for new companies
+      ]);
+
       // Access group and role setup
       $team = Team::create([
         'name' => "company:{$company->id}",
@@ -156,6 +162,16 @@ class Company extends Model
   public function vendorPartners()
   {
     return $this->hasMany(VendorAgentPartner::class, 'agent_id');
+  }
+
+  protected function aiCredit()
+  {
+    return $this->hasOne(AiCredit::class, 'company_id');
+  }
+
+  protected function aiUsageLogs()
+  {
+    return $this->hasMany(AiUsageLog::class, 'company_id');
   }
 
   protected function photoUrl(): Attribute
