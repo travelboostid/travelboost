@@ -20,12 +20,18 @@ use App\Http\Controllers\Companies\Dashboard\WalletTransactionsController;
 use App\Http\Controllers\Companies\Dashboard\WithdrawalController;
 use Illuminate\Support\Facades\Route;
 
+Route::prefix('companies/{company:username}/dashboard')->middleware(['auth'])->name('company.')->group(function () {
+  Route::group(['prefix' => 'vendors/{vendor}', 'as' => 'vendor.'], function () {
+    Route::get('/tours/{tour}/brochure', [VendorTourCatalogController::class, 'viewBrochure'])->name('tour.view-brochure');
+  });
+});
+
 Route::prefix('companies/{company:username}/dashboard')->middleware(['auth', 'company.access'])->name('company.')->group(function () {
   Route::get('/', [HomeController::class, 'index'])->name('index');
   Route::group(['prefix' => 'vendors/{vendor}', 'as' => 'vendor.'], function () {
     Route::get('/tours', [VendorTourCatalogController::class, 'index'])->name('tours.index');
     Route::post('/tours/{tour}/copy', [VendorTourCatalogController::class, 'copy'])->name('tour.copy');
-    Route::get('/tours/{tour}/brochure', [VendorTourCatalogController::class, 'viewBrochure'])->name('tour.view-brochure');
+    //Route::get('/tours/{tour}/brochure', [VendorTourCatalogController::class, 'viewBrochure'])->name('tour.view-brochure');
   });
   Route::resource('agent-registrations', AgentRegistrationController::class);
   Route::resource('vendor-registrations', VendorRegistrationController::class);

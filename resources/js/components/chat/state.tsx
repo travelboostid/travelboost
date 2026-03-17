@@ -109,8 +109,13 @@ export function ChatContextProvider({
     return result;
   };
 
+  //16032026
+  const userId = auth?.user?.id;
+  //
+
   // 🔔 Message created
-  useEcho(`users.${auth.user.id}`, '.ChatMessageCreated', (e) => {
+  //useEcho(`users.${auth.user.id}`, '.ChatMessageCreated', (e) => {
+  useEcho(`users.${userId}`, '.ChatMessageCreated', (e) => {
     setMessageById((prev) => ({
       ...prev,
       [e.id]: e,
@@ -127,7 +132,8 @@ export function ChatContextProvider({
   });
 
   // 🔔 Room updated
-  useEcho(`users.${auth.user.id}`, '.ChatRoomUpdated', (e) => {
+  //useEcho(`users.${auth.user.id}`, '.ChatRoomUpdated', (e) => {
+  useEcho(`users.${userId}`, '.ChatRoomUpdated', (e) => {
     setRoomById((prev) => ({
       ...prev,
       [e.room.id]: {
@@ -138,7 +144,8 @@ export function ChatContextProvider({
   });
 
   // 🔔 Room created
-  useEcho(`users.${auth.user.id}`, '.ChatRoomCreated', (e) => {
+  //useEcho(`users.${auth.user.id}`, '.ChatRoomCreated', (e) => {
+  useEcho(`users.${userId}`, '.ChatRoomCreated', (e) => {
     setRoomById((prev) => ({
       ...prev,
       [e.room.id]: e.room,

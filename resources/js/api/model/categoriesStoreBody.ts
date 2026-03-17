@@ -11,5 +11,6 @@ export type CategoriesStoreBody = {
   /** @maxLength 255 */
   name: string;
   description?: CategoriesStoreBodyDescription;
+  position_no: string;
   user_id?: CategoriesStoreBodyUserId;
 };

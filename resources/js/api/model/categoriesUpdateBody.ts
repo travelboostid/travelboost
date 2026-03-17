@@ -11,5 +11,6 @@ export type CategoriesUpdateBody = {
   /** @maxLength 255 */
   name?: string;
   description?: CategoriesUpdateBodyDescription;
+  position_no?: string;
   user_id?: CategoriesUpdateBodyUserId;
 };

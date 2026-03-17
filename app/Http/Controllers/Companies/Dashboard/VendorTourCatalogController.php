@@ -54,7 +54,8 @@ class VendorTourCatalogController extends Controller
     return back();
   }
 
-  public function viewBrochure(string $username, Tour $tour)
+  //public function viewBrochure(string $username, Tour $tour)
+  public function viewBrochure(Company $company, string $username, Tour $tour)
   {
     return Inertia::render('companies/dashboard/vendor-tours/view-brochure', [
       'username' => $username,

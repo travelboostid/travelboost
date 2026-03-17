@@ -3,7 +3,7 @@ import type { TourCategoryResource, TourResource } from '@/api/model';
 import CompanyDashboardLayout from '@/components/layouts/company-dashboard';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { router } from '@inertiajs/react';
-import { SearchIcon } from 'lucide-react';
+import { SearchIcon, MessageCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import TourCard from './components/TourCard';
 import VendorPartnershipRegistrationButton from './components/vendor-partnership-register-button';
@@ -11,7 +11,6 @@ import { EmptyTours } from './empty-tours';
 
 type PageProps = {
   username: string;
-  phone: string;
   categories: TourCategoryResource[];
   filters: {
     category?: string;
@@ -31,6 +30,9 @@ export default function Page({
   vendor,
   partnership,
 }: PageProps) {
+
+  //console.log("VENDOR DATA:", vendor); 
+
   const [search, setSearch] = useState(filters.search ?? '');
   const { company } = usePageSharedDataProps();
   useEffect(() => {
@@ -47,6 +49,8 @@ export default function Page({
         },
       );
     }, 500); // 500ms delay
+
+    //console.log({ company, vendor });
 
     return () => clearTimeout(timeout);
   }, [company.username, filters.category, search, vendor.username]);
@@ -66,6 +70,18 @@ export default function Page({
   //02032026
   //const waNumber = data.data[0]?.user_phone; // ambil dari tour pertama (contoh)
   //const waNumber = "012232322";
+
+  //const waNumber = vendor?.phone || '628123456789';
+  const waNumber = vendor?.phone;
+
+  const waMessage = encodeURIComponent(
+    `Halo, saya melihat katalog tour dari ${username}. Mohon info lebih lanjut.`
+  );
+
+  const waUrl = waNumber
+    ? `https://wa.me/${waNumber}?text=${waMessage}`
+    : null;
+
   return (
     <CompanyDashboardLayout
       openMenuIds={['vendor-tour-catalogs']}
@@ -151,6 +167,19 @@ export default function Page({
       ) : (
         <EmptyTours />
       )}
+
+      {waUrl && (
+        <a
+          href={waUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="fixed bottom-24 right-6 z-50 flex items-center gap-2 rounded-full bg-green-500 px-5 py-3 text-white shadow-lg hover:bg-green-600"
+        >
+          <MessageCircle />
+          
+        </a>
+      )}
+
     </CompanyDashboardLayout>
   );
 }

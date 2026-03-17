@@ -16,11 +16,18 @@ import { Spinner } from '@/components/ui/spinner';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { extractImageSrc } from '@/lib/utils';
 import { router } from '@inertiajs/react';
-import { IconPdf } from '@tabler/icons-react';
+import { IconPdf, IconBrandFacebook, IconBrandWhatsapp } from '@tabler/icons-react';
 import { MessageSquareIcon, SaveIcon } from 'lucide-react';
 import { useState } from 'react';
 
-export default function TourCard({ tour }: { tour: TourResource }) {
+//export default function TourCard({ tour }: { tour: TourResource }) {
+export default function TourCard({
+  tour,
+  type = 'agent',
+}: {
+  tour: TourResource
+  type?: string
+}) {
   const { company } = usePageSharedDataProps();
   const floatingChat = useFloatingChatWidgetContext();
   const [startingPrivateChat, setStartingPrivateChat] = useState(false);
@@ -69,6 +76,38 @@ export default function TourCard({ tour }: { tour: TourResource }) {
     }
   };
 
+  //26022026 share to fb
+  const shareUrl = `${window.location.origin}/@${tour.name}/tours/${tour.id}`;
+  //console.log('shareUrl:', shareUrl);
+
+  const handleShareFacebook = () => {
+    const fbUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(
+      shareUrl,
+    )}`;
+    window.open(fbUrl, '_blank', 'noopener,noreferrer');
+  };
+
+  const handleShareFacebookPdf = () => {
+    if (!hasDocument) return;
+
+    const pdfUrl = brochure({ username, tour: tour.id }).url;
+
+    console.log('PDF URL:', pdfUrl);
+  }
+
+  const handleChatWhatsApp = () => {
+    //const phone = tour.user_phone; // contoh: "628123456789"
+    const phone = tour.user?.phone;
+    if (!phone) return;
+
+    const message = encodeURIComponent(
+      `Halo, saya tertarik dengan tour *${tour.name}*. Bisa info lebih lanjut?`
+    );
+
+    const waUrl = `https://wa.me/${phone}?text=${message}`;
+    window.open(waUrl, '_blank', 'noopener,noreferrer');
+  };
+
   //03032026
   const formattedPrice = new Intl.NumberFormat('id-ID', {
     style: 'currency',
@@ -85,6 +124,24 @@ export default function TourCard({ tour }: { tour: TourResource }) {
         }).format(tour.earlybird)
       : null;
 
+  const formattedpromoprice =
+    tour.promoprice && tour.promoprice > 0
+      ? new Intl.NumberFormat('id-ID', {
+          style: 'currency',
+          currency: 'IDR',
+          maximumFractionDigits: 0,
+        }).format(tour.promoprice)
+      : null;
+
+  const formattedpromoteprice =
+    tour.promote_price && tour.promote_price > 0
+      ? new Intl.NumberFormat('id-ID', {
+          style: 'currency',
+          currency: 'IDR',
+          maximumFractionDigits: 0,
+        }).format(tour.promote_price)
+      : null;
+    
   return (
     <Card className="relative mx-auto flex w-full flex-col overflow-hidden pt-0">
       <img
@@ -102,7 +159,7 @@ export default function TourCard({ tour }: { tour: TourResource }) {
         {formattedEarlybird ? (
           <div className="flex flex-col">
             {/* Harga normal dicoret */}
-            <span className="text-sm text-muted-foreground line-through">
+            <span className="text-sm text-muted-foreground">
               {formattedPrice}
             </span>
 
@@ -120,35 +177,110 @@ export default function TourCard({ tour }: { tour: TourResource }) {
               </span>
             )}
           </div>
-        ) : (
+        ) 
+
+        : formattedpromoprice ?(
+          <div className="flex flex-col">
+            {/* Harga normal dicoret */}
+            <span className="text-sm text-muted-foreground line-through">
+              {formattedPrice}
+            </span>
+
+            {/* Harga earlybird */}
+            <span className="text-xs bg-red-600 text-white px-2 py-1 rounded w-fit">
+              PROMO
+            </span>
+            <span className="text-xl font-bold text-red-600">
+              {formattedpromoprice}
+            </span>
+          </div>
+        )
+
+        : formattedpromoteprice ?(
+          <div className="flex flex-col">
+            {/* Harga normal dicoret */}
+            <span className="text-sm text-muted-foreground line-through">
+              {formattedPrice}
+            </span>
+
+            {/* Harga earlybird */}
+            {/* ✅ Earlybird Note */}
+            {tour.promote_title && (
+              <span className="text-xs bg-blue-600 text-white px-2 py-1 rounded w-fit">
+                {tour.promote_title}
+              </span>
+            )}
+            <span className="text-xl font-bold text-blue-600">
+              {formattedpromoteprice}
+            </span>
+            {/* ✅ Earlybird Note */}
+            {tour.promote_note && (
+              <span className="text-sm text-muted-foreground">
+                {tour.promote_note}
+              </span>
+            )}
+          </div>
+        )
+
+        : (
           <div className="text-lg font-bold text-primary">{formattedPrice}</div>
         )}
       </div>
       <div className="flex-1" />
-      <CardFooter className="flex gap-2">
+      {/* fix screen for desktop and mobile */}
+      {/*<CardFooter className="flex gap-2"> */}
+      <CardFooter className="grid grid-cols-2 lg:grid-cols-4 gap-2">
         <Button
           variant="secondary"
-          className="flex-1"
+          //className="flex-1"
           disabled={!hasDocument}
           onClick={handleViewBrochure}
         >
           <IconPdf />
         </Button>
-        <Button
-          disabled={(tour as any).has_copied}
-          onClick={handleCopy}
-          className="flex-1"
-        >
-          <SaveIcon />
-        </Button>
+        {type === 'agent' && (
+          <Button
+            disabled={(tour as any).has_copied}
+            onClick={handleCopy}
+            //className="flex-1"
+          >
+            <SaveIcon />
+          </Button>
+        )}
+        
         <Button
           onClick={handleMessage}
           disabled={startingPrivateChat}
           variant="secondary"
-          className="flex-1"
+          //className="flex-1"
         >
           {startingPrivateChat ? <Spinner /> : <MessageSquareIcon />}
         </Button>
+
+        {/* ✅ SHARE FACEBOOK */}
+        {/* hasDocument && ( */}
+          {!hasDocument && (
+        <Button
+          variant="secondary"
+          //onClick={handleShareFacebook}
+          onClick={handleShareFacebookPdf}
+          //disabled={!hasDocument}
+          disabled={hasDocument}
+          //className="flex-1"
+        >
+          <IconBrandFacebook />
+          {/* <span className="hidden md:inline">Share</span> */}
+        </Button>
+        )}
+
+        {/*<Button
+          variant="secondary"
+          onClick={handleChatWhatsApp}
+          //className="flex-1"
+        >
+          <IconBrandWhatsapp /> */}
+          {/* <span className="hidden md:inline">WhatsApp</span> */}
+        {/* </Button> */}
       </CardFooter>
     </Card>
   );

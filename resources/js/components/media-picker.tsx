@@ -146,6 +146,7 @@ export function MediaPicker({
     >
       {children(internalValue, handleOpen)}
       <DialogContent className="w-full max-w-200">
+      {/*<DialogContent className="w-full max-w-200 max-h-[80vh] overflow-y-auto">*/}
         {selectedImage ? (
           <div className="grid gap-4">
             <div className="relative h-50 w-full">
@@ -218,16 +219,18 @@ export function MediaPicker({
               <div className="text-sm text-muted-foreground">
                 Or select from your existing...
               </div>
-              <MediaSelector
-                params={params}
-                type={type}
-                value={
-                  typeof internalValue === 'object'
-                    ? (internalValue as MediaResource)
-                    : undefined
-                }
-                onChange={handleSelectedMedia}
-              />
+              <div className="max-h-[300px] overflow-y-auto border rounded-md p-2">
+                <MediaSelector
+                  params={params}
+                  type={type}
+                  value={
+                    typeof internalValue === 'object'
+                      ? (internalValue as MediaResource)
+                      : undefined
+                  }
+                  onChange={handleSelectedMedia}
+                />
+              </div>
             </div>
           </>
         )}
