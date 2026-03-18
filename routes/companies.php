@@ -56,3 +56,9 @@ Route::prefix('companies/{company:username}/dashboard')->middleware(['auth', 'co
   Route::singleton('chatbot', ChatbotController::class);
   Route::singleton('page', PageController::class);
 });
+
+Route::get(
+  '/brochure/{vendor}/{tour}',
+  [VendorTourCatalogController::class, 'viewPublicBrochure']
+)->name('brochure.public');
+//

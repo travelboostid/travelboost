@@ -24,9 +24,13 @@ import { useState } from 'react';
 export default function TourCard({
   tour,
   type = 'agent',
+  fromLogin = true,
+  //test = true,
 }: {
   tour: TourResource
   type?: string
+  fromLogin? : boolean
+  //test?: boolean
 }) {
   const { company } = usePageSharedDataProps();
   const floatingChat = useFloatingChatWidgetContext();
@@ -50,7 +54,7 @@ export default function TourCard({
     );
   };
 
-  const handleViewBrochure = () => {
+  /*const handleViewBrochure = () => {
     if (!hasDocument) {
       return;
     }
@@ -61,6 +65,24 @@ export default function TourCard({
       tour: tour.id,
     }).url;
     window.open(url, '_blank');
+  };*/
+
+  const handleViewBrochure = () => {
+    if (!hasDocument) return;
+
+    if(!fromLogin){
+      const url = `/brochure/${tour.company?.username}/${tour.id}`;
+      window.open(url, '_blank', 'noopener,noreferrer');
+    }
+    else {
+      const url = viewBrochure({
+        company: company.username,
+        vendor: tour.company?.username || '',
+        tour: tour.id,
+      }).url;
+      window.open(url, '_blank');
+    }
+    
   };
 
   const handleMessage = async () => {
@@ -227,6 +249,9 @@ export default function TourCard({
         )}
       </div>
       <div className="flex-1" />
+      <div className="px-6 pb-2">
+        <div className="text-lg font-bold text-primary">Status : {tour.status}</div>
+      </div>
       {/* fix screen for desktop and mobile */}
       {/*<CardFooter className="flex gap-2"> */}
       <CardFooter className="grid grid-cols-2 lg:grid-cols-4 gap-2">
@@ -248,7 +273,8 @@ export default function TourCard({
           </Button>
         )}
         
-        <Button
+        {type === 'agent' && (
+          <Button
           onClick={handleMessage}
           disabled={startingPrivateChat}
           variant="secondary"
@@ -256,6 +282,7 @@ export default function TourCard({
         >
           {startingPrivateChat ? <Spinner /> : <MessageSquareIcon />}
         </Button>
+        )}
 
         {/* ✅ SHARE FACEBOOK */}
         {/* hasDocument && ( */}
@@ -285,3 +312,4 @@ export default function TourCard({
     </Card>
   );
 }
+

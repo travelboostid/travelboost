@@ -4,7 +4,7 @@ import TourCard from '@/pages/companies/dashboard/vendor-tours/components/TourCa
 import { EmptyTours } from '@/pages/companies/dashboard/vendor-tours/empty-tours'
 
 import PublicCatalogLayout from '@/layouts/PublicCatalogLayout'
-
+//
 type Props = {
   username: string
   data: any[]
@@ -106,7 +106,7 @@ export default function Page({
       {filteredTours.length ? (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {filteredTours.map((tour) => (
-            <TourCard key={tour.id} tour={tour} type={vendor.type} />
+            <TourCard key={tour.id} tour={tour} type={vendor.type} fromLogin={false} />
           ))}
         </div>
       ) : (
