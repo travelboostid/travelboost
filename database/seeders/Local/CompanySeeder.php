@@ -18,10 +18,12 @@ class CompanySeeder extends Seeder
     $targets = [
       [
         'username' => 'root',
+        'subdomain' => 'root',
         'company_type' => CompanyType::VENDOR,
       ],
       [
         'username' => 'john',
+        'subdomain' => 'john',
         'company_type' => CompanyType::AGENT,
       ],
     ];
@@ -34,6 +36,7 @@ class CompanySeeder extends Seeder
       }
       $company = Company::factory()->create([
         'username' => $target['username'],
+        'subdomain' => $target['subdomain'],
         'type' => $target['company_type'],
         'name' => ucfirst($target['username']) . ' Company',
         'email' => $user->email,

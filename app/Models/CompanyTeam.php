@@ -59,7 +59,7 @@ class CompanyTeam extends Model
 
   public function getRolesAttribute()
   {
-    if ($this->status === CompanyTeamStatus::PENDING) {
+    if ($this->user_id === null) {
       return Role::where('name', $this->invite_role)->get();
     }
     return $this->user->roles()->where('name', 'like', "company:{$this->company_id}:%")->get();

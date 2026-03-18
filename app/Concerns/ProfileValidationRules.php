@@ -14,6 +14,8 @@ trait ProfileValidationRules
    */
   protected function profileRules(?int $userId = null): array
   {
+    $tenant = request()->attributes->get('tenant');
+    $tenantId = $tenant == null ? null : $tenant->id;
     return [
       'name' => ['required', 'string', 'max:255'],
       'username' => [
@@ -21,8 +23,8 @@ trait ProfileValidationRules
         'string',
         'max:50',
         $userId === null
-          ? Rule::unique(User::class, 'username')
-          : Rule::unique(User::class, 'username')->ignore($userId),
+          ? Rule::unique(User::class, 'username')->where('company_id', $tenantId)
+          : Rule::unique(User::class, 'username')->where('company_id', $tenantId)->ignore($userId),
       ],
       'email' => [
         'required',
@@ -30,8 +32,8 @@ trait ProfileValidationRules
         'email',
         'max:255',
         $userId === null
-          ? Rule::unique(User::class)
-          : Rule::unique(User::class)->ignore($userId),
+          ? Rule::unique(User::class)->where('company_id', $tenantId)
+          : Rule::unique(User::class)->where('company_id', $tenantId)->ignore($userId),
       ],
       'phone' => [
         'nullable',

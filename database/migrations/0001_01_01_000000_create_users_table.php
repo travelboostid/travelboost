@@ -28,6 +28,8 @@ return new class extends Migration
       $table->string(column: 'phone')->default('');
       $table->enum('gender', UserGender::cases())->default(UserGender::UNSPECIFIED);
       $table->enum('status', UserStatus::cases())->default(UserStatus::INACTIVE);
+      $table->string('note')->nullable();
+      $table->jsonb('meta')->nullable();
       $table->rememberToken();
       $table->timestamps();
     });
@@ -52,9 +54,13 @@ return new class extends Migration
       $table->enum('type', CompanyType::cases());
       $table->string('name');
       $table->string('username')->unique();
+      $table->string('subdomain')->unique();
       $table->string('email')->unique();
       $table->string(column: 'address')->default('');
       $table->string(column: 'phone')->default('');
+      $table->string(column: 'customer_service_phone')->default('');
+      $table->string('note')->nullable();
+      $table->jsonb('meta')->nullable();
       $table->rememberToken();
       $table->timestamps();
     });

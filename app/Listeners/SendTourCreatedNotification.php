@@ -26,7 +26,7 @@ class SendTourCreatedNotification
   {
     // $receivers = $event->tour->company->agentPartners()->where('status', VendorAgentPartnerStatus::ACTIVE)->get();
     // Notification::send($receivers, new TourCreatedNotification($event->tour));
-    Notification::route('mail', 'irvan.herz@gmail.com')
-      ->notify(new TourCreatedNotification($event->tour));
+    // Notification::route('mail', 'irvan.herz@gmail.com')
+    //   ->notify(new TourCreatedNotification($event->tour));
   }
 }

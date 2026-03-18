@@ -20,10 +20,10 @@ class TenantResolver
     }
 
     if (Str::endsWith($currentHost, '.' . $appHost)) {
-      $username = Str::before($currentHost, '.' . $appHost);
-      $company = Company::where('username', $username)->first();
+      $subdomain = Str::before($currentHost, '.' . $appHost);
+      $company = Company::where('subdomain', $subdomain)->first();
       if ($company == null) {
-        return Inertia::render('errors/invalid-tenant-username')
+        return Inertia::render('errors/invalid-tenant-subdomain')
           ->toResponse($request)
           ->setStatusCode(404);
       }

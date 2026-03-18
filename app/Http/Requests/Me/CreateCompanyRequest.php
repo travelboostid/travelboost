@@ -21,6 +21,8 @@ class CreateCompanyRequest extends FormRequest
   {
     $this->merge([
       'username' => strtolower($this->username),
+      'subdomain' => strtolower($this->username),
+      'email' => strtolower($this->email),
     ]);
   }
 
@@ -35,6 +37,11 @@ class CreateCompanyRequest extends FormRequest
       'name' => ['required', 'string', 'max:255'],
       'username' => ['required', 'string', 'max:255', 'regex:/^[a-z][a-z0-9-]*$/', 'unique:companies,username'],
       'email' => ['required', 'string', 'email', 'max:255', 'unique:companies,email'],
+      'photo_id' => ['nullable', 'integer', 'exists:media,id'],
+      'phone' => ['nullable', 'string', 'max:255'],
+      'customer_service_phone' => ['nullable', 'string', 'max:255'],
+      'address' => ['nullable', 'string', 'max:255'],
+      'subdomain' => ['required', 'string', 'max:255', 'regex:/^[a-z0-9]+$/', 'unique:companies,subdomain'],
     ];
   }
 }

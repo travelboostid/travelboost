@@ -4,6 +4,7 @@ namespace App\Actions\Fortify;
 
 use App\Concerns\PasswordValidationRules;
 use App\Concerns\ProfileValidationRules;
+use App\Enums\UserStatus;
 use App\Models\User;
 // use App\Models\UserPreference;
 use Illuminate\Support\Facades\Validator;
@@ -21,7 +22,7 @@ class CreateNewUser implements CreatesNewUsers
   public function create(array $input): User
   {
     $tenant = request()->attributes->get('tenant');
-    $companyId = $tenant == null ? null : $tenant->id;
+
     Validator::make($input, [
       ...$this->profileRules(),
       'password' => $this->passwordRules(),
@@ -34,7 +35,8 @@ class CreateNewUser implements CreatesNewUsers
       'address',
     ])->toArray();
 
-    $data['company_id'] = $companyId;
+    $data['company_id'] = $tenant == null ? null : $tenant->id;
+    $data['status'] = $tenant == null ? UserStatus::INACTIVE : UserStatus::ACTIVE;
     $data['password'] = $input['password'];
 
     $user = User::create($data);

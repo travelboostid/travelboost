@@ -85,8 +85,10 @@ class FortifyServiceProvider extends ServiceProvider
    */
   private function configureViews(): void
   {
+    $tenant = request()->attributes->get('tenant');
+
     Fortify::loginView(fn(Request $request) => Inertia::render('auth/login', [
-      'company' => null,
+      'tenant' => $tenant,
       'canResetPassword' => Features::enabled(Features::resetPasswords()),
       'canRegister' => Features::enabled(Features::registration()),
       'status' => $request->session()->get('status')

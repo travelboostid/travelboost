@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Companies\Dashboard;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Companies\UpdateProfileRequest;
 use App\Models\Company;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -22,15 +23,9 @@ class ProfileController extends Controller
   /**
    * Update the resource in storage.
    */
-  public function update(Request $request, Company $company)
+  public function update(UpdateProfileRequest $request, Company $company)
   {
-    $validated = $request->validate([
-      'username' => 'nullable|string|max:255|unique:companies,username,' . $company->id,
-      'name' => 'required|string|max:255',
-      'phone' => 'nullable|string|max:20',
-      'address' => 'nullable|string|max:255',
-      'photo_id' => 'nullable|exists:medias,id',
-    ]);
+    $validated = $request->validated();
 
     $company->update($validated);
 

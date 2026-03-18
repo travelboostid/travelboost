@@ -22,6 +22,8 @@ class Company extends Model
     'email',
     'address',
     'phone',
+    'customer_service_phone',
+    'subdomain',
     'photo_id'
   ];
 

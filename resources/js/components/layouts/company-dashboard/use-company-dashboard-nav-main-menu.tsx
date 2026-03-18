@@ -36,12 +36,18 @@ type MenuItem =
     });
 
 export function useCompanyDashboardNavMainMenu() {
-  const appHost = import.meta.env.VITE_APP_HOST;
+  const {
+    VITE_APP_HOST: appHost,
+    VITE_APP_PORT: appPort,
+    VITE_APP_SCHEME: appScheme,
+  } = import.meta.env;
   const { company } = usePageSharedDataProps();
   const { data } = useGetCompanies(
     { type: 'vendor' },
     { query: { enabled: company.type === 'agent' } },
   );
+  const companySubdomain = `${appScheme}://${company.subdomain}.${appHost}${appPort ? `:${appPort}` : ''}`;
+  console.log(import.meta.env, companySubdomain);
 
   return company.type === 'vendor'
     ? ([
@@ -76,7 +82,7 @@ export function useCompanyDashboardNavMainMenu() {
             {
               id: 'tours.preview',
               title: 'My Catalogs',
-              urlOrAction: `//${company.username}.${appHost}/tours`,
+              urlOrAction: companySubdomain,
               target: '_blank',
             },
             {
@@ -210,7 +216,7 @@ export function useCompanyDashboardNavMainMenu() {
             {
               id: 'tours.cats',
               title: 'My Catalogs',
-              urlOrAction: `//${company.username}.${appHost}/tours`,
+              urlOrAction: companySubdomain,
               target: '_blank',
             },
             {
@@ -267,7 +273,7 @@ export function useCompanyDashboardNavMainMenu() {
             {
               id: 'marketings.landing-page.view',
               title: 'My Landing Page',
-              urlOrAction: `//${company.username}.${appHost}`,
+              urlOrAction: companySubdomain,
               target: '_blank',
             },
             {

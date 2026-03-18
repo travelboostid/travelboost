@@ -108,17 +108,17 @@ export default function useUserDashboardNavMainMenu() {
         {
           id: 'settings.profile',
           title: 'Profile',
-          urlOrAction: `/me/settings/profile`,
+          urlOrAction: `/me/profile`,
         },
         {
           id: 'settings.password',
           title: 'Password',
-          urlOrAction: `/me/settings/password`,
+          urlOrAction: `/me/password`,
         },
         {
           id: 'settings.two-factor-auth',
           title: 'Two Factor Auth',
-          urlOrAction: `/me/settings/two-factor`,
+          urlOrAction: `/me/two-factor`,
         },
       ],
     },
