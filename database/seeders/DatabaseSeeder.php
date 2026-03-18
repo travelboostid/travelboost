@@ -31,11 +31,5 @@ class DatabaseSeeder extends Seeder
         $this->call(DevelopmentSeeder::class);
         break;
     }
-    // $this->call([
-    //   RolePermissionSeeder::class,
-    //   UserSeeder::class,
-    //   TourSeeder::class,
-    //   ChatSeeder::class,
-    // ]);
   }
 }

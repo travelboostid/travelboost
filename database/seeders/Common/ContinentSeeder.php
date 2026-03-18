@@ -1,12 +1,9 @@
 <?php
 
-namespace Database\Seeders\Local;
+namespace Database\Seeders\Common;
 
 use App\Models\Continent;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\DB;
-use Carbon\Carbon;
 
 class ContinentSeeder extends Seeder
 {

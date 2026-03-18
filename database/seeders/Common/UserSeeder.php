@@ -1,14 +1,10 @@
 <?php
 
-namespace Database\Seeders\Development;
+namespace Database\Seeders\Common;
 
-use App\Enums\AgentUserRole;
-use App\Enums\AgentUserStatus;
-use App\Enums\VendorUserRole;
-use App\Enums\VendorUserStatus;
-use App\Models\Agent;
+use App\Enums\UserStatus;
+use App\Models\Role;
 use App\Models\User;
-use App\Models\Vendor;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
@@ -16,26 +12,29 @@ class UserSeeder extends Seeder
 {
   public function run(): void
   {
+    $superadmin = Role::where('name', 'company:0:superadmin')->first();
     $root = User::factory()->create([
       'name' => 'Root',
       'email' => 'root@travelboost.co.id',
       'username' => 'root',
       'address' => 'Jakarta',
-      'phone' => '0',
+      'phone' => '',
+      'status' => UserStatus::ACTIVE,
       'password' => Hash::make('root'),
     ]);
 
-    $root->assignRole('superadmin');
+    $root->addRole($superadmin);
 
     $john = User::factory()->create([
       'name' => 'John',
       'email' => 'john@travelboost.co.id',
       'username' => 'john',
       'address' => 'Jakarta',
-      'phone' => '0',
+      'phone' => '',
+      'status' => UserStatus::ACTIVE,
       'password' => Hash::make('john'),
     ]);
 
-    $john->assignRole('admin');
+    $john->addRole($superadmin);
   }
 }

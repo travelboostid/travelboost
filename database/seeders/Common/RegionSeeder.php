@@ -1,18 +1,14 @@
 <?php
 
-namespace Database\Seeders\Development;
+namespace Database\Seeders\Common;
 
 use App\Models\Region;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\DB;
-use Carbon\Carbon;
-
 
 class RegionSeeder extends Seeder
 {
   public function run(): void
   {
-    $now = Carbon::now();
 
     $regions = [
       // 🌏 ASIA (continent_id = 1)
