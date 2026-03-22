@@ -33,6 +33,8 @@ import SelectContinent from './components/select-continent';
 import SelectCountry from './components/select-country';
 import SelectRegion from './components/select-region';
 
+import { useEffect } from "react"
+
 type Props = {
   tour: any;
 };
@@ -68,6 +70,16 @@ export default function Page({ tour }: Props) {
     const formatted = new Intl.NumberFormat("id-ID").format(Number(numeric))
     setDisplayPrice(formatted)
   }
+
+  useEffect(() => {
+    if (tour.showprice) {
+      const numeric = String(tour.showprice)
+      setRawPrice(numeric)
+
+      const formatted = new Intl.NumberFormat("id-ID").format(Number(numeric))
+      setDisplayPrice(formatted)
+    }
+  }, [tour.showprice])
   //
 
   //for price
@@ -81,6 +93,16 @@ export default function Page({ tour }: Props) {
     const formatted1 = new Intl.NumberFormat("id-ID").format(Number(numeric1))
     setDisplayPrice1(formatted1)
   }
+
+  useEffect(() => {
+    if (tour.promote_price) {
+      const numeric = String(tour.promote_price)
+      setRawPrice1(numeric)
+
+      const formatted = new Intl.NumberFormat("id-ID").format(Number(numeric))
+      setDisplayPrice1(formatted)
+    }
+  }, [tour.promote_price])
   //
 
   return (
@@ -339,6 +361,7 @@ export default function Page({ tour }: Props) {
                   type="text"
                   name="promote_title"
                   placeholder="Title Promotion"
+                  defaultValue={tour.promote_title}
                 />
                 <InputError message={errors.promote_title} />
               </div>
@@ -366,6 +389,7 @@ export default function Page({ tour }: Props) {
                   type="text"
                   name="promote_note"
                   placeholder="Promotion Note"
+                  defaultValue={tour.promote_note}
                 />
                 <InputError message={errors.promote_note} />
               </div>
