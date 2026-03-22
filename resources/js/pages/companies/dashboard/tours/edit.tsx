@@ -57,6 +57,32 @@ export default function Page({ tour }: Props) {
     });
   };
 
+  //for price
+  const [displayPrice, setDisplayPrice] = useState("")
+  const [rawPrice, setRawPrice] = useState("")
+
+  const handlePriceChange = (value: string) => {
+    const numeric = value.replace(/\D/g, "")
+    setRawPrice(numeric)
+
+    const formatted = new Intl.NumberFormat("id-ID").format(Number(numeric))
+    setDisplayPrice(formatted)
+  }
+  //
+
+  //for price
+  const [displayPrice1, setDisplayPrice1] = useState("")
+  const [rawPrice1, setRawPrice1] = useState("")
+
+  const handlePriceChange1 = (value: string) => {
+    const numeric1 = value.replace(/\D/g, "")
+    setRawPrice1(numeric1)
+
+    const formatted1 = new Intl.NumberFormat("id-ID").format(Number(numeric1))
+    setDisplayPrice1(formatted1)
+  }
+  //
+
   return (
     <CompanyDashboardLayout
       openMenuIds={['tours']}
@@ -288,6 +314,62 @@ export default function Page({ tour }: Props) {
                 </Select>
                 <InputError message={errors.status} />
               </div>
+
+              {/* Normal Price show on catalog */}
+              <div className="grid gap-2">
+                <Label htmlFor="showprice">Normal Price show on catalog</Label>
+                <Input
+                  id="showprice"
+                  type="text"
+                  required
+                  placeholder="Normal Price"
+                  value={displayPrice}
+                  onChange={(e) => handlePriceChange(e.target.value)}
+                />
+
+                <input type="hidden" name="showprice" value={rawPrice} />
+                <InputError message={errors.showprice} />
+              </div>
+
+              {/* promote title */}
+              <div className="grid gap-2">
+                <Label htmlFor="code">Title Promotion on Catalog</Label>
+                <Input
+                  id="promote_title"
+                  type="text"
+                  name="promote_title"
+                  placeholder="Title Promotion"
+                />
+                <InputError message={errors.promote_title} />
+              </div>
+
+              {/* Promote Price show on catalog */}
+              <div className="grid gap-2">
+                <Label htmlFor="promote_price">Promotion Price show on catalog</Label>
+                <Input
+                  id="promote_price"
+                  type="text"
+                  placeholder="Promotion Price"
+                  value={displayPrice1}
+                  onChange={(e) => handlePriceChange1(e.target.value)}
+                />
+
+                <input type="hidden" name="promote_price" value={rawPrice1} />
+                <InputError message={errors.promote_price} />
+              </div>
+
+              {/* promote note */}
+              <div className="grid gap-2">
+                <Label htmlFor="code">Promotion Note on Catalog</Label>
+                <Input
+                  id="promote_note"
+                  type="text"
+                  name="promote_note"
+                  placeholder="Promotion Note"
+                />
+                <InputError message={errors.promote_note} />
+              </div>
+              
             </div>
             <Button type="submit" disabled={processing}>
               {processing && <Spinner />}Update

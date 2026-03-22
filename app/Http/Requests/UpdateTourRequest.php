@@ -33,6 +33,10 @@ class UpdateTourRequest extends FormRequest
       'user_id'      => 'nullable|exists:users,id',
       'image_id'  => 'nullable|exists:medias,id',
       'document_id'  => 'nullable|exists:medias,id',
+      'showprice' => 'nullable|integer|min:0',
+      'promote_title' => 'nullable|string|max:255',
+      'promote_note' => 'nullable|string|max:255',
+      'promote_price' => 'nullable|integer|min:0',
     ];
   }
 

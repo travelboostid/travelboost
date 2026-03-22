@@ -29,7 +29,10 @@ class Tour extends Model
     'document_id',
     'showprice',
     'earlybird',
-    'earlybird_note'
+    'earlybird_note',
+    'promote_title',
+    'promote_price',
+    'promote_note',
   ];
 
   protected $guarded = [
