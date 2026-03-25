@@ -248,10 +248,6 @@ export default function TourCard({
           <div className="text-lg font-bold text-primary">{formattedPrice}</div>
         )}
       </div>
-      <div className="flex-1" />
-      <div className="px-6 pb-2">
-        <div className="text-lg font-bold text-primary">Status : {tour.status}</div>
-      </div>
       {/* fix screen for desktop and mobile */}
       {/*<CardFooter className="flex gap-2"> */}
       <CardFooter className="grid grid-cols-2 lg:grid-cols-4 gap-2">
@@ -286,7 +282,7 @@ export default function TourCard({
 
         {/* ✅ SHARE FACEBOOK */}
         {/* hasDocument && ( */}
-          {!hasDocument && (
+          {!hasDocument && type === 'agent' && (
         <Button
           variant="secondary"
           //onClick={handleShareFacebook}
@@ -309,6 +305,10 @@ export default function TourCard({
           {/* <span className="hidden md:inline">WhatsApp</span> */}
         {/* </Button> */}
       </CardFooter>
+      {/* div className="flex-1" /> */}
+      <div className="px-6 pb-2">
+        <div className="text-xs font-bold text-primary">Status : {tour.status}</div>
+      </div>
     </Card>
   );
 }

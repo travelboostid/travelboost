@@ -40,10 +40,12 @@ class StoreTourRequest extends FormRequest
       'parent_id'    => 'nullable|exists:tours,id',
       'image_id'  => 'nullable|exists:medias,id',
       'document_id'  => 'nullable|exists:medias,id',
-      'showprice' => 'nullable|integer|min:0',
+      //'showprice' => 'nullable|integer|min:0',
+      'showprice' => 'required|numeric|min:0',
       'promote_title' => 'nullable|string|max:255',
       'promote_note' => 'nullable|string|max:255',
-      'promote_price' => 'nullable|integer|min:0',
+      //'promote_price' => 'nullable|integer|min:0',
+      'promote_price' => 'nullable|numeric|min:0',
     ];
   }
 

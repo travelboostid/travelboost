@@ -30,7 +30,9 @@ class HomeController extends Controller
         'company' => $tenant,
     ]);*/
 
-    $tenant = request()->attributes->get('tenant');
+    //////////////////////////////////////
+
+    /*$tenant = request()->attributes->get('tenant');
 
     $tours = Tour::where('company_id', $tenant->id)
         //->where('is_published', true)
@@ -39,7 +41,47 @@ class HomeController extends Controller
         ->latest()
         ->get();
 
-    $categories = TourCategory::all();
+    //$categories = TourCategory::all();
+    $categories = TourCategory::where('company_id', $tenant->id)
+    ->orderBy('name')
+    ->get();
+
+    return Inertia::render('tenant/home', [
+        'username' => $tenant->username,
+        'vendor' => $tenant,
+        'company' => $tenant,
+        'data' => $tours,
+        'categories' => $categories,
+        'filters' => [],
+        'partnership' => null,
+    ]); */
+
+    $tenant = request()->attributes->get('tenant');
+
+    // 🏢 Tour milik vendor
+    $ownTours = Tour::where('company_id', $tenant->id)
+        ->where('status', 'active')
+        ->with('company:id,username,name')
+        ->get();
+
+    // 🤝 Tour dari agent
+    $agentTours = \App\Models\AgentTour::where('company_id', $tenant->id)
+        ->with('tour.company:id,username,name')
+        ->get()
+        ->pluck('tour')
+        ->filter();
+
+    // 🔥 Gabungkan
+    $tours = $ownTours
+        ->merge($agentTours)
+        ->unique('id')
+        ->sortByDesc('created_at')
+        ->values();
+
+    // 📂 Kategori milik tenant
+    $categories = TourCategory::where('company_id', $tenant->id)
+        ->orderBy('name')
+        ->get();
 
     return Inertia::render('tenant/home', [
         'username' => $tenant->username,

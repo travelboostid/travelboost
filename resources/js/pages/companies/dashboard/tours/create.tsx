@@ -58,11 +58,14 @@ export default function Page() {
   //
 
   //for price
-  const [displayPrice1, setDisplayPrice1] = useState("")
-  const [rawPrice1, setRawPrice1] = useState("")
+  const [displayPrice1, setDisplayPrice1] = useState("0")
+  const [rawPrice1, setRawPrice1] = useState("0")
 
   const handlePriceChange1 = (value: string) => {
-    const numeric1 = value.replace(/\D/g, "")
+    let numeric1 = value.replace(/\D/g, "")
+
+    if (numeric1 === "") numeric1 = "0" // 🔥 default 0
+
     setRawPrice1(numeric1)
 
     const formatted1 = new Intl.NumberFormat("id-ID").format(Number(numeric1))
@@ -332,43 +335,53 @@ export default function Page() {
                 <InputError message={errors.showprice} />
               </div>
 
-              {/* promote title */}
-              <div className="grid gap-2">
-                <Label htmlFor="code">Title Promotion on Catalog</Label>
-                <Input
-                  id="promote_title"
-                  type="text"
-                  name="promote_title"
-                  placeholder="Title Promotion"
-                />
-                <InputError message={errors.promote_title} />
-              </div>
+              <div className="rounded-lg border bg-muted/30 p-4 space-y-4">
 
-              {/* Promote Price show on catalog */}
-              <div className="grid gap-2">
-                <Label htmlFor="promote_price">Promotion Price show on catalog</Label>
-                <Input
-                  id="promote_price"
-                  type="text"
-                  placeholder="Promotion Price"
-                  value={displayPrice1}
-                  onChange={(e) => handlePriceChange1(e.target.value)}
-                />
+                <div className="text-sm font-semibold text-muted-foreground">
+                  Promotion Settings
+                </div>
 
-                <input type="hidden" name="promote_price" value={rawPrice1} />
-                <InputError message={errors.promote_price} />
-              </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-              {/* promote note */}
-              <div className="grid gap-2">
-                <Label htmlFor="code">Promotion Note on Catalog</Label>
-                <Input
-                  id="promote_note"
-                  type="text"
-                  name="promote_note"
-                  placeholder="Promotion Note"
-                />
-                <InputError message={errors.promote_note} />
+                  {/* promote title */}
+                  <div className="grid gap-2">
+                    <Label htmlFor="promote_title">Title Promotion on Catalog</Label>
+                    <Input
+                      id="promote_title"
+                      type="text"
+                      name="promote_title"
+                      placeholder="Title Promotion"
+                    />
+                    <InputError message={errors.promote_title} />
+                  </div>
+
+                  {/* Promote Price */}
+                  <div className="grid gap-2">
+                    <Label htmlFor="promote_price">Promotion Price show on catalog</Label>
+                    <Input
+                      id="promote_price"
+                      type="text"
+                      placeholder="Promotion Price"
+                      value={displayPrice1}
+                      onChange={(e) => handlePriceChange1(e.target.value)}
+                    />
+                    <input type="hidden" name="promote_price" value={rawPrice1} />
+                    <InputError message={errors.promote_price} />
+                  </div>
+
+                  {/* promote note — full width */}
+                  <div className="grid gap-2 md:col-span-2">
+                    <Label htmlFor="promote_note">Promotion Note on Catalog</Label>
+                    <Input
+                      id="promote_note"
+                      type="text"
+                      name="promote_note"
+                      placeholder="Promotion Note"
+                    />
+                    <InputError message={errors.promote_note} />
+                  </div>
+
+                </div>
               </div>
 
             </div>
