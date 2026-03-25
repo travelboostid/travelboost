@@ -281,14 +281,14 @@ export default function TourCard({
         )}
 
         {/* ✅ SHARE FACEBOOK */}
-        {/* hasDocument && ( */}
-          {!hasDocument && type === 'agent' && (
+        {/* !hasDocument && ( */}
+          {hasDocument && type === 'agent' && (
         <Button
           variant="secondary"
           //onClick={handleShareFacebook}
           onClick={handleShareFacebookPdf}
-          //disabled={!hasDocument}
-          disabled={hasDocument}
+          disabled={!hasDocument}
+          //disabled={hasDocument}
           //className="flex-1"
         >
           <IconBrandFacebook />
