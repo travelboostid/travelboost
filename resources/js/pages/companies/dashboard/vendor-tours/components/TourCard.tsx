@@ -315,7 +315,7 @@ export default function TourCard({
 
         {/* ✅ SHARE FACEBOOK */}
         {/* !hasDocument && ( */}
-          {hasDocument && type === 'agent' && (
+          {hasDocument && type === 'agent' && !fromLogin && (
         <Button
           variant="secondary"
           //onClick={handleShareFacebook}
