@@ -85,7 +85,7 @@ export default function TourCard({
     
   };
 
-  const handleMessage = async () => {
+  /*const handleMessage = async () => {
     try {
       setStartingPrivateChat(true);
       floatingChat.setAttachment({ type: 'tour-code', data: tour.code });
@@ -93,6 +93,32 @@ export default function TourCard({
         type: 'company',
         id: tour.company_id,
       });
+    } finally {
+      setStartingPrivateChat(false);
+    }
+  };*/
+
+  const handleMessage = async () => {
+    console.log("CLICKED");
+
+    try {
+      setStartingPrivateChat(true);
+
+      console.log("floatingChat:", floatingChat);
+
+      floatingChat?.setAttachment({
+        type: 'tour-code',
+        data: tour.code,
+      });
+
+      await floatingChat?.startPrivateChat({
+        type: 'company',
+        id: tour.company_id,
+      });
+
+      console.log("CHAT STARTED");
+    } catch (err) {
+      console.error("CHAT ERROR:", err);
     } finally {
       setStartingPrivateChat(false);
     }
@@ -112,10 +138,17 @@ export default function TourCard({
   const handleShareFacebookPdf = () => {
     if (!hasDocument) return;
 
-    const pdfUrl = brochure({ username, tour: tour.id }).url;
+    const pdfUrl = viewBrochure({
+      company: company.username,
+      vendor: tour.company?.username || '',
+      tour: tour.id,
+    }).url;
 
-    console.log('PDF URL:', pdfUrl);
-  }
+    const fbUrl =
+      `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(pdfUrl)}`;
+
+    window.open(fbUrl, '_blank', 'noopener,noreferrer');
+  };
 
   const handleChatWhatsApp = () => {
     //const phone = tour.user_phone; // contoh: "628123456789"
@@ -259,7 +292,7 @@ export default function TourCard({
         >
           <IconPdf />
         </Button>
-        {type === 'agent' && (
+        {type === 'agent' && fromLogin && (
           <Button
             disabled={(tour as any).has_copied}
             onClick={handleCopy}

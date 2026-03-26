@@ -80,8 +80,11 @@ class HomeController extends Controller
 
     // 📂 Kategori milik tenant
     $categories = TourCategory::where('company_id', $tenant->id)
-        ->orderBy('name')
+        ->orderBy('position_no')
         ->get();
+
+    // 📱 Phone vendor
+    $phone = $tenant->customer_service_phone ?: $tenant->phone;
 
     return Inertia::render('tenant/home', [
         'username' => $tenant->username,
@@ -91,6 +94,7 @@ class HomeController extends Controller
         'categories' => $categories,
         'filters' => [],
         'partnership' => null,
+        'phone' => $phone,
     ]);
   }
 }

@@ -161,7 +161,7 @@ export default function Page({
       {data.length ? (
         <div className="grid w-full grid-cols-1 gap-4 p-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {data.map((tour) => (
-            <TourCard tour={tour} />
+            <TourCard tour={tour} fromLogin={true} />
           ))}
         </div>
       ) : (

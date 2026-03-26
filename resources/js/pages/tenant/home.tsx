@@ -10,6 +10,7 @@ type Props = {
   data: any[]
   categories: any[]
   vendor: any
+  phone: string | null
 }
 
 export default function Page({
@@ -17,6 +18,7 @@ export default function Page({
   data,
   categories,
   vendor,
+  phone,
 }: Props) {
   const [search, setSearch] = useState('')
 
@@ -34,7 +36,9 @@ export default function Page({
   })
 
   // 📱 WhatsApp
-  const waNumber = vendor?.phone
+  //const waNumber = vendor?.phone
+  const waNumber = phone
+  //const waNumber = "0809808080"
 
   const waMessage = encodeURIComponent(
     `Halo, saya melihat katalog tour dari ${username}. Mohon info lebih lanjut.`
