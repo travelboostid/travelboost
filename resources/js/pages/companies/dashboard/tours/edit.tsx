@@ -302,37 +302,63 @@ export default function Page({ tour }: Props) {
 
               {/* Document */}
               <div className="grid gap-2">
-                <Label htmlFor="name">Document</Label>
+                <Label htmlFor="name">Document Itinerary</Label>
                 <MediaPicker
                   type="document"
                   defaultValue={tour.document}
                   params={{ owner_type: 'company', owner_id: company.id }}
                   uploadParams={{ owner_type: 'company', owner_id: company.id }}
                 >
-                  {(media, change) => (
-                    <Item variant="outline">
-                      <ItemContent>
-                        <ItemTitle>
-                          {(media as any)?.name || 'No document selected'}
-                        </ItemTitle>
-                      </ItemContent>
-                      <input
-                        type="hidden"
-                        name="document_id"
-                        value={(media as any)?.id || undefined}
-                      />
-                      <ItemActions>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={change}
-                          type="button"
-                        >
-                          Change
-                        </Button>
-                      </ItemActions>
-                    </Item>
-                  )}
+                  {(media, change) => {
+                    const url =
+                      (media as any)?.url ||
+                      (media as any)?.data?.url
+
+                    const fullUrl = url
+                      ? (url.startsWith('http')
+                          ? url
+                          : window.location.origin + url)
+                      : null
+
+                    return (
+                      <Item variant="outline" className="space-y-2">
+                        <ItemContent className="space-y-2">
+
+                          {fullUrl ? (
+                            <iframe
+                              src={fullUrl}
+                              className="w-full h-56 rounded border"
+                              title="PDF Preview"
+                            />
+                          ) : (
+                            <ItemTitle>No document selected</ItemTitle>
+                          )}
+
+                          <ItemTitle>
+                            {(media as any)?.name || ''}
+                          </ItemTitle>
+
+                        </ItemContent>
+
+                        <input
+                          type="hidden"
+                          name="document_id"
+                          value={(media as any)?.id || undefined}
+                        />
+
+                        <ItemActions>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={change}
+                            type="button"
+                          >
+                            Change
+                          </Button>
+                        </ItemActions>
+                      </Item>
+                    )
+                  }}
                 </MediaPicker>
                 <InputError message={errors.document_id} />
               </div>

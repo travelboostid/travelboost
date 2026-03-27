@@ -20,6 +20,19 @@ import { IconPdf, IconBrandFacebook, IconBrandWhatsapp } from '@tabler/icons-rea
 import { MessageSquareIcon, SaveIcon } from 'lucide-react';
 import { useState } from 'react';
 
+//27032026
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+
 //export default function TourCard({ tour }: { tour: TourResource }) {
 export default function TourCard({
   tour,
@@ -292,14 +305,39 @@ export default function TourCard({
         >
           <IconPdf />
         </Button>
+        
         {type === 'agent' && fromLogin && (
-          <Button
-            disabled={(tour as any).has_copied}
-            onClick={handleCopy}
-            //className="flex-1"
-          >
-            <SaveIcon />
-          </Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                disabled={(tour as any).has_copied}
+              >
+                <SaveIcon />
+              </Button>
+            </AlertDialogTrigger>
+
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>
+                  Copy to Catalog
+                </AlertDialogTitle>
+
+                <AlertDialogDescription>
+                  Do you want copy to your Catalog?
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+
+              <AlertDialogFooter>
+                <AlertDialogCancel>
+                  No
+                </AlertDialogCancel>
+
+                <AlertDialogAction onClick={handleCopy}>
+                  Yes
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         )}
         
         {type === 'agent' && (

@@ -125,4 +125,10 @@ class Tour extends Model
   {
     return $this->belongsTo(Country::class, 'country_id');
   }
+
+  //27032026
+  public function schedules()
+  {
+      return $this->hasMany(TourSchedule::class);
+  }
 }
