@@ -65,8 +65,20 @@ class HomeController extends Controller
         ->get();
 
     // 🤝 Tour dari agent
-    $agentTours = \App\Models\AgentTour::where('company_id', $tenant->id)
+    /*$agentTours = \App\Models\AgentTour::where('company_id', $tenant->id)
         ->with('tour.company:id,username,name')
+        ->get()
+        ->pluck('tour')
+        ->filter();*/
+    
+    $agentTours = \App\Models\AgentTour::where('company_id', $tenant->id)
+        ->whereHas('tour', function ($q) {
+            $q->where('status', 'active');
+        })
+        ->with(['tour' => function ($q) {
+            $q->where('status', 'active')
+              ->with('company:id,username,name');
+        }])
         ->get()
         ->pluck('tour')
         ->filter();

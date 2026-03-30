@@ -377,9 +377,12 @@ export default function TourCard({
         {/* </Button> */}
       </CardFooter>
       {/* div className="flex-1" /> */}
-      <div className="px-6 pb-2">
-        <div className="text-xs font-bold text-primary">Status : {tour.status}</div>
-      </div>
+      {type === 'agent' && fromLogin && (
+        <div className="px-6 pb-2">
+          <div className="text-xs font-bold text-primary">Status : {tour.status}</div>
+        </div>
+
+      )}
     </Card>
   );
 }

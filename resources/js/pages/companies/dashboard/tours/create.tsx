@@ -28,7 +28,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { Textarea } from '@/components/ui/textarea';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { extractImageSrc } from '@/lib/utils';
-import { Form, router } from '@inertiajs/react';
+import { Form, router, useForm } from '@inertiajs/react';
 import { useState } from 'react';
 import SelectCategory from './components/select-category';
 import SelectContinent from './components/select-continent';
@@ -41,6 +41,16 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs"
+
+//30032026
+//import { useForm } from '@inertiajs/react'
+
+/*type Schedule = {
+  departure_date: string
+  return_date: string
+  quota: string
+  price: string
+}*/
 
 export default function Page() {
   const [continentId, setContinentId] = useState<number | null>(null);
@@ -83,6 +93,36 @@ export default function Page() {
   //27032026
   const [schedules, setSchedules] = useState<any[]>([])
 
+  //30032026
+  const { data, setData, post, processing, errors } = useForm({
+    name: '',
+    description: '',
+    code: '',
+    destination: '',
+    duration_days: '',
+    showprice: '',
+    promote_price: '',
+    promote_title: '',
+    promote_note: '',
+    schedules: [],
+  })
+
+  /*const updateSchedule = (
+    index: number,
+    field: keyof Schedule,
+    value: string
+  ) => {
+    const updated = [...data.schedules]
+    if (!updated[index]) return // 🔥 penting
+
+    updated[index] = {
+      ...updated[index],
+      [field]: value,
+    }
+
+    setData('schedules', updated)
+  }*/
+
   return (
     <CompanyDashboardLayout
       openMenuIds={['tours']}
@@ -101,7 +141,7 @@ export default function Page() {
         {({ errors, processing }) => (
           <div className="container mx-auto space-y-4 p-4">
             
-            <Tabs defaultValue="tour" className="w-full">
+            <Tabs defaultValue="tour" className="w-full" key="tour-form">
 
               <TabsList className="mb-4">
                 <TabsTrigger value="tour">Tour</TabsTrigger>
@@ -155,6 +195,8 @@ export default function Page() {
                       name="code"
                       required
                       placeholder="Tour Code"
+                      value={data.code}
+                      onChange={(e) => setData('code', e.target.value)}
                     />
                     <InputError message={errors.code} />
                   </div>
@@ -167,6 +209,8 @@ export default function Page() {
                       name="name"
                       required
                       placeholder="Tour Name"
+                      value={data.name}
+                      onChange={(e) => setData('name', e.target.value)}
                     />
                     <InputError message={errors.name} />
                   </div>
@@ -190,6 +234,8 @@ export default function Page() {
                         el.style.height = 'auto';
                         el.style.height = el.scrollHeight + 'px';
                       }}
+                      value={data.description}
+                      onChange={(e) => setData('description', e.target.value)}
                     />
                     <InputError message={errors.description} />
                   </div>
@@ -203,6 +249,8 @@ export default function Page() {
                       name="duration_days"
                       required
                       placeholder="Duration"
+                      value={data.duration_days}
+                      onChange={(e) => setData('duration_days', e.target.value)}
                     />
                     <InputError message={errors.duration_days} />
                   </div>
@@ -273,6 +321,8 @@ export default function Page() {
                       type="text"
                       name="destination"
                       placeholder="Destination"
+                      value={data.destination}
+                      onChange={(e) => setData('destination', e.target.value)}
                     />
                     <InputError message={errors.destination} />
                   </div>
@@ -393,6 +443,8 @@ export default function Page() {
                           type="text"
                           name="promote_title"
                           placeholder="Title Promotion"
+                          value={data.promote_title}
+                          onChange={(e) => setData('promote_title', e.target.value)}
                         />
                         <InputError message={errors.promote_title} />
                       </div>
@@ -419,6 +471,8 @@ export default function Page() {
                           type="text"
                           name="promote_note"
                           placeholder="Promotion Note"
+                          value={data.promote_note}
+                          onChange={(e) => setData('promote_note', e.target.value)}
                         />
                         <InputError message={errors.promote_note} />
                       </div>
