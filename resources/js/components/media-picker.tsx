@@ -146,7 +146,7 @@ export function MediaPicker({
     >
       {children(internalValue, handleOpen)}
       <DialogContent className="w-full max-w-200">
-      {/*<DialogContent className="w-full max-w-200 max-h-[80vh] overflow-y-auto">*/}
+        {/*<DialogContent className="w-full max-w-200 max-h-[80vh] overflow-y-auto">*/}
         {selectedImage ? (
           <div className="grid gap-4">
             <div className="relative h-50 w-full">

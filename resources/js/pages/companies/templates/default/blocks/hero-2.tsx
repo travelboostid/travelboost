@@ -1,12 +1,14 @@
 import { Button } from '@/components/ui/button';
 import { Link } from '@inertiajs/react';
-import type { ComponentConfig } from '@puckeditor/core';
-import { Sparkles } from 'lucide-react';
+import { FieldLabel, type ComponentConfig } from '@puckeditor/core';
+import { Plane } from 'lucide-react';
 import type { LinkButtonComponentProps } from '../../base/blocks/link-button';
 import { LinkButtonComponenentFields } from '../../base/blocks/link-button';
+import ImagePicker from '../../components/image-picker';
 import { LUCIDE_ICON_NAMES, LucideIconRenderer } from '../utils';
 
 export type Hero2ComponentProps = {
+  imageUrl: string;
   header: string;
   description: string;
   actions: LinkButtonComponentProps[];
@@ -16,14 +18,30 @@ export type Hero2ComponentProps = {
 export const Hero2ComponentConfig: ComponentConfig<Hero2ComponentProps> = {
   label: 'Hero 2',
   fields: {
-    header: { type: 'richtext', contentEditable: true },
-    description: { type: 'richtext', contentEditable: true },
+    imageUrl: {
+      label: 'Image',
+      type: 'custom',
+      render: ({ field, name, onChange, value }) => (
+        <FieldLabel label={field.label || 'Image'}>
+          <ImagePicker name={name} value={value} onChange={onChange} />
+        </FieldLabel>
+      ),
+    },
+    header: { label: 'Header', type: 'richtext', contentEditable: true },
+    description: {
+      label: 'Description',
+      type: 'richtext',
+      contentEditable: true,
+    },
     actions: {
+      label: 'Actions',
       type: 'array',
       max: 5,
       arrayFields: LinkButtonComponenentFields as any,
+      getItemSummary: (item) => item.label || 'Button',
     },
     features: {
+      label: 'Features',
       type: 'array',
       max: 5,
       arrayFields: {
@@ -37,9 +55,11 @@ export const Hero2ComponentConfig: ComponentConfig<Hero2ComponentProps> = {
         },
         content: { type: 'text', contentEditable: true },
       },
+      getItemSummary: (item) => item.content || 'Item',
     },
   },
   defaultProps: {
+    imageUrl: '',
     header: 'Powerful features built for scale',
     description:
       'Everything you need to build, deploy, and monitor production-grade applications. From instant deployments to edge functions.',
@@ -71,7 +91,7 @@ export const Hero2ComponentConfig: ComponentConfig<Hero2ComponentProps> = {
       { icon: 'Zap', content: 'Lorem ipsum dolor sit amet' },
     ],
   },
-  render: ({ header, description, actions, features, editMode }) => {
+  render: ({ imageUrl, header, description, actions, features, editMode }) => {
     return (
       <section className="w-full px-4 py-20 md:py-32 bg-background">
         <div className="max-w-6xl mx-auto">
@@ -110,12 +130,20 @@ export const Hero2ComponentConfig: ComponentConfig<Hero2ComponentProps> = {
                 )}
               </div>
             </div>
-            <div className="bg-linear-to-br from-primary/20 to-secondary/20 rounded-2xl h-96 flex items-center justify-center border border-primary/20">
-              <div className="text-center">
-                <Sparkles className="w-16 h-16 text-primary mx-auto mb-4 opacity-50" />
-                <p className="text-muted-foreground">Feature Preview</p>
+            {imageUrl ? (
+              <img
+                src={imageUrl}
+                alt="Hero Image"
+                className="w-full aspect-video rounded-2xl object-cover shadow"
+              />
+            ) : (
+              <div className="relative flex h-96 items-center justify-center overflow-hidden rounded-2xl bg-linear-to-br from-primary/10 to-secondary/10 md:h-full">
+                <div className="text-center">
+                  <Plane className="mx-auto mb-4 h-24 w-24 text-primary/30" />
+                  <p className="text-muted-foreground">Adventure awaits</p>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
       </section>

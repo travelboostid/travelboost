@@ -1,10 +1,12 @@
 import { Button } from '@/components/ui/button';
 import { Link } from '@inertiajs/react';
-import type { ComponentConfig } from '@puckeditor/core';
+import { FieldLabel, type ComponentConfig } from '@puckeditor/core';
 import type { LinkButtonComponentProps } from '../../base/blocks/link-button';
 import { LinkButtonComponenentFields } from '../../base/blocks/link-button';
+import ImagePicker from '../../components/image-picker';
 
 export type Hero3ComponentProps = {
+  backgroundUrl?: string;
   header: string;
   description: string;
   actions: LinkButtonComponentProps[];
@@ -14,20 +16,37 @@ export type Hero3ComponentProps = {
 export const Hero3ComponentConfig: ComponentConfig<Hero3ComponentProps> = {
   label: 'Hero 3',
   fields: {
-    header: { type: 'richtext', contentEditable: true },
-    description: { type: 'richtext', contentEditable: true },
+    backgroundUrl: {
+      label: 'Background Image',
+      type: 'custom',
+      render: ({ field, name, onChange, value }) => (
+        <FieldLabel label={field.label || 'Background Image'}>
+          <ImagePicker name={name} value={value || ''} onChange={onChange} />
+        </FieldLabel>
+      ),
+    },
+    header: { label: 'Header', type: 'richtext', contentEditable: true },
+    description: {
+      label: 'Description',
+      type: 'richtext',
+      contentEditable: true,
+    },
     actions: {
+      label: 'Actions',
       type: 'array',
       max: 5,
       arrayFields: LinkButtonComponenentFields as any,
+      getItemSummary: (item) => item.label || 'Button',
     },
     summaries: {
+      label: 'Summaries',
       type: 'array',
       max: 5,
       arrayFields: {
         title: { type: 'text', contentEditable: true },
         subtitle: { type: 'text', contentEditable: true },
       },
+      getItemSummary: (item) => item.title || 'Item',
     },
   },
   defaultProps: {
@@ -62,13 +81,22 @@ export const Hero3ComponentConfig: ComponentConfig<Hero3ComponentProps> = {
       { title: '24/7', subtitle: 'Support' },
     ],
   },
-  render: ({ header, description, actions, summaries, editMode }) => {
+  render: ({
+    backgroundUrl,
+    header,
+    description,
+    actions,
+    summaries,
+    editMode,
+  }) => {
     return (
       <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-linear-to-b from-muted/30 to-background">
         {/* Background Image */}
         <div className="absolute inset-0 z-0">
           <img
-            src="/images/stunning-tropical-beach-paradise.jpg"
+            src={
+              backgroundUrl || '/images/stunning-tropical-beach-paradise.jpg'
+            }
             alt="Paradise destination"
             className="w-full h-full object-cover opacity-20"
           />

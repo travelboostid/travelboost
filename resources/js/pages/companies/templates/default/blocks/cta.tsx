@@ -13,12 +13,14 @@ export type CtaComponentProps = {
 export const CtaComponentConfig: ComponentConfig<CtaComponentProps> = {
   label: 'CTA',
   fields: {
-    header: { type: 'text', contentEditable: true },
-    description: { type: 'text', contentEditable: true },
+    header: { label: 'Header', type: 'text', contentEditable: true },
+    description: { label: 'Description', type: 'text', contentEditable: true },
     actions: {
+      label: 'Actions',
       type: 'array',
       max: 5,
       arrayFields: LinkButtonComponenentFields as any,
+      getItemSummary: (item) => item.label || 'Button',
     },
   },
   defaultProps: {

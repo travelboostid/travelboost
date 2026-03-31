@@ -2,15 +2,32 @@
 
 namespace Database\Seeders\Production;
 
-use App\Models\User;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+use Database\Seeders\Common\AiModelSeeder;
+use Database\Seeders\Common\CompanySeeder;
+use Database\Seeders\Common\ContinentSeeder;
+use Database\Seeders\Common\CountrySeeder;
+use Database\Seeders\Common\RegionSeeder;
+use Database\Seeders\Common\RolePermissionSeeder;
+use Database\Seeders\Common\TourSeeder;
+use Database\Seeders\Common\UserSeeder;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\Hash;
 
 class ProductionSeeder extends Seeder
 {
   /**
    * Run the database seeds.
    */
-  public function run(): void {}
+  public function run(): void
+  {
+    $this->call([
+      AiModelSeeder::class,
+      RolePermissionSeeder::class,
+      UserSeeder::class,
+      CompanySeeder::class,
+      ContinentSeeder::class,
+      RegionSeeder::class,
+      CountrySeeder::class,
+      TourSeeder::class,
+    ]);
+  }
 }

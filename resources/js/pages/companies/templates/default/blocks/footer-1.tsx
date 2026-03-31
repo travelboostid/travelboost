@@ -7,7 +7,7 @@ export type Footer1ComponentProps = {
 export const Footer1ComponentConfig: ComponentConfig<Footer1ComponentProps> = {
   label: 'Footer',
   fields: {
-    content: { type: 'text', contentEditable: true },
+    content: { label: 'Content', type: 'text', contentEditable: true },
   },
   defaultProps: {
     content: '© 2025 Travel Company. All rights reserved.',

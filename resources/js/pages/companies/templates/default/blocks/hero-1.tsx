@@ -1,11 +1,13 @@
 import { Button } from '@/components/ui/button';
 import { Link } from '@inertiajs/react';
-import type { ComponentConfig } from '@puckeditor/core';
+import { FieldLabel, type ComponentConfig } from '@puckeditor/core';
 import { Plane } from 'lucide-react';
 import type { LinkButtonComponentProps } from '../../base/blocks/link-button';
 import { LinkButtonComponenentFields } from '../../base/blocks/link-button';
+import ImagePicker from '../../components/image-picker';
 
 export type Hero1ComponentProps = {
+  imageUrl: string;
   header: string;
   description: string;
   actions: LinkButtonComponentProps[];
@@ -15,23 +17,41 @@ export type Hero1ComponentProps = {
 export const Hero1ComponentConfig: ComponentConfig<Hero1ComponentProps> = {
   label: 'Hero 1',
   fields: {
-    header: { type: 'richtext', contentEditable: true },
-    description: { type: 'richtext', contentEditable: true },
+    imageUrl: {
+      label: 'Image',
+      type: 'custom',
+      render: ({ field, name, onChange, value }) => (
+        <FieldLabel label={field.label || 'Image'}>
+          <ImagePicker name={name} value={value} onChange={onChange} />
+        </FieldLabel>
+      ),
+    },
+    header: { label: 'Header', type: 'richtext', contentEditable: true },
+    description: {
+      label: 'Description',
+      type: 'richtext',
+      contentEditable: true,
+    },
     actions: {
+      label: 'Actions',
       type: 'array',
       max: 5,
       arrayFields: LinkButtonComponenentFields as any,
+      getItemSummary: (item) => item.label || 'Button',
     },
     summaries: {
+      label: 'Summaries',
       type: 'array',
       max: 5,
       arrayFields: {
         title: { type: 'text', contentEditable: true },
         subtitle: { type: 'text', contentEditable: true },
       },
+      getItemSummary: (item) => item.title || 'Item',
     },
   },
   defaultProps: {
+    imageUrl: '',
     header: 'Explore the World Your Way',
     description:
       'Discover extraordinary destinations with personalized travel packages curated by expert guides. Your adventure starts here.',
@@ -63,7 +83,7 @@ export const Hero1ComponentConfig: ComponentConfig<Hero1ComponentProps> = {
       { title: '24/7', subtitle: 'Support' },
     ],
   },
-  render: ({ header, description, actions, summaries, editMode }) => {
+  render: ({ imageUrl, header, description, actions, summaries, editMode }) => {
     return (
       <section className="relative px-4 py-20 sm:px-6 md:py-32 lg:px-8">
         <div className="mx-auto max-w-7xl">
@@ -103,12 +123,20 @@ export const Hero1ComponentConfig: ComponentConfig<Hero1ComponentProps> = {
                 ))}
               </div>
             </div>
-            <div className="relative flex h-96 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-primary/10 to-secondary/10 md:h-full">
-              <div className="text-center">
-                <Plane className="mx-auto mb-4 h-24 w-24 text-primary/30" />
-                <p className="text-muted-foreground">Adventure awaits</p>
+            {imageUrl ? (
+              <img
+                src={imageUrl}
+                alt="Hero Image"
+                className="w-full aspect-video rounded-2xl object-cover shadow"
+              />
+            ) : (
+              <div className="relative flex h-96 items-center justify-center overflow-hidden rounded-2xl bg-linear-to-br from-primary/10 to-secondary/10 md:h-full">
+                <div className="text-center">
+                  <Plane className="mx-auto mb-4 h-24 w-24 text-primary/30" />
+                  <p className="text-muted-foreground">Adventure awaits</p>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
       </section>

@@ -24,7 +24,9 @@ class Company extends Model
     'phone',
     'customer_service_phone',
     'subdomain',
-    'photo_id'
+    'photo_id',
+    'meta',
+    'note',
   ];
 
   protected $hidden = [

@@ -18,15 +18,17 @@ export type FaqComponentProps = {
 export const FaqComponentConfig: ComponentConfig<FaqComponentProps> = {
   label: 'FAQ',
   fields: {
-    title: { type: 'text', contentEditable: true },
-    description: { type: 'text', contentEditable: true },
+    title: { label: 'Title', type: 'text', contentEditable: true },
+    description: { label: 'Description', type: 'text', contentEditable: true },
     items: {
       type: 'array',
+      label: 'Questions & Answers',
       max: 10,
       arrayFields: {
-        question: { type: 'text', contentEditable: true },
-        answer: { type: 'text', contentEditable: true },
+        question: { label: 'Question', type: 'text', contentEditable: true },
+        answer: { label: 'Answer', type: 'text', contentEditable: true },
       },
+      getItemSummary: (item) => item.question || 'FAQ',
     },
   },
   defaultProps: {

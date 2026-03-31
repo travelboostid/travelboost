@@ -38,8 +38,10 @@ export const Card1ComponentConfig: ComponentConfig<Card1ComponentProps> = {
     },
     actions: {
       type: 'array',
+      label: 'Actions',
       max: 2,
       arrayFields: ButtonComponentFields as any,
+      getItemSummary: (item) => item.label || 'Button',
     },
   },
 

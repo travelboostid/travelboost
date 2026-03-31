@@ -14,22 +14,47 @@ export type TestimonialsComponentProps = {
   badge: string;
   header: string;
   description: string;
-  testimonials: { name: string; roleAndCompany: string }[];
+  testimonials: {
+    name: string;
+    roleAndCompany: string;
+    content: string;
+    avatar: string;
+  }[];
 };
 
 export const TestimonialsComponentConfig: ComponentConfig<TestimonialsComponentProps> =
   {
     fields: {
-      badge: { type: 'text', contentEditable: true },
-      header: { type: 'text', contentEditable: true },
-      description: { type: 'richtext', contentEditable: true },
+      badge: { label: 'Badge', type: 'text', contentEditable: true },
+      header: { label: 'Header', type: 'text', contentEditable: true },
+      description: {
+        label: 'Description',
+        type: 'textarea',
+        contentEditable: true,
+      },
       testimonials: {
+        label: 'Testimonials',
         type: 'array',
         max: 5,
         arrayFields: {
-          name: { type: 'text', contentEditable: true },
-          roleAndCompany: { type: 'text', contentEditable: true },
+          name: { label: 'Name', type: 'text', contentEditable: true },
+          roleAndCompany: {
+            label: 'Role & Company',
+            type: 'text',
+            contentEditable: true,
+          },
+          content: {
+            label: 'Testimonial Content',
+            type: 'text',
+            contentEditable: true,
+          },
+          avatar: {
+            label: 'Avatar URL',
+            type: 'text',
+            contentEditable: true,
+          },
         },
+        getItemSummary: (item) => item.name || 'Item',
       },
     },
     render: ({ badge, header, description, testimonials }) => (
@@ -93,7 +118,7 @@ export const TestimonialsComponentConfig: ComponentConfig<TestimonialsComponentP
                           {testimonial.name}
                         </h4>
                         <p className="text-muted-foreground">
-                          {testimonial.role}
+                          {testimonial.roleAndCompany}
                         </p>
                       </div>
                     </div>
@@ -113,7 +138,7 @@ export const TestimonialsComponentConfig: ComponentConfig<TestimonialsComponentP
       testimonials: [
         {
           name: 'Craig Bator',
-          role: 'CEO & Co Founder at Zendesk',
+          roleAndCompany: 'CEO & Co Founder at Zendesk',
           avatar:
             'https://cdn.shadcnstudio.com/ss-assets/avatar/avatar-1.png?width=40&height=40&format=auto',
           content:
@@ -121,7 +146,7 @@ export const TestimonialsComponentConfig: ComponentConfig<TestimonialsComponentP
         },
         {
           name: 'Martin Dorwart',
-          role: 'Product manager at Orbit',
+          roleAndCompany: 'Product manager at Orbit',
           avatar:
             'https://cdn.shadcnstudio.com/ss-assets/avatar/avatar-2.png?width=40&height=40&format=auto',
           content:
@@ -129,7 +154,7 @@ export const TestimonialsComponentConfig: ComponentConfig<TestimonialsComponentP
         },
         {
           name: 'Sarah Johnson',
-          role: 'Lead Designer at Figma',
+          roleAndCompany: 'Lead Designer at Figma',
           avatar:
             'https://cdn.shadcnstudio.com/ss-assets/avatar/avatar-3.png?width=40&height=40&format=auto',
           content:

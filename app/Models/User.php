@@ -41,6 +41,8 @@ class User extends Authenticatable implements Customer, Wallet, LaratrustUser
     'company_id',
     'gender',
     'status',
+    'meta',
+    'note',
   ];
 
   /**

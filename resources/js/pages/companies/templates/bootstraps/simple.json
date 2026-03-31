@@ -10,8 +10,8 @@
     {
       "type": "Hero1",
       "props": {
-        "header": "Jelajahi Dunia Sesuai Cara Anda",
-        "description": "Temukan destinasi luar biasa dengan paket perjalanan yang dipersonalisasi dan dikurasi oleh pemandu ahli. Petualangan Anda dimulai di sini.",
+        "header": "Jelajahi Dunia Bersama Kami",
+        "description": "Wujudkan impian Anda untuk menjelajahi keindahan dunia dengan paket tour eksklusif kami. Dari kota-kota ikonik hingga destinasi eksotis tersembunyi, kami hadirkan petualangan tak terlupakan yang dirancang khusus untuk Anda.",
         "actions": [
           {
             "variant": "default",
@@ -36,16 +36,16 @@
         ],
         "summaries": [
           {
-            "title": "500+",
-            "subtitle": "Destinasi"
-          },
-          {
-            "title": "50k+",
-            "subtitle": "Pelancong Puas"
+            "title": "20%",
+            "subtitle": "Diskon Spesial"
           },
           {
             "title": "24/7",
-            "subtitle": "Dukungan"
+            "subtitle": "Layanan Pelanggan"
+          },
+          {
+            "title": "100%",
+            "subtitle": "Garansi Harga Terbaik"
           }
         ],
         "width": "w-auto",
@@ -69,32 +69,17 @@
           {
             "icon": "MapPin",
             "title": "Destinasi Eksotis",
-            "description": "Pilih dari 500+ destinasi wisata terbaik di seluruh dunia"
-          },
-          {
-            "icon": "Users",
-            "title": "Pemandu Ahli",
-            "description": "Pemandu berpengalaman 10+ tahun di bidang pariwisata"
+            "description": "Rasakan pengalaman luar biasa ke berbagai belahan dunia dengan destinasi pilihan terbaik."
           },
           {
             "icon": "Clock",
-            "title": "Jadwal Fleksibel",
-            "description": "Tur yang dapat disesuaikan dengan ketersediaan Anda"
+            "title": "Paket Fleksibel",
+            "description": "Pilihan tour lengkap dan dapat disesuaikan dengan kebutuhan serta jadwal Anda."
           },
           {
-            "icon": "Shield",
-            "title": "Asuransi Perjalanan",
-            "description": "Perlindungan komprehensif untuk setiap perjalanan Anda"
-          },
-          {
-            "icon": "CreditCard",
-            "title": "Pembayaran Fleksibel",
-            "description": "Cicilan 0% tersedia untuk semua paket premium"
-          },
-          {
-            "icon": "Plane",
-            "title": "Dukungan 24/7",
-            "description": "Tim customer service siap membantu kapan saja"
+            "icon": "Users",
+            "title": "Pemandu Profesional",
+            "description": "Didampingi pemandu berpengalaman untuk perjalanan yang aman dan menyenangkan."
           }
         ],
         "id": "Features-336073ad-e7e7-4f95-9ea1-d13f7faaf7b8"
@@ -103,28 +88,24 @@
     {
       "type": "Steps",
       "props": {
-        "header": "Cara Memesan Perjalanan Anda",
-        "description": "Proses booking yang mudah dalam 4 langkah sederhana",
+        "header": "Pesan Sekarang & Mulai Petualangan Anda!",
+        "description": "Jangan lewatkan kesempatan emas untuk mewujudkan impian traveling Anda! Dengan proses pemesanan yang mudah dan cepat, petualangan dunia Anda hanya berjarak beberapa klik.",
         "steps": [
           {
-            "title": "Pilih Destinasi",
-            "desc": "Jelajahi katalog destinasi kami yang lengkap",
-            "description": "Cari berdasarkan benua, tipe wisata, atau budget Anda"
+            "title": "Pilih Destinasi & Tanggal",
+            "description": "Tentukan tujuan impian Anda dan pilih tanggal keberangkatan sesuai jadwal."
           },
           {
-            "title": "Pilih Tanggal",
-            "desc": "Tentukan waktu keberangkatan yang ideal",
-            "description": "Lihat ketersediaan dan harga untuk setiap periode"
+            "title": "Isi Data Peserta",
+            "description": "Masukkan informasi lengkap untuk semua peserta tour dengan mudah dan aman."
           },
           {
-            "title": "Sesuaikan Paket",
-            "desc": "Tambahkan akomodasi, aktivitas, dan layanan tambahan",
-            "description": "Pilih dari berbagai opsi untuk membuat paket impian Anda"
+            "title": "Pilih Paket & Pembayaran",
+            "description": "Pilih paket sesuai kebutuhan dan lakukan pembayaran dengan metode terpercaya."
           },
           {
-            "title": "Selesaikan Pemesanan",
-            "desc": "Lakukan pembayaran dan dapatkan konfirmasi",
-            "description": "Terima dokumentasi perjalanan lengkap via email"
+            "title": "Terima Konfirmasi",
+            "description": "Dapatkan konfirmasi booking dan persiapan lengkap untuk perjalanan Anda."
           }
         ],
         "id": "Steps-9c33bc64-1e52-4d04-99f3-c2db8a26f9df"
@@ -139,19 +120,19 @@
         "testimonials": [
           {
             "name": "Budi Santoso",
-            "role": "Pengusaha dari Jakarta",
+            "roleAndCompany": "Pengusaha dari Jakarta",
             "avatar": "https://cdn.shadcnstudio.com/ss-assets/avatar/avatar-1.png?width=40&height=40&format=auto",
             "content": "Paket tour ke Bali bersama TravelBoost benar-benar sempurna. Pemandu kami sangat informatif dan sangat membantu membuat liburan kami tak terlupakan."
           },
           {
             "name": "Siti Nurhaliza",
-            "role": "Guru dari Bandung",
+            "roleAndCompany": "Guru dari Bandung",
             "avatar": "https://cdn.shadcnstudio.com/ss-assets/avatar/avatar-2.png?width=40&height=40&format=auto",
             "content": "Pertama kali liburan ke Eropa dan TravelBoost membuat semuanya mudah. Harga sangat kompetitif dan layanan luar biasa memuaskan."
           },
           {
             "name": "Ahmad Wijaya",
-            "role": "Fotografer dari Yogyakarta",
+            "roleAndCompany": "Fotografer dari Yogyakarta",
             "avatar": "https://cdn.shadcnstudio.com/ss-assets/avatar/avatar-3.png?width=40&height=40&format=auto",
             "content": "Paket photography tour ke Flores yang TravelBoost tawarkan sangat detail dan spot-spotnya luar biasa bagus. Highly recommended!"
           }

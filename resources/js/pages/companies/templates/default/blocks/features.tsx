@@ -12,10 +12,16 @@ export const FeaturesComponentConfig: ComponentConfig<FeaturesComponentProps> =
   {
     label: 'Features',
     fields: {
-      header: { type: 'text', contentEditable: true },
-      description: { type: 'richtext', contentEditable: true },
+      header: { label: 'Header', type: 'text', contentEditable: true },
+      description: {
+        label: 'Description',
+        type: 'richtext',
+        contentEditable: true,
+      },
       features: {
         type: 'array',
+        label: 'Features',
+        max: 6,
         arrayFields: {
           icon: {
             type: 'select',
@@ -28,6 +34,7 @@ export const FeaturesComponentConfig: ComponentConfig<FeaturesComponentProps> =
           title: { type: 'text', contentEditable: true },
           description: { type: 'text', contentEditable: true },
         },
+        getItemSummary: (item) => item.title || 'Item',
       },
     },
     render: ({ header, description, features }) => (

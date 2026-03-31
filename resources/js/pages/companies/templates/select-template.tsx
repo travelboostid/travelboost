@@ -1,7 +1,6 @@
 import { Button } from '@/components/ui/button';
 import {
   Card,
-  CardContent,
   CardDescription,
   CardFooter,
   CardHeader,
@@ -53,14 +52,7 @@ const TemplateCard = ({
   onSelected: (data: any) => void;
 }) => {
   return (
-    <Card className="flex pt-0">
-      <CardContent className="px-0">
-        <img
-          src={template.image}
-          alt="Banner"
-          className="aspect-video h-70 rounded-t-xl object-cover"
-        />
-      </CardContent>
+    <Card className="flex">
       <CardHeader className="flex-1">
         <CardTitle>{template.name}</CardTitle>
         <CardDescription>{template.description}</CardDescription>

@@ -9,15 +9,25 @@ export type StepsComponentProps = {
 export const StepsComponentConfig: ComponentConfig<StepsComponentProps> = {
   label: 'Steps',
   fields: {
-    header: { type: 'text', contentEditable: true },
-    description: { type: 'richtext', contentEditable: true },
+    header: { label: 'Header', type: 'text', contentEditable: true },
+    description: {
+      label: 'Description',
+      type: 'richtext',
+      contentEditable: true,
+    },
     steps: {
+      label: 'Steps',
       type: 'array',
       max: 5,
       arrayFields: {
-        title: { type: 'text', contentEditable: true },
-        description: { type: 'text', contentEditable: true },
+        title: { label: 'Title', type: 'text', contentEditable: true },
+        description: {
+          label: 'Description',
+          type: 'text',
+          contentEditable: true,
+        },
       },
+      getItemSummary: (item) => item.title || 'Item',
     },
   },
   render: ({ header, description, steps }) => (
