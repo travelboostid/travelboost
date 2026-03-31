@@ -30,7 +30,30 @@ class TourController extends Controller
 
   public function store(StoreTourRequest $request, Company $company)
   {
-    $tour = $company->tours()->create($request->validated());
+    //27032026
+    //$tour = $company->tours()->create($request->validated());
+    //return back();
+    
+    // 1️⃣ Ambil data valid
+    $data = $request->validated();
+
+    // 2️⃣ Simpan MASTER TOUR via relasi company
+    $tour = $company->tours()->create($data);
+
+    // 3️⃣ Ambil schedules dari form
+    $schedules = $request->input('schedules', []);
+
+    // 4️⃣ Simpan schedules jika ada
+    foreach ($schedules as $schedule) {
+        $tour->schedules()->create([
+            'departure_date' => $schedule['departure_date'] ?? null,
+            'return_date'    => $schedule['return_date'] ?? null,
+            'quota'          => $schedule['quota'] ?? 0,
+            'price'          => $schedule['price'] ?? 0,
+        ]);
+    }
+
+    // 5️⃣ Redirect / back
     return back();
   }
 

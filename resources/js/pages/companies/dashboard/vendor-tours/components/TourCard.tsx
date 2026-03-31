@@ -20,6 +20,19 @@ import { IconPdf, IconBrandFacebook, IconBrandWhatsapp } from '@tabler/icons-rea
 import { MessageSquareIcon, SaveIcon } from 'lucide-react';
 import { useState } from 'react';
 
+//27032026
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+
 //export default function TourCard({ tour }: { tour: TourResource }) {
 export default function TourCard({
   tour,
@@ -85,7 +98,7 @@ export default function TourCard({
     
   };
 
-  const handleMessage = async () => {
+  /*const handleMessage = async () => {
     try {
       setStartingPrivateChat(true);
       floatingChat.setAttachment({ type: 'tour-code', data: tour.code });
@@ -93,6 +106,32 @@ export default function TourCard({
         type: 'company',
         id: tour.company_id,
       });
+    } finally {
+      setStartingPrivateChat(false);
+    }
+  };*/
+
+  const handleMessage = async () => {
+    console.log("CLICKED");
+
+    try {
+      setStartingPrivateChat(true);
+
+      console.log("floatingChat:", floatingChat);
+
+      floatingChat?.setAttachment({
+        type: 'tour-code',
+        data: tour.code,
+      });
+
+      await floatingChat?.startPrivateChat({
+        type: 'company',
+        id: tour.company_id,
+      });
+
+      console.log("CHAT STARTED");
+    } catch (err) {
+      console.error("CHAT ERROR:", err);
     } finally {
       setStartingPrivateChat(false);
     }
@@ -112,10 +151,17 @@ export default function TourCard({
   const handleShareFacebookPdf = () => {
     if (!hasDocument) return;
 
-    const pdfUrl = brochure({ username, tour: tour.id }).url;
+    const pdfUrl = viewBrochure({
+      company: company.username,
+      vendor: tour.company?.username || '',
+      tour: tour.id,
+    }).url;
 
-    console.log('PDF URL:', pdfUrl);
-  }
+    const fbUrl =
+      `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(pdfUrl)}`;
+
+    window.open(fbUrl, '_blank', 'noopener,noreferrer');
+  };
 
   const handleChatWhatsApp = () => {
     //const phone = tour.user_phone; // contoh: "628123456789"
@@ -248,10 +294,6 @@ export default function TourCard({
           <div className="text-lg font-bold text-primary">{formattedPrice}</div>
         )}
       </div>
-      <div className="flex-1" />
-      <div className="px-6 pb-2">
-        <div className="text-lg font-bold text-primary">Status : {tour.status}</div>
-      </div>
       {/* fix screen for desktop and mobile */}
       {/*<CardFooter className="flex gap-2"> */}
       <CardFooter className="grid grid-cols-2 lg:grid-cols-4 gap-2">
@@ -263,14 +305,39 @@ export default function TourCard({
         >
           <IconPdf />
         </Button>
-        {type === 'agent' && (
-          <Button
-            disabled={(tour as any).has_copied}
-            onClick={handleCopy}
-            //className="flex-1"
-          >
-            <SaveIcon />
-          </Button>
+        
+        {type === 'agent' && fromLogin && (
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                disabled={(tour as any).has_copied}
+              >
+                <SaveIcon />
+              </Button>
+            </AlertDialogTrigger>
+
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>
+                  Copy to Catalog
+                </AlertDialogTitle>
+
+                <AlertDialogDescription>
+                  Do you want copy to your Catalog?
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+
+              <AlertDialogFooter>
+                <AlertDialogCancel>
+                  No
+                </AlertDialogCancel>
+
+                <AlertDialogAction onClick={handleCopy}>
+                  Yes
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         )}
         
         {type === 'agent' && (
@@ -285,14 +352,14 @@ export default function TourCard({
         )}
 
         {/* ✅ SHARE FACEBOOK */}
-        {/* hasDocument && ( */}
-          {!hasDocument && (
+        {/* !hasDocument && ( */}
+          {hasDocument && type === 'agent' && !fromLogin && (
         <Button
           variant="secondary"
           //onClick={handleShareFacebook}
           onClick={handleShareFacebookPdf}
-          //disabled={!hasDocument}
-          disabled={hasDocument}
+          disabled={!hasDocument}
+          //disabled={hasDocument}
           //className="flex-1"
         >
           <IconBrandFacebook />
@@ -309,6 +376,13 @@ export default function TourCard({
           {/* <span className="hidden md:inline">WhatsApp</span> */}
         {/* </Button> */}
       </CardFooter>
+      {/* div className="flex-1" /> */}
+      {type === 'agent' && fromLogin && (
+        <div className="px-6 pb-2">
+          <div className="text-xs font-bold text-primary">Status : {tour.status}</div>
+        </div>
+
+      )}
     </Card>
   );
 }

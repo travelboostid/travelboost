@@ -46,7 +46,13 @@ export function useCompanyDashboardNavMainMenu() {
     { type: 'vendor' },
     { query: { enabled: company.type === 'agent' } },
   );
-  const companySubdomain = `${appScheme}://${company.subdomain}.${appHost}${appPort ? `:${appPort}` : ''}`;
+  //26032026
+  //const companySubdomain = `${appScheme}://${company.subdomain}.${appHost}${appPort ? `:${appPort}` : ''}`;
+  const scheme = window.location.protocol.replace(':', '');
+
+  const companySubdomain =
+    `${scheme}://${company.subdomain}.${appHost}${appPort ? `:${appPort}` : ''}`;
+  //
   console.log(import.meta.env, companySubdomain);
 
   return company.type === 'vendor'

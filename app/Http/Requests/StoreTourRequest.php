@@ -25,7 +25,8 @@ class StoreTourRequest extends FormRequest
   {
     return [
       'code'         => 'nullable|string|max:50|unique:tours,code',
-      'name'         => 'required|string|max:255',
+      //'name'         => 'required|string|max:255',
+      'name'         => 'nullable|string|max:255',
       'description'  => 'nullable|string',
       'duration_days' => 'nullable|integer|min:1',
       'status'       => ['nullable', Rule::in([
@@ -40,6 +41,13 @@ class StoreTourRequest extends FormRequest
       'parent_id'    => 'nullable|exists:tours,id',
       'image_id'  => 'nullable|exists:medias,id',
       'document_id'  => 'nullable|exists:medias,id',
+      //'showprice' => 'nullable|integer|min:0',
+      //'showprice' => 'required|numeric|min:0',
+      'showprice' => 'nullable|numeric|min:0',
+      'promote_title' => 'nullable|string|max:255',
+      'promote_note' => 'nullable|string|max:255',
+      //'promote_price' => 'nullable|integer|min:0',
+      'promote_price' => 'nullable|numeric|min:0',
     ];
   }
 

@@ -33,6 +33,8 @@ import SelectContinent from './components/select-continent';
 import SelectCountry from './components/select-country';
 import SelectRegion from './components/select-region';
 
+import { useEffect } from "react"
+
 type Props = {
   tour: any;
 };
@@ -57,6 +59,60 @@ export default function Page({ tour }: Props) {
     });
   };
 
+  //for price
+  const [displayPrice, setDisplayPrice] = useState("0")
+  const [rawPrice, setRawPrice] = useState("0")
+
+  const handlePriceChange = (value: string) => {
+    let numeric = value.replace(/\D/g, "")
+
+    if (numeric === "") numeric = "0"
+
+    setRawPrice(numeric)
+
+    const formatted = new Intl.NumberFormat("id-ID").format(Number(numeric))
+    setDisplayPrice(formatted)
+  }
+
+  useEffect(() => {
+    const numeric = tour.showprice != null
+      ? String(tour.showprice)
+      : "0"
+
+    setRawPrice(numeric)
+
+    const formatted = new Intl.NumberFormat("id-ID").format(Number(numeric))
+    setDisplayPrice(formatted)
+  }, [tour.showprice])
+  //
+
+  //for price
+  const [displayPrice1, setDisplayPrice1] = useState("0")
+  const [rawPrice1, setRawPrice1] = useState("0")
+
+  const handlePriceChange1 = (value: string) => {
+    let numeric1 = value.replace(/\D/g, "")
+
+    if (numeric1 === "") numeric1 = "0"
+
+    setRawPrice1(numeric1)
+
+    const formatted1 = new Intl.NumberFormat("id-ID").format(Number(numeric1))
+    setDisplayPrice1(formatted1)
+  }
+
+  useEffect(() => {
+    const numeric = tour.promote_price
+      ? String(tour.promote_price)
+      : "0"
+
+    setRawPrice1(numeric)
+
+    const formatted = new Intl.NumberFormat("id-ID").format(Number(numeric))
+    setDisplayPrice1(formatted)
+  }, [tour.promote_price])
+  //
+
   return (
     <CompanyDashboardLayout
       openMenuIds={['tours']}
@@ -67,8 +123,18 @@ export default function Page({ tour }: Props) {
         { title: 'Edit' },
       ]}
     >
+      {/* <Form
+        {...update.form({ company: company.username, tour: tour.id })}
+        className="space-y-4"
+        onSuccess={handleSuccess}
+      > */}
       <Form
         {...update.form({ company: company.username, tour: tour.id })}
+        transform={(data) => ({
+          ...data,
+          showprice: rawPrice,        // 🔥 kirim angka murni
+          promote_price: rawPrice1,   // 🔥 kirim angka murni
+        })}
         className="space-y-4"
         onSuccess={handleSuccess}
       >
@@ -236,37 +302,63 @@ export default function Page({ tour }: Props) {
 
               {/* Document */}
               <div className="grid gap-2">
-                <Label htmlFor="name">Document</Label>
+                <Label htmlFor="name">Document Itinerary</Label>
                 <MediaPicker
                   type="document"
                   defaultValue={tour.document}
                   params={{ owner_type: 'company', owner_id: company.id }}
                   uploadParams={{ owner_type: 'company', owner_id: company.id }}
                 >
-                  {(media, change) => (
-                    <Item variant="outline">
-                      <ItemContent>
-                        <ItemTitle>
-                          {(media as any)?.name || 'No document selected'}
-                        </ItemTitle>
-                      </ItemContent>
-                      <input
-                        type="hidden"
-                        name="document_id"
-                        value={(media as any)?.id || undefined}
-                      />
-                      <ItemActions>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={change}
-                          type="button"
-                        >
-                          Change
-                        </Button>
-                      </ItemActions>
-                    </Item>
-                  )}
+                  {(media, change) => {
+                    const url =
+                      (media as any)?.url ||
+                      (media as any)?.data?.url
+
+                    const fullUrl = url
+                      ? (url.startsWith('http')
+                          ? url
+                          : window.location.origin + url)
+                      : null
+
+                    return (
+                      <Item variant="outline" className="space-y-2">
+                        <ItemContent className="space-y-2">
+
+                          {fullUrl ? (
+                            <iframe
+                              src={fullUrl}
+                              className="w-full h-56 rounded border"
+                              title="PDF Preview"
+                            />
+                          ) : (
+                            <ItemTitle>No document selected</ItemTitle>
+                          )}
+
+                          <ItemTitle>
+                            {(media as any)?.name || ''}
+                          </ItemTitle>
+
+                        </ItemContent>
+
+                        <input
+                          type="hidden"
+                          name="document_id"
+                          value={(media as any)?.id || undefined}
+                        />
+
+                        <ItemActions>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={change}
+                            type="button"
+                          >
+                            Change
+                          </Button>
+                        </ItemActions>
+                      </Item>
+                    )
+                  }}
                 </MediaPicker>
                 <InputError message={errors.document_id} />
               </div>
@@ -288,6 +380,79 @@ export default function Page({ tour }: Props) {
                 </Select>
                 <InputError message={errors.status} />
               </div>
+
+              {/* Normal Price show on catalog */}
+              <div className="grid gap-2">
+                <Label htmlFor="showprice">Normal Price show on catalog</Label>
+                <Input
+                  id="showprice_display"
+                  type="text"
+                  placeholder="Normal Price"
+                  value={displayPrice}
+                  onChange={(e) => handlePriceChange(e.target.value)}
+                />
+                <input
+                  type="number"
+                  name="showprice"
+                  value={rawPrice}
+                  readOnly
+                  hidden
+                />
+                <InputError message={errors.showprice} />
+              </div>
+
+              <div className="rounded-lg border bg-muted/30 p-4 space-y-4">
+              
+                              <div className="text-sm font-semibold text-muted-foreground">
+                                Promotion Settings
+                              </div>
+              
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              
+                                {/* promote title */}
+                                <div className="grid gap-2">
+                                  <Label htmlFor="promote_title">Title Promotion on Catalog</Label>
+                                  <Input
+                                    id="promote_title"
+                                    type="text"
+                                    name="promote_title"
+                                    placeholder="Title Promotion"
+                                    defaultValue={tour.promote_title}
+                                  />
+                                  <InputError message={errors.promote_title} />
+                                </div>
+              
+                                {/* Promote Price */}
+                                <div className="grid gap-2">
+                                  <Label htmlFor="promote_price">Promotion Price show on catalog</Label>
+                                  <Input
+                                    id="promote_price"
+                                    type="text"
+                                    placeholder="Promotion Price"
+                                    value={displayPrice1}
+                                    onChange={(e) => handlePriceChange1(e.target.value)}
+                                  />
+                                  <input type="hidden" name="promote_price" value={rawPrice1} />
+                                  <InputError message={errors.promote_price} />
+                                </div>
+              
+                                {/* promote note — full width */}
+                                <div className="grid gap-2 md:col-span-2">
+                                  <Label htmlFor="promote_note">Promotion Note on Catalog</Label>
+                                  <Input
+                                    id="promote_note"
+                                    type="text"
+                                    name="promote_note"
+                                    placeholder="Promotion Note"
+                                    defaultValue={tour.promote_note}
+                                  />
+                                  <InputError message={errors.promote_note} />
+                                </div>
+              
+                              </div>
+                            </div>
+              
+              
             </div>
             <Button type="submit" disabled={processing}>
               {processing && <Spinner />}Update

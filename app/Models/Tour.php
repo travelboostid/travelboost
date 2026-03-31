@@ -29,7 +29,10 @@ class Tour extends Model
     'document_id',
     'showprice',
     'earlybird',
-    'earlybird_note'
+    'earlybird_note',
+    'promote_title',
+    'promote_price',
+    'promote_note',
   ];
 
   protected $guarded = [
@@ -121,5 +124,11 @@ class Tour extends Model
   public function country()
   {
     return $this->belongsTo(Country::class, 'country_id');
+  }
+
+  //27032026
+  public function schedules()
+  {
+      return $this->hasMany(TourSchedule::class);
   }
 }
