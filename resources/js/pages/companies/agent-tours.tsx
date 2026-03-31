@@ -69,6 +69,7 @@ function TourCard({ agentTour }: { agentTour: AgentTour }) {
           <span className="hidden md:inline">Brochures</span>
         </Button>
         <Button
+          type="button"
           onClick={handleMessage}
           disabled={startingPrivateChat}
           variant="secondary"
