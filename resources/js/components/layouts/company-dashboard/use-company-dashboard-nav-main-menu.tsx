@@ -88,8 +88,10 @@ export function useCompanyDashboardNavMainMenu() {
             {
               id: 'tours.preview',
               title: 'My Catalogs',
-              urlOrAction: companySubdomain,
-              target: '_blank',
+              //31032026
+              //urlOrAction: companySubdomain,
+              urlOrAction: `/companies/${company.username}/dashboard/vendors/${company.username}/tours`,
+              //target: '_blank',
             },
             {
               id: 'tours.orders',
@@ -222,8 +224,10 @@ export function useCompanyDashboardNavMainMenu() {
             {
               id: 'tours.cats',
               title: 'My Catalogs',
-              urlOrAction: companySubdomain,
-              target: '_blank',
+              //31032026
+              //urlOrAction: companySubdomain,
+              //target: '_blank',
+              urlOrAction: `/companies/${company.username}/dashboard/vendors/${company.username}/tours`,
             },
             {
               id: 'tours.bookings',

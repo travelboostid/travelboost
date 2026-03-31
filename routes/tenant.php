@@ -8,6 +8,9 @@ $appHost = env('APP_HOST', 'localhost');
 Route::domain('{username}.' . $appHost)->group(function () {
   // log current host
 
-  Route::get('/', [HomeController::class, 'index']);
-  Route::get('/tours', [TourController::class, 'index']);
+  //31032026
+  Route::get('/', [TourController::class, 'index']);
+  //Route::get('/', [HomeController::class, 'index']);
+  Route::get('/tours', [HomeController::class, 'index']);
+  //Route::get('/tours', [TourController::class, 'index']);
 });
