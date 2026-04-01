@@ -36,22 +36,25 @@ type MenuItem =
     });
 
 export function useCompanyDashboardNavMainMenu() {
-  const {
-    VITE_APP_HOST: appHost,
-    VITE_APP_PORT: appPort,
-    VITE_APP_SCHEME: appScheme,
-  } = import.meta.env;
   const { company } = usePageSharedDataProps();
+  
   const { data } = useGetCompanies(
     { type: 'vendor' },
     { query: { enabled: company.type === 'agent' } },
   );
-  //26032026
-  //const companySubdomain = `${appScheme}://${company.subdomain}.${appHost}${appPort ? `:${appPort}` : ''}`;
-  const scheme = window.location.protocol.replace(':', '');
 
-  const companySubdomain =
-    `${scheme}://${company.subdomain}.${appHost}${appPort ? `:${appPort}` : ''}`;
+  let baseHost = window.location.hostname;
+  
+  if (baseHost === '127.0.0.1') {
+    baseHost = 'localhost';
+  }
+
+  const protocol = window.location.protocol;
+  const port = window.location.port ? `:${window.location.port}` : '';
+
+  const companySubdomain = `${protocol}//${company.username}.${baseHost}${port}`;
+  // const companySubdomain =
+  //   `${scheme}://${company.subdomain}.${appHost}${appPort ? `:${appPort}` : ''}`;
   //
   console.log(import.meta.env, companySubdomain);
 
