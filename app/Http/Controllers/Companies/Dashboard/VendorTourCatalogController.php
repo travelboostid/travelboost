@@ -14,11 +14,20 @@ class VendorTourCatalogController extends Controller
   public function index(Company $company, string $username)
   {
     $vendor = Company::where('username', $username)->firstOrFail();
+
     $categories = TourCategory::where('company_id', $vendor->id)
       ->orderBy('position_no')
       ->get();
+
     $vendor = Company::where('username', $username)->firstOrFail();
-    $tours = $vendor->tours()
+
+    //$tours = $vendor->tours()
+    $ownTours = $vendor->tours()
+      /*->withExists([
+          'agents as has_copied' => function ($query) use ($company) {
+              $query->where('company_id', $company->id);
+          }
+      ])*/
       //31032026
       ->where('status', 'active')
       //
@@ -28,11 +37,31 @@ class VendorTourCatalogController extends Controller
       ->when(request('search'), function ($query, $search) {
         $query->where('name', 'ilike', "%{$search}%");
       })
-      ->get()
-      ->map(function ($tour) use ($company) {
+      ->get();
+      /*->map(function ($tour) use ($company) {
         $tour->has_copied = $company->agentTours()->where('tour_id', $tour->id)->exists();
         return $tour;
-      });
+      });*/
+    
+    //01042026
+    $agentTours = \App\Models\AgentTour::where('company_id', $vendor->id)
+        ->whereHas('tour', function ($q) {
+            $q->where('status', 'active');
+        })
+        ->with(['tour' => function ($q) {
+            $q->where('status', 'active')
+              ->with('company:id,username,name');
+        }])
+        ->get()
+        ->pluck('tour')
+        ->filter();
+
+      $tours = $ownTours
+        ->merge($agentTours)
+        ->unique('id')
+        ->sortByDesc('created_at')
+        ->values();
+      //
 
     $partnership = VendorAgentPartner::where('vendor_id', $vendor->id)
       ->where('agent_id', $company->id)

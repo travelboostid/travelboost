@@ -82,6 +82,10 @@ export default function Page({
     ? `https://wa.me/${waNumber}?text=${waMessage}`
     : null;
 
+  //01042026
+  const isAgent = company.type === 'agent';
+  const isVendor = company.type === 'vendor';
+
   return (
     <CompanyDashboardLayout
       openMenuIds={['vendor-tour-catalogs']}
@@ -93,10 +97,12 @@ export default function Page({
       ]}
       containerClassName="space-y-4"
       applet={
-        <VendorPartnershipRegistrationButton
-          vendor={vendor}
-          partnership={partnership}
-        />
+        isAgent ? (
+          <VendorPartnershipRegistrationButton
+            vendor={vendor}
+            partnership={partnership}
+          />
+        ) : undefined
       }
     >
       <div className="px-4 mt-4">
@@ -161,7 +167,7 @@ export default function Page({
       {data.length ? (
         <div className="grid w-full grid-cols-1 gap-4 p-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {data.map((tour) => (
-            <TourCard tour={tour} fromLogin={true} />
+            <TourCard tour={tour} fromLogin={true} type={company.type} />
           ))}
         </div>
       ) : (

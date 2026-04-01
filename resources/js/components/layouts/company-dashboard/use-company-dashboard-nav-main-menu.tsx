@@ -231,6 +231,7 @@ export function useCompanyDashboardNavMainMenu() {
               //urlOrAction: companySubdomain,
               //target: '_blank',
               urlOrAction: `/companies/${company.username}/dashboard/vendors/${company.username}/tours`,
+              //urlOrAction: `/companies/${company.username}/dashboard/my-tours`,
             },
             {
               id: 'tours.bookings',

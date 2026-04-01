@@ -126,6 +126,7 @@ class Company extends Model
 
   public function agentTours()
   {
+    //31032026
     return $this->hasMany(AgentTour::class);
   }
 
