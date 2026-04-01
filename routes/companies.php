@@ -33,6 +33,7 @@ Route::prefix('companies/{company:username}/dashboard')->middleware(['auth', 'co
     Route::post('/tours/{tour}/copy', [VendorTourCatalogController::class, 'copy'])->name('tour.copy');
     //Route::get('/tours/{tour}/brochure', [VendorTourCatalogController::class, 'viewBrochure'])->name('tour.view-brochure');
   });
+
   Route::resource('agent-registrations', AgentRegistrationController::class);
   Route::resource('vendor-registrations', VendorRegistrationController::class);
   Route::post('vendor-registrations/register', [VendorRegistrationController::class, 'register'])->name('vendor-registrations.register');

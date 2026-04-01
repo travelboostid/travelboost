@@ -131,4 +131,16 @@ class Tour extends Model
   {
       return $this->hasMany(TourSchedule::class);
   }
+
+  //01042026
+  public function agents()
+  {
+      return $this->belongsToMany(
+          Company::class,
+          'agent_tours',   // nama pivot table
+          'tour_id',       // foreign key di pivot ke tour
+          'company_id'     // foreign key di pivot ke company
+      );
+  }
+  
 }
