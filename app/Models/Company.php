@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Casts\Attribute;
+use App\Models\Customer;
 
 class Company extends Model
 {
@@ -150,7 +151,7 @@ class Company extends Model
 
   public function customers()
   {
-    return $this->hasMany(User::class);
+    return $this->hasMany(Customer::class, 'company_id');
   }
 
   public function domain()

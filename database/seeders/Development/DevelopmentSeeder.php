@@ -6,6 +6,7 @@ use Database\Seeders\Common\AiModelSeeder;
 use Database\Seeders\Common\CompanySeeder;
 use Database\Seeders\Common\ContinentSeeder;
 use Database\Seeders\Common\CountrySeeder;
+use Database\Seeders\Common\CustomerSeeder;
 use Database\Seeders\Common\RegionSeeder;
 use Database\Seeders\Common\RolePermissionSeeder;
 use Database\Seeders\Common\TourSeeder;
@@ -24,6 +25,7 @@ class DevelopmentSeeder extends Seeder
       RolePermissionSeeder::class,
       UserSeeder::class,
       CompanySeeder::class,
+      CustomerSeeder::class,
       ContinentSeeder::class,
       RegionSeeder::class,
       CountrySeeder::class,
