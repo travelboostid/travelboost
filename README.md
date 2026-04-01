@@ -2,22 +2,20 @@
 
 ## Table of Contents
 
-Prerequisites
-Initial Setup
-Development Workflow
-Package Documentation
-Useful Commands
-Troubleshooting
+- [Prerequisites](#prerequisites)
+- [Initial Setup](#initial-setup)
+- [Development Workflow](#development-workflow)
+- [Package Documentation](#package-documentation)
+- [Useful Commands](#useful-commands)
+- [Troubleshooting](#troubleshooting)
 
 ## Prerequisites
 
 ### Backend Requirements
 
-PHP (Version specified in `composer.json`)
-
-- Local environment: XAMPP (team standard)
-- [Read more about PHP requirements](https://laravel.com/docs/12.x/deployment#server-requirements)
-  Composer - PHP dependency manager
+- PHP (Required version specified in `composer.json`) - [Read more about PHP requirements](https://laravel.com/docs/12.x/deployment#server-requirements)
+- PostgreSQL + pgvector extension
+- Composer - PHP dependency manager
 - [Download Composer](https://getcomposer.org/download/)
   Laravel Installer - For creating/managing Laravel projects
 
@@ -47,7 +45,7 @@ Required VS Code Extensions:
 - ESLint - JavaScript/TypeScript linting
 - PHP Intelephense - PHP intelligence & autocompletion
 
-## Initial Setup
+## Initial Setup of This Project (Incase We Need To Scaffold Other, This Can be a Reference)
 
 ### 1. Create New Laravel Project
 
@@ -775,12 +773,3 @@ QUEUE_CONNECTION=database  # or 'redis' for better performance
 - [React Documentation](https://react.dev)
 - [Vite Documentation](https://vitejs.dev)
 - Project Issue Tracker: _[Add your project's issue tracker link]_
-
----
-
-_Last Updated: February 2026_  
-_Maintainer: Travelboost Development Team_
-
-composer require midtrans/midtrans-php
-#   t r a v e l b o o s t  
- 
