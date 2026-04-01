@@ -23,6 +23,7 @@ class TourIndexRequest extends FormRequest
   {
     return [
       'company_id' => 'nullable|integer|exists:companies,id',
+      'code' => 'nullable|string|max:50',
       'search' => 'nullable|string|max:100',
       'category_id' => 'nullable|integer|exists:tour_categories,id',
       'duration_min' => 'nullable|integer|min:1|max:365',

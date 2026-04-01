@@ -3,6 +3,7 @@ import { cn } from '@/lib/utils';
 import { useEffect, useRef, useState } from 'react';
 import { useInView } from 'react-intersection-observer';
 import ReactMarkdown from 'react-markdown';
+import RenderAttachment from './render-attachment';
 import {
   useFloatingChatWidgetContext,
   useLoadMessages,
@@ -10,11 +11,15 @@ import {
   useRoomMessages,
 } from './state';
 
+/**
+ * Renders a single chat message with styling based on sender type.
+ * Displays message content with markdown support and optional attachments.
+ */
 function ChatMessage({ message }: { message: ChatMessageResource }) {
   const { actor } = useFloatingChatWidgetContext();
-  console.log('message', message, actor);
   const mine =
     message.sender_type === actor?.type && message.sender_id === actor?.id;
+
   return (
     <div
       key={message.id}
@@ -30,10 +35,15 @@ function ChatMessage({ message }: { message: ChatMessageResource }) {
         <p className="text-sm leading-relaxed">
           <MessageContentRenderer message={message} />
         </p>
-        {message.attachment_data && (
-          <div className="rounded-lg border bg-background/10 px-2 py-1 text-xs">
-            <div className="text-xs text-background/50">Attached</div>
-            <div className="text-sm">{message.attachment_data}</div>
+        {message.attachment_data && !message.is_bot && (
+          <div className="rounded-lg border bg-background/10 p-2 space-y-2">
+            <div className="text-xs opacity-80">Attached</div>
+            <div className="text-sm">
+              <RenderAttachment
+                type={message.attachment_type || ''}
+                data={message.attachment_data}
+              />
+            </div>
           </div>
         )}
       </div>
@@ -41,6 +51,9 @@ function ChatMessage({ message }: { message: ChatMessageResource }) {
   );
 }
 
+/**
+ * Renders the message content as markdown.
+ */
 export function MessageContentRenderer({
   message,
 }: {
@@ -49,6 +62,11 @@ export function MessageContentRenderer({
   return <ReactMarkdown>{message?.message || ''}</ReactMarkdown>;
 }
 
+/**
+ * Chat message container with infinite scroll pagination support.
+ * Automatically loads older messages when the top of the conversation is visible.
+ * Scrolls to the latest message whenever new messages are loaded.
+ */
 export default function ChatBox({
   roomId,
   className,
@@ -62,15 +80,23 @@ export default function ChatBox({
   const messages = useRoomMessages(roomId);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
 
+  /**
+   * Scrolls the conversation to the bottom using smooth behavior.
+   */
   const scrollToBottom = () => {
     scrollAnchorRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
+  // Intersection observer to detect when the top of the message list is visible
   const { ref, inView } = useInView({
     /* Optional options */
     threshold: 0,
   });
 
+  /**
+   * Loads the chat room and fetches messages when the top becomes visible.
+   * Pagination is handled via cursor-based loading for better performance.
+   */
   useEffect(() => {
     if (!inView || nextCursor === '') return;
     loadRoom(roomId);
@@ -81,6 +107,9 @@ export default function ChatBox({
     });
   }, [loadMessages, loadRoom, roomId, inView, nextCursor]);
 
+  /**
+   * Automatically scrolls to the latest message when the messages list updates.
+   */
   useEffect(() => {
     scrollToBottom();
   }, [messages]);

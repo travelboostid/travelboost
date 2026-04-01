@@ -22,6 +22,12 @@ class TourController extends Controller
       ->when($request->company_id, function ($q) use ($request) {
         $q->where('company_id', $request->company_id);
       })
+      ->when($request->code, function ($q) use ($request) {
+        $q->where('code', $request->code);
+      })
+      ->when($request->search, function ($q) use ($request) {
+        $q->where('name', 'like', '%' . $request->search . '%');
+      })
       ->when($request->category_id, function ($q) use ($request) {
         $q->where('category_id', $request->category_id);
       })
@@ -43,7 +49,6 @@ class TourController extends Controller
    */
   public function show(Tour $tour): JsonResponse
   {
-    $tour->increment('view_count');
     return TourResource::make($tour)->response();
   }
 }

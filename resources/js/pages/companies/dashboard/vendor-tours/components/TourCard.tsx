@@ -16,7 +16,7 @@ import { Spinner } from '@/components/ui/spinner';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { extractImageSrc } from '@/lib/utils';
 import { router } from '@inertiajs/react';
-import { IconPdf, IconBrandFacebook, IconBrandWhatsapp } from '@tabler/icons-react';
+import { IconBrandFacebook, IconPdf } from '@tabler/icons-react';
 import { MessageSquareIcon, SaveIcon } from 'lucide-react';
 import { useState } from 'react';
 
@@ -31,7 +31,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
+} from '@/components/ui/alert-dialog';
 
 //export default function TourCard({ tour }: { tour: TourResource }) {
 export default function TourCard({
@@ -40,9 +40,9 @@ export default function TourCard({
   fromLogin = true,
   //test = true,
 }: {
-  tour: TourResource
-  type?: string
-  fromLogin? : boolean
+  tour: TourResource;
+  type?: string;
+  fromLogin?: boolean;
   //test?: boolean
 }) {
   const { company } = usePageSharedDataProps();
@@ -83,11 +83,10 @@ export default function TourCard({
   const handleViewBrochure = () => {
     if (!hasDocument) return;
 
-    if(!fromLogin){
+    if (!fromLogin) {
       const url = `/brochure/${tour.company?.username}/${tour.id}`;
       window.open(url, '_blank', 'noopener,noreferrer');
-    }
-    else {
+    } else {
       const url = viewBrochure({
         company: company.username,
         vendor: tour.company?.username || '',
@@ -95,13 +94,12 @@ export default function TourCard({
       }).url;
       window.open(url, '_blank');
     }
-    
   };
 
   /*const handleMessage = async () => {
     try {
       setStartingPrivateChat(true);
-      floatingChat.setAttachment({ type: 'tour-code', data: tour.code });
+      floatingChat.setAttachment({ type: 'tour', data: tour.id });
       await floatingChat.startPrivateChat({
         type: 'company',
         id: tour.company_id,
@@ -112,16 +110,16 @@ export default function TourCard({
   };*/
 
   const handleMessage = async () => {
-    console.log("CLICKED");
+    console.log('CLICKED');
 
     try {
       setStartingPrivateChat(true);
 
-      console.log("floatingChat:", floatingChat);
+      console.log('floatingChat:', floatingChat);
 
       floatingChat?.setAttachment({
-        type: 'tour-code',
-        data: tour.code,
+        type: 'tour',
+        data: tour.id.toString(),
       });
 
       await floatingChat?.startPrivateChat({
@@ -129,9 +127,9 @@ export default function TourCard({
         id: tour.company_id,
       });
 
-      console.log("CHAT STARTED");
+      console.log('CHAT STARTED');
     } catch (err) {
-      console.error("CHAT ERROR:", err);
+      console.error('CHAT ERROR:', err);
     } finally {
       setStartingPrivateChat(false);
     }
@@ -157,8 +155,7 @@ export default function TourCard({
       tour: tour.id,
     }).url;
 
-    const fbUrl =
-      `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(pdfUrl)}`;
+    const fbUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(pdfUrl)}`;
 
     window.open(fbUrl, '_blank', 'noopener,noreferrer');
   };
@@ -169,7 +166,7 @@ export default function TourCard({
     if (!phone) return;
 
     const message = encodeURIComponent(
-      `Halo, saya tertarik dengan tour *${tour.name}*. Bisa info lebih lanjut?`
+      `Halo, saya tertarik dengan tour *${tour.name}*. Bisa info lebih lanjut?`,
     );
 
     const waUrl = `https://wa.me/${phone}?text=${message}`;
@@ -209,7 +206,7 @@ export default function TourCard({
           maximumFractionDigits: 0,
         }).format(tour.promote_price)
       : null;
-    
+
   return (
     <Card className="relative mx-auto flex w-full flex-col overflow-hidden pt-0">
       <img
@@ -245,9 +242,7 @@ export default function TourCard({
               </span>
             )}
           </div>
-        ) 
-
-        : formattedpromoprice ?(
+        ) : formattedpromoprice ? (
           <div className="flex flex-col">
             {/* Harga normal dicoret */}
             <span className="text-sm text-muted-foreground line-through">
@@ -262,9 +257,7 @@ export default function TourCard({
               {formattedpromoprice}
             </span>
           </div>
-        )
-
-        : formattedpromoteprice ?(
+        ) : formattedpromoteprice ? (
           <div className="flex flex-col">
             {/* Harga normal dicoret */}
             <span className="text-sm text-muted-foreground line-through">
@@ -288,9 +281,7 @@ export default function TourCard({
               </span>
             )}
           </div>
-        )
-
-        : (
+        ) : (
           <div className="text-lg font-bold text-primary">{formattedPrice}</div>
         )}
       </div>
@@ -305,22 +296,18 @@ export default function TourCard({
         >
           <IconPdf />
         </Button>
-        
+
         {type === 'agent' && fromLogin && (
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <Button
-                disabled={(tour as any).has_copied}
-              >
+              <Button disabled={(tour as any).has_copied}>
                 <SaveIcon />
               </Button>
             </AlertDialogTrigger>
 
             <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle>
-                  Copy to Catalog
-                </AlertDialogTitle>
+                <AlertDialogTitle>Copy to Catalog</AlertDialogTitle>
 
                 <AlertDialogDescription>
                   Do you want copy to your Catalog?
@@ -328,43 +315,39 @@ export default function TourCard({
               </AlertDialogHeader>
 
               <AlertDialogFooter>
-                <AlertDialogCancel>
-                  No
-                </AlertDialogCancel>
+                <AlertDialogCancel>No</AlertDialogCancel>
 
-                <AlertDialogAction onClick={handleCopy}>
-                  Yes
-                </AlertDialogAction>
+                <AlertDialogAction onClick={handleCopy}>Yes</AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
         )}
-        
+
         {type === 'agent' && (
           <Button
-          onClick={handleMessage}
-          disabled={startingPrivateChat}
-          variant="secondary"
-          //className="flex-1"
-        >
-          {startingPrivateChat ? <Spinner /> : <MessageSquareIcon />}
-        </Button>
+            onClick={handleMessage}
+            disabled={startingPrivateChat}
+            variant="secondary"
+            //className="flex-1"
+          >
+            {startingPrivateChat ? <Spinner /> : <MessageSquareIcon />}
+          </Button>
         )}
 
         {/* ✅ SHARE FACEBOOK */}
         {/* !hasDocument && ( */}
-          {hasDocument && type === 'agent' && fromLogin && (
-        <Button
-          variant="secondary"
-          //onClick={handleShareFacebook}
-          onClick={handleShareFacebookPdf}
-          disabled={!hasDocument}
-          //disabled={hasDocument}
-          //className="flex-1"
-        >
-          <IconBrandFacebook />
-          {/* <span className="hidden md:inline">Share</span> */}
-        </Button>
+        {hasDocument && type === 'agent' && fromLogin && (
+          <Button
+            variant="secondary"
+            //onClick={handleShareFacebook}
+            onClick={handleShareFacebookPdf}
+            disabled={!hasDocument}
+            //disabled={hasDocument}
+            //className="flex-1"
+          >
+            <IconBrandFacebook />
+            {/* <span className="hidden md:inline">Share</span> */}
+          </Button>
         )}
 
         {/*<Button
@@ -373,17 +356,17 @@ export default function TourCard({
           //className="flex-1"
         >
           <IconBrandWhatsapp /> */}
-          {/* <span className="hidden md:inline">WhatsApp</span> */}
+        {/* <span className="hidden md:inline">WhatsApp</span> */}
         {/* </Button> */}
       </CardFooter>
       {/* div className="flex-1" /> */}
       {type === 'agent' && fromLogin && (
         <div className="px-6 pb-2">
-          <div className="text-xs font-bold text-primary">Status : {tour.status}</div>
+          <div className="text-xs font-bold text-primary">
+            Status : {tour.status}
+          </div>
         </div>
-
       )}
     </Card>
   );
 }
-

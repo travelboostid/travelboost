@@ -4,7 +4,6 @@ namespace App\Listeners;
 
 use App\Ai\Agents\ChatbotAgent;
 use App\Events\ChatMessageCreated;
-use Illuminate\Support\Facades\Log;
 
 class ChatbotAutoReply
 {

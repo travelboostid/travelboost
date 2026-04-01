@@ -3,6 +3,7 @@
 namespace App\Ai\Agents;
 
 use App\Models\ChatMessage;
+use App\Models\Tour;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Arr;
 use Laravel\Ai\Contracts\Agent;
@@ -26,29 +27,17 @@ class ChatbotIntentDetectorAgent implements Agent, Conversational, HasStructured
    */
   public function instructions(): Stringable|string
   {
+    $prompt = "Analyze the user message and:\n\n" .
+      "1. Detect intent:\n" .
+      "   - detail → asking about a specific tour or following up on a tour. " .
+      "Tour code may be provided in the message or inferred from recent chat context. " .
+      "Never go to detail intent if you cannot find a tour code in the message or recent chat context. " .
+      "Ask for clarification if you cannot find a tour code.\n" .
+      "   - search → looking for tours based on criteria\n" .
+      "   - general → general travel questions or chit-chat\n\n" .
+      "2. Extract structured arguments if available.\n";
 
-    $latestMessageWithTourAttachment = $this->message->room->messages()
-      ->whereIn('attachment_type', ['tour-code'])
-      ->latest()
-      ->first();
 
-    $latestAttachedTourCode = '';
-    if ($latestMessageWithTourAttachment) {
-      $latestAttachedTourCode = $latestMessageWithTourAttachment->attachment;
-    }
-
-    $prompt = "Analyze the user message and:
-
-1. Detect intent:
-   - detail → asking about a specific tour or following up on a tour. Tour code may be provided in the message or inferred from recent chat context. Never go to detail intent if you cannot find a tour code in the message or recent chat context. Ask for clarification if you cannot find a tour code.
-   - search → looking for tours based on criteria
-   - general → general travel questions or chit-chat
-
-2. Extract structured arguments if available.
-";
-    if ($latestAttachedTourCode !== '') {
-      $prompt .= "\n\nAdditional context for your analysis:\n- Latest attached tour code: '{$latestAttachedTourCode}' was mentioned.\n";
-    }
     return $prompt;
   }
 
@@ -57,12 +46,29 @@ class ChatbotIntentDetectorAgent implements Agent, Conversational, HasStructured
    */
   public function messages(): iterable
   {
-    $rawMessages = $this->message->room->messages()->latest()->take(10)->get()->reverse();
+    $rawMessages = $this->message->room->messages()
+      ->latest()
+      ->take(10)
+      ->get()
+      ->reverse();
+
     return Arr::map($rawMessages->toArray(), function ($rawMessage) {
       $msg = $rawMessage['message'];
-      if ($rawMessage['attachment_type'] == 'tour-code') {
-        $msg .= " (\n---\n This message has context tour code: {$rawMessage['attachment_data']})";
+      if ($rawMessage['attachment_type'] === 'tour') {
+        $tourId = $rawMessage['attachment_data'];
+        $tour = Tour::find($tourId);
+        if ($tour) {
+          $msg .= "\n\n---\n\n Additional context:\n"
+            . "This message related with tour details below: \n"
+            . "Tour ID: {$tour->id}\n"
+            . "Tour name: {$tour->name}\n"
+            . "Tour code: ({$tour->code})\n"
+            . "Duration: {$tour->duration_days} days\n"
+            . "Destination: {$tour->destination}\n"
+            . "Country: {$tour->country_name}";
+        }
       }
+
       return new Message(
         $rawMessage['is_bot'] ? MessageRole::Assistant : MessageRole::User,
         $msg,
@@ -84,7 +90,7 @@ class ChatbotIntentDetectorAgent implements Agent, Conversational, HasStructured
         'price_max' => $schema->number()->required(),
       ])->required()->withoutAdditionalProperties(),
       'detail' => $schema->object([
-        'tour_code' => $schema->string()->required(),
+        'tour_id' => $schema->number()->required(),
       ])->required()->withoutAdditionalProperties(),
     ];
   }

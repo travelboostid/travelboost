@@ -70,8 +70,19 @@ class ChatbotAgent implements Agent, Conversational
 
     return Arr::map($rawMessages->toArray(), function ($rawMessage) {
       $msg = $rawMessage['message'];
-      if ($rawMessage['attachment_type'] === 'tour-code') {
-        $msg .= " (Tour code: {$rawMessage['attachment_data']})";
+      if ($rawMessage['attachment_type'] === 'tour') {
+        $tourId = $rawMessage['attachment_data'];
+        $tour = Tour::find($tourId);
+        if ($tour) {
+          $msg .= "\n\n---\n\n Additional context:\n"
+            . "This message related with tour details below: \n"
+            . "Tour ID: {$tour->id}\n"
+            . "Tour name: {$tour->name}\n"
+            . "Tour code: ({$tour->code})\n"
+            . "Duration: {$tour->duration_days} days\n"
+            . "Destination: {$tour->destination}\n"
+            . "Country: {$tour->country_name}";
+        }
       }
 
       return new Message(
@@ -123,7 +134,10 @@ class ChatbotAgent implements Agent, Conversational
   private function detectIntent(): AgentResponse
   {
     $detector = new ChatbotIntentDetectorAgent($this->message);
-    $detected = $detector->prompt('Detect intent and extract filters from the user message. Return only structured JSON.');
+    $detected = $detector->prompt(
+      'Detect intent and extract filters from the user message. '
+        . 'Return only structured JSON.'
+    );
     Log::info('Chatbot intent detection', ['result' => $detected]);
 
     return $detected;
@@ -145,26 +159,31 @@ class ChatbotAgent implements Agent, Conversational
 
     $tourList = $tours->map(fn($t) => "- {$t->name} ({$t->code}): {$t->duration_days} days in {$t->country_name}, \${$t->showprice}")->implode("\n");
 
-    $response = $this->prompt(
-      "Respond to the user's tour search based on filters: " . json_encode($filters) . ".\n\nMatching tours:\n{$tourList}\n\n"
-        . ($tours->isEmpty() ? "No tours found matching the criteria." : "")
-    );
+    $prompt = "Respond to the user's tour search based on filters: "
+      . json_encode($filters) . ".\n\nMatching tours:\n{$tourList}\n\n"
+      . ($tours->isEmpty() ? "No tours found matching the criteria." : "");
+
+    $response = $this->prompt($prompt);
 
     $this->saveBotMessage($response->text, $receiver);
   }
 
   private function handleDetailIntent(AgentResponse $detected, object $receiver): void
   {
-    $tourCode = $detected['detail']['tour_code'] ?? null;
-    $tour = Tour::query()->where('code', $tourCode)->first();
+    $tourId = $detected['detail']['tour_id'] ?? null;
+    $tour = Tour::find($tourId);
 
     if (!$tour) {
-      $response = $this->prompt("The user asked about tour code '{$tourCode}' which was not found. Politely explain this and ask for clarification.");
+      $response = $this->prompt(
+        "The user asked about tour ID '{$tourId}' which was not found. "
+          . "Politely explain this and ask for clarification."
+      );
       $this->saveBotMessage($response->text, $receiver);
       return;
     }
 
-    $context = "Tour: {$tour->name} (Code: {$tour->code}), {$tour->duration_days} days, {$tour->destination}, {$tour->country_name}, \${$tour->showprice}";
+    $context = "Tour: {$tour->name} (Code: {$tour->code}), {$tour->duration_days} days, "
+      . "{$tour->destination}, {$tour->country_name}, \${$tour->showprice}";
 
     $embedded = Embeddings::for([$this->message->message])
       ->cache()
@@ -177,24 +196,34 @@ class ChatbotAgent implements Agent, Conversational
       ->pluck('content')
       ->implode("\n\n---\n");
 
-    $response = $this->prompt("Context: {$context}\n\nRelevant information:\n{$documents}\n\nRespond helpfully to the user's question.");
-    $this->saveBotMessage($response->text, $receiver);
+    $prompt = "Context: {$context}\n\n"
+      . "Relevant information:\n{$documents}\n\n"
+      . "Respond helpfully to the user's question.";
+
+    $response = $this->prompt($prompt);
+    $this->saveBotMessage($response->text, $receiver, [
+      'attachment_type' => 'tour',
+      'attachment_data' => (string) $tour->id,
+    ]);
   }
 
   private function handleGeneralIntent(object $receiver): void
   {
-    $response = $this->prompt("Respond to the user's general travel question in a helpful way. If unsure, offer to help differently.");
+    $response = $this->prompt(
+      "Respond to the user's general travel question in a helpful way. "
+        . "If unsure, offer to help differently."
+    );
     $this->saveBotMessage($response->text, $receiver);
   }
 
-  private function saveBotMessage(string $message, object $receiver): void
+  private function saveBotMessage(string $message, object $receiver, array $additionalData = []): void
   {
-    ChatMessage::create([
+    ChatMessage::create(array_merge([
       'room_id' => $this->message->room_id,
       'sender_type' => $receiver->member_type,
       'sender_id' => $receiver->member_id,
       'message' => $message,
       'is_bot' => true,
-    ]);
+    ], $additionalData));
   }
 }

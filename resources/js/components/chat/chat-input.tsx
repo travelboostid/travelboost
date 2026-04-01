@@ -5,20 +5,8 @@ import { useState } from 'react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Spinner } from '../ui/spinner';
+import RenderAttachment from './render-attachment';
 import { useFloatingChatWidgetContext, useSendMessage } from './state';
-
-function RenderAttachment({ attachment }: { attachment: any }) {
-  const { type, data } = attachment;
-  if (type === 'tour-code') {
-    return (
-      <div className="p-4">
-        <div>You want to ask details about the tour:</div>
-        <div>{data}</div>
-      </div>
-    );
-  }
-  return null;
-}
 
 export default function ChatInput({
   roomId,
@@ -36,7 +24,7 @@ export default function ChatInput({
     try {
       setSending(true);
 
-      await sendMessage(roomId, buildData());
+      await sendMessage(roomId, buildMessagePayload());
       setAttachment(null);
       setMessage('');
     } finally {
@@ -44,22 +32,25 @@ export default function ChatInput({
     }
   };
 
-  const buildData = () => {
+  const buildMessagePayload = () => {
     const data: StoreChatMessageRequest = {
       message: message.trim(),
       sender_type: actor?.type || '',
       sender_id: actor?.id || 0,
     };
     if (!attachment) return data;
-    if (attachment.type === 'tour-code') {
-      data.attachment_type = 'tour-code';
-      data.attachment_data = attachment.data;
-    }
+    data.attachment_type = attachment.type;
+    data.attachment_data = attachment.data;
+
     return data;
   };
   return (
     <div className={cn('divide-y border-t', className)}>
-      {attachment && <RenderAttachment attachment={attachment} />}
+      {attachment && (
+        <div className="p-4">
+          <RenderAttachment type={attachment.type} data={attachment.data} />
+        </div>
+      )}
       <div className="flex gap-3 p-4">
         <Input
           disabled={sending}
