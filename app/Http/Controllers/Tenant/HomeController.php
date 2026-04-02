@@ -59,6 +59,8 @@ class HomeController extends Controller
     $tenant = request()->attributes->get('tenant');
     $tenant->load('settings');
     $hasCustomLandingPage = $tenant->settings && !empty($tenant->settings->landing_page_data);
+    $tenant->load('settings');
+    $hasCustomLandingPage = $tenant->settings && !empty($tenant->settings->landing_page_data);
 
     if ($hasCustomLandingPage) {
         return Inertia::render('companies/landing-page', [
