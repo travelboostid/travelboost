@@ -88,6 +88,10 @@ class ChatbotAgent implements Agent, Conversational
             . "Destination: {$tour->destination}\n"
             . "Country: {$tour->country_name}";
         }
+      } elseif ($rawMessage['attachment_type'] === 'bot-hints') {
+        $msg .= "\n\n---\n\n Additional context:\n"
+          . "Hints for understanding the bot's response: \n"
+          . $rawMessage['attachment_data'];
       }
 
       return new Message(
@@ -180,7 +184,10 @@ class ChatbotAgent implements Agent, Conversational
     $response = $this->prompt($prompt);
 
     // Save the bot's response
-    $this->saveBotMessage($response->text, $receiver);
+    $this->saveBotMessage($response->text, $receiver, [
+      'attachment_type' => 'bot-hints',
+      'attachment_data' => "This response is based on detected search filters: " . json_encode($filters),
+    ]);
   }
 
   private function handleDetailIntent(AgentResponse $detected, object $receiver): void
