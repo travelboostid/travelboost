@@ -338,13 +338,13 @@ class ChatbotAgent implements Agent, Conversational
       return;
     }
 
-    // Prepare context information about the tour
     $contextFromEntity = "Tour: {$tour->name}\n"
       . "Code: {$tour->code}\n"
       . "Duration: {$tour->duration_days} days\n"
       . "Destination: {$tour->destination}\n"
       . "Country: {$tour->country_name}\n"
       . "Price: \${$tour->showprice}";
+    $prompt = "Context from entity: {$contextFromEntity}\n\n";
 
     $prompt = "Context from entity: {$contextFromEntity}\n\n";
 
@@ -361,7 +361,6 @@ class ChatbotAgent implements Agent, Conversational
       ->pluck('content')
       ->implode("\n\n---\n");
 
-    // Append retrieved documents to the prompt if available
     if ($documents) {
       $prompt .= "Retrieved relevant tour documents from system based on the user's question:\n{$documents}\n\n";
     }
