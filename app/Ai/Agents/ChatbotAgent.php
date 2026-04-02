@@ -102,6 +102,9 @@ class ChatbotAgent implements Agent, Conversational
     if (!$receiver) {
       return;
     }
+    if (!$receiver->member->settings?->chatbot_enabled) {
+      return;
+    }
 
     $detected = $this->detectIntent();
 
