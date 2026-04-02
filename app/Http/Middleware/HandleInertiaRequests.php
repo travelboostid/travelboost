@@ -40,6 +40,7 @@ class HandleInertiaRequests extends Middleware
     return [
       ...parent::share($request),
       'name' => config('app.name'),
+      'appDomain' => env('APP_HOST', 'localhost'),
       'auth' => [
         'user' => $request->user()?->load(['companies']),
       ],

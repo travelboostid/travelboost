@@ -57,7 +57,14 @@ class HomeController extends Controller
     ]); */
 
     $tenant = request()->attributes->get('tenant');
+    $tenant->load('settings');
+    $hasCustomLandingPage = $tenant->settings && !empty($tenant->settings->landing_page_data);
 
+    if ($hasCustomLandingPage) {
+        return Inertia::render('companies/landing-page', [
+            'company' => $tenant,
+        ]);
+    }
     // 🏢 Tour milik vendor
     $ownTours = Tour::where('company_id', $tenant->id)
         ->where('status', 'active')
