@@ -56,7 +56,6 @@ class ChatbotAgent implements Agent, Conversational
       . "Tone: " . ($toneMap[$settings?->chatbot_tone ?? 'professional'] ?? $toneMap['professional']) . "\n"
       . "Role: " . ($personalityMap[$settings?->chatbot_personality ?? 'assistant'] ?? $personalityMap['assistant']) . "\n"
       . "Emoji usage: {$emojiUsage}\n"
-      . "Include tour codes when discussing specific tours.\n"
       . "If unsure, ask for clarification. Do not mention embeddings or internal systems.";
   }
 
@@ -185,8 +184,13 @@ class ChatbotAgent implements Agent, Conversational
       return;
     }
 
-    $context = "Tour: {$tour->name} (Code: {$tour->code}), {$tour->duration_days} days, "
-      . "{$tour->destination}, {$tour->country_name}, \${$tour->showprice}";
+    $contextFromEntity = "Tour: {$tour->name}\n"
+      . "Code: {$tour->code}\n"
+      . "Duration: {$tour->duration_days} days\n"
+      . "Destination: {$tour->destination}\n"
+      . "Country: {$tour->country_name}\n"
+      . "Price: \${$tour->showprice}";
+    $prompt = "Context from entity: {$contextFromEntity}\n\n";
 
     $embedded = Embeddings::for([$this->message->message])
       ->cache()
@@ -199,9 +203,10 @@ class ChatbotAgent implements Agent, Conversational
       ->pluck('content')
       ->implode("\n\n---\n");
 
-    $prompt = "Context: {$context}\n\n"
-      . "Relevant information:\n{$documents}\n\n"
-      . "Respond helpfully to the user's question.";
+    if ($documents) {
+      $prompt .= "Retrieved relevant tour documents from system based on the user's question:\n{$documents}\n\n";
+    }
+    $prompt .= "Answer the user's question about the tour using the above information. If the question is not clear, ask for clarification.";
 
     $response = $this->prompt($prompt);
     $this->saveBotMessage($response->text, $receiver, [
