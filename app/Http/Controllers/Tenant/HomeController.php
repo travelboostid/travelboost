@@ -5,9 +5,6 @@ namespace App\Http\Controllers\Tenant;
 use App\Http\Controllers\Controller;
 use Inertia\Inertia;
 
-use App\Models\Tour;
-use App\Models\TourCategory;
-
 class HomeController extends Controller
 {
   public function index()
