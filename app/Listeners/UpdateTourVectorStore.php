@@ -42,8 +42,26 @@ class UpdateTourVectorStore
     }
 
     $text = $this->readPdfAsPlainText($absolutePath);
-    $chunks = $this->splitText($text, 2000, '.', 50);
-    $embeddings = Embeddings::for($chunks)->cache(3600)->generate();
+    //01042026
+    /*$chunks = $this->splitText($text, 2000, '.', 50);
+    $embeddings = Embeddings::for($chunks)->cache(3600)->generate();*/
+    $chunks = collect(
+        $this->splitText($text, 2000, '.', 50)
+    );
+
+    if ($chunks->isEmpty()) {
+        return;
+    }
+
+    $chunks
+        ->chunk(10)
+        ->each(function ($batch) {
+            Embeddings::for($batch->values())
+                ->cache(3600)
+                ->generate();
+
+            sleep(1);
+        });
 
     // Clear existing knowledge base entries for the tour
     TourDocumentKnowledgeBase::where('tour_id', $tour->id)->delete();
