@@ -67,6 +67,10 @@ class ChatbotIntentDetectorAgent implements Agent, Conversational, HasStructured
             . "Destination: {$tour->destination}\n"
             . "Country: {$tour->country_name}";
         }
+      } elseif ($rawMessage['attachment_type'] === 'bot-hints') {
+        $msg .= "\n\n---\n\n Additional context:\n"
+          . "Hints for understanding the bot's response: \n"
+          . $rawMessage['attachment_data'];
       }
 
       return new Message(
