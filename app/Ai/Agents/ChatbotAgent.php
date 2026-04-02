@@ -184,6 +184,12 @@ class ChatbotAgent implements Agent, Conversational
 
   public function messages(): iterable
   {
+    // Retrieve the last 10 messages in reverse order
+    $rawMessages = $this->message->room->messages()
+      ->latest()
+      ->take(10)
+      ->get()
+      ->reverse();
 
     return Arr::map($this->chatMessages->toArray(), function ($rawMessage) {
       $msg = $rawMessage['message'];
@@ -217,7 +223,8 @@ class ChatbotAgent implements Agent, Conversational
 
   public function reply()
   {
-    if (!$this->shouldRespond) {
+    // Exit if the message is from a bot or not in a private room
+    if ($this->message->is_bot || $this->message->room->type !== 'private') {
       return;
     }
 
@@ -229,6 +236,7 @@ class ChatbotAgent implements Agent, Conversational
       return;
     }
 
+    // Detect the intent of the message
     $detected = $this->detectIntent();
 
     // Handle the detected intent accordingly
@@ -239,8 +247,24 @@ class ChatbotAgent implements Agent, Conversational
       default => null,
     };
 
-    // Save the AI usage log for billing and analytics
-    $this->saveUsageLog();
+  private function getCompany(): ?Company
+  {
+    $receiver = $this->getReceiver();
+    return $receiver?->member_type === 'company' ? $receiver->member : null;
+  }
+
+  private function getReceiver(): ?object
+  {
+    // Get the sender of the message
+    $sender = $this->message->room->members()
+      ->where('member_id', $this->message->sender_id)
+      ->where('member_type', $this->message->sender_type)
+      ->first();
+
+    // Return the first member that is not the sender
+    return $this->message->room->members()
+      ->where('id', '!=', $sender?->id)
+      ->first();
   }
 
   private function detectIntent(): AgentResponse
@@ -303,7 +327,7 @@ class ChatbotAgent implements Agent, Conversational
       ->get();
 
     // Format the list of matching tours
-    $tourList = $tours->map(fn($t) => "- {$t->name} | Duration: {$t->duration_days} days | Destination: {$t->destination} | Country: {$t->country_name} | Price: \${$t->showprice}")->implode("\n");
+    $tourList = $tours->map(fn($t) => "- {$t->name} ({$t->code}): {$t->duration_days} days in {$t->country_name}, \${$t->showprice}")->implode("\n");
 
     $prompt = "Respond to the user's tour search based on filters: "
       . json_encode($filters) . ".\n\nMatching tours:\n{$tourList}\n\n"
@@ -311,13 +335,8 @@ class ChatbotAgent implements Agent, Conversational
 
     $response = $this->prompt(prompt: $prompt, model: $this->chatbotModel->code);
 
-    $this->trackTokenUsage($response);
-
     // Save the bot's response
-    $this->saveBotMessage($response->text, [
-      'attachment_type' => 'bot-hints',
-      'attachment_data' => "Tour ID reference:\n" . $tours->map(fn($t) => "ID{$t->id} → {$t->name}")->implode("\n"),
-    ]);
+    $this->saveBotMessage($response->text, $receiver);
   }
 
   private function handleDetailIntent(AgentResponse $detected): void
@@ -338,13 +357,13 @@ class ChatbotAgent implements Agent, Conversational
       return;
     }
 
+    // Prepare context information about the tour
     $contextFromEntity = "Tour: {$tour->name}\n"
       . "Code: {$tour->code}\n"
       . "Duration: {$tour->duration_days} days\n"
       . "Destination: {$tour->destination}\n"
       . "Country: {$tour->country_name}\n"
       . "Price: \${$tour->showprice}";
-    $prompt = "Context from entity: {$contextFromEntity}\n\n";
 
     $prompt = "Context from entity: {$contextFromEntity}\n\n";
 
@@ -361,6 +380,7 @@ class ChatbotAgent implements Agent, Conversational
       ->pluck('content')
       ->implode("\n\n---\n");
 
+    // Append retrieved documents to the prompt if available
     if ($documents) {
       $prompt .= "Retrieved relevant tour documents from system based on the user's question:\n{$documents}\n\n";
     }
