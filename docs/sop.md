@@ -23,7 +23,15 @@ Tags:
 
 This is not mandatory, but recommended for consistency and readability.
 
----
+## Making Changes
+
+To keep everything aligned, never push commits directly to the `dev` or `main` branches. Instead, always create a feature branch from `dev` and commit your changes there.
+
+Once development and testing on `dev` are complete, push your branch to the remote repository and open a pull request (PR). Request a review from your teammates if needed. After the code review is approved, merge the PR into `dev`.
+
+For production releases, it is recommended to recreate pull requests from the previously merged feature branches—this time targeting `main`. This flow is important because changes that work in the `dev` environment may not always pass tests or behave correctly when evaluated against `main`.
+
+However, if all changes in `dev` are stable and both `dev` and `main` share the same base commit, you can merge `dev` directly into `main`.
 
 ## Coding Standards
 

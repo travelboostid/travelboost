@@ -5,14 +5,11 @@ namespace App\Http\Controllers\Tenant;
 use App\Http\Controllers\Controller;
 use Inertia\Inertia;
 
-use App\Models\Tour;
-use App\Models\TourCategory;
-
 class HomeController extends Controller
 {
   public function index()
   {
-    /*$tenant = request()->attributes->get('tenant');
+    $tenant = request()->attributes->get('tenant');
     $tenant->load('settings');
     return Inertia::render('companies/landing-page', [
       'company' => $tenant,
