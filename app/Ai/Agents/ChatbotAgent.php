@@ -175,7 +175,7 @@ class ChatbotAgent implements Agent, Conversational
       ->get();
 
     // Format the list of matching tours
-    $tourList = $tours->map(fn($t) => "- {$t->name} ({$t->code}): {$t->duration_days} days in {$t->country_name}, \${$t->showprice}")->implode("\n");
+    $tourList = $tours->map(fn($t) => "- ID{$t->id}\nName: {$t->name}\nDuration: {$t->duration_days} days\nDestination: {$t->destination}\nCountry: {$t->country_name}\nPrice: \${$t->showprice}")->implode("\n");
 
     $prompt = "Respond to the user's tour search based on filters: "
       . json_encode($filters) . ".\n\nMatching tours:\n{$tourList}\n\n"
@@ -186,7 +186,7 @@ class ChatbotAgent implements Agent, Conversational
     // Save the bot's response
     $this->saveBotMessage($response->text, $receiver, [
       'attachment_type' => 'bot-hints',
-      'attachment_data' => "This response is based on detected search filters: " . json_encode($filters),
+      'attachment_data' => "Tour ID reference:\n" . $tours->map(fn($t) => "ID{$t->id} → {$t->name}")->implode("\n"),
     ]);
   }
 
