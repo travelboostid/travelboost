@@ -35,7 +35,7 @@ However, if all changes in `dev` are stable and both `dev` and `main` share the 
 
 ## Coding Standards
 
-- Most important: follow best practices and commonly accepted patterns. Avoid reinventing solutions. This helps reduce bugs and makes issues easier to debug.
+- Follow best practices and common patterns. Avoid reinventing solutions. Using widely accepted approaches helps reduce bugs and makes issues easier to debug. It also makes it easier to find solutions online, since similar problems have likely already been encountered and solved by others.
 
 - Always use English. Choose variable, function, and file names that are descriptive, intuitive, and concise.
 
@@ -46,3 +46,7 @@ However, if all changes in `dev` are stable and both `dev` and `main` share the 
 - Maintain consistent naming conventions across the project, including files, variables, and functions.
 
 - Write code for readability and maintainability. Code should be easy to understand and extend by other developers.
+
+- **Complexity will come naturally from real requirements—especially from business needs that we can’t always control or reject**. If the requirements are already complex, don’t make things worse by inventing complicated things. BALANCE simplicity and scalability. Overly simple designs can be limiting, but over-engineering for scalability can make the system unnecessarily complex.
+
+- Stay consistent with PATTERNS and avoid going off-track. When the codebase follows clear and consistent patterns, it becomes much easier to understand the system as a whole. Navigating files, tracing logic from top to bottom, and working with the code all become more straightforward. Even if the business logic is complex, consistent patterns make it manageable.
