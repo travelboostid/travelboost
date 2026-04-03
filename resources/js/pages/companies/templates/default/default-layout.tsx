@@ -78,6 +78,12 @@ export default function DefaultLayout({
               </a>
               <a
                 href="#about-us"
+                className="text-muted-foreground hover:text-foreground transition-colors"
+              >
+                About Us
+              </a>
+              <a
+                href="#about-us"
                 className="text-muted-foreground hover:text-foreground transition-colors font-medium"
               >
                 About Us
@@ -142,13 +148,6 @@ export default function DefaultLayout({
                   onClick={() => setIsMenuOpen(false)}
                 >
                   Tours
-                </a>
-                <a
-                  href="#about-us"
-                  className="font-bold text-muted-foreground hover:text-foreground transition-colors"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  About Us
                 </a>
 
                 <div className="flex flex-col gap-2 pt-4 border-t border-border mt-2">
