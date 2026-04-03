@@ -48,6 +48,12 @@ export default function DefaultLayout({
               >
                 Tours
               </a>
+              <a
+                href="#about-us"
+                className="text-muted-foreground hover:text-foreground transition-colors"
+              >
+                About Us
+              </a>
             </nav>
 
             {/* DESKTOP BUTTON */}
@@ -113,6 +119,12 @@ export default function DefaultLayout({
                   className="text-muted-foreground hover:text-foreground"
                 >
                   Kontak
+                </a>
+                <a
+                  href="#about-us"
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  About Us
                 </a>
 
                 <div className="flex flex-col gap-2 pt-4">

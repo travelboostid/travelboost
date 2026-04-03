@@ -8,17 +8,20 @@ import { toast } from 'sonner';
 import type { BasePuckProps } from './templates/base/base.puck.config';
 import DefaultThemePuckConfig from './templates/default/default.puck.config';
 import SelectTemplate from './templates/select-template';
+import { ensureAboutUsBlock } from './templates/default/utils';
 
 type Props = {
   company: any;
 };
 
 export default function PageDesigner({ company }: Props) {
-  const [data, setData] = useState(
-    company.settings.landing_page_data
-      ? JSON.parse(company.settings.landing_page_data)
-      : null,
-  );
+  const [data, setData] = useState(() => {
+    if (!company.settings.landing_page_data) {
+      return null;
+    }
+    const rawData = JSON.parse(company.settings.landing_page_data);
+    return ensureAboutUsBlock(rawData);
+  });
   const updater = useCompanyUpdateSettings();
 
   const handlePublish = (data: Data<BasePuckProps, any>) => {
