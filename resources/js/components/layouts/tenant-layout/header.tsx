@@ -1,9 +1,9 @@
 import AppLogoIcon from '@/components/app-logo-icon';
 import { Button } from '@/components/ui/button';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
-import { Link, usePage } from '@inertiajs/react';
+import { Link, router, usePage } from '@inertiajs/react';
 import { MenuIcon, XIcon } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { NavUser } from './nav-user';
 
 export function Header() {
@@ -21,6 +21,26 @@ export function Header() {
   } catch {
     // ignore parse error if any
   }
+
+  useEffect(() => {
+    if (auth?.user) {
+      const pendingStr = sessionStorage.getItem('pendingTourAction');
+      if (pendingStr) {
+        try {
+          const stored = JSON.parse(pendingStr);
+          if (
+            stored.returnUrl &&
+            window.location.pathname + window.location.search !==
+              stored.returnUrl
+          ) {
+            router.visit(stored.returnUrl);
+          }
+        } catch (e) {
+          console.error('Error parsing pendingTourAction:', e);
+        }
+      }
+    }
+  }, [auth?.user]);
 
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-sm">
@@ -47,7 +67,9 @@ export function Header() {
             <Link
               href="/"
               className={`transition-colors font-medium ${
-                url === '/' ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
+                url === '/'
+                  ? 'text-primary'
+                  : 'text-muted-foreground hover:text-foreground'
               }`}
             >
               Home
@@ -55,10 +77,18 @@ export function Header() {
             <Link
               href="/tours"
               className={`transition-colors font-medium ${
-                url.startsWith('/tours') ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
+                url.startsWith('/tours')
+                  ? 'text-primary'
+                  : 'text-muted-foreground hover:text-foreground'
               }`}
             >
               Tours
+            </Link>
+            <Link
+              href="/#about-us"
+              className="transition-colors font-medium text-muted-foreground hover:text-foreground"
+            >
+              About Us
             </Link>
           </nav>
 
@@ -72,7 +102,7 @@ export function Header() {
                   <Link href="/login">Masuk</Link>
                 </Button>
                 <Button asChild>
-                  <Link href="/register">Daftar Gratis</Link>
+                  <Link href="/register">Daftar</Link>
                 </Button>
               </>
             )}
@@ -101,7 +131,9 @@ export function Header() {
               <Link
                 href="/"
                 className={`transition-colors font-bold ${
-                  url === '/' ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
+                  url === '/'
+                    ? 'text-primary'
+                    : 'text-muted-foreground hover:text-foreground'
                 }`}
                 onClick={() => setIsMenuOpen(false)}
               >
@@ -110,11 +142,20 @@ export function Header() {
               <Link
                 href="/tours"
                 className={`transition-colors font-bold ${
-                  url.startsWith('/tours') ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
+                  url.startsWith('/tours')
+                    ? 'text-primary'
+                    : 'text-muted-foreground hover:text-foreground'
                 }`}
                 onClick={() => setIsMenuOpen(false)}
               >
                 Tours
+              </Link>
+              <Link
+                href="/#about-us"
+                className="transition-colors font-bold text-muted-foreground hover:text-foreground"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                About Us
               </Link>
 
               <div className="flex flex-col gap-2 pt-4 border-t border-border mt-2">
@@ -122,11 +163,15 @@ export function Header() {
                   <NavUser />
                 ) : (
                   <>
-                    <Button asChild variant="ghost" className="w-full justify-start">
+                    <Button
+                      asChild
+                      variant="ghost"
+                      className="w-full justify-start"
+                    >
                       <Link href="/login">Masuk</Link>
                     </Button>
                     <Button asChild className="w-full justify-start">
-                      <Link href="/register">Daftar Gratis</Link>
+                      <Link href="/register">Daftar</Link>
                     </Button>
                   </>
                 )}
