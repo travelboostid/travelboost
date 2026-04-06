@@ -27,6 +27,8 @@ class VendorTourCatalogController extends Controller
       ->orderBy('position_no')
       ->get();
 
+    $vendor = Company::where('username', $username)->firstOrFail();
+
     $tours = $toursQuery
       ->when(request('category'), function ($query, $categoryId) use ($vendor) {
         $query->where(function ($q) use ($categoryId, $vendor) {

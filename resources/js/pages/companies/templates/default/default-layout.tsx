@@ -21,26 +21,6 @@ export default function DefaultLayout({
 }: DefaultLayoutProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { auth, company } = usePageSharedDataProps();
-
-  useEffect(() => {
-    if (auth?.user) {
-      const pendingStr = sessionStorage.getItem('pendingTourAction');
-      if (pendingStr) {
-        try {
-          const stored = JSON.parse(pendingStr);
-          if (
-            stored.returnUrl &&
-            window.location.pathname + window.location.search !== stored.returnUrl
-          ) {
-            router.visit(stored.returnUrl);
-          }
-        } catch (e) {
-          console.error(e);
-        }
-      }
-    }
-  }, [auth?.user]);
-
   return (
     <div
       className={`${theme} min-h-screen bg-background text-foreground transition-colors duration-300`}
@@ -78,7 +58,7 @@ export default function DefaultLayout({
               </a>
               <a
                 href="#about-us"
-                className="text-muted-foreground hover:text-foreground transition-colors"
+                className="text-muted-foreground hover:text-foreground transition-colors font-medium"
               >
                 About Us
               </a>
@@ -98,7 +78,7 @@ export default function DefaultLayout({
                     <Link href="#">Masuk</Link>
                   </Button>
                   <Button asChild>
-                    <Link href="#">Daftar</Link>
+                    <Link href="#">Daftar Gratis</Link>
                   </Button>
                 </>
               ) : auth?.user ? (
@@ -149,34 +129,33 @@ export default function DefaultLayout({
                 >
                   Tours
                 </a>
+                <a
+                  href="#about-us"
+                  className="font-bold text-muted-foreground hover:text-foreground transition-colors"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  About Us
+                </a>
 
                 <div className="flex flex-col gap-2 pt-4 border-t border-border mt-2">
                   {editMode ? (
                     <>
-                      <Button
-                        asChild
-                        variant="ghost"
-                        className="w-full justify-start"
-                      >
+                      <Button asChild variant="ghost" className="w-full justify-start">
                         <Link href="#">Masuk</Link>
                       </Button>
                       <Button asChild className="w-full justify-start">
-                        <Link href="#">Daftar</Link>
+                        <Link href="#">Daftar Gratis</Link>
                       </Button>
                     </>
                   ) : auth?.user ? (
                     <DefaultLayoutNavUser />
                   ) : (
                     <>
-                      <Button
-                        asChild
-                        variant="ghost"
-                        className="w-full justify-start"
-                      >
+                      <Button asChild variant="ghost" className="w-full justify-start">
                         <Link href="/login">Masuk</Link>
                       </Button>
                       <Button asChild className="w-full justify-start">
-                        <Link href="/register">Daftar</Link>
+                        <Link href="/register">Daftar Gratis</Link>
                       </Button>
                     </>
                   )}
