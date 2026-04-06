@@ -17,10 +17,12 @@ import { toast } from 'sonner';
 export default function TourDeleteConfirmDialog({ children, tour }: any) {
   const { company } = usePageSharedDataProps();
   const handleDelete = () => {
-    router.delete(destroy({ company: company.username, tour: tour.id }), {
-      preserveScroll: true,
-      onSuccess: () => {
-        toast.success('Success', {
+    router.delete(
+      destroy({ company: company.username, agent_tour: tour.id }),
+      {
+        preserveScroll: true,
+        onSuccess: () => {
+          toast.success('Success', {
           position: 'top-center',
           description: 'Tour deleted successfully',
         });

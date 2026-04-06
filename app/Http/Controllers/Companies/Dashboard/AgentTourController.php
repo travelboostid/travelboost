@@ -17,9 +17,9 @@ class AgentTourController extends Controller
     ]);
   }
 
-  public function destroy(Company $company, AgentTour $tour)
+  public function destroy(Company $company, AgentTour $agent_tour)
   {
-    $tour->delete();
+    $agent_tour->delete();
     return back();
   }
 }
