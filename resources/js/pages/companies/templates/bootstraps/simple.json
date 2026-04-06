@@ -161,6 +161,14 @@
       }
     },
     {
+      "type": "AboutUs",
+      "props": {
+        "header": "Tentang Kami",
+        "description": "Kenali lebih dekat agen perjalanan Anda dan hubungi kami kapan saja.",
+        "id": "AboutUs-a1b2c3d4-simple-0001-0000-000000000001"
+      }
+    },
+    {
       "type": "Faq",
       "props": {
         "title": "Pertanyaan Umum Tentang Perjalanan",
