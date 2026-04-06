@@ -78,6 +78,26 @@ return new class extends Migration
       $table->timestamps();
     });
 
+    Schema::create('agent_subscription_packages', function (Blueprint $table) {
+      $table->id();
+      $table->string('name'); // e.g. Basic, Pro, Enterprise
+      $table->integer('duration_months'); // 1, 3, 6, 12
+      $table->decimal('price', 14, 2); // final price after discount
+      $table->boolean('is_active')->default(true);
+      $table->timestamps();
+    });
+
+    Schema::create('agent_subscriptions', function (Blueprint $table) {
+      $table->id();
+      $table->foreignId('company_id')->constrained('companies')->onDelete('cascade');
+      $table->foreignId('package_id')->constrained('agent_subscription_packages');
+      // lifecycle
+      $table->timestamp('started_at')->nullable();
+      $table->timestamp('ended_at')->nullable();
+
+      $table->timestamps();
+    });
+
     Schema::create('ai_models', function (Blueprint $table) {
       $table->id();
       $table->string('code')->unique();

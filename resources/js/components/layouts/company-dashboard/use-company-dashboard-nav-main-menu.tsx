@@ -50,8 +50,7 @@ export function useCompanyDashboardNavMainMenu() {
   //const companySubdomain = `${appScheme}://${company.subdomain}.${appHost}${appPort ? `:${appPort}` : ''}`;
   const scheme = window.location.protocol.replace(':', '');
 
-  const companySubdomain =
-    `${scheme}://${company.subdomain}.${appHost}${appPort ? `:${appPort}` : ''}`;
+  const companySubdomain = `${scheme}://${company.subdomain}.${appHost}${appPort ? `:${appPort}` : ''}`;
   //
   console.log(import.meta.env, companySubdomain);
 
@@ -323,6 +322,11 @@ export function useCompanyDashboardNavMainMenu() {
           urlOrAction: '#',
           icon: SettingsIcon,
           items: [
+            {
+              id: 'settings.subscriptions',
+              title: 'Agent Subscriptions',
+              urlOrAction: `/companies/${company.username}/dashboard/agent-subscriptions`,
+            },
             {
               id: 'settings.profile',
               title: 'Profile',

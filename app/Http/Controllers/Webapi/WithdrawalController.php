@@ -4,14 +4,9 @@ namespace App\Http\Controllers\Webapi;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\PaymentIndexRequest;
-use App\Http\Resources\PaymentResource;
 use App\Http\Resources\WithdrawalResource;
-use App\Models\Payment;
-use App\Models\WalletTopup;
 use App\Models\Withdrawal;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Midtrans\Snap;
 
 class WithdrawalController extends Controller
 {

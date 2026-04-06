@@ -2,7 +2,8 @@
 
 namespace App\Providers;
 
-use App\Models\WalletTopup;
+use App\Models\AgentSubscriptionPayment;
+use App\Models\WalletTopupPayment;
 use App\Services\ChatbotService;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Relations\Relation;
@@ -56,7 +57,8 @@ class AppServiceProvider extends ServiceProvider
   public function boot(): void
   {
     Relation::morphMap([
-      'wallet-topup' => WalletTopup::class,
+      'wallet-topup-payment' => WalletTopupPayment::class,
+      'agent-subscription-payment' => AgentSubscriptionPayment::class,
       'company' => \App\Models\Company::class,
       'user' => \App\Models\User::class,
     ]);
