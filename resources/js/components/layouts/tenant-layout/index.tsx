@@ -13,10 +13,11 @@ type TenantLayoutProps = {
 
 export default function TenantLayout({ children }: TenantLayoutProps) {
   const { auth } = usePageSharedDataProps();
+  const actorId = auth?.user?.id || 0;
   return (
-    <ChatContextProvider actor={{ type: 'user', id: auth.user.id }}>
+    <ChatContextProvider actor={{ type: 'user', id: actorId }}>
       <FloatingChatWidgetContextProvider
-        initialValue={{ actor: { type: 'user', id: auth.user.id } }}
+        initialValue={{ actor: { type: 'user', id: actorId } }}
       >
         <div className="bg-background text-foreground transition-colors duration-300">
           <div className="min-h-screen ">
