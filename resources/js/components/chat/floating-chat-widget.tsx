@@ -2,7 +2,7 @@ import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { DEFAULT_PHOTO } from '@/config';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { cn } from '@/lib/utils';
-import { IconUsersGroup } from '@tabler/icons-react';
+import { IconBrandWhatsapp, IconUsersGroup } from '@tabler/icons-react';
 import { ChevronLeftIcon, MessageSquareIcon, UserIcon } from 'lucide-react';
 import {
   Avatar,
@@ -123,24 +123,56 @@ function ChatHeader() {
 
 export default function FloatingChatWidget() {
   const { open, setOpen, roomId } = useFloatingChatWidgetContext();
+  const { company } = usePageSharedDataProps();
+
+  const phone = company?.customer_service_phone || company?.phone;
+  let whatsappUrl = '';
+  if (phone) {
+    const message = encodeURIComponent(`Halo, saya ingin bertanya tentang layanan Anda.`);
+    whatsappUrl = `https://wa.me/${phone}?text=${message}`;
+  }
+
   return (
     <>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            onClick={() => setOpen(true)}
-            className={cn(
-              'fixed right-4 lg:right-6 bottom-4 lg:bottom-6 h-12 lg:w-16 w-12 lg:h-16 rounded-full',
-              open && 'hidden',
-            )}
-          >
-            <MessageSquareIcon />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>
-          <p>Chat</p>
-        </TooltipContent>
-      </Tooltip>
+      <div
+        className={cn(
+          'fixed right-4 lg:right-6 bottom-4 lg:bottom-6 flex flex-col gap-3 z-50',
+          open && 'hidden',
+        )}
+      >
+        {whatsappUrl && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                asChild
+                className="h-12 w-12 lg:h-16 lg:w-16 rounded-full bg-[#25D366] hover:bg-[#1ebe5d] text-white shadow-lg"
+              >
+                <a href={whatsappUrl} target="_blank" rel="noopener noreferrer">
+                  <IconBrandWhatsapp size={32} />
+                </a>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>WhatsApp</p>
+            </TooltipContent>
+          </Tooltip>
+        )}
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              onClick={() => setOpen(true)}
+              className="h-12 w-12 lg:h-16 lg:w-16 rounded-full shadow-lg"
+            >
+              <MessageSquareIcon />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Chat</p>
+          </TooltipContent>
+        </Tooltip>
+      </div>
+
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent className="flex min-h-screen flex-col gap-0">
           <ChatHeader />

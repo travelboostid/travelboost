@@ -1,30 +1,14 @@
-import type { Company, TourResource } from '@/api/model';
-import { useFloatingChatWidgetContext } from '@/components/chat/state';
+import type { Company, TourResource, TourCategoryResource } from '@/api/model';
 import TenantLayout from '@/components/layouts/tenant-layout';
-import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import {
-  InputGroup,
-  InputGroupAddon,
-  InputGroupInput,
-} from '@/components/ui/input-group';
-import { Spinner } from '@/components/ui/spinner';
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { extractImageSrc } from '@/lib/utils';
-import { IconPdf } from '@tabler/icons-react';
-import { MessageSquareIcon, SearchIcon } from 'lucide-react';
+import { SearchIcon } from 'lucide-react';
 import { useState } from 'react';
 import { EmptyTours } from './empty-tours';
+import TourCard from './dashboard/vendor-tours/components/TourCard';
 
 export type AgentTour = {
   id: number;
   company_id: number;
+  category_id?: number;
   company: Company;
   tour: TourResource;
 };
@@ -84,34 +68,75 @@ function TourCard({ agentTour }: { agentTour: AgentTour }) {
 
 type ArticlePageProps = {
   data: AgentTour[];
+  company: Company;
+  vendor: Company;
+  username: string;
+  categories: TourCategoryResource[];
+  phone: string;
 };
 
-export default function Page({ data }: ArticlePageProps) {
+export default function Page({ data, categories }: ArticlePageProps) {
+  const [search, setSearch] = useState('');
+  const [category, setCategory] = useState<number | ''>('');
+
+  const filteredData = data.filter((item) => {
+    const matchSearch = item.tour.name.toLowerCase().includes(search.toLowerCase());
+    const matchCategory = category === '' ? true : item.category_id === category;
+    return matchSearch && matchCategory;
+  });
+
   return (
     <TenantLayout>
-      {data.length ? (
+      <div className="px-4 mt-4">
+        <div className="mx-auto relative w-full max-w-md">
+          <input
+            type="text"
+            placeholder="Cari tour..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full rounded-full border bg-background px-4 py-2 pr-10 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-primary"
+          />
+          <SearchIcon
+            size={18}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+          />
+        </div>
+      </div>
+      <div className="flex gap-2 overflow-x-auto pb-4 pt-4 px-4 justify-center">
+        <button
+          onClick={() => setCategory('')}
+          className={`px-4 py-2 rounded-full text-sm font-medium transition
+          ${
+            category === ''
+              ? 'bg-primary text-white'
+              : 'bg-muted hover:bg-muted/70'
+          }`}
+        >
+          Semua
+        </button>
+
+        {categories?.map((cat) => (
+          <button
+            key={cat.id}
+            onClick={() => setCategory(cat.id)}
+            className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200
+            active:scale-95
+            ${
+              category === cat.id
+                ? 'bg-primary text-white hover:bg-primary/90'
+                : 'bg-muted hover:bg-muted/70'
+            }`}
+          >
+            {cat.name}
+          </button>
+        ))}
+      </div>
+
+      {filteredData.length ? (
         <div className="space-y-4 p-4">
-          <div className="justify-items-center">
-            <ToggleGroup variant="outline" type="single" defaultValue="all">
-              <ToggleGroupItem value="all" aria-label="Toggle all">
-                All
-              </ToggleGroupItem>
-              <ToggleGroupItem value="missed" aria-label="Toggle missed">
-                Missed
-              </ToggleGroupItem>
-            </ToggleGroup>
-          </div>
-          <div className="justify-items-center">
-            <InputGroup className="max-w-xs">
-              <InputGroupInput placeholder="Search..." />
-              <InputGroupAddon>
-                <SearchIcon />
-              </InputGroupAddon>
-            </InputGroup>
-          </div>
-          <div className="grid grid-cols-4 gap-4">
-            {data.map((tour) => (
-              <TourCard agentTour={tour} />
+          <div className="grid w-full grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {filteredData.map((item) => (
+              <TourCard key={item.id} tour={item.tour} fromLogin={false} />
             ))}
           </div>
         </div>
