@@ -189,4 +189,9 @@ class Company extends Model
       }
     );
   }
+
+  public function agentSubscription()
+  {
+    return $this->hasOne(AgentSubscription::class);
+  }
 }

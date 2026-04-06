@@ -38,6 +38,7 @@ Route::prefix('webapi')->group(function () {
     // Messages nested under rooms
     Route::apiResource('chat/rooms.messages', ChatMessageController::class)
       ->shallow();
-    Route::post('payments/topup', [PaymentController::class, 'topup']);
+    Route::post('payments/create-topup-payment', [PaymentController::class, 'createTopupPayment']);
+    Route::post('payments/create-agent-subscription-payment', [PaymentController::class, 'createAgentSubscriptionPayment']);
   });
 });

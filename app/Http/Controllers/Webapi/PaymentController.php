@@ -5,10 +5,13 @@ namespace App\Http\Controllers\Webapi;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\PaymentIndexRequest;
 use App\Http\Resources\PaymentResource;
+use App\Models\AgentSubscriptionPackage;
+use App\Models\AgentSubscriptionPayment;
 use App\Models\Payment;
-use App\Models\WalletTopup;
+use App\Models\WalletTopupPayment;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 use Midtrans\Snap;
 
 class PaymentController extends Controller
@@ -60,25 +63,90 @@ class PaymentController extends Controller
    *
    * @operationId createTopupPayment
    */
-  public function topup(Request $request)
+  public function createTopupPayment(Request $request)
   {
     $validated = $request->validate([
+      'owner_type' => ['required', 'in:user,company'],
+      'owner_id' => [
+        'required',
+        Rule::when(
+          $request->owner_type === 'user',
+          Rule::exists('users', 'id'),
+          Rule::exists('companies', 'id')
+        ),
+      ],
       'amount' => ['required', 'integer', 'min:100000'],
     ]);
 
     $user = Auth::user();
 
-    $topup = WalletTopup::create([
-      'user_id' => $user->id,
+    $topup = WalletTopupPayment::create([
       'amount' => $validated['amount'],
     ]);
 
     // ... rest of your code remains the same
     $payment = $topup->payment()->create([
-      'user_id' => $user->id,
+      'owner_type' => $validated['owner_type'],
+      'owner_id' => $validated['owner_id'],
       'provider' => 'midtrans',
       'payment_method' => 'snap',
       'amount' => $topup->amount,
+      'status' => 'unpaid',
+    ]);
+
+    $params = [
+      'transaction_details' => [
+        'order_id' => $payment->id . '-' . uniqid(),
+        'gross_amount' => (int) $payment->amount,
+      ],
+      'customer_details' => [
+        'first_name' => $user->name,
+        'email' => $user->email,
+      ],
+      'callbacks' => [
+        'finish' => config('app.url') . '/wallet',
+      ],
+    ];
+
+    $snapToken = Snap::getSnapToken($params);
+
+    $payment->update([
+      'status' => 'pending',
+      'payload' => [
+        'snap_token' => $snapToken,
+        'request' => $params,
+      ],
+    ]);
+
+    return new PaymentResource($payment);
+  }
+
+  /**
+   * Create payment for agent subscription
+   * 
+   * @operationId createAgentSubscriptionPayment
+   */
+  public function createAgentSubscriptionPayment(Request $request)
+  {
+    $validated = $request->validate([
+      'company_id' => ['required', 'exists:companies,id'],
+      'package_id' => ['required', 'exists:agent_subscription_packages,id'],
+    ]);
+    $user = Auth::user();
+
+    $package = AgentSubscriptionPackage::findOrFail($validated['package_id']);
+    $subscriptionPayment = AgentSubscriptionPayment::create([
+      'package_id' => $validated['package_id'],
+    ]);
+    $amount = $package->price;
+
+    // ... rest of your code remains the same
+    $payment = $subscriptionPayment->payment()->create([
+      'owner_id' => $validated['company_id'],
+      'owner_type' => 'company',
+      'provider' => 'midtrans',
+      'payment_method' => 'snap',
+      'amount' => $amount,
       'status' => 'unpaid',
     ]);
 

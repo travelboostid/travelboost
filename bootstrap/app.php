@@ -3,6 +3,7 @@
 use App\Console\Commands\ProcessAiBilling;
 use App\Http\Middleware\CheckOnboarding;
 use App\Http\Middleware\CheckUserStatus;
+use App\Http\Middleware\EnsureAgentSubscriptionIsActive;
 use App\Http\Middleware\EnsureHasAdminAccess;
 use App\Http\Middleware\EnsureHasCompanyAccess;
 use App\Http\Middleware\TenantResolver;
@@ -31,6 +32,7 @@ return Application::configure(basePath: dirname(__DIR__))
     $middleware->alias([
       'company.access' => EnsureHasCompanyAccess::class,
       'admin.access' => EnsureHasAdminAccess::class,
+      'agent.subscription.active' => EnsureAgentSubscriptionIsActive::class,
       'check.user.status' => CheckUserStatus::class,
     ]);
     $middleware->web(append: [

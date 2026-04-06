@@ -4,6 +4,7 @@ namespace Database\Seeders\Common;
 
 use App\Enums\CompanyType;
 use App\Enums\CompanyTeamStatus;
+use App\Models\AgentSubscriptionPackage;
 use App\Models\User;
 use App\Models\Company;
 use App\Models\Role;
@@ -15,7 +16,34 @@ class CompanySeeder extends Seeder
 {
   public function run(): void
   {
-    $targets = [
+    // Define the target packages to create
+    $packages = [
+      [
+        'name' => 'Basic',
+        'duration_months' => 1,
+        'price' => 100000,
+        'is_active' => true,
+      ],
+      [
+        'name' => 'Pro',
+        'duration_months' => 6,
+        'price' => 500000,
+        'is_active' => true,
+      ],
+      [
+        'name' => 'Enterprise',
+        'duration_months' => 12,
+        'price' => 1000000,
+        'is_active' => true,
+      ],
+    ];
+
+    foreach ($packages as $package) {
+      AgentSubscriptionPackage::factory()->create($package);
+    }
+
+    // Define the target companies to create
+    $companies = [
       [
         'username' => 'root',
         'subdomain' => 'root',
@@ -28,17 +56,17 @@ class CompanySeeder extends Seeder
       ],
     ];
 
-    foreach ($targets as $target) {
-      $user = User::where('username', $target['username'])->first();
+    foreach ($companies as $company) {
+      $user = User::where('username', $company['username'])->first();
       if (!$user) {
-        $this->command->error("User with username '{$target['username']}' not found. Please run UserSeeder first.");
+        $this->command->error("User with username '{$company['username']}' not found. Please run UserSeeder first.");
         continue;
       }
       $company = Company::factory()->create([
-        'username' => $target['username'],
-        'subdomain' => $target['subdomain'],
-        'type' => $target['company_type'],
-        'name' => ucfirst($target['username']) . ' Company',
+        'username' => $company['username'],
+        'subdomain' => $company['subdomain'],
+        'type' => $company['company_type'],
+        'name' => ucfirst($company['username']) . ' Company',
         'email' => $user->email,
         'address' => 'Jakarta',
         'phone' => '',

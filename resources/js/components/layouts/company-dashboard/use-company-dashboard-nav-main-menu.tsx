@@ -328,6 +328,11 @@ export function useCompanyDashboardNavMainMenu() {
           icon: SettingsIcon,
           items: [
             {
+              id: 'settings.subscriptions',
+              title: 'Agent Subscriptions',
+              urlOrAction: `/companies/${company.username}/dashboard/agent-subscriptions`,
+            },
+            {
               id: 'settings.profile',
               title: 'Profile',
               urlOrAction: `/companies/${company.username}/dashboard/profile`,
