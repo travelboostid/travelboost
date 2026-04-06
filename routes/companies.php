@@ -65,7 +65,6 @@ Route::prefix('companies/{company:username}/dashboard')->middleware(['auth', 'co
   Route::singleton('chatbot', ChatbotController::class);
   Route::singleton('page', PageController::class);
   Route::singleton('agent-subscriptions', AgentSubscriptionController::class);
-  Route::singleton('ai-credits', AiCreditController::class);
 });
 
 Route::get(

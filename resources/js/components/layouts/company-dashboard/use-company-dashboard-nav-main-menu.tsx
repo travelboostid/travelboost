@@ -248,9 +248,42 @@ export function useCompanyDashboardNavMainMenu() {
           urlOrAction: `/companies/${company.username}/dashboard/profile`,
         },
         {
-          id: 'settings.teams',
-          title: <FormattedMessage defaultMessage="User Management" />,
-          urlOrAction: `/companies/${company.username}/dashboard/teams`,
+          id: 'settings',
+          title: 'Settings',
+          urlOrAction: '#',
+          icon: SettingsIcon,
+          items: [
+            {
+              id: 'settings.subscriptions',
+              title: 'Agent Subscriptions',
+              urlOrAction: `/companies/${company.username}/dashboard/agent-subscriptions`,
+            },
+            {
+              id: 'settings.profile',
+              title: 'Profile',
+              urlOrAction: `/companies/${company.username}/dashboard/profile`,
+            },
+            {
+              id: 'settings.teams',
+              title: 'User Management',
+              urlOrAction: `/companies/${company.username}/dashboard/teams`,
+            },
+            {
+              id: 'settings.roles',
+              title: 'Access Roles',
+              urlOrAction: `/companies/${company.username}/dashboard/roles`,
+            },
+            {
+              id: 'settings.chatbot',
+              title: 'Chat AI',
+              urlOrAction: `/companies/${company.username}/dashboard/chatbot`,
+            },
+            {
+              id: 'settings.vendor-regs',
+              title: 'Vendor Registrations',
+              urlOrAction: `/companies/${company.username}/dashboard/vendor-registrations`,
+            },
+          ],
         },
         {
           id: 'settings.roles',

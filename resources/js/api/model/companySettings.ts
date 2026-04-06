@@ -17,7 +17,7 @@ export interface CompanySettings {
   chatbot_emoji_usage: string;
   chatbot_personality: string;
   chatbot_default_language: string;
-  chatbot_model_id: CompanySettingsChatbotModelId;
+  chatbot_model_code: string;
   landing_page_data: CompanySettingsLandingPageData;
   created_at: CompanySettingsCreatedAt;
   updated_at: CompanySettingsUpdatedAt;

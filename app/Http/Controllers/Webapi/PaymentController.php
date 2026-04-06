@@ -66,8 +66,18 @@ class PaymentController extends Controller
    * @operationId createTopupPayment
    */
   public function createTopupPayment(Request $request)
+  public function createTopupPayment(Request $request)
   {
     $validated = $request->validate([
+      'owner_type' => ['required', 'in:user,company'],
+      'owner_id' => [
+        'required',
+        Rule::when(
+          $request->owner_type === 'user',
+          Rule::exists('users', 'id'),
+          Rule::exists('companies', 'id')
+        ),
+      ],
       'owner_type' => ['required', 'in:user,company'],
       'owner_id' => [
         'required',
@@ -83,11 +93,14 @@ class PaymentController extends Controller
     $user = Auth::user();
 
     $topup = WalletTopupPayment::create([
+    $topup = WalletTopupPayment::create([
       'amount' => $validated['amount'],
     ]);
 
     // ... rest of your code remains the same
     $payment = $topup->payment()->create([
+      'owner_type' => $validated['owner_type'],
+      'owner_id' => $validated['owner_id'],
       'owner_type' => $validated['owner_type'],
       'owner_id' => $validated['owner_id'],
       'provider' => 'midtrans',

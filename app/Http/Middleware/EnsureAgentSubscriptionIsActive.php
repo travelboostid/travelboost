@@ -2,7 +2,6 @@
 
 namespace App\Http\Middleware;
 
-use App\Enums\AgentSubscriptionStatus;
 use App\Models\AgentSubscription;
 use Closure;
 use Illuminate\Http\Request;
@@ -19,7 +18,7 @@ class EnsureAgentSubscriptionIsActive
   {
     $company = $request->route('company');
     $subscription = AgentSubscription::where('company_id', $company->id)->latest()->first();
-    if (! $subscription || $subscription->status !== AgentSubscriptionStatus::ACTIVE) {
+    if (! $subscription || $subscription->status !== 'active') {
       return redirect()->route('company.agent-subscriptions.show', ['company' => $company->username]);
     }
     return $next($request);

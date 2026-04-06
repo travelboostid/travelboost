@@ -16,7 +16,7 @@ export default function Home() {
       activeMenuIds={[`home`]}
       breadcrumb={[{ title: 'Dashboard', url: '/dashboard' }]}
     >
-      <Head title="Home" />
+      <Head title="Preferences" />
       <div className="grid grid-cols-1 gap-4 p-4">
         {company.type === 'agent' && <SubscriptionAlert />}
         <SectionCards />
