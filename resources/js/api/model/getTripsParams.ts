@@ -8,6 +8,10 @@
 export type GetTripsParams = {
 company_id?: number | null;
 /**
+ * @maxLength 50
+ */
+code?: string | null;
+/**
  * @maxLength 100
  */
 search?: string | null;

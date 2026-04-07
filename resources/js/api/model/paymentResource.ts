@@ -5,6 +5,7 @@
  * OpenAPI spec version: 0.0.1
  */
 import type { PaymentResourcePaymentMethod } from './paymentResourcePaymentMethod';
+import type { PaymentStatus } from './paymentStatus';
 import type { PaymentResourcePayload } from './paymentResourcePayload';
 import type { PaymentResourcePayable } from './paymentResourcePayable';
 
@@ -14,7 +15,7 @@ export interface PaymentResource {
   provider: string;
   payment_method: PaymentResourcePaymentMethod;
   amount: number;
-  status: string;
+  status: PaymentStatus;
   /** Important: include payload (contains snap_token, etc) */
   payload: PaymentResourcePayload;
   paid_at: string;

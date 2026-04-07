@@ -1,4 +1,17 @@
+import dotenv from 'dotenv';
+import dotenvExpand from 'dotenv-expand';
 import { defineConfig } from 'orval';
+import process from 'process';
+
+const env = dotenv.config();
+dotenvExpand.expand(env);
+
+const {
+  VITE_APP_HOST: appHost,
+  VITE_APP_PORT: appPort,
+  VITE_APP_SCHEME: appScheme,
+} = process.env;
+const baseUrl = `${appScheme}://${appHost}${appPort ? `:${appPort}` : ''}`;
 
 export default defineConfig({
   traveboostQuery: {
@@ -15,7 +28,7 @@ export default defineConfig({
       },
     },
     input: {
-      target: 'http://localhost:8000/docs/api.json',
+      target: `${baseUrl}/docs/api.json`,
     },
   },
 });

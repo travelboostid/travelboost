@@ -4,8 +4,12 @@
  * Travelboost
  * OpenAPI spec version: 0.0.1
  */
+import type { CreateTopupPaymentBodyOwnerType } from './createTopupPaymentBodyOwnerType';
+import type { CreateTopupPaymentBodyOwnerId } from './createTopupPaymentBodyOwnerId';
 
 export type CreateTopupPaymentBody = {
+  owner_type: CreateTopupPaymentBodyOwnerType;
+  owner_id: CreateTopupPaymentBodyOwnerId;
   /** @minimum 100000 */
   amount: number;
 };
