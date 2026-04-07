@@ -56,7 +56,9 @@ export default function TourCard({
   const [startingPrivateChat, setStartingPrivateChat] = useState(false);
   const [liked, setLiked] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
-  const [pendingAction, setPendingAction] = useState<'like' | 'book' | null>(null);
+  const [pendingAction, setPendingAction] = useState<'like' | 'book' | null>(
+    null,
+  );
   const hasDocument = Boolean(tour.document);
 
   useEffect(() => {
@@ -67,7 +69,8 @@ export default function TourCard({
           const stored = JSON.parse(pendingStr);
           if (
             stored.tourId === tour.id &&
-            window.location.pathname + window.location.search === stored.returnUrl
+            window.location.pathname + window.location.search ===
+              stored.returnUrl
           ) {
             sessionStorage.removeItem('pendingTourAction');
             if (stored.action === 'like') {
@@ -131,7 +134,7 @@ export default function TourCard({
 
       await floatingChat?.startPrivateChat({
         type: 'company',
-        id: tour.company_id,
+        id: company.id,
       });
 
       console.log('CHAT STARTED');
@@ -493,12 +496,16 @@ export default function TourCard({
         </Dialog>
       )}
 
-      <AlertDialog open={!!pendingAction} onOpenChange={(open) => !open && setPendingAction(null)}>
+      <AlertDialog
+        open={!!pendingAction}
+        onOpenChange={(open) => !open && setPendingAction(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Login Diperlukan</AlertDialogTitle>
             <AlertDialogDescription>
-              Silakan mendaftar atau masuk terlebih dahulu untuk melanjutkan aksi ini.
+              Silakan mendaftar atau masuk terlebih dahulu untuk melanjutkan
+              aksi ini.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -510,8 +517,9 @@ export default function TourCard({
                   JSON.stringify({
                     tourId: tour.id,
                     action: pendingAction,
-                    returnUrl: window.location.pathname + window.location.search,
-                  })
+                    returnUrl:
+                      window.location.pathname + window.location.search,
+                  }),
                 );
                 router.visit('/login');
               }}
