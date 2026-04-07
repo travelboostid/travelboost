@@ -42,14 +42,6 @@ class HandleInertiaRequests extends Middleware
     $company = $request->route('company');
     $anonymousUserToken = $request->cookie('anonymous_user_token');
     $anonymousUser = $anonymousUserToken ? AnonymousUser::where('token', $anonymousUserToken)->first() : null;
-
-    if (!$anonymousUser && !$request->user()) {
-        $anonymousUser = AnonymousUser::create([
-            'token' => (string) \Illuminate\Support\Str::uuid(),
-        ]);
-        \Illuminate\Support\Facades\Cookie::queue('anonymous_user_token', $anonymousUser->token, 60 * 24 * 365);
-    }
-
     return [
       ...parent::share($request),
       'name' => config('app.name'),
