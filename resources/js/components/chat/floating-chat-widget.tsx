@@ -15,7 +15,11 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
 import ChatBox from './chat-box';
 import ChatInput from './chat-input';
 import ChatList from './chat-list';
-import { useChatRoom, useFloatingChatWidgetContext } from './state';
+import {
+  useChatContext,
+  useChatRoom,
+  useFloatingChatWidgetContext,
+} from './state';
 
 function GroupChatHeader() {
   const { roomId, setRoomId, setAttachment } = useFloatingChatWidgetContext();
@@ -46,7 +50,7 @@ function GroupChatHeader() {
 }
 
 function PrivateChatHeader() {
-  const { actor } = useFloatingChatWidgetContext();
+  const { actor } = useChatContext();
   const { setAttachment, roomId, setRoomId } = useFloatingChatWidgetContext();
   const room = useChatRoom(roomId);
 

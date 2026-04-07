@@ -5,6 +5,9 @@
  * OpenAPI spec version: 0.0.1
  */
 
+export * from './anonymousUserResource';
+export * from './anonymousUserResourceCreatedAt';
+export * from './anonymousUserResourceUpdatedAt';
 export * from './authenticationExceptionResponse';
 export * from './authorizationExceptionResponse';
 export * from './bankAccountResource';
@@ -252,6 +255,7 @@ export * from './mediasUpdateBody';
 export * from './mediasUpdateBodyDescription';
 export * from './modelNotFoundExceptionResponse';
 export * from './openChatRequest';
+export * from './openChatRequestRecipientId';
 export * from './openChatRequestRecipientType';
 export * from './openChatRequestSenderType';
 export * from './openChatRoom200';
@@ -270,6 +274,9 @@ export * from './paymentResourcePaymentMethod';
 export * from './paymentStatus';
 export * from './paymentUpdatedAt';
 export * from './regionResource';
+export * from './setupAnonymousUser200';
+export * from './setupAnonymousUser200AnyOf';
+export * from './setupAnonymousUser200AnyOfTwo';
 export * from './storeChatMessageRequest';
 export * from './storeChatMessageRequestAttachment';
 export * from './storeChatMessageRequestAttachmentData';

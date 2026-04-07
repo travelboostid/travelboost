@@ -20,7 +20,7 @@ class ChatRoomController extends Controller
   public function index(Request $request)
   {
     $validated = $request->validate([
-      'member_type' => 'nullable|in:user,company', // Make sure these match your actual types
+      'member_type' => 'nullable|in:user,company,anonymous-user', // Make sure these match your actual types
       'member_id' => 'nullable|integer',
       'cursor' => 'nullable|string',
       'per_page' => 'nullable|integer|min:1|max:100',
