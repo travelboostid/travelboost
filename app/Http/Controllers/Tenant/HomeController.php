@@ -61,15 +61,15 @@ class HomeController extends Controller
     $hasCustomLandingPage = $tenant->settings && !empty($tenant->settings->landing_page_data);
 
     if ($hasCustomLandingPage) {
-        return Inertia::render('companies/landing-page', [
-            'company' => $tenant,
-        ]);
+      return Inertia::render('companies/landing-page', [
+        'company' => $tenant,
+      ]);
     }
     // 🏢 Tour milik vendor
     $ownTours = Tour::where('company_id', $tenant->id)
-        ->where('status', 'active')
-        ->with('company:id,username,name')
-        ->get();
+      ->where('status', 'active')
+      ->with('company:id,username,name')
+      ->get();
 
     // 🤝 Tour dari agent
     /*$agentTours = \App\Models\AgentTour::where('company_id', $tenant->id)
@@ -77,43 +77,43 @@ class HomeController extends Controller
         ->get()
         ->pluck('tour')
         ->filter();*/
-    
+
     $agentTours = \App\Models\AgentTour::where('company_id', $tenant->id)
-        ->whereHas('tour', function ($q) {
-            $q->where('status', 'active');
-        })
-        ->with(['tour' => function ($q) {
-            $q->where('status', 'active')
-              ->with('company:id,username,name');
-        }])
-        ->get()
-        ->pluck('tour')
-        ->filter();
+      ->whereHas('tour', function ($q) {
+        $q->where('status', 'active');
+      })
+      ->with(['tour' => function ($q) {
+        $q->where('status', 'active')
+          ->with('company:id,username,name');
+      }])
+      ->get()
+      ->pluck('tour')
+      ->filter();
 
     // 🔥 Gabungkan
     $tours = $ownTours
-        ->merge($agentTours)
-        ->unique('id')
-        ->sortByDesc('created_at')
-        ->values();
+      ->merge($agentTours)
+      ->unique('id')
+      ->sortByDesc('created_at')
+      ->values();
 
     // 📂 Kategori milik tenant
     $categories = TourCategory::where('company_id', $tenant->id)
-        ->orderBy('position_no')
-        ->get();
+      ->orderBy('position_no')
+      ->get();
 
     // 📱 Phone vendor
     $phone = $tenant->customer_service_phone ?: $tenant->phone;
 
     return Inertia::render('tenant/home', [
-        'username' => $tenant->username,
-        'vendor' => $tenant,
-        'company' => $tenant,
-        'data' => $tours,
-        'categories' => $categories,
-        'filters' => [],
-        'partnership' => null,
-        'phone' => $phone,
+      'username' => $tenant->username,
+      'vendor' => $tenant,
+      'company' => $tenant,
+      'data' => $tours,
+      'categories' => $categories,
+      'filters' => [],
+      'partnership' => null,
+      'phone' => $phone,
     ]);
   }
 }
