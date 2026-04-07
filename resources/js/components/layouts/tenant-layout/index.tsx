@@ -1,6 +1,7 @@
 import AnonymousUserContextProvider from '@/components/anonymous-user-context-provider';
 import type { ReactNode } from 'react';
-import Inner from './inner';
+import { Footer } from './footer';
+import { Header } from './header';
 
 export type TenantLayoutProps = {
   children: ReactNode;
