@@ -12,4 +12,5 @@ export type OpenChatRequestRecipientType = typeof OpenChatRequestRecipientType[k
 export const OpenChatRequestRecipientType = {
   user: 'user',
   company: 'company',
+  'anonymous-user': 'anonymous-user',
 } as const;

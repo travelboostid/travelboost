@@ -34,6 +34,12 @@ return new class extends Migration
       $table->timestamps();
     });
 
+    Schema::create('anonymous_users', function (Blueprint $table) {
+      $table->id();
+      $table->string('token')->unique();
+      $table->timestamps();
+    });
+
     Schema::create('password_reset_tokens', function (Blueprint $table) {
       $table->string('email')->primary();
       $table->string('token');

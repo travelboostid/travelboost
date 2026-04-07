@@ -21,9 +21,10 @@ import { MessageSquareIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { createContext, useContext, useState } from 'react';
 import { toast } from 'sonner';
+import { useAnonymousUserContext } from '../anonymous-user-context-provider';
 
-type ChatActor = {
-  type: 'user' | 'company';
+export type ChatActor = {
+  type: 'user' | 'company' | 'anonymous-user';
   id: number;
 };
 
@@ -55,6 +56,7 @@ export function ChatContextProvider({
   actor: ChatActor;
 }) {
   const { auth } = usePageSharedDataProps();
+  const anonymousUser = useAnonymousUserContext();
   const [roomById, setRoomById] = useState<Record<number, ChatRoomResource>>(
     {},
   );
@@ -109,13 +111,14 @@ export function ChatContextProvider({
     return result;
   };
 
-  //16032026
   const userId = auth?.user?.id;
-  //
+  const anonymousUserId = anonymousUser?.id;
+  const channelName = userId
+    ? `users.${userId}`
+    : `anonymous-users.${anonymousUserId}`;
 
   // 🔔 Message created
-  //useEcho(`users.${auth.user.id}`, '.ChatMessageCreated', (e) => {
-  useEcho(`users.${userId}`, '.ChatMessageCreated', (e) => {
+  useEcho(channelName, '.ChatMessageCreated', (e) => {
     setMessageById((prev) => ({
       ...prev,
       [e.id]: e,
@@ -132,8 +135,7 @@ export function ChatContextProvider({
   });
 
   // 🔔 Room updated
-  //useEcho(`users.${auth.user.id}`, '.ChatRoomUpdated', (e) => {
-  useEcho(`users.${userId}`, '.ChatRoomUpdated', (e) => {
+  useEcho(channelName, '.ChatRoomUpdated', (e) => {
     setRoomById((prev) => ({
       ...prev,
       [e.room.id]: {
@@ -144,8 +146,7 @@ export function ChatContextProvider({
   });
 
   // 🔔 Room created
-  //useEcho(`users.${auth.user.id}`, '.ChatRoomCreated', (e) => {
-  useEcho(`users.${userId}`, '.ChatRoomCreated', (e) => {
+  useEcho(channelName, '.ChatRoomCreated', (e) => {
     setRoomById((prev) => ({
       ...prev,
       [e.room.id]: e.room,
@@ -229,8 +230,6 @@ type Attachment = {
 };
 
 type FloatingChatWidgetContextType = {
-  actor: ChatActor | null;
-  setActor: (o: ChatActor | null) => void;
   message: string;
   setMessage: (o: string) => void;
   attachment: Attachment | undefined | null;
@@ -248,15 +247,13 @@ const FloatingChatWidgetContext = createContext<FloatingChatWidgetContextType>(
 
 export function FloatingChatWidgetContextProvider({
   children,
-  initialValue,
 }: {
   children: ReactNode;
   initialValue?: Partial<FloatingChatWidgetContextType>;
 }) {
+  const { actor } = useChatContext();
   const { auth } = usePageSharedDataProps();
-  const [actor, setActor] = useState<ChatActor | null>(
-    initialValue?.actor || null,
-  );
+
   const openChatRoom = useOpenChatRoom();
   const [message, setMessage] = useState('');
   const [attachment, setAttachment] = useState<Attachment | undefined | null>(
@@ -281,8 +278,6 @@ export function FloatingChatWidgetContextProvider({
   return (
     <FloatingChatWidgetContext.Provider
       value={{
-        actor,
-        setActor,
         open,
         setOpen,
         roomId,
