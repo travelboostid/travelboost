@@ -61,6 +61,7 @@ class AppServiceProvider extends ServiceProvider
       'agent-subscription-payment' => AgentSubscriptionPayment::class,
       'company' => \App\Models\Company::class,
       'user' => \App\Models\User::class,
+      'anonymous-user' => \App\Models\AnonymousUser::class,
     ]);
 
     $this->configureDefaults();

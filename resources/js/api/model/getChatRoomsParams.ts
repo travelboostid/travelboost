@@ -6,7 +6,7 @@
  */
 
 export type GetChatRoomsParams = {
-member_type?: 'user' | 'company' | null;
+member_type?: 'user' | 'company' | 'anonymous-user' | null;
 /**
  * Make sure these match your actual types
  */

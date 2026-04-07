@@ -6,7 +6,11 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Spinner } from '../ui/spinner';
 import RenderAttachment from './render-attachment';
-import { useFloatingChatWidgetContext, useSendMessage } from './state';
+import {
+  useChatContext,
+  useFloatingChatWidgetContext,
+  useSendMessage,
+} from './state';
 
 export default function ChatInput({
   roomId,
@@ -16,7 +20,8 @@ export default function ChatInput({
   className?: string;
 }) {
   const sendMessage = useSendMessage();
-  const { message, setMessage, attachment, setAttachment, actor } =
+  const { actor } = useChatContext();
+  const { message, setMessage, attachment, setAttachment } =
     useFloatingChatWidgetContext();
   const [sending, setSending] = useState(false);
 
