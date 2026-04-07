@@ -1,9 +1,9 @@
-import type { Company, TourResource, TourCategoryResource } from '@/api/model';
+import type { Company, TourCategoryResource, TourResource } from '@/api/model';
 import TenantLayout from '@/components/layouts/tenant-layout';
 import { SearchIcon } from 'lucide-react';
 import { useState } from 'react';
-import { EmptyTours } from './empty-tours';
 import TourCard from './dashboard/vendor-tours/components/TourCard';
+import { EmptyTours } from './empty-tours';
 
 export type AgentTour = {
   id: number;
@@ -27,8 +27,11 @@ export default function Page({ data, categories }: ArticlePageProps) {
   const [category, setCategory] = useState<number | ''>('');
 
   const filteredData = data.filter((item) => {
-    const matchSearch = item.tour.name.toLowerCase().includes(search.toLowerCase());
-    const matchCategory = category === '' ? true : item.category_id === category;
+    const matchSearch = item.tour.name
+      .toLowerCase()
+      .includes(search.toLowerCase());
+    const matchCategory =
+      category === '' ? true : item.category_id === category;
     return matchSearch && matchCategory;
   });
 

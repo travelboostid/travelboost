@@ -2,11 +2,12 @@
 
 namespace App\Http\Controllers\Webhooks;
 
+use App\Enums\AgentSubscriptionStatus;
 use App\Enums\PaymentStatus;
 use App\Http\Controllers\Controller;
+use App\Models\AgentSubscriptionPackage;
+use App\Models\Company;
 use App\Models\Payment;
-use App\Models\User;
-use Bavix\Wallet\Models\Wallet;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -44,8 +45,8 @@ class MidtransWebhookController extends Controller
     $status = $this->mapStatus($payload['transaction_status'] ?? 'pending');
 
     // Handle wallet topup if payment is paid
-    if ($status === PaymentStatus::PAID && $payment->payable_type === 'wallet-topup') {
-      $this->processWalletTopup($payment);
+    if ($status === PaymentStatus::PAID) {
+      $this->processPayment($payment);
     } else {
       return response()->json(['error' => 'Payment is not eligible to be processed'], 404);
     }
@@ -70,15 +71,74 @@ class MidtransWebhookController extends Controller
     };
   }
 
-  protected function processWalletTopup(Payment $payment)
+  private function processPayment(Payment $payment)
   {
-    Log::info('Processing wallet topup for payment', ['payment_id' => $payment->id]);
-    $user = User::where('id', $payment->user_id)->first();
-    if (!$user) {
-      Log::error('User not found for payment', ['payment_id' => $payment->id]);
+    if ($payment->payable_type === 'agent-subscription-payment') {
+      $this->processAgentSubscription($payment);
+    } else if ($payment->payable_type === 'wallet-topup-payment') {
+      $this->processWalletTopup($payment);
+    } else {
+      Log::warning('Unknown payable type for payment processing', [
+        'payment_id' => $payment->id,
+        'payable_type' => $payment->payable_type,
+      ]);
+    }
+  }
+
+  private function processAgentSubscription(Payment $payment)
+  {
+    Log::info('Processing agent subscription for payment', ['payment_id' => $payment->id]);
+    /** @var Company */
+    $owner = $payment->owner;
+
+    if (!$owner) {
+      Log::error('Owner not found for payment', ['payment_id' => $payment->id]);
       return;
     }
-    $wallet = $user->wallet;
+    $payment->load('payable');
+    if (!$payable = $payment->payable) {
+      Log::error('Payable not found', ['payment_id' => $payment->id]);
+      return;
+    }
+    $package = $payable->package_id ? AgentSubscriptionPackage::find($payable->package_id) : null;
+    if (!$package) {
+      Log::error('Package not found for agent subscription payment', ['payment_id' => $payment->id]);
+      return;
+    }
+    $existingSubscription = $owner->agentSubscription()->first();
+    if ($existingSubscription === null) {
+      $owner->agentSubscription()->create([
+        'package_id' => $package->id,
+        'started_at' => now(),
+        'ended_at' => now()->addMonths($package->duration_months),
+      ]);
+      return;
+    } else if ($existingSubscription->status === AgentSubscriptionStatus::ACTIVE) {
+      $existingSubscription->update([
+        'package_id' => $package->id,
+        'started_at' => now(),
+        'ended_at' => $existingSubscription->ended_at->addMonths($package->duration_months),
+      ]);
+      return;
+    } else if ($existingSubscription->status === AgentSubscriptionStatus::EXPIRED) {
+      $existingSubscription->update([
+        'package_id' => $package->id,
+        'started_at' => now(),
+        'ended_at' => now()->addMonths($package->duration_months),
+      ]);
+      return;
+    }
+  }
+
+  private function processWalletTopup(Payment $payment)
+  {
+    Log::info('Processing wallet topup for payment', ['payment_id' => $payment->id]);
+    $owner = $payment->owner;
+    if (!$owner) {
+      Log::error('Owner not found for payment', ['payment_id' => $payment->id]);
+      return;
+    }
+    $wallet = $owner->wallet;
 
     $payment->load('payable');
 
@@ -93,10 +153,8 @@ class MidtransWebhookController extends Controller
       'payment_id' => $payment->id,
     ]);
 
-    $payable->update(['status' => 'completed']);
-
     Log::info('Topup successful', [
-      'user_id' => $payment->user_id,
+      'owner_id' => $payment->owner_id,
       'wallet_id' => $wallet->id,
       'amount' => $payment->amount,
     ]);

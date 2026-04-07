@@ -1,33 +1,15 @@
-import FloatingChatWidget from '@/components/chat/floating-chat-widget';
-import {
-  ChatContextProvider,
-  FloatingChatWidgetContextProvider,
-} from '@/components/chat/state';
-import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
+import AnonymousUserContextProvider from '@/components/anonymous-user-context-provider';
 import type { ReactNode } from 'react';
-import { Footer } from './footer';
-import { Header } from './header';
-type TenantLayoutProps = {
+import Inner from './inner';
+
+export type TenantLayoutProps = {
   children: ReactNode;
 };
 
-export default function TenantLayout({ children }: TenantLayoutProps) {
-  const { auth } = usePageSharedDataProps();
-  const actorId = auth?.user?.id || 0;
+export default function TenantLayout(props: TenantLayoutProps) {
   return (
-    <ChatContextProvider actor={{ type: 'user', id: actorId }}>
-      <FloatingChatWidgetContextProvider
-        initialValue={{ actor: { type: 'user', id: actorId } }}
-      >
-        <div className="bg-background text-foreground transition-colors duration-300">
-          <div className="min-h-screen ">
-            <Header />
-            <main>{children}</main>
-          </div>
-          <Footer />
-        </div>
-        <FloatingChatWidget />
-      </FloatingChatWidgetContextProvider>
-    </ChatContextProvider>
+    <AnonymousUserContextProvider>
+      <Inner {...props} />
+    </AnonymousUserContextProvider>
   );
 }

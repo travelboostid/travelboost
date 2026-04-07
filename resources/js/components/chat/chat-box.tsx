@@ -5,7 +5,7 @@ import { useInView } from 'react-intersection-observer';
 import ReactMarkdown from 'react-markdown';
 import RenderAttachment from './render-attachment';
 import {
-  useFloatingChatWidgetContext,
+  useChatContext,
   useLoadMessages,
   useLoadRoom,
   useRoomMessages,
@@ -16,7 +16,7 @@ import {
  * Displays message content with markdown support and optional attachments.
  */
 function ChatMessage({ message }: { message: ChatMessageResource }) {
-  const { actor } = useFloatingChatWidgetContext();
+  const { actor } = useChatContext();
   const mine =
     message.sender_type === actor?.type && message.sender_id === actor?.id;
 

@@ -37,14 +37,14 @@ type MenuItem =
 
 export function useCompanyDashboardNavMainMenu() {
   const { company } = usePageSharedDataProps();
-  
+
   const { data } = useGetCompanies(
     { type: 'vendor' },
     { query: { enabled: company.type === 'agent' } },
   );
 
   let baseHost = window.location.hostname;
-  
+
   if (baseHost === '127.0.0.1') {
     baseHost = 'localhost';
   }
@@ -326,6 +326,11 @@ export function useCompanyDashboardNavMainMenu() {
           urlOrAction: '#',
           icon: SettingsIcon,
           items: [
+            {
+              id: 'settings.subscriptions',
+              title: 'Agent Subscriptions',
+              urlOrAction: `/companies/${company.username}/dashboard/agent-subscriptions`,
+            },
             {
               id: 'settings.profile',
               title: 'Profile',
