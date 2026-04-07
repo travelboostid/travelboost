@@ -14,6 +14,59 @@ export type AgentTour = {
   tour: TourResource;
 };
 
+function TourCard({ agentTour }: { agentTour: AgentTour }) {
+  const floatingChat = useFloatingChatWidgetContext();
+  const [startingPrivateChat, setStartingPrivateChat] = useState(false);
+  const hasDocument = Boolean(agentTour.tour.document);
+  const { src, srcSet } = extractImageSrc(agentTour.tour.image as any);
+
+  const handleMessage = async () => {
+    try {
+      setStartingPrivateChat(true);
+      floatingChat.setAttachment({
+        type: 'tour',
+        data: `${agentTour.tour.id}`,
+      });
+      await floatingChat.startPrivateChat({
+        type: 'company',
+        id: agentTour.company_id,
+      });
+    } finally {
+      setStartingPrivateChat(false);
+    }
+  };
+
+  return (
+    <Card className="relative mx-auto w-full overflow-hidden pt-0">
+      <img
+        src={src}
+        srcSet={srcSet}
+        alt="Event cover"
+        className="relative z-20 aspect-video w-full object-cover"
+      />
+      <CardHeader>
+        <CardTitle>{agentTour.tour.name}</CardTitle>
+        <CardDescription>{agentTour.tour.description}</CardDescription>
+      </CardHeader>
+      <CardFooter className="flex gap-2">
+        <Button variant="secondary" className="flex-1" disabled={!hasDocument}>
+          <IconPdf />
+          <span className="hidden md:inline">Brochures</span>
+        </Button>
+        <Button
+          type="button"
+          onClick={handleMessage}
+          disabled={startingPrivateChat}
+          variant="secondary"
+          className="flex-1"
+        >
+          {startingPrivateChat ? <Spinner /> : <MessageSquareIcon />}
+        </Button>
+      </CardFooter>
+    </Card>
+  );
+}
+
 type ArticlePageProps = {
   data: AgentTour[];
   company: Company;
