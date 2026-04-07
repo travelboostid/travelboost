@@ -1,25 +1,29 @@
+import { useAnonymousUserContext } from '@/components/anonymous-user-context-provider';
 import FloatingChatWidget from '@/components/chat/floating-chat-widget';
+import type { ChatActor } from '@/components/chat/state';
 import {
   ChatContextProvider,
   FloatingChatWidgetContextProvider,
 } from '@/components/chat/state';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
-import type { ReactNode } from 'react';
+import { useMemo } from 'react';
+import type { TenantLayoutProps } from '.';
 import { Footer } from './footer';
 import { Header } from './header';
 
-export type TenantLayoutProps = {
-  children: ReactNode;
-};
-
-export default function TenantLayout({ children }: TenantLayoutProps) {
+export default function Inner({ children }: TenantLayoutProps) {
   const { auth } = usePageSharedDataProps();
-  const actorId = auth?.user?.id || 0;
+  const anonymousUser = useAnonymousUserContext();
+  const actor = useMemo<ChatActor>(() => {
+    if (auth?.user) {
+      return { type: 'user', id: auth.user.id };
+    }
+    return { type: 'anonymous-user', id: anonymousUser.id || 0 };
+  }, [auth, anonymousUser]);
+
   return (
-    <ChatContextProvider actor={{ type: 'user', id: actorId }}>
-      <FloatingChatWidgetContextProvider
-        initialValue={{ actor: { type: 'user', id: actorId } }}
-      >
+    <ChatContextProvider actor={actor}>
+      <FloatingChatWidgetContextProvider>
         <div className="bg-background text-foreground transition-colors duration-300">
           <div className="min-h-screen ">
             <Header />
