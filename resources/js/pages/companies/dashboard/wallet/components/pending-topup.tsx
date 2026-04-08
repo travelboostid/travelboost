@@ -1,5 +1,4 @@
 import { useGetPayments } from '@/api/payment/payment';
-import { Button } from '@/components/ui/button';
 import {
   Item,
   ItemActions,
@@ -9,7 +8,8 @@ import {
   ItemTitle,
 } from '@/components/ui/item';
 import { ShieldAlertIcon } from 'lucide-react';
-import CancelPayment from '../payments/cancel-payment';
+import CancelPayment from '../../payments/components/cancel-payment';
+import ContinuePayment from './continue-payment';
 
 export default function PendingTopup() {
   const { data, refetch } = useGetPayments();
@@ -37,14 +37,8 @@ export default function PendingTopup() {
         </ItemDescription>
       </ItemContent>
       <ItemActions>
-        <CancelPayment payment={pendingTopup}>
-          <Button size="sm" variant="outline">
-            Cancel
-          </Button>
-        </CancelPayment>
-        <Button size="sm" variant="default" onClick={handlePay}>
-          Pay
-        </Button>
+        <CancelPayment payment={pendingTopup} />
+        <ContinuePayment payment={pendingTopup} />
       </ItemActions>
     </Item>
   ) : null;

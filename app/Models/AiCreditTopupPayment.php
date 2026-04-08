@@ -4,7 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class WalletTopupPayment extends Model
+class AiCreditTopupPayment extends Model
 {
   protected $fillable = ['amount'];
 

@@ -193,4 +193,9 @@ class Company extends Model
   {
     return $this->hasOne(AgentSubscription::class);
   }
+
+  public function payments()
+  {
+    return $this->morphMany(Payment::class, 'owner');
+  }
 }

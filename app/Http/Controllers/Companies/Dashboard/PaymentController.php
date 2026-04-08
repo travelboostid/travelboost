@@ -18,14 +18,6 @@ class PaymentController extends Controller
    */
   public function index(Company $company, Request $request)
   {
-    $user = Auth::user();
-
-    /**
-     * ------------------------------------------------------
-     * Date range (optional)
-     * default = last 1 month
-     * ------------------------------------------------------
-     */
     $from = $request->input('from')
       ? Carbon::parse($request->input('from'))->startOfDay()
       : now()->subMonth()->startOfDay();
@@ -34,8 +26,7 @@ class PaymentController extends Controller
       ? Carbon::parse($request->input('to'))->endOfDay()
       : now()->endOfDay();
 
-    $payments = Payment::with('payable')
-      ->where('user_id', $user->id)
+    $payments = $company->payments()->with('payable')
       ->whereBetween('created_at', [$from, $to]) // Simpler and more efficient
       ->latest()
       ->get();

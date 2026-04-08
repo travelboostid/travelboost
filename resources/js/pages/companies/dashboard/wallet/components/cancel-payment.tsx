@@ -10,16 +10,11 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { Button } from '@/components/ui/button';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { router } from '@inertiajs/react';
 
-export default function CancelPayment({
-  payment,
-  children,
-}: {
-  payment: any;
-  children?: any;
-}) {
+export default function CancelPayment({ payment }: { payment: any }) {
   const { company } = usePageSharedDataProps();
   const handleCancel = () => {
     router.put(
@@ -36,7 +31,11 @@ export default function CancelPayment({
   };
   return (
     <AlertDialog>
-      <AlertDialogTrigger asChild>{children}</AlertDialogTrigger>
+      <AlertDialogTrigger asChild>
+        <Button size="sm" variant="destructive">
+          Cancel
+        </Button>
+      </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
@@ -46,7 +45,7 @@ export default function CancelPayment({
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogCancel>Close</AlertDialogCancel>
           <AlertDialogAction onClick={handleCancel}>Continue</AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

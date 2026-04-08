@@ -56,7 +56,6 @@ export function useCompanyDashboardNavMainMenu() {
   // const companySubdomain =
   //   `${scheme}://${company.subdomain}.${appHost}${appPort ? `:${appPort}` : ''}`;
   //
-  console.log(import.meta.env, companySubdomain);
 
   return company.type === 'vendor'
     ? ([
@@ -227,9 +226,6 @@ export function useCompanyDashboardNavMainMenu() {
             {
               id: 'tours.cats',
               title: 'My Catalogs',
-              //31032026
-              //urlOrAction: companySubdomain,
-              //target: '_blank',
               urlOrAction: `/companies/${company.username}/dashboard/vendors/${company.username}/tours`,
             },
             {
@@ -350,6 +346,11 @@ export function useCompanyDashboardNavMainMenu() {
               id: 'settings.chatbot',
               title: 'Chat AI',
               urlOrAction: `/companies/${company.username}/dashboard/chatbot`,
+            },
+            {
+              id: 'settings.ai-credits',
+              title: 'AI Credits',
+              urlOrAction: `/companies/${company.username}/dashboard/ai-credits`,
             },
             {
               id: 'settings.vendor-regs',
