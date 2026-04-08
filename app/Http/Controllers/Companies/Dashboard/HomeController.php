@@ -10,8 +10,9 @@ class HomeController extends Controller
 {
   public function index(Company $company)
   {
-    return Inertia::render('companies/dashboard/home', [
-      'data' => [],
+    $agentSubscription = $company->agentSubscription()->with('package')->latest()->first();
+    return Inertia::render('companies/dashboard/home/index', [
+      'agentSubscription' => $agentSubscription,
     ]);
   }
 }

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Companies\Dashboard\AgentRegistrationController;
+use App\Http\Controllers\Companies\Dashboard\AgentSubscriptionController;
 use App\Http\Controllers\Companies\Dashboard\AgentTourController;
 use App\Http\Controllers\Companies\Dashboard\BankAccountController;
 use App\Http\Controllers\Companies\Dashboard\CategoryController;
@@ -35,7 +36,7 @@ Route::prefix('companies/{company:username}/dashboard')->middleware(['auth', 'co
   });
   Route::resource('agent-registrations', AgentRegistrationController::class);
   Route::resource('vendor-registrations', VendorRegistrationController::class);
-  Route::post('vendor-registrations/register', [VendorRegistrationController::class, 'register'])->name('vendor-registrations.register');
+  Route::middleware(['agent.subscription.active'])->post('vendor-registrations/register', [VendorRegistrationController::class, 'register'])->name('vendor-registrations.register');
   Route::resource('tours', TourController::class);
   Route::resource('agent-tours', AgentTourController::class);
   Route::resource('categories', CategoryController::class);
@@ -55,6 +56,7 @@ Route::prefix('companies/{company:username}/dashboard')->middleware(['auth', 'co
   Route::resource('customers', CustomerController::class);
   Route::singleton('chatbot', ChatbotController::class);
   Route::singleton('page', PageController::class);
+  Route::singleton('agent-subscriptions', AgentSubscriptionController::class);
 });
 
 Route::get(

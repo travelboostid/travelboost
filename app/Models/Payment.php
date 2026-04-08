@@ -2,15 +2,20 @@
 
 namespace App\Models;
 
+use App\Enums\PaymentStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 class Payment extends Model
 {
+  use HasFactory;
+
   protected $fillable = [
-    'payer_id',
-    'payer_type',
+    'owner_id',
+    'owner_type',
+    'payable_id',
+    'payable_type',
     'provider',
     'payment_method',
     'amount',
@@ -19,26 +24,23 @@ class Payment extends Model
     'paid_at',
   ];
 
-  protected $casts = [
-    'payload' => 'array',
-    'paid_at' => 'datetime',
-  ];
+  protected function casts(): array
+  {
+    return [
+      'status' => PaymentStatus::class,
+      'payload' => 'array',
+      'paid_at' => 'datetime',
+      'amount' => 'decimal:2',
+    ];
+  }
 
-  public function payable()
+  public function owner(): MorphTo
   {
     return $this->morphTo();
   }
 
-  public function markPaid(array $payload = [])
+  public function payable(): MorphTo
   {
-    if ($this->status === 'paid') {
-      return; // idempotent
-    }
-
-    $this->update([
-      'status' => 'paid',
-      'payload' => $payload,
-      'paid_at' => now(),
-    ]);
+    return $this->morphTo();
   }
 }

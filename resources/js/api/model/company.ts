@@ -4,6 +4,8 @@
  * Travelboost
  * OpenAPI spec version: 0.0.1
  */
+import type { CompanyNote } from './companyNote';
+import type { CompanyMeta } from './companyMeta';
 import type { CompanyRememberToken } from './companyRememberToken';
 import type { CompanyCreatedAt } from './companyCreatedAt';
 import type { CompanyUpdatedAt } from './companyUpdatedAt';
@@ -15,9 +17,13 @@ export interface Company {
   type: string;
   name: string;
   username: string;
+  subdomain: string;
   email: string;
   address: string;
   phone: string;
+  customer_service_phone: string;
+  note: CompanyNote;
+  meta: CompanyMeta;
   remember_token: CompanyRememberToken;
   created_at: CompanyCreatedAt;
   updated_at: CompanyUpdatedAt;

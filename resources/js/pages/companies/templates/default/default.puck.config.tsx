@@ -3,6 +3,10 @@ import type { BasePuckProps } from '../base/base.puck.config';
 import { BasePuckConfig } from '../base/base.puck.config';
 import type { WithLayoutComponentProps } from '../base/blocks/base';
 import { withLayoutComponentConfig } from '../base/blocks/base';
+import {
+  AboutUsComponentConfig,
+  type AboutUsComponentProps,
+} from './blocks/about-us';
 import { Card1ComponentConfig, type Card1ComponentProps } from './blocks/card1';
 import { CtaComponentConfig, type CtaComponentProps } from './blocks/cta';
 import type { FaqComponentProps } from './blocks/faq';
@@ -27,6 +31,7 @@ import { TestimonialsComponentConfig } from './blocks/testimonials';
 import DefaultLayout from './default-layout';
 
 type DefaultThemePuckProps = {
+  AboutUs: WithLayoutComponentProps<AboutUsComponentProps>;
   Hero1: WithLayoutComponentProps<Hero1ComponentProps>;
   Hero2: WithLayoutComponentProps<Hero2ComponentProps>;
   Hero3: WithLayoutComponentProps<Hero3ComponentProps>;
@@ -60,6 +65,7 @@ const DefaultThemePuckConfig: Config<DefaultThemePuckProps> = {
         'Steps',
         'Testimonials',
         'Cta',
+        'AboutUs',
         'Faq',
         'Footer1',
       ],
@@ -67,6 +73,7 @@ const DefaultThemePuckConfig: Config<DefaultThemePuckProps> = {
   },
   components: {
     ...BasePuckConfig.components,
+    AboutUs: withLayoutComponentConfig(AboutUsComponentConfig as any) as any,
     Hero1: withLayoutComponentConfig(Hero1ComponentConfig as any) as any,
     Hero2: withLayoutComponentConfig(Hero2ComponentConfig as any) as any,
     Hero3: withLayoutComponentConfig(Hero3ComponentConfig as any) as any,

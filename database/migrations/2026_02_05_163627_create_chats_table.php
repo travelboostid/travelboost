@@ -24,10 +24,7 @@ return new class extends Migration
       $table->foreignId('room_id')
         ->constrained('chat_rooms')
         ->cascadeOnDelete();
-
-      // Polymorphic member (User, Vendor, or Agent)
-      $table->morphs('member'); // member_id + member_type
-
+      $table->morphs('member'); // member_id + member_type (User, Anonymous User, or Company)
       $table->enum('role', ['member', 'admin', 'owner'])->default('member');
       $table->timestamp('joined_at')->useCurrent();
       $table->timestamp('last_read_at')->nullable();

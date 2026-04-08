@@ -11,13 +11,14 @@ import {
   AvatarImage,
 } from '../ui/avatar';
 import {
+  useChatContext,
   useChatRooms,
   useFloatingChatWidgetContext,
   useLoadRooms,
 } from './state';
 
 function PrivateRoomItem({ room }: { room: ChatRoomResource }) {
-  const { actor } = useFloatingChatWidgetContext();
+  const { actor } = useChatContext();
   const { setRoomId } = useFloatingChatWidgetContext();
   const partner = room?.members?.find(
     (member) =>
@@ -72,7 +73,7 @@ function RoomItem({ room }: { room: ChatRoomResource }) {
 }
 
 export default function ChatList({ className }: { className?: string }) {
-  const { actor } = useFloatingChatWidgetContext();
+  const { actor } = useChatContext();
   const loadRooms = useLoadRooms();
   const rooms = useChatRooms();
   useEffect(() => {
@@ -81,7 +82,8 @@ export default function ChatList({ className }: { className?: string }) {
       member_type: actor?.type || 'user',
       member_id: actor?.id || 0,
     });
-  }, [actor, loadRooms]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [actor]);
 
   return (
     <div className={cn('divide-y overflow-y-auto', className)}>

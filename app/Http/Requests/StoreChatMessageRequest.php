@@ -33,8 +33,8 @@ class StoreChatMessageRequest extends FormRequest
   {
     $this->merge([
       'sender_type' => $this->input('sender_type', 'user'),
-      'sender_id'   => $this->input('sender_id', $this->user()->id),
-      'user_id'     => $this->input('user_id', $this->user()->id),
+      'sender_id'   => $this->input('sender_id', $this->user()?->id),
+      'user_id'     => $this->input('user_id', $this->user()?->id),
     ]);
   }
 }

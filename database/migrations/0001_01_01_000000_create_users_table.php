@@ -34,6 +34,12 @@ return new class extends Migration
       $table->timestamps();
     });
 
+    Schema::create('anonymous_users', function (Blueprint $table) {
+      $table->id();
+      $table->string('token')->unique();
+      $table->timestamps();
+    });
+
     Schema::create('password_reset_tokens', function (Blueprint $table) {
       $table->string('email')->primary();
       $table->string('token');
@@ -75,6 +81,26 @@ return new class extends Migration
       $table->string('chatbot_default_language')->default('auto'); // auto | id | en
       $table->string('chatbot_model_code')->default('gpt-3.5-turbo');
       $table->text('landing_page_data')->nullable();
+      $table->timestamps();
+    });
+
+    Schema::create('agent_subscription_packages', function (Blueprint $table) {
+      $table->id();
+      $table->string('name'); // e.g. Basic, Pro, Enterprise
+      $table->integer('duration_months'); // 1, 3, 6, 12
+      $table->decimal('price', 14, 2); // final price after discount
+      $table->boolean('is_active')->default(true);
+      $table->timestamps();
+    });
+
+    Schema::create('agent_subscriptions', function (Blueprint $table) {
+      $table->id();
+      $table->foreignId('company_id')->constrained('companies')->onDelete('cascade');
+      $table->foreignId('package_id')->constrained('agent_subscription_packages');
+      // lifecycle
+      $table->timestamp('started_at')->nullable();
+      $table->timestamp('ended_at')->nullable();
+
       $table->timestamps();
     });
 

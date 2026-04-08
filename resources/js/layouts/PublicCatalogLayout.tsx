@@ -1,47 +1,18 @@
-import {
-  TooltipProvider
-} from '@/components/ui/tooltip'
+import { TooltipProvider } from '@/components/ui/tooltip';
 
-import {
-  ChatContextProvider
-} from '@/components/chat/state'
+import AnonymousUserContextProvider from '@/components/anonymous-user-context-provider';
+import PublicCatalogLayoutInner from './public-catalog-layout-inner';
 
-import {
-  FloatingChatWidgetContextProvider
-} from '@/components/chat/state'
+export type PublicCatalogLayoutProps = {
+  children: React.ReactNode;
+};
 
-import FloatingChatWidget from '@/components/chat/Floating-Chat-Widget'
-
-export default function PublicCatalogLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+export default function PublicCatalogLayout(props: PublicCatalogLayoutProps) {
   return (
     <TooltipProvider>
-      <ChatContextProvider>
-        <FloatingChatWidgetContextProvider>
-
-          <div className="min-h-screen bg-background">
-
-            {/* HEADER */}
-            <div className="border-b px-6 py-4 flex items-center justify-between">
-              <h1 className="text-lg font-semibold">
-                TravelBoost
-              </h1>
-            </div>
-
-            {/* CONTENT */}
-            <main className="p-4">
-              {children}
-            </main>
-
-          </div>
-
-          <FloatingChatWidget />
-
-        </FloatingChatWidgetContextProvider>
-      </ChatContextProvider>
+      <AnonymousUserContextProvider>
+        <PublicCatalogLayoutInner {...props} />
+      </AnonymousUserContextProvider>
     </TooltipProvider>
-  )
+  );
 }

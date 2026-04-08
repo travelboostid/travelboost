@@ -30,6 +30,7 @@ class ChatbotAgent implements Agent, Conversational
 
     $baseInstructions = 'You are an AI travel assistant in a private chat. Keep answers short, clear, and helpful.';
 
+    // Define tone options
     $toneMap = [
       'professional' => 'Use formal, business-appropriate language.',
       'friendly' => 'Be warm and conversational.',
@@ -37,6 +38,7 @@ class ChatbotAgent implements Agent, Conversational
       'enthusiastic' => 'Be upbeat and energetic.',
     ];
 
+    // Define personality options
     $personalityMap = [
       'assistant' => 'Help users with information and questions.',
       'sales' => 'Focus on promoting tours and closing bookings.',
@@ -44,6 +46,7 @@ class ChatbotAgent implements Agent, Conversational
       'travel_consultant' => 'Provide expert travel advice and personalized recommendations.',
     ];
 
+    // Determine emoji usage based on settings
     $emojiUsage = match ($settings?->chatbot_emoji_usage ?? 'minimal') {
       'none' => 'Do not use emojis.',
       'minimal' => 'Use emojis sparingly.',
@@ -56,12 +59,12 @@ class ChatbotAgent implements Agent, Conversational
       . "Tone: " . ($toneMap[$settings?->chatbot_tone ?? 'professional'] ?? $toneMap['professional']) . "\n"
       . "Role: " . ($personalityMap[$settings?->chatbot_personality ?? 'assistant'] ?? $personalityMap['assistant']) . "\n"
       . "Emoji usage: {$emojiUsage}\n"
-      . "Include tour codes when discussing specific tours.\n"
       . "If unsure, ask for clarification. Do not mention embeddings or internal systems.";
   }
 
   public function messages(): iterable
   {
+    // Retrieve the last 10 messages in reverse order
     $rawMessages = $this->message->room->messages()
       ->latest()
       ->take(10)
@@ -70,6 +73,8 @@ class ChatbotAgent implements Agent, Conversational
 
     return Arr::map($rawMessages->toArray(), function ($rawMessage) {
       $msg = $rawMessage['message'];
+
+      // If the message has an attachment of type 'tour', add tour details
       if ($rawMessage['attachment_type'] === 'tour') {
         $tourId = $rawMessage['attachment_data'];
         $tour = Tour::find($tourId);
@@ -83,6 +88,10 @@ class ChatbotAgent implements Agent, Conversational
             . "Destination: {$tour->destination}\n"
             . "Country: {$tour->country_name}";
         }
+      } elseif ($rawMessage['attachment_type'] === 'bot-hints') {
+        $msg .= "\n\n---\n\n Additional context:\n"
+          . "Hints for understanding the bot's response: \n"
+          . $rawMessage['attachment_data'];
       }
 
       return new Message(
@@ -94,6 +103,7 @@ class ChatbotAgent implements Agent, Conversational
 
   public function reply(): void
   {
+    // Exit if the message is from a bot or not in a private room
     if ($this->message->is_bot || $this->message->room->type !== 'private') {
       return;
     }
@@ -102,9 +112,14 @@ class ChatbotAgent implements Agent, Conversational
     if (!$receiver) {
       return;
     }
+    if (!$receiver->member->settings?->chatbot_enabled) {
+      return;
+    }
 
+    // Detect the intent of the message
     $detected = $this->detectIntent();
 
+    // Handle the detected intent accordingly
     match ($detected['intent'] ?? 'general') {
       'search' => $this->handleSearchIntent($detected, $receiver),
       'detail' => $this->handleDetailIntent($detected, $receiver),
@@ -121,11 +136,13 @@ class ChatbotAgent implements Agent, Conversational
 
   private function getReceiver(): ?object
   {
+    // Get the sender of the message
     $sender = $this->message->room->members()
       ->where('member_id', $this->message->sender_id)
       ->where('member_type', $this->message->sender_type)
       ->first();
 
+    // Return the first member that is not the sender
     return $this->message->room->members()
       ->where('id', '!=', $sender?->id)
       ->first();
@@ -157,7 +174,8 @@ class ChatbotAgent implements Agent, Conversational
       ->limit(5)
       ->get();
 
-    $tourList = $tours->map(fn($t) => "- {$t->name} ({$t->code}): {$t->duration_days} days in {$t->country_name}, \${$t->showprice}")->implode("\n");
+    // Format the list of matching tours
+    $tourList = $tours->map(fn($t) => "- {$t->name} | Duration: {$t->duration_days} days | Destination: {$t->destination} | Country: {$t->country_name} | Price: \${$t->showprice}")->implode("\n");
 
     $prompt = "Respond to the user's tour search based on filters: "
       . json_encode($filters) . ".\n\nMatching tours:\n{$tourList}\n\n"
@@ -165,7 +183,11 @@ class ChatbotAgent implements Agent, Conversational
 
     $response = $this->prompt($prompt);
 
-    $this->saveBotMessage($response->text, $receiver);
+    // Save the bot's response
+    $this->saveBotMessage($response->text, $receiver, [
+      'attachment_type' => 'bot-hints',
+      'attachment_data' => "Tour ID reference:\n" . $tours->map(fn($t) => "ID{$t->id} → {$t->name}")->implode("\n"),
+    ]);
   }
 
   private function handleDetailIntent(AgentResponse $detected, object $receiver): void
@@ -173,6 +195,7 @@ class ChatbotAgent implements Agent, Conversational
     $tourId = $detected['detail']['tour_id'] ?? null;
     $tour = Tour::find($tourId);
 
+    // If the tour is not found, respond accordingly
     if (!$tour) {
       $response = $this->prompt(
         "The user asked about tour ID '{$tourId}' which was not found. "
@@ -182,13 +205,22 @@ class ChatbotAgent implements Agent, Conversational
       return;
     }
 
-    $context = "Tour: {$tour->name} (Code: {$tour->code}), {$tour->duration_days} days, "
-      . "{$tour->destination}, {$tour->country_name}, \${$tour->showprice}";
+    // Prepare context information about the tour
+    $contextFromEntity = "Tour: {$tour->name}\n"
+      . "Code: {$tour->code}\n"
+      . "Duration: {$tour->duration_days} days\n"
+      . "Destination: {$tour->destination}\n"
+      . "Country: {$tour->country_name}\n"
+      . "Price: \${$tour->showprice}";
 
+    $prompt = "Context from entity: {$contextFromEntity}\n\n";
+
+    // Generate embeddings for the user's message
     $embedded = Embeddings::for([$this->message->message])
       ->cache()
       ->generate();
 
+    // Retrieve relevant documents based on the tour and user's question
     $documents = TourDocumentKnowledgeBase::query()
       ->whereVectorSimilarTo('embedding', $embedded->embeddings[0] ?? null, minSimilarity: 0.1)
       ->where('tour_id', $tour->id)
@@ -196,9 +228,11 @@ class ChatbotAgent implements Agent, Conversational
       ->pluck('content')
       ->implode("\n\n---\n");
 
-    $prompt = "Context: {$context}\n\n"
-      . "Relevant information:\n{$documents}\n\n"
-      . "Respond helpfully to the user's question.";
+    // Append retrieved documents to the prompt if available
+    if ($documents) {
+      $prompt .= "Retrieved relevant tour documents from system based on the user's question:\n{$documents}\n\n";
+    }
+    $prompt .= "Answer the user's question about the tour using the above information. If the question is not clear, ask for clarification.";
 
     $response = $this->prompt($prompt);
     $this->saveBotMessage($response->text, $receiver, [
@@ -218,6 +252,7 @@ class ChatbotAgent implements Agent, Conversational
 
   private function saveBotMessage(string $message, object $receiver, array $additionalData = []): void
   {
+    // Create a new chat message for the bot's response
     ChatMessage::create(array_merge([
       'room_id' => $this->message->room_id,
       'sender_type' => $receiver->member_type,
