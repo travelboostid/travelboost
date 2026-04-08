@@ -1,7 +1,6 @@
-import { update } from '@/actions/App/Http/Controllers/Companies/Dashboard/TourController';
 import type { MediaResource } from '@/api/model';
 import InputError from '@/components/input-error';
-import CompanyDashboardLayout from '@/components/layouts/company-dashboard';
+import AdminDashboardLayout from '@/components/layouts/admin-dashboard';
 import { MediaPicker } from '@/components/media-picker';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,19 +22,19 @@ import {
 } from '@/components/ui/select';
 import { Spinner } from '@/components/ui/spinner';
 import { Textarea } from '@/components/ui/textarea';
-import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { extractImageSrc } from '@/lib/utils';
-import { Form } from '@inertiajs/react';
-import { useState } from 'react';
+import SelectCategory from '@/pages/companies/dashboard/tours/components/select-category';
+import SelectContinent from '@/pages/companies/dashboard/tours/components/select-continent';
+import SelectCountry from '@/pages/companies/dashboard/tours/components/select-country';
+import SelectRegion from '@/pages/companies/dashboard/tours/components/select-region';
+import { Form, Head } from '@inertiajs/react';
+import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import SelectCategory from './components/select-category';
-import SelectContinent from './components/select-continent';
-import SelectCountry from './components/select-country';
-import SelectRegion from './components/select-region';
 
 type Props = {
   tour: any;
 };
+
 export default function Page({ tour }: Props) {
   const [continentId, setContinentId] = useState<number | null>(
     tour.continent_id ?? null,
@@ -49,74 +48,57 @@ export default function Page({ tour }: Props) {
   const [categoryId, setCategoryId] = useState<number | null>(
     tour.category_id ?? null,
   );
-  const { company } = usePageSharedDataProps();
+
   const handleSuccess = () => {
     toast.success('Success', {
       position: 'top-center',
       description: 'Tour data updated successfully',
     });
   };
-
-  //for price
-  const initialShowpriceRaw =
-    tour.showprice != null ? String(tour.showprice) : '0';
-  const initialShowpriceDisplay = new Intl.NumberFormat('id-ID').format(
-    Number(initialShowpriceRaw),
-  );
+  // Price formatting
+  const initialShowpriceRaw = tour.showprice != null ? String(tour.showprice) : '0';
+  const initialShowpriceDisplay = new Intl.NumberFormat('id-ID').format(Number(initialShowpriceRaw));
 
   const [displayPrice, setDisplayPrice] = useState(initialShowpriceDisplay);
   const [rawPrice, setRawPrice] = useState(initialShowpriceRaw);
 
   const handlePriceChange = (value: string) => {
     let numeric = value.replace(/\D/g, '');
-
     if (numeric === '') numeric = '0';
-
     setRawPrice(numeric);
-
     const formatted = new Intl.NumberFormat('id-ID').format(Number(numeric));
     setDisplayPrice(formatted);
   };
 
-  //for price
-  const initialPromoteRaw = tour.promote_price
-    ? String(tour.promote_price)
-    : '0';
-  const initialPromoteDisplay = new Intl.NumberFormat('id-ID').format(
-    Number(initialPromoteRaw),
-  );
+  // Promote price formatting
+  const initialPromoteRaw = tour.promote_price ? String(tour.promote_price) : '0';
+  const initialPromoteDisplay = new Intl.NumberFormat('id-ID').format(Number(initialPromoteRaw));
 
   const [displayPrice1, setDisplayPrice1] = useState(initialPromoteDisplay);
   const [rawPrice1, setRawPrice1] = useState(initialPromoteRaw);
 
   const handlePriceChange1 = (value: string) => {
     let numeric1 = value.replace(/\D/g, '');
-
     if (numeric1 === '') numeric1 = '0';
-
     setRawPrice1(numeric1);
-
     const formatted1 = new Intl.NumberFormat('id-ID').format(Number(numeric1));
     setDisplayPrice1(formatted1);
   };
 
   return (
-    <CompanyDashboardLayout
-      openMenuIds={['tours']}
-      activeMenuIds={['tours.index']}
+    <AdminDashboardLayout
+      openMenuIds={['tour']}
+      activeMenuIds={['tour', 'tour.products']}
       breadcrumb={[
-        { title: 'Dashboard', url: '/dashboard' },
-        { title: 'Tours', url: '/dashboard/tours' },
+        { title: 'Tours' },
+        { title: 'Products', url: '/admin/tours/products' },
         { title: 'Edit' },
       ]}
     >
-      {/* <Form
-        {...update.form({ company: company.username, tour: tour.id })}
-        className="space-y-4"
-        onSuccess={handleSuccess}
-      > */}
+      <Head title={`Edit Tour — ${tour.name}`} />
       <Form
-        {...update.form({ company: company.username, tour: tour.id })}
+        action={`/admin/tours/products/${tour.id}`}
+        method="put"
         transform={(data) => ({
           ...data,
           showprice: rawPrice,
@@ -127,16 +109,20 @@ export default function Page({ tour }: Props) {
       >
         {({ errors, processing }) => (
           <div className="container mx-auto space-y-4 p-4">
-            {/* <div className="grid gap-6"> changed for show in 2 column */}
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
               {/* Image */}
-              {/* <div className="grid gap-2"> */}
               <div className="grid gap-2 md:col-span-2">
                 <Label htmlFor="name">Image</Label>
                 <MediaPicker
                   type="image"
-                  params={{ owner_type: 'company', owner_id: company.id }}
-                  uploadParams={{ owner_type: 'company', owner_id: company.id }}
+                  params={{
+                    owner_type: 'company',
+                    owner_id: tour.company_id,
+                  }}
+                  uploadParams={{
+                    owner_type: 'company',
+                    owner_id: tour.company_id,
+                  }}
                   defaultValue={tour.image}
                 >
                   {(media, change) => (
@@ -176,6 +162,7 @@ export default function Page({ tour }: Props) {
                 />
                 <InputError message={errors.code} />
               </div>
+
               {/* Name */}
               <div className="grid gap-2">
                 <Label htmlFor="name">Name</Label>
@@ -227,7 +214,6 @@ export default function Page({ tour }: Props) {
                     setCountryId(null);
                   }}
                 />
-
                 <InputError message={errors.continent_id} />
               </div>
 
@@ -256,7 +242,6 @@ export default function Page({ tour }: Props) {
                     setCountryId(Number(val));
                   }}
                 />
-
                 <InputError message={errors.country_id} />
               </div>
 
@@ -283,7 +268,6 @@ export default function Page({ tour }: Props) {
                     setCategoryId(Number(val));
                   }}
                 />
-
                 <InputError message={errors.category_id} />
               </div>
 
@@ -293,8 +277,14 @@ export default function Page({ tour }: Props) {
                 <MediaPicker
                   type="document"
                   defaultValue={tour.document}
-                  params={{ owner_type: 'company', owner_id: company.id }}
-                  uploadParams={{ owner_type: 'company', owner_id: company.id }}
+                  params={{
+                    owner_type: 'company',
+                    owner_id: tour.company_id,
+                  }}
+                  uploadParams={{
+                    owner_type: 'company',
+                    owner_id: tour.company_id,
+                  }}
                 >
                   {(media, change) => {
                     const url =
@@ -312,7 +302,7 @@ export default function Page({ tour }: Props) {
                           {fullUrl ? (
                             <iframe
                               src={fullUrl}
-                              className="w-full h-56 rounded border"
+                              className="h-56 w-full rounded border"
                               title="PDF Preview"
                             />
                           ) : (
@@ -350,7 +340,7 @@ export default function Page({ tour }: Props) {
                 <Label htmlFor="status">Status</Label>
                 <Select name="status" defaultValue={tour.status}>
                   <SelectTrigger className="w-full max-w-48">
-                    <SelectValue placeholder="Select a fruit" />
+                    <SelectValue placeholder="Select status" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectGroup>
@@ -363,9 +353,11 @@ export default function Page({ tour }: Props) {
                 <InputError message={errors.status} />
               </div>
 
-              {/* Normal Price show on catalog */}
+              {/* Normal Price */}
               <div className="grid gap-2">
-                <Label htmlFor="showprice">Normal Price show on catalog</Label>
+                <Label htmlFor="showprice">
+                  Normal Price show on catalog
+                </Label>
                 <Input
                   id="showprice_display"
                   type="text"
@@ -383,13 +375,13 @@ export default function Page({ tour }: Props) {
                 <InputError message={errors.showprice} />
               </div>
 
+              {/* Promotion Settings */}
               <div className="rounded-lg border bg-muted/30 p-4 space-y-4">
                 <div className="text-sm font-semibold text-muted-foreground">
                   Promotion Settings
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* promote title */}
                   <div className="grid gap-2">
                     <Label htmlFor="promote_title">
                       Title Promotion on Catalog
@@ -404,7 +396,6 @@ export default function Page({ tour }: Props) {
                     <InputError message={errors.promote_title} />
                   </div>
 
-                  {/* Promote Price */}
                   <div className="grid gap-2">
                     <Label htmlFor="promote_price">
                       Promotion Price show on catalog
@@ -424,7 +415,6 @@ export default function Page({ tour }: Props) {
                     <InputError message={errors.promote_price} />
                   </div>
 
-                  {/* promote note — full width */}
                   <div className="grid gap-2 md:col-span-2">
                     <Label htmlFor="promote_note">
                       Promotion Note on Catalog
@@ -447,6 +437,6 @@ export default function Page({ tour }: Props) {
           </div>
         )}
       </Form>
-    </CompanyDashboardLayout>
+    </AdminDashboardLayout>
   );
 }

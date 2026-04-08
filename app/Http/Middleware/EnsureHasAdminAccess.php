@@ -8,19 +8,22 @@ use Symfony\Component\HttpFoundation\Response;
 
 class EnsureHasAdminAccess
 {
-  /**
-   * Handle an incoming request.
-   *
-   * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
-   */
-  public function handle(Request $request, Closure $next): Response
-  {
-    $user = $request->user();
+    /**
+     * Handle an incoming request.
+     *
+     * @param  Closure(Request): (Response)  $next
+     */
+    public function handle(Request $request, Closure $next): Response
+    {
+        $user = $request->user();
 
-    if (! $user || ! $user->roles()->whereIn('name', ['admin', 'superadmin'])->exists()) {
-      return redirect('/');
+        if (! $user) {
+            return redirect()->route('login');
+        }
+        if (! $user->hasRole(['company:0:superadmin', 'company:0:admin'])) {
+            abort(403, 'Unauthorized: Required Internal Admin privileges (Scope: company:0).');
+        }
+
+        return $next($request);
     }
-
-    return $next($request);
-  }
 }

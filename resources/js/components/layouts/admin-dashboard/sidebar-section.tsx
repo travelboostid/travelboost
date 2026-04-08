@@ -7,10 +7,9 @@ import {
 } from '@/components/ui/sidebar';
 import type { AdminDashboardLayoutProps } from '.';
 import { DashboardSidebarHeader } from '../components/dashboard-sidebar-header';
-import { NavUser } from '../components/nav-user';
 import { NavMain } from './nav-main';
-
-// This is sample data.
+import { NavSecondary } from './nav-secondary';
+import { NavUser } from './nav-user';
 
 export function SidebarSection(props: AdminDashboardLayoutProps) {
   return (
@@ -20,6 +19,7 @@ export function SidebarSection(props: AdminDashboardLayoutProps) {
       </SidebarHeader>
       <SidebarContent>
         <NavMain {...props} />
+        <NavSecondary />
       </SidebarContent>
       <SidebarFooter>
         <NavUser />
