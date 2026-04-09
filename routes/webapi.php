@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Webapi\AnonymousUserController;
 use App\Http\Controllers\Webapi\BankAccountController;
 use App\Http\Controllers\Webapi\ChatMessageController;
 use App\Http\Controllers\Webapi\ChatRoomController;
@@ -19,7 +20,6 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('webapi')->group(function () {
   Route::middleware(['web', 'auth'])->group(function () {
     Route::apiResource('companies', CompanyController::class);
-    Route::apiResource('tours', TourController::class);
     Route::apiResource('payments', PaymentController::class);
     Route::apiResource('withdrawals', WithdrawalController::class);
     Route::apiResource('bank-accounts', BankAccountController::class);
@@ -32,12 +32,14 @@ Route::prefix('webapi')->group(function () {
     Route::apiResource('categories', TourCategoryController::class);
     Route::get('companies/{company}/settings', [CompanyController::class, 'showSettings']);
     Route::put('companies/{company}/settings', [CompanyController::class, 'updateSettings']);
+    Route::post('payments/create-topup-payment', [PaymentController::class, 'createTopupPayment']);
+    Route::post('payments/create-agent-subscription-payment', [PaymentController::class, 'createAgentSubscriptionPayment']);
+  });
+  Route::middleware(['web'])->group(function () {
+    Route::apiResource('tours', TourController::class);
+    Route::post('anonymous-users/setup', [AnonymousUserController::class, 'setupAnonymousUser']);
+    Route::apiResource('chat/rooms.messages', ChatMessageController::class)->shallow(); // Messages nested under rooms
     Route::apiResource('chat/rooms', ChatRoomController::class);
     Route::post('chat/rooms/open', [ChatRoomController::class, 'open']);
-
-    // Messages nested under rooms
-    Route::apiResource('chat/rooms.messages', ChatMessageController::class)
-      ->shallow();
-    Route::post('payments/topup', [PaymentController::class, 'topup']);
   });
 });

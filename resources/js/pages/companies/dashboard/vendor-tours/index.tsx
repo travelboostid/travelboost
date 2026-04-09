@@ -37,12 +37,13 @@ export default function Page({
   const { company } = usePageSharedDataProps();
   useEffect(() => {
     const timeout = setTimeout(() => {
+      const params: any = {};
+      if (filters.category) params.category = filters.category;
+      if (search) params.search = search;
+
       router.get(
         index({ company: company.username, vendor: vendor.username }),
-        {
-          category: filters.category,
-          search: search || undefined,
-        },
+        params,
         {
           preserveState: true,
           replace: true, // supaya URL tidak numpuk di history
@@ -117,15 +118,15 @@ export default function Page({
       <div className="flex gap-2 overflow-x-auto pb-2 ml-4">
         {/* Tombol Semua */}
         <button
-          onClick={() =>
+          onClick={() => {
+            const params: any = {};
+            if (search) params.search = search;
             router.get(
               index({ company: company.username, vendor: username }),
-              {
-                search: search || undefined,
-              },
+              params,
               { preserveState: true },
-            )
-          }
+            );
+          }}
           className={`px-4 py-2 rounded-full text-sm font-medium transition
           ${
             !filters.category

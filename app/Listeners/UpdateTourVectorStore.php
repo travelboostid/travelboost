@@ -28,7 +28,7 @@ class UpdateTourVectorStore
    */
   public function handle(TourCreated|TourUpdated $event): void
   {
-    $tour = $event->tour;
+    $tour = $event->tour->fresh()->load('document');
     if (! $tour?->document?->data['url']) {
       return;
     }

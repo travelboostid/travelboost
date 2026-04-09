@@ -23,11 +23,10 @@ export default function ApproveRegistrationButton({
 }) {
   const { company } = usePageSharedDataProps();
   const [open, setOpen] = useState(false);
-  const form = useForm();
+  const form = useForm({
+    status: 'active',
+  });
   const handleApprove = () => {
-    form.setData({
-      status: 'active',
-    });
     form.put(
       update({
         company: company.username,

@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Companies\Dashboard;
 
 use App\Http\Controllers\Controller;
-use App\Models\Tour;
 use App\Models\Company;
+use App\Models\Tour;
 use App\Models\TourCategory;
 use App\Models\VendorAgentPartner;
 use Inertia\Inertia;
@@ -14,16 +14,30 @@ class VendorTourCatalogController extends Controller
   public function index(Company $company, string $username)
   {
     $vendor = Company::where('username', $username)->firstOrFail();
+
+    $agentTourIds = $vendor->agentTours()->pluck('tour_id');
+
+    $toursQuery = Tour::where('status', 'active')
+      ->where(function ($query) use ($vendor, $agentTourIds) {
+        $query->where('company_id', $vendor->id)
+          ->orWhereIn('id', $agentTourIds);
+      });
+
     $categories = TourCategory::where('company_id', $vendor->id)
       ->orderBy('position_no')
       ->get();
-    $vendor = Company::where('username', $username)->firstOrFail();
-    $tours = $vendor->tours()
-      //31032026
-      ->where('status', 'active')
-      //
-      ->when(request('category'), function ($query, $categoryId) {
-        $query->where('category_id', $categoryId);
+
+    $tours = $toursQuery
+      ->when(request('category'), function ($query, $categoryId) use ($vendor) {
+        $query->where(function ($q) use ($categoryId, $vendor) {
+          $q->where('category_id', $categoryId)
+            ->orWhereIn('id', function ($subquery) use ($categoryId, $vendor) {
+              $subquery->select('tour_id')
+                ->from('agent_tours')
+                ->where('company_id', $vendor->id)
+                ->where('category_id', $categoryId);
+            });
+        });
       })
       ->when(request('search'), function ($query, $search) {
         $query->where('name', 'ilike', "%{$search}%");
@@ -40,7 +54,7 @@ class VendorTourCatalogController extends Controller
 
     return Inertia::render('companies/dashboard/vendor-tours/index', [
       'data' => $tours,
-      'filters'    => request()->only(['category', 'search']),
+      'filters' => request()->only(['category', 'search']),
       'categories' => $categories,
       'username' => $username,
       'partnership' => $partnership,
@@ -68,18 +82,18 @@ class VendorTourCatalogController extends Controller
 
   public function viewPublicBrochure($vendor, $tourId)
   {
-      $tour = Tour::with('document')->findOrFail($tourId);
-      //
-      if (!$tour->document) {
-          abort(404);
-      }
+    $tour = Tour::with('document')->findOrFail($tourId);
+    //
+    if (! $tour->document) {
+      abort(404);
+    }
 
-      $url = $tour->document['data']['url'] ?? null;
+    $url = $tour->document['data']['url'] ?? null;
 
-      if (!$url) {
-          abort(404);
-      }
+    if (! $url) {
+      abort(404);
+    }
 
-      return redirect($url);
+    return redirect($url);
   }
 }

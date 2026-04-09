@@ -13,20 +13,23 @@ class TenantResolver
   {
     $appHost = env('APP_HOST', 'localhost');
     $currentHost = $request->getHost();
-    // skip main domain
-    if ($currentHost == $appHost) {
+    if ($currentHost === $appHost || $currentHost === '127.0.0.1' || $currentHost === 'localhost') {
       $request->attributes->set('tenant', null);
       return $next($request);
     }
+    $baseHost = ($appHost === '127.0.0.1') ? 'localhost' : $appHost;
 
-    if (Str::endsWith($currentHost, '.' . $appHost)) {
-      $subdomain = Str::before($currentHost, '.' . $appHost);
-      $company = Company::where('subdomain', $subdomain)->first();
+    if (Str::endsWith($currentHost, '.' . $baseHost)) {
+      $subdomain = Str::before($currentHost, '.' . $baseHost);
+      $company = Company::where('username', $subdomain)
+                        ->orWhere('subdomain', $subdomain)
+                        ->first();
       if ($company == null) {
         return Inertia::render('errors/invalid-tenant-subdomain')
           ->toResponse($request)
           ->setStatusCode(404);
       }
+            
       $request->attributes->set('tenant', $company);
     } else {
       // user use custom domain
@@ -35,6 +38,7 @@ class TenantResolver
         ->toResponse($request)
         ->setStatusCode(404);
     }
+
     return $next($request);
   }
 }

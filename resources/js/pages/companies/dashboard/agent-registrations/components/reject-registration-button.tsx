@@ -23,11 +23,10 @@ export default function RejectRegistrationButton({
 }) {
   const { company } = usePageSharedDataProps();
   const [open, setOpen] = useState(false);
-  const form = useForm();
+  const form = useForm({
+    status: 'rejected',
+  });
   const handleReject = () => {
-    form.setData({
-      status: 'rejected',
-    });
     form.put(
       update({
         company: company.username,

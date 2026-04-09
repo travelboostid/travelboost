@@ -18,7 +18,9 @@ export type AdminDashboardLayoutProps = {
   openMenuIds?: string[];
 };
 
-export default function AdminDashboardLayout(props: AdminDashboardLayoutProps) {
+export default function AdminDashboardLayout(
+  props: AdminDashboardLayoutProps,
+) {
   const { children, breadcrumb, applet, containerClassName } = props;
 
   return (

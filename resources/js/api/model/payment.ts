@@ -5,6 +5,7 @@
  * OpenAPI spec version: 0.0.1
  */
 import type { PaymentPaymentMethod } from './paymentPaymentMethod';
+import type { PaymentStatus } from './paymentStatus';
 import type { PaymentPayload } from './paymentPayload';
 import type { PaymentPaidAt } from './paymentPaidAt';
 import type { PaymentCreatedAt } from './paymentCreatedAt';
@@ -19,7 +20,7 @@ export interface Payment {
   provider: string;
   payment_method: PaymentPaymentMethod;
   amount: string;
-  status: string;
+  status: PaymentStatus;
   payload: PaymentPayload;
   paid_at: PaymentPaidAt;
   created_at: PaymentCreatedAt;

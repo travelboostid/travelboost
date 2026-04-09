@@ -147,6 +147,14 @@
       }
     },
     {
+      "type": "AboutUs",
+      "props": {
+        "header": "Tentang Kami",
+        "description": "Kenali lebih dekat agen perjalanan Anda dan hubungi kami kapan saja.",
+        "id": "AboutUs-a1b2c3d4-greenie-001-0000-000000000001"
+      }
+    },
+    {
       "type": "Footer1",
       "props": {
         "content": "© 2025 TravelSync. Semua hak dilindungi.",
