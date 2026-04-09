@@ -5,7 +5,11 @@ import AiCreditsTopup from './components/ai-credits-topup';
 import DailyUsageStats from './components/daily-usage-stats';
 
 export type AiCreditsPageProps = {
-  ai_credits: number;
+  settings: any;
+  credit: any;
+  billingCycles: any[];
+  usageCostToday: any;
+  usageCostIn30Days: any;
 };
 
 export default function AiCreditsPage() {

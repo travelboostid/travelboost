@@ -185,6 +185,11 @@ export function useCompanyDashboardNavMainMenu() {
               title: 'Chat AI',
               urlOrAction: `/companies/${company.username}/dashboard/chatbot`,
             },
+            {
+              id: 'settings.ai-credits',
+              title: 'AI Credits',
+              urlOrAction: `/companies/${company.username}/dashboard/ai-credits`,
+            },
           ],
         },
       ] as MenuItem[])

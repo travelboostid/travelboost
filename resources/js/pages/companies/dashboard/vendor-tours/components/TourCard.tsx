@@ -134,7 +134,7 @@ export default function TourCard({
 
       await floatingChat?.startPrivateChat({
         type: 'company',
-        id: company.id,
+        id: tour.company_id,
       });
 
       console.log('CHAT STARTED');

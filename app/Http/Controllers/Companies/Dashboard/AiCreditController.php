@@ -15,10 +15,13 @@ class AiCreditController extends Controller
   public function show(Company $company)
   {
     $settings = $company->settings()->first();
-    // $credit = $company->aiCredit()->first();
+    $credit = $company->aiCredit()->first();
     return Inertia::render('companies/dashboard/ai-credits/index', [
       'settings' => $settings,
-      // 'credit' => $credit,
+      'credit' => $credit,
+      'billingCycles' => $company->aiBillingCycles()->orderBy('date', 'asc')->limit(30)->get(),
+      'usageCostToday' => $company->aiBillingCycles()->where('date', now()->toDateString())->sum('cost'),
+      'usageCostIn30Days' => $company->aiBillingCycles()->where('date', '>=', now()->subDays(30)->toDateString())->sum('cost'),
     ]);
   }
 }
