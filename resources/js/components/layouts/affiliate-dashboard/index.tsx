@@ -1,0 +1,49 @@
+import { Separator } from '@/components/ui/separator';
+import {
+  SidebarInset,
+  SidebarProvider,
+  SidebarTrigger,
+} from '@/components/ui/sidebar';
+import { type ReactNode } from 'react';
+import type { BreadcrumbItemInfo } from '../components/breadcrumb-renderer';
+import BreadcrumbRenderer from '../components/breadcrumb-renderer';
+import { SidebarSection } from './sidebar-section';
+
+export type AffiliateDashboardLayoutProps = {
+  children: ReactNode;
+  breadcrumb?: BreadcrumbItemInfo[];
+  applet?: ReactNode;
+  containerClassName?: string;
+  activeMenuIds?: string[];
+  openMenuIds?: string[];
+};
+
+export default function AffiliateDashboardLayout(
+  props: AffiliateDashboardLayoutProps,
+) {
+  const { children, breadcrumb, applet, containerClassName } = props;
+
+  return (
+    <SidebarProvider>
+      <SidebarSection {...props} />
+      <SidebarInset>
+        <header className="flex h-16 w-full shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 border-b border-border/40">
+          <div className="flex w-full items-center gap-2 px-4">
+            <SidebarTrigger className="-ml-1" />
+            <Separator
+              orientation="vertical"
+              className="mr-2 data-[orientation=vertical]:h-4"
+            />
+            <div className="flex-1">
+              <BreadcrumbRenderer breadcrumb={breadcrumb} />
+            </div>
+            <div>{applet}</div>
+          </div>
+        </header>
+        <main className={`flex-1 p-4 md:p-6 ${containerClassName || ''}`}>
+          {children}
+        </main>
+      </SidebarInset>
+    </SidebarProvider>
+  );
+}

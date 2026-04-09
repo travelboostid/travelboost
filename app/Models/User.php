@@ -115,4 +115,14 @@ class User extends Authenticatable implements Customer, Wallet, LaratrustUser
   {
     return $this->belongsTo(Company::class, 'company_id');
   }
+
+  public function affiliateProfile()
+  {
+    return $this->hasOne(AffiliateProfile::class);
+  }
+
+  public function affiliateCommissions()
+  {
+    return $this->hasMany(AffiliateCommission::class);
+  }
 }
