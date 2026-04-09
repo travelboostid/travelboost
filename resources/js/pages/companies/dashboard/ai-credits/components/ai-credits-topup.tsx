@@ -1,42 +1,36 @@
 import { useCreateTopupPayment } from '@/api/payment/payment';
 import { Button } from '@/components/ui/button';
 import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Field, FieldGroup } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
+import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { useState } from 'react';
 
 const PRESET_AMOUNTS = [100_000, 200_000, 500_000, 1_000_000];
 const MIN_AMOUNT = 100_000;
 
-type TopupDialogProps = {
-  children: React.ReactNode;
-};
-
-export function TopupDialog({ children }: TopupDialogProps) {
-  const [open, setOpen] = useState(false);
+export default function AiCreditsTopup() {
   const [amount, setAmount] = useState<number | null>(null);
   const [ongoing, setOngoing] = useState(false);
   const isValid = amount !== null && amount >= MIN_AMOUNT;
+  const { company } = usePageSharedDataProps();
   const topup = useCreateTopupPayment();
   const handleTopup = () => {
     if (!isValid || ongoing) return;
 
     topup.mutate(
-      { data: { amount } },
+      { data: { amount, owner_type: 'company', owner_id: company.id } },
       {
         onSuccess: (payment) => {
-          setOpen(false);
           const snapToken = (payment.data.payload as any)?.snap_token as string;
           (window as any).snap.pay(snapToken, {
             onSuccess: () => setOngoing(false),
@@ -51,17 +45,14 @@ export function TopupDialog({ children }: TopupDialogProps) {
   const loaading = topup.isPending || ongoing;
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>{children}</DialogTrigger>
-
-      <DialogContent className="sm:max-w-sm">
-        <DialogHeader>
-          <DialogTitle>Top up wallet</DialogTitle>
-          <DialogDescription>
-            Choose an amount or enter a custom value (minimum Rp 100.000)
-          </DialogDescription>
-        </DialogHeader>
-
+    <Card>
+      <CardHeader>
+        <CardTitle>Top up AI credits</CardTitle>
+        <CardDescription>
+          Top up your AI credits for your account.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
         {/* Preset amounts */}
         <div className="grid grid-cols-2 gap-2">
           {PRESET_AMOUNTS.map((preset) => (
@@ -92,17 +83,16 @@ export function TopupDialog({ children }: TopupDialogProps) {
             />
           </Field>
         </FieldGroup>
-
-        <DialogFooter>
-          <DialogClose asChild>
-            <Button variant="outline">Cancel</Button>
-          </DialogClose>
-
-          <Button disabled={!isValid || loaading} onClick={handleTopup}>
-            {loaading && <Spinner />} Topup
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      </CardContent>
+      <CardFooter className="flex-col gap-2">
+        <Button
+          disabled={!isValid || loaading}
+          onClick={handleTopup}
+          className="w-full"
+        >
+          {loaading && <Spinner />} Topup AI Credits
+        </Button>
+      </CardFooter>
+    </Card>
   );
 }

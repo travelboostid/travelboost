@@ -54,7 +54,7 @@ class Company extends Model
 
       // AI
       $company->aiCredit()->create([
-        'balance' => 10, // Default AI free credit balance for new companies
+        'balance' => 10000, // Default AI free credit balance for new companies
       ]);
 
       // Access group and role setup
@@ -168,17 +168,17 @@ class Company extends Model
     return $this->hasMany(VendorAgentPartner::class, 'agent_id');
   }
 
-  protected function aiCredit()
+  public function aiCredit()
   {
     return $this->hasOne(AiCredit::class, 'company_id');
   }
 
-  protected function aiUsageLogs()
+  public function aiUsageLogs()
   {
     return $this->hasMany(AiUsageLog::class, 'company_id');
   }
 
-  protected function photoUrl(): Attribute
+  public function photoUrl(): Attribute
   {
     return Attribute::make(
       get: function () {
@@ -192,5 +192,15 @@ class Company extends Model
   public function agentSubscription()
   {
     return $this->hasOne(AgentSubscription::class);
+  }
+
+  public function payments()
+  {
+    return $this->morphMany(Payment::class, 'owner');
+  }
+
+  public function aiBillingCycles()
+  {
+    return $this->hasMany(AiBillingCycle::class, 'company_id');
   }
 }

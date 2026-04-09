@@ -14,20 +14,50 @@ class AiModelSeeder extends Seeder
   {
     $models = [
       [
+        'code' => 'gpt-5.4',
+        'input_token_rate' => 45000,
+        'output_token_rate' => 260000,
+      ],
+      [
+        'code' => 'gpt-5.4-mini',
+        'input_token_rate' => 15000,
+        'output_token_rate' => 80000,
+      ],
+      [
+        'code' => 'gpt-5.4-nano',
+        'input_token_rate' => 5000,
+        'output_token_rate' => 25000,
+      ],
+      [
+        'code' => 'gpt-4.1',
+        'input_token_rate' => 40000,
+        'output_token_rate' => 150000,
+      ],
+      [
+        'code' => 'gpt-4.1-mini',
+        'input_token_rate' => 10000,
+        'output_token_rate' => 30000,
+      ],
+      [
+        'code' => 'gpt-4.1-nano',
+        'input_token_rate' => 4000,
+        'output_token_rate' => 10000,
+      ],
+      [
+        'code' => 'gpt-4o',
+        'input_token_rate' => 45000,
+        'output_token_rate' => 200000,
+      ],
+      [
+        'code' => 'gpt-4o-mini',
+        'input_token_rate' => 4000,
+        'output_token_rate' => 14000,
+      ],
+      [
         'code' => 'gpt-3.5-turbo',
-        'input_token_rate' => 0.00000150,
-        'output_token_rate' => 0.00000600,
-      ],
-      [
-        'code' => 'gpt-4',
-        'input_token_rate' => 0.00000300,
-        'output_token_rate' => 0.00001200,
-      ],
-      [
-        'code' => 'gpt-5',
-        'input_token_rate' => 0.00000075,
-        'output_token_rate' => 0.00000300,
-      ],
+        'input_token_rate' => 12000,
+        'output_token_rate' => 25000,
+      ]
     ];
 
     foreach ($models as $data) {

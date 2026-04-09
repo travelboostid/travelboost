@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Models\AgentSubscriptionPayment;
+use App\Models\AiCreditTopupPayment;
 use App\Models\WalletTopupPayment;
 use App\Services\ChatbotService;
 use Carbon\CarbonImmutable;
@@ -58,6 +59,7 @@ class AppServiceProvider extends ServiceProvider
   {
     Relation::morphMap([
       'wallet-topup-payment' => WalletTopupPayment::class,
+      'ai-credit-topup-payment' => AiCreditTopupPayment::class,
       'agent-subscription-payment' => AgentSubscriptionPayment::class,
       'company' => \App\Models\Company::class,
       'user' => \App\Models\User::class,

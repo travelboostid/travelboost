@@ -4,9 +4,16 @@
  * Travelboost
  * OpenAPI spec version: 0.0.1
  */
+import type { GetWithdrawalsOwnerType } from './getWithdrawalsOwnerType';
 import type { GetWithdrawalsStatus } from './getWithdrawalsStatus';
 
 export type GetWithdrawalsParams = {
+owner_type?: GetWithdrawalsOwnerType;
+owner_id?: number | number;
+/**
+ * @maxLength 50
+ */
+payable_type?: string;
 status?: GetWithdrawalsStatus;
 /**
  * @maxLength 50
