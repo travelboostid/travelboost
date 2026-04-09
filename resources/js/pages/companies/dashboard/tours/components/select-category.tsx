@@ -15,6 +15,7 @@ interface SelectCategoryProps {
   value?: string | number;
   defaultValue?: string | number;
   onChange?: (value: string | number) => void;
+  companyId?: number;
 }
 
 export default function SelectCategory({
@@ -22,10 +23,11 @@ export default function SelectCategory({
   value,
   defaultValue,
   onChange,
+  companyId,
 }: SelectCategoryProps) {
   const { company } = usePageSharedDataProps();
   const { data, isLoading } = useGetTourCategories({
-    company_id: company.id,
+    company_id: companyId ?? company?.id,
   });
 
   return (
