@@ -86,11 +86,7 @@ export default function WithdrawalsPage({
     <CompanyDashboardLayout
       activeMenuIds={['funds.withdrawals']}
       openMenuIds={['funds']}
-      breadcrumb={[
-        { title: 'Dashboard', url: '/dashboard' },
-        { title: 'Wallet', url: '/wallet' },
-        { title: 'Withdrawals' },
-      ]}
+      breadcrumb={[{ title: 'Funds' }, { title: 'Withdrawals' }]}
     >
       <Head title="Withdrawals" />
 

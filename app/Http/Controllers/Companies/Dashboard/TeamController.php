@@ -17,7 +17,6 @@ use Illuminate\Support\Str;
 
 class TeamController extends Controller
 {
-  // List company team members with their roles
   public function index(Company $company)
   {
     $members = $company->teams()
@@ -31,7 +30,6 @@ class TeamController extends Controller
     ]);
   }
 
-  // Send team invitation to email
   public function invite(InviteCompanyTeamRequest $request, Company $company)
   {
     $validated = $request->validated();
@@ -39,7 +37,7 @@ class TeamController extends Controller
     $existingUser = User::where('email', $email)->first();
     $userId = $existingUser?->id;
 
-    // Check if user already invited
+    // Check both registered users and pending invitations
     $alreadyInvited = $company->teams()
       ->where(function ($q) use ($userId, $email) {
         if ($userId) {
@@ -64,13 +62,13 @@ class TeamController extends Controller
     return back()->with('success', 'Invitation sent.');
   }
 
-  // Resend pending team invitation
   public function resendInvitation(Company $company, CompanyTeam $team)
   {
     if ($team->status != CompanyTeamStatus::PENDING) {
       return back()->withErrors(['email' => 'Invitation cannot be resent.']);
     }
 
+    // Send to email or user depending on acceptance status
     if ($team->user == null) {
       Notification::route('mail', $team->invite_email)
         ->notify(new TeamInvitationNotification($team));
@@ -81,24 +79,25 @@ class TeamController extends Controller
     return back();
   }
 
-  // Update team member details
   public function update(UpdateCompanyTeamRequest $request, Company $company, CompanyTeam $team)
   {
     $team->load('user.roles');
     $validated = $request->validated();
     $roleName = $validated['role'] ?? null;
     $rest = collect($validated)->except('role')->toArray();
+
+    // Update user role if provided
     if ($roleName) {
       $role = Role::where('name', $roleName)->first();
       $existingRoles = $team->user->roles()->where('name', 'like', "company:{$company->id}:%")->pluck('name')->toArray();
       $team->user->removeRoles($existingRoles, "company:{$company->id}");
       $team->user->addRole($role, "company:{$company->id}");
     }
+
     $team->update($rest);
     return back();
   }
 
-  // Remove team member from company
   public function destroy(Company $company, CompanyTeam $team)
   {
     $team->delete();

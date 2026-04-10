@@ -328,7 +328,7 @@ export function useCompanyDashboardNavMainMenu() {
           icon: SettingsIcon,
           items: [
             {
-              id: 'settings.subscriptions',
+              id: 'settings.agent-subscriptions',
               title: 'Agent Subscriptions',
               urlOrAction: `/companies/${company.username}/dashboard/agent-subscriptions`,
             },
@@ -358,7 +358,7 @@ export function useCompanyDashboardNavMainMenu() {
               urlOrAction: `/companies/${company.username}/dashboard/ai-credits`,
             },
             {
-              id: 'settings.vendor-regs',
+              id: 'settings.vendor-registrations',
               title: 'Vendor Registrations',
               urlOrAction: `/companies/${company.username}/dashboard/vendor-registrations`,
             },

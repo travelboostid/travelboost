@@ -16,7 +16,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { Switch } from '@/components/ui/switch';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { update } from '@/routes/company/chatbot';
-import { Form } from '@inertiajs/react';
+import { Form, Head } from '@inertiajs/react';
 import { toast } from 'sonner';
 import SelectAiModel from './components/select-ai-model';
 
@@ -34,8 +34,11 @@ export default function Page({ settings }: { settings: any }) {
   return (
     <CompanyDashboardLayout
       containerClassName="p-4"
-      breadcrumb={[{ title: 'Settings' }, { title: 'Chatbot' }]}
+      breadcrumb={[{ title: 'Settings' }, { title: 'Chatbot Settings' }]}
+      openMenuIds={['settings']}
+      activeMenuIds={['settings.chatbot']}
     >
+      <Head title="Chatbot Settings" />
       <Form
         {...update.form({ company: company.username })}
         transform={(src) => ({

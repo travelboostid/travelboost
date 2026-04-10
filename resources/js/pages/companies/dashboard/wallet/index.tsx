@@ -28,12 +28,9 @@ export default function WalletPage() {
     <CompanyDashboardLayout
       activeMenuIds={[`funds.wallets`]}
       openMenuIds={['funds']}
-      breadcrumb={[
-        { title: 'Dashboard', url: '/dashboard' },
-        { title: 'Wallet' },
-      ]}
+      breadcrumb={[{ title: 'Funds' }, { title: 'Wallet' }]}
     >
-      <Head title="My Wallet" />
+      <Head title="Wallet" />
       <div className="max-w-6xl mx-auto grid gap-4 p-4">
         <WalletSummary />
         <PendingTopup />

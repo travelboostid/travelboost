@@ -71,13 +71,9 @@ export default function Page({ payments, filters }: PaymentsPageProps) {
 
   return (
     <CompanyDashboardLayout
-      activeMenuIds={['funds.payments']}
+      breadcrumb={[{ title: 'Funds' }, { title: 'Payments' }]}
       openMenuIds={['funds']}
-      breadcrumb={[
-        { title: 'Dashboard', url: '/dashboard' },
-        { title: 'Wallet', url: '/wallet' },
-        { title: 'Payments' },
-      ]}
+      activeMenuIds={['funds.payments']}
     >
       <Head title="Payments" />
 

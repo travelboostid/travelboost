@@ -8,6 +8,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { Head } from '@inertiajs/react';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import InviteTeamButton from './components/invite-team-button';
@@ -24,8 +25,11 @@ export default function Teams({ members, roles }: TeamsPageProps) {
     <CompanyDashboardLayout
       containerClassName="p-4"
       breadcrumb={[{ title: 'Settings' }, { title: 'User Management' }]}
+      openMenuIds={['settings']}
+      activeMenuIds={['settings.teams']}
       applet={<InviteTeamButton roles={roles} />}
     >
+      <Head title="User Management" />
       <div className="rounded-lg border bg-card w-full">
         <Table>
           <TableHeader>

@@ -177,10 +177,7 @@ export default function AgentToursPage({ data }: PageProps) {
     <CompanyDashboardLayout
       openMenuIds={['tours']}
       activeMenuIds={['tours.index']}
-      breadcrumb={[
-        { title: 'Dashboard', url: '/dashboard' },
-        { title: 'My Tours' },
-      ]}
+      breadcrumb={[{ title: 'My Tours' }]}
     >
       <div className="w-full space-y-4 p-4">
         {/* Toolbar */}

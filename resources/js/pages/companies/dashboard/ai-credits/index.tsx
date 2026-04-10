@@ -1,4 +1,5 @@
 import CompanyDashboardLayout from '@/components/layouts/company-dashboard';
+import { Head } from '@inertiajs/react';
 import AiCreditsInfo from './components/ai-credits-info';
 import AiCreditsSummary from './components/ai-credits-summary';
 import AiCreditsTopup from './components/ai-credits-topup';
@@ -17,7 +18,10 @@ export default function AiCreditsPage() {
     <CompanyDashboardLayout
       containerClassName="p-4"
       breadcrumb={[{ title: 'Settings' }, { title: 'AI Credits' }]}
+      openMenuIds={['settings']}
+      activeMenuIds={['settings.ai-credits']}
     >
+      <Head title="AI Credits" />
       <div className="grid gap-4">
         <AiCreditsInfo />
         <AiCreditsSummary />

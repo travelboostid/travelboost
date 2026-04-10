@@ -14,6 +14,8 @@ class VendorRegistrationController extends Controller
   public function index(Company $company, VendorRegistrationIndexRequest $request)
   {
     $validated = $request->validated();
+
+    // Fetch vendor partners with optional filtering and sorting
     $data = $company->vendorPartners()
       ->with(['vendor'])
       ->when($validated['vendor.name'] ?? null, function ($query, $name) {
@@ -24,6 +26,7 @@ class VendorRegistrationController extends Controller
       ->when(request('sort'), function ($query) {
         $sorts = explode(',', request('sort'));
         foreach ($sorts as $sort) {
+          // Handle ascending and descending sort directions
           if (str_starts_with($sort, '-')) {
             $query->orderBy(substr($sort, 1), 'desc');
           } else {
@@ -39,12 +42,9 @@ class VendorRegistrationController extends Controller
     ]);
   }
 
-  /**
-   * Remove the specified resource from storage.
-   */
   public function destroy(Company $company, VendorAgentPartner $vendor_registration)
   {
-    $vendor_registration->delete(); // Delete the partner
+    $vendor_registration->delete();
     return back();
   }
 
@@ -52,7 +52,9 @@ class VendorRegistrationController extends Controller
   {
     $validated = $request->validated();
     $vendor = Company::where('id', $validated['vendor_id'])->first();
-    VendorAgentPartner::create(['agent_id' => $company->id, 'vendor_id' => $vendor->id]); // Register the partner
+
+    // Create partner relationship between agent and vendor
+    VendorAgentPartner::create(['agent_id' => $company->id, 'vendor_id' => $vendor->id]);
     return back();
   }
 }

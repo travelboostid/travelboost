@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/tooltip';
 import { DEFAULT_PHOTO } from '@/config';
 import { useDataTable } from '@/hooks/use-data-table';
+import { Head } from '@inertiajs/react';
 import type { ColumnDef } from '@tanstack/react-table';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
@@ -152,7 +153,9 @@ export default function Page({ data }: PageProps) {
     <CompanyDashboardLayout
       containerClassName="p-4"
       breadcrumb={[{ title: 'Settings' }, { title: 'Vendor Registrations' }]}
+      openMenuIds={['settings']}
     >
+      <Head title="Vendor Registrations" />
       <DataTable table={table} renderEmptyState={<EmptyRegistrations />}>
         <DataTableToolbar table={table} />
       </DataTable>

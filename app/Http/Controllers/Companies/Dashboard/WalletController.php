@@ -12,30 +12,31 @@ class WalletController extends Controller
 {
   public function index(Company $company)
   {
-    $wallet = $company->wallet; // default wallet
-    // Current balance
-    $balance = $wallet->balance;
+    $wallet = $company->wallet; // Get the default wallet
+    $balance = $wallet->balance; // Current balance
 
+    // Define date ranges for this month and last month
     $thisMonthStart = now()->startOfMonth();
     $thisMonthEnd   = now()->endOfMonth();
-
     $lastMonthStart = now()->subMonth()->startOfMonth();
     $lastMonthEnd   = now()->subMonth()->endOfMonth();
 
     // --- THIS MONTH ---
+    // Calculate income and expenses for this month
     $thisIncome = $wallet->transactions()
-      ->where('amount', '>', 0)
+      ->where('amount', '>', 0) // Income transactions
       ->whereBetween('created_at', [$thisMonthStart, $thisMonthEnd])
       ->sum('amount');
 
     $thisExpense = abs(
       $wallet->transactions()
-        ->where('amount', '<', 0)
+        ->where('amount', '<', 0) // Expense transactions
         ->whereBetween('created_at', [$thisMonthStart, $thisMonthEnd])
         ->sum('amount')
     );
 
     // --- LAST MONTH ---
+    // Calculate income and expenses for last month
     $lastIncome = $wallet->transactions()
       ->where('amount', '>', 0)
       ->whereBetween('created_at', [$lastMonthStart, $lastMonthEnd])
@@ -48,24 +49,25 @@ class WalletController extends Controller
         ->sum('amount')
     );
 
-    // Net movement
+    // Calculate net movement for this month and last month
     $thisNet = $thisIncome - $thisExpense;
     $lastNet = $lastIncome - $lastExpense;
 
-    // Last 10 transactions
+    // Retrieve the last 10 transactions
     $transactions = $wallet->transactions()
       ->latest()
       ->take(10)
       ->get()
       ->map(fn(Transaction $t) => [
         'id'        => $t->id,
-        'type'      => $t->amount > 0 ? 'income' : 'expense',
+        'type'      => $t->amount > 0 ? 'income' : 'expense', // Determine transaction type
         'amount'    => $t->amount,
         'confirmed' => $t->confirmed,
         'meta'      => $t->meta,
         'created_at' => $t->created_at,
       ]);
 
+    // Render the Inertia view with wallet data
     return Inertia::render('companies/dashboard/wallet/index', [
       'balance' => $balance,
       'income' => [
@@ -87,12 +89,13 @@ class WalletController extends Controller
     ]);
   }
 
+  // Calculate growth percentage between current and previous values
   private function growthPercentage(int $current, int $previous): float
   {
     if ($previous === 0) {
-      return $current > 0 ? 100.0 : 0.0;
+      return $current > 0 ? 100.0 : 0.0; // Handle division by zero
     }
 
-    return round((($current - $previous) / abs($previous)) * 100, 2);
+    return round((($current - $previous) / abs($previous)) * 100, 2); // Calculate percentage
   }
 }

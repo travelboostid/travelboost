@@ -10,7 +10,6 @@ export default function ViewBrochure({ tour }: { tour: TourResource }) {
       openMenuIds={['tours']}
       activeMenuIds={['tours.index']}
       breadcrumb={[
-        { title: 'Dashboard', url: '/dashboard' },
         { title: 'Tours', url: '/dashboard/tours' },
         { title: tour.name },
         { title: 'Brochure' },

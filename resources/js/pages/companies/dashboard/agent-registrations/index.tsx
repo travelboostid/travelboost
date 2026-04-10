@@ -156,7 +156,9 @@ export default function Page({ data }: PageProps) {
   return (
     <CompanyDashboardLayout
       containerClassName="p-4"
-      breadcrumb={[{ title: 'Settings' }, { title: 'Agents' }]}
+      breadcrumb={[{ title: 'Settings' }, { title: 'Agent Registrations' }]}
+      openMenuIds={['settings']}
+      activeMenuIds={['settings.agent-registrations']}
     >
       <DataTable table={table} renderEmptyState={<EmptyRegistrations />}>
         <DataTableToolbar table={table} />
