@@ -3,7 +3,7 @@ import type { TourCategoryResource, TourResource } from '@/api/model';
 import CompanyDashboardLayout from '@/components/layouts/company-dashboard';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { router } from '@inertiajs/react';
-import { SearchIcon, MessageCircle } from 'lucide-react';
+import { MessageCircle, SearchIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import TourCard from './components/TourCard';
 import VendorPartnershipRegistrationButton from './components/vendor-partnership-register-button';
@@ -30,8 +30,7 @@ export default function Page({
   vendor,
   partnership,
 }: PageProps) {
-
-  //console.log("VENDOR DATA:", vendor); 
+  //console.log("VENDOR DATA:", vendor);
 
   const [search, setSearch] = useState(filters.search ?? '');
   const { company } = usePageSharedDataProps();
@@ -76,22 +75,16 @@ export default function Page({
   const waNumber = vendor?.phone;
 
   const waMessage = encodeURIComponent(
-    `Halo, saya melihat katalog tour dari ${username}. Mohon info lebih lanjut.`
+    `Halo, saya melihat katalog tour dari ${username}. Mohon info lebih lanjut.`,
   );
 
-  const waUrl = waNumber
-    ? `https://wa.me/${waNumber}?text=${waMessage}`
-    : null;
+  const waUrl = waNumber ? `https://wa.me/${waNumber}?text=${waMessage}` : null;
 
   return (
     <CompanyDashboardLayout
       openMenuIds={['vendor-tour-catalogs']}
       activeMenuIds={[`vendor-tour-catalogs.${username}`]}
-      breadcrumb={[
-        { title: 'Dashboard', url: '/dashboard' },
-        { title: 'Tour Catalogs' },
-        { title: username },
-      ]}
+      breadcrumb={[{ title: 'Tour Catalogs' }, { title: username }]}
       containerClassName="space-y-4"
       applet={
         <VendorPartnershipRegistrationButton
@@ -177,10 +170,8 @@ export default function Page({
           className="fixed bottom-24 right-6 z-50 flex items-center gap-2 rounded-full bg-green-500 px-5 py-3 text-white shadow-lg hover:bg-green-600"
         >
           <MessageCircle />
-          
         </a>
       )}
-
     </CompanyDashboardLayout>
   );
 }

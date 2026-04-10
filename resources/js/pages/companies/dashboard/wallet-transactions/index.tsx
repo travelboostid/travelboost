@@ -129,11 +129,7 @@ export default function TransactionsPage({
     <CompanyDashboardLayout
       activeMenuIds={['funds.wallet-transactions']}
       openMenuIds={['funds']}
-      breadcrumb={[
-        { title: 'Dashboard', url: '/dashboard' },
-        { title: 'Wallet' },
-        { title: 'Wallet Transactions' },
-      ]}
+      breadcrumb={[{ title: 'Funds' }, { title: 'Wallet Transactions' }]}
     >
       <Head title="Wallet Transactions" />
 

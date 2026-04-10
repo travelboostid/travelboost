@@ -8,44 +8,44 @@ use App\Models\Payment;
 use App\Models\Company;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 
 class PaymentController extends Controller
 {
-  /**
-   * Display a listing of the resource.
-   */
+  // Display a listing of the payments for a specific company
   public function index(Company $company, Request $request)
   {
+    // Determine the start date for filtering payments
     $from = $request->input('from')
       ? Carbon::parse($request->input('from'))->startOfDay()
-      : now()->subMonth()->startOfDay();
+      : now()->subMonth()->startOfDay(); // Default to one month ago
 
+    // Determine the end date for filtering payments
     $to = $request->input('to')
       ? Carbon::parse($request->input('to'))->endOfDay()
-      : now()->endOfDay();
+      : now()->endOfDay(); // Default to now
 
+    // Fetch payments within the specified date range
     $payments = $company->payments()->with('payable')
-      ->whereBetween('created_at', [$from, $to]) // Simpler and more efficient
-      ->latest()
+      ->whereBetween('created_at', [$from, $to]) // Filter by date range
+      ->latest() // Order by latest payments
       ->get();
 
+    // Render the payments index view with payments and filters
     return Inertia::render('companies/dashboard/payments/index', [
       'payments' => $payments,
-      'filters' => [ // Return as filters object for consistency
+      'filters' => [ // Return filters for consistency
         'from' => $request->input('from') ? $from->toDateString() : null,
         'to' => $request->input('to') ? $to->toDateString() : null,
       ],
     ]);
   }
 
-  /**
-   * Show the form for creating a new resource.
-   */
+  // Cancel a specific payment for a company
   public function cancel(Company $company, Payment $payment)
   {
+    // Update the payment status to cancelled
     $payment->update(['status' => PaymentStatus::CANCELLED]);
-    return back();
+    return back(); // Redirect back to the previous page
   }
 }

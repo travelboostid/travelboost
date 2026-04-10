@@ -4,6 +4,7 @@ import type { BankAccountResource } from '@/api/model';
 import CompanyDashboardLayout from '@/components/layouts/company-dashboard';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Head } from '@inertiajs/react';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import {
@@ -148,11 +149,7 @@ export default function BankAccountsPage({ bank_accounts }: any) {
     <CompanyDashboardLayout
       openMenuIds={['funds']}
       activeMenuIds={[`funds.bank-accounts`]}
-      breadcrumb={[
-        { title: 'Dashboard', url: '/dashboard' },
-        { title: 'Funds' },
-        { title: 'Bank Accounts' },
-      ]}
+      breadcrumb={[{ title: 'Funds' }, { title: 'Bank Accounts' }]}
       applet={
         <CreateBankAccountDialog>
           <Button>
@@ -161,6 +158,7 @@ export default function BankAccountsPage({ bank_accounts }: any) {
         </CreateBankAccountDialog>
       }
     >
+      <Head title="Bank Accounts" />
       <div className="p-4 grid gap-4">
         {/* Accounts List */}
         {bank_accounts.length === 0 ? (

@@ -1,6 +1,5 @@
 import ProfileController from '@/actions/App/Http/Controllers/Me/Settings/ProfileController';
 import type { MediaResource } from '@/api/model';
-import Heading from '@/components/heading';
 import InputError from '@/components/input-error';
 import UserDashboardLayout from '@/components/layouts/user-dashboard';
 import { MediaPicker } from '@/components/media-picker';
@@ -8,6 +7,15 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { send } from '@/routes/verification';
 import { Transition } from '@headlessui/react';
@@ -28,23 +36,17 @@ export default function Profile({
       <Head title="Profile settings" />
 
       <h1 className="sr-only">Profile Settings</h1>
-      <div className="space-y-6 p-4">
-        <Heading
-          variant="small"
-          title="Profile information"
-          description="Update your name and email address"
-        />
-
-        <Form
-          {...ProfileController.update.form()}
-          options={{
-            preserveScroll: true,
-          }}
-          className="space-y-6"
-        >
-          {({ processing, recentlySuccessful, errors }) => (
-            <>
-              <div className="grid justify-items-center gap-2">
+      <Form
+        {...ProfileController.update.form()}
+        options={{
+          preserveScroll: true,
+        }}
+        className="space-y-4 p-4 max-w-3xl mx-auto"
+      >
+        {({ processing, recentlySuccessful, errors }) => (
+          <>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid justify-items-center gap-2 col-span-2">
                 <MediaPicker
                   params={{ owner_type: 'user', owner_id: auth.user.id }}
                   uploadParams={{ owner_type: 'user', owner_id: auth.user.id }}
@@ -77,28 +79,14 @@ export default function Profile({
                   )}
                 </MediaPicker>
               </div>
-              <div className="grid gap-2">
-                <Label htmlFor="username">Username</Label>
-                <Input
-                  id="username"
-                  type="text"
-                  name="username"
-                  required
-                  autoComplete="username"
-                  placeholder="john_doe"
-                  defaultValue={auth.user.username}
-                />
-                <InputError message={errors.username} />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="name">Name</Label>
+              <div className="grid gap-2 col-span-2">
+                <Label htmlFor="name">Full name</Label>
 
                 <Input
                   id="name"
                   className="mt-1 block w-full"
                   defaultValue={auth.user.name}
                   name="name"
-                  required
                   autoComplete="name"
                   placeholder="Full name"
                 />
@@ -115,12 +103,62 @@ export default function Profile({
                   className="mt-1 block w-full"
                   defaultValue={auth.user.email}
                   name="email"
-                  required
-                  autoComplete="username"
+                  autoComplete="email"
                   placeholder="Email address"
+                  readOnly
                 />
 
                 <InputError className="mt-2" message={errors.email} />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="username">Username</Label>
+                <Input
+                  id="username"
+                  type="text"
+                  name="username"
+                  required
+                  autoComplete="username"
+                  placeholder="john_doe"
+                  defaultValue={auth.user.username}
+                />
+                <InputError message={errors.username} />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="phone">Phone</Label>
+
+                <Input
+                  id="phone"
+                  type="text"
+                  className="mt-1 block w-full"
+                  defaultValue={auth.user.phone || ''}
+                  name="phone"
+                  autoComplete="tel"
+                  placeholder="Phone number"
+                />
+
+                <InputError className="mt-2" message={errors.phone} />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="gender">Gender</Label>
+
+                <Select
+                  name="gender"
+                  defaultValue={auth.user.gender || 'unspecified'}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select gender" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      <SelectLabel>Gender</SelectLabel>
+                      <SelectItem value="unspecified">Unspecified</SelectItem>
+                      <SelectItem value="male">Male</SelectItem>
+                      <SelectItem value="female">Female</SelectItem>
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+
+                <InputError className="mt-2" message={errors.gender} />
               </div>
 
               {mustVerifyEmail && auth.user.email_verified_at === null && (
@@ -144,26 +182,30 @@ export default function Profile({
                   )}
                 </div>
               )}
+            </div>
 
-              <div className="flex items-center gap-4">
-                <Button disabled={processing} data-test="update-profile-button">
-                  Save
-                </Button>
+            <div className="flex items-center gap-4">
+              <Button
+                disabled={processing}
+                data-test="update-profile-button"
+                className="w-full"
+              >
+                Save
+              </Button>
 
-                <Transition
-                  show={recentlySuccessful}
-                  enter="transition ease-in-out"
-                  enterFrom="opacity-0"
-                  leave="transition ease-in-out"
-                  leaveTo="opacity-0"
-                >
-                  <p className="text-sm text-neutral-600">Saved</p>
-                </Transition>
-              </div>
-            </>
-          )}
-        </Form>
-      </div>
+              <Transition
+                show={recentlySuccessful}
+                enter="transition ease-in-out"
+                enterFrom="opacity-0"
+                leave="transition ease-in-out"
+                leaveTo="opacity-0"
+              >
+                <p className="text-sm text-neutral-600">Saved</p>
+              </Transition>
+            </div>
+          </>
+        )}
+      </Form>
     </UserDashboardLayout>
   );
 }

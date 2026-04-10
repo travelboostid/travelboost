@@ -35,12 +35,7 @@ import SelectContinent from './components/select-continent';
 import SelectCountry from './components/select-country';
 import SelectRegion from './components/select-region';
 
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 //30032026
 //import { useForm } from '@inertiajs/react'
@@ -62,36 +57,36 @@ export default function Page() {
   };
 
   //for price
-  const [displayPrice, setDisplayPrice] = useState("")
-  const [rawPrice, setRawPrice] = useState("")
+  const [displayPrice, setDisplayPrice] = useState('');
+  const [rawPrice, setRawPrice] = useState('');
 
   const handlePriceChange = (value: string) => {
-    const numeric = value.replace(/\D/g, "")
-    setRawPrice(numeric)
+    const numeric = value.replace(/\D/g, '');
+    setRawPrice(numeric);
 
-    const formatted = new Intl.NumberFormat("id-ID").format(Number(numeric))
-    setDisplayPrice(formatted)
-  }
+    const formatted = new Intl.NumberFormat('id-ID').format(Number(numeric));
+    setDisplayPrice(formatted);
+  };
   //
 
   //for price
-  const [displayPrice1, setDisplayPrice1] = useState("0")
-  const [rawPrice1, setRawPrice1] = useState("0")
+  const [displayPrice1, setDisplayPrice1] = useState('0');
+  const [rawPrice1, setRawPrice1] = useState('0');
 
   const handlePriceChange1 = (value: string) => {
-    let numeric1 = value.replace(/\D/g, "")
+    let numeric1 = value.replace(/\D/g, '');
 
-    if (numeric1 === "") numeric1 = "0" // 🔥 default 0
+    if (numeric1 === '') numeric1 = '0'; // 🔥 default 0
 
-    setRawPrice1(numeric1)
+    setRawPrice1(numeric1);
 
-    const formatted1 = new Intl.NumberFormat("id-ID").format(Number(numeric1))
-    setDisplayPrice1(formatted1)
-  }
+    const formatted1 = new Intl.NumberFormat('id-ID').format(Number(numeric1));
+    setDisplayPrice1(formatted1);
+  };
   //
 
   //27032026
-  const [schedules, setSchedules] = useState<any[]>([])
+  const [schedules, setSchedules] = useState<any[]>([]);
 
   //30032026
   const { data, setData, post, processing, errors } = useForm({
@@ -105,7 +100,7 @@ export default function Page() {
     promote_title: '',
     promote_note: '',
     schedules: [],
-  })
+  });
 
   /*const updateSchedule = (
     index: number,
@@ -128,7 +123,6 @@ export default function Page() {
       openMenuIds={['tours']}
       activeMenuIds={['tours.index']}
       breadcrumb={[
-        { title: 'Dashboard', url: '/dashboard' },
         { title: 'Tours', url: '/dashboard/tours' },
         { title: 'Create' },
       ]}
@@ -140,9 +134,7 @@ export default function Page() {
       >
         {({ errors, processing }) => (
           <div className="container mx-auto space-y-4 p-4">
-            
             <Tabs defaultValue="tour" className="w-full" key="tour-form">
-
               <TabsList className="mb-4">
                 <TabsTrigger value="tour">Tour</TabsTrigger>
                 <TabsTrigger value="schedule">Jadwal</TabsTrigger>
@@ -150,7 +142,6 @@ export default function Page() {
 
               {/* ================= TAB 1 — TOUR ================= */}
               <TabsContent value="tour">
-
                 {/* <div className="grid gap-6"> changed for show in 2 column */}
                 <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                   {/* Image */}
@@ -160,7 +151,10 @@ export default function Page() {
                     <MediaPicker
                       type="image"
                       params={{ owner_type: 'company', owner_id: company.id }}
-                      uploadParams={{ owner_type: 'company', owner_id: company.id }}
+                      uploadParams={{
+                        owner_type: 'company',
+                        owner_id: company.id,
+                      }}
                     >
                       {(media, change) => (
                         <div className="flex flex-col items-center justify-items-center gap-2">
@@ -177,7 +171,11 @@ export default function Page() {
                             name="image_id"
                             value={(media as MediaResource)?.id}
                           />
-                          <Button className="w-fit" onClick={change} type="button">
+                          <Button
+                            className="w-fit"
+                            onClick={change}
+                            type="button"
+                          >
                             Change
                           </Button>
                         </div>
@@ -342,17 +340,18 @@ export default function Page() {
                     <MediaPicker
                       type="document"
                       params={{ owner_type: 'company', owner_id: company.id }}
-                      uploadParams={{ owner_type: 'company', owner_id: company.id }}
+                      uploadParams={{
+                        owner_type: 'company',
+                        owner_id: company.id,
+                      }}
                     >
                       {(media, change) => {
                         const url =
-                          (media as any)?.url ||
-                          (media as any)?.data?.url
+                          (media as any)?.url || (media as any)?.data?.url;
 
                         return (
                           <Item variant="outline" className="space-y-2">
                             <ItemContent className="space-y-2">
-
                               {url ? (
                                 <iframe
                                   src={window.location.origin + url}
@@ -366,7 +365,6 @@ export default function Page() {
                               <ItemTitle>
                                 {(media as any)?.name || ''}
                               </ItemTitle>
-
                             </ItemContent>
 
                             <input
@@ -386,7 +384,7 @@ export default function Page() {
                               </Button>
                             </ItemActions>
                           </Item>
-                        )
+                        );
                       }}
                     </MediaPicker>
                     <InputError message={errors.document_id} />
@@ -413,7 +411,9 @@ export default function Page() {
 
                   {/* Normal Price show on catalog */}
                   <div className="grid gap-2">
-                    <Label htmlFor="showprice">Normal Price show on catalog</Label>
+                    <Label htmlFor="showprice">
+                      Normal Price show on catalog
+                    </Label>
                     <Input
                       id="showprice"
                       type="text"
@@ -428,30 +428,34 @@ export default function Page() {
                   </div>
 
                   <div className="rounded-lg border bg-muted/30 p-4 space-y-4">
-
                     <div className="text-sm font-semibold text-muted-foreground">
                       Promotion Settings
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
                       {/* promote title */}
                       <div className="grid gap-2">
-                        <Label htmlFor="promote_title">Title Promotion on Catalog</Label>
+                        <Label htmlFor="promote_title">
+                          Title Promotion on Catalog
+                        </Label>
                         <Input
                           id="promote_title"
                           type="text"
                           name="promote_title"
                           placeholder="Title Promotion"
                           value={data.promote_title}
-                          onChange={(e) => setData('promote_title', e.target.value)}
+                          onChange={(e) =>
+                            setData('promote_title', e.target.value)
+                          }
                         />
                         <InputError message={errors.promote_title} />
                       </div>
 
                       {/* Promote Price */}
                       <div className="grid gap-2">
-                        <Label htmlFor="promote_price">Promotion Price show on catalog</Label>
+                        <Label htmlFor="promote_price">
+                          Promotion Price show on catalog
+                        </Label>
                         <Input
                           id="promote_price"
                           type="text"
@@ -459,41 +463,42 @@ export default function Page() {
                           value={displayPrice1}
                           onChange={(e) => handlePriceChange1(e.target.value)}
                         />
-                        <input type="hidden" name="promote_price" value={rawPrice1} />
+                        <input
+                          type="hidden"
+                          name="promote_price"
+                          value={rawPrice1}
+                        />
                         <InputError message={errors.promote_price} />
                       </div>
 
                       {/* promote note — full width */}
                       <div className="grid gap-2 md:col-span-2">
-                        <Label htmlFor="promote_note">Promotion Note on Catalog</Label>
+                        <Label htmlFor="promote_note">
+                          Promotion Note on Catalog
+                        </Label>
                         <Input
                           id="promote_note"
                           type="text"
                           name="promote_note"
                           placeholder="Promotion Note"
                           value={data.promote_note}
-                          onChange={(e) => setData('promote_note', e.target.value)}
+                          onChange={(e) =>
+                            setData('promote_note', e.target.value)
+                          }
                         />
                         <InputError message={errors.promote_note} />
                       </div>
-
                     </div>
                   </div>
-
                 </div>
-
               </TabsContent>
 
               {/* ================= TAB 2 — JADWAL ================= */}
               <TabsContent value="schedule">
-
                 <div className="space-y-4">
-
                   {/* Header */}
                   <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold">
-                      Tour Schedule
-                    </h3>
+                    <h3 className="text-lg font-semibold">Tour Schedule</h3>
 
                     <Button
                       type="button"
@@ -501,10 +506,10 @@ export default function Page() {
                         setSchedules([
                           ...schedules,
                           {
-                            departure_date: "",
-                            return_date: "",
-                            quota: "",
-                            price: "",
+                            departure_date: '',
+                            return_date: '',
+                            quota: '',
+                            price: '',
                           },
                         ])
                       }
@@ -515,9 +520,7 @@ export default function Page() {
 
                   {/* Grid */}
                   <div className="rounded-lg border overflow-hidden">
-
                     <table className="w-full text-sm">
-
                       <thead className="bg-muted">
                         <tr>
                           <th className="p-2 text-left">Departure</th>
@@ -529,10 +532,12 @@ export default function Page() {
                       </thead>
 
                       <tbody>
-
                         {schedules.length === 0 && (
                           <tr>
-                            <td colSpan={5} className="p-4 text-center text-muted-foreground">
+                            <td
+                              colSpan={5}
+                              className="p-4 text-center text-muted-foreground"
+                            >
                               No schedules yet
                             </td>
                           </tr>
@@ -540,100 +545,95 @@ export default function Page() {
 
                         {schedules.map((s, i) => (
                           <tr key={i} className="border-t">
+                            <td className="p-2">
+                              <Input
+                                type="date"
+                                value={s.departure_date}
+                                onChange={(e) => {
+                                  const copy = [...schedules];
+                                  copy[i].departure_date = e.target.value;
+                                  setSchedules(copy);
+                                }}
+                              />
+                              <input
+                                type="hidden"
+                                name={`schedules[${i}][departure_date]`}
+                                value={s.departure_date}
+                              />
+                            </td>
 
-  <td className="p-2">
-    <Input
-      type="date"
-      value={s.departure_date}
-      onChange={(e) => {
-        const copy = [...schedules]
-        copy[i].departure_date = e.target.value
-        setSchedules(copy)
-      }}
-    />
-    <input
-      type="hidden"
-      name={`schedules[${i}][departure_date]`}
-      value={s.departure_date}
-    />
-  </td>
+                            <td className="p-2">
+                              <Input
+                                type="date"
+                                value={s.return_date}
+                                onChange={(e) => {
+                                  const copy = [...schedules];
+                                  copy[i].return_date = e.target.value;
+                                  setSchedules(copy);
+                                }}
+                              />
+                              <input
+                                type="hidden"
+                                name={`schedules[${i}][return_date]`}
+                                value={s.return_date}
+                              />
+                            </td>
 
-  <td className="p-2">
-    <Input
-      type="date"
-      value={s.return_date}
-      onChange={(e) => {
-        const copy = [...schedules]
-        copy[i].return_date = e.target.value
-        setSchedules(copy)
-      }}
-    />
-    <input
-      type="hidden"
-      name={`schedules[${i}][return_date]`}
-      value={s.return_date}
-    />
-  </td>
+                            <td className="p-2">
+                              <Input
+                                type="number"
+                                value={s.quota}
+                                onChange={(e) => {
+                                  const copy = [...schedules];
+                                  copy[i].quota = e.target.value;
+                                  setSchedules(copy);
+                                }}
+                              />
+                              <input
+                                type="hidden"
+                                name={`schedules[${i}][quota]`}
+                                value={s.quota}
+                              />
+                            </td>
 
-  <td className="p-2">
-    <Input
-      type="number"
-      value={s.quota}
-      onChange={(e) => {
-        const copy = [...schedules]
-        copy[i].quota = e.target.value
-        setSchedules(copy)
-      }}
-    />
-    <input
-      type="hidden"
-      name={`schedules[${i}][quota]`}
-      value={s.quota}
-    />
-  </td>
+                            <td className="p-2">
+                              <Input
+                                type="number"
+                                value={s.price}
+                                onChange={(e) => {
+                                  const copy = [...schedules];
+                                  copy[i].price = e.target.value;
+                                  setSchedules(copy);
+                                }}
+                              />
+                              <input
+                                type="hidden"
+                                name={`schedules[${i}][price]`}
+                                value={s.price}
+                              />
+                            </td>
 
-  <td className="p-2">
-    <Input
-      type="number"
-      value={s.price}
-      onChange={(e) => {
-        const copy = [...schedules]
-        copy[i].price = e.target.value
-        setSchedules(copy)
-      }}
-    />
-    <input
-      type="hidden"
-      name={`schedules[${i}][price]`}
-      value={s.price}
-    />
-  </td>
-
-  <td className="p-2">
-    <Button
-      type="button"
-      variant="destructive"
-      size="sm"
-      onClick={() =>
-        setSchedules(schedules.filter((_, idx) => idx !== i))
-      }
-    >
-      Delete
-    </Button>
-  </td>
-
-</tr>
+                            <td className="p-2">
+                              <Button
+                                type="button"
+                                variant="destructive"
+                                size="sm"
+                                onClick={() =>
+                                  setSchedules(
+                                    schedules.filter((_, idx) => idx !== i),
+                                  )
+                                }
+                              >
+                                Delete
+                              </Button>
+                            </td>
+                          </tr>
                         ))}
-
                       </tbody>
                     </table>
-
                   </div>
-
                 </div>
-
               </TabsContent>
-
             </Tabs>
 
             <Button type="submit" disabled={processing}>

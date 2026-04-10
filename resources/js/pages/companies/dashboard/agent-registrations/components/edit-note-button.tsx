@@ -14,10 +14,10 @@ import { Textarea } from '@/components/ui/textarea';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { update } from '@/routes/company/agent-registrations';
 import { useForm } from '@inertiajs/react';
-import { UserX2Icon } from 'lucide-react';
+import { NotebookPenIcon } from 'lucide-react';
 import { useState } from 'react';
 
-export default function RejectRegistrationButton({
+export default function EditNoteButton({
   registration,
 }: {
   registration: any;
@@ -25,10 +25,9 @@ export default function RejectRegistrationButton({
   const { company } = usePageSharedDataProps();
   const [open, setOpen] = useState(false);
   const form = useForm({
-    status: 'rejected',
-    note: '',
+    note: registration.note || '',
   });
-  const handleReject = () => {
+  const handleApprove = () => {
     form.put(
       update({
         company: company.username,
@@ -45,16 +44,17 @@ export default function RejectRegistrationButton({
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
       <AlertDialogTrigger asChild>
-        <Button size="icon" className="text-destructive" variant="outline">
-          <UserX2Icon />
+        <Button size="icon">
+          <NotebookPenIcon />
         </Button>
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Reject Registration</AlertDialogTitle>
+          <AlertDialogTitle>Edit Note</AlertDialogTitle>
           <AlertDialogDescription>
-            This action will reject the registration. The agent will be notified
-            and can re-apply if they wish. Are you sure you want to proceed?
+            Leave a note about the current status of the registration. It will
+            be notified to the agent you they can contact you to resolve any
+            issues.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <Textarea
@@ -66,7 +66,9 @@ export default function RejectRegistrationButton({
         />
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction onClick={handleReject}>Reject</AlertDialogAction>
+          <AlertDialogAction onClick={handleApprove}>
+            Update Note
+          </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

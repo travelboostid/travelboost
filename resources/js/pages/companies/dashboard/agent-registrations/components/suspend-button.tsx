@@ -14,21 +14,17 @@ import { Textarea } from '@/components/ui/textarea';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { update } from '@/routes/company/agent-registrations';
 import { useForm } from '@inertiajs/react';
-import { UserX2Icon } from 'lucide-react';
+import { ShieldBanIcon } from 'lucide-react';
 import { useState } from 'react';
 
-export default function RejectRegistrationButton({
-  registration,
-}: {
-  registration: any;
-}) {
+export default function SuspendButton({ registration }: { registration: any }) {
   const { company } = usePageSharedDataProps();
   const [open, setOpen] = useState(false);
   const form = useForm({
-    status: 'rejected',
+    status: 'active',
     note: '',
   });
-  const handleReject = () => {
+  const handleApprove = () => {
     form.put(
       update({
         company: company.username,
@@ -45,16 +41,17 @@ export default function RejectRegistrationButton({
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
       <AlertDialogTrigger asChild>
-        <Button size="icon" className="text-destructive" variant="outline">
-          <UserX2Icon />
+        <Button size="icon" className="text-primary" variant="destructive">
+          <ShieldBanIcon />
         </Button>
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Reject Registration</AlertDialogTitle>
+          <AlertDialogTitle>Suspend Registration</AlertDialogTitle>
           <AlertDialogDescription>
-            This action will reject the registration. The agent will be notified
-            and can re-apply if they wish. Are you sure you want to proceed?
+            This will suspend the registration and prevent the agent from
+            accessing your tours. The agent will be notified and can contact you
+            to resolve any issues. Are you sure you want to proceed?
           </AlertDialogDescription>
         </AlertDialogHeader>
         <Textarea
@@ -66,7 +63,7 @@ export default function RejectRegistrationButton({
         />
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction onClick={handleReject}>Reject</AlertDialogAction>
+          <AlertDialogAction onClick={handleApprove}>Suspend</AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

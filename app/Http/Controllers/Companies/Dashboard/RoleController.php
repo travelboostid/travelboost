@@ -18,10 +18,14 @@ class RoleController extends Controller
    */
   public function index(Company $company)
   {
+    // Retrieve all permissions
     $permissions = Permission::all();
+
+    // Get roles associated with the company
     $roles = Role::where('name', 'like', "company:{$company->id}:%")
-      ->with(['permissions', 'users'])
+      ->with(['permissions', 'users']) // Eager load permissions and users
       ->get();
+
     return Inertia::render('companies/dashboard/roles/index', [
       'company' => $company,
       'roles' => $roles,
@@ -29,17 +33,23 @@ class RoleController extends Controller
     ]);
   }
 
-
   /**
    * Store a newly created resource in storage.
    */
   public function store(StoreRoleRequest $request, Company $company)
   {
     $validated = $request->validated();
+
+    // Filter out empty permissions
     $permissions = Arr::where($validated['permissions'] ?? [], fn($v) => $v);
+
+    // Prefix role name with company ID
     $validated['name'] = "company:{$company->id}:{$validated['name']}";
+
+    // Create the role and sync permissions
     $role = Role::create($validated);
     $role->syncPermissions(array_keys($permissions));
+
     return back();
   }
 
@@ -49,15 +59,21 @@ class RoleController extends Controller
   public function update(UpdateRoleRequest $request, Company $company, Role $role)
   {
     $validated = $request->validated();
+
+    // Filter out empty permissions
     $permissions = Arr::where($validated['permissions'] ?? [], fn($v) => $v);
 
+    // Update role name if provided
     if (isset($validated['name'])) {
       $validated['name'] = "company:{$company->id}:{$validated['name']}";
     }
+
+    // Update role and sync permissions if provided
     $role->update($validated);
     if (isset($validated['permissions'])) {
       $role->syncPermissions(array_keys($permissions));
     }
+
     return back();
   }
 
@@ -66,7 +82,9 @@ class RoleController extends Controller
    */
   public function destroy(Company $company, Role $role)
   {
+    // Delete the role
     $role->delete();
+
     return back();
   }
 }
