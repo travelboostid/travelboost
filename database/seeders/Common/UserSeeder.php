@@ -10,31 +10,40 @@ use Illuminate\Support\Facades\Hash;
 
 class UserSeeder extends Seeder
 {
-  public function run(): void
-  {
-    $superadmin = Role::where('name', 'company:0:superadmin')->first();
-    $root = User::factory()->create([
-      'name' => 'Root',
-      'email' => 'root@travelboost.co.id',
-      'username' => 'root',
-      'address' => 'Jakarta',
-      'phone' => '',
-      'status' => UserStatus::ACTIVE,
-      'password' => Hash::make('root'),
-    ]);
+    public function run(): void
+    {
+        $superadmin = Role::where('name', 'company:0:superadmin')->first();
+        $root = User::factory()->create([
+            'name' => 'Root',
+            'email' => 'root@travelboost.co.id',
+            'username' => 'root',
+            'address' => 'Jakarta',
+            'phone' => '',
+            'company_id' => null,
+            'status' => UserStatus::ACTIVE,
+            'password' => Hash::make('root'),
+        ]);
 
-    $root->addRole($superadmin);
+        $root->syncRoles([$superadmin]);
 
-    $john = User::factory()->create([
-      'name' => 'John',
-      'email' => 'john@travelboost.co.id',
-      'username' => 'john',
-      'address' => 'Jakarta',
-      'phone' => '',
-      'status' => UserStatus::ACTIVE,
-      'password' => Hash::make('john'),
-    ]);
+        $vendor = User::factory()->create([
+            'name' => 'Vendor',
+            'email' => 'vendor@travelboost.co.id',
+            'username' => 'vendor',
+            'address' => 'Jakarta',
+            'phone' => '0',
+            'status' => UserStatus::ACTIVE,
+            'password' => Hash::make('vendor'),
+        ]);
 
-    $john->addRole($superadmin);
-  }
+        $john = User::factory()->create([
+            'name' => 'John',
+            'email' => 'john@travelboost.co.id',
+            'username' => 'john',
+            'address' => 'Jakarta',
+            'phone' => '',
+            'status' => UserStatus::ACTIVE,
+            'password' => Hash::make('john'),
+        ]);
+    }
 }

@@ -89,7 +89,7 @@ export function NavUser() {
               <DropdownMenuItem asChild>
                 <Link
                   className="block w-full cursor-pointer"
-                  href="/admin/settings/profile"
+                  href="/me/profile"
                 >
                   <UserCogIcon className="mr-2" />
                   Manage Profile
@@ -98,7 +98,7 @@ export function NavUser() {
               <DropdownMenuItem asChild>
                 <Link
                   className="block w-full cursor-pointer"
-                  href="/admin/settings/change-password"
+                  href="/me/password"
                 >
                   <KeyRoundIcon className="mr-2" />
                   Change Password
