@@ -172,6 +172,7 @@ return new class extends Migration
       $table->enum('status', VendorAgentPartnerStatus::cases())->default(VendorAgentPartnerStatus::PENDING);
       $table->timestamp('applied_at')->nullable();
       $table->timestamp('accepted_at')->nullable();
+      $table->string('note', 1000)->nullable();
       $table->timestamps();
 
       $table->unique(['vendor_id', 'agent_id']);

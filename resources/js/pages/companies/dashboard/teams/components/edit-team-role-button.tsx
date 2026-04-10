@@ -17,21 +17,16 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
+import usePageProps from '@/hooks/use-page-props';
 import { update } from '@/routes/company/teams';
 import { useForm } from '@inertiajs/react';
-import { UserCheck2Icon } from 'lucide-react';
+import { IconUserShield } from '@tabler/icons-react';
 import { useState } from 'react';
+import type { TeamsPageProps } from '..';
 
-export default function EditTeamRoleButton({
-  team,
-  roles,
-}: {
-  team: any;
-  roles: any[];
-}) {
+export default function EditTeamRoleButton({ team }: { team: any }) {
   const [open, setOpen] = useState(false);
-  const { company } = usePageSharedDataProps();
+  const { roles, company } = usePageProps<TeamsPageProps>();
 
   const form = useForm({
     role: '',
@@ -61,7 +56,7 @@ export default function EditTeamRoleButton({
               className="h-8 w-8 text-destructive"
               aria-label="Edit"
             >
-              <UserCheck2Icon className="size-4" />
+              <IconUserShield className="size-4" />
             </Button>
           </TooltipTrigger>
           <TooltipContent>Edit Team Role</TooltipContent>

@@ -4,6 +4,7 @@ namespace Database\Seeders\Common;
 
 use App\Enums\CompanyType;
 use App\Enums\CompanyTeamStatus;
+use App\Models\AgentSubscription;
 use App\Models\AgentSubscriptionPackage;
 use App\Models\User;
 use App\Models\Company;
@@ -78,6 +79,15 @@ class CompanySeeder extends Seeder
       $team = Team::where('name', "company:{$company->id}")->first();
       $superadmin = Role::where('name', "company:{$company->id}:superadmin")->first();
       $user->addRole($superadmin, $team);
+
+      if ($company['type'] === CompanyType::AGENT) {
+        AgentSubscription::create([
+          'company_id' => $company->id,
+          'package_id' => 1,
+          'started_at' => now(),
+          'ended_at' => now()->addDays(999),
+        ]);
+      }
     }
 
     $jane = User::factory()->create([

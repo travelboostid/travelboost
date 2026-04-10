@@ -11,8 +11,11 @@ import relativeTime from 'dayjs/plugin/relativeTime';
 import { TextIcon, UserIcon } from 'lucide-react';
 import { useMemo } from 'react';
 import ApproveRegistrationButton from './components/approve-registration-button';
+import EditNoteButton from './components/edit-note-button';
 import { EmptyRegistrations } from './components/empty-registrations';
 import RejectRegistrationButton from './components/reject-registration-button';
+import SuspendButton from './components/suspend-button';
+import UnsuspendButton from './components/unsuspend-button';
 dayjs.extend(relativeTime);
 
 type PageProps = {
@@ -107,8 +110,24 @@ export default function Page({ data }: PageProps) {
         cell: ({ row }) => {
           return (
             <div className="flex gap-2">
-              <ApproveRegistrationButton registration={row.original} />
-              <RejectRegistrationButton registration={row.original} />
+              {row.original.status === 'pending' && (
+                <>
+                  <ApproveRegistrationButton registration={row.original} />
+                  <RejectRegistrationButton registration={row.original} />
+                </>
+              )}
+              {row.original.status === 'active' && (
+                <SuspendButton registration={row.original} />
+              )}
+              {row.original.status === 'suspended' && (
+                <UnsuspendButton registration={row.original} />
+              )}
+              {row.original.status === 'rejected' && (
+                <ApproveRegistrationButton registration={row.original} />
+              )}
+              {['suspended', 'rejected'].includes(row.original.status) && (
+                <EditNoteButton registration={row.original} />
+              )}
             </div>
           );
         },
