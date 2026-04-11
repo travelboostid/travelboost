@@ -3,6 +3,7 @@ import {
   DatabaseIcon,
   HomeIcon,
   PlaneIcon,
+  SettingsIcon,
   WalletIcon,
 } from 'lucide-react';
 import { useMemo } from 'react';
@@ -44,11 +45,6 @@ export default function useAdminNavMainMenu() {
               title: 'Customers',
               urlOrAction: '/admin/database/customers',
             },
-            {
-              id: 'database.users',
-              title: 'User Management',
-              urlOrAction: '/admin/database/users',
-            },
           ],
         },
         {
@@ -86,16 +82,6 @@ export default function useAdminNavMainMenu() {
               urlOrAction: '/admin/funds/wallets',
             },
             {
-              id: 'fund.wallet-transactions',
-              title: 'Wallet Transactions',
-              urlOrAction: '/admin/funds/wallet-transactions',
-            },
-            {
-              id: 'fund.withdrawals',
-              title: 'Withdrawals',
-              urlOrAction: '/admin/funds/withdrawals',
-            },
-            {
               id: 'fund.payment-history',
               title: 'Payment History',
               urlOrAction: '/admin/funds/payment-history',
@@ -104,6 +90,24 @@ export default function useAdminNavMainMenu() {
               id: 'fund.bank-accounts',
               title: 'Bank Accounts',
               urlOrAction: '/admin/funds/bank-accounts',
+            },
+          ],
+        },
+        {
+          id: 'withdrawal-requests',
+          title: 'Withdrawal Request',
+          urlOrAction: '#',
+          icon: WalletIcon,
+          items: [
+            {
+              id: 'withdrawal-requests.history',
+              title: 'Wallet History',
+              urlOrAction: '/admin/funds/wallet-transactions',
+            },
+            {
+              id: 'withdrawal-requests.manage',
+              title: 'Withdrawal',
+              urlOrAction: '/admin/funds/withdrawals',
             },
           ],
         },
@@ -117,6 +121,24 @@ export default function useAdminNavMainMenu() {
               id: 'reports.inventories',
               title: 'Inventory Status',
               urlOrAction: '/admin/reports/inventories',
+            },
+          ],
+        },
+        {
+          id: 'settings',
+          title: 'Settings',
+          urlOrAction: '#',
+          icon: SettingsIcon,
+          items: [
+            {
+              id: 'settings.users',
+              title: 'User Management',
+              urlOrAction: '/admin/database/users',
+            },
+            {
+              id: 'settings.vouchers',
+              title: 'Vouchers',
+              urlOrAction: '/admin/vouchers',
             },
           ],
         },
