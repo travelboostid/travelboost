@@ -14,73 +14,55 @@ class WalletTransactionsController extends Controller
 {
   public function index(Request $request, Company $company)
   {
-    $user = Auth::user();
-    $wallet = $user->wallet;
+    $wallet = $company->wallet; // Retrieve the company's wallet
 
-    /**
-     * ------------------------------------------------------
-     * Date range (optional)
-     * default = last 1 month
-     * ------------------------------------------------------
-     */
+    // define date range for filtering transactions
     $from = $request->input('from')
-      ? Carbon::parse($request->input('from'))->startOfDay()
-      : now()->subMonth()->startOfDay();
+      ? Carbon::parse($request->input('from'))->startOfDay() // Start date
+      : now()->subMonth()->startOfDay(); // Default to one month ago
 
     $to = $request->input('to')
-      ? Carbon::parse($request->input('to'))->endOfDay()
-      : now()->endOfDay();
+      ? Carbon::parse($request->input('to'))->endOfDay() // End date
+      : now()->endOfDay(); // Default to today
 
-    /**
-     * ------------------------------------------------------
-     * Base query
-     * ------------------------------------------------------
-     */
+    // Base query for transactions within the date range
     $query = $wallet->transactions()
-      ->whereBetween('created_at', [$from, $to]);
+      ->whereBetween('created_at', [$from, $to]); // Filter transactions by date range
 
-    /**
-     * ------------------------------------------------------
-     * Aggregates
-     * ------------------------------------------------------
-     */
-    $transactionCount = (clone $query)->count();
+    // Calculate statistics
+    $transactionCount = (clone $query)->count(); // Count total transactions
 
     $incomeAmount = (clone $query)
-      ->where('amount', '>', 0)
-      ->sum('amount');
+      ->where('amount', '>', 0) // Filter for income transactions
+      ->sum('amount'); // Sum income amounts
 
     $expenseAmount = abs(
       (clone $query)
-        ->where('amount', '<', 0)
-        ->sum('amount')
+        ->where('amount', '<', 0) // Filter for expense transactions
+        ->sum('amount') // Sum expense amounts
     );
 
-    /**
-     * ------------------------------------------------------
-     * Transactions list
-     * ------------------------------------------------------
-     */
+    // transactions list with pagination (latest 50 transactions)
     $transactions = (clone $query)
-      ->latest()
-      ->take(50)
+      ->latest() // Get latest transactions
+      ->take(50) // Limit to 50 transactions
       ->get()
       ->map(fn(Transaction $t) => [
         'id' => $t->id,
-        'type' => $t->amount > 0 ? 'income' : 'expense',
-        'amount' => abs($t->amount),
-        'meta' => $t->meta,
-        'confirmed' => $t->confirmed,
-        'created_at' => $t->created_at,
+        'type' => $t->amount > 0 ? 'income' : 'expense', // Determine transaction type
+        'amount' => abs($t->amount), // Use absolute value for amount
+        'meta' => $t->meta, // Transaction metadata
+        'confirmed' => $t->confirmed, // Confirmation status
+        'created_at' => $t->created_at, // Transaction creation date
       ]);
 
     return Inertia::render('companies/dashboard/wallet-transactions/index', [
-      'from' => $from->toDateString(),
-      'to' => $to->toDateString(),
-      'transaction_count' => $transactionCount,
-      'income_amount' => $incomeAmount,
-      'expense_amount' => $expenseAmount,
-      'transactions' => $transactions,
+      'from' => $from->toDateString(), // Format start date
+      'to' => $to->toDateString(), // Format end date
+      'transaction_count' => $transactionCount, // Total transaction count
+      'income_amount' => $incomeAmount, // Total income amount
+      'expense_amount' => $expenseAmount, // Total expense amount
+      'transactions' => $transactions, // List of transactions
     ]);
   }
 }

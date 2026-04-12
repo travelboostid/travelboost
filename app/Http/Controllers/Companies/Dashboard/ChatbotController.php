@@ -9,28 +9,21 @@ use Inertia\Inertia;
 
 class ChatbotController extends Controller
 {
-
-  /**
-   * Display the specified resource.
-   */
+  // Display the chatbot settings for the specified company
   public function show(Company $company)
   {
-    $settings = $company->settings()->first();
-    // $credit = $company->aiCredit()->first();
+    $settings = $company->settings()->first(); // Retrieve the company's settings
     return Inertia::render('companies/dashboard/chatbot/index', [
-      'settings' => $settings,
-      // 'credit' => $credit,
+      'settings' => $settings, // Pass settings to the Inertia view
     ]);
   }
 
-  /**
-   * Update the specified resource in storage.
-   */
+  // Update the chatbot settings for the specified company
   public function update(UpdateChatbotRequest $request, Company $company)
   {
-    $validated = $request->validated();
-    $company->settings()->update($validated);
+    $validated = $request->validated(); // Validate the incoming request data
+    $company->settings()->update($validated); // Update the company's settings with validated data
 
-    return back();
+    return back(); // Redirect back to the previous page
   }
 }

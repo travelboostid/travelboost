@@ -42,13 +42,9 @@ export default function Profile() {
 
   return (
     <CompanyDashboardLayout
+      breadcrumb={[{ title: 'Settings' }, { title: 'Profile' }]}
       openMenuIds={['settings']}
       activeMenuIds={[`settings.profile`]}
-      breadcrumb={[
-        { title: 'Dashboard', url: '/dashboard' },
-        { title: 'Settings' },
-        { title: 'Profile' },
-      ]}
     >
       <Head title="Profile" />
 

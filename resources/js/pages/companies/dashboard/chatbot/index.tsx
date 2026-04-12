@@ -16,8 +16,9 @@ import { Spinner } from '@/components/ui/spinner';
 import { Switch } from '@/components/ui/switch';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { update } from '@/routes/company/chatbot';
-import { Form } from '@inertiajs/react';
+import { Form, Head } from '@inertiajs/react';
 import { toast } from 'sonner';
+import SelectAiModel from './components/select-ai-model';
 
 export default function Page({ settings }: { settings: any }) {
   const { company } = usePageSharedDataProps();
@@ -33,8 +34,11 @@ export default function Page({ settings }: { settings: any }) {
   return (
     <CompanyDashboardLayout
       containerClassName="p-4"
-      breadcrumb={[{ title: 'Settings' }, { title: 'Chatbot' }]}
+      breadcrumb={[{ title: 'Settings' }, { title: 'Chatbot Settings' }]}
+      openMenuIds={['settings']}
+      activeMenuIds={['settings.chatbot']}
     >
+      <Head title="Chatbot Settings" />
       <Form
         {...update.form({ company: company.username })}
         transform={(src) => ({
@@ -72,6 +76,22 @@ export default function Page({ settings }: { settings: any }) {
                 </FieldGroup>
                 <InputError message={errors.chatbot_enabled} />
               </div>
+
+              {/* AI Model Selection */}
+              <FieldSet className="w-full">
+                <FieldLegend variant="label">AI Model</FieldLegend>
+                <FieldDescription>
+                  Select the AI model that powers your chatbot. Different models
+                  may have different capabilities, response styles, and
+                  performance characteristics. Choose the one that best fits
+                  your business needs and customer interaction style.
+                </FieldDescription>
+                <SelectAiModel
+                  defaultValue={settings.chatbot_model_id}
+                  name="chatbot_model_id"
+                />
+                <InputError message={errors.chatbot_model_id} />
+              </FieldSet>
 
               {/* Tone */}
               <FieldSet className="w-full">

@@ -50,7 +50,7 @@ export default function InviteTeamButton({ roles }: { roles: any[] }) {
       </DialogTrigger>
 
       <DialogContent className="sm:max-w-sm">
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} className="grid gap-4">
           <DialogHeader>
             <DialogTitle>Invite New Team</DialogTitle>
             <DialogDescription>

@@ -9,21 +9,21 @@ class AiBillingCycle extends Model
 {
   protected $fillable = [
     'company_id',
-    'start_at',
-    'end_at',
+    'date',
     'input_tokens',
     'output_tokens',
     'cost',
+    'charged_at',
   ];
 
   protected function casts(): array
   {
     return [
-      'start_at' => 'datetime',
-      'end_at' => 'datetime',
+      'date' => 'date',
       'input_tokens' => 'integer',
       'output_tokens' => 'integer',
-      'cost' => 'decimal:8',
+      'cost' => 'decimal:16',
+      'charged_at' => 'datetime',
     ];
   }
 

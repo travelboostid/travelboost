@@ -14,6 +14,7 @@ class VendorAgentPartner extends Model
     'status',
     'applied_at',
     'accepted_at',
+    'note',
   ];
 
   protected function casts(): array

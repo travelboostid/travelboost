@@ -105,7 +105,6 @@ export default function Page({ tour }: Props) {
       openMenuIds={['tours']}
       activeMenuIds={['tours.index']}
       breadcrumb={[
-        { title: 'Dashboard', url: '/dashboard' },
         { title: 'Tours', url: '/dashboard/tours' },
         { title: 'Edit' },
       ]}

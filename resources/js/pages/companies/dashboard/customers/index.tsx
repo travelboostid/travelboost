@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useDataTable } from '@/hooks/use-data-table';
+import { Head } from '@inertiajs/react';
 import type { Column, ColumnDef } from '@tanstack/react-table';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
@@ -164,7 +165,9 @@ export default function CustomersPage({ data }: CustomersPageProps) {
     <CompanyDashboardLayout
       containerClassName="p-4"
       breadcrumb={[{ title: 'Customers' }]}
+      activeMenuIds={['customers']}
     >
+      <Head title="Customers" />
       <DataTable table={table} renderEmptyState={<EmptyCustomers />}>
         <DataTableToolbar table={table} />
       </DataTable>

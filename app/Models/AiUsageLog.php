@@ -9,7 +9,7 @@ class AiUsageLog extends Model
 {
   protected $fillable = [
     'company_id',
-    'model',
+    'model_id',
     'input_tokens',
     'output_tokens',
     'total_tokens',

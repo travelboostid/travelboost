@@ -31,3 +31,10 @@ export function extractDocumentUrl(media: MediaResource) {
   const url = (media?.data as any)?.url;
   return url || '';
 }
+
+export const formatIDR = (value: number) =>
+  new Intl.NumberFormat('id-ID', {
+    style: 'currency',
+    currency: 'IDR',
+    minimumFractionDigits: 0,
+  }).format(value);

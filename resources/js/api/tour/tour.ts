@@ -20,7 +20,6 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
-  AuthenticationExceptionResponse,
   GetTour200,
   GetTrips200,
   GetTripsParams,
@@ -61,7 +60,7 @@ export const getGetTripsQueryKey = (params?: GetTripsParams,) => {
     }
 
     
-export const getGetTripsQueryOptions = <TData = Awaited<ReturnType<typeof getTrips>>, TError = AuthenticationExceptionResponse | ValidationExceptionResponse>(params?: GetTripsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getTrips>>, TError, TData>>, request?: SecondParameter<typeof apiInstance>}
+export const getGetTripsQueryOptions = <TData = Awaited<ReturnType<typeof getTrips>>, TError = ValidationExceptionResponse>(params?: GetTripsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getTrips>>, TError, TData>>, request?: SecondParameter<typeof apiInstance>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
@@ -80,10 +79,10 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type GetTripsQueryResult = NonNullable<Awaited<ReturnType<typeof getTrips>>>
-export type GetTripsQueryError = AuthenticationExceptionResponse | ValidationExceptionResponse
+export type GetTripsQueryError = ValidationExceptionResponse
 
 
-export function useGetTrips<TData = Awaited<ReturnType<typeof getTrips>>, TError = AuthenticationExceptionResponse | ValidationExceptionResponse>(
+export function useGetTrips<TData = Awaited<ReturnType<typeof getTrips>>, TError = ValidationExceptionResponse>(
  params: undefined |  GetTripsParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getTrips>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof getTrips>>,
@@ -93,7 +92,7 @@ export function useGetTrips<TData = Awaited<ReturnType<typeof getTrips>>, TError
       >, request?: SecondParameter<typeof apiInstance>}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetTrips<TData = Awaited<ReturnType<typeof getTrips>>, TError = AuthenticationExceptionResponse | ValidationExceptionResponse>(
+export function useGetTrips<TData = Awaited<ReturnType<typeof getTrips>>, TError = ValidationExceptionResponse>(
  params?: GetTripsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getTrips>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof getTrips>>,
@@ -103,7 +102,7 @@ export function useGetTrips<TData = Awaited<ReturnType<typeof getTrips>>, TError
       >, request?: SecondParameter<typeof apiInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetTrips<TData = Awaited<ReturnType<typeof getTrips>>, TError = AuthenticationExceptionResponse | ValidationExceptionResponse>(
+export function useGetTrips<TData = Awaited<ReturnType<typeof getTrips>>, TError = ValidationExceptionResponse>(
  params?: GetTripsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getTrips>>, TError, TData>>, request?: SecondParameter<typeof apiInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
@@ -111,7 +110,7 @@ export function useGetTrips<TData = Awaited<ReturnType<typeof getTrips>>, TError
  * @summary Display a listing of the resource
  */
 
-export function useGetTrips<TData = Awaited<ReturnType<typeof getTrips>>, TError = AuthenticationExceptionResponse | ValidationExceptionResponse>(
+export function useGetTrips<TData = Awaited<ReturnType<typeof getTrips>>, TError = ValidationExceptionResponse>(
  params?: GetTripsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getTrips>>, TError, TData>>, request?: SecondParameter<typeof apiInstance>}
  , queryClient?: QueryClient 
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
@@ -153,7 +152,7 @@ export const getGetTourQueryKey = (tour?: number,) => {
     }
 
     
-export const getGetTourQueryOptions = <TData = Awaited<ReturnType<typeof getTour>>, TError = AuthenticationExceptionResponse | ModelNotFoundExceptionResponse>(tour: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getTour>>, TError, TData>>, request?: SecondParameter<typeof apiInstance>}
+export const getGetTourQueryOptions = <TData = Awaited<ReturnType<typeof getTour>>, TError = ModelNotFoundExceptionResponse>(tour: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getTour>>, TError, TData>>, request?: SecondParameter<typeof apiInstance>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
@@ -172,10 +171,10 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type GetTourQueryResult = NonNullable<Awaited<ReturnType<typeof getTour>>>
-export type GetTourQueryError = AuthenticationExceptionResponse | ModelNotFoundExceptionResponse
+export type GetTourQueryError = ModelNotFoundExceptionResponse
 
 
-export function useGetTour<TData = Awaited<ReturnType<typeof getTour>>, TError = AuthenticationExceptionResponse | ModelNotFoundExceptionResponse>(
+export function useGetTour<TData = Awaited<ReturnType<typeof getTour>>, TError = ModelNotFoundExceptionResponse>(
  tour: number, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getTour>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof getTour>>,
@@ -185,7 +184,7 @@ export function useGetTour<TData = Awaited<ReturnType<typeof getTour>>, TError =
       >, request?: SecondParameter<typeof apiInstance>}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetTour<TData = Awaited<ReturnType<typeof getTour>>, TError = AuthenticationExceptionResponse | ModelNotFoundExceptionResponse>(
+export function useGetTour<TData = Awaited<ReturnType<typeof getTour>>, TError = ModelNotFoundExceptionResponse>(
  tour: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getTour>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof getTour>>,
@@ -195,7 +194,7 @@ export function useGetTour<TData = Awaited<ReturnType<typeof getTour>>, TError =
       >, request?: SecondParameter<typeof apiInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetTour<TData = Awaited<ReturnType<typeof getTour>>, TError = AuthenticationExceptionResponse | ModelNotFoundExceptionResponse>(
+export function useGetTour<TData = Awaited<ReturnType<typeof getTour>>, TError = ModelNotFoundExceptionResponse>(
  tour: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getTour>>, TError, TData>>, request?: SecondParameter<typeof apiInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
@@ -203,7 +202,7 @@ export function useGetTour<TData = Awaited<ReturnType<typeof getTour>>, TError =
  * @summary Display a item of the resource
  */
 
-export function useGetTour<TData = Awaited<ReturnType<typeof getTour>>, TError = AuthenticationExceptionResponse | ModelNotFoundExceptionResponse>(
+export function useGetTour<TData = Awaited<ReturnType<typeof getTour>>, TError = ModelNotFoundExceptionResponse>(
  tour: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getTour>>, TError, TData>>, request?: SecondParameter<typeof apiInstance>}
  , queryClient?: QueryClient 
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {

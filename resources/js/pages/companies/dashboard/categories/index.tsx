@@ -117,10 +117,7 @@ export default function Page({ data }: { data: any }) {
 
   return (
     <CompanyDashboardLayout
-      breadcrumb={[
-        { title: 'Dashboard', url: '/dashboard' },
-        { title: 'Categories' },
-      ]}
+      breadcrumb={[{ title: 'Tours' }, { title: 'Product Categories' }]}
       openMenuIds={['tours']}
       activeMenuIds={['tours.categories']}
       applet={

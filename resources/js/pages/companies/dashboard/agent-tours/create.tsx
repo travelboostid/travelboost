@@ -41,7 +41,6 @@ export default function Page() {
       openMenuIds={['tours']}
       activeMenuIds={['tours.index']}
       breadcrumb={[
-        { title: 'Dashboard', url: '/dashboard' },
         { title: 'Tours', url: '/dashboard/tours' },
         { title: 'Create' },
       ]}

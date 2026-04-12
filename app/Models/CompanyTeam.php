@@ -6,7 +6,6 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use App\Enums\CompanyTeamStatus;
 use App\Events\CompanyTeamCreated;
-use function PHPUnit\Framework\returnValue;
 
 class CompanyTeam extends Model
 {
@@ -30,38 +29,38 @@ class CompanyTeam extends Model
     'accepted_at' => 'datetime',
   ];
 
+  /** Eager load user and their roles */
   protected $with = [
     'user',
     'user.roles',
   ];
 
+  /** Append computed roles attribute */
   protected $appends = ['roles'];
 
   protected $dispatchesEvents = [
     'created' => CompanyTeamCreated::class
   ];
 
-  /*
-  |--------------------------------------------------------------------------
-  | Relationships
-  |--------------------------------------------------------------------------
-  */
-
+  /** @return \Illuminate\Database\Eloquent\Relations\BelongsTo */
   public function company()
   {
     return $this->belongsTo(Company::class);
   }
 
+  /** @return \Illuminate\Database\Eloquent\Relations\BelongsTo */
   public function user()
   {
     return $this->belongsTo(User::class, 'user_id');
   }
 
+  /** Get roles for pending invites or accepted team members */
   public function getRolesAttribute()
   {
     if ($this->user_id === null) {
       return Role::where('name', $this->invite_role)->get();
     }
+
     return $this->user->roles()->where('name', 'like', "company:{$this->company_id}:%")->get();
   }
 }

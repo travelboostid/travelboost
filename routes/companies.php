@@ -3,6 +3,7 @@
 use App\Http\Controllers\Companies\Dashboard\AgentRegistrationController;
 use App\Http\Controllers\Companies\Dashboard\AgentSubscriptionController;
 use App\Http\Controllers\Companies\Dashboard\AgentTourController;
+use App\Http\Controllers\Companies\Dashboard\AiCreditController;
 use App\Http\Controllers\Companies\Dashboard\BankAccountController;
 use App\Http\Controllers\Companies\Dashboard\CategoryController;
 use App\Http\Controllers\Companies\Dashboard\ChatbotController;
@@ -57,6 +58,7 @@ Route::prefix('companies/{company:username}/dashboard')->middleware(['auth', 'co
   Route::singleton('chatbot', ChatbotController::class);
   Route::singleton('page', PageController::class);
   Route::singleton('agent-subscriptions', AgentSubscriptionController::class);
+  Route::singleton('ai-credits', AiCreditController::class);
 });
 
 Route::get(
