@@ -95,6 +95,64 @@ export default function ProfileIndex({ user }: { user: any }) {
                   />
                 </div>
 
+                {/* LOGIKA INFORMASI REFERRAL */}
+                {(() => {
+                  const profile =
+                    user?.affiliate_profile || user?.affiliateProfile;
+                  const tier = profile?.tier;
+                  const uplineMA = profile?.upline; // Master Affiliate
+                  const uplinePartner =
+                    uplineMA?.affiliate_profile?.upline ||
+                    uplineMA?.affiliateProfile?.upline; // Partner
+
+                  // Jika user adalah Affiliator Biasa
+                  if (tier === 'affiliate') {
+                    return (
+                      <>
+                        <div className="space-y-2">
+                          <Label className="text-blue-700">
+                            Invited By (Master Affiliate)
+                          </Label>
+                          <Input
+                            value={uplineMA?.name || '-'}
+                            disabled
+                            className="bg-blue-50/50 border-blue-100 font-medium"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-blue-700">
+                            Network Partner
+                          </Label>
+                          <Input
+                            value={uplinePartner?.name || '-'}
+                            disabled
+                            className="bg-blue-50/50 border-blue-100 font-medium"
+                          />
+                        </div>
+                      </>
+                    );
+                  }
+
+                  // Jika user adalah Master Affiliate
+                  if (
+                    tier === 'master_affiliate' ||
+                    tier === 'master-affiliate'
+                  ) {
+                    return (
+                      <div className="space-y-2">
+                        <Label className="text-blue-700">Partner Under</Label>
+                        <Input
+                          value={uplineMA?.name || '-'}
+                          disabled
+                          className="bg-blue-50/50 border-blue-100 font-medium"
+                        />
+                      </div>
+                    );
+                  }
+
+                  return null;
+                })()}
+
                 {/* Username (Readonly) */}
                 <div className="space-y-2">
                   <Label htmlFor="username" className="text-muted-foreground">

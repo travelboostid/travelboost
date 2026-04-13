@@ -11,7 +11,7 @@ export function NavMain({
 
   return (
     <SidebarGroup>
-      <SidebarGroupLabel>Menu Mitra</SidebarGroupLabel>
+      <SidebarGroupLabel>Main Menu</SidebarGroupLabel>
       <SidebarMenuRenderer
         menu={menus}
         activeMenuIds={activeMenuIds || []}

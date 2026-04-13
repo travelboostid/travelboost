@@ -1,54 +1,73 @@
-import { SidebarGroup, SidebarGroupLabel } from '@/components/ui/sidebar';
-import { HelpCircleIcon, MoonIcon, Share2Icon, SunIcon } from 'lucide-react';
-import { useTheme } from 'next-themes';
-import { useMemo } from 'react';
 import {
-  SidebarMenuRenderer,
-  type MenuItem,
-} from '../components/sidebar-menu-renderer';
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+} from '@/components/ui/sidebar';
+import { ExternalLink, Globe, HelpCircle, Share2 } from 'lucide-react';
+import React from 'react';
 
-export function NavSecondary() {
-  const { resolvedTheme, setTheme } = useTheme();
-
-  const menus: MenuItem[] = useMemo(() => {
-    return [
-      {
-        title: 'Bantuan',
-        urlOrAction: 'https://wa.me/6289654401230',
-        target: '_blank',
-        icon: HelpCircleIcon,
-      },
-      {
-        title: 'Bagikan Link',
-        urlOrAction: 'https://wa.me/?text=Daftar TravelBoost sekarang!',
-        icon: Share2Icon,
-        target: '_blank',
-      },
-      {
-        title: 'Tema Tampilan',
-        urlOrAction: () =>
-          setTheme(resolvedTheme === 'light' ? 'dark' : 'light'),
-        icon: resolvedTheme === 'light' ? SunIcon : MoonIcon,
-        actions: [
-          {
-            title: 'Terang',
-            urlOrAction: () => setTheme('light'),
-            icon: SunIcon,
-          },
-          {
-            title: 'Gelap',
-            urlOrAction: () => setTheme('dark'),
-            icon: MoonIcon,
-          },
-        ],
-      },
-    ] as MenuItem[];
-  }, [resolvedTheme, setTheme]);
-
+export function NavSecondary({
+  className,
+  ...props
+}: React.ComponentPropsWithoutRef<typeof SidebarGroup>) {
   return (
-    <SidebarGroup className="group-data-[collapsible=icon]:hidden">
-      <SidebarGroupLabel>Lainnya</SidebarGroupLabel>
-      <SidebarMenuRenderer menu={menus} activeMenuIds={[]} openMenuIds={[]} />
+    <SidebarGroup className={className} {...props}>
+      <SidebarGroupLabel>Others</SidebarGroupLabel>
+      <SidebarGroupContent>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild>
+              <a
+                href="https://wa.me/6289654401230"
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center justify-between w-full"
+              >
+                <div className="flex items-center gap-2">
+                  <HelpCircle className="size-4" />
+                  <span>Help</span>
+                </div>
+                <ExternalLink className="size-3 text-muted-foreground" />
+              </a>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild>
+              <a
+                href="#"
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center justify-between w-full"
+              >
+                <div className="flex items-center gap-2">
+                  <Share2 className="size-4" />
+                  <span>Share Link</span>
+                </div>
+                <ExternalLink className="size-3 text-muted-foreground" />
+              </a>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild>
+              <a
+                href="https://dev.travelboost.co.id"
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center justify-between w-full"
+              >
+                <div className="flex items-center gap-2">
+                  <Globe className="size-4" />
+                  <span>Affiliate Page</span>
+                </div>
+                <ExternalLink className="size-3 text-muted-foreground" />
+              </a>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarGroupContent>
     </SidebarGroup>
   );
 }

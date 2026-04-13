@@ -266,7 +266,15 @@ export default function Landing() {
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
+  const [currentDomain, setCurrentDomain] = useState(
+    'afiliasi.travelboost.co.id',
+  );
+
   useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setCurrentDomain(window.location.host);
+    }
+
     const sLang = localStorage.getItem('tb_lang') as 'id' | 'en';
     if (sLang) setLang(sLang);
 
@@ -458,7 +466,9 @@ export default function Landing() {
                 {t.heroTitle}
               </h1>
               <p className="text-lg md:text-xl text-slate-600 dark:text-slate-400 leading-relaxed max-w-2xl mx-auto lg:mx-0">
-                {t.heroDesc}
+                {t.heroDesc
+                  .replace('afiliasi.travelboost.co.id', currentDomain)
+                  .replace('affiliate.travelboost.co.id', currentDomain)}
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
                 <a

@@ -1,8 +1,8 @@
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import {
-  BoltIcon,
   HomeIcon,
   SettingsIcon,
+  UsersIcon,
   UsersRoundIcon,
   WalletIcon,
 } from 'lucide-react';
@@ -25,12 +25,50 @@ export function useAffiliateDashboardNavMainMenu() {
   const { auth } = usePageSharedDataProps();
   const user = auth?.user;
 
-  // Casting ke any[] agar TypeScript mengenali method .some()
-  const roles = (user?.roles as any[]) || [];
-  const isPartner = roles.some((r) => r.name === 'partner');
-  const isMaster = roles.some((r) => r.name === 'master_affiliate');
+  const roles = Array.isArray(user?.roles) ? user.roles : [];
+  const profile = user?.affiliate_profile || user?.affiliateProfile;
+  const tier = profile?.tier;
+
+  const isPartner =
+    roles.some((r) => r.name === 'partner') || tier === 'partner';
+  const isMaster =
+    roles.some(
+      (r) => r.name === 'master_affiliate' || r.name === 'master-affiliate',
+    ) ||
+    tier === 'master_affiliate' ||
+    tier === 'master-affiliate';
+
+  const isApproved =
+    isPartner ||
+    isMaster ||
+    profile?.status === 'approved' ||
+    profile?.approved_at != null;
 
   return useMemo(() => {
+    if (!isApproved) {
+      return [
+        {
+          id: 'home',
+          title: 'Dashboard',
+          urlOrAction: '/affiliate/dashboard',
+          icon: HomeIcon,
+        },
+        {
+          id: 'setup',
+          title: 'Setup',
+          urlOrAction: '#',
+          icon: SettingsIcon,
+          items: [
+            {
+              id: 'setup.profile',
+              title: 'Profile',
+              urlOrAction: '/affiliate/dashboard/setup/profile',
+            },
+          ],
+        },
+      ] as MenuItem[];
+    }
+
     return [
       {
         id: 'home',
@@ -38,82 +76,92 @@ export function useAffiliateDashboardNavMainMenu() {
         urlOrAction: '/affiliate/dashboard',
         icon: HomeIcon,
       },
-      {
-        id: 'network',
-        title: 'Jaringan Mitra',
-        urlOrAction: '#',
-        icon: UsersRoundIcon,
-        items: [
-          ...(isPartner || isMaster
-            ? [
+      ...(isMaster || isPartner
+        ? [
+            {
+              id: 'affiliate',
+              title: 'Affiliate',
+              urlOrAction: '#',
+              icon: UsersRoundIcon,
+              items: [
                 {
-                  id: 'network.sub-mitra',
-                  title: 'Daftar Sub-Mitra',
-                  urlOrAction: '/affiliate/dashboard/network/sub-mitra',
+                  id: 'affiliate.approval',
+                  title: 'Affiliate Approval',
+                  urlOrAction: '/affiliate/dashboard/affiliate/approvals',
                 },
-              ]
-            : []),
+                {
+                  id: 'affiliate.list',
+                  title: 'Affiliate List',
+                  urlOrAction: '/affiliate/dashboard/affiliate/list',
+                },
+              ],
+            },
+          ]
+        : []),
+      {
+        id: 'agent',
+        title: 'Agent',
+        urlOrAction: '#',
+        icon: UsersIcon,
+        items: [
           {
-            id: 'network.agents',
-            title: 'Daftar Agen (Customer)',
-            urlOrAction: '/affiliate/dashboard/network/agents',
+            id: 'agent.list',
+            title: 'Agent List',
+            urlOrAction: '/affiliate/dashboard/agent/list',
           },
         ],
       },
       {
-        id: 'funds',
-        title: 'Komisi & Keuangan',
+        id: 'fund',
+        title: 'Fund',
         urlOrAction: '#',
         icon: WalletIcon,
         items: [
           {
-            id: 'funds.wallet',
-            title: 'Saldo',
-            urlOrAction: '/affiliate/dashboard/wallet',
+            id: 'fund.wallet',
+            title: 'Wallet',
+            urlOrAction: '/affiliate/dashboard/fund/wallet',
           },
           {
-            id: 'funds.commissions',
-            title: 'Validasi Komisi',
-            urlOrAction: '/affiliate/dashboard/commissions',
+            id: 'fund.transaction',
+            title: 'Wallet Transaction',
+            urlOrAction: '/affiliate/dashboard/fund/transactions',
           },
           {
-            id: 'funds.withdrawals',
-            title: 'Penarikan Dana',
-            urlOrAction: '/affiliate/dashboard/withdrawals',
+            id: 'fund.withdraw',
+            title: 'Withdraw',
+            urlOrAction: '/affiliate/dashboard/fund/withdrawals',
+          },
+          {
+            id: 'fund.history',
+            title: 'Payment History',
+            urlOrAction: '/affiliate/dashboard/fund/payments',
+          },
+          {
+            id: 'fund.bank',
+            title: 'Bank Account',
+            urlOrAction: '/affiliate/dashboard/fund/bank-accounts',
           },
         ],
       },
       {
-        id: 'marketing',
-        title: 'Alat Promosi',
-        urlOrAction: '#',
-        icon: BoltIcon,
-        items: [
-          {
-            id: 'marketing.links',
-            title: 'Link & Landing Page',
-            urlOrAction: '/affiliate/dashboard/marketing/links',
-          },
-        ],
-      },
-      {
-        id: 'settings',
-        title: 'Pengaturan',
+        id: 'setup',
+        title: 'Settings',
         urlOrAction: '#',
         icon: SettingsIcon,
         items: [
           {
-            id: 'settings.profile',
-            title: 'Profil Pribadi',
-            urlOrAction: '/affiliate/dashboard/profile',
+            id: 'setup.profile',
+            title: 'Profile',
+            urlOrAction: '/affiliate/dashboard/setup/profile',
           },
           {
-            id: 'settings.bank',
-            title: 'Rekening Bank',
-            urlOrAction: '/affiliate/dashboard/bank',
+            id: 'setup.password',
+            title: 'Change Password',
+            urlOrAction: '/affiliate/dashboard/setup/password',
           },
         ],
       },
     ] as MenuItem[];
-  }, [isPartner, isMaster]);
+  }, [isMaster, isPartner, isApproved]);
 }

@@ -2,47 +2,46 @@ import InputError from '@/components/input-error';
 import AuthLayout from '@/components/layouts/auth/auth-layout';
 import TextLink from '@/components/text-link';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { Head, useForm } from '@inertiajs/react';
-import { FormEventHandler } from 'react';
+import React from 'react';
 
-export default function LoginAffiliate() {
+export default function Login() {
   const { data, setData, post, processing, errors, reset } = useForm({
     login: '',
     password: '',
     remember: false,
   });
 
-  const submit: FormEventHandler = (e) => {
+  const submit = (e: React.FormEvent) => {
     e.preventDefault();
     post('/affiliate/login', {
-      onSuccess: () => reset('password'),
+      onFinish: () => reset('password'),
     });
   };
 
   return (
     <AuthLayout
-      title="Login Portal Mitra"
-      description="Masukkan email/username dan password untuk masuk"
+      title="Log in to your account"
+      description="Enter your email or username and password to access your dashboard"
     >
-      <Head title="Login Mitra" />
+      <Head title="Log in" />
 
       <form onSubmit={submit} className="flex flex-col gap-6">
         <div className="grid gap-6">
+          {/* Kolom Input Login (Email / Username) */}
           <div className="grid gap-2">
-            <Label htmlFor="login">Email atau Username</Label>
+            <Label htmlFor="login">Email or Username</Label>
             <Input
               id="login"
-              type="text"
-              required
-              autoFocus
-              tabIndex={1}
+              type="text" // Diubah ke 'text' agar bisa menerima username tanpa '@'
+              name="login"
               value={data.login}
+              autoFocus
               onChange={(e) => setData('login', e.target.value)}
-              placeholder="nama@email.com atau username"
+              placeholder="email@example.com or username"
             />
             <InputError message={errors.login} />
           </div>
@@ -54,8 +53,7 @@ export default function LoginAffiliate() {
             <Input
               id="password"
               type="password"
-              required
-              tabIndex={2}
+              name="password"
               value={data.password}
               onChange={(e) => setData('password', e.target.value)}
               placeholder="Password"
@@ -63,34 +61,15 @@ export default function LoginAffiliate() {
             <InputError message={errors.password} />
           </div>
 
-          <div className="flex items-center space-x-3">
-            <Checkbox
-              id="remember"
-              checked={data.remember}
-              onCheckedChange={(checked) =>
-                setData('remember', checked === true)
-              }
-              tabIndex={3}
-            />
-            <Label htmlFor="remember">Ingat Saya</Label>
-          </div>
-
-          <Button
-            type="submit"
-            className="mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white"
-            tabIndex={4}
-            disabled={processing}
-          >
-            {processing && <Spinner className="mr-2" />}
-            Masuk
+          <Button type="submit" className="w-full" disabled={processing}>
+            {processing && <Spinner />}
+            Log in
           </Button>
         </div>
 
-        <div className="text-center text-sm text-muted-foreground mt-2">
-          Belum bergabung?{' '}
-          <TextLink href="/affiliate/register" tabIndex={5}>
-            Daftar sekarang
-          </TextLink>
+        <div className="text-center text-sm text-muted-foreground">
+          Don't have an account?{' '}
+          <TextLink href="/affiliate/register">Sign up</TextLink>
         </div>
       </form>
     </AuthLayout>

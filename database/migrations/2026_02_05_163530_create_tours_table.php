@@ -104,7 +104,7 @@ return new class extends Migration
         ->constrained('tours')
         ->cascadeOnDelete();
       $table->text('content');
-      $table->vector('embedding', dimensions: 1536);
+      $table->text('embedding');
       $table->timestamps();
     });
 
