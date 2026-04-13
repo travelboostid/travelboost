@@ -2,7 +2,10 @@
 
 namespace App\Http\Requests\Companies;
 
+use App\Models\Company;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 class UpdateProfileRequest extends FormRequest
 {
@@ -22,13 +25,98 @@ class UpdateProfileRequest extends FormRequest
   public function rules(): array
   {
     return [
-      'username' => 'nullable|string|max:255|unique:companies,username,' . $this->company->id,
-      'subdomain' => 'nullable|string|max:255|unique:companies,subdomain,' . $this->company->id,
-      'name' => 'required|string|max:255',
-      'phone' => 'nullable|string|max:20',
-      'customer_service_phone' => 'nullable|string|max:20',
-      'address' => 'nullable|string|max:255',
-      'photo_id' => 'nullable|exists:medias,id',
+      'username' => [
+        'nullable',
+        'string',
+        'max:255',
+        Rule::unique('companies', 'username')->ignore($this->company->id),
+      ],
+      'subdomain' => [
+        'nullable',
+        'string',
+        'max:255',
+        Rule::unique('domains', 'subdomain')
+          ->where(
+            fn($q) =>
+            $q->where('owner_type', Company::class)
+              ->where('owner_id', $this->company?->id)
+          ),
+      ],
+      'domain_enabled' => [
+        'boolean',
+      ],
+      'domain' => [
+        Rule::requiredIf(fn() => $this->boolean('domain_enabled')),
+        'nullable',
+        'string',
+        'max:255',
+        'regex:/^(?=.{1,253}$)(?!-)(?:[a-zA-Z0-9-]{1,63}\.)+[a-zA-Z]{2,63}$/',
+        Rule::unique('domains', 'domain')
+          ->where(
+            fn($q) =>
+            $q->where('owner_type', Company::class)
+              ->where('owner_id', $this->company?->id)
+          ),
+      ],
+      'name' => [
+        'required',
+        'string',
+        'max:255',
+      ],
+      'phone' => [
+        'nullable',
+        'string',
+        'max:20',
+      ],
+      'customer_service_phone' => [
+        'nullable',
+        'string',
+        'max:20',
+      ],
+      'address' => [
+        'nullable',
+        'string',
+        'max:255',
+      ],
+      'photo_id' => [
+        'nullable',
+        'exists:medias,id',
+      ],
     ];
+  }
+
+  public function withValidator(Validator $validator)
+  {
+    $validator->after(function ($validator) {
+      $domain = $this->input('domain');
+
+      // skip if domain_enabled is false or not present
+      if (!$this->boolean('domain_enabled')) {
+        return;
+      }
+
+      if (!$domain) return;
+
+      // skip if domain hasn't changed or is same as current domain (to allow saving other fields without changing domain)
+      if ($this->company && $domain === optional($this->company->domain)->domain) {
+        return;
+      }
+
+      if (!$this->verifyDomainOwnership($domain)) {
+        $validator->errors()->add(
+          'domain',
+          "Domain ownership verification failed. Please read the instructions to verify your domain ownership."
+        );
+      }
+    });
+  }
+  protected function verifyDomainOwnership(string $domain): bool
+  {
+    $records = dns_get_record($domain, DNS_A) ?: [];
+    $expectedIp = request()->server('SERVER_ADDR');
+
+    return collect($records)
+      ->pluck('ip')
+      ->contains($expectedIp);
   }
 }

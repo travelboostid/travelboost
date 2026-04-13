@@ -17,7 +17,6 @@ export interface Company {
   type: string;
   name: string;
   username: string;
-  subdomain: string;
   email: string;
   address: string;
   phone: string;

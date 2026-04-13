@@ -44,10 +44,16 @@ class HandleInertiaRequests extends Middleware
       ...parent::share($request),
       'name' => config('app.name'),
       'appDomain' => env('APP_HOST', 'localhost'),
+      // current authenticated user
       'auth' => [
         'user' => $request->user()?->load(['companies']),
+        'permissions' => $request->user()?->allPermissions()->pluck('name')->toArray(),
+        'roles' => $request->user()?->roles->pluck('name')->toArray(),
+        'teams' => $request->user()?->allTeams()->pluck('name')->toArray(),
       ],
+      // current company based on route parameter (don't interpret as user's current company!!!)
       'company' => $company,
+      // current tenant based on route parameter (don't interpret as user's tenant!!!)
       'tenant' => $request->attributes->get('tenant'),
       'anonymousUser' => $anonymousUser,
       'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
