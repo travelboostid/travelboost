@@ -21,15 +21,16 @@ class TenantResolver
 
     if (Str::endsWith($currentHost, '.' . $baseHost)) {
       $subdomain = Str::before($currentHost, '.' . $baseHost);
-      $company = Company::where('username', $subdomain)
-                        ->orWhere('subdomain', $subdomain)
-                        ->first();
+      $company = Company::with('photo')
+        ->where('username', $subdomain)
+        ->orWhere('subdomain', $subdomain)
+        ->first();
       if ($company == null) {
         return Inertia::render('errors/invalid-tenant-subdomain')
           ->toResponse($request)
           ->setStatusCode(404);
       }
-            
+
       $request->attributes->set('tenant', $company);
     } else {
       // user use custom domain
