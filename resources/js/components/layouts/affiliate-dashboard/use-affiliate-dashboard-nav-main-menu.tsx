@@ -1,5 +1,6 @@
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import {
+  BriefcaseIcon,
   HomeIcon,
   SettingsIcon,
   UsersIcon,
@@ -8,41 +9,23 @@ import {
 } from 'lucide-react';
 import { useMemo } from 'react';
 
-type MenuItemBase = {
+type MenuItem = {
   id: string;
   title: string;
   urlOrAction: string | (() => void);
-  target?: React.HTMLAttributeAnchorTarget;
   icon?: any;
+  items?: MenuItem[];
 };
-
-type MenuItem =
-  | (MenuItemBase & { items?: MenuItem[]; actions?: never })
-  | (MenuItemBase & { items?: never; actions?: MenuItem[] })
-  | (MenuItemBase & { items?: never; actions?: never });
 
 export function useAffiliateDashboardNavMainMenu() {
   const { auth } = usePageSharedDataProps();
   const user = auth?.user;
-
-  const roles = Array.isArray(user?.roles) ? user.roles : [];
   const profile = user?.affiliate_profile || user?.affiliateProfile;
   const tier = profile?.tier;
 
-  const isPartner =
-    roles.some((r) => r.name === 'partner') || tier === 'partner';
-  const isMaster =
-    roles.some(
-      (r) => r.name === 'master_affiliate' || r.name === 'master-affiliate',
-    ) ||
-    tier === 'master_affiliate' ||
-    tier === 'master-affiliate';
-
-  const isApproved =
-    isPartner ||
-    isMaster ||
-    profile?.status === 'approved' ||
-    profile?.approved_at != null;
+  const isPartner = tier === 'partner';
+  const isMaster = tier === 'master_affiliate' || tier === 'master-affiliate';
+  const isApproved = isPartner || isMaster || profile?.status === 'approved';
 
   return useMemo(() => {
     if (!isApproved) {
@@ -69,48 +52,92 @@ export function useAffiliateDashboardNavMainMenu() {
       ] as MenuItem[];
     }
 
-    return [
+    const menuItems: MenuItem[] = [
       {
         id: 'home',
         title: 'Dashboard',
         urlOrAction: '/affiliate/dashboard',
         icon: HomeIcon,
       },
-      ...(isMaster || isPartner
-        ? [
+    ];
+
+    // Menu Partner
+    if (isPartner) {
+      menuItems.push(
+        {
+          id: 'network_ma',
+          title: 'Master Affiliate',
+          urlOrAction: '#',
+          icon: BriefcaseIcon,
+          items: [
             {
-              id: 'affiliate',
-              title: 'Affiliate',
-              urlOrAction: '#',
-              icon: UsersRoundIcon,
-              items: [
-                {
-                  id: 'affiliate.approval',
-                  title: 'Affiliate Approval',
-                  urlOrAction: '/affiliate/dashboard/affiliate/approvals',
-                },
-                {
-                  id: 'affiliate.list',
-                  title: 'Affiliate List',
-                  urlOrAction: '/affiliate/dashboard/affiliate/list',
-                },
-              ],
+              id: 'network_ma.approvals',
+              title: 'MA Approval',
+              urlOrAction: '/affiliate/dashboard/network/approvals?tier=ma',
             },
-          ]
-        : []),
-      {
-        id: 'agent',
-        title: 'Agent',
-        urlOrAction: '#',
+            {
+              id: 'network_ma.list',
+              title: 'MA List',
+              urlOrAction: '/affiliate/dashboard/network/list?tier=ma',
+            },
+          ],
+        },
+        {
+          id: 'network_affiliate_list',
+          title: 'Affiliate List',
+          urlOrAction: '/affiliate/dashboard/network/list?tier=affiliate',
+          icon: UsersRoundIcon,
+        },
+        {
+          id: 'agent_list',
+          title: 'Agent List',
+          urlOrAction: '/affiliate/dashboard/agent/list',
+          icon: UsersIcon,
+        },
+      );
+    }
+    // Menu Master Affiliate
+    else if (isMaster) {
+      menuItems.push(
+        {
+          id: 'network_affiliate',
+          title: 'Affiliate',
+          urlOrAction: '#',
+          icon: UsersRoundIcon,
+          items: [
+            {
+              id: 'network_affiliate.approvals',
+              title: 'Affiliate Approval',
+              urlOrAction:
+                '/affiliate/dashboard/network/approvals?tier=affiliate',
+            },
+            {
+              id: 'network_affiliate.list',
+              title: 'Affiliate List',
+              urlOrAction: '/affiliate/dashboard/network/list?tier=affiliate',
+            },
+          ],
+        },
+        {
+          id: 'agent_list',
+          title: 'Agent List',
+          urlOrAction: '/affiliate/dashboard/agent/list',
+          icon: UsersIcon,
+        },
+      );
+    }
+    // Menu Affiliator Biasa
+    else {
+      menuItems.push({
+        id: 'agent_list',
+        title: 'Agent List',
+        urlOrAction: '/affiliate/dashboard/agent/list',
         icon: UsersIcon,
-        items: [
-          {
-            id: 'agent.list',
-            title: 'Agent List',
-            urlOrAction: '/affiliate/dashboard/agent/list',
-          },
-        ],
-      },
+      });
+    }
+
+    // Menu Umum
+    menuItems.push(
       {
         id: 'fund',
         title: 'Fund',
@@ -162,6 +189,8 @@ export function useAffiliateDashboardNavMainMenu() {
           },
         ],
       },
-    ] as MenuItem[];
+    );
+
+    return menuItems;
   }, [isMaster, isPartner, isApproved]);
 }

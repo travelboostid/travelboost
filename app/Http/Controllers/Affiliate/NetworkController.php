@@ -4,150 +4,155 @@ namespace App\Http\Controllers\Affiliate;
 
 use App\Http\Controllers\Controller;
 use App\Models\AffiliateProfile;
+use App\Models\User;
 use Illuminate\Http\Request;
-use Inertia\Inertia;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Inertia\Inertia;
 
 class NetworkController extends Controller
 {
   public function index(Request $request)
   {
-    $user = $request->user();
+    $user = Auth::user();
+    $tier = $request->query('tier', 'affiliate');
 
-    $sortField = $request->input('sort', 'created_at');
-    $sortOrder = $request->input('order', 'desc');
-    $limit = $request->input('limit', 10);
-    $period = $request->input('period', 'monthly');
+    // Cek apakah user yang login ini Partner
+    $userProfile = AffiliateProfile::where('user_id', $user->id)->first();
+    $isPartner = $userProfile && $userProfile->tier === 'partner';
 
-    // Multiplier untuk simulasi filter waktu (HAPUS saat deployment)
-    $multiplier = $period === 'yearly' ? 12 : ($period === 'all_time' ? 24 : 1);
+    $query = User::select(
+      'users.id',
+      'users.name',
+      'users.email',
+      'users.username',
+      'users.created_at',
+      'ap.phone',
+      'ap.tier'
+    )
+      ->join('affiliate_profiles as ap', 'users.id', '=', 'ap.user_id')
+      ->where('ap.status', 'approved');
 
-    // ===================================================================================
-    // [DEPLOYMENT] UNCOMMENT QUERY ASLI DI BAWAH INI DAN SESUAIKAN FILTER PERIODENYA
-    // ===================================================================================
-    /*
-        $query = AffiliateProfile::where('upline_id', $user->id)
-            ->where('status', 'approved')
-            ->with('user:id,name,username,email,created_at')
-            ->withCount([
-                // Menghitung total agen yang diundang
-                'user as invited_count' => function ($q) use ($period) {
-                    $q->from('users')->whereColumn('users.referred_by', 'affiliate_profiles.user_id');
-                    // Tambahkan filter $period di sini kalau perlu aja (misal where('created_at', '>=', startOfMonth))
-                },
-                // Menghitung agen yang berhasil Subscribe (terhubung ke company -> agent_subscriptions)
-                'user as subscribed_count' => function ($q) use ($period) {
-                    $q->from('users')
-                      ->whereColumn('users.referred_by', 'affiliate_profiles.user_id')
-                      ->whereHas('company.agentSubscriptions', function($subQuery) {
-                          $subQuery->where('ended_at', '>', now()); // Asumsi subscription masih aktif
-                      });
-                }
-            ]);
+    if ($tier === 'ma') {
+      // List MA: Hanya dilihat oleh Partner
+      $query->where('ap.tier', 'master_affiliate')
+        ->where('ap.upline_id', $user->id);
+    } else {
+      // List Affiliate
+      $query->where('ap.tier', 'affiliate');
 
-        $affiliates = $query->orderBy($sortField, $sortOrder)->paginate($limit)->withQueryString();
-        */
+      if ($isPartner) {
+        // Partner melihat SEMUA affiliate di bawah MA miliknya
+        $maIds = AffiliateProfile::where('upline_id', $user->id)
+          ->where('tier', 'master_affiliate')
+          ->pluck('user_id');
+        $query->whereIn('ap.upline_id', $maIds);
+      } else {
+        // MA melihat affiliate di bawah jaringannya sendiri
+        $query->where('ap.upline_id', $user->id);
+      }
+    }
 
-    // ===================================================================================
-    // [DUMMY INJECTION] HAPUS QUERY DUMMY INI SAAT DEPLOYMENT
-    // ===================================================================================
-    $affiliates = AffiliateProfile::where('upline_id', $user->id)
-      ->where('status', 'approved')
-      ->with('user:id,name,username,email,created_at')
-      ->orderBy($sortField, $sortOrder)
-      ->paginate($limit)
-      ->withQueryString();
+    $networks = $query->get()->map(function ($network) {
 
-    $affiliates->getCollection()->transform(function ($affiliate) use ($multiplier) {
-      $baseInvited = ($affiliate->id * 23) % 80 + 20;
-      $baseSubscribed = ($affiliate->id * 7) % $baseInvited;
+      // Hitung Affiliator di bawahnya
+      $affiliatesQuery = DB::table('affiliate_profiles')
+        ->where('upline_id', $network->id)
+        ->where('tier', 'affiliate')
+        ->where('status', 'approved');
 
-      $affiliate->invited_count = $baseInvited * $multiplier;
-      $affiliate->subscribed_count = $baseSubscribed * $multiplier;
-      return $affiliate;
+      $total_affiliators = $affiliatesQuery->count();
+
+      // Tentukan pengundang agen (Dia sendiri + turunan affiliatornya)
+      $referrerIds = [$network->id];
+      if ($network->tier === 'master_affiliate') {
+        $downlineAffiliateIds = $affiliatesQuery->pluck('user_id')->toArray();
+        $referrerIds = array_merge($referrerIds, $downlineAffiliateIds);
+      }
+
+      // Hitung Total Agen (di tabel companies)
+      $total_agents = DB::table('companies')
+        ->where('type', 'agent')
+        ->whereIn('referred_by', $referrerIds)
+        ->count();
+
+      // Hitung Agen Subscribed (Join companies.id ke agent_subscriptions.company_id)
+      $subscribed_agents = DB::table('companies')
+        ->join('agent_subscriptions', 'companies.id', '=', 'agent_subscriptions.company_id')
+        ->where('companies.type', 'agent')
+        ->whereIn('companies.referred_by', $referrerIds)
+        ->whereNotNull('agent_subscriptions.package_id')
+        ->count();
+
+      return [
+        'id' => $network->id,
+        'name' => $network->name,
+        'username' => $network->username,
+        'email' => $network->email,
+        'phone' => $network->phone,
+        'tier' => $network->tier,
+        'created_at' => $network->created_at,
+        'total_affiliators' => $total_affiliators,
+        'total_agents' => $total_agents,
+        'subscribed_agents' => $subscribed_agents,
+      ];
     });
-    // ===================================================================================
 
-    return Inertia::render('affiliate/dashboard/affiliate/list', [
-      'affiliates' => $affiliates,
-      'filters' => $request->only(['sort', 'order', 'limit', 'period', 'top']),
+    return Inertia::render('affiliate/dashboard/network/list', [
+      'networks' => $networks
     ]);
   }
 
   public function getChartData(Request $request)
   {
     $user = $request->user();
-    $period = $request->input('period', 'monthly');
     $top = $request->input('top', 5);
 
-    $multiplier = $period === 'yearly' ? 12 : ($period === 'all_time' ? 24 : 1);
-
-    // ===================================================================================
-    // [DEPLOYMENT] UNCOMMENT QUERY ASLI SAAT DEPLOYMENT 
-    // ===================================================================================
-    /*
-        $data = AffiliateProfile::where('upline_id', $user->id)
-            ->where('status', 'approved')
-            ->with('user:id,username')
-            ->withCount([
-                'user as invited_count' => function ($q) {
-                    $q->from('users')->whereColumn('users.referred_by', 'affiliate_profiles.user_id');
-                },
-                'user as subscribed_count' => function ($q) {
-                    $q->from('users')->whereColumn('users.referred_by', 'affiliate_profiles.user_id')
-                      ->whereHas('company.agentSubscriptions', function($subQuery) {
-                          $subQuery->where('ended_at', '>', now());
-                      });
-                }
-            ])
-            ->orderByDesc('subscribed_count') // Ambil best performance
-            ->take($top)
-            ->get()
-            ->map(function($affiliate) {
-                return [
-                    'name' => $affiliate->user->username,
-                    'invited' => $affiliate->invited_count,
-                    'subscribed' => $affiliate->subscribed_count,
-                ];
-            });
-        return response()->json($data);
-        */
-
-    // ===================================================================================
-    // [DUMMY INJECTION] HAPUS BLOK DUMMY INI SAAT DEPLOYMENT
-    // ===================================================================================
     $data = AffiliateProfile::where('upline_id', $user->id)
       ->where('status', 'approved')
-      ->with('user:id,username')
+      ->with('user:id,name,username')
       ->take($top)
       ->get()
-      ->map(function ($affiliate) use ($multiplier) {
-        $baseInvited = ($affiliate->id * 23) % 80 + 20;
-        $baseSubscribed = ($affiliate->id * 7) % $baseInvited;
-
+      ->map(function ($affiliate) {
         return [
-          'name' => $affiliate->user->username,
-          'invited' => $baseInvited * $multiplier,
-          'subscribed' => $baseSubscribed * $multiplier,
+          'name' => $affiliate->user->username ?? 'Unknown',
+          'invited' => 0,
+          'subscribed' => 0,
         ];
       });
 
     return response()->json($data);
-    // ===================================================================================
   }
 
+  // Bagian fungsi approvals yang diperbarui:
   public function approvals(Request $request)
   {
     $user = $request->user();
+    $tierFilter = $request->query('tier');
 
-    $pending = AffiliateProfile::where('upline_id', $user->id)
+    $query = AffiliateProfile::where('upline_id', $user->id)
       ->where('status', 'pending')
       ->with('user')
-      ->orderBy('created_at', 'desc')
-      ->paginate(10);
+      ->orderBy('created_at', 'desc');
 
-    return Inertia::render('affiliate/dashboard/affiliate/approvals', [
-      'pendingAffiliates' => $pending
+    if ($tierFilter === 'ma') {
+      $query->where('tier', 'master_affiliate');
+    } else {
+      $query->where('tier', 'affiliate');
+    }
+
+    $pending = $query->get()->map(function ($profile) {
+      return [
+        'id' => $profile->id,
+        'name' => $profile->user->name ?? '-',
+        'email' => $profile->user->email ?? '-',
+        'username' => $profile->user->username ?? '-',
+        'registered_at' => $profile->created_at ? $profile->created_at->format('Y-m-d') : '-',
+      ];
+    });
+
+    return Inertia::render('affiliate/dashboard/network/approvals', [
+      'pending_approvals' => $pending
     ]);
   }
 
@@ -170,7 +175,15 @@ class NetworkController extends Controller
   public function reject(Request $request, $id)
   {
     $profile = AffiliateProfile::findOrFail($id);
-    $profile->update(['status' => 'rejected']);
-    return back()->with('success', 'Affiliate application rejected.');
+
+    if ($profile->upline_id !== $request->user()->id) {
+      abort(403);
+    }
+
+    $profile->update([
+      'status' => 'rejected',
+    ]);
+
+    return back()->with('success', 'Affiliate has been rejected.');
   }
 }

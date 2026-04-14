@@ -5,114 +5,126 @@ namespace App\Http\Controllers\Affiliate;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
-use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
+use Carbon\Carbon;
 
 class AgentController extends Controller
 {
   public function index(Request $request)
   {
-    $user = $request->user()->load('affiliateProfile', 'roles');
+    $user = Auth::user();
 
-    // Deteksi apakah user ini Master Affiliate (MA) atau Partner
-    $roles = $user->roles->pluck('name')->toArray();
-    $tier = $user->affiliateProfile?->tier;
-    $isMaster = in_array('master_affiliate', $roles) || in_array('master-affiliate', $roles) ||
-      in_array('partner', $roles) || $tier === 'master_affiliate' || $tier === 'master-affiliate' || $tier === 'partner';
+    // 1. Dapatkan profil affiliate untuk tahu tier-nya
+    $profile = DB::table('affiliate_profiles')->where('user_id', $user->id)->first();
+    $tier = $profile ? $profile->tier : 'affiliate';
+    $isMaster = in_array($tier, ['partner', 'master_affiliate', 'master-affiliate']);
+
+    // 2. Dapatkan persentase komisi berdasarkan tier
+    $commissionRate = DB::table('affiliate_commission_rates')->where('tier', $tier)->value('percentage') ?? 0;
 
     $sortField = $request->input('sort', 'created_at');
     $sortOrder = $request->input('order', 'desc');
     $limit = $request->input('limit', 10);
-    $page = $request->input('page', 1);
 
-    // ===================================================================================
-    // [DEPLOYMENT] UNCOMMENT QUERY ASLI DI BAWAH INI DAN HAPUS BAGIAN DUMMY
-    // ===================================================================================
-    /*
-        // Asumsi: 
-        // 1. Kolom referal di tabel users bernama 'referred_by'
-        // 2. Relasi di model User: public function referrer() { return $this->belongsTo(User::class, 'referred_by'); }
-        // 3. Relasi di model Company: public function activeSubscription() { return $this->hasOne(AgentSubscription::class)->where('ended_at', '>', now()); }
-        // 4. Relasi di model AgentSubscription: public function package() { return $this->belongsTo(AgentSubscriptionPackage::class); }
+    // 3. LOGIKA KEDALAMAN JARINGAN (Penentu Pengundang Agen)
+    $allowedIds = [$user->id]; // Termasuk agen yang diundang sendiri
 
-        $query = \App\Models\User::whereHas('roles', function($q) {
-            $q->where('name', 'agent');
-        });
+    if ($tier === 'partner') {
+      // Level 1: MA atau Affiliate yang langsung di bawah Partner
+      $level1_Ids = DB::table('affiliate_profiles')
+        ->where('upline_id', $user->id)
+        ->pluck('user_id')
+        ->toArray();
 
-        if ($isMaster) {
-            // MA: Ambil agen miliknya dan agen milik affiliator di bawahnya
-            $downlineIds = \App\Models\AffiliateProfile::where('upline_id', $user->id)->pluck('user_id')->toArray();
-            $allowedIds = array_merge([$user->id], $downlineIds);
-            $query->whereIn('referred_by', $allowedIds);
-        } else {
-            // Affiliator: Hanya agen miliknya
-            $query->where('referred_by', $user->id);
-        }
+      // Level 2: Affiliate yang berada di bawah MA
+      $level2_Ids = [];
+      if (!empty($level1_Ids)) {
+        $level2_Ids = DB::table('affiliate_profiles')
+          ->whereIn('upline_id', $level1_Ids)
+          ->pluck('user_id')
+          ->toArray();
+      }
 
-        $query->with(['referrer:id,name,username', 'company.activeSubscription.package']);
-        
-        $agentsData = $query->orderBy($sortField, $sortOrder)->paginate($limit)->withQueryString();
+      // Gabungkan semua ID
+      $allowedIds = array_merge($allowedIds, $level1_Ids, $level2_Ids);
+    } elseif (in_array($tier, ['master_affiliate', 'master-affiliate'])) {
+      // MA hanya membaca 1 Level ke bawah (Affiliate miliknya)
+      $level1_Ids = DB::table('affiliate_profiles')
+        ->where('upline_id', $user->id)
+        ->pluck('user_id')
+        ->toArray();
 
-        $agentsData->getCollection()->transform(function ($agent) use ($user) {
-            $subscription = $agent->company?->activeSubscription;
-            $package = $subscription?->package;
-            
-            return [
-                'id' => $agent->id,
-                'name' => $agent->name,
-                'email' => $agent->email,
-                'status' => $subscription ? 'Subscribed' : 'Registered',
-                'package' => $package ? $package->name : '-',
-                'subscription_date' => $subscription ? $subscription->started_at->format('Y-m-d') : '-',
-                'potential_commission' => $package ? ($package->price * 0.10) : 0, // Misal komisi 10%
-                'affiliator_name' => $agent->referred_by === $user->id ? 'Direct (Me)' : $agent->referrer?->name,
-                'created_at' => $agent->created_at->format('Y-m-d H:i:s'),
-            ];
-        });
-
-        $agents = $agentsData;
-        */
-
-    // ===================================================================================
-    // [DUMMY INJECTION] HAPUS BAGIAN INI SAAT DEPLOYMENT
-    // ===================================================================================
-    $dummyItems = collect();
-    $statuses = ['Registered', 'Pending Subscription', 'Subscribed'];
-    $packages = ['Basic', 'Pro', 'Enterprise'];
-
-    for ($i = 1; $i <= 35; $i++) {
-      $statusIndex = ($i * 7) % 3;
-      $status = $statuses[$statusIndex];
-      $isSubscribed = $status === 'Subscribed';
-      $isPending = $status === 'Pending Subscription';
-
-      $potentialComm = $isSubscribed ? (($i * 15) % 50 + 10) * 10000 : ($isPending ? 150000 : 0);
-
-      $dummyItems->push([
-        'id' => $i,
-        'name' => 'Agen Travel ' . $i,
-        'email' => 'agen' . $i . '@example.com',
-        'status' => $status,
-        'package' => $isSubscribed ? $packages[($i * 3) % 3] : '-',
-        'subscription_date' => $isSubscribed ? now()->subDays(($i * 13) % 60)->format('Y-m-d') : '-',
-        'potential_commission' => $potentialComm,
-        'affiliator_name' => $isMaster ? ($i % 3 === 0 ? 'Direct (Me)' : 'Affiliator Network ' . ($i % 5)) : $user->name,
-        'created_at' => now()->subDays($i * 2)->format('Y-m-d H:i:s'),
-      ]);
+      $allowedIds = array_merge($allowedIds, $level1_Ids);
     }
 
-    $sortedItems = $sortOrder === 'desc'
-      ? $dummyItems->sortByDesc($sortField)->values()
-      : $dummyItems->sortBy($sortField)->values();
+    // 4. Query utama ke tabel Companies -> Relasi ke Package dan Referrer
+    $query = DB::table('companies')
+      ->select(
+        'companies.id',
+        'companies.name',
+        'companies.email',
+        'companies.created_at',
+        'companies.referred_by',
+        'users.name as referrer_name',
+        'agent_subscriptions.started_at',
+        'agent_subscriptions.ended_at',
+        'agent_subscription_packages.name as package_name',
+        'agent_subscription_packages.price'
+      )
+      ->leftJoin('users', 'companies.referred_by', '=', 'users.id')
+      // Join ke agent_subscriptions menggunakan company_id (Sesuai skema database terakhir)
+      ->leftJoin('agent_subscriptions', function ($join) {
+        $join->on('companies.id', '=', 'agent_subscriptions.company_id')
+          ->whereRaw('agent_subscriptions.id = (SELECT MAX(id) FROM agent_subscriptions WHERE company_id = companies.id)');
+      })
+      ->leftJoin('agent_subscription_packages', 'agent_subscriptions.package_id', '=', 'agent_subscription_packages.id')
+      ->where('companies.type', 'agent')
+      ->whereIn('companies.referred_by', $allowedIds);
 
-    $slicedItems = $sortedItems->slice(($page - 1) * $limit, $limit)->values();
-    $agents = new LengthAwarePaginator($slicedItems, $dummyItems->count(), $limit, $page, [
-      'path' => $request->url(),
-      'query' => $request->query(),
-    ]);
-    // ===================================================================================
+    // 5. Pemetaan Sorting
+    $sortColumn = 'companies.' . $sortField;
+    if (in_array($sortField, ['status', 'package'])) {
+      $sortColumn = 'agent_subscription_packages.name';
+    } elseif ($sortField === 'subscription_date') {
+      $sortColumn = 'agent_subscriptions.started_at';
+    } elseif ($sortField === 'potential_commission') {
+      $sortColumn = 'agent_subscription_packages.price';
+    } elseif ($sortField === 'affiliator_name') {
+      $sortColumn = 'users.name';
+    }
+
+    $agentsData = $query->orderBy($sortColumn, $sortOrder)->paginate($limit)->withQueryString();
+
+    // 6. Format data sebelum dilempar ke Frontend
+    $agentsData->getCollection()->transform(function ($agent) use ($user, $commissionRate) {
+      $isSubscribed = $agent->ended_at && Carbon::parse($agent->ended_at)->isFuture();
+
+      // Komisi: (Harga Paket * Persentase Tier) / 100
+      $potentialComm = $agent->price ? $agent->price * ($commissionRate / 100) : 0;
+
+      $status = 'Registered';
+      if ($isSubscribed) {
+        $status = 'Subscribed';
+      } elseif ($agent->package_name) {
+        $status = 'Expired';
+      }
+
+      return [
+        'id' => $agent->id,
+        'name' => $agent->name,
+        'email' => $agent->email,
+        'status' => $status,
+        'package' => $agent->package_name ?? '-',
+        'subscription_date' => $agent->started_at ? Carbon::parse($agent->started_at)->format('Y-m-d') : '-',
+        'potential_commission' => $potentialComm,
+        'affiliator_name' => $agent->referred_by === $user->id ? 'Direct (Me)' : $agent->referrer_name,
+        'created_at' => Carbon::parse($agent->created_at)->format('Y-m-d'),
+      ];
+    });
 
     return Inertia::render('affiliate/dashboard/agent/list', [
-      'agents' => $agents,
+      'agents' => $agentsData,
       'isMaster' => $isMaster,
       'filters' => $request->only(['sort', 'order', 'limit']),
     ]);

@@ -559,9 +559,6 @@ export default function AffiliateDashboardIndex({ auth }: any) {
                       Affiliate Name
                     </TableHead>
                     <TableHead className="text-xs font-semibold">
-                      Level
-                    </TableHead>
-                    <TableHead className="text-xs font-semibold">
                       Revenue
                     </TableHead>
                     <TableHead className="text-xs font-semibold text-right">
@@ -574,9 +571,6 @@ export default function AffiliateDashboardIndex({ auth }: any) {
                     <TableRow key={idx}>
                       <TableCell className="font-semibold text-xs text-slate-900">
                         {net.name}
-                      </TableCell>
-                      <TableCell className="text-xs text-slate-600">
-                        {net.level}
                       </TableCell>
                       <TableCell className="text-xs font-medium text-emerald-600">
                         {formatIDR(net.revenue)}
