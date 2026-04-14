@@ -2,9 +2,7 @@
 
 namespace App\Models;
 
-use App\Enums\DomainStatus;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Domain extends Model
 {

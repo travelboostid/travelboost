@@ -2,7 +2,6 @@
 
 use App\Enums\CompanyType;
 use App\Enums\CompanyTeamStatus;
-use App\Enums\DomainStatus;
 use App\Enums\UserGender;
 use App\Enums\UserStatus;
 use App\Enums\VendorAgentPartnerStatus;
