@@ -23,7 +23,6 @@ class Company extends Model
     'address',
     'phone',
     'customer_service_phone',
-    'subdomain',
     'photo_id',
     'meta',
     'note',
@@ -155,7 +154,7 @@ class Company extends Model
 
   public function domain()
   {
-    return $this->hasOne(Domain::class);
+    return $this->morphOne(Domain::class, 'owner');
   }
 
   public function agentPartners()

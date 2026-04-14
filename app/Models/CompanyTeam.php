@@ -29,6 +29,15 @@ class CompanyTeam extends Model
     'accepted_at' => 'datetime',
   ];
 
+  // protected static function booted()
+  // {
+  //   static::created(function (CompanyTeam $team) {
+  //     if ($team->user_id) {
+  //       $team->user->addRole("company:{$team->company_id}:{$team->invite_role}", "company:{$team->company_id}");
+  //     }
+  //   });
+  // }
+
   /** Eager load user and their roles */
   protected $with = [
     'user',
