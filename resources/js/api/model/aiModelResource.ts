@@ -9,7 +9,7 @@ import type { AiModelResourceUpdatedAt } from './aiModelResourceUpdatedAt';
 
 export interface AiModelResource {
   id: number;
-  code: boolean;
+  code: string;
   input_token_rate: string;
   output_token_rate: string;
   created_at: AiModelResourceCreatedAt;

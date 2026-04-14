@@ -17,7 +17,6 @@ export interface CompanyResource {
   type: string;
   name: string;
   username: string;
-  subdomain: string;
   email: string;
   address: string;
   phone: string;

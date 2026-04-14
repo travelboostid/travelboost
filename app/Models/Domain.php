@@ -2,25 +2,24 @@
 
 namespace App\Models;
 
-use App\Enums\DomainStatus;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Domain extends Model
 {
   protected $fillable = [
-    'company_id',
+    'owner_type',
+    'owner_id',
+    'subdomain',
     'domain',
-    'status',
-    'verification_token',
+    'domain_enabled',
   ];
 
   protected $casts = [
-    'status' => DomainStatus::class,
+    'domain_enabled' => 'boolean',
   ];
 
-  public function company(): BelongsTo
+  public function owner()
   {
-    return $this->belongsTo(Company::class);
+    return $this->morphTo();
   }
 }

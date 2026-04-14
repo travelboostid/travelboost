@@ -1,7 +1,6 @@
 <?php
 
 use App\Console\Commands\ProcessAiBilling;
-use App\Http\Middleware\CheckOnboarding;
 use App\Http\Middleware\CheckUserStatus;
 use App\Http\Middleware\EnsureAgentSubscriptionIsActive;
 use App\Http\Middleware\EnsureHasAdminAccess;
