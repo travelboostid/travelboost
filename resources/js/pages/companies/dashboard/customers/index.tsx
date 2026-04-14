@@ -95,6 +95,21 @@ export default function CustomersPage({ data }: CustomersPageProps) {
         cell: ({ cell }) => <div>{cell.getValue<string>()?.toString()}</div>,
       },
       {
+        id: 'agent',
+        accessorKey: 'company.name',
+        header: ({ column }: { column: Column<UserResource, unknown> }) => (
+          <DataTableColumnHeader column={column} label="Agent" />
+        ),
+        cell: ({ row }) => {
+          const companyName = (row.original as any).company?.name;
+          return (
+            <div className="text-muted-foreground">
+              {companyName ?? '—'}
+            </div>
+          );
+        },
+      },
+      {
         id: 'gender',
         accessorKey: 'gender',
         header: ({ column }: { column: Column<UserResource, unknown> }) => (
