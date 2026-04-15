@@ -12,6 +12,7 @@ import {
   WalletIcon,
 } from 'lucide-react';
 import type { HTMLAttributeAnchorTarget } from 'react';
+import { FormattedMessage } from 'react-intl';
 
 type MenuItemBase = {
   id: string;
@@ -62,14 +63,14 @@ export function useCompanyDashboardNavMainMenu() {
   const unfilteredMenus = [
     {
       id: 'home',
-      title: 'Home',
+      title: <FormattedMessage defaultMessage="Home" />,
       urlOrAction: `/companies/${company.username}/dashboard`,
       icon: HomeIcon,
       visibleToCompanyTypes: ['vendor', 'agent'],
     },
     {
       id: 'vendor-tours',
-      title: 'Vendor Catalogs',
+      title: <FormattedMessage defaultMessage="Vendor Catalogs" />,
       urlOrAction: '#',
       icon: FolderSearchIcon,
       items:
