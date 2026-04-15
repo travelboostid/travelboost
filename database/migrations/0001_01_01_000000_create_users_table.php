@@ -135,7 +135,7 @@ return new class extends Migration
     Schema::create('ai_usage_logs', function (Blueprint $table) {
       $table->id();
       $table->foreignId('company_id')->constrained('companies')->cascadeOnDelete();
-      $table->foreignId('model_id')->constrained('ai_models')->nullOnDelete();
+      $table->foreignId('model_id')->nullable()->constrained('ai_models')->onDelete('set null');
       $table->unsignedInteger('input_tokens')->default(0);
       $table->unsignedInteger('output_tokens')->default(0);
       $table->decimal('cost', 16, 8)->default(0);

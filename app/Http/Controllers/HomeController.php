@@ -3,12 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Tenant\TourController as TenantTourController;
+use Illuminate\Support\Facades\Context;
 use Inertia\Inertia;
 use Inertia\Response;
 
-class DefaultController extends Controller
+class HomeController extends Controller
 {
-  public function home(): Response
+  public function index(): Response
   {
     return Inertia::render('home/index');
   }
@@ -31,5 +33,10 @@ class DefaultController extends Controller
   public function privacy(): Response
   {
     return Inertia::render('privacy/index');
+  }
+
+  public function tours(): Response
+  {
+    return app(TenantTourController::class)->index();
   }
 }

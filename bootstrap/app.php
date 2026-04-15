@@ -2,6 +2,7 @@
 
 use App\Console\Commands\ProcessAiBilling;
 use App\Http\Middleware\CheckUserStatus;
+use App\Http\Middleware\DomainResolver;
 use App\Http\Middleware\EnsureAgentSubscriptionIsActive;
 use App\Http\Middleware\EnsureHasAdminAccess;
 use App\Http\Middleware\EnsureHasCompanyAccess;
@@ -35,7 +36,7 @@ return Application::configure(basePath: dirname(__DIR__))
       'check.user.status' => CheckUserStatus::class,
     ]);
     $middleware->web(append: [
-      TenantResolver::class,
+      DomainResolver::class,
       HandleAppearance::class,
       HandleInertiaRequests::class,
       AddLinkHeadersForPreloadedAssets::class,

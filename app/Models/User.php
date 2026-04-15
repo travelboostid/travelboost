@@ -77,6 +77,7 @@ class User extends Authenticatable implements Customer, Wallet, LaratrustUser
   protected $appends = ['photo_url'];
 
   // protected $with = ['photo'];
+  protected $with = ['affiliateProfile', 'roles'];
 
   // Relationship
 
@@ -106,6 +107,7 @@ class User extends Authenticatable implements Customer, Wallet, LaratrustUser
       }
     );
   }
+
   public function medias()
   {
     return $this->morphMany(Media::class, 'owner');
@@ -114,5 +116,15 @@ class User extends Authenticatable implements Customer, Wallet, LaratrustUser
   public function company()
   {
     return $this->belongsTo(Company::class, 'company_id');
+  }
+
+  public function affiliateProfile()
+  {
+    return $this->hasOne(AffiliateProfile::class);
+  }
+
+  public function affiliateCommissionRates()
+  {
+    return $this->hasMany(AffiliateCommissionRate::class);
   }
 }
