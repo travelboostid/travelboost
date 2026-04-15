@@ -38,6 +38,16 @@ class UserSeeder extends Seeder
       'password' => Hash::make('vendor'),
     ]);
 
+    $greatChinaTourUser = User::factory()->create([
+      'name' => 'Great China Tour',
+      'email' => 'greatchinatour@travelboost.co.id',
+      'username' => 'greatchinatour',
+      'address' => 'Jakarta',
+      'phone' => '0',
+      'status' => UserStatus::ACTIVE,
+      'password' => Hash::make('greatchinatour'),
+    ]);
+
     $john = User::factory()->create([
       'name' => 'John',
       'email' => 'john@travelboost.co.id',
