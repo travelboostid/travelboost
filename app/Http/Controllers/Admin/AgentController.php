@@ -37,7 +37,7 @@ class AgentController extends Controller
       })
       ->paginate();
 
-    return Inertia::render('admin/agents/index', [
+    return Inertia::render('admin/database/agents/index', [
       'data' => $data,
     ]);
   }

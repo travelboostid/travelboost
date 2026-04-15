@@ -109,11 +109,11 @@ export default function Page({ tour }: Props) {
   const [rawPrice, setRawPrice] = useState("0")
 
   const handlePriceChange = (value: string) => {
-    let numeric = value.replace(/\D/g, "")
+    let numeric = value.replace(/\D/g, '');
 
-    if (numeric === "") numeric = "0"
+    if (numeric === '') numeric = '0';
 
-    setRawPrice(numeric)
+    setRawPrice(numeric);
 
     const formatted = new Intl.NumberFormat("id-ID").format(Number(numeric))
     setDisplayPrice(formatted)
@@ -162,11 +162,11 @@ export default function Page({ tour }: Props) {
   const [rawPrice1, setRawPrice1] = useState("0")
 
   const handlePriceChange1 = (value: string) => {
-    let numeric1 = value.replace(/\D/g, "")
+    let numeric1 = value.replace(/\D/g, '');
 
-    if (numeric1 === "") numeric1 = "0"
+    if (numeric1 === '') numeric1 = '0';
 
-    setRawPrice1(numeric1)
+    setRawPrice1(numeric1);
 
     const formatted1 = new Intl.NumberFormat("id-ID").format(Number(numeric1))
     setDisplayPrice1(formatted1)
@@ -386,7 +386,6 @@ export default function Page({ tour }: Props) {
       openMenuIds={['tours']}
       activeMenuIds={['tours.index']}
       breadcrumb={[
-        { title: 'Dashboard', url: '/dashboard' },
         { title: 'Tours', url: '/dashboard/tours' },
         { title: 'Edit' },
       ]}

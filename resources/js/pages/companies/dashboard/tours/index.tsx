@@ -187,10 +187,7 @@ export default function Page({ data }: PageProps) {
     <CompanyDashboardLayout
       openMenuIds={['tours']}
       activeMenuIds={['tours.index']}
-      breadcrumb={[
-        { title: 'Dashboard', url: '/dashboard' },
-        { title: 'Tours' },
-      ]}
+      breadcrumb={[{ title: 'Tours' }]}
       applet={
         <Link href={create({ company: company.username })}>
           <Button>

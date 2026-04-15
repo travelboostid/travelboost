@@ -13,53 +13,46 @@ use Inertia\Inertia;
 
 class BankAccountController extends Controller
 {
-  /**
-   * Display a listing of the resource.
-   */
+  // Display a list of bank accounts for the specified company
   public function index(Company $company)
   {
     $bankAccounts = $company->bankAccounts()
-      ->orderBy('is_default', 'desc')
-      ->orderBy('created_at', 'desc')
+      ->orderBy('is_default', 'desc') // Prioritize default accounts
+      ->orderBy('created_at', 'desc') // Sort by creation date
       ->get();
 
     return Inertia::render('companies/dashboard/bank-accounts/index', [
       'bank_accounts' => $bankAccounts,
-      'providers' => ['BCA', 'BNI', 'MANDIRI', 'OVO', 'GOPAY'],
+      'providers' => ['BCA', 'BNI', 'MANDIRI', 'OVO', 'GOPAY'], // List of bank providers
     ]);
   }
-  /**
-   * Store a newly created resource in storage.
-   */
+
+  // Store a new bank account for the specified company
   public function store(CreateBankAccountRequest $request, Company $company)
   {
     $company->bankAccounts()->create($request->validated());
 
     // If this account is marked as default, unset previous defaults
-    if ($data['is_default'] ?? false) {
+    if ($request->validated()['is_default'] ?? false) {
       BankAccount::where('user_id', Auth::id())
         ->where('is_default', true)
         ->update(['is_default' => false]);
     }
 
-    return back();
+    return back(); // Redirect back after storing
   }
 
-  /**
-   * Update the specified resource in storage.
-   */
+  // Update an existing bank account
   public function update(UpdateBankAccountRequest $request, Company $company, BankAccount $bankAccount)
   {
     $bankAccount->update($request->validated());
-    return back();
+    return back(); // Redirect back after updating
   }
 
-  /**
-   * Remove the specified resource from storage.
-   */
+  // Delete a bank account for the specified company
   public function destroy(Company $company, BankAccount $bankAccount)
   {
     $company->bankAccounts()->where('id', $bankAccount->id)->delete();
-    return back();
+    return back(); // Redirect back after deletion
   }
 }

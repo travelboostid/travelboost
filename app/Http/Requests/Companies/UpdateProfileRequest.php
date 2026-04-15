@@ -2,7 +2,10 @@
 
 namespace App\Http\Requests\Companies;
 
+use App\Models\Company;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 class UpdateProfileRequest extends FormRequest
 {
@@ -34,5 +37,40 @@ class UpdateProfileRequest extends FormRequest
       'city' => 'nullable|string|max:50',
       'identity_id' => 'nullable|exists:medias,id',
     ];
+  }
+
+  public function withValidator(Validator $validator)
+  {
+    $validator->after(function ($validator) {
+      $domain = $this->input('domain');
+
+      // skip if domain_enabled is false or not present
+      if (!$this->boolean('domain_enabled')) {
+        return;
+      }
+
+      if (!$domain) return;
+
+      // skip if domain hasn't changed or is same as current domain (to allow saving other fields without changing domain)
+      if ($this->company && $domain === optional($this->company->domain)->domain) {
+        return;
+      }
+
+      if (!$this->verifyDomainOwnership($domain)) {
+        $validator->errors()->add(
+          'domain',
+          "Domain ownership verification failed. Please read the instructions to verify your domain ownership."
+        );
+      }
+    });
+  }
+  protected function verifyDomainOwnership(string $domain): bool
+  {
+    $records = dns_get_record($domain, DNS_A) ?: [];
+    $expectedIp = request()->server('SERVER_ADDR');
+
+    return collect($records)
+      ->pluck('ip')
+      ->contains($expectedIp);
   }
 }

@@ -265,7 +265,7 @@ export function FloatingChatWidgetContextProvider({
   const startPrivateChat = async (recepient: ChatActor) => {
     const result = await openChatRoom.mutateAsync({
       data: {
-        sender_id: actor?.id || auth.user.id,
+        sender_id: actor?.id || auth?.user?.id || 0,
         sender_type: actor?.type || 'user',
         recipient_id: recepient.id,
         recipient_type: recepient.type,

@@ -33,6 +33,26 @@ For production releases, it is recommended to recreate pull requests from the pr
 
 However, if all changes in `dev` are stable and both `dev` and `main` share the same base commit, you can merge `dev` directly into `main`.
 
+## Pull Request Format
+
+Follow the conventional commit style for PR titles.
+
+If the PR is still a draft (not ready for review), add the `[DRAFT]` prefix.
+
+**Examples:**
+
+- `feat: add anonymous chat support`
+- `fix: prevent duplicate webhook processing`
+- `[DRAFT] refactor: simplify order synchronization logic`
+
+## Hotfix
+
+A hotfix is a change made to address urgent issues that must be deployed to production immediately.
+
+In this case, create a branch from `main`, apply the fix, and open pull requests to both `main` and `dev`.
+
+This ensures the fix is applied to production while keeping `dev` in sync.
+
 ## Coding Standards
 
 - Follow best practices and common patterns. Avoid reinventing solutions. Using widely accepted approaches helps reduce bugs and makes issues easier to debug. It also makes it easier to find solutions online, since similar problems have likely already been encountered and solved by others.

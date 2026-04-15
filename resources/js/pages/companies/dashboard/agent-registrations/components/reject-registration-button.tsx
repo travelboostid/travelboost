@@ -10,6 +10,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { update } from '@/routes/company/agent-registrations';
 import { useForm } from '@inertiajs/react';
@@ -25,6 +26,7 @@ export default function RejectRegistrationButton({
   const [open, setOpen] = useState(false);
   const form = useForm({
     status: 'rejected',
+    note: '',
   });
   const handleReject = () => {
     form.put(
@@ -49,15 +51,22 @@ export default function RejectRegistrationButton({
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Delete registration?</AlertDialogTitle>
+          <AlertDialogTitle>Reject Registration</AlertDialogTitle>
           <AlertDialogDescription>
-            This will permanently remove the registration. This action cannot be
-            undone.
+            This action will reject the registration. The agent will be notified
+            and can re-apply if they wish. Are you sure you want to proceed?
           </AlertDialogDescription>
         </AlertDialogHeader>
+        <Textarea
+          cols={5}
+          placeholder="Write a note for the agent"
+          value={form.data.note}
+          onChange={(e) => form.setData('note', e.target.value)}
+          className="w-full"
+        />
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction onClick={handleReject}>Delete</AlertDialogAction>
+          <AlertDialogAction onClick={handleReject}>Reject</AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

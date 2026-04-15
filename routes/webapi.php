@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Webapi\AiModelController;
 use App\Http\Controllers\Webapi\AnonymousUserController;
 use App\Http\Controllers\Webapi\BankAccountController;
 use App\Http\Controllers\Webapi\ChatMessageController;
@@ -36,6 +37,7 @@ Route::prefix('webapi')->group(function () {
     Route::post('payments/create-agent-subscription-payment', [PaymentController::class, 'createAgentSubscriptionPayment']);
   });
   Route::middleware(['web'])->group(function () {
+    Route::apiResource('ai-models', AiModelController::class);
     Route::apiResource('tours', TourController::class);
     Route::post('anonymous-users/setup', [AnonymousUserController::class, 'setupAnonymousUser']);
     Route::apiResource('chat/rooms.messages', ChatMessageController::class)->shallow(); // Messages nested under rooms

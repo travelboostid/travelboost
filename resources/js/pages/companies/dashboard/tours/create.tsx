@@ -36,12 +36,7 @@ import SelectCountry from './components/select-country';
 import SelectRegion from './components/select-region';
 import SelectCurrency from './components/select-currency';
 
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 ///////////tab 2
 type RoomPrice = {
@@ -81,34 +76,34 @@ export default function Page() {
   };
 
   //for price
-  const [displayPrice, setDisplayPrice] = useState("")
-  const [rawPrice, setRawPrice] = useState("")
+  const [displayPrice, setDisplayPrice] = useState('');
+  const [rawPrice, setRawPrice] = useState('');
 
   const handlePriceChange = (value: string) => {
     const numeric = value.replace(/\D/g, "")
     setRawPrice(numeric)
     setData('showprice', numeric)
 
-    const formatted = new Intl.NumberFormat("id-ID").format(Number(numeric))
-    setDisplayPrice(formatted)
-  }
+    const formatted = new Intl.NumberFormat('id-ID').format(Number(numeric));
+    setDisplayPrice(formatted);
+  };
   //
 
   //for price
-  const [displayPrice1, setDisplayPrice1] = useState("0")
-  const [rawPrice1, setRawPrice1] = useState("0")
+  const [displayPrice1, setDisplayPrice1] = useState('0');
+  const [rawPrice1, setRawPrice1] = useState('0');
 
   const handlePriceChange1 = (value: string) => {
-    let numeric1 = value.replace(/\D/g, "")
+    let numeric1 = value.replace(/\D/g, '');
 
-    if (numeric1 === "") numeric1 = "0" // 🔥 default 0
+    if (numeric1 === '') numeric1 = '0'; // 🔥 default 0
 
     setRawPrice1(numeric1)
     setData('promote_price', numeric1)
 
-    const formatted1 = new Intl.NumberFormat("id-ID").format(Number(numeric1))
-    setDisplayPrice1(formatted1)
-  }
+    const formatted1 = new Intl.NumberFormat('id-ID').format(Number(numeric1));
+    setDisplayPrice1(formatted1);
+  };
   //
 
   //30032026
@@ -264,7 +259,6 @@ const updateRoomAdjustment = (
       openMenuIds={['tours']}
       activeMenuIds={['tours.index']}
       breadcrumb={[
-        { title: 'Dashboard', url: '/dashboard' },
         { title: 'Tours', url: '/dashboard/tours' },
         { title: 'Create' },
       ]}
@@ -288,9 +282,7 @@ const updateRoomAdjustment = (
 >
         
           <div className="container mx-auto space-y-4 p-4">
-            
             <Tabs defaultValue="tour" className="w-full" key="tour-form">
-
               <TabsList className="mb-4">
                 <TabsTrigger value="tour">Master</TabsTrigger>
                 <TabsTrigger value="schedule">Schedule and Price</TabsTrigger>
@@ -298,7 +290,6 @@ const updateRoomAdjustment = (
 
               {/* ================= TAB 1 — TOUR ================= */}
               <TabsContent value="tour">
-
                 {/* <div className="grid gap-6"> changed for show in 2 column */}
                 <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                   {/* Image */}
@@ -308,7 +299,10 @@ const updateRoomAdjustment = (
                     <MediaPicker
                       type="image"
                       params={{ owner_type: 'company', owner_id: company.id }}
-                      uploadParams={{ owner_type: 'company', owner_id: company.id }}
+                      uploadParams={{
+                        owner_type: 'company',
+                        owner_id: company.id,
+                      }}
                     >
                       {(media, change) => {
                         const mediaId = (media as MediaResource)?.id
@@ -511,7 +505,10 @@ const updateRoomAdjustment = (
                     <MediaPicker
                       type="document"
                       params={{ owner_type: 'company', owner_id: company.id }}
-                      uploadParams={{ owner_type: 'company', owner_id: company.id }}
+                      uploadParams={{
+                        owner_type: 'company',
+                        owner_id: company.id,
+                      }}
                     >
                       {(media, change) => {
                         const mediaId = (media as any)?.id
@@ -551,7 +548,7 @@ const updateRoomAdjustment = (
                               </Button>
                             </ItemActions>
                           </Item>
-                        )
+                        );
                       }}
                     </MediaPicker>
                     <InputError message={errors.document_id} />
@@ -624,23 +621,25 @@ const updateRoomAdjustment = (
                   </div>
 
                   <div className="rounded-lg border bg-muted/30 p-4 space-y-4">
-
                     <div className="text-sm font-semibold text-muted-foreground">
                       Promotion Settings
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
                       {/* promote title */}
                       <div className="grid gap-2">
-                        <Label htmlFor="promote_title">Title Promotion on Catalog</Label>
+                        <Label htmlFor="promote_title">
+                          Title Promotion on Catalog
+                        </Label>
                         <Input
                           id="promote_title"
                           type="text"
                           name="promote_title"
                           placeholder="Title Promotion"
                           value={data.promote_title}
-                          onChange={(e) => setData('promote_title', e.target.value)}
+                          onChange={(e) =>
+                            setData('promote_title', e.target.value)
+                          }
                         />
                         <InputError message={errors.promote_title} />
                       </div>
@@ -670,21 +669,23 @@ const updateRoomAdjustment = (
 
                       {/* promote note — full width */}
                       <div className="grid gap-2 md:col-span-2">
-                        <Label htmlFor="promote_note">Promotion Note on Catalog</Label>
+                        <Label htmlFor="promote_note">
+                          Promotion Note on Catalog
+                        </Label>
                         <Input
                           id="promote_note"
                           type="text"
                           name="promote_note"
                           placeholder="Promotion Note"
                           value={data.promote_note}
-                          onChange={(e) => setData('promote_note', e.target.value)}
+                          onChange={(e) =>
+                            setData('promote_note', e.target.value)
+                          }
                         />
                         <InputError message={errors.promote_note} />
                       </div>
-
                     </div>
                   </div>
-
                 </div>
 
                 <div className="flex justify-start pt-6 border-t">
@@ -708,7 +709,6 @@ const updateRoomAdjustment = (
                     Save & Continue
                   </Button>
                 </div>
-
               </TabsContent>
 
               {/* ================= TAB 2 — JADWAL ================= */}

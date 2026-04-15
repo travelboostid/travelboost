@@ -23,14 +23,13 @@ class CompanySettings extends Model
     'chatbot_enabled' => 'boolean',
   ];
 
-  /*
-    |--------------------------------------------------------------------------
-    | Relationships
-    |--------------------------------------------------------------------------
-    */
-
   public function company()
   {
     return $this->belongsTo(Company::class);
+  }
+
+  public function chatbotModel()
+  {
+    return $this->belongsTo(AiModel::class, 'chatbot_model_id');
   }
 }

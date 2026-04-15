@@ -4,9 +4,16 @@
  * Travelboost
  * OpenAPI spec version: 0.0.1
  */
+import type { GetPaymentsOwnerType } from './getPaymentsOwnerType';
 import type { GetPaymentsStatus } from './getPaymentsStatus';
 
 export type GetPaymentsParams = {
+owner_type?: GetPaymentsOwnerType;
+owner_id?: number | number;
+/**
+ * @maxLength 50
+ */
+payable_type?: string;
 status?: GetPaymentsStatus;
 /**
  * @maxLength 50

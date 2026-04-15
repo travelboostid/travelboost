@@ -42,14 +42,28 @@ class HandleInertiaRequests extends Middleware
     $company = $request->route('company');
     $anonymousUserToken = $request->cookie('anonymous_user_token');
     $anonymousUser = $anonymousUserToken ? AnonymousUser::where('token', $anonymousUserToken)->first() : null;
+
+    if (!$anonymousUser && !$request->user()) {
+        $anonymousUser = AnonymousUser::create([
+            'token' => (string) \Illuminate\Support\Str::uuid(),
+        ]);
+        \Illuminate\Support\Facades\Cookie::queue('anonymous_user_token', $anonymousUser->token, 60 * 24 * 365);
+    }
+
     return [
       ...parent::share($request),
       'name' => config('app.name'),
       'appDomain' => env('APP_HOST', 'localhost'),
+      // current authenticated user
       'auth' => [
         'user' => $request->user()?->load(['companies']),
+        'permissions' => $request->user()?->allPermissions()->pluck('name')->toArray(),
+        'roles' => $request->user()?->roles->pluck('name')->toArray(),
+        'teams' => $request->user()?->allTeams()->pluck('name')->toArray(),
       ],
+      // current company based on route parameter (don't interpret as user's current company!!!)
       'company' => $company,
+      // current tenant based on route parameter (don't interpret as user's tenant!!!)
       'tenant' => $request->attributes->get('tenant'),
       'anonymousUser' => $anonymousUser,
       'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',

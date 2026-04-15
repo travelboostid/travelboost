@@ -24,7 +24,9 @@ import { useState } from 'react';
 export default function SuspendTeamButton({ team }: { team: any }) {
   const { company } = usePageSharedDataProps();
   const [open, setOpen] = useState(false);
-  const form = useForm();
+  const form = useForm({
+    status: 'suspended',
+  });
 
   const handleSuspend = () => {
     form.put(update({ company: company.username, team: team.id }).url, {

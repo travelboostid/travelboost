@@ -24,7 +24,6 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
-  AuthenticationExceptionResponse,
   GetChatRoom200,
   GetChatRooms200,
   GetChatRoomsParams,
@@ -67,7 +66,7 @@ export const getGetChatRoomsQueryKey = (params?: GetChatRoomsParams,) => {
     }
 
     
-export const getGetChatRoomsQueryOptions = <TData = Awaited<ReturnType<typeof getChatRooms>>, TError = AuthenticationExceptionResponse | ValidationExceptionResponse>(params?: GetChatRoomsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getChatRooms>>, TError, TData>>, request?: SecondParameter<typeof apiInstance>}
+export const getGetChatRoomsQueryOptions = <TData = Awaited<ReturnType<typeof getChatRooms>>, TError = ValidationExceptionResponse>(params?: GetChatRoomsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getChatRooms>>, TError, TData>>, request?: SecondParameter<typeof apiInstance>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
@@ -86,10 +85,10 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type GetChatRoomsQueryResult = NonNullable<Awaited<ReturnType<typeof getChatRooms>>>
-export type GetChatRoomsQueryError = AuthenticationExceptionResponse | ValidationExceptionResponse
+export type GetChatRoomsQueryError = ValidationExceptionResponse
 
 
-export function useGetChatRooms<TData = Awaited<ReturnType<typeof getChatRooms>>, TError = AuthenticationExceptionResponse | ValidationExceptionResponse>(
+export function useGetChatRooms<TData = Awaited<ReturnType<typeof getChatRooms>>, TError = ValidationExceptionResponse>(
  params: undefined |  GetChatRoomsParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getChatRooms>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof getChatRooms>>,
@@ -99,7 +98,7 @@ export function useGetChatRooms<TData = Awaited<ReturnType<typeof getChatRooms>>
       >, request?: SecondParameter<typeof apiInstance>}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetChatRooms<TData = Awaited<ReturnType<typeof getChatRooms>>, TError = AuthenticationExceptionResponse | ValidationExceptionResponse>(
+export function useGetChatRooms<TData = Awaited<ReturnType<typeof getChatRooms>>, TError = ValidationExceptionResponse>(
  params?: GetChatRoomsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getChatRooms>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof getChatRooms>>,
@@ -109,7 +108,7 @@ export function useGetChatRooms<TData = Awaited<ReturnType<typeof getChatRooms>>
       >, request?: SecondParameter<typeof apiInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetChatRooms<TData = Awaited<ReturnType<typeof getChatRooms>>, TError = AuthenticationExceptionResponse | ValidationExceptionResponse>(
+export function useGetChatRooms<TData = Awaited<ReturnType<typeof getChatRooms>>, TError = ValidationExceptionResponse>(
  params?: GetChatRoomsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getChatRooms>>, TError, TData>>, request?: SecondParameter<typeof apiInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
@@ -117,7 +116,7 @@ export function useGetChatRooms<TData = Awaited<ReturnType<typeof getChatRooms>>
  * @summary Display a paginated list of chat rooms using cursor pagination
  */
 
-export function useGetChatRooms<TData = Awaited<ReturnType<typeof getChatRooms>>, TError = AuthenticationExceptionResponse | ValidationExceptionResponse>(
+export function useGetChatRooms<TData = Awaited<ReturnType<typeof getChatRooms>>, TError = ValidationExceptionResponse>(
  params?: GetChatRoomsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getChatRooms>>, TError, TData>>, request?: SecondParameter<typeof apiInstance>}
  , queryClient?: QueryClient 
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
@@ -159,7 +158,7 @@ export const getGetChatRoomQueryKey = (room?: number,) => {
     }
 
     
-export const getGetChatRoomQueryOptions = <TData = Awaited<ReturnType<typeof getChatRoom>>, TError = AuthenticationExceptionResponse | ModelNotFoundExceptionResponse>(room: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getChatRoom>>, TError, TData>>, request?: SecondParameter<typeof apiInstance>}
+export const getGetChatRoomQueryOptions = <TData = Awaited<ReturnType<typeof getChatRoom>>, TError = ModelNotFoundExceptionResponse>(room: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getChatRoom>>, TError, TData>>, request?: SecondParameter<typeof apiInstance>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
@@ -178,10 +177,10 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type GetChatRoomQueryResult = NonNullable<Awaited<ReturnType<typeof getChatRoom>>>
-export type GetChatRoomQueryError = AuthenticationExceptionResponse | ModelNotFoundExceptionResponse
+export type GetChatRoomQueryError = ModelNotFoundExceptionResponse
 
 
-export function useGetChatRoom<TData = Awaited<ReturnType<typeof getChatRoom>>, TError = AuthenticationExceptionResponse | ModelNotFoundExceptionResponse>(
+export function useGetChatRoom<TData = Awaited<ReturnType<typeof getChatRoom>>, TError = ModelNotFoundExceptionResponse>(
  room: number, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getChatRoom>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof getChatRoom>>,
@@ -191,7 +190,7 @@ export function useGetChatRoom<TData = Awaited<ReturnType<typeof getChatRoom>>, 
       >, request?: SecondParameter<typeof apiInstance>}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetChatRoom<TData = Awaited<ReturnType<typeof getChatRoom>>, TError = AuthenticationExceptionResponse | ModelNotFoundExceptionResponse>(
+export function useGetChatRoom<TData = Awaited<ReturnType<typeof getChatRoom>>, TError = ModelNotFoundExceptionResponse>(
  room: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getChatRoom>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof getChatRoom>>,
@@ -201,7 +200,7 @@ export function useGetChatRoom<TData = Awaited<ReturnType<typeof getChatRoom>>, 
       >, request?: SecondParameter<typeof apiInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetChatRoom<TData = Awaited<ReturnType<typeof getChatRoom>>, TError = AuthenticationExceptionResponse | ModelNotFoundExceptionResponse>(
+export function useGetChatRoom<TData = Awaited<ReturnType<typeof getChatRoom>>, TError = ModelNotFoundExceptionResponse>(
  room: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getChatRoom>>, TError, TData>>, request?: SecondParameter<typeof apiInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
@@ -209,7 +208,7 @@ export function useGetChatRoom<TData = Awaited<ReturnType<typeof getChatRoom>>, 
  * @summary Show a single chat room by model
  */
 
-export function useGetChatRoom<TData = Awaited<ReturnType<typeof getChatRoom>>, TError = AuthenticationExceptionResponse | ModelNotFoundExceptionResponse>(
+export function useGetChatRoom<TData = Awaited<ReturnType<typeof getChatRoom>>, TError = ModelNotFoundExceptionResponse>(
  room: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getChatRoom>>, TError, TData>>, request?: SecondParameter<typeof apiInstance>}
  , queryClient?: QueryClient 
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
@@ -245,7 +244,7 @@ export const openChatRoom = (
   
 
 
-export const getOpenChatRoomMutationOptions = <TError = AuthenticationExceptionResponse | ValidationExceptionResponse,
+export const getOpenChatRoomMutationOptions = <TError = ValidationExceptionResponse,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof openChatRoom>>, TError,{data: OpenChatRequest}, TContext>, request?: SecondParameter<typeof apiInstance>}
 ): UseMutationOptions<Awaited<ReturnType<typeof openChatRoom>>, TError,{data: OpenChatRequest}, TContext> => {
 
@@ -272,12 +271,12 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type OpenChatRoomMutationResult = NonNullable<Awaited<ReturnType<typeof openChatRoom>>>
     export type OpenChatRoomMutationBody = OpenChatRequest
-    export type OpenChatRoomMutationError = AuthenticationExceptionResponse | ValidationExceptionResponse
+    export type OpenChatRoomMutationError = ValidationExceptionResponse
 
     /**
  * @summary Open a private chat with another user
  */
-export const useOpenChatRoom = <TError = AuthenticationExceptionResponse | ValidationExceptionResponse,
+export const useOpenChatRoom = <TError = ValidationExceptionResponse,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof openChatRoom>>, TError,{data: OpenChatRequest}, TContext>, request?: SecondParameter<typeof apiInstance>}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof openChatRoom>>,

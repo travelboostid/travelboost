@@ -102,13 +102,9 @@ type Props = {
 export default function Roles({ roles, permissions }: Props) {
   return (
     <CompanyDashboardLayout
+      breadcrumb={[{ title: 'Settings' }, { title: 'Roles' }]}
       openMenuIds={['settings']}
-      activeMenuIds={[`settings.profile`]}
-      breadcrumb={[
-        { title: 'Dashboard', url: '/dashboard' },
-        { title: 'Settings' },
-        { title: 'Roles' },
-      ]}
+      activeMenuIds={[`settings.roles`]}
       applet={<AddRoleButton permissions={permissions} />}
     >
       <Head title="Roles" />

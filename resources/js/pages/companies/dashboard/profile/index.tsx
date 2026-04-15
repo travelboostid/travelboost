@@ -11,14 +11,19 @@ import {
   InputGroupInput,
 } from '@/components/ui/input-group';
 import { Label } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
 import { Spinner } from '@/components/ui/spinner';
-import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
+import { Switch } from '@/components/ui/switch';
 import { extractImageSrc } from '@/lib/utils';
 import { Head, useForm } from '@inertiajs/react';
 import { toast } from 'sonner';
 
-export default function Profile() {
-  const { company } = usePageSharedDataProps();
+export type ProfilePageProps = {
+  profile: any;
+};
+
+export default function Profile({ profile }: ProfilePageProps) {
+  console.log('profile', profile);
   const form = useForm({
     name: company.name,
     email: company.email,
@@ -38,7 +43,7 @@ export default function Profile() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     form.setData('photo_id', form.data.photo_id || undefined);
-    form.put(update({ company: company.username }).url, {
+    form.put(update({ company: profile.username }).url, {
       onSuccess: () => {
         toast.success('Profile updated successfully');
       },
@@ -47,24 +52,24 @@ export default function Profile() {
 
   return (
     <CompanyDashboardLayout
+      breadcrumb={[{ title: 'Settings' }, { title: 'Profile' }]}
       openMenuIds={['settings']}
       activeMenuIds={[`settings.profile`]}
-      breadcrumb={[
-        { title: 'Dashboard', url: '/dashboard' },
-        { title: 'Settings' },
-        { title: 'Profile' },
-      ]}
+      containerClassName=""
     >
       <Head title="Profile" />
 
-      <form onSubmit={handleSubmit} className="grid gap-6 p-4">
+      <form
+        onSubmit={handleSubmit}
+        className="grid gap-6 p-4 max-w-4xl mx-auto"
+      >
         <div className="grid grid-cols-2 gap-6">
           <div className="grid gap-2 col-span-2">
             <MediaPicker
-              params={{ owner_type: 'company', owner_id: company.id }}
+              params={{ owner_type: 'company', owner_id: profile.id }}
               uploadParams={{
                 owner_type: 'company',
-                owner_id: company.id,
+                owner_id: profile.id,
               }}
               type="photo"
               onChange={(media) => form.setData('photo_id', (media as any)?.id)}
@@ -302,6 +307,46 @@ export default function Profile() {
               </InputGroupAddon>
             </InputGroup>
             <InputError message={form.errors.subdomain} className="mt-2" />
+          </div>
+
+          <Separator className="col-span-2" />
+          <div className="grid gap-2 col-span-2">
+            <div className="flex gap-2">
+              <Label htmlFor="domain">Custom Domain</Label>
+              <Switch
+                checked={form.data.domain_enabled}
+                onCheckedChange={(checked) =>
+                  form.setData('domain_enabled', checked)
+                }
+              />
+            </div>
+            <FieldDescription>
+              You can setup custom domain like <code>example.com</code> that
+              points to your landing page and public tour catalog. This requires
+              additional DNS configuration. You can also use the default
+              subdomain provided by the system.
+            </FieldDescription>
+            <div className="flex gap-2">
+              {form.data.domain_enabled ? (
+                <Input
+                  className="flex-1"
+                  id="domain"
+                  type="text"
+                  required
+                  autoFocus
+                  tabIndex={1}
+                  autoComplete="domain"
+                  placeholder="example.com"
+                  value={form.data.domain}
+                  onChange={(e) => form.setData('domain', e.target.value)}
+                />
+              ) : (
+                <div className="text-muted-foreground text-xs">
+                  Custom domain is not enabled.
+                </div>
+              )}
+            </div>
+            <InputError message={form.errors.domain} className="mt-2" />
           </div>
 
           <div className="col-span-2">

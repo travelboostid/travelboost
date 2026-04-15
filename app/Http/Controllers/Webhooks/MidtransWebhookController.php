@@ -77,6 +77,8 @@ class MidtransWebhookController extends Controller
       $this->processAgentSubscription($payment);
     } else if ($payment->payable_type === 'wallet-topup-payment') {
       $this->processWalletTopup($payment);
+    } else if ($payment->payable_type === 'ai-credit-topup-payment') {
+      $this->processAiCreditTopup($payment);
     } else {
       Log::warning('Unknown payable type for payment processing', [
         'payment_id' => $payment->id,
@@ -130,6 +132,23 @@ class MidtransWebhookController extends Controller
     }
   }
 
+  private function processAiCreditTopup(Payment $payment)
+  {
+    Log::info('Processing AI credit topup for payment', ['payment_id' => $payment->id]);
+    /** @var Company */
+    $owner = $payment->owner;
+
+    if (!$owner) {
+      Log::error('Owner not found for payment', ['payment_id' => $payment->id]);
+      return;
+    }
+    $payment->load('payable');
+    if (!$payable = $payment->payable) {
+      Log::error('Payable not found', ['payment_id' => $payment->id]);
+      return;
+    }
+  }
+
   private function processWalletTopup(Payment $payment)
   {
     Log::info('Processing wallet topup for payment', ['payment_id' => $payment->id]);
@@ -141,13 +160,9 @@ class MidtransWebhookController extends Controller
     $wallet = $owner->wallet;
 
     $payment->load('payable');
+    $topup = $payment->payable;
 
-    if (!$payable = $payment->payable) {
-      Log::error('Payable not found', ['payment_id' => $payment->id]);
-      return;
-    }
-
-    $wallet->deposit($payment->amount, [
+    $wallet->deposit($topup->amount, [
       'type' => 'topup',
       'description' => 'Wallet topup via Midtrans',
       'payment_id' => $payment->id,

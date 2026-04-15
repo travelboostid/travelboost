@@ -25,6 +25,7 @@ export default function ApproveRegistrationButton({
   const [open, setOpen] = useState(false);
   const form = useForm({
     status: 'active',
+    note: '',
   });
   const handleApprove = () => {
     form.put(

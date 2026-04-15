@@ -15,11 +15,14 @@ export type User = {
     photo_url: string | null;
     [key: string]: any;
   }[];
-  [key: string]: unknown;
+  [key: string]: any;
 };
 
 export type Auth = {
   user: User;
+  permissions: string[];
+  roles: string[];
+  teams: string[];
 };
 
 export type TwoFactorSetupData = {

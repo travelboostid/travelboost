@@ -29,6 +29,12 @@ return new class extends Migration {
       $table->timestamps();
     });
 
+    Schema::create('ai_credit_topup_payments', function (Blueprint $table) {
+      $table->id();
+      $table->decimal('amount', 14, 2);
+      $table->timestamps();
+    });
+
     Schema::create('agent_subscription_payments', function (Blueprint $table) {
       $table->id();
       $table->foreignId('package_id')->constrained('agent_subscription_packages');

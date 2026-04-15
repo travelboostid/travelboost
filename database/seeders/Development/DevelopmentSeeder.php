@@ -2,6 +2,8 @@
 
 namespace Database\Seeders\Development;
 
+use Database\Seeders\Common\AffiliateCommissionRateSeeder;
+use Database\Seeders\Common\AffiliateSeeder;
 use Database\Seeders\Common\AiModelSeeder;
 use Database\Seeders\Common\CompanySeeder;
 use Database\Seeders\Common\ContinentSeeder;
@@ -30,8 +32,8 @@ class DevelopmentSeeder extends Seeder
       RegionSeeder::class,
       CountrySeeder::class,
       TourSeeder::class,
-      CurrencySeeder::class,
-      PriceCategorySeeder::class,
+      AffiliateCommissionRateSeeder::class,
+      AffiliateSeeder::class,
     ]);
   }
 }

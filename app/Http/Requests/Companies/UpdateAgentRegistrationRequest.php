@@ -22,7 +22,8 @@ class UpdateAgentRegistrationRequest extends FormRequest
   public function rules(): array
   {
     return [
-      'status' => 'nullable|in:active,rejected,pending',
+      'status' => 'nullable|in:active,rejected,pending,suspended',
+      'note' => 'nullable|string|max:1000',
     ];
   }
 }

@@ -2,8 +2,10 @@
 
 namespace App\Concerns;
 
+use App\Enums\UserGender;
 use App\Models\User;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Enum;
 
 trait ProfileValidationRules
 {
@@ -40,6 +42,12 @@ trait ProfileValidationRules
         'string',
         'max:20',
         'regex:/^[0-9+\-\s]+$/'
+      ],
+
+      'gender' => [
+        'nullable',
+        'string',
+        new Enum(UserGender::class),
       ],
 
       'address' => [
