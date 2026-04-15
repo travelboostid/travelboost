@@ -6,6 +6,8 @@ use App\Models\AnonymousUser;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
+use App\Models\Currency;
+
 class HandleInertiaRequests extends Middleware
 {
   /**
@@ -51,6 +53,13 @@ class HandleInertiaRequests extends Middleware
       'tenant' => $request->attributes->get('tenant'),
       'anonymousUser' => $anonymousUser,
       'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
+
+      //13042026
+      'currencies' => fn () => Currency::select('code', 'name')->get(),
+
+      'flash' => [
+          'tab' => $request->session()->get('tab'),
+      ],
     ];
   }
 }

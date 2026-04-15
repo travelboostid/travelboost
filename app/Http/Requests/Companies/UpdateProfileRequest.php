@@ -29,6 +29,10 @@ class UpdateProfileRequest extends FormRequest
       'customer_service_phone' => 'nullable|string|max:20',
       'address' => 'nullable|string|max:255',
       'photo_id' => 'nullable|exists:medias,id',
+      //10042026
+      'province' => 'nullable|string|max:50',
+      'city' => 'nullable|string|max:50',
+      'identity_id' => 'nullable|exists:medias,id',
     ];
   }
 }

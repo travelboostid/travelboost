@@ -65,6 +65,10 @@ return new class extends Migration
       $table->string(column: 'address')->default('');
       $table->string(column: 'phone')->default('');
       $table->string(column: 'customer_service_phone')->default('');
+      //09042026
+      $table->string(column: 'province')->default('');
+      $table->string(column: 'city')->default('');
+      //
       $table->string('note')->nullable();
       $table->jsonb('meta')->nullable();
       $table->rememberToken();

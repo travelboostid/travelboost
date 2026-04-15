@@ -28,6 +28,11 @@ export default function Profile() {
     address: company.address || '',
     subdomain: company.subdomain,
     photo_id: company.photo_id || undefined,
+    //09042026
+    province: company.province || '',
+    city: company.city || '',
+    identity_id: company.identity_id || undefined,
+    
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -197,6 +202,77 @@ export default function Profile() {
               onChange={(e) => form.setData('address', e.target.value)}
             />
             <InputError message={form.errors.address} className="mt-2" />
+          </div>
+
+          <div className="grid gap-2">
+            <Label htmlFor="province">Province</Label>
+            <Input
+              id="province"
+              type="text"
+              required
+              autoFocus
+              tabIndex={1}
+              autoComplete="tel"
+              name="province"
+              placeholder="Province"
+              value={form.data.province}
+              onChange={(e) => form.setData('province', e.target.value)}
+            />
+            <InputError message={form.errors.province} className="mt-2" />
+          </div>
+
+          <div className="grid gap-2">
+            <Label htmlFor="city">
+              City
+            </Label>
+            <Input
+              id="city"
+              type="text"
+              required
+              autoFocus
+              tabIndex={1}
+              autoComplete="tel"
+              name="city"
+              placeholder="City"
+              value={form.data.city}
+              onChange={(e) =>
+                form.setData('city', e.target.value)
+              }
+            />
+            <InputError
+              message={form.errors.city}
+              className="mt-2"
+            />
+          </div>
+
+          <div className="grid gap-2 col-span-2">
+            <Label htmlFor="identity_card">Identity Card</Label>
+            <MediaPicker
+              params={{ owner_type: 'company', owner_id: company.id }}
+              uploadParams={{
+                owner_type: 'company',
+                owner_id: company.id,
+              }}
+              type="photo"
+              onChange={(media) => form.setData('identity_id', (media as any)?.id)}
+            >
+              {(media, change) => (
+                <div className="flex flex-col gap-2">
+                  <img
+                    className="aspect-square max-w-80 object-cover shadow"
+                    src={
+                      typeof media === 'string'
+                        ? media
+                        : extractImageSrc(media as any).src
+                    }
+                  />
+                  <Button className="w-fit" onClick={change} type="button">
+                    Change
+                  </Button>
+                </div>
+              )}
+            </MediaPicker>
+            <InputError message={form.errors.name} className="mt-2" />
           </div>
 
           <div className="grid gap-2 col-span-2">

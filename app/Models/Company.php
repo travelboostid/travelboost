@@ -27,6 +27,10 @@ class Company extends Model
     'photo_id',
     'meta',
     'note',
+    //10042026
+    'province',
+    'city',
+    'identity_id',
   ];
 
   protected $hidden = [

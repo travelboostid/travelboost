@@ -28,12 +28,13 @@ import { Spinner } from '@/components/ui/spinner';
 import { Textarea } from '@/components/ui/textarea';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { extractImageSrc } from '@/lib/utils';
-import { Form, router, useForm } from '@inertiajs/react';
+import { Form, router, useForm, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import SelectCategory from './components/select-category';
 import SelectContinent from './components/select-continent';
 import SelectCountry from './components/select-country';
 import SelectRegion from './components/select-region';
+import SelectCurrency from './components/select-currency';
 
 import {
   Tabs,
@@ -42,15 +43,33 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs"
 
-//30032026
-//import { useForm } from '@inertiajs/react'
+///////////tab 2
+type RoomPrice = {
+  room_type_id: number
+  price: string
+  promotion: Adjustment
+  commission: Adjustment
+}
 
-/*type Schedule = {
+type Adjustment = {
+  type: 'percent' | 'value'
+  value: string
+}
+
+type Schedule = {
   departure_date: string
   return_date: string
   quota: string
-  price: string
-}*/
+  prices: RoomPrice[]
+  //promotion: Adjustment
+  //commission: Adjustment
+}
+
+type PriceCategory = {
+  id: number
+  name: string
+}
+/////////////
 
 export default function Page() {
   const [continentId, setContinentId] = useState<number | null>(null);
@@ -68,6 +87,7 @@ export default function Page() {
   const handlePriceChange = (value: string) => {
     const numeric = value.replace(/\D/g, "")
     setRawPrice(numeric)
+    setData('showprice', numeric)
 
     const formatted = new Intl.NumberFormat("id-ID").format(Number(numeric))
     setDisplayPrice(formatted)
@@ -84,14 +104,12 @@ export default function Page() {
     if (numeric1 === "") numeric1 = "0" // 🔥 default 0
 
     setRawPrice1(numeric1)
+    setData('promote_price', numeric1)
 
     const formatted1 = new Intl.NumberFormat("id-ID").format(Number(numeric1))
     setDisplayPrice1(formatted1)
   }
   //
-
-  //27032026
-  const [schedules, setSchedules] = useState<any[]>([])
 
   //30032026
   const { data, setData, post, processing, errors } = useForm({
@@ -101,27 +119,145 @@ export default function Page() {
     destination: '',
     duration_days: '',
     showprice: '',
-    promote_price: '',
+    promote_price: 0,
     promote_title: '',
     promote_note: '',
-    schedules: [],
+
+    continent_id: '', // ✅ wajib
+    region_id: '',
+    country_id: '',
+    category_id: '',
+    status: 'inactive',
+    image_id: '',
+    document_id: '',
+
+    currency: 'IDR',
   })
 
-  /*const updateSchedule = (
+  const { priceCategories } = usePage<{
+    priceCategories: PriceCategory[]
+  }>().props
+
+  const [schedules, setSchedules] = useState<Schedule[]>([])
+
+  const addSchedule = () => {
+    setSchedules([
+      ...schedules,
+      {
+        departure_date: '',
+        return_date: '',
+        quota: '',
+        prices: [
+          {
+            room_type_id: null,
+            price: '',
+            promotion: { type: 'percent', value: '' },
+            commission: { type: 'percent', value: '' },
+          }
+        ],
+        promotion: { type: 'percent', value: '' },
+        commission: { type: 'percent', value: '' },
+      }
+    ])
+  }
+
+  const updateSchedule = (
     index: number,
     field: keyof Schedule,
     value: string
   ) => {
-    const updated = [...data.schedules]
-    if (!updated[index]) return // 🔥 penting
+    const updated = [...schedules]
+    updated[index][field] = value as any
+    setSchedules(updated)
+  }
 
-    updated[index] = {
-      ...updated[index],
-      [field]: value,
-    }
+  const removeSchedule = (index: number) => {
+    const updated = schedules.filter((_, i) => i !== index)
+    setSchedules(updated)
+  }
 
-    setData('schedules', updated)
-  }*/
+const addRoom = (index: number) => {
+  setSchedules((prev) =>
+    prev.map((schedule, i) => {
+      if (i !== index) return schedule
+
+      return {
+        ...schedule,
+        prices: [
+          ...schedule.prices,
+          {
+            room_type_id: null,
+            price: '',
+            promotion: {
+              percent: '',
+              value: '',
+            },
+            commission: {
+              percent: '',
+              value: '',
+            },
+          },
+        ],
+      }
+    })
+  )
+}
+
+const updateRoom = (
+  scheduleIndex: number,
+  roomIndex: number,
+  field: string,
+  value: any
+) => {
+  setSchedules((prev) =>
+    prev.map((schedule, i) => {
+      if (i !== scheduleIndex) return schedule
+
+      return {
+        ...schedule,
+        prices: schedule.prices.map((room, r) => {
+          if (r !== roomIndex) return room
+
+          return {
+            ...room,
+            [field]: value,
+          }
+        }),
+      }
+    })
+  )
+}
+
+const removeRoom = (scheduleIndex: number, roomIndex: number) => {
+  const updated = [...schedules]
+  updated[scheduleIndex].prices = updated[scheduleIndex].prices.filter(
+    (_, i) => i !== roomIndex
+  )
+  setSchedules(updated)
+}
+
+const updateAdjustment = (
+  index: number,
+  field: 'promotion' | 'commission',
+  key: 'type' | 'value',
+  value: string
+) => {
+  const updated = [...schedules]
+  updated[index][field][key] = value as any
+  setSchedules(updated)
+}
+
+const updateRoomAdjustment = (
+  scheduleIndex: number,
+  roomIndex: number,
+  field: 'promotion' | 'commission',
+  key: 'type' | 'value',
+  value: string
+) => {
+  const updated = [...schedules]
+  updated[scheduleIndex].prices[roomIndex][field][key] = value as any
+  setSchedules(updated)
+}
 
   return (
     <CompanyDashboardLayout
@@ -133,19 +269,31 @@ export default function Page() {
         { title: 'Create' },
       ]}
     >
-      <Form
-        {...store.form({ company: company.username })}
-        className="space-y-4"
-        onSuccess={handleSuccess}
-      >
-        {({ errors, processing }) => (
+      <form
+  onSubmit={(e) => {
+    e.preventDefault()
+
+    // ensure values always exist
+    setData(prev => ({
+      ...prev,
+      showprice: prev.showprice || '0',
+      promote_price: prev.promote_price || '0',
+    }))
+
+    post(store.url({ company: company.username }), {
+      onSuccess: handleSuccess,
+    })
+  }}
+  className="space-y-4"
+>
+        
           <div className="container mx-auto space-y-4 p-4">
             
             <Tabs defaultValue="tour" className="w-full" key="tour-form">
 
               <TabsList className="mb-4">
-                <TabsTrigger value="tour">Tour</TabsTrigger>
-                <TabsTrigger value="schedule">Jadwal</TabsTrigger>
+                <TabsTrigger value="tour">Master</TabsTrigger>
+                <TabsTrigger value="schedule">Schedule and Price</TabsTrigger>
               </TabsList>
 
               {/* ================= TAB 1 — TOUR ================= */}
@@ -162,26 +310,31 @@ export default function Page() {
                       params={{ owner_type: 'company', owner_id: company.id }}
                       uploadParams={{ owner_type: 'company', owner_id: company.id }}
                     >
-                      {(media, change) => (
-                        <div className="flex flex-col items-center justify-items-center gap-2">
-                          <img
-                            className="aspect-video max-w-[360px] rounded object-cover shadow"
-                            src={
-                              typeof media === 'string'
-                                ? media
-                                : extractImageSrc(media as any).src
-                            }
-                          />
-                          <input
-                            type="hidden"
-                            name="image_id"
-                            value={(media as MediaResource)?.id}
-                          />
-                          <Button className="w-fit" onClick={change} type="button">
-                            Change
-                          </Button>
-                        </div>
-                      )}
+                      {(media, change) => {
+                        const mediaId = (media as MediaResource)?.id
+
+                        // 🔥 sync ke inertia
+                        if (mediaId && data.image_id !== mediaId) {
+                          setData('image_id', mediaId)
+                        }
+
+                        return (
+                          <div className="flex flex-col items-center gap-2">
+                            <img
+                              className="aspect-video max-w-[360px] rounded object-cover shadow"
+                              src={
+                                typeof media === 'string'
+                                  ? media
+                                  : extractImageSrc(media as any).src
+                              }
+                            />
+
+                            <Button type="button" onClick={change}>
+                              Change
+                            </Button>
+                          </div>
+                        )
+                      }}
                     </MediaPicker>
                     <InputError message={errors.media_id} />
                   </div>
@@ -279,9 +432,15 @@ export default function Page() {
                       name="continent_id"
                       value={continentId ?? undefined}
                       onChange={(val) => {
-                        setContinentId(Number(val));
-                        setRegionId(null);
-                        setCountryId(null);
+                        const id = Number(val)
+
+                        setContinentId(id)
+                        setRegionId(null)
+                        setCountryId(null)
+
+                        setData('continent_id', id) // ✅ WAJIB
+                        setData('region_id', '')    // reset
+                        setData('country_id', '')   
                       }}
                     />
                     <InputError message={errors.continent_id} />
@@ -294,8 +453,13 @@ export default function Page() {
                       continentId={continentId}
                       value={regionId ?? undefined}
                       onChange={(val) => {
-                        setRegionId(Number(val));
-                        setCountryId(null);
+                        const id = Number(val)
+
+                        setRegionId(id)
+                        setCountryId(null)
+
+                        setData('region_id', id) // ✅
+                        setData('country_id', '') // reset
                       }}
                     />
                     <InputError message={errors.region_id} />
@@ -308,7 +472,12 @@ export default function Page() {
                       continentId={continentId}
                       regionId={regionId}
                       value={countryId ?? undefined}
-                      onChange={(val) => setCountryId(Number(val))}
+                      onChange={(val) => {
+                        const id = Number(val)
+
+                        setCountryId(id)
+                        setData('country_id', id) // ✅
+                      }}
                     />
                     <InputError message={errors.country_id} />
                   </div>
@@ -330,7 +499,7 @@ export default function Page() {
                   {/* Category */}
                   <div className="grid gap-2">
                     <Label htmlFor="category_id">Category</Label>
-                    <SelectCategory name="category_id" />
+                    <SelectCategory name="category_id" value={data.category_id || undefined} onChange={(val) => setData('category_id', Number(val))}/>
 
                     <InputError message={errors.category_id} />
                   </div>
@@ -345,14 +514,17 @@ export default function Page() {
                       uploadParams={{ owner_type: 'company', owner_id: company.id }}
                     >
                       {(media, change) => {
-                        const url =
-                          (media as any)?.url ||
-                          (media as any)?.data?.url
+                        const mediaId = (media as any)?.id
+                        const url = (media as any)?.url || (media as any)?.data?.url
+
+                        // 🔥 sync ke inertia
+                        if (mediaId && data.document_id !== mediaId) {
+                          setData('document_id', mediaId)
+                        }
 
                         return (
                           <Item variant="outline" className="space-y-2">
                             <ItemContent className="space-y-2">
-
                               {url ? (
                                 <iframe
                                   src={window.location.origin + url}
@@ -366,14 +538,7 @@ export default function Page() {
                               <ItemTitle>
                                 {(media as any)?.name || ''}
                               </ItemTitle>
-
                             </ItemContent>
-
-                            <input
-                              type="hidden"
-                              name="document_id"
-                              value={(media as any)?.id || undefined}
-                            />
 
                             <ItemActions>
                               <Button
@@ -393,37 +558,68 @@ export default function Page() {
                   </div>
 
                   {/* Status */}
-                  <div className="grid gap-2">
-                    <Label htmlFor="status">Status at Catalog</Label>
-                    {/* <Select name="status" defaultValue="active"> */}
-                    <Select name="status" defaultValue="inactive">
-                      <SelectTrigger className="w-full max-w-48">
-                        <SelectValue placeholder="Select a fruit" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectGroup>
-                          <SelectLabel>Select status</SelectLabel>
-                          <SelectItem value="active">Active</SelectItem>
-                          <SelectItem value="inactive">Inactive</SelectItem>
-                        </SelectGroup>
-                      </SelectContent>
-                    </Select>
-                    <InputError message={errors.status} />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* STATUS */}
+                    <div className="grid gap-2">
+                      <Label htmlFor="status">Status at Catalog</Label>
+
+                      <Select
+                        name="status"
+                        value={data.status}
+                        onValueChange={(val) => setData('status', val)}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectGroup>
+                            <SelectLabel>Select status</SelectLabel>
+                            <SelectItem value="active">Active</SelectItem>
+                            <SelectItem value="inactive">Inactive</SelectItem>
+                          </SelectGroup>
+                        </SelectContent>
+                      </Select>
+
+                      <InputError message={errors.status} />
+                    </div>
+
+                    {/* CURRENCY */}
+                    <div className="grid gap-2">
+                      <Label>Currency</Label>
+
+                      <SelectCurrency
+                        value={data.currency}
+                        onChange={(val) => setData('currency', val)}
+                      />
+
+                    </div>
+
                   </div>
 
                   {/* Normal Price show on catalog */}
                   <div className="grid gap-2">
                     <Label htmlFor="showprice">Normal Price show on catalog</Label>
-                    <Input
-                      id="showprice"
-                      type="text"
-                      required
-                      placeholder="Normal Price"
-                      value={displayPrice}
-                      onChange={(e) => handlePriceChange(e.target.value)}
+
+                    <div className="flex gap-2">
+                      
+                      {/* ✅ Price Input */}
+                      <Input
+                        id="showprice_display"
+                        type="text"
+                        placeholder="Normal Price"
+                        value={displayPrice}
+                        onChange={(e) => handlePriceChange(e.target.value)}
+                      />
+
+                    </div>
+
+                    {/* hidden raw value */}
+                    <input
+                      type="hidden"
+                      name="showprice"
+                      value={rawPrice}
                     />
 
-                    <input type="hidden" name="showprice" value={rawPrice} />
                     <InputError message={errors.showprice} />
                   </div>
 
@@ -452,14 +648,23 @@ export default function Page() {
                       {/* Promote Price */}
                       <div className="grid gap-2">
                         <Label htmlFor="promote_price">Promotion Price show on catalog</Label>
-                        <Input
-                          id="promote_price"
-                          type="text"
-                          placeholder="Promotion Price"
-                          value={displayPrice1}
-                          onChange={(e) => handlePriceChange1(e.target.value)}
-                        />
+
+                        <div className="flex gap-2">
+
+                          {/* ✅ Price */}
+                          <Input
+                            id="promote_price_display"
+                            type="text"
+                            placeholder="Promotion Price"
+                            value={displayPrice1}
+                            onChange={(e) => handlePriceChange1(e.target.value)}
+                          />
+
+                        </div>
+
+                        {/* hidden raw value */}
                         <input type="hidden" name="promote_price" value={rawPrice1} />
+
                         <InputError message={errors.promote_price} />
                       </div>
 
@@ -482,166 +687,473 @@ export default function Page() {
 
                 </div>
 
-              </TabsContent>
+                <div className="flex justify-start pt-6 border-t">
+                  <Button
+                    type="button"
+                    disabled={processing}
+                    /*onClick={() => {
+                      post(store.url({ company: company.username }), {
+                        onSuccess: (page: any) => {
+                          const tourId = page.props.tour.id
 
-              {/* ================= TAB 2 — JADWAL ================= */}
-              <TabsContent value="schedule">
-
-                <div className="space-y-4">
-
-                  {/* Header */}
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold">
-                      Tour Schedule
-                    </h3>
-
-                    <Button
-                      type="button"
-                      onClick={() =>
-                        setSchedules([
-                          ...schedules,
-                          {
-                            departure_date: "",
-                            return_date: "",
-                            quota: "",
-                            price: "",
-                          },
-                        ])
-                      }
-                    >
-                      + Add New Schedule
-                    </Button>
-                  </div>
-
-                  {/* Grid */}
-                  <div className="rounded-lg border overflow-hidden">
-
-                    <table className="w-full text-sm">
-
-                      <thead className="bg-muted">
-                        <tr>
-                          <th className="p-2 text-left">Departure</th>
-                          <th className="p-2 text-left">Return</th>
-                          <th className="p-2 text-left">Quota</th>
-                          <th className="p-2 text-left">Price</th>
-                          <th className="p-2 text-left">Action</th>
-                        </tr>
-                      </thead>
-
-                      <tbody>
-
-                        {schedules.length === 0 && (
-                          <tr>
-                            <td colSpan={5} className="p-4 text-center text-muted-foreground">
-                              No schedules yet
-                            </td>
-                          </tr>
-                        )}
-
-                        {schedules.map((s, i) => (
-                          <tr key={i} className="border-t">
-
-  <td className="p-2">
-    <Input
-      type="date"
-      value={s.departure_date}
-      onChange={(e) => {
-        const copy = [...schedules]
-        copy[i].departure_date = e.target.value
-        setSchedules(copy)
-      }}
-    />
-    <input
-      type="hidden"
-      name={`schedules[${i}][departure_date]`}
-      value={s.departure_date}
-    />
-  </td>
-
-  <td className="p-2">
-    <Input
-      type="date"
-      value={s.return_date}
-      onChange={(e) => {
-        const copy = [...schedules]
-        copy[i].return_date = e.target.value
-        setSchedules(copy)
-      }}
-    />
-    <input
-      type="hidden"
-      name={`schedules[${i}][return_date]`}
-      value={s.return_date}
-    />
-  </td>
-
-  <td className="p-2">
-    <Input
-      type="number"
-      value={s.quota}
-      onChange={(e) => {
-        const copy = [...schedules]
-        copy[i].quota = e.target.value
-        setSchedules(copy)
-      }}
-    />
-    <input
-      type="hidden"
-      name={`schedules[${i}][quota]`}
-      value={s.quota}
-    />
-  </td>
-
-  <td className="p-2">
-    <Input
-      type="number"
-      value={s.price}
-      onChange={(e) => {
-        const copy = [...schedules]
-        copy[i].price = e.target.value
-        setSchedules(copy)
-      }}
-    />
-    <input
-      type="hidden"
-      name={`schedules[${i}][price]`}
-      value={s.price}
-    />
-  </td>
-
-  <td className="p-2">
-    <Button
-      type="button"
-      variant="destructive"
-      size="sm"
-      onClick={() =>
-        setSchedules(schedules.filter((_, idx) => idx !== i))
-      }
-    >
-      Delete
-    </Button>
-  </td>
-
-</tr>
-                        ))}
-
-                      </tbody>
-                    </table>
-
-                  </div>
-
+                          router.visit(`/dashboard/tours/${tourId}/edit?tab=schedule`)
+                        },
+                      })
+                    }}*/
+                    onClick={() => {
+                      post(store.url({ company: company.username }))
+                    }}
+                  >
+                    {processing && <Spinner />}
+                    Save & Continue
+                  </Button>
                 </div>
 
               </TabsContent>
 
+              {/* ================= TAB 2 — JADWAL ================= */}
+              <TabsContent value="schedule">
+                <div className="space-y-4">
+
+                  {/* HEADER */}
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold">Tour Schedule and Price</h3>
+
+                    <Button type="button" 
+                    disabled={processing || schedules.length === 0}
+                    onClick={addSchedule}>
+                      + Add New Schedule
+                    </Button>
+                  </div>
+
+                  {/* DESKTOP TABLE */}
+                  <div className="rounded-lg border overflow-hidden hidden md:block">
+                    <table className="w-full text-sm">
+                      
+                      {/* ================= HEADER ================= */}
+                      <thead className="bg-muted">
+                        <tr>
+                          <th className="p-3 text-left" rowSpan={2}>Departure</th>
+                          <th className="p-3 text-left" rowSpan={2}>Return</th>
+
+                          <th className="p-3 text-center" colSpan={4}>
+                            Prices
+                          </th>
+
+                          <th className="p-3 text-left" rowSpan={2}>Action</th>
+                        </tr>
+
+                        <tr className="text-xs text-muted-foreground">
+                          <th className="p-2">Category</th>
+                          <th className="p-2">Price</th>
+                          <th className="p-2">Promotion</th>
+                          <th className="p-2">Commission</th>
+                        </tr>
+                      </thead>
+
+                      {/* ================= BODY ================= */}
+                      <tbody>
+                        {schedules.map((item, index) => (
+                          <tr key={index} className="align-top border-t">
+
+                            {/* DATE */}
+                            <td className="p-2">
+                              <Input
+                                type="date"
+                                value={item.departure_date}
+                                onChange={(e) =>
+                                  updateSchedule(index, 'departure_date', e.target.value)
+                                }
+                              />
+                            </td>
+
+                            <td className="p-2">
+                              <Input
+                                type="date"
+                                value={item.return_date}
+                                onChange={(e) =>
+                                  updateSchedule(index, 'return_date', e.target.value)
+                                }
+                              />
+                            </td>
+
+                            {/* PRICES */}
+                            <td colSpan={4} className="p-2">
+                              <div className="space-y-3">
+
+                                {item.prices.map((room, rIndex) => (
+                                  <div
+                                    key={rIndex}
+                                    className="grid grid-cols-4 gap-2 items-start p-2 border rounded-md"
+                                  >
+
+                                    {/* ROOM */}
+                                    <select
+                                      className="border rounded px-2 h-9 text-sm w-full"
+                                      value={room.room_type_id ?? ''}
+                                      onChange={(e) =>
+                                        updateRoom(index, rIndex, 'room_type_id', Number(e.target.value))
+                                      }
+                                    >
+                                      <option value="">Select Category</option>
+
+                                      {priceCategories.map((cat) => (
+                                        <option key={cat.id} value={cat.id}>
+                                          {cat.name}
+                                        </option>
+                                      ))}
+                                    </select>
+
+                                    {/* PRICE */}
+                                    <Input
+                                      type="number"
+                                      className="no-spinner"
+                                      placeholder="Price"
+                                      value={room.price}
+                                      onChange={(e) =>
+                                        updateRoom(index, rIndex, 'price', e.target.value)
+                                      }
+                                    />
+
+                                    {/* PROMOTION */}
+                                    <div className="grid grid-cols-2 gap-2">
+
+                                      {/* PERCENT */}
+                                      <Input
+                                        type="number"
+                                        className="no-spinner"
+                                        placeholder="%"
+                                        value={room.promotion.type === 'percent' ? room.promotion.value : ''}
+                                        disabled={room.promotion.type === 'value' && room.promotion.value !== ''}
+                                        onChange={(e) => {
+                                          const val = e.target.value
+
+                                          updateRoomAdjustment(index, rIndex, 'promotion', 'type', 'percent')
+                                          updateRoomAdjustment(index, rIndex, 'promotion', 'value', val)
+                                        }}
+                                      />
+
+                                      {/* VALUE */}
+                                      <Input
+                                        type="number"
+                                        className="no-spinner"
+                                        placeholder="Value"
+                                        value={room.promotion.type === 'value' ? room.promotion.value : ''}
+                                        disabled={room.promotion.type === 'percent' && room.promotion.value !== ''}
+                                        onChange={(e) => {
+                                          const val = e.target.value
+
+                                          updateRoomAdjustment(index, rIndex, 'promotion', 'type', 'value')
+                                          updateRoomAdjustment(index, rIndex, 'promotion', 'value', val)
+                                        }}
+                                      />
+
+                                    </div>
+
+                                    {/* COMMISSION */}
+                                    <div className="grid grid-cols-2 gap-2">
+
+                                      {/* PERCENT */}
+                                      <Input
+                                        type="number"
+                                        className="no-spinner"
+                                        placeholder="%"
+                                        value={room.commission.type === 'percent' ? room.commission.value : ''}
+                                        disabled={room.commission.type === 'value' && room.commission.value !== ''}
+                                        onChange={(e) => {
+                                          const val = e.target.value
+
+                                          updateRoomAdjustment(index, rIndex, 'commission', 'type', 'percent')
+                                          updateRoomAdjustment(index, rIndex, 'commission', 'value', val)
+                                        }}
+                                      />
+
+                                      {/* VALUE */}
+                                      <Input
+                                        type="number"
+                                        className="no-spinner"
+                                        placeholder="Value"
+                                        value={room.commission.type === 'value' ? room.commission.value : ''}
+                                        disabled={room.commission.type === 'percent' && room.commission.value !== ''}
+                                        onChange={(e) => {
+                                          const val = e.target.value
+
+                                          updateRoomAdjustment(index, rIndex, 'commission', 'type', 'value')
+                                          updateRoomAdjustment(index, rIndex, 'commission', 'value', val)
+                                        }}
+                                      />
+
+                                    </div>
+
+                                    {/* REMOVE ROOM */}
+                                    <div className="col-span-4 flex justify-end">
+                                      <Button
+                                        type="button"
+                                        size="sm"
+                                        variant="ghost"
+                                        className="text-red-500"
+                                        onClick={() => removeRoom(index, rIndex)}
+                                      >
+                                        Delete Room
+                                      </Button>
+                                    </div>
+
+                                  </div>
+                                ))}
+
+                                {/* ADD ROOM */}
+                                <div>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => addRoom(index)}
+                                  >
+                                    + Add Room
+                                  </Button>
+                                </div>
+
+                              </div>
+                            </td>
+
+                            {/* ACTION */}
+                            <td className="p-2">
+                              <Button
+                                type="button"
+                                variant="destructive"
+                                onClick={() => removeSchedule(index)}
+                              >
+                                Delete
+                              </Button>
+                            </td>
+
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* MOBILE VERSION */}
+                  <div className="md:hidden space-y-4">
+                    {schedules.map((item, index) => (
+                      <div key={index} className="border rounded-lg p-3 space-y-3">
+
+                        {/* HEADER */}
+                        <div className="flex justify-between items-center">
+                          <p className="font-medium text-sm">
+                            Schedule #{index + 1}
+                          </p>
+
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => removeSchedule(index)}
+                          >
+                            Delete
+                          </Button>
+                        </div>
+
+                        {/* DATES */}
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <p className="text-xs text-muted-foreground">Departure</p>
+                            <Input
+                              type="date"
+                              value={item.departure_date}
+                              onChange={(e) =>
+                                updateSchedule(index, 'departure_date', e.target.value)
+                              }
+                            />
+                          </div>
+
+                          <div>
+                            <p className="text-xs text-muted-foreground">Return</p>
+                            <Input
+                              type="date"
+                              value={item.return_date}
+                              onChange={(e) =>
+                                updateSchedule(index, 'return_date', e.target.value)
+                              }
+                            />
+                          </div>
+                        </div>
+
+                        {/* ROOMS */}
+                        <div className="space-y-3">
+                          {item.prices.map((room, rIndex) => (
+                            <div
+                              key={rIndex}
+                              className="border rounded-md p-3 space-y-2"
+                            >
+
+                              {/* ROOM HEADER */}
+                              <div className="flex justify-between items-center">
+                                <p className="text-xs font-medium text-muted-foreground">
+                                  Room #{rIndex + 1}
+                                </p>
+
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="ghost"
+                                  className="text-red-500"
+                                  onClick={() => removeRoom(index, rIndex)}
+                                >
+                                  Delete Room
+                                </Button>
+                              </div>
+
+                              {/* ROOM TYPE */}
+                              <div className="space-y-1">
+                                <p className="text-xs text-muted-foreground">Category</p>
+
+                                <select
+                                  className="w-full border rounded-md px-3 h-10 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+                                  value={room.room_type_id ?? ''}
+                                  onChange={(e) =>
+                                    updateRoom(index, rIndex, 'room_type_id', Number(e.target.value))
+                                  }
+                                >
+                                  <option value="">Select Category</option>
+
+                                  {priceCategories.map((cat) => (
+                                    <option key={cat.id} value={cat.id}>
+                                      {cat.name}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+
+                              {/* PRICE */}
+                              <div>
+                                <p className="text-xs text-muted-foreground">Price</p>
+                                <Input
+                                  type="number"
+                                  placeholder="Price"
+                                  value={room.price}
+                                  onChange={(e) =>
+                                    updateRoom(index, rIndex, 'price', e.target.value)
+                                  }
+                                />
+                              </div>
+
+                              {/* PROMOTION */}
+                              <div className="space-y-1">
+                                <p className="text-xs text-muted-foreground">Promotion</p>
+
+                                <div className="grid grid-cols-2 gap-2">
+                                  {/* % */}
+                                  <Input
+                                    type="number"
+                                    className="no-spinner"
+                                    placeholder="%"
+                                    value={room.promotion.type === 'percent' ? room.promotion.value : ''}
+                                    disabled={room.promotion.type === 'value' && room.promotion.value !== ''}
+                                    onChange={(e) => {
+                                      const val = e.target.value
+
+                                      updateRoomAdjustment(index, rIndex, 'promotion', 'type', 'percent')
+                                      updateRoomAdjustment(index, rIndex, 'promotion', 'value', val)
+                                    }}
+                                  />
+
+                                  {/* VALUE */}
+                                  <Input
+                                    type="number"
+                                    className="no-spinner"
+                                    placeholder="Value"
+                                    value={room.promotion.type === 'value' ? room.promotion.value : ''}
+                                    disabled={room.promotion.type === 'percent' && room.promotion.value !== ''}
+                                    onChange={(e) => {
+                                      const val = e.target.value
+
+                                      updateRoomAdjustment(index, rIndex, 'promotion', 'type', 'value')
+                                      updateRoomAdjustment(index, rIndex, 'promotion', 'value', val)
+                                    }}
+                                  />
+                                </div>
+                              </div>
+
+                              {/* COMMISSION */}
+                              <div className="space-y-1">
+                                <p className="text-xs text-muted-foreground">Commission</p>
+
+                                <div className="grid grid-cols-2 gap-2">
+                                  {/* % */}
+                                  <Input
+                                    type="number"
+                                    className="no-spinner"
+                                    placeholder="%"
+                                    value={room.commission.type === 'percent' ? room.commission.value : ''}
+                                    disabled={room.commission.type === 'value' && room.commission.value !== ''}
+                                    onChange={(e) => {
+                                      const val = e.target.value
+
+                                      updateRoomAdjustment(index, rIndex, 'commission', 'type', 'percent')
+                                      updateRoomAdjustment(index, rIndex, 'commission', 'value', val)
+                                    }}
+                                  />
+
+                                  {/* VALUE */}
+                                  <Input
+                                    type="number"
+                                    className="no-spinner"
+                                    placeholder="Value"
+                                    value={room.commission.type === 'value' ? room.commission.value : ''}
+                                    disabled={room.commission.type === 'percent' && room.commission.value !== ''}
+                                    onChange={(e) => {
+                                      const val = e.target.value
+
+                                      updateRoomAdjustment(index, rIndex, 'commission', 'type', 'value')
+                                      updateRoomAdjustment(index, rIndex, 'commission', 'value', val)
+                                    }}
+                                  />
+                                </div>
+                              </div>
+
+                            </div>
+                          ))}
+
+                          {/* ADD ROOM */}
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={() => addRoom(index)}
+                            className="w-full"
+                          >
+                            + Add Room
+                          </Button>
+                        </div>
+
+                      </div>
+                    ))}
+                  </div>
+
+                </div>
+
+                <div className="flex justify-start pt-6 border-t">
+                    <Button
+                      type="submit"
+                      disabled={processing || schedules.length === 0}
+                    >
+                      Save Schedule
+                    </Button>
+                </div>
+              </TabsContent>
+
             </Tabs>
 
-            <Button type="submit" disabled={processing}>
-              {processing && <Spinner />}Create
-            </Button>
+            <input
+                type="hidden"
+                name="schedules"
+                value={JSON.stringify(schedules)}
+            />
+
           </div>
-        )}
-      </Form>
+        
+      </form>
     </CompanyDashboardLayout>
   );
 }
