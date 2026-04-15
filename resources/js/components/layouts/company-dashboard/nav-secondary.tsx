@@ -1,5 +1,13 @@
+import { useLocale } from '@/components/locale-context';
 import { SidebarGroup, SidebarGroupLabel } from '@/components/ui/sidebar';
-import { HelpCircleIcon, MoonIcon, Share2Icon, SunIcon } from 'lucide-react';
+import { LOCALES } from '@/config/locale';
+import {
+  HelpCircleIcon,
+  LanguagesIcon,
+  MoonIcon,
+  Share2Icon,
+  SunIcon,
+} from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { useMemo } from 'react';
 import {
@@ -8,6 +16,13 @@ import {
 } from '../components/sidebar-menu-renderer';
 
 export function NavSecondary() {
+  const { locale, setLocale } = useLocale();
+  const localeInfo = useMemo(() => {
+    return (
+      LOCALES.find((l) => l.code === locale) ||
+      LOCALES.find((l) => l.code === 'en')!
+    );
+  }, [locale]);
   const { resolvedTheme, setTheme } = useTheme();
   const menus: MenuItem[] = useMemo(() => {
     return [
@@ -42,8 +57,18 @@ export function NavSecondary() {
           },
         ],
       },
+      {
+        title: localeInfo.name,
+        urlOrAction: () => setLocale(localeInfo.code === 'en' ? 'id' : 'en'),
+        icon: LanguagesIcon,
+        actions: LOCALES.map((l) => ({
+          title: l.name,
+          urlOrAction: () => setLocale(l.code),
+          icon: LanguagesIcon,
+        })),
+      },
     ] as MenuItem[];
-  }, [resolvedTheme, setTheme]);
+  }, [resolvedTheme, setTheme, localeInfo, setLocale]);
   return (
     <SidebarGroup className="group-data-[collapsible=icon]:hidden">
       <SidebarGroupLabel>Other</SidebarGroupLabel>

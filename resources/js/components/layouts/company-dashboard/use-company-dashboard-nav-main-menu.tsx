@@ -16,12 +16,12 @@ import { FormattedMessage } from 'react-intl';
 
 type MenuItemBase = {
   id: string;
-  title: string;
+  title: string | React.ReactNode;
   urlOrAction: string | (() => void);
   target?: HTMLAttributeAnchorTarget;
   icon?: LucideIcon;
-  visibleToPermissions?: string[]; // Optional permissions to control visibility
-  visibleToCompanyTypes?: string[]; // Optional company types to control visibility
+  visibleToPermissions?: string[];
+  visibleToCompanyTypes?: string[];
 };
 
 type MenuItem =
@@ -56,9 +56,6 @@ export function useCompanyDashboardNavMainMenu() {
   const port = window.location.port ? `:${window.location.port}` : '';
 
   const companySubdomain = `${protocol}//${company.username}.${baseHost}${port}`;
-  // const companySubdomain =
-  //   `${scheme}://${company.subdomain}.${appHost}${appPort ? `:${appPort}` : ''}`;
-  //
 
   const unfilteredMenus = [
     {
@@ -84,38 +81,35 @@ export function useCompanyDashboardNavMainMenu() {
     },
     {
       id: 'agent-registrations',
-      title: 'Agents',
+      title: <FormattedMessage defaultMessage="Agents" />,
       urlOrAction: `/companies/${company.username}/dashboard/agent-registrations`,
       icon: UsersRoundIcon,
       visibleToCompanyTypes: ['vendor'],
     },
     {
       id: 'tours',
-      title: 'Tours',
+      title: <FormattedMessage defaultMessage="Tours" />,
       urlOrAction: '#',
       icon: PlaneIcon,
       items: [
         {
           id: 'tours.index',
-          title: 'Products',
+          title: <FormattedMessage defaultMessage="Products" />,
           urlOrAction: `/companies/${company.username}/dashboard/tours`,
         },
         {
           id: 'tours.categories',
-          title: 'Product Categories',
+          title: <FormattedMessage defaultMessage="Product Categories" />,
           urlOrAction: `/companies/${company.username}/dashboard/categories`,
         },
         {
           id: 'tours.preview',
-          title: 'My Catalogs',
-          //31032026
-          //urlOrAction: companySubdomain,
+          title: <FormattedMessage defaultMessage="My Catalogs" />,
           urlOrAction: `/companies/${company.username}/dashboard/vendors/${company.username}/tours`,
-          //target: '_blank',
         },
         {
           id: 'tours.orders',
-          title: 'Orders',
+          title: <FormattedMessage defaultMessage="Orders" />,
           urlOrAction: `/companies/${company.username}/dashboard/orders`,
         },
       ],
@@ -124,28 +118,28 @@ export function useCompanyDashboardNavMainMenu() {
     },
     {
       id: 'tours',
-      title: 'Tours',
+      title: <FormattedMessage defaultMessage="Tours" />,
       urlOrAction: '#',
       icon: PlaneIcon,
       items: [
         {
           id: 'agent-tours.index',
-          title: 'Products',
+          title: <FormattedMessage defaultMessage="Products" />,
           urlOrAction: `/companies/${company.username}/dashboard/agent-tours`,
         },
         {
           id: 'tours.categories',
-          title: 'Product Categories',
+          title: <FormattedMessage defaultMessage="Product Categories" />,
           urlOrAction: `/companies/${company.username}/dashboard/categories`,
         },
         {
           id: 'tours.cats',
-          title: 'My Catalogs',
+          title: <FormattedMessage defaultMessage="My Catalogs" />,
           urlOrAction: `/companies/${company.username}/dashboard/vendors/${company.username}/tours`,
         },
         {
           id: 'tours.bookings',
-          title: 'Order',
+          title: <FormattedMessage defaultMessage="Order" />,
           urlOrAction: `#`,
         },
       ],
@@ -154,7 +148,7 @@ export function useCompanyDashboardNavMainMenu() {
     },
     {
       id: 'customers',
-      title: 'Customers',
+      title: <FormattedMessage defaultMessage="Customers" />,
       urlOrAction: `/companies/${company.username}/dashboard/customers`,
       icon: BookUserIcon,
       visibleToCompanyTypes: ['agent'],
@@ -162,33 +156,33 @@ export function useCompanyDashboardNavMainMenu() {
     },
     {
       id: 'funds',
-      title: 'Funds',
+      title: <FormattedMessage defaultMessage="Funds" />,
       urlOrAction: `/companies/${company.username}/dashboard/wallets`,
       icon: WalletIcon,
       items: [
         {
           id: 'funds.wallets',
-          title: 'Wallet',
+          title: <FormattedMessage defaultMessage="Wallet" />,
           urlOrAction: `/companies/${company.username}/dashboard/wallets`,
         },
         {
           id: 'funds.wallet-transactions',
-          title: 'Wallet Transactions',
+          title: <FormattedMessage defaultMessage="Wallet Transactions" />,
           urlOrAction: `/companies/${company.username}/dashboard/wallet-transactions`,
         },
         {
           id: 'funds.bank-accounts',
-          title: 'Bank Accounts',
+          title: <FormattedMessage defaultMessage="Bank Accounts" />,
           urlOrAction: `/companies/${company.username}/dashboard/bank-accounts`,
         },
         {
           id: 'funds.withdrawals',
-          title: 'Withdrawals',
+          title: <FormattedMessage defaultMessage="Withdrawals" />,
           urlOrAction: `/companies/${company.username}/dashboard/withdrawals`,
         },
         {
           id: 'funds.payments',
-          title: 'Payment History',
+          title: <FormattedMessage defaultMessage="Payment History" />,
           urlOrAction: `/companies/${company.username}/dashboard/payments`,
         },
       ],
@@ -197,29 +191,29 @@ export function useCompanyDashboardNavMainMenu() {
     },
     {
       id: 'marketings',
-      title: 'Marketings & Socmeds',
+      title: <FormattedMessage defaultMessage="Marketings & Socmeds" />,
       urlOrAction: '#',
       icon: BoltIcon,
       items: [
         {
           id: 'marketings.landing-page.edit',
-          title: 'Edit Landing Page',
+          title: <FormattedMessage defaultMessage="Edit Landing Page" />,
           urlOrAction: `/companies/${company.username}/dashboard/page/edit`,
         },
         {
           id: 'marketings.landing-page.view',
-          title: 'My Landing Page',
+          title: <FormattedMessage defaultMessage="My Landing Page" />,
           urlOrAction: companySubdomain,
           target: '_blank',
         },
         {
           id: 'marketings.socmed-analytics',
-          title: 'Social Media Analytics',
+          title: <FormattedMessage defaultMessage="Social Media Analytics" />,
           urlOrAction: `#`,
         },
         {
           id: 'marketings.budgeting',
-          title: 'Promotion Budgetting',
+          title: <FormattedMessage defaultMessage="Promotion Budgetting" />,
           urlOrAction: `#`,
         },
       ],
@@ -227,56 +221,56 @@ export function useCompanyDashboardNavMainMenu() {
     },
     {
       id: 'reports',
-      title: 'Reports',
+      title: <FormattedMessage defaultMessage="Reports" />,
       urlOrAction: '#',
       icon: BoltIcon,
       items: [
         {
           id: 'reports.room-listings',
-          title: 'Room Listings',
+          title: <FormattedMessage defaultMessage="Room Listings" />,
           urlOrAction: `#`,
         },
         {
           id: 'reports.inventories',
-          title: 'Inventory Status',
+          title: <FormattedMessage defaultMessage="Inventory Status" />,
           urlOrAction: `#`,
         },
       ],
     },
     {
       id: 'settings',
-      title: 'Settings',
+      title: <FormattedMessage defaultMessage="Settings" />,
       urlOrAction: '#',
       icon: SettingsIcon,
       items: [
         {
           id: 'settings.profile',
-          title: 'Profile',
+          title: <FormattedMessage defaultMessage="Profile" />,
           urlOrAction: `/companies/${company.username}/dashboard/profile`,
         },
         {
           id: 'settings.teams',
-          title: 'User Management',
+          title: <FormattedMessage defaultMessage="User Management" />,
           urlOrAction: `/companies/${company.username}/dashboard/teams`,
         },
         {
           id: 'settings.roles',
-          title: 'Access Roles',
+          title: <FormattedMessage defaultMessage="Access Roles" />,
           urlOrAction: `/companies/${company.username}/dashboard/roles`,
         },
         {
           id: 'settings.chatbot',
-          title: 'Chat AI',
+          title: <FormattedMessage defaultMessage="Chat AI" />,
           urlOrAction: `/companies/${company.username}/dashboard/chatbot`,
         },
         {
           id: 'settings.ai-credits',
-          title: 'AI Credits',
+          title: <FormattedMessage defaultMessage="AI Credits" />,
           urlOrAction: `/companies/${company.username}/dashboard/ai-credits`,
         },
         {
           id: 'settings.vendor-registrations',
-          title: 'Vendor Registrations',
+          title: <FormattedMessage defaultMessage="Vendor Registrations" />,
           urlOrAction: `/companies/${company.username}/dashboard/vendor-registrations`,
           visibleToCompanyTypes: ['agent'],
         },
@@ -287,7 +281,6 @@ export function useCompanyDashboardNavMainMenu() {
   ] as MenuItem[];
 
   const isMenuVisible = (menu: MenuItem): boolean => {
-    // Check company type visibility
     if (menu.visibleToCompanyTypes) {
       if (!menu.visibleToCompanyTypes.includes(company.type)) {
         return false;
@@ -304,7 +297,6 @@ export function useCompanyDashboardNavMainMenu() {
     return true;
   };
 
-  // Recursive function to filter menu items based on visibility. Includes submenus.
   const filterMenuItems = (menus: MenuItem[]): MenuItem[] => {
     return menus.filter(isMenuVisible).map((menu) => {
       if (menu.items) {
