@@ -92,7 +92,7 @@ export function NavUser() {
                   href={edit().url}
                   prefetch
                 >
-                  <SettingsIcon className="mr-2" />
+                  <SettingsIcon />
                   Settings
                 </Link>
               </DropdownMenuItem>

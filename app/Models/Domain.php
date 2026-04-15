@@ -2,25 +2,35 @@
 
 namespace App\Models;
 
-use App\Enums\DomainStatus;
+use App\Events\DomainUpdated;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Domain extends Model
 {
   protected $fillable = [
-    'company_id',
+    'owner_type',
+    'owner_id',
+    'subdomain',
     'domain',
-    'status',
-    'verification_token',
+    'domain_enabled',
   ];
 
   protected $casts = [
-    'status' => DomainStatus::class,
+    'domain_enabled' => 'boolean',
   ];
 
-  public function company(): BelongsTo
+  protected static function booted()
   {
-    return $this->belongsTo(Company::class);
+
+    static::updated(function ($domain) {
+      if ($domain->wasChanged('domain') || $domain->wasChanged('domain_enabled')) {
+        event(new DomainUpdated($domain));
+      }
+    });
+  }
+
+  public function owner()
+  {
+    return $this->morphTo();
   }
 }
