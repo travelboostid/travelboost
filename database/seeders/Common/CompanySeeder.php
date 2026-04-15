@@ -56,6 +56,11 @@ class CompanySeeder extends Seeder
         'subdomain' => 'john',
         'company_type' => CompanyType::AGENT,
       ],
+      [
+        'username' => 'greatchinatour',
+        'subdomain' => 'greatchinatour',
+        'company_type' => CompanyType::VENDOR,
+      ],
     ];
 
     foreach ($seeds as $seed) {
