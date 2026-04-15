@@ -33,7 +33,6 @@ export default function Profile({ profile }: ProfilePageProps) {
     address: company.address || '',
     subdomain: company.subdomain,
     photo_id: company.photo_id || undefined,
-    //09042026
     province: company.province || '',
     city: company.city || '',
     identity_id: company.identity_id || undefined,

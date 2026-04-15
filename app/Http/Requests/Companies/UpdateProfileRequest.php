@@ -25,64 +25,17 @@ class UpdateProfileRequest extends FormRequest
   public function rules(): array
   {
     return [
-      'username' => [
-        'nullable',
-        'string',
-        'max:255',
-        Rule::unique('companies', 'username')->ignore($this->company->id),
-      ],
-      'subdomain' => [
-        'nullable',
-        'string',
-        'max:255',
-        Rule::unique('domains', 'subdomain')
-          ->where(
-            fn($q) =>
-            $q->where('owner_type', Company::class)
-              ->where('owner_id', $this->company?->id)
-          ),
-      ],
-      'domain_enabled' => [
-        'sometimes',
-        'boolean',
-      ],
-      'domain' => [
-        Rule::requiredIf(fn() => $this->boolean('domain_enabled')),
-        'nullable',
-        'string',
-        'max:255',
-        'regex:/^(?=.{1,253}$)(?!-)(?:[a-zA-Z0-9-]{1,63}\.)+[a-zA-Z]{2,63}$/',
-        Rule::unique('domains', 'domain')
-          ->where(
-            fn($q) =>
-            $q->where('owner_type', Company::class)
-              ->where('owner_id', $this->company?->id)
-          ),
-      ],
-      'name' => [
-        'required',
-        'string',
-        'max:255',
-      ],
-      'phone' => [
-        'nullable',
-        'string',
-        'max:20',
-      ],
-      'customer_service_phone' => [
-        'nullable',
-        'string',
-        'max:20',
-      ],
-      'address' => [
-        'nullable',
-        'string',
-        'max:255',
-      ],
-      'photo_id' => [
-        'nullable',
-        'exists:medias,id',
-      ],
+      'username' => 'nullable|string|max:255|unique:companies,username,' . $this->company->id,
+      'subdomain' => 'nullable|string|max:255|unique:companies,subdomain,' . $this->company->id,
+      'name' => 'required|string|max:255',
+      'phone' => 'nullable|string|max:20',
+      'customer_service_phone' => 'nullable|string|max:20',
+      'address' => 'nullable|string|max:255',
+      'photo_id' => 'nullable|exists:medias,id',
+      //10042026
+      'province' => 'nullable|string|max:50',
+      'city' => 'nullable|string|max:50',
+      'identity_id' => 'nullable|exists:medias,id',
     ];
   }
 
