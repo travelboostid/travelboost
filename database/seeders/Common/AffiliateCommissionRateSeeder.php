@@ -1,6 +1,6 @@
 <?php
 
-namespace Database\Seeders;
+namespace Database\Seeders\Common;
 
 use Illuminate\Database\Seeder;
 use App\Models\AffiliateCommissionRate;
@@ -20,7 +20,7 @@ class AffiliateCommissionRateSeeder extends Seeder
 
     foreach ($rates as $rate) {
       AffiliateCommissionRate::updateOrCreate(
-        ['tier' => $rate['tier']], 
+        ['tier' => $rate['tier']],
         [
           'percentage' => $rate['percentage'],
           'is_active' => true

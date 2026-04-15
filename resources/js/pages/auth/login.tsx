@@ -8,19 +8,19 @@ import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { register } from '@/routes';
 import { store } from '@/routes/login';
-import { request } from '@/routes/password';
+// import { request } from '@/routes/password';
 import { Form, Head } from '@inertiajs/react';
 
 type Props = {
   status?: string;
-  canResetPassword: boolean;
+  // canResetPassword: boolean;
   canRegister: boolean;
   company: any;
 };
 
 export default function Login({
   status,
-  canResetPassword,
+  // canResetPassword,
   canRegister,
 }: Props) {
   return (
@@ -56,7 +56,7 @@ export default function Login({
               <div className="grid gap-2">
                 <div className="flex items-center">
                   <Label htmlFor="password">Password</Label>
-                  {canResetPassword && (
+                  {/* {canResetPassword && (
                     <TextLink
                       href={request()}
                       className="ml-auto text-sm"
@@ -64,7 +64,7 @@ export default function Login({
                     >
                       Forgot password?
                     </TextLink>
-                  )}
+                  )} */}
                 </div>
                 <Input
                   id="password"

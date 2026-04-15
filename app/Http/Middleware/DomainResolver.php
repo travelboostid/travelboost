@@ -5,14 +5,16 @@ namespace App\Http\Middleware;
 use App\Models\Company;
 use App\Models\Domain;
 use Closure;
+use Illuminate\Support\Facades\Context;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 
-class TenantResolver
+class DomainResolver
 {
   private string $appHost;
   private string $currentHost;
   private bool $isMainHost;
+  private array $internalSubdomains = ['affiliate'];
 
   public function __construct()
   {
@@ -24,7 +26,7 @@ class TenantResolver
   public function handle($request, Closure $next)
   {
     // Main host has no tenant context
-    if ($this->isMainHost) {
+    if ($this->isMainHost || $this->isInternalSubdomain()) {
       $request->attributes->set('tenant', null);
       return $next($request);
     }
@@ -32,11 +34,14 @@ class TenantResolver
     // Resolve tenant from subdomain or custom domain
     $domainObject = $this->resolveDomain();
 
+
     if ($domainObject === null) {
       return Inertia::render('errors/invalid-tenant-domain')
         ->toResponse($request)
         ->setStatusCode(404);
     }
+
+    Context::add('domain', $domainObject);
 
     // TODO: support multiple tenant types in the future. For instance, affiliator
     if ($domainObject->owner instanceof Company) {
@@ -57,5 +62,15 @@ class TenantResolver
 
     // Fall back to custom domain lookup
     return Domain::where('domain', $this->currentHost)->with('owner')->first();
+  }
+
+  /** Check if the current host is an internal subdomain (e.g. affiliate) */
+  private function isInternalSubdomain(): bool
+  {
+    if (Str::endsWith($this->currentHost, '.' . $this->appHost)) {
+      $subdomain = Str::before($this->currentHost, '.' . $this->appHost);
+      return in_array($subdomain, $this->internalSubdomains);
+    }
+    return false;
   }
 }
