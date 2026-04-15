@@ -34,7 +34,6 @@ class DomainResolver
     // Resolve tenant from subdomain or custom domain
     $domainObject = $this->resolveDomain();
 
-
     if ($domainObject === null) {
       return Inertia::render('errors/invalid-tenant-domain')
         ->toResponse($request)
@@ -43,7 +42,7 @@ class DomainResolver
 
     Context::add('domain', $domainObject);
 
-    // TODO: support multiple tenant types in the future. For instance, affiliator
+    // TODO: switch usage to context
     if ($domainObject->owner instanceof Company) {
       $request->attributes->set('tenant', $domainObject->owner);
     }
