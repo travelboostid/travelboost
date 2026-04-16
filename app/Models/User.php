@@ -60,72 +60,84 @@ class User extends Authenticatable implements Customer, LaratrustUser, Wallet
     ];
 
     /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
-    protected function casts(): array
-    {
-        return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
-            'two_factor_confirmed_at' => 'datetime',
-            'status' => UserStatus::class,
-            'gender' => UserGender::class,
-        ];
-    }
+   * Get the attributes that should be cast.
+   *
+   * @return array<string, string>
+   */
+  protected function casts(): array
+  {
+    return [
+      'email_verified_at' => 'datetime',
+      'password' => 'hashed',
+      'two_factor_confirmed_at' => 'datetime',
+      'status' => UserStatus::class,
+      'gender' => UserGender::class,
+    ];
+  }
 
-    protected $appends = ['photo_url'];
+  protected $appends = ['photo_url'];
 
-    // protected $with = ['photo'];
+  // protected $with = ['photo'];
+  protected $with = ['affiliateProfile', 'roles'];
 
-    // Relationship
+  // Relationship
 
-    public function photo()
-    {
-        return $this->belongsTo(Media::class, 'photo_id');
-    }
+  public function photo()
+  {
+    return $this->belongsTo(Media::class, 'photo_id');
+  }
 
-    public function bankAccounts()
-    {
-        return $this->hasMany(BankAccount::class);
-    }
+  public function bankAccounts()
+  {
+    return $this->hasMany(BankAccount::class);
+  }
 
-    public function companies()
-    {
-        return $this->belongsToMany(Company::class, 'company_teams')
-            ->withTimestamps();
-    }
+  public function companies()
+  {
+    return $this->belongsToMany(Company::class, 'company_teams')
+      ->withTimestamps();
+  }
 
-    protected function photoUrl(): Attribute
-    {
-        return Attribute::make(
-            get: function () {
-                $files = collect($this->photo?->data['files'] ?? []);
-                $file = $files->firstWhere('code', 'small');
+  protected function photoUrl(): Attribute
+  {
+    return Attribute::make(
+      get: function () {
+        $files = collect($this->photo?->data['files'] ?? []);
+        $file = $files->firstWhere('code', 'small');
 
-                return data_get($file, 'url');
-            }
-        );
-    }
+        return data_get($file, 'url');
+      }
+    );
+  }
 
-    public function medias()
-    {
-        return $this->morphMany(Media::class, 'owner');
-    }
 
-    public function company()
-    {
-        return $this->belongsTo(Company::class, 'company_id');
-    }
+  public function medias()
+  {
+    return $this->morphMany(Media::class, 'owner');
+  }
 
-    public function bookings()
-    {
-        return $this->hasMany(Booking::class);
-    }
+  public function company()
+  {
+    return $this->belongsTo(Company::class, 'company_id');
+  }
 
-    public function savedPassengers()
-    {
-        return $this->hasMany(SavedPassenger::class);
-    }
+  public function bookings()
+  {
+    return $this->hasMany(Booking::class);
+  }
+
+  public function savedPassengers()
+  {
+    return $this->hasMany(SavedPassenger::class);
+  }
+
+  public function affiliateProfile()
+  {
+    return $this->hasOne(AffiliateProfile::class);
+  }
+
+  public function affiliateCommissionRates()
+  {
+    return $this->hasMany(AffiliateCommissionRate::class);
+  }
 }

@@ -36,7 +36,7 @@ return new class extends Migration
     Schema::create('chat_messages', function (Blueprint $table) {
       $table->id();
       $table->boolean('is_bot')->default(false);
-      $table->text('message')->default('');
+      $table->text('message')->nullable();
       $table->string('attachment_data')->nullable(); // File/image/video path
       $table->string('attachment_type')->nullable(); // 'image', 'video', 'file', etc.
       $table->timestamps();

@@ -2,7 +2,6 @@
 
 use App\Enums\CompanyType;
 use App\Enums\CompanyTeamStatus;
-use App\Enums\DomainStatus;
 use App\Enums\UserGender;
 use App\Enums\UserStatus;
 use App\Enums\VendorAgentPartnerStatus;
@@ -60,7 +59,6 @@ return new class extends Migration
       $table->enum('type', CompanyType::cases());
       $table->string('name');
       $table->string('username')->unique();
-      $table->string('subdomain')->unique();
       $table->string('email')->unique();
       $table->string(column: 'address')->default('');
       $table->string(column: 'phone')->default('');
@@ -137,7 +135,7 @@ return new class extends Migration
     Schema::create('ai_usage_logs', function (Blueprint $table) {
       $table->id();
       $table->foreignId('company_id')->constrained('companies')->cascadeOnDelete();
-      $table->foreignId('model_id')->constrained('ai_models')->nullOnDelete();
+      $table->foreignId('model_id')->nullable()->constrained('ai_models')->onDelete('set null');
       $table->unsignedInteger('input_tokens')->default(0);
       $table->unsignedInteger('output_tokens')->default(0);
       $table->decimal('cost', 16, 8)->default(0);
@@ -180,10 +178,10 @@ return new class extends Migration
 
     Schema::create('domains', function (Blueprint $table) {
       $table->id();
-      $table->foreignId('company_id')->unique()->constrained('companies')->cascadeOnDelete();
-      $table->string('domain')->unique();
-      $table->enum('status', DomainStatus::cases())->default(DomainStatus::PENDING);
-      $table->uuid('verification_token')->unique();
+      $table->morphs('owner'); // owner_type (Company, User), owner_id
+      $table->string('subdomain')->nullable()->unique();
+      $table->string('domain')->nullable()->unique();
+      $table->boolean('domain_enabled')->default(false);
       $table->timestamps();
     });
 

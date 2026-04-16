@@ -10,7 +10,6 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Me\CreateCompanyRequest;
 use App\Models\Company;
 use App\Models\CompanyTeam;
-use App\Models\Domain;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -35,9 +34,12 @@ class OnboardingController extends Controller
   {
     $user = Auth::user()->fresh();
     $validated = $request->validated();
-    $validatedCompanyDto = Arr::except($validated, ['domain']);
+    $validatedCompanyDto = Arr::except($validated, ['subdomain']);
     $validatedCompanyDto['type'] = CompanyType::AGENT;
     $company = Company::create($validatedCompanyDto);
+    $company->domain()->create([
+      'subdomain' => $validated['subdomain'],
+    ]);
     CompanyTeam::create([
       'company_id' => $company->id,
       'user_id' => $user->id,
