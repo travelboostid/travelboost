@@ -37,7 +37,7 @@ class OnboardingController extends Controller
     $validatedCompanyDto = Arr::except($validated, ['subdomain']);
     $validatedCompanyDto['type'] = CompanyType::AGENT;
     $company = Company::create($validatedCompanyDto);
-    $company->domains()->create([
+    $company->domain()->create([
       'subdomain' => $validated['subdomain'],
     ]);
     CompanyTeam::create([
