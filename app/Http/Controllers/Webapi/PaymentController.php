@@ -66,7 +66,6 @@ class PaymentController extends Controller
    * @operationId createTopupPayment
    */
   public function createTopupPayment(Request $request)
-  public function createTopupPayment(Request $request)
   {
     $validated = $request->validate([
       'owner_type' => ['required', 'in:user,company'],
@@ -92,7 +91,6 @@ class PaymentController extends Controller
 
     $user = Auth::user();
 
-    $topup = WalletTopupPayment::create([
     $topup = WalletTopupPayment::create([
       'amount' => $validated['amount'],
     ]);

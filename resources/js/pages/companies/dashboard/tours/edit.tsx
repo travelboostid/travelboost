@@ -428,7 +428,7 @@ export default function Page({ tour }: Props) {
   const buildAvailabilityPayload = () => {
     return availability.map((row, i) => ({
       company_id: company.id,
-      tour_code: tour.id, // ⚠️ di DB namanya tour_code tapi isinya id
+      tour_id: tour.id, // ⚠️ di DB namanya tour_code tapi isinya id
       schedule_id: schedules[i]?.id ?? null, // pastikan schedule punya id dari DB
       max_pax: row.max_pax,
       WP: row.WP,
@@ -1487,8 +1487,10 @@ export default function Page({ tour }: Props) {
 
                         console.log('SEND AVAILABILITY:', payload)
 
+                        //`/companies/${company.username}/dashboard/tour-availabilities`
+                        
                         router.post(
-                          `/dashboard/${company.username}/tour-availabilities`, // sesuaikan route
+                          `/companies/${company.username}/dashboard/tour-availabilities`,
                           {
                             availabilities: payload,
                           },
