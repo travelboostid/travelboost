@@ -43,6 +43,7 @@ class UpdateProfileRequest extends FormRequest
           ),
       ],
       'domain_enabled' => [
+        'sometimes',
         'boolean',
       ],
       'domain' => [
