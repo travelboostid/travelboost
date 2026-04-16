@@ -34,6 +34,8 @@ class DevelopmentSeeder extends Seeder
       TourSeeder::class,
       AffiliateCommissionRateSeeder::class,
       AffiliateSeeder::class,
+      CurrencySeeder::class,
+      PriceCategorySeeder::class,
     ]);
   }
 }

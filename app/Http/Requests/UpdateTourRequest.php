@@ -44,7 +44,7 @@ class UpdateTourRequest extends FormRequest
       //13042026
       'schedules' => 'nullable|array',
 
-      'schedules.*.departure_date' => 'required|date',
+      'schedules.*.departure_date' => 'nullable|date',
       'schedules.*.return_date' => 'nullable|date',
       'schedules.*.quota' => 'nullable|numeric',
 
@@ -63,11 +63,26 @@ class UpdateTourRequest extends FormRequest
 
   protected function prepareForValidation()
   {
-    $schedules = $this->schedules ?? [];
+    // 🔥 STEP 1: normalize empty string → null
+    $data = $this->all();
+
+    array_walk_recursive($data, function (&$value) {
+        if ($value === '') {
+            $value = null;
+        }
+    });
+
+    $this->merge($data);
+
+    // 🔥 STEP 2: baru ambil schedules yang sudah bersih
+    $schedules = $this->input('schedules', []);
 
     $clean = collect($schedules)->map(function ($schedule) {
         return [
             ...$schedule,
+
+            'departure_date' => $schedule['departure_date'] ?? null,
+            'return_date' => $schedule['return_date'] ?? null,
 
             // 🔥 FIX quota kosong
             'quota' => is_numeric($schedule['quota'] ?? null)
@@ -77,7 +92,9 @@ class UpdateTourRequest extends FormRequest
             'prices' => collect($schedule['prices'] ?? [])->map(function ($price) {
 
                 return [
-                    ...$price,
+                    'room_type_id' => is_numeric($price['room_type_id'] ?? null)
+                        ? (int) $price['room_type_id']
+                        : null,
 
                     'price' => is_numeric($price['price'] ?? null)
                         ? (int) $price['price']
@@ -97,9 +114,9 @@ class UpdateTourRequest extends FormRequest
                             : 0,
                     ],
                 ];
-            })->toArray(),
+            })->values()->toArray(),
         ];
-    })->toArray();
+    })->values()->toArray();
 
     $this->merge([
         'showprice' => (int) ($this->showprice ?? 0),

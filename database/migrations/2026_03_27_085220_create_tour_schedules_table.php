@@ -86,6 +86,8 @@ return new class extends Migration
           $table->decimal('promotion', 12, 2)->default(0);
           $table->decimal('commission_rate', 12, 2)->default(0);
           $table->decimal('commission', 12, 2)->default(0);
+
+          $table->timestamps();
         });
 
         Schema::create('tour_add_ons', function (Blueprint $table) {
@@ -95,7 +97,7 @@ return new class extends Migration
                 ->constrained('companies')
                 ->cascadeOnDelete();
 
-          $table->foreignId('tour_code')
+          $table->foreignId('tour_id')
                 ->constrained('tours')
                 ->cascadeOnDelete();
 
@@ -116,7 +118,7 @@ return new class extends Migration
                 ->constrained('companies')
                 ->cascadeOnDelete();
 
-          $table->foreignId('tour_code')
+          $table->foreignId('tour_id')
                 ->constrained('tours')
                 ->cascadeOnDelete();
 

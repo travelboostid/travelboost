@@ -108,6 +108,11 @@ class TourController extends Controller
     //dd($request->all());
     //dd($request->validated());
     //dd($request->validated()['schedules']);
+    /*dd([
+      'all' => $request->all(),
+      'validated' => $request->validated(),
+      'content' => $request->getContent()
+    ]);*/
 
     $data = $request->validated();
 
