@@ -8,6 +8,8 @@ import { ThemeProvider } from 'next-themes';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import '../css/app.css';
+import I18nProvider from './components/i18n-provider';
+import { LocaleProvider } from './components/locale-context';
 import { Toaster } from './components/ui/sonner';
 import { TooltipProvider } from './components/ui/tooltip';
 import { initializeTheme } from './hooks/use-appearance';
@@ -49,22 +51,26 @@ createInertiaApp({
 
     root.render(
       <StrictMode>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="light"
-          forcedTheme={isOnDesignerPage ? 'light' : undefined} // design page must light theme!
-          enableSystem
-          disableTransitionOnChange
-        >
-          <TooltipProvider>
-            <QueryClientProvider client={queryClient}>
-              <NuqsAdapter>
-                <App {...props} />
-              </NuqsAdapter>
-              <Toaster />
-            </QueryClientProvider>
-          </TooltipProvider>
-        </ThemeProvider>
+        <LocaleProvider>
+          <I18nProvider>
+            <ThemeProvider
+              attribute="class"
+              defaultTheme="light"
+              forcedTheme={isOnDesignerPage ? 'light' : undefined} // design page must light theme!
+              enableSystem
+              disableTransitionOnChange
+            >
+              <TooltipProvider>
+                <QueryClientProvider client={queryClient}>
+                  <NuqsAdapter>
+                    <App {...props} />
+                  </NuqsAdapter>
+                  <Toaster />
+                </QueryClientProvider>
+              </TooltipProvider>
+            </ThemeProvider>
+          </I18nProvider>
+        </LocaleProvider>
       </StrictMode>,
     );
   },

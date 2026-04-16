@@ -32,9 +32,7 @@ export default function CompanyDashboardLayout(
 
   return (
     <ChatContextProvider actor={{ type: 'company', id: company.id }}>
-      <FloatingChatWidgetContextProvider
-        initialValue={{ actor: { type: 'company', id: company.id } }}
-      >
+      <FloatingChatWidgetContextProvider>
         <SidebarProvider>
           <SidebarSection {...props} />
           <SidebarInset>

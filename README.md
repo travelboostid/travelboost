@@ -10,6 +10,7 @@ This application is designed to enhance your travel experience by providing a se
 - [Development Environment Setup](./docs/development-environment-setup.md)
 - [Deployment Guidelines](./docs/deployments.md)
 - [Architecture Overview](./docs/architecture.md)
+- [Translations](./docs/technical/translations.md)
 
 ## Getting Started
 
