@@ -17,7 +17,6 @@ class NetworkController extends Controller
     $user = Auth::user();
     $tier = $request->query('tier', 'affiliate');
 
-    // Cek apakah user yang login ini Partner
     $userProfile = AffiliateProfile::where('user_id', $user->id)->first();
     $isPartner = $userProfile && $userProfile->tier === 'partner';
 
@@ -27,35 +26,38 @@ class NetworkController extends Controller
       'users.email',
       'users.username',
       'users.created_at',
+      'ap.id as profile_id',
       'ap.phone',
-      'ap.tier'
+      'ap.tier',
+      'ap.approved_at',
+      'ap.identity_number',
+      'ap.identity_photo_path',
+      'ap.address',
+      'ap.city',
+      'ap.province',
+      'upline.name as upline_name'
     )
       ->join('affiliate_profiles as ap', 'users.id', '=', 'ap.user_id')
+      ->leftJoin('users as upline', 'ap.upline_id', '=', 'upline.id')
       ->where('ap.status', 'approved');
 
     if ($tier === 'ma') {
-      // List MA: Hanya dilihat oleh Partner
       $query->where('ap.tier', 'master_affiliate')
         ->where('ap.upline_id', $user->id);
     } else {
-      // List Affiliate
       $query->where('ap.tier', 'affiliate');
 
       if ($isPartner) {
-        // Partner melihat SEMUA affiliate di bawah MA miliknya
         $maIds = AffiliateProfile::where('upline_id', $user->id)
           ->where('tier', 'master_affiliate')
           ->pluck('user_id');
         $query->whereIn('ap.upline_id', $maIds);
       } else {
-        // MA melihat affiliate di bawah jaringannya sendiri
         $query->where('ap.upline_id', $user->id);
       }
     }
 
     $networks = $query->get()->map(function ($network) {
-
-      // Hitung Affiliator di bawahnya
       $affiliatesQuery = DB::table('affiliate_profiles')
         ->where('upline_id', $network->id)
         ->where('tier', 'affiliate')
@@ -63,20 +65,17 @@ class NetworkController extends Controller
 
       $total_affiliators = $affiliatesQuery->count();
 
-      // Tentukan pengundang agen (Dia sendiri + turunan affiliatornya)
       $referrerIds = [$network->id];
       if ($network->tier === 'master_affiliate') {
         $downlineAffiliateIds = $affiliatesQuery->pluck('user_id')->toArray();
         $referrerIds = array_merge($referrerIds, $downlineAffiliateIds);
       }
 
-      // Hitung Total Agen (di tabel companies)
       $total_agents = DB::table('companies')
         ->where('type', 'agent')
         ->whereIn('referred_by', $referrerIds)
         ->count();
 
-      // Hitung Agen Subscribed (Join companies.id ke agent_subscriptions.company_id)
       $subscribed_agents = DB::table('companies')
         ->join('agent_subscriptions', 'companies.id', '=', 'agent_subscriptions.company_id')
         ->where('companies.type', 'agent')
@@ -86,12 +85,18 @@ class NetworkController extends Controller
 
       return [
         'id' => $network->id,
+        'profile_id' => $network->profile_id,
         'name' => $network->name,
         'username' => $network->username,
         'email' => $network->email,
         'phone' => $network->phone,
+        'address' => trim($network->address . ' ' . $network->city . ' ' . $network->province),
+        'identity_number' => $network->identity_number,
+        'identity_photo_path' => $network->identity_photo_path,
+        'upline_name' => $network->upline_name,
         'tier' => $network->tier,
         'created_at' => $network->created_at,
+        'approved_at' => $network->approved_at,
         'total_affiliators' => $total_affiliators,
         'total_agents' => $total_agents,
         'subscribed_agents' => $subscribed_agents,
@@ -124,14 +129,13 @@ class NetworkController extends Controller
     return response()->json($data);
   }
 
-  // Bagian fungsi approvals yang diperbarui:
   public function approvals(Request $request)
   {
     $user = $request->user();
     $tierFilter = $request->query('tier');
 
     $query = AffiliateProfile::where('upline_id', $user->id)
-      ->where('status', 'pending')
+      ->whereIn('status', ['pending', 'rejected'])
       ->with('user')
       ->orderBy('created_at', 'desc');
 
@@ -144,9 +148,14 @@ class NetworkController extends Controller
     $pending = $query->get()->map(function ($profile) {
       return [
         'id' => $profile->id,
+        'status' => $profile->status,
         'name' => $profile->user->name ?? '-',
         'email' => $profile->user->email ?? '-',
         'username' => $profile->user->username ?? '-',
+        'phone' => $profile->phone ?? '-',
+        'address' => trim($profile->address . ' ' . $profile->city . ' ' . $profile->province),
+        'identity_number' => $profile->identity_number ?? '-',
+        'identity_photo_path' => $profile->identity_photo_path ?? null,
         'registered_at' => $profile->created_at ? $profile->created_at->format('Y-m-d') : '-',
       ];
     });
@@ -159,15 +168,22 @@ class NetworkController extends Controller
   public function approve(Request $request, $id)
   {
     $profile = AffiliateProfile::findOrFail($id);
+    $user = $request->user();
+    $userProfile = AffiliateProfile::where('user_id', $user->id)->first();
 
-    if ($profile->upline_id !== $request->user()->id) {
-      abort(403);
-    }
+    $isAuthorized = $profile->upline_id === $user->id ||
+      ($userProfile && $userProfile->tier === 'partner' && AffiliateProfile::where('user_id', $profile->upline_id)->where('upline_id', $user->id)->exists());
+
+    if (!$isAuthorized) abort(403);
 
     $profile->update([
       'status' => 'approved',
       'approved_at' => now(),
     ]);
+
+    if ($profile->user) {
+      $profile->user->update(['status' => 'active']);
+    }
 
     return back()->with('success', 'Affiliate has been approved.');
   }
@@ -175,8 +191,9 @@ class NetworkController extends Controller
   public function reject(Request $request, $id)
   {
     $profile = AffiliateProfile::findOrFail($id);
+    $user = $request->user();
 
-    if ($profile->upline_id !== $request->user()->id) {
+    if ($profile->upline_id !== $user->id) {
       abort(403);
     }
 
@@ -184,6 +201,10 @@ class NetworkController extends Controller
       'status' => 'rejected',
     ]);
 
-    return back()->with('success', 'Affiliate has been rejected.');
+    if ($profile->user) {
+      $profile->user->update(['status' => 'inactive']);
+    }
+
+    return back()->with('success', 'Account has been deactivated.');
   }
 }

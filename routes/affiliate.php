@@ -10,36 +10,12 @@ use App\Http\Controllers\Affiliate\ProfileController;
 use App\Http\Controllers\Affiliate\WalletController;
 use App\Http\Controllers\Affiliate\WalletTransactionsController;
 use App\Http\Controllers\Affiliate\WithdrawalController;
+use App\Http\Controllers\Affiliate\DashboardController;
 use App\Http\Controllers\Auth\AffiliateAuthController;
 use Illuminate\Support\Facades\Route;
 
-$domain = env('APP_HOST', 'travelboost.co.id');
-
-// =========================================================================
-// [SECTION 1] SUBDOMAIN ROUTES (ex : ma-satu.domain-asli.co.id)
-// =========================================================================
-Route::domain('{subdomain}.' . $domain)
-  ->where(['subdomain' => '^(?!www|affiliate).*$'])
-  ->group(function () {
-
-    Route::get('/', [LandingController::class, 'subdomainIndex'])->name('affiliate.subdomain.landing');
-
-    Route::prefix('affiliate')->name('affiliate.subdomain.')->group(function () {
-      Route::middleware('guest')->group(function () {
-        Route::get('/login', [AffiliateAuthController::class, 'showLogin'])->name('login');
-        Route::post('/login', [AffiliateAuthController::class, 'login'])->name('login.store');
-
-        Route::get('/register', [AffiliateAuthController::class, 'showRegister'])->name('register');
-        Route::post('/register', [AffiliateAuthController::class, 'register'])->name('register.store');
-      });
-    });
-  });
-
-// =========================================================================
-// [SECTION 2] MAIN PANEL ROUTES (affiliate.domain-asli.co.id)
-// =========================================================================
-Route::domain('affiliate.' . $domain)
-  ->prefix('affiliate')
+// hapus batasan domain agar panel bisa diakses dari subdomain manapun
+Route::prefix('affiliate')
   ->name('affiliate.panel.')
   ->group(function () {
 
@@ -61,9 +37,7 @@ Route::domain('affiliate.' . $domain)
       Route::post('/logout', [AffiliateAuthController::class, 'logout'])->name('logout');
 
       Route::middleware('verified')->prefix('dashboard')->group(function () {
-        Route::get('/', function () {
-          return inertia('affiliate/dashboard/index');
-        })->name('dashboard');
+        Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
 
         Route::prefix('setup')->name('setup.')->group(function () {
           Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
