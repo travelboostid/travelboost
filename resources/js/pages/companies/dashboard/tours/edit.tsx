@@ -199,6 +199,7 @@ export default function Page({ tour }: Props) {
       departure_date: s.departure_date ?? '',
       return_date: s.return_date ?? '',
       quota: String(s.quota ?? ''),
+      availability: s.availability || null,
       /*prices: (s.prices || []).map((p: any) => ({
         room_type_id: p.room_type_id,
         price: String(p.price ?? ''),
@@ -212,6 +213,7 @@ export default function Page({ tour }: Props) {
         },
       })),*/
       prices: (s.prices || []).map((p: any) => ({
+        id: p.id,
         room_type_id: p.price_category_id,
 
         price: String(p.price ?? ''),
@@ -237,6 +239,11 @@ export default function Page({ tour }: Props) {
     }))
   )
 
+  // 🔥 TAMBAHKAN DI SINI 17042026
+/*useEffect(() => {
+  console.log('FROM SERVER:', tour.schedules)
+}, [])*/
+
   useEffect(() => {
     setData('schedules', schedules)
   }, [schedules])
@@ -245,6 +252,7 @@ export default function Page({ tour }: Props) {
       setSchedules([
         ...schedules,
         {
+          id: null,
           departure_date: '',
           return_date: '',
           quota: '',
@@ -371,33 +379,41 @@ export default function Page({ tour }: Props) {
   }
 
   const availabilityData = useMemo(() => {
-    return schedules.map((s, i) => {
-      const max_pax = Number(s.quota || 0)
+    return schedules.map((s) => {
+      const a = s.availability || {}
+
+      const max_pax = Number(a.max_pax ?? s.quota ?? 0)
 
       return {
-        id: i,
+        id: s.id,
         schedule: `${formatDate(s.departure_date)} → ${formatDate(s.return_date)}`,
+
         max_pax,
-        WP: 0,
-        DP: 0,
-        FP: 0,
-        RS: 0,
-        CA: 0,
-        RF: 0,
-        EX: 0,
-        WL: 0,
-        available: Number(s.quota || 0),
+
+        WP: Number(a.WP || 0),
+        DP: Number(a.DP || 0),
+        FP: Number(a.FP || 0),
+        RS: Number(a.RS || 0),
+        CA: Number(a.CA || 0),
+        RF: Number(a.RF || 0),
+        EX: Number(a.EX || 0),
+        WL: Number(a.WL || 0),
+        available: Number(a.available || 0),
       }
     })
   }, [schedules])
 
-  const [availability, setAvailability] = useState(availabilityData)
-
-  const [savingAvailability, setSavingAvailability] = useState(false)
+  const [availability, setAvailability] = useState([])
 
   useEffect(() => {
     setAvailability(availabilityData)
-  }, [schedules])
+  }, [availabilityData])
+
+  const [savingAvailability, setSavingAvailability] = useState(false)
+
+  /*useEffect(() => {
+    setAvailability(availabilityData)
+  }, [schedules])*/
 
   const updateAvailability = (
     index: number,
@@ -458,7 +474,7 @@ export default function Page({ tour }: Props) {
         onSuccess={handleSuccess}
       > */}
       <form
-        onSubmit={(e) => {
+        /*onSubmit={(e) => {
           e.preventDefault()
 
           console.log('SEND DATA:', {
@@ -483,7 +499,32 @@ export default function Page({ tour }: Props) {
               handleSuccess()
               setActiveTab('schedule')
             },
-          })
+          })*/
+
+          onSubmit={(e) => {
+            e.preventDefault()
+
+            const payload = {
+              ...data,
+              showprice: Number(rawPrice),
+              promote_price: Number(rawPrice1),
+              schedules: schedules, // ✅ ini yang benar
+            }
+
+            //console.log('SEND DATA:', payload)
+
+            put(update.url({
+              company: company.username,
+              tour: tour.id
+            }), {
+              data: payload, // 🔥 WAJIB
+              forceFormData: false,
+              onSuccess: () => {
+                handleSuccess()
+                setActiveTab('schedule')
+              },
+            })
+            
           /*put(update.url({
             company: company.username,
             tour: tour.id
@@ -1352,108 +1393,99 @@ export default function Page({ tour }: Props) {
 
                             {/* max pax */}
                             <td className="p-3">
-                              <Input
-                                type="number"
-                                className="no-spinner text-right"
+                              <MoneyInput
+                                className="text-right"
                                 value={row.max_pax}
-                                onChange={(e) =>
-                                  updateAvailability(i, 'max_pax', Number(e.target.value))
+                                onChange={(val) =>
+                                  updateAvailability(i, 'max_pax', Number(val))
                                 }
                               />
                             </td>
 
                             {/* WP */}
                             <td className="p-3">
-                              <Input
-                                type="number"
-                                className="no-spinner text-right"
+                              <MoneyInput
+                                className="text-right"
                                 value={row.WP}
-                                onChange={(e) =>
-                                  updateAvailability(i, 'WP', Number(e.target.value))
+                                onChange={(val) =>
+                                  updateAvailability(i, 'WP', Number(val))
                                 }
                               />
                             </td>
 
                             {/* DP */}
                             <td className="p-3">
-                              <Input
-                                type="number"
-                                className="no-spinner text-right"
+                              <MoneyInput
+                                className="text-right"
                                 value={row.DP}
-                                onChange={(e) =>
-                                  updateAvailability(i, 'DP', Number(e.target.value))
+                                onChange={(val) =>
+                                  updateAvailability(i, 'DP', Number(val))
                                 }
                               />
                             </td>
 
                             {/* FP */}
                             <td className="p-3">
-                              <Input
-                                type="number"
-                                className="no-spinner text-right"
+                              <MoneyInput
+                                className="text-right"
                                 value={row.FP}
-                                onChange={(e) =>
-                                  updateAvailability(i, 'FP', Number(e.target.value))
+                                onChange={(val) =>
+                                  updateAvailability(i, 'FP', Number(val))
                                 }
                               />
                             </td>
 
                             {/* RS */}
                             <td className="p-3">
-                              <Input
-                                type="number"
-                                className="no-spinner text-right"
+                              <MoneyInput
+                                className="text-right"
                                 value={row.RS}
-                                onChange={(e) =>
-                                  updateAvailability(i, 'RS', Number(e.target.value))
+                                onChange={(val) =>
+                                  updateAvailability(i, 'RS', Number(val))
                                 }
                               />
                             </td>
 
                             {/* CA */}
                             <td className="p-3">
-                              <Input
-                                type="number"
-                                className="no-spinner text-right"
+                              <MoneyInput
+                                className="text-right"
                                 value={row.CA}
-                                onChange={(e) =>
-                                  updateAvailability(i, 'CA', Number(e.target.value))
+                                onChange={(val) =>
+                                  updateAvailability(i, 'CA', Number(val))
                                 }
                               />
                             </td>
 
                             {/* RF */}
                             <td className="p-3">
-                              <Input
-                                type="number"
-                                className="no-spinner text-right"
+                              <MoneyInput
+                                className="text-right"
                                 value={row.RF}
-                                onChange={(e) =>
-                                  updateAvailability(i, 'RF', Number(e.target.value))
+                                onChange={(val) =>
+                                  updateAvailability(i, 'RF', Number(val))
                                 }
                               />
                             </td>
 
                             {/* EX */}
                             <td className="p-3">
-                              <Input
-                                type="number"
-                                className="no-spinner text-right"
+                              <MoneyInput
+                                className="text-right"
                                 value={row.EX}
-                                onChange={(e) =>
-                                  updateAvailability(i, 'EX', Number(e.target.value))
+                                onChange={(val) =>
+                                  updateAvailability(i, 'EX', Number(val))
                                 }
                               />
                             </td>
 
                             {/* WL */}
                             <td className="p-3">
-                              <Input
-                                type="number"
-                                className="no-spinner text-right"
+                              <MoneyInput
+                                className="text-right"
                                 value={row.WL}
-                                onChange={(e) =>
-                                  updateAvailability(i, 'WL', Number(e.target.value))
+                                onChange={(val) =>
+                                  updateAvailability(i, 'WL', Number(val))
                                 }
                               />
                             </td>

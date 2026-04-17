@@ -22,6 +22,11 @@ class TourSchedule extends Model
         'note',
     ];
 
+    public function availability()
+    {
+        return $this->hasOne(TourAvailability::class, 'schedule_id');
+    }
+
     public function prices()
     {
         return $this->hasMany(TourPrice::class, 'schedule_id');
