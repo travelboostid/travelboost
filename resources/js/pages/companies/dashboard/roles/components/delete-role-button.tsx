@@ -42,10 +42,10 @@ export default function DeleteRoleButton({ role }: { role: any }) {
         <Tooltip>
           <TooltipTrigger>
             <Button
-              disabled={shouldDisabled}
-              variant="outline"
+              variant="ghost"
               size="icon"
-              className="h-8 w-8 text-destructive"
+              className="rounded-full text-destructive"
+              disabled={shouldDisabled}
               aria-label="Delete role"
             >
               <Trash2Icon className="size-4" />
@@ -56,7 +56,7 @@ export default function DeleteRoleButton({ role }: { role: any }) {
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Delete {role.name}?</AlertDialogTitle>
+          <AlertDialogTitle>Delete {role.display_name}?</AlertDialogTitle>
           <AlertDialogDescription>
             This will permanently delete the role. This action cannot be undone.
           </AlertDialogDescription>

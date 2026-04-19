@@ -77,7 +77,7 @@ export function useCompanyDashboardNavMainMenu() {
           urlOrAction: `/companies/${company.username}/dashboard/vendors/${vendor.username}/tours`,
         })) || [],
       visibleToCompanyTypes: ['agent'],
-      visibleToPermissions: ['tour.read'],
+      visibleToPermissions: ['tour.query'],
     },
     {
       id: 'agent-registrations',
@@ -114,7 +114,7 @@ export function useCompanyDashboardNavMainMenu() {
         },
       ],
       visibleToCompanyTypes: ['vendor'],
-      visibleToPermissions: ['tour.read'],
+      visibleToPermissions: ['tour.query'],
     },
     {
       id: 'tours',
@@ -144,7 +144,7 @@ export function useCompanyDashboardNavMainMenu() {
         },
       ],
       visibleToCompanyTypes: ['agent'],
-      visibleToPermissions: ['tour.read'],
+      visibleToPermissions: ['tour.query'],
     },
     {
       id: 'customers',
@@ -152,7 +152,7 @@ export function useCompanyDashboardNavMainMenu() {
       urlOrAction: `/companies/${company.username}/dashboard/customers`,
       icon: BookUserIcon,
       visibleToCompanyTypes: ['agent'],
-      visibleToPermissions: ['user.read'],
+      visibleToPermissions: ['user.query'],
     },
     {
       id: 'funds',
@@ -187,7 +187,7 @@ export function useCompanyDashboardNavMainMenu() {
         },
       ],
       visibleToCompanyTypes: ['agent', 'vendor'],
-      visibleToPermissions: ['wallet.read'],
+      visibleToPermissions: ['wallet.query'],
     },
     {
       id: 'marketings',
@@ -276,7 +276,7 @@ export function useCompanyDashboardNavMainMenu() {
         },
       ],
       visibleToCompanyTypes: ['agent', 'vendor'],
-      visibleToPermissions: ['company.read'],
+      visibleToPermissions: ['company.query'],
     },
   ] as MenuItem[];
 
