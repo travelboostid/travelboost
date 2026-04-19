@@ -10,6 +10,7 @@ import {
   AvatarGroupCount,
   AvatarImage,
 } from '../ui/avatar';
+import EmptyChat from './empty-chat';
 import {
   useChatContext,
   useChatRooms,
@@ -84,6 +85,10 @@ export default function ChatList({ className }: { className?: string }) {
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [actor]);
+
+  if (!rooms.length) {
+    return <EmptyChat />;
+  }
 
   return (
     <div className={cn('divide-y overflow-y-auto', className)}>

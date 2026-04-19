@@ -40,8 +40,8 @@ export default function SelectAiModel({
         <SelectGroup>
           <SelectLabel>AI Model</SelectLabel>
           {data?.data.map((cat) => (
-            <SelectItem key={cat.id} value={cat.id.toString()}>
-              {cat.code}
+            <SelectItem key={cat.id} value={cat.id.toString()} className="flex">
+              <div>{cat.code}</div>
             </SelectItem>
           ))}
         </SelectGroup>

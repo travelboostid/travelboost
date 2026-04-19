@@ -24,9 +24,7 @@ class UpdateChatbotRequest extends FormRequest
     return [
       'chatbot_enabled' => 'sometimes|boolean',
       'chatbot_model_id' => 'sometimes|exists:ai_models,id',
-      'chatbot_tone' => 'sometimes|string|in:professional,friendly,casual,enthusiastic',
-      'chatbot_emoji_usage' => 'sometimes|string|in:none,minimal,moderate,expressive',
-      'chatbot_personality' => 'sometimes|string|in:assistant,sales,support,travel_consultant',
+      'chatbot_response_style' => 'sometimes|string|in:professional,friendly,casual',
       'chatbot_default_language' => 'sometimes|string|in:en,id,auto'
     ];
   }
