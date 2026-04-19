@@ -246,6 +246,7 @@ class ChatbotAgent implements Agent, Conversational
       'general' => $this->handleGeneralIntent($detected),
       default => null,
     };
+  }
 
   private function getCompany(): ?Company
   {
@@ -336,7 +337,7 @@ class ChatbotAgent implements Agent, Conversational
     $response = $this->prompt(prompt: $prompt, model: $this->chatbotModel->code);
 
     // Save the bot's response
-    $this->saveBotMessage($response->text, $receiver, [
+    $this->saveBotMessage($response->text, [
       'attachment_type' => 'bot-hints',
       'attachment_data' => "This response is based on detected search filters: " . json_encode($filters),
     ]);
