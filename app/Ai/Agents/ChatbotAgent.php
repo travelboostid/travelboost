@@ -184,13 +184,6 @@ class ChatbotAgent implements Agent, Conversational
 
   public function messages(): iterable
   {
-    // Retrieve the last 10 messages in reverse order
-    $rawMessages = $this->message->room->messages()
-      ->latest()
-      ->take(10)
-      ->get()
-      ->reverse();
-
     return Arr::map($this->chatMessages->toArray(), function ($rawMessage) {
       $msg = $rawMessage['message'];
 
