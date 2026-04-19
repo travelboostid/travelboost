@@ -86,8 +86,8 @@ class CompanySeeder extends Seeder
         'status' => CompanyTeamStatus::ACTIVE,
         'is_owner' => true,
       ]);
-      $team = Team::where('name', "company:{$company->id}")->first();
-      $superadmin = Role::where('name', "company:{$company->id}:superadmin")->first();
+      $team = Team::where('name', "company:{$company->id}")->firstOrCreate();
+      $superadmin = Role::where('name', "company:{$company->id}:superadmin")->firstOrCreate();
       $user->addRole($superadmin, $team);
 
       if ($company['type'] === CompanyType::AGENT) {
