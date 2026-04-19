@@ -224,15 +224,7 @@ class ChatbotAgent implements Agent, Conversational
   public function reply()
   {
     // Exit if the message is from a bot or not in a private room
-    if ($this->message->is_bot || $this->message->room->type !== 'private') {
-      return;
-    }
-
-    $receiver = $this->getReceiver();
-    if (!$receiver) {
-      return;
-    }
-    if (!$receiver->member->settings?->chatbot_enabled) {
+    if (!$this->shouldRespond) {
       return;
     }
 
@@ -246,26 +238,8 @@ class ChatbotAgent implements Agent, Conversational
       'general' => $this->handleGeneralIntent($detected),
       default => null,
     };
-  }
 
-  private function getCompany(): ?Company
-  {
-    $receiver = $this->getReceiver();
-    return $receiver?->member_type === 'company' ? $receiver->member : null;
-  }
-
-  private function getReceiver(): ?object
-  {
-    // Get the sender of the message
-    $sender = $this->message->room->members()
-      ->where('member_id', $this->message->sender_id)
-      ->where('member_type', $this->message->sender_type)
-      ->first();
-
-    // Return the first member that is not the sender
-    return $this->message->room->members()
-      ->where('id', '!=', $sender?->id)
-      ->first();
+    $this->saveUsageLog();
   }
 
   private function detectIntent(): AgentResponse
