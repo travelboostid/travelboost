@@ -6,6 +6,7 @@ use App\Models\Permission;
 use App\Models\Role;
 use App\Models\Team;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Arr;
 
 class RolePermissionSeeder extends Seeder
 {
@@ -15,40 +16,7 @@ class RolePermissionSeeder extends Seeder
       'name' => 'company:0',
       'display_name' => 'Travelboost',
     ]);
-    $permissions = [
-      'user.create',
-      'user.read',
-      'user.update',
-      'user.delete',
-
-      'company.create',
-      'company.read',
-      'company.update',
-      'company.delete',
-
-      'company.setting.read',
-      'company.setting.update',
-
-      'company.team.create',
-      'company.team.read',
-      'company.team.update',
-      'company.team.delete',
-
-      'wallet.create',
-      'wallet.read',
-      'wallet.update',
-      'wallet.delete',
-
-      'tour.create',
-      'tour.read',
-      'tour.update',
-      'tour.delete',
-
-      'tour.category.create',
-      'tour.category.read',
-      'tour.category.update',
-      'tour.category.delete',
-    ];
+    $permissions = config('travelboost.permissions');
 
     $superadmin = Role::firstOrCreate([
       'name' => 'company:0:superadmin',
@@ -56,9 +24,11 @@ class RolePermissionSeeder extends Seeder
     ]);
     foreach ($permissions as $permission) {
       Permission::firstOrCreate([
-        'name' => $permission,
+        'name' => $permission['name'],
+        'display_name' => $permission['display_name'],
+        'description' => $permission['description'],
       ]);
     }
-    $superadmin->syncPermissions($permissions);
+    $superadmin->syncPermissions(Permission::all());
   }
 }
