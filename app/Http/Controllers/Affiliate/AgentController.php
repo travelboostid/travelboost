@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Affiliate;
 
 use App\Http\Controllers\Controller;
+use App\Models\AffiliateProfile;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
@@ -14,17 +15,17 @@ class AgentController extends Controller
   public function index(Request $request)
   {
     $user = Auth::user();
-    $profile = DB::table('affiliate_profiles')->where('user_id', $user->id)->first();
+    $profile = AffiliateProfile::where('user_id', $user->id)->first();
     $tier = $profile ? $profile->tier : 'affiliate';
 
     $allowedIds = [$user->id];
 
     if ($tier === 'partner') {
-      $level1_Ids = DB::table('affiliate_profiles')->where('upline_id', $user->id)->pluck('user_id')->toArray();
-      $level2_Ids = !empty($level1_Ids) ? DB::table('affiliate_profiles')->whereIn('upline_id', $level1_Ids)->pluck('user_id')->toArray() : [];
+      $level1_Ids = AffiliateProfile::where('upline_id', $user->id)->pluck('user_id')->toArray();
+      $level2_Ids = !empty($level1_Ids) ? AffiliateProfile::whereIn('upline_id', $level1_Ids)->pluck('user_id')->toArray() : [];
       $allowedIds = array_merge($allowedIds, $level1_Ids, $level2_Ids);
     } elseif (in_array($tier, ['master_affiliate', 'master-affiliate'])) {
-      $level1_Ids = DB::table('affiliate_profiles')->where('upline_id', $user->id)->pluck('user_id')->toArray();
+      $level1_Ids = AffiliateProfile::where('upline_id', $user->id)->pluck('user_id')->toArray();
       $allowedIds = array_merge($allowedIds, $level1_Ids);
     }
 

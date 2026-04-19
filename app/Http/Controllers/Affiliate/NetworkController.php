@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Affiliate;
 
 use App\Http\Controllers\Controller;
 use App\Models\AffiliateProfile;
+use App\Models\Company;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -58,8 +59,8 @@ class NetworkController extends Controller
     }
 
     $networks = $query->get()->map(function ($network) {
-      $affiliatesQuery = DB::table('affiliate_profiles')
-        ->where('upline_id', $network->id)
+      $affiliatesQuery = AffiliateProfile
+        ::where('upline_id', $network->id)
         ->where('tier', 'affiliate')
         ->where('status', 'approved');
 
@@ -71,17 +72,17 @@ class NetworkController extends Controller
         $referrerIds = array_merge($referrerIds, $downlineAffiliateIds);
       }
 
-      $total_agents = DB::table('companies')
-        ->where('type', 'agent')
+      $total_agents = Company::where('type', 'agent')
         ->whereIn('referred_by', $referrerIds)
         ->count();
 
-      $subscribed_agents = DB::table('companies')
-        ->join('agent_subscriptions', 'companies.id', '=', 'agent_subscriptions.company_id')
-        ->where('companies.type', 'agent')
-        ->whereIn('companies.referred_by', $referrerIds)
-        ->whereNotNull('agent_subscriptions.package_id')
+      $subscribed_agents = Company::where('type', 'agent')
+        ->whereIn('referred_by', $referrerIds)
+        ->whereHas('agentSubscription', function ($q) {
+          $q->whereNotNull('package_id');
+        })
         ->count();
+
 
       return [
         'id' => $network->id,
