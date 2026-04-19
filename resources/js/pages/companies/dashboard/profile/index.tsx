@@ -16,6 +16,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { Switch } from '@/components/ui/switch';
 import { extractImageSrc } from '@/lib/utils';
 import { Head, useForm } from '@inertiajs/react';
+import { FormattedMessage, useIntl } from 'react-intl';
 import { toast } from 'sonner';
 
 export type ProfilePageProps = {
@@ -23,7 +24,7 @@ export type ProfilePageProps = {
 };
 
 export default function Profile({ profile }: ProfilePageProps) {
-  console.log('profile', profile);
+  const intl = useIntl();
   const form = useForm({
     name: company.name,
     email: company.email,
@@ -51,12 +52,15 @@ export default function Profile({ profile }: ProfilePageProps) {
 
   return (
     <CompanyDashboardLayout
-      breadcrumb={[{ title: 'Settings' }, { title: 'Profile' }]}
+      breadcrumb={[
+        { title: intl.formatMessage({ defaultMessage: 'Settings' }) },
+        { title: intl.formatMessage({ defaultMessage: 'Profile' }) },
+      ]}
       openMenuIds={['settings']}
       activeMenuIds={[`settings.profile`]}
       containerClassName=""
     >
-      <Head title="Profile" />
+      <Head title={intl.formatMessage({ defaultMessage: 'Profile' })} />
 
       <form
         onSubmit={handleSubmit}
@@ -92,7 +96,9 @@ export default function Profile({ profile }: ProfilePageProps) {
             <InputError message={form.errors.name} className="mt-2" />
           </div>
           <div className="grid gap-2 col-span-2">
-            <Label htmlFor="name">Company Name</Label>
+            <Label htmlFor="name">
+              <FormattedMessage defaultMessage="Company Name" />
+            </Label>
             <Input
               id="name"
               type="text"
@@ -101,7 +107,9 @@ export default function Profile({ profile }: ProfilePageProps) {
               tabIndex={1}
               autoComplete="name"
               name="name"
-              placeholder="Professional Travel Agency"
+              placeholder={intl.formatMessage({
+                defaultMessage: 'Professional Travel Agency',
+              })}
               value={form.data.name}
               onChange={(e) => form.setData('name', e.target.value)}
             />
@@ -109,7 +117,9 @@ export default function Profile({ profile }: ProfilePageProps) {
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="email">Company Email</Label>
+            <Label htmlFor="email">
+              <FormattedMessage defaultMessage="Company Email" />
+            </Label>
             <Input
               id="email"
               type="email"
@@ -118,7 +128,9 @@ export default function Profile({ profile }: ProfilePageProps) {
               tabIndex={2}
               autoComplete="email"
               name="email"
-              placeholder="email@example.com"
+              placeholder={intl.formatMessage({
+                defaultMessage: 'email@example.com',
+              })}
               value={form.data.email}
               onChange={(e) => form.setData('email', e.target.value)}
             />
@@ -126,7 +138,9 @@ export default function Profile({ profile }: ProfilePageProps) {
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="username">Company Username</Label>
+            <Label htmlFor="username">
+              <FormattedMessage defaultMessage="Company Username" />
+            </Label>
             <Input
               id="username"
               type="text"
@@ -148,7 +162,9 @@ export default function Profile({ profile }: ProfilePageProps) {
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="phone">Company Phone</Label>
+            <Label htmlFor="phone">
+              <FormattedMessage defaultMessage="Company Phone" />
+            </Label>
             <Input
               id="phone"
               type="text"
@@ -157,7 +173,9 @@ export default function Profile({ profile }: ProfilePageProps) {
               tabIndex={1}
               autoComplete="tel"
               name="phone"
-              placeholder="Phone number"
+              placeholder={intl.formatMessage({
+                defaultMessage: 'Phone number',
+              })}
               value={form.data.phone}
               onChange={(e) => form.setData('phone', e.target.value)}
             />
@@ -166,7 +184,7 @@ export default function Profile({ profile }: ProfilePageProps) {
 
           <div className="grid gap-2">
             <Label htmlFor="customer_service_phone">
-              Customer Service Phone
+              <FormattedMessage defaultMessage="Customer Service Phone" />
             </Label>
             <Input
               id="customer_service_phone"
@@ -176,7 +194,9 @@ export default function Profile({ profile }: ProfilePageProps) {
               tabIndex={1}
               autoComplete="tel"
               name="customer_service_phone"
-              placeholder="Phone number"
+              placeholder={intl.formatMessage({
+                defaultMessage: 'Phone number',
+              })}
               value={form.data.customer_service_phone}
               onChange={(e) =>
                 form.setData('customer_service_phone', e.target.value)
@@ -189,9 +209,11 @@ export default function Profile({ profile }: ProfilePageProps) {
           </div>
 
           <div className="grid gap-2 col-span-2">
-            <Label htmlFor="address">Company Address</Label>
+            <Label htmlFor="address">
+              <FormattedMessage defaultMessage="Company Address" />
+            </Label>
             <FieldDescription>
-              Enter the full address of your company.
+              <FormattedMessage defaultMessage="Enter the full address of your company." />
             </FieldDescription>
             <Input
               id="address"
@@ -201,7 +223,9 @@ export default function Profile({ profile }: ProfilePageProps) {
               tabIndex={1}
               autoComplete="address"
               name="address"
-              placeholder="Full address"
+              placeholder={intl.formatMessage({
+                defaultMessage: 'Full address',
+              })}
               value={form.data.address}
               onChange={(e) => form.setData('address', e.target.value)}
             />
@@ -280,10 +304,11 @@ export default function Profile({ profile }: ProfilePageProps) {
           </div>
 
           <div className="grid gap-2 col-span-2">
-            <Label htmlFor="subdomain">Subdomain</Label>
+            <Label htmlFor="subdomain">
+              <FormattedMessage defaultMessage="Subdomain" />
+            </Label>
             <FieldDescription>
-              This URL will point to your public tour catalog. You can setup
-              custom domain like <code>example.com</code> later.
+              <FormattedMessage defaultMessage="This URL will point to your public tour catalog. You can setup custom domain like example.com later." />
             </FieldDescription>
             <InputGroup>
               <InputGroupInput
@@ -294,7 +319,7 @@ export default function Profile({ profile }: ProfilePageProps) {
                 tabIndex={1}
                 autoComplete="subdomain"
                 name="subdomain"
-                placeholder="example"
+                placeholder={intl.formatMessage({ defaultMessage: 'example' })}
                 value={form.data.subdomain}
                 onChange={(e) => form.setData('subdomain', e.target.value)}
               />
@@ -311,7 +336,9 @@ export default function Profile({ profile }: ProfilePageProps) {
           <Separator className="col-span-2" />
           <div className="grid gap-2 col-span-2">
             <div className="flex gap-2">
-              <Label htmlFor="domain">Custom Domain</Label>
+              <Label htmlFor="domain">
+                <FormattedMessage defaultMessage="Custom Domain" />
+              </Label>
               <Switch
                 checked={form.data.domain_enabled}
                 onCheckedChange={(checked) =>
@@ -320,10 +347,7 @@ export default function Profile({ profile }: ProfilePageProps) {
               />
             </div>
             <FieldDescription>
-              You can setup custom domain like <code>example.com</code> that
-              points to your landing page and public tour catalog. This requires
-              additional DNS configuration. You can also use the default
-              subdomain provided by the system.
+              <FormattedMessage defaultMessage="You can setup custom domain like example.com that points to your landing page and public tour catalog. This requires additional DNS configuration. You can also use the default subdomain provided by the system." />
             </FieldDescription>
             <div className="flex gap-2">
               {form.data.domain_enabled ? (
@@ -341,7 +365,7 @@ export default function Profile({ profile }: ProfilePageProps) {
                 />
               ) : (
                 <div className="text-muted-foreground text-xs">
-                  Custom domain is not enabled.
+                  <FormattedMessage defaultMessage="Custom domain is not enabled." />
                 </div>
               )}
             </div>
@@ -357,7 +381,7 @@ export default function Profile({ profile }: ProfilePageProps) {
               data-test="register-user-button"
             >
               {form.processing && <Spinner />}
-              Update Profile
+              <FormattedMessage defaultMessage="Save Changes" />
             </Button>
           </div>
         </div>

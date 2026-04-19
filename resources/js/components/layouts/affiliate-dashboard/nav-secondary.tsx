@@ -53,7 +53,7 @@ export function NavSecondary({
           <SidebarMenuItem>
             <SidebarMenuButton asChild>
               <a
-                href="https://dev.travelboost.co.id"
+                href="#"
                 target="_blank"
                 rel="noreferrer"
                 className="flex items-center justify-between w-full"
