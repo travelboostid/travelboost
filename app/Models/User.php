@@ -12,6 +12,7 @@ use Bavix\Wallet\Interfaces\Wallet;
 use Bavix\Wallet\Traits\CanPay;
 use Bavix\Wallet\Traits\HasWallet;
 use Bavix\Wallet\Traits\HasWallets;
+use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -20,45 +21,45 @@ use Laratrust\Contracts\LaratrustUser;
 use Laratrust\Traits\HasRolesAndPermissions;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 
-class User extends Authenticatable implements Customer, Wallet, LaratrustUser
+class User extends Authenticatable implements Customer, LaratrustUser, Wallet
 {
-  /** @use HasFactory<\Database\Factories\UserFactory> */
-  use HasFactory, Notifiable, TwoFactorAuthenticatable, HasRolesAndPermissions, CanPay, HasWallet, HasWallets, HasBankAccounts;
+    /** @use HasFactory<UserFactory> */
+    use CanPay, HasBankAccounts, HasFactory, HasRolesAndPermissions, HasWallet, HasWallets, Notifiable, TwoFactorAuthenticatable;
 
-  /**
-   * The attributes that are mass assignable.
-   *
-   * @var list<string>
-   */
-  protected $fillable = [
-    'name',
-    'username',
-    'email',
-    'password',
-    'phone',
-    'address',
-    'photo_id',
-    'company_id',
-    'gender',
-    'status',
-    'meta',
-    'note',
-  ];
+    /**
+     * The attributes that are mass assignable.
+     *
+     * @var list<string>
+     */
+    protected $fillable = [
+        'name',
+        'username',
+        'email',
+        'password',
+        'phone',
+        'address',
+        'photo_id',
+        'company_id',
+        'gender',
+        'status',
+        'meta',
+        'note',
+    ];
 
-  /**
-   * The attributes that should be hidden for serialization.
-   *
-   * @var list<string>
-   */
-  protected $hidden = [
-    'password',
-    'two_factor_secret',
-    'two_factor_recovery_codes',
-    'remember_token',
-    'photo'
-  ];
+    /**
+     * The attributes that should be hidden for serialization.
+     *
+     * @var list<string>
+     */
+    protected $hidden = [
+        'password',
+        'two_factor_secret',
+        'two_factor_recovery_codes',
+        'remember_token',
+        'photo',
+    ];
 
-  /**
+    /**
    * Get the attributes that should be cast.
    *
    * @return array<string, string>
@@ -103,10 +104,12 @@ class User extends Authenticatable implements Customer, Wallet, LaratrustUser
       get: function () {
         $files = collect($this->photo?->data['files'] ?? []);
         $file = $files->firstWhere('code', 'small');
+
         return data_get($file, 'url');
       }
     );
   }
+
 
   public function medias()
   {
@@ -116,6 +119,16 @@ class User extends Authenticatable implements Customer, Wallet, LaratrustUser
   public function company()
   {
     return $this->belongsTo(Company::class, 'company_id');
+  }
+
+  public function bookings()
+  {
+    return $this->hasMany(Booking::class);
+  }
+
+  public function savedPassengers()
+  {
+    return $this->hasMany(SavedPassenger::class);
   }
 
   public function affiliateProfile()
