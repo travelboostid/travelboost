@@ -37,6 +37,7 @@ export interface TourResource {
   showprice: string;
   earlybird: string;
   earlybird_note: string;
+  currency: string;
   company_id: number;
   category_id: TourResourceCategoryId;
   image_id: TourResourceImageId;

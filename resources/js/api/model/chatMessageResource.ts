@@ -7,6 +7,7 @@
 import type { ChatMessageResourceSenderType } from './chatMessageResourceSenderType';
 import type { ChatMessageResourceSenderId } from './chatMessageResourceSenderId';
 import type { ChatMessageResourceUserId } from './chatMessageResourceUserId';
+import type { ChatMessageResourceMessage } from './chatMessageResourceMessage';
 import type { ChatMessageResourceAttachmentData } from './chatMessageResourceAttachmentData';
 import type { ChatMessageResourceAttachmentType } from './chatMessageResourceAttachmentType';
 import type { ChatMessageResourceReplyTo } from './chatMessageResourceReplyTo';
@@ -22,7 +23,7 @@ export interface ChatMessageResource {
   sender_type: ChatMessageResourceSenderType;
   sender_id: ChatMessageResourceSenderId;
   user_id: ChatMessageResourceUserId;
-  message: string;
+  message: ChatMessageResourceMessage;
   attachment_data: ChatMessageResourceAttachmentData;
   attachment_type: ChatMessageResourceAttachmentType;
   is_bot: string;
