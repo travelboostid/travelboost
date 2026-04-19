@@ -72,9 +72,9 @@ const dict = {
     step4D: 'Komisi masuk wallet & siap ditarik.',
 
     advTitle: 'Keunggulan Program Afiliasi TravelBoost',
-    adv1Title: 'Komisi 10% Flat & Transparan',
+    adv1Title: 'Komisi 10% - 15% Flat & Transparan',
     adv1Desc:
-      'Hitungan komisi jelas dari nilai transaksi, tanpa potongan tersembunyi.',
+      'Hitungan komisi jelas dari nilai subscription, tanpa potongan tersembunyi.',
     adv2Title: 'Nol Modal, Nol Risiko',
     adv2Desc: 'Tidak perlu beli produk atau biaya pendaftaran. Langsung mulai.',
     adv3Title: 'Pembayaran Otomatis via Wallet',
@@ -168,9 +168,9 @@ const dict = {
     step4D: 'Commission enters wallet & ready to withdraw.',
 
     advTitle: 'TravelBoost Affiliate Program Advantages',
-    adv1Title: 'Flat 10% Transparent Commission',
+    adv1Title: 'Flat 10% - 15% Transparent Commission',
     adv1Desc:
-      'Clear commission calculation from transaction value, no hidden deductions.',
+      'Clear commission calculation from subscription value, no hidden deductions.',
     adv2Title: 'Zero Capital, Zero Risk',
     adv2Desc: 'No need to buy products or registration fees. Start instantly.',
     adv3Title: 'Automated Wallet Payment',

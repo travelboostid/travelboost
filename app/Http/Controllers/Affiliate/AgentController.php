@@ -3,130 +3,82 @@
 namespace App\Http\Controllers\Affiliate;
 
 use App\Http\Controllers\Controller;
+use App\Models\AffiliateProfile;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
-use Carbon\Carbon;
+use App\Models\Company;
 
 class AgentController extends Controller
 {
   public function index(Request $request)
   {
     $user = Auth::user();
-
-    // 1. Dapatkan profil affiliate untuk tahu tier-nya
-    $profile = DB::table('affiliate_profiles')->where('user_id', $user->id)->first();
+    $profile = AffiliateProfile::where('user_id', $user->id)->first();
     $tier = $profile ? $profile->tier : 'affiliate';
-    $isMaster = in_array($tier, ['partner', 'master_affiliate', 'master-affiliate']);
 
-    // 2. Dapatkan persentase komisi berdasarkan tier
-    $commissionRate = DB::table('affiliate_commission_rates')->where('tier', $tier)->value('percentage') ?? 0;
-
-    $sortField = $request->input('sort', 'created_at');
-    $sortOrder = $request->input('order', 'desc');
-    $limit = $request->input('limit', 10);
-
-    // 3. LOGIKA KEDALAMAN JARINGAN (Penentu Pengundang Agen)
-    $allowedIds = [$user->id]; // Termasuk agen yang diundang sendiri
+    $allowedIds = [$user->id];
 
     if ($tier === 'partner') {
-      // Level 1: MA atau Affiliate yang langsung di bawah Partner
-      $level1_Ids = DB::table('affiliate_profiles')
-        ->where('upline_id', $user->id)
-        ->pluck('user_id')
-        ->toArray();
-
-      // Level 2: Affiliate yang berada di bawah MA
-      $level2_Ids = [];
-      if (!empty($level1_Ids)) {
-        $level2_Ids = DB::table('affiliate_profiles')
-          ->whereIn('upline_id', $level1_Ids)
-          ->pluck('user_id')
-          ->toArray();
-      }
-
-      // Gabungkan semua ID
+      $level1_Ids = AffiliateProfile::where('upline_id', $user->id)->pluck('user_id')->toArray();
+      $level2_Ids = !empty($level1_Ids) ? AffiliateProfile::whereIn('upline_id', $level1_Ids)->pluck('user_id')->toArray() : [];
       $allowedIds = array_merge($allowedIds, $level1_Ids, $level2_Ids);
     } elseif (in_array($tier, ['master_affiliate', 'master-affiliate'])) {
-      // MA hanya membaca 1 Level ke bawah (Affiliate miliknya)
-      $level1_Ids = DB::table('affiliate_profiles')
-        ->where('upline_id', $user->id)
-        ->pluck('user_id')
-        ->toArray();
-
+      $level1_Ids = AffiliateProfile::where('upline_id', $user->id)->pluck('user_id')->toArray();
       $allowedIds = array_merge($allowedIds, $level1_Ids);
     }
 
-    // 4. Query utama ke tabel Companies -> Relasi ke Package dan Referrer
-    $query = DB::table('companies')
-      ->select(
-        'companies.id',
-        'companies.name',
-        'companies.email',
-        'companies.created_at',
-        'companies.referred_by',
-        'users.name as referrer_name',
-        'agent_subscriptions.started_at',
-        'agent_subscriptions.ended_at',
-        'agent_subscription_packages.name as package_name',
-        'agent_subscription_packages.price'
-      )
-      ->leftJoin('users', 'companies.referred_by', '=', 'users.id')
-      // Join ke agent_subscriptions menggunakan company_id (Sesuai skema database terakhir)
-      ->leftJoin('agent_subscriptions', function ($join) {
-        $join->on('companies.id', '=', 'agent_subscriptions.company_id')
-          ->whereRaw('agent_subscriptions.id = (SELECT MAX(id) FROM agent_subscriptions WHERE company_id = companies.id)');
-      })
-      ->leftJoin('agent_subscription_packages', 'agent_subscriptions.package_id', '=', 'agent_subscription_packages.id')
-      ->where('companies.type', 'agent')
-      ->whereIn('companies.referred_by', $allowedIds);
+    $query = Company::with(['referrer.affiliateProfile.upline'])
+      ->where('type', 'agent')
+      ->whereIn('referred_by', $allowedIds)
+      ->orderBy('created_at', 'desc')
+      ->get();
 
-    // 5. Pemetaan Sorting
-    $sortColumn = 'companies.' . $sortField;
-    if (in_array($sortField, ['status', 'package'])) {
-      $sortColumn = 'agent_subscription_packages.name';
-    } elseif ($sortField === 'subscription_date') {
-      $sortColumn = 'agent_subscriptions.started_at';
-    } elseif ($sortField === 'potential_commission') {
-      $sortColumn = 'agent_subscription_packages.price';
-    } elseif ($sortField === 'affiliator_name') {
-      $sortColumn = 'users.name';
-    }
+    $agentsData = $query->map(function ($agent) {
+      $referrer = $agent->referrer;
+      $referrerProfile = $referrer ? $referrer->affiliateProfile : null;
 
-    $agentsData = $query->orderBy($sortColumn, $sortOrder)->paginate($limit)->withQueryString();
+      $affiliatorName = '-';
+      $maName = '-';
 
-    // 6. Format data sebelum dilempar ke Frontend
-    $agentsData->getCollection()->transform(function ($agent) use ($user, $commissionRate) {
-      $isSubscribed = $agent->ended_at && Carbon::parse($agent->ended_at)->isFuture();
-
-      // Komisi: (Harga Paket * Persentase Tier) / 100
-      $potentialComm = $agent->price ? $agent->price * ($commissionRate / 100) : 0;
-
-      $status = 'Registered';
-      if ($isSubscribed) {
-        $status = 'Subscribed';
-      } elseif ($agent->package_name) {
-        $status = 'Expired';
+      if ($referrerProfile) {
+        if ($referrerProfile->tier === 'affiliate') {
+          $affiliatorName = $referrer->name;
+          $maName = $referrerProfile->upline ? $referrerProfile->upline->name : '-';
+        } elseif (in_array($referrerProfile->tier, ['master_affiliate', 'master-affiliate'])) {
+          $maName = $referrer->name;
+          $affiliatorName = '-';
+        }
       }
+
+      $addressParts = array_filter([
+        $agent->address,
+        $agent->village ?? data_get($agent->meta, 'village'),
+        $agent->district ?? data_get($agent->meta, 'district'),
+        $agent->city ?? data_get($agent->meta, 'city'),
+        $agent->province ?? data_get($agent->meta, 'province'),
+        $agent->postal_code ?? data_get($agent->meta, 'postal_code'),
+      ]);
 
       return [
         'id' => $agent->id,
         'name' => $agent->name,
         'email' => $agent->email,
-        'status' => $status,
-        'package' => $agent->package_name ?? '-',
-        'subscription_date' => $agent->started_at ? Carbon::parse($agent->started_at)->format('Y-m-d') : '-',
-        'potential_commission' => $potentialComm,
-        'affiliator_name' => $agent->referred_by === $user->id ? 'Direct (Me)' : $agent->referrer_name,
-        'created_at' => Carbon::parse($agent->created_at)->format('Y-m-d'),
+        'phone' => $agent->phone,
+        'customer_service_phone' => $agent->customer_service_phone,
+        'address' => !empty($addressParts) ? implode(', ', $addressParts) : '-',
+        'identity_number' => $agent->identity_number ?? data_get($agent->meta, 'identity_number'),
+        'identity_photo_path' => $agent->identity_photo_path ?? data_get($agent->meta, 'identity_photo_path'),
+        'join_date' => $agent->created_at ? $agent->created_at->format('Y-m-d') : '-',
+        'affiliator_name' => $affiliatorName,
+        'ma_name' => $maName,
       ];
     });
 
     return Inertia::render('affiliate/dashboard/agent/list', [
       'agents' => $agentsData,
-      'isMaster' => $isMaster,
-      'filters' => $request->only(['sort', 'order', 'limit']),
+      'userTier' => $tier,
     ]);
   }
 }
