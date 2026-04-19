@@ -74,10 +74,7 @@ class User extends Authenticatable implements Wallet, Customer, LaratrustUser
   {
     return $this->belongsTo(Media::class, 'photo_id');
   }
-  public function bankAccounts()
-  {
-    return $this->hasMany(BankAccount::class);
-  }
+
   public function affiliateProfile()
   {
     return $this->hasOne(AffiliateProfile::class);

@@ -68,9 +68,9 @@ export default function EditRoleButton({
         <Tooltip>
           <TooltipTrigger>
             <Button
-              variant="outline"
+              variant="ghost"
               size="icon"
-              className="h-8 w-8"
+              className="rounded-full"
               aria-label="Edit role"
             >
               <EditIcon className="size-4" />
@@ -80,8 +80,8 @@ export default function EditRoleButton({
         </Tooltip>
       </DialogTrigger>
 
-      <DialogContent className="sm:max-w-sm">
-        <form onSubmit={handleSubmit}>
+      <DialogContent className="max-h-[90dvh] flex flex-col">
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
           <DialogHeader>
             <DialogTitle>Edit Role</DialogTitle>
             <DialogDescription>
@@ -90,7 +90,7 @@ export default function EditRoleButton({
             </DialogDescription>
           </DialogHeader>
 
-          <FieldGroup>
+          <FieldGroup className="flex flex-col flex-1 min-h-0">
             <Field>
               <Label htmlFor="name">Code</Label>
               <Input
@@ -128,14 +128,16 @@ export default function EditRoleButton({
               />
               <InputError message={form.errors.description} />
             </Field>
-            <Field>
+            <Field className="flex flex-col flex-1 min-h-0">
               <Label>Permissions</Label>
-              <PermissionsSelector
-                disabled={shouldDisabled}
-                permissions={permissions}
-                value={form.data.permissions}
-                onChange={(value) => form.setData('permissions', value)}
-              ></PermissionsSelector>
+              <div className="flex flex-col flex-1 min-h-75 overflow-y-auto">
+                <PermissionsSelector
+                  disabled={shouldDisabled}
+                  permissions={permissions}
+                  value={form.data.permissions}
+                  onChange={(value) => form.setData('permissions', value)}
+                />
+              </div>
             </Field>
           </FieldGroup>
 

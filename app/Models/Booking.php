@@ -1,0 +1,81 @@
+<?php
+
+namespace App\Models;
+
+use App\Enums\BookingStatus;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
+
+class Booking extends Model
+{
+    use HasFactory;
+
+    protected $fillable = [
+        'booking_number',
+        'user_id',
+        'vendor_id',
+        'agent_id',
+        'tour_id',
+        'departure_date',
+        'status',
+        'pax_adult',
+        'pax_child',
+        'pax_infant',
+        'total_price',
+        'tax_amount',
+        'platform_fee',
+        'commission_amount',
+        'grand_total',
+    ];
+
+    protected function casts(): array
+    {
+        return [
+            'departure_date' => 'date',
+            'status' => BookingStatus::class,
+            'total_price' => 'decimal:2',
+            'tax_amount' => 'decimal:2',
+            'platform_fee' => 'decimal:2',
+            'commission_amount' => 'decimal:2',
+            'grand_total' => 'decimal:2',
+        ];
+    }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    public function vendor(): BelongsTo
+    {
+        return $this->belongsTo(Company::class, 'vendor_id');
+    }
+
+    public function agent(): BelongsTo
+    {
+        return $this->belongsTo(Company::class, 'agent_id');
+    }
+
+    public function tour(): BelongsTo
+    {
+        return $this->belongsTo(Tour::class);
+    }
+
+    public function passengers(): HasMany
+    {
+        return $this->hasMany(BookingPassenger::class);
+    }
+
+    public function addons(): HasMany
+    {
+        return $this->hasMany(BookingAddon::class);
+    }
+
+    public function payments(): MorphMany
+    {
+        return $this->morphMany(Payment::class, 'payable');
+    }
+}
