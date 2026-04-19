@@ -39,20 +39,90 @@ class UpdateTourRequest extends FormRequest
       'promote_note' => 'nullable|string|max:255',
       //'promote_price' => 'nullable|integer|min:0',
       'promote_price' => 'nullable|numeric|min:0',
+      'currency'  => 'nullable|string',
+
+      //13042026
+      'schedules' => 'nullable|array',
+
+      'schedules.*.departure_date' => 'nullable|date',
+      'schedules.*.return_date' => 'nullable|date',
+      'schedules.*.quota' => 'nullable|numeric',
+
+      'schedules.*.prices' => 'nullable|array',
+
+      'schedules.*.prices.*.room_type_id' => 'nullable|integer',
+      'schedules.*.prices.*.price' => 'nullable|numeric',
+
+      'schedules.*.prices.*.promotion.type' => 'nullable|string',
+      'schedules.*.prices.*.promotion.value' => 'nullable|numeric',
+
+      'schedules.*.prices.*.commission.type' => 'nullable|string',
+      'schedules.*.prices.*.commission.value' => 'nullable|numeric',
     ];
   }
 
   protected function prepareForValidation()
   {
-    // 1️⃣ Hapus field null
-    $this->replace(
-      array_filter($this->all(), fn($v) => !is_null($v))
-    );
+    // 🔥 STEP 1: normalize empty string → null
+    $data = $this->all();
 
-    // 2️⃣ Paksa harga jadi integer
+    array_walk_recursive($data, function (&$value) {
+        if ($value === '') {
+            $value = null;
+        }
+    });
+
+    $this->merge($data);
+
+    // 🔥 STEP 2: baru ambil schedules yang sudah bersih
+    $schedules = $this->input('schedules', []);
+
+    $clean = collect($schedules)->map(function ($schedule) {
+        return [
+            ...$schedule,
+
+            'departure_date' => $schedule['departure_date'] ?? null,
+            'return_date' => $schedule['return_date'] ?? null,
+
+            // 🔥 FIX quota kosong
+            'quota' => is_numeric($schedule['quota'] ?? null)
+                ? (int) $schedule['quota']
+                : 0,
+
+            'prices' => collect($schedule['prices'] ?? [])->map(function ($price) {
+
+                return [
+                    'room_type_id' => is_numeric($price['room_type_id'] ?? null)
+                        ? (int) $price['room_type_id']
+                        : null,
+
+                    'price' => is_numeric($price['price'] ?? null)
+                        ? (int) $price['price']
+                        : 0,
+
+                    'promotion' => [
+                        'type' => $price['promotion']['type'] ?? 'percent',
+                        'value' => is_numeric($price['promotion']['value'] ?? null)
+                            ? (float) $price['promotion']['value']
+                            : 0,
+                    ],
+
+                    'commission' => [
+                        'type' => $price['commission']['type'] ?? 'percent',
+                        'value' => is_numeric($price['commission']['value'] ?? null)
+                            ? (float) $price['commission']['value']
+                            : 0,
+                    ],
+                ];
+            })->values()->toArray(),
+        ];
+    })->values()->toArray();
+
     $this->merge([
         'showprice' => (int) ($this->showprice ?? 0),
         'promote_price' => (int) ($this->promote_price ?? 0),
+        'schedules' => $clean,
     ]);
+
   }
 }

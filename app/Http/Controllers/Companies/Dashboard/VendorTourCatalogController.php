@@ -27,6 +27,8 @@ class VendorTourCatalogController extends Controller
       ->orderBy('position_no')
       ->get();
 
+    $vendor = Company::where('username', $username)->firstOrFail();
+
     $tours = $toursQuery
       ->when(request('category'), function ($query, $categoryId) use ($vendor) {
         $query->where(function ($q) use ($categoryId, $vendor) {
@@ -42,11 +44,31 @@ class VendorTourCatalogController extends Controller
       ->when(request('search'), function ($query, $search) {
         $query->where('name', 'ilike', "%{$search}%");
       })
-      ->get()
-      ->map(function ($tour) use ($company) {
+      ->get();
+      /*->map(function ($tour) use ($company) {
         $tour->has_copied = $company->agentTours()->where('tour_id', $tour->id)->exists();
         return $tour;
-      });
+      });*/
+    
+    //01042026
+    $agentTours = \App\Models\AgentTour::where('company_id', $vendor->id)
+        ->whereHas('tour', function ($q) {
+            $q->where('status', 'active');
+        })
+        ->with(['tour' => function ($q) {
+            $q->where('status', 'active')
+              ->with('company:id,username,name');
+        }])
+        ->get()
+        ->pluck('tour')
+        ->filter();
+
+      $tours = $ownTours
+        ->merge($agentTours)
+        ->unique('id')
+        ->sortByDesc('created_at')
+        ->values();
+      //
 
     $partnership = VendorAgentPartner::where('vendor_id', $vendor->id)
       ->where('agent_id', $company->id)
@@ -65,13 +87,14 @@ class VendorTourCatalogController extends Controller
   public function copy(Company $company, string $vendor, Tour $tour)
   {
     $vendor = Company::where('username', $vendor)->firstOrFail();
+
     $company->agentTours()->create([
       'tour_id' => $tour->id,
     ]);
+
     return back();
   }
 
-  //public function viewBrochure(string $username, Tour $tour)
   public function viewBrochure(Company $company, string $username, Tour $tour)
   {
     return Inertia::render('companies/dashboard/vendor-tours/view-brochure', [
@@ -83,7 +106,7 @@ class VendorTourCatalogController extends Controller
   public function viewPublicBrochure($vendor, $tourId)
   {
     $tour = Tour::with('document')->findOrFail($tourId);
-    //
+
     if (! $tour->document) {
       abort(404);
     }

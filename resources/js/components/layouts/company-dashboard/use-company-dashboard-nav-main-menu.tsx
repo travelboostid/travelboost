@@ -47,7 +47,6 @@ export function useCompanyDashboardNavMainMenu() {
   );
 
   let baseHost = window.location.hostname;
-
   if (baseHost === '127.0.0.1') {
     baseHost = 'localhost';
   }

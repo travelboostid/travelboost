@@ -26,6 +26,10 @@ class Company extends Model
     'photo_id',
     'meta',
     'note',
+    //10042026
+    'province',
+    'city',
+    'identity_id',
   ];
 
   protected $hidden = [
@@ -79,6 +83,7 @@ class Company extends Model
 
   public function agentTours()
   {
+    //31032026
     return $this->hasMany(AgentTour::class);
   }
 

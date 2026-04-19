@@ -132,6 +132,51 @@ class MidtransWebhookController extends Controller
     }
   }
 
+  private function processWalletTopup(Payment $payment)
+  {
+    Log::info('Processing wallet topup for payment', ['payment_id' => $payment->id]);
+    $owner = $payment->owner;
+    if (!$owner) {
+      Log::error('Owner not found for payment', ['payment_id' => $payment->id]);
+      return;
+    }
+    $wallet = $owner->wallet;
+
+    $payment->load('payable');
+    if (!$payable = $payment->payable) {
+      Log::error('Payable not found', ['payment_id' => $payment->id]);
+      return;
+    }
+    $package = $payable->package_id ? AgentSubscriptionPackage::find($payable->package_id) : null;
+    if (!$package) {
+      Log::error('Package not found for agent subscription payment', ['payment_id' => $payment->id]);
+      return;
+    }
+    $existingSubscription = $owner->agentSubscription()->first();
+    if ($existingSubscription === null) {
+      $owner->agentSubscription()->create([
+        'package_id' => $package->id,
+        'started_at' => now(),
+        'ended_at' => now()->addMonths($package->duration_months),
+      ]);
+      return;
+    } else if ($existingSubscription->status === AgentSubscriptionStatus::ACTIVE) {
+      $existingSubscription->update([
+        'package_id' => $package->id,
+        'started_at' => now(),
+        'ended_at' => $existingSubscription->ended_at->addMonths($package->duration_months),
+      ]);
+      return;
+    } else if ($existingSubscription->status === AgentSubscriptionStatus::EXPIRED) {
+      $existingSubscription->update([
+        'package_id' => $package->id,
+        'started_at' => now(),
+        'ended_at' => now()->addMonths($package->duration_months),
+      ]);
+      return;
+    }
+  }
+
   private function processAiCreditTopup(Payment $payment)
   {
     Log::info('Processing AI credit topup for payment', ['payment_id' => $payment->id]);

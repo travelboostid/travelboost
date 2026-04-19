@@ -3,10 +3,8 @@
 namespace Database\Seeders\Common;
 
 use App\Enums\CompanyTeamStatus;
-use App\Enums\CompanyType;
-use App\Enums\VendorAgentPartnerStatus;
-use App\Models\AgentSubscription;
 use App\Models\AgentSubscriptionPackage;
+use App\Models\User;
 use App\Models\Company;
 use App\Models\Role;
 use App\Models\Team;
@@ -19,6 +17,8 @@ class CompanySeeder extends Seeder
 {
   public function run(): void
   {
+    // Define the target packages to create
+    $packages = [
     // Define the target packages to create
     $packages = [
       [
@@ -45,10 +45,11 @@ class CompanySeeder extends Seeder
       AgentSubscriptionPackage::factory()->create($package);
     }
 
-    $seeds = [
+    // Define the target companies to create
+    $companies = [
       [
-        'username' => 'vendor',
-        'subdomain' => 'vendor',
+        'username' => 'root',
+        'subdomain' => 'root',
         'company_type' => CompanyType::VENDOR,
       ],
       [
@@ -63,17 +64,17 @@ class CompanySeeder extends Seeder
       ],
     ];
 
-    foreach ($seeds as $seed) {
-      $user = User::where('username', $seed['username'])->first();
-      if (! $user) {
-        $this->command->error("User with username '{$seed['username']}' not found. Please run UserSeeder first.");
-
+    foreach ($companies as $company) {
+      $user = User::where('username', $company['username'])->first();
+      if (!$user) {
+        $this->command->error("User with username '{$company['username']}' not found. Please run UserSeeder first.");
         continue;
       }
-      $company = Company::create([
-        'username' => $seed['username'],
-        'type' => $seed['company_type'],
-        'name' => ucfirst($seed['username']) . ' Company',
+      $company = Company::factory()->create([
+        'username' => $company['username'],
+        'subdomain' => $company['subdomain'],
+        'type' => $company['company_type'],
+        'name' => ucfirst($company['username']) . ' Company',
         'email' => $user->email,
         'address' => 'Jakarta',
         'phone' => '0123456789',

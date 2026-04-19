@@ -37,6 +37,11 @@ return new class extends Migration
         ->nullable()
         ->constrained('medias')
         ->nullOnDelete();
+      //09042026
+      $table->foreignId('identity_id')
+        ->nullable()
+        ->constrained('medias')
+        ->nullOnDelete();
     });
   }
 
@@ -48,6 +53,9 @@ return new class extends Migration
     Schema::table('companies', function (Blueprint $table) {
       $table->dropForeign(['photo_id']);
       $table->dropColumn('photo_id');
+      //09042026
+      $table->dropForeign(['identity_id']);
+      $table->dropColumn('identity_id');
     });
     Schema::table('users', function (Blueprint $table) {
       $table->dropForeign(['photo_id']);

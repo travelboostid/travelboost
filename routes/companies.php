@@ -20,6 +20,7 @@ use App\Http\Controllers\Companies\Dashboard\VendorTourCatalogController;
 use App\Http\Controllers\Companies\Dashboard\WalletController;
 use App\Http\Controllers\Companies\Dashboard\WalletTransactionsController;
 use App\Http\Controllers\Companies\Dashboard\WithdrawalController;
+use App\Http\Controllers\Companies\Dashboard\TourAvailabilityController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('companies/{company:username}/dashboard')->middleware(['auth'])->name('company.')->group(function () {
@@ -35,14 +36,20 @@ Route::prefix('companies/{company:username}/dashboard')->middleware(['auth', 'co
     Route::post('/tours/{tour}/copy', [VendorTourCatalogController::class, 'copy'])->name('tour.copy');
     //Route::get('/tours/{tour}/brochure', [VendorTourCatalogController::class, 'viewBrochure'])->name('tour.view-brochure');
   });
+
   Route::resource('agent-registrations', AgentRegistrationController::class);
   Route::resource('vendor-registrations', VendorRegistrationController::class);
   Route::middleware(['agent.subscription.active'])->post('vendor-registrations/register', [VendorRegistrationController::class, 'register'])->name('vendor-registrations.register');
   Route::resource('tours', TourController::class);
+
+  Route::post(
+  'tour-availabilities',
+  [TourAvailabilityController::class, 'store']
+)->name('tour-availabilities.store');
+
   Route::resource('agent-tours', AgentTourController::class);
   Route::resource('categories', CategoryController::class);
   Route::resource('wallets', WalletController::class);
-  Route::resource('payments', PaymentController::class);
   Route::resource('payments', PaymentController::class);
   Route::post('payments/{payment}/cancel', [PaymentController::class, 'cancel'])->name('payments.cancel');
   Route::resource('bank-accounts', BankAccountController::class);
@@ -58,7 +65,6 @@ Route::prefix('companies/{company:username}/dashboard')->middleware(['auth', 'co
   Route::singleton('chatbot', ChatbotController::class);
   Route::singleton('page', PageController::class);
   Route::singleton('agent-subscriptions', AgentSubscriptionController::class);
-  Route::singleton('ai-credits', AiCreditController::class);
 });
 
 Route::get(

@@ -26,16 +26,18 @@ export type ProfilePageProps = {
 export default function Profile({ profile }: ProfilePageProps) {
   const intl = useIntl();
   const form = useForm({
-    name: profile.name,
-    email: profile.email,
-    username: profile.username,
-    phone: (profile.phone || '') as string,
-    customer_service_phone: profile.customer_service_phone || '',
-    address: profile.address || '',
-    subdomain: profile.domain.subdomain,
-    domain_enabled: profile.domain.domain_enabled,
-    domain: profile.domain.domain || '',
-    photo_id: profile.photo_id || undefined,
+    name: company.name,
+    email: company.email,
+    username: company.username,
+    phone: (company.phone || '') as string,
+    customer_service_phone: company.customer_service_phone || '',
+    address: company.address || '',
+    subdomain: company.subdomain,
+    photo_id: company.photo_id || undefined,
+    province: company.province || '',
+    city: company.city || '',
+    identity_id: company.identity_id || undefined,
+    
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -228,6 +230,77 @@ export default function Profile({ profile }: ProfilePageProps) {
               onChange={(e) => form.setData('address', e.target.value)}
             />
             <InputError message={form.errors.address} className="mt-2" />
+          </div>
+
+          <div className="grid gap-2">
+            <Label htmlFor="province">Province</Label>
+            <Input
+              id="province"
+              type="text"
+              required
+              autoFocus
+              tabIndex={1}
+              autoComplete="tel"
+              name="province"
+              placeholder="Province"
+              value={form.data.province}
+              onChange={(e) => form.setData('province', e.target.value)}
+            />
+            <InputError message={form.errors.province} className="mt-2" />
+          </div>
+
+          <div className="grid gap-2">
+            <Label htmlFor="city">
+              City
+            </Label>
+            <Input
+              id="city"
+              type="text"
+              required
+              autoFocus
+              tabIndex={1}
+              autoComplete="tel"
+              name="city"
+              placeholder="City"
+              value={form.data.city}
+              onChange={(e) =>
+                form.setData('city', e.target.value)
+              }
+            />
+            <InputError
+              message={form.errors.city}
+              className="mt-2"
+            />
+          </div>
+
+          <div className="grid gap-2 col-span-2">
+            <Label htmlFor="identity_card">Identity Card</Label>
+            <MediaPicker
+              params={{ owner_type: 'company', owner_id: company.id }}
+              uploadParams={{
+                owner_type: 'company',
+                owner_id: company.id,
+              }}
+              type="photo"
+              onChange={(media) => form.setData('identity_id', (media as any)?.id)}
+            >
+              {(media, change) => (
+                <div className="flex flex-col gap-2">
+                  <img
+                    className="aspect-square max-w-80 object-cover shadow"
+                    src={
+                      typeof media === 'string'
+                        ? media
+                        : extractImageSrc(media as any).src
+                    }
+                  />
+                  <Button className="w-fit" onClick={change} type="button">
+                    Change
+                  </Button>
+                </div>
+              )}
+            </MediaPicker>
+            <InputError message={form.errors.name} className="mt-2" />
           </div>
 
           <div className="grid gap-2 col-span-2">

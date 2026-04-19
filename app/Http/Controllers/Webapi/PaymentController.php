@@ -66,8 +66,18 @@ class PaymentController extends Controller
    * @operationId createTopupPayment
    */
   public function createTopupPayment(Request $request)
+  public function createTopupPayment(Request $request)
   {
     $validated = $request->validate([
+      'owner_type' => ['required', 'in:user,company'],
+      'owner_id' => [
+        'required',
+        Rule::when(
+          $request->owner_type === 'user',
+          Rule::exists('users', 'id'),
+          Rule::exists('companies', 'id')
+        ),
+      ],
       'owner_type' => ['required', 'in:user,company'],
       'owner_id' => [
         'required',
@@ -83,11 +93,14 @@ class PaymentController extends Controller
     $user = Auth::user();
 
     $topup = WalletTopupPayment::create([
+    $topup = WalletTopupPayment::create([
       'amount' => $validated['amount'],
     ]);
 
     // ... rest of your code remains the same
     $payment = $topup->payment()->create([
+      'owner_type' => $validated['owner_type'],
+      'owner_id' => $validated['owner_id'],
       'owner_type' => $validated['owner_type'],
       'owner_id' => $validated['owner_id'],
       'provider' => 'midtrans',
@@ -189,22 +202,21 @@ class PaymentController extends Controller
   {
     $validated = $request->validate([
       'company_id' => ['required', 'exists:companies,id'],
-      'amount' => ['required', 'integer', 'min:1'],
+      'amount' => ['required', 'integer', 'min:1000'],
     ]);
+
     $user = Auth::user();
 
-    $amount = $validated['credits'] * 1000; // Assuming 1 credit = 1000 currency unit
     $topup = AiCreditTopupPayment::create([
       'amount' => $validated['amount'],
     ]);
 
-    // Create a payment record
     $payment = $topup->payment()->create([
       'owner_id' => $validated['company_id'],
       'owner_type' => 'company',
       'provider' => 'midtrans',
       'payment_method' => 'snap',
-      'amount' => $amount,
+      'amount' => $topup->amount,
       'status' => 'unpaid',
     ]);
 
