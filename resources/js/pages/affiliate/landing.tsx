@@ -21,6 +21,7 @@ import {
   Users,
   X,
 } from 'lucide-react';
+import { useTheme } from 'next-themes';
 import React, { useEffect, useState } from 'react';
 
 // --- KAMUS BAHASA ---
@@ -263,7 +264,7 @@ const FaqItem: React.FC<{ question: string; answer: string }> = ({
 
 export default function Landing() {
   const [lang, setLang] = useState<'id' | 'en'>('id');
-  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const { resolvedTheme, setTheme } = useTheme();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const [currentDomain, setCurrentDomain] = useState(
@@ -277,12 +278,6 @@ export default function Landing() {
 
     const sLang = localStorage.getItem('tb_lang') as 'id' | 'en';
     if (sLang) setLang(sLang);
-
-    const sTheme = localStorage.getItem('tb_theme') as 'light' | 'dark';
-    if (sTheme === 'dark') {
-      setTheme('dark');
-      document.documentElement.classList.add('dark');
-    }
   }, []);
 
   const toggleLang = () => {
@@ -292,10 +287,8 @@ export default function Landing() {
   };
 
   const toggleTheme = () => {
-    const n = theme === 'light' ? 'dark' : 'light';
+    const n = resolvedTheme === 'light' ? 'dark' : 'light';
     setTheme(n);
-    localStorage.setItem('tb_theme', n);
-    document.documentElement.classList.toggle('dark', n === 'dark');
   };
 
   const t = dict[lang];
@@ -378,7 +371,11 @@ export default function Landing() {
                 onClick={toggleTheme}
                 className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition"
               >
-                {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
+                {resolvedTheme === 'light' ? (
+                  <Moon size={18} />
+                ) : (
+                  <Sun size={18} />
+                )}
               </button>
 
               {/* Menu Hamburger Mobile */}

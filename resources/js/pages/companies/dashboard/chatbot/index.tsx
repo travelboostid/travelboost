@@ -95,15 +95,16 @@ export default function Page({ settings }: { settings: any }) {
 
               {/* Tone */}
               <FieldSet className="w-full">
-                <FieldLegend variant="label">Tone</FieldLegend>
+                <FieldLegend variant="label">Response Style</FieldLegend>
                 <FieldDescription>
-                  Choose the tone of the chatbot responses. This setting allows
-                  you to customize the personality of the chatbot to better
-                  align with your brand and customer interactions.
+                  Choose how the chatbot should respond to customer inquiries.
+                  The tone you select will influence the chatbot's language
+                  style, formality, and overall personality in its interactions
+                  with customers.
                 </FieldDescription>
                 <RadioGroup
-                  defaultValue={settings.chatbot_tone}
-                  name="chatbot_tone"
+                  defaultValue={settings.response_style}
+                  name="chatbot_response_style"
                 >
                   <Field orientation="horizontal">
                     <RadioGroupItem id="professional" value="professional" />
@@ -123,118 +124,8 @@ export default function Page({ settings }: { settings: any }) {
                       Casual
                     </FieldLabel>
                   </Field>
-                  <Field orientation="horizontal">
-                    <RadioGroupItem id="enthusiastic" value="enthusiastic" />
-                    <FieldLabel htmlFor="enthusiastic" className="font-normal">
-                      Enthusiastic
-                    </FieldLabel>
-                  </Field>
                 </RadioGroup>
                 <InputError message={errors.tone} />
-              </FieldSet>
-
-              {/* Emoji Usage */}
-              <FieldSet className="w-full">
-                <FieldLegend variant="label">Emoji Usage</FieldLegend>
-                <FieldDescription>
-                  Control how frequently emojis are used in chatbot responses.
-                  This helps set the visual tone and friendliness level of the
-                  chatbot interactions.
-                </FieldDescription>
-                <RadioGroup
-                  defaultValue={settings.chatbot_emoji_usage}
-                  name="chatbot_emoji_usage"
-                >
-                  <Field orientation="horizontal">
-                    <RadioGroupItem id="emoji-none" value="none" />
-                    <FieldLabel htmlFor="emoji-none" className="font-normal">
-                      None
-                    </FieldLabel>
-                  </Field>
-                  <Field orientation="horizontal">
-                    <RadioGroupItem id="emoji-minimal" value="minimal" />
-                    <FieldLabel htmlFor="emoji-minimal" className="font-normal">
-                      Minimal
-                    </FieldLabel>
-                  </Field>
-                  <Field orientation="horizontal">
-                    <RadioGroupItem id="emoji-moderate" value="moderate" />
-                    <FieldLabel
-                      htmlFor="emoji-moderate"
-                      className="font-normal"
-                    >
-                      Moderate
-                    </FieldLabel>
-                  </Field>
-                  <Field orientation="horizontal">
-                    <RadioGroupItem id="emoji-expressive" value="expressive" />
-                    <FieldLabel
-                      htmlFor="emoji-expressive"
-                      className="font-normal"
-                    >
-                      Expressive
-                    </FieldLabel>
-                  </Field>
-                </RadioGroup>
-                <InputError message={errors.chatbot_emoji_usage} />
-              </FieldSet>
-
-              {/* Personality */}
-              <FieldSet className="w-full">
-                <FieldLegend variant="label">Personality</FieldLegend>
-                <FieldDescription>
-                  Select the personality type for your chatbot. Different
-                  personalities are optimized for different use cases and
-                  customer interaction styles.
-                </FieldDescription>
-                <RadioGroup
-                  defaultValue={settings.chatbot_personality}
-                  name="chatbot_personality"
-                >
-                  <Field orientation="horizontal">
-                    <RadioGroupItem
-                      id="personality-assistant"
-                      value="assistant"
-                    />
-                    <FieldLabel
-                      htmlFor="personality-assistant"
-                      className="font-normal"
-                    >
-                      Assistant
-                    </FieldLabel>
-                  </Field>
-                  <Field orientation="horizontal">
-                    <RadioGroupItem id="personality-sales" value="sales" />
-                    <FieldLabel
-                      htmlFor="personality-sales"
-                      className="font-normal"
-                    >
-                      Sales
-                    </FieldLabel>
-                  </Field>
-                  <Field orientation="horizontal">
-                    <RadioGroupItem id="personality-support" value="support" />
-                    <FieldLabel
-                      htmlFor="personality-support"
-                      className="font-normal"
-                    >
-                      Support
-                    </FieldLabel>
-                  </Field>
-                  <Field orientation="horizontal">
-                    <RadioGroupItem
-                      id="personality-travel-consultant"
-                      value="travel_consultant"
-                    />
-                    <FieldLabel
-                      htmlFor="personality-travel-consultant"
-                      className="font-normal"
-                    >
-                      Travel Consultant
-                    </FieldLabel>
-                  </Field>
-                </RadioGroup>
-                <InputError message={errors.chatbot_personality} />
               </FieldSet>
 
               {/* Default Language */}
@@ -251,7 +142,7 @@ export default function Page({ settings }: { settings: any }) {
                   <Field orientation="horizontal">
                     <RadioGroupItem id="lang-auto" value="auto" />
                     <FieldLabel htmlFor="lang-auto" className="font-normal">
-                      Auto Detect
+                      Auto (Detect language from user input)
                     </FieldLabel>
                   </Field>
                   <Field orientation="horizontal">

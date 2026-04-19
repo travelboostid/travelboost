@@ -80,10 +80,8 @@ return new class extends Migration
     Schema::create('company_settings', function (Blueprint $table) {
       $table->id();
       $table->foreignId('company_id')->unique()->constrained('companies')->cascadeOnDelete();
-      $table->boolean('chatbot_enabled')->default(false);
-      $table->string('chatbot_tone')->default('professional'); // professional | friendly | casual | enthusiastic
-      $table->string('chatbot_emoji_usage')->default('minimal'); // none | minimal | moderate | expressive
-      $table->string('chatbot_personality')->default('assistant'); // assistant | sales | support | travel_consultant
+      $table->boolean('chatbot_enabled')->default(true);
+      $table->string('chatbot_response_style')->default('professional'); // professional | friendly | casual
       $table->string('chatbot_default_language')->default('auto'); // auto | id | en
       $table->foreignId('chatbot_model_id')->nullable()->constrained('ai_models')->nullOnDelete();
       $table->text('landing_page_data')->nullable();

@@ -11,9 +11,7 @@ class CompanySettings extends Model
 
   protected $fillable = [
     'chatbot_enabled',
-    'chatbot_tone',
-    'chatbot_emoji_usage',
-    'chatbot_personality',
+    'chatbot_response_style',
     'chatbot_default_language',
     'chatbot_model_code',
     'landing_page_data',

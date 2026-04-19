@@ -19,6 +19,7 @@ import { TextIcon, Trash2Icon, UserIcon } from 'lucide-react';
 import { useMemo } from 'react';
 import DeleteRegistrationDialog from './components/delete-registration-dialog';
 import { EmptyRegistrations } from './components/empty-registrations';
+import StatusBadge from './components/status-badge';
 dayjs.extend(relativeTime);
 
 type PageProps = {
@@ -72,9 +73,7 @@ export default function Page({ data }: PageProps) {
         header: ({ column }) => (
           <DataTableColumnHeader column={column} label="Status" />
         ),
-        cell: ({ cell }) => (
-          <div className="font-medium">{cell.getValue<string>()}</div>
-        ),
+        cell: ({ row }) => <StatusBadge partnership={row.original} />,
         enableColumnFilter: true,
       },
       {
