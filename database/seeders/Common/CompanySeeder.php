@@ -48,8 +48,8 @@ class CompanySeeder extends Seeder
     // Define the target companies to create
     $companies = [
       [
-        'username' => 'root',
-        'subdomain' => 'root',
+        'username' => 'vendor',
+        'subdomain' => 'vendor',
         'company_type' => CompanyType::VENDOR,
       ],
       [

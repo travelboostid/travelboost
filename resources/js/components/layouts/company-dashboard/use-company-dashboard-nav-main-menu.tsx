@@ -186,7 +186,7 @@ export function useCompanyDashboardNavMainMenu() {
         },
       ],
       visibleToCompanyTypes: ['agent', 'vendor'],
-      visibleToPermissions: ['wallet.query'],
+      visibleToPermissions: ['fund.query'],
     },
     {
       id: 'marketings',

@@ -41,7 +41,7 @@ export default function SuspendButton({ registration }: { registration: any }) {
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
       <AlertDialogTrigger asChild>
-        <Button size="icon" className="text-primary" variant="destructive">
+        <Button size="icon" variant="destructive">
           <ShieldBanIcon />
         </Button>
       </AlertDialogTrigger>

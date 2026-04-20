@@ -103,7 +103,7 @@ export default function Page({ settings }: { settings: any }) {
                   with customers.
                 </FieldDescription>
                 <RadioGroup
-                  defaultValue={settings.response_style}
+                  defaultValue={settings.chatbot_response_style}
                   name="chatbot_response_style"
                 >
                   <Field orientation="horizontal">

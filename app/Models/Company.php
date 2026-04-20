@@ -46,7 +46,7 @@ class Company extends Model
         'slug' => 'main',
         'description' => 'Primary wallet for company transactions',
       ]);
-      $company->settings()->firstOrCreate([]);
+      $company->settings()->create(config('travelboost.company_default_settings'));
 
       // AI
       $company->aiCredit()->create([

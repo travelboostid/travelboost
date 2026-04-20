@@ -14,6 +14,7 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Spinner } from '@/components/ui/spinner';
 import { Switch } from '@/components/ui/switch';
+import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { extractImageSrc } from '@/lib/utils';
 import { Head, useForm } from '@inertiajs/react';
 import { FormattedMessage, useIntl } from 'react-intl';
@@ -24,20 +25,22 @@ export type ProfilePageProps = {
 };
 
 export default function Profile({ profile }: ProfilePageProps) {
+  const { company } = usePageSharedDataProps();
   const intl = useIntl();
   const form = useForm({
-    name: company.name,
-    email: company.email,
-    username: company.username,
-    phone: (company.phone || '') as string,
-    customer_service_phone: company.customer_service_phone || '',
-    address: company.address || '',
-    subdomain: company.subdomain,
-    photo_id: company.photo_id || undefined,
-    province: company.province || '',
-    city: company.city || '',
-    identity_id: company.identity_id || undefined,
-    
+    name: profile.name,
+    email: profile.email,
+    username: profile.username,
+    phone: (profile.phone || '') as string,
+    customer_service_phone: profile.customer_service_phone || '',
+    address: profile.address || '',
+    subdomain: profile.domain.subdomain,
+    domain_enabled: profile.domain.domain_enabled,
+    domain: profile.domain.domain || '',
+    photo_id: profile.photo_id || undefined,
+    province: profile.province || '',
+    city: profile.city || '',
+    identity_id: profile.identity_id || undefined,
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -250,9 +253,7 @@ export default function Profile({ profile }: ProfilePageProps) {
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="city">
-              City
-            </Label>
+            <Label htmlFor="city">City</Label>
             <Input
               id="city"
               type="text"
@@ -263,14 +264,9 @@ export default function Profile({ profile }: ProfilePageProps) {
               name="city"
               placeholder="City"
               value={form.data.city}
-              onChange={(e) =>
-                form.setData('city', e.target.value)
-              }
+              onChange={(e) => form.setData('city', e.target.value)}
             />
-            <InputError
-              message={form.errors.city}
-              className="mt-2"
-            />
+            <InputError message={form.errors.city} className="mt-2" />
           </div>
 
           <div className="grid gap-2 col-span-2">
@@ -282,7 +278,9 @@ export default function Profile({ profile }: ProfilePageProps) {
                 owner_id: company.id,
               }}
               type="photo"
-              onChange={(media) => form.setData('identity_id', (media as any)?.id)}
+              onChange={(media) =>
+                form.setData('identity_id', (media as any)?.id)
+              }
             >
               {(media, change) => (
                 <div className="flex flex-col gap-2">

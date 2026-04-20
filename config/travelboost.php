@@ -60,4 +60,10 @@ return [
       ],
     ],
   ],
+  'company_default_settings' => [
+    'chatbot_enabled' => true,
+    'chatbot_response_style' => 'professional',
+    'chatbot_default_language' => 'auto',
+    'chatbot_model_id' => '9',
+  ],
 ];

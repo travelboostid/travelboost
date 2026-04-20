@@ -5,6 +5,9 @@
  * OpenAPI spec version: 0.0.1
  */
 
+export * from './aiModelResource';
+export * from './aiModelResourceCreatedAt';
+export * from './aiModelResourceUpdatedAt';
 export * from './anonymousUserResource';
 export * from './anonymousUserResourceCreatedAt';
 export * from './anonymousUserResourceUpdatedAt';
