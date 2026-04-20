@@ -21,6 +21,7 @@ import {
   Users,
   X,
 } from 'lucide-react';
+import { useTheme } from 'next-themes';
 import React, { useEffect, useState } from 'react';
 
 // --- KAMUS BAHASA ---
@@ -72,9 +73,9 @@ const dict = {
     step4D: 'Komisi masuk wallet & siap ditarik.',
 
     advTitle: 'Keunggulan Program Afiliasi TravelBoost',
-    adv1Title: 'Komisi 10% Flat & Transparan',
+    adv1Title: 'Komisi 10% - 15% Flat & Transparan',
     adv1Desc:
-      'Hitungan komisi jelas dari nilai transaksi, tanpa potongan tersembunyi.',
+      'Hitungan komisi jelas dari nilai subscription, tanpa potongan tersembunyi.',
     adv2Title: 'Nol Modal, Nol Risiko',
     adv2Desc: 'Tidak perlu beli produk atau biaya pendaftaran. Langsung mulai.',
     adv3Title: 'Pembayaran Otomatis via Wallet',
@@ -168,9 +169,9 @@ const dict = {
     step4D: 'Commission enters wallet & ready to withdraw.',
 
     advTitle: 'TravelBoost Affiliate Program Advantages',
-    adv1Title: 'Flat 10% Transparent Commission',
+    adv1Title: 'Flat 10% - 15% Transparent Commission',
     adv1Desc:
-      'Clear commission calculation from transaction value, no hidden deductions.',
+      'Clear commission calculation from subscription value, no hidden deductions.',
     adv2Title: 'Zero Capital, Zero Risk',
     adv2Desc: 'No need to buy products or registration fees. Start instantly.',
     adv3Title: 'Automated Wallet Payment',
@@ -263,7 +264,7 @@ const FaqItem: React.FC<{ question: string; answer: string }> = ({
 
 export default function Landing() {
   const [lang, setLang] = useState<'id' | 'en'>('id');
-  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const { resolvedTheme, setTheme } = useTheme();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const [currentDomain, setCurrentDomain] = useState(
@@ -277,12 +278,6 @@ export default function Landing() {
 
     const sLang = localStorage.getItem('tb_lang') as 'id' | 'en';
     if (sLang) setLang(sLang);
-
-    const sTheme = localStorage.getItem('tb_theme') as 'light' | 'dark';
-    if (sTheme === 'dark') {
-      setTheme('dark');
-      document.documentElement.classList.add('dark');
-    }
   }, []);
 
   const toggleLang = () => {
@@ -292,10 +287,8 @@ export default function Landing() {
   };
 
   const toggleTheme = () => {
-    const n = theme === 'light' ? 'dark' : 'light';
+    const n = resolvedTheme === 'light' ? 'dark' : 'light';
     setTheme(n);
-    localStorage.setItem('tb_theme', n);
-    document.documentElement.classList.toggle('dark', n === 'dark');
   };
 
   const t = dict[lang];
@@ -378,7 +371,11 @@ export default function Landing() {
                 onClick={toggleTheme}
                 className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition"
               >
-                {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
+                {resolvedTheme === 'light' ? (
+                  <Moon size={18} />
+                ) : (
+                  <Sun size={18} />
+                )}
               </button>
 
               {/* Menu Hamburger Mobile */}

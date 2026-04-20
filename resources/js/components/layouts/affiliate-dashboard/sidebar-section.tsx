@@ -26,9 +26,9 @@ export function SidebarSection(props: AffiliateDashboardLayoutProps) {
                   <span className="truncate font-bold text-blue-600 dark:text-blue-500 text-lg">
                     TravelBoost
                   </span>
-                  <span className="truncate text-xs font-medium text-slate-500">
+                  {/* <span className="truncate text-xs font-medium text-slate-500">
                     for Affiliator
-                  </span>
+                  </span> */}
                 </div>
               </a>
             </SidebarMenuButton>

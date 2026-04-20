@@ -1,5 +1,13 @@
 import { useState } from 'react';
 
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Field,
+  FieldContent,
+  FieldDescription,
+  FieldLabel,
+} from '@/components/ui/field';
+
 export default function PermissionsSelector({
   permissions,
   value,
@@ -25,20 +33,29 @@ export default function PermissionsSelector({
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       {permissions.map((permission) => (
-        <div key={permission.id} className="flex items-center space-x-2">
-          <input
-            type="checkbox"
+        <Field
+          orientation="horizontal"
+          key={permission.id}
+          className="flex items-center gap-2"
+        >
+          <Checkbox
             id={`permission-${permission.id}`}
+            name={`permission-${permission.id}`}
             checked={internalValue[permission.name] || false}
-            onChange={(e) =>
-              handleChange({ [permission.name]: e.target.checked })
+            onCheckedChange={(checked) =>
+              handleChange({ [permission.name]: Boolean(checked) })
             }
             disabled={disabled}
           />
-          <label htmlFor={`permission-${permission.id}`}>
-            {permission.name}
-          </label>
-        </div>
+          <FieldContent>
+            <FieldLabel htmlFor="terms-checkbox-2">
+              {permission.name}
+            </FieldLabel>
+            <FieldDescription className="text-xs">
+              {permission.description || 'No description provided.'}
+            </FieldDescription>
+          </FieldContent>
+        </Field>
       ))}
     </div>
   );

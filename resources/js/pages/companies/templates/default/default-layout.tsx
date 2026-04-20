@@ -82,6 +82,12 @@ export default function DefaultLayout({
               >
                 About Us
               </a>
+              <a
+                href="#about-us"
+                className="text-muted-foreground hover:text-foreground transition-colors font-medium"
+              >
+                About Us
+              </a>
             </nav>
 
             {/* DESKTOP BUTTON */}

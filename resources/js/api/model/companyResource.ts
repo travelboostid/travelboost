@@ -11,6 +11,8 @@ import type { CompanyResourceCreatedAt } from './companyResourceCreatedAt';
 import type { CompanyResourceUpdatedAt } from './companyResourceUpdatedAt';
 import type { CompanyResourceLogoId } from './companyResourceLogoId';
 import type { CompanyResourcePhotoId } from './companyResourcePhotoId';
+import type { CompanyResourceIdentityId } from './companyResourceIdentityId';
+import type { CompanyResourceReferredBy } from './companyResourceReferredBy';
 
 export interface CompanyResource {
   id: number;
@@ -21,6 +23,8 @@ export interface CompanyResource {
   address: string;
   phone: string;
   customer_service_phone: string;
+  province: string;
+  city: string;
   note: CompanyResourceNote;
   meta: CompanyResourceMeta;
   remember_token: CompanyResourceRememberToken;
@@ -28,5 +32,7 @@ export interface CompanyResource {
   updated_at: CompanyResourceUpdatedAt;
   logo_id: CompanyResourceLogoId;
   photo_id: CompanyResourcePhotoId;
+  identity_id: CompanyResourceIdentityId;
+  referred_by: CompanyResourceReferredBy;
   photo_url: string;
 }

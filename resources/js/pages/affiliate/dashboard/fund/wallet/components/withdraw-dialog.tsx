@@ -16,7 +16,7 @@ import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { useForm, usePage } from '@inertiajs/react';
 
-const MIN_AMOUNT = 50_000; // Affiliate biasanya batas WD lebih kecil
+const MIN_AMOUNT = 50_000;
 
 type WithdrawDialogProps = {
   children: React.ReactNode;
@@ -39,7 +39,6 @@ export function WithdrawDialog({ children }: WithdrawDialogProps) {
   const handleWithdraw = () => {
     if (!isValid || processing) return;
 
-    // Arahkan ke route pemrosesan penarikan affiliate (Nanti dibuat di controller Withdraw)
     post('/affiliate/dashboard/fund/withdraw', {
       onSuccess: () => reset(),
     });
@@ -77,10 +76,15 @@ export function WithdrawDialog({ children }: WithdrawDialogProps) {
 
           <Field>
             <Label htmlFor="bank-account-id">Bank Account</Label>
-            {/* Memanfaatkan komponen SelectBank bawaan tim Mba */}
             <SelectBank
               name="bank_account_id"
-              onChange={(e: any) => setData('bank_account_id', e.target.value)}
+              value={data.bank_account_id}
+              onChange={(val: any) => {
+                // [FIX BLANK PAGE] Handle custom select yang me-return string langsung
+                // atau native select yang me-return event
+                const selectedValue = val?.target ? val.target.value : val;
+                setData('bank_account_id', selectedValue);
+              }}
             />
           </Field>
 

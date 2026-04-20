@@ -6,6 +6,10 @@ use App\Models\AnonymousUser;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
+use App\Models\Currency;
+use Illuminate\Support\Facades\Cookie;
+use Illuminate\Support\Str;
+
 class HandleInertiaRequests extends Middleware
 {
   /**
@@ -42,17 +46,16 @@ class HandleInertiaRequests extends Middleware
     $anonymousUser = $anonymousUserToken ? AnonymousUser::where('token', $anonymousUserToken)->first() : null;
 
     if (!$anonymousUser && !$request->user()) {
-        $anonymousUser = AnonymousUser::create([
-            'token' => (string) \Illuminate\Support\Str::uuid(),
-        ]);
-        \Illuminate\Support\Facades\Cookie::queue('anonymous_user_token', $anonymousUser->token, 60 * 24 * 365);
+      $anonymousUser = AnonymousUser::create([
+        'token' => Str::uuid()->toString(),
+      ]);
+      Cookie::queue('anonymous_user_token', $anonymousUser->token, 60 * 24 * 365);
     }
 
     return [
       ...parent::share($request),
       'name' => config('app.name'),
       'appDomain' => env('APP_HOST', 'localhost'),
-      // current authenticated user
       'auth' => [
         'user' => $request->user()?->load(['companies']),
         'permissions' => $request->user()?->allPermissions()->pluck('name')->toArray(),
@@ -65,6 +68,16 @@ class HandleInertiaRequests extends Middleware
       'tenant' => $request->attributes->get('tenant'),
       'anonymousUser' => $anonymousUser,
       'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
+
+      //13042026
+      'currencies' => fn() => Currency::select('code', 'name')->get(),
+
+      'flash' => [
+        'tab' => $request->session()->get('tab'),
+        'account_inactive' => $request->session()->get('account_inactive'),
+        'warning' => $request->session()->get('warning'),
+        'success' => $request->session()->get('success'),
+      ],
     ];
   }
 }

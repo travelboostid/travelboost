@@ -12,133 +12,97 @@ class AffiliateSeeder extends Seeder
 {
   public function run(): void
   {
-    $payloads = [
-      [
-        'user' => [
-          'name' => 'Partner Satu',
-          'username' => 'partner-satu',
-          'email' => 'partner1@tb.com'
-        ],
-        'affiliate_profile' => [
-          'upline_id' => null,
-          'tier' => 'partner',
-          'status' => 'approved',
-          'referral_code' => 'partner-satu',
-          'approved_at' => now()
-        ],
-        'domain' => [
-          'subdomain' => 'partner-satu',
-        ]
-      ],
-      [
-        'user' => [
-          'name' => 'Partner Dua',
-          'username' => 'partner-dua',
-          'email' => 'partner2@tb.com'
-        ],
-        'affiliate_profile' => [
-          'upline_id' => null,
-          'tier' => 'partner',
-          'status' => 'approved',
-          'referral_code' => 'partner-dua',
-          'approved_at' => now()
-        ],
-        'domain' => [
-          'subdomain' => 'partner-dua',
-        ]
-      ],
-      [
-        'user' => [
-          'name' => 'Master Satu',
-          'username' => 'ma-satu',
-          'email' => 'ma1@tb.com'
-        ],
-        'affiliate_profile' => [
-          'upline_id' => null,
-          'tier' => 'master_affiliate',
-          'status' => 'approved',
-          'referral_code' => 'ma-satu',
-          'approved_at' => now()
-        ],
-        'domain' => [
-          'subdomain' => 'ma-satu',
-        ]
-      ],
-      [
-        'user' => [
-          'name' => 'Master Dua',
-          'username' => 'ma-dua',
-          'email' => 'ma2@tb.com'
-        ],
-        'affiliate_profile' => [
-          'upline_id' => null,
-          'tier' => 'master_affiliate',
-          'status' => 'approved',
-          'referral_code' => 'ma-dua',
-          'approved_at' => now()
-        ],
-        'domain' => [
-          'subdomain' => 'ma-dua',
-        ]
-      ],
-      [
-        'user' => [
-          'name' => 'Affiliate Approved',
-          'username' => 'affiliate-satu',
-          'email' => 'affiliate1@tb.com'
-        ],
-        'affiliate_profile' => [
-          'upline_id' => null,
-          'tier' => 'affiliate',
-          'status' => 'approved',
-          'referral_code' => 'affiliate-satu',
-          'approved_at' => now()
-        ],
-        'domain' => [
-          'subdomain' => 'affiliate-satu',
-        ]
-      ],
-      [
-        'user' => [
-          'name' => 'Affiliate Pending',
-          'username' => 'affiliate-dua',
-          'email' => 'affiliate2@tb.com'
-        ],
-        'affiliate_profile' => [
-          'upline_id' => null,
-          'tier' => 'affiliate',
-          'status' => 'pending',
-          'referral_code' => 'affiliate-dua',
-          'approved_at' => null
-        ],
-        'domain' => [
-          'subdomain' => 'affiliate-dua',
-        ]
-      ]
-    ];
+    $nums = [1 => 'satu', 2 => 'dua', 3 => 'tiga', 4 => 'empat', 5 => 'lima', 6 => 'enam', 7 => 'tujuh', 8 => 'delapan', 9 => 'sembilan', 10 => 'sepuluh', 11 => 'sebelas', 12 => 'duabelas', 13 => 'tigabelas', 14 => 'empatbelas', 15 => 'limabelas'];
 
-    foreach ($payloads as $payload) {
+    $partners = [];
+    for ($i = 1; $i <= 2; $i++) {
+      $username = 'partner-' . $nums[$i];
       $user = User::create([
-        'name' => $payload['user']['name'],
-        'username' => $payload['user']['username'],
-        'email' => $payload['user']['email'],
-        'password' => Hash::make($payload['user']['username']),
+        'name' => 'Partner ' . ucfirst($nums[$i]),
+        'username' => $username,
+        'email' => "partner{$i}@tb.com",
+        'password' => Hash::make($username),
         'email_verified_at' => now(),
         'status' => 'active'
       ]);
 
-      $affiliate = AffiliateProfile::create([
+      $profile = AffiliateProfile::create([
         'user_id' => $user->id,
-        'upline_id' => $payload['affiliate_profile']['upline_id'],
-        'tier' => $payload['affiliate_profile']['tier'],
-        'status' => $payload['affiliate_profile']['status'],
-        'referral_code' => $payload['affiliate_profile']['referral_code'],
-        'approved_at' => $payload['affiliate_profile']['approved_at']
+        'upline_id' => null,
+        'tier' => 'partner',
+        'status' => 'approved',
+        'referral_code' => $username,
+        'approved_at' => now()
       ]);
+
       Domain::create([
-        'owner_id' => $affiliate->id,
+        'owner_id' => $profile->id,
         'owner_type' => AffiliateProfile::class,
-        'subdomain' => $payload['domain']['subdomain'],
+        'subdomain' => $username,
+      ]);
+
+      $partners[$i] = $user->id;
+    }
+
+    $mas = [];
+    for ($i = 1; $i <= 3; $i++) {
+      $username = 'ma-' . $nums[$i];
+      $upline = ($i === 1 || $i === 2) ? $partners[1] : $partners[2];
+
+      $user = User::create([
+        'name' => 'Master Affiliate ' . ucfirst($nums[$i]),
+        'username' => $username,
+        'email' => "ma{$i}@tb.com",
+        'password' => Hash::make($username),
+        'email_verified_at' => now(),
+        'status' => 'active'
+      ]);
+
+      $profile = AffiliateProfile::create([
+        'user_id' => $user->id,
+        'upline_id' => $upline,
+        'tier' => 'master_affiliate',
+        'status' => 'approved',
+        'referral_code' => $username,
+        'approved_at' => now()
+      ]);
+
+      Domain::create([
+        'owner_id' => $profile->id,
+        'owner_type' => AffiliateProfile::class,
+        'subdomain' => $username,
+      ]);
+
+      $mas[$i] = $user->id;
+    }
+
+    for ($i = 1; $i <= 15; $i++) {
+      $username = 'affiliate-' . $nums[$i];
+      $userStatus = ($i % 4 === 0) ? 'inactive' : 'active';
+      $profileStatus = ($i % 3 === 0) ? 'pending' : 'approved';
+
+      $user = User::create([
+        'name' => 'Affiliate ' . ucfirst($nums[$i]),
+        'username' => $username,
+        'email' => "affiliate{$i}@tb.com",
+        'password' => Hash::make($username),
+        'email_verified_at' => ($userStatus === 'active') ? now() : null,
+        'status' => $userStatus
+      ]);
+
+      $profile = AffiliateProfile::create([
+        'user_id' => $user->id,
+        'upline_id' => $mas[array_rand($mas)],
+        'tier' => 'affiliate',
+        'status' => $profileStatus,
+        'referral_code' => $username,
+        'approved_at' => ($profileStatus === 'approved') ? now() : null
+      ]);
+
+      Domain::create([
+        'owner_id' => $profile->id,
+        'owner_type' => AffiliateProfile::class,
+        'subdomain' => $username,
       ]);
     }
   }

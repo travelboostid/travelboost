@@ -12,6 +12,8 @@ use Database\Seeders\Common\RegionSeeder;
 use Database\Seeders\Common\RolePermissionSeeder;
 use Database\Seeders\Common\TourSeeder;
 use Database\Seeders\Common\UserSeeder;
+use Database\Seeders\Common\CurrencySeeder;
+use Database\Seeders\Common\PriceCategorySeeder;
 use Illuminate\Database\Seeder;
 
 class DevelopmentSeeder extends Seeder
@@ -32,6 +34,8 @@ class DevelopmentSeeder extends Seeder
       TourSeeder::class,
       AffiliateCommissionRateSeeder::class,
       AffiliateSeeder::class,
+      CurrencySeeder::class,
+      PriceCategorySeeder::class,
     ]);
   }
 }

@@ -22,6 +22,7 @@
     "laravel/telescope": "*",
     "laravel/tinker": "^2.10.1",
     "laravel/wayfinder": "^0.1.9",
+    "laravolt/indonesia": "^0.41.0",
     "midtrans/midtrans-php": "*",
     "santigarcor/laratrust": "^8.5",
     "spatie/laravel-query-builder": "*",

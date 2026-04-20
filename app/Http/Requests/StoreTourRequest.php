@@ -48,6 +48,7 @@ class StoreTourRequest extends FormRequest
       'promote_note' => 'nullable|string|max:255',
       //'promote_price' => 'nullable|integer|min:0',
       'promote_price' => 'nullable|numeric|min:0',
+      'currency'  => 'nullable|string',
     ];
   }
 

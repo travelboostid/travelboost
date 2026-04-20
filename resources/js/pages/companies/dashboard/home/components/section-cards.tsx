@@ -1,101 +1,116 @@
-import { IconTrendingDown, IconTrendingUp } from '@tabler/icons-react';
-
 import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { formatIDR } from '@/lib/utils';
 import {
-  Card,
-  CardAction,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+  Briefcase,
+  ShoppingBag,
+  TrendingUp,
+  Users,
+  Wallet,
+} from 'lucide-react';
 
-export function SectionCards() {
+export function SectionCards({ stats, type }: { stats: any; type: string }) {
   return (
-    <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
-      <Card className="bg-linear-to-t from-primary/5 to-card shadow-xs dark:bg-card">
-        <CardHeader>
-          <CardDescription>Total Revenue</CardDescription>
-          <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-            $1,250.00
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <Card className="border-none shadow-sm bg-white overflow-hidden relative group">
+        <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:scale-110 transition-transform">
+          <ShoppingBag size={80} />
+        </div>
+        <CardHeader className="pb-2">
+          <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            Total Sales
+          </div>
+          <CardTitle className="text-2xl font-bold">
+            {formatIDR(stats.sales.total.idr)}
           </CardTitle>
-          <CardAction>
-            <Badge variant="outline">
-              <IconTrendingUp />
-              +12.5%
-            </Badge>
-          </CardAction>
         </CardHeader>
-        <CardFooter className="flex-col items-start gap-1.5 text-sm">
-          <div className="line-clamp-1 flex gap-2 font-medium">
-            Trending up this month <IconTrendingUp className="size-4" />
+        <CardContent className="space-y-3">
+          <div className="flex gap-4 text-xs text-slate-500 font-medium">
+            <span>{stats.sales.total.pax} PAX</span>
+            <span>{stats.sales.total.order} Orders</span>
           </div>
-          <div className="text-muted-foreground">
-            Visitors for the last 6 months
+          <div className="pt-2 border-t">
+            <div className="text-[10px] text-slate-400 mb-1">This Month:</div>
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-emerald-600">
+                {formatIDR(stats.sales.monthly.idr)}
+              </span>
+              <Badge
+                variant="secondary"
+                className="text-[10px] bg-emerald-50 text-emerald-600 border-none"
+              >
+                +{stats.sales.monthly.pax} Pax
+              </Badge>
+            </div>
           </div>
-        </CardFooter>
+        </CardContent>
       </Card>
-      <Card className="bg-linear-to-t from-primary/5 to-card shadow-xs dark:bg-card">
-        <CardHeader>
-          <CardDescription>New Customers</CardDescription>
-          <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-            1,234
+
+      <Card className="border-none shadow-sm bg-white overflow-hidden relative group">
+        <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:scale-110 transition-transform">
+          <Wallet size={80} />
+        </div>
+        <CardHeader className="pb-2">
+          <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            {type === 'vendor' ? 'Total Profit' : 'Total Commission'}
+          </div>
+          <CardTitle className="text-2xl font-bold text-emerald-600">
+            {formatIDR(stats.commission.total)}
           </CardTitle>
-          <CardAction>
-            <Badge variant="outline">
-              <IconTrendingDown />
-              -20%
-            </Badge>
-          </CardAction>
         </CardHeader>
-        <CardFooter className="flex-col items-start gap-1.5 text-sm">
-          <div className="line-clamp-1 flex gap-2 font-medium">
-            Down 20% this period <IconTrendingDown className="size-4" />
+        <CardContent>
+          <div className="text-[10px] text-slate-400 mb-1">This Month:</div>
+          <div className="text-lg font-bold">
+            {formatIDR(stats.commission.monthly)}
           </div>
-          <div className="text-muted-foreground">
-            Acquisition needs attention
-          </div>
-        </CardFooter>
+          <p className="text-[10px] text-emerald-500 flex items-center gap-1 mt-1">
+            <TrendingUp size={10} /> 12% increase from last month
+          </p>
+        </CardContent>
       </Card>
-      <Card className="bg-linear-to-t from-primary/5 to-card shadow-xs dark:bg-card">
-        <CardHeader>
-          <CardDescription>Active Accounts</CardDescription>
-          <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-            45,678
-          </CardTitle>
-          <CardAction>
-            <Badge variant="outline">
-              <IconTrendingUp />
-              +12.5%
-            </Badge>
-          </CardAction>
-        </CardHeader>
-        <CardFooter className="flex-col items-start gap-1.5 text-sm">
-          <div className="line-clamp-1 flex gap-2 font-medium">
-            Strong user retention <IconTrendingUp className="size-4" />
+
+      <Card className="border-none shadow-sm bg-white overflow-hidden relative group">
+        <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:scale-110 transition-transform">
+          <Users size={80} />
+        </div>
+        <CardHeader className="pb-2">
+          <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            Total Customers
           </div>
-          <div className="text-muted-foreground">Engagement exceed targets</div>
-        </CardFooter>
+          <CardTitle className="text-3xl font-bold">
+            {stats.counters.customers}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-xs text-slate-500">Active registered customers</p>
+          <div className="w-full bg-slate-100 h-1.5 rounded-full mt-4">
+            <div className="bg-blue-500 h-1.5 rounded-full w-[70%]"></div>
+          </div>
+        </CardContent>
       </Card>
-      <Card className="bg-linear-to-t from-primary/5 to-card shadow-xs dark:bg-card">
-        <CardHeader>
-          <CardDescription>Growth Rate</CardDescription>
-          <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-            4.5%
-          </CardTitle>
-          <CardAction>
-            <Badge variant="outline">
-              <IconTrendingUp />
-              +4.5%
-            </Badge>
-          </CardAction>
-        </CardHeader>
-        <CardFooter className="flex-col items-start gap-1.5 text-sm">
-          <div className="line-clamp-1 flex gap-2 font-medium">
-            Steady performance increase <IconTrendingUp className="size-4" />
+
+      <Card className="border-none shadow-sm bg-white overflow-hidden relative group">
+        <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:scale-110 transition-transform">
+          <Briefcase size={80} />
+        </div>
+        <CardHeader className="pb-2">
+          <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            {type === 'vendor' ? 'Partner Agents' : 'Agent Ranking'}
           </div>
-          <div className="text-muted-foreground">Meets growth projections</div>
-        </CardFooter>
+          <CardTitle className="text-3xl font-bold">
+            {type === 'vendor' ? stats.counters.agents : '#4'}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-xs text-slate-500">
+            {type === 'vendor'
+              ? 'Active agents in network'
+              : 'Top 5% national agents'}
+          </p>
+          <Badge className="mt-4 bg-blue-50 text-blue-600 border-none">
+            Keep growing! 🚀
+          </Badge>
+        </CardContent>
       </Card>
     </div>
   );

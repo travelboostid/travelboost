@@ -14,15 +14,10 @@ import { Form, Head } from '@inertiajs/react';
 type Props = {
   status?: string;
   // canResetPassword: boolean;
-  canRegister: boolean;
   company: any;
 };
 
-export default function Login({
-  status,
-  // canResetPassword,
-  canRegister,
-}: Props) {
+export default function Login({ status }: Props) {
   return (
     <AuthLayout
       title="Log in to your account"
@@ -95,14 +90,12 @@ export default function Login({
               </Button>
             </div>
 
-            {canRegister && (
-              <div className="text-center text-sm text-muted-foreground">
-                Don't have an account?{' '}
-                <TextLink href={register()} tabIndex={5}>
-                  Sign up
-                </TextLink>
-              </div>
-            )}
+            <div className="text-center text-sm text-muted-foreground">
+              Don't have an account?{' '}
+              <TextLink href={register()} tabIndex={5}>
+                Sign up
+              </TextLink>
+            </div>
           </>
         )}
       </Form>

@@ -2,8 +2,6 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
-
 use App\Enums\UserGender;
 use App\Enums\UserStatus;
 use App\Traits\HasBankAccounts;
@@ -12,7 +10,6 @@ use Bavix\Wallet\Interfaces\Wallet;
 use Bavix\Wallet\Traits\CanPay;
 use Bavix\Wallet\Traits\HasWallet;
 use Bavix\Wallet\Traits\HasWallets;
-use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -21,158 +18,112 @@ use Laratrust\Contracts\LaratrustUser;
 use Laratrust\Traits\HasRolesAndPermissions;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 
-class User extends Authenticatable implements Customer, LaratrustUser, Wallet
+class User extends Authenticatable implements Wallet, Customer, LaratrustUser
 {
-  /** @use HasFactory<UserFactory> */
-  use CanPay, HasBankAccounts, HasFactory, HasRolesAndPermissions, HasWallet, HasWallets, Notifiable, TwoFactorAuthenticatable;
+    use HasFactory, Notifiable, TwoFactorAuthenticatable, HasRolesAndPermissions, CanPay, HasWallet, HasWallets, HasBankAccounts;
 
-  /**
-   * The attributes that are mass assignable.
-   *
-   * @var list<string>
-   */
-  protected $fillable = [
-    'name',
-    'username',
-    'email',
-    'password',
-    'phone',
-    'address',
-    'photo_id',
-    'company_id',
-    'gender',
-    'status',
-    'meta',
-    'note',
-  ];
-
-  /**
-   * The attributes that should be hidden for serialization.
-   *
-   * @var list<string>
-   */
-  protected $hidden = [
-    'password',
-    'two_factor_secret',
-    'two_factor_recovery_codes',
-    'remember_token',
-    'photo',
-  ];
-
-  /**
-   * Get the attributes that should be cast.
-   *
-   * @return array<string, string>
-   */
-  protected function casts(): array
-  {
-    return [
-      'email_verified_at' => 'datetime',
-      'password' => 'hashed',
-      'two_factor_confirmed_at' => 'datetime',
-      'status' => UserStatus::class,
-      'gender' => UserGender::class,
+    protected $fillable = [
+        'name',
+        'username',
+        'email',
+        'password',
+        'phone',
+        'address',
+        'photo_id',
+        'company_id',
+        'gender',
+        'status',
+        'meta',
+        'note',
     ];
-  }
 
-  protected $appends = ['photo_url'];
+    protected $hidden = [
+        'password',
+        'remember_token',
+        'two_factor_recovery_codes',
+        'two_factor_secret',
+        'photo'
+    ];
 
-  // protected $with = ['photo'];
-  protected $with = ['affiliateProfile', 'roles'];
+    protected function casts(): array
+    {
+        return [
+            'email_verified_at' => 'datetime',
+            'password' => 'hashed',
+            'two_factor_confirmed_at' => 'datetime',
+            'status' => UserStatus::class,
+            'gender' => UserGender::class,
+        ];
+    }
 
-  // Relationship
-  // Relationship
+    protected $appends = ['photo_url'];
+    protected $with = ['affiliateProfile', 'roles'];
 
-  public function photo()
-  {
-    return $this->belongsTo(Media::class, 'photo_id');
-  }
-  public function photo()
-  {
-    return $this->belongsTo(Media::class, 'photo_id');
-  }
+    protected static function booted()
+    {
+        static::created(function ($user) {
+            $user->wallet()->create([
+                'name' => 'Main Wallet',
+                'slug' => 'main',
+                'description' => 'Primary wallet for user transactions',
+            ]);
+        });
+    }
 
-  public function bankAccounts()
-  {
-    return $this->hasMany(BankAccount::class);
-  }
-  public function bankAccounts()
-  {
-    return $this->hasMany(BankAccount::class);
-  }
+    public function photo()
+    {
+        return $this->belongsTo(Media::class, 'photo_id');
+    }
 
-  public function companies()
-  {
-    return $this->belongsToMany(Company::class, 'company_teams')
-      ->withTimestamps();
-  }
-  public function companies()
-  {
-    return $this->belongsToMany(Company::class, 'company_teams')
-      ->withTimestamps();
-  }
+    public function bankAccounts()
+    {
+        return $this->hasMany(BankAccount::class);
+    }
 
-  protected function photoUrl(): Attribute
-  {
-    return Attribute::make(
-      get: function () {
-        $files = collect($this->photo?->data['files'] ?? []);
-        $file = $files->firstWhere('code', 'small');
-  protected function photoUrl(): Attribute
-  {
-    return Attribute::make(
-      get: function () {
-        $files = collect($this->photo?->data['files'] ?? []);
-        $file = $files->firstWhere('code', 'small');
+    public function companies()
+    {
+        return $this->belongsToMany(Company::class, 'company_teams')->withTimestamps();
+    }
 
-        return data_get($file, 'url');
-      }
-    );
-  }
+    protected function photoUrl(): Attribute
+    {
+        return Attribute::make(
+            get: function () {
+                $files = collect($this->photo?->data['files'] ?? []);
+                $file = $files->firstWhere('code', 'small');
 
+                return data_get($file, 'url');
+            }
+        );
+    }
 
-  public function medias()
-  {
-    return $this->morphMany(Media::class, 'owner');
-  }
-  public function medias()
-  {
-    return $this->morphMany(Media::class, 'owner');
-  }
+    public function medias()
+    {
+        return $this->morphMany(Media::class, 'owner');
+    }
 
-  public function company()
-  {
-    return $this->belongsTo(Company::class, 'company_id');
-  }
-  public function company()
-  {
-    return $this->belongsTo(Company::class, 'company_id');
-  }
+    public function company()
+    {
+        return $this->belongsTo(Company::class, 'company_id');
+    }
 
-  public function bookings()
-  {
-    return $this->hasMany(Booking::class);
-  }
-  public function bookings()
-  {
-    return $this->hasMany(Booking::class);
-  }
+    public function bookings()
+    {
+        return $this->hasMany(Booking::class);
+    }
 
-  public function savedPassengers()
-  {
-    return $this->hasMany(SavedPassenger::class);
-  public function savedPassengers()
-  {
-    return $this->hasMany(SavedPassenger::class);
-  }
+    public function savedPassengers()
+    {
+        return $this->hasMany(SavedPassenger::class);
+    }
 
-  public function affiliateProfile()
-  {
-    return $this->hasOne(AffiliateProfile::class);
-  }
+    public function affiliateProfile()
+    {
+        return $this->hasOne(AffiliateProfile::class);
+    }
 
-  public function affiliateCommissionRates()
-  {
-    return $this->hasMany(AffiliateCommissionRate::class);
-  }
+    public function affiliateCommissionRates()
+    {
+        return $this->hasMany(AffiliateCommissionRate::class);
+    }
 }

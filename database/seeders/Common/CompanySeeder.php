@@ -45,7 +45,8 @@ class CompanySeeder extends Seeder
       AgentSubscriptionPackage::factory()->create($package);
     }
 
-    $seeds = [
+    // Define the target companies to create
+    $companies = [
       [
         'username' => 'vendor',
         'subdomain' => 'vendor',
@@ -63,14 +64,13 @@ class CompanySeeder extends Seeder
       ],
     ];
 
-    foreach ($seeds as $seed) {
+    foreach ($companies as $seed) {
       $user = User::where('username', $seed['username'])->first();
-      if (! $user) {
+      if (!$user) {
         $this->command->error("User with username '{$seed['username']}' not found. Please run UserSeeder first.");
-
         continue;
       }
-      $company = Company::create([
+      $company = Company::factory()->create([
         'username' => $seed['username'],
         'type' => $seed['company_type'],
         'name' => ucfirst($seed['username']) . ' Company',
@@ -85,8 +85,8 @@ class CompanySeeder extends Seeder
         'status' => CompanyTeamStatus::ACTIVE,
         'is_owner' => true,
       ]);
-      $team = Team::where('name', "company:{$company->id}")->first();
-      $superadmin = Role::where('name', "company:{$company->id}:superadmin")->first();
+      $team = Team::where('name', "company:{$company->id}")->firstOrCreate();
+      $superadmin = Role::where('name', "company:{$company->id}:superadmin")->firstOrCreate();
       $user->addRole($superadmin, $team);
 
       if ($company['type'] === CompanyType::AGENT) {

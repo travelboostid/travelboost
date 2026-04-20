@@ -83,6 +83,9 @@ class UpdateProfileRequest extends FormRequest
         'nullable',
         'exists:medias,id',
       ],
+      'province' => ['nullable', 'string', 'max:50'],
+      'city' => ['nullable', 'string', 'max:50'],
+      'identity_id' => ['nullable', 'exists:medias,id'],
     ];
   }
 
