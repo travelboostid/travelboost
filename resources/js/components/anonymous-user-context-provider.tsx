@@ -1,5 +1,7 @@
+import { useSetupAnonymousUser } from '@/api/anonymous-user/anonymous-user';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
-import { createContext, useContext } from 'react';
+import { createContext, useContext, useEffect } from 'react';
+
 export type AnonymousUserContextType = {
   id: number | null;
   token: string | null;
@@ -15,16 +17,27 @@ export default function AnonymousUserContextProvider({
 }: {
   children: React.ReactNode;
 }) {
-  const { auth, anonymousUser: sharedAnonymousUser } = usePageSharedDataProps();
+  const { auth } = usePageSharedDataProps();
+  const setup = useSetupAnonymousUser();
 
-  const resolvedId = sharedAnonymousUser?.id ?? null;
-  const resolvedToken = sharedAnonymousUser?.token ?? null;
+  useEffect(() => {
+    if (!auth?.user) {
+      setup.mutate();
+    } else {
+      setup.reset();
+    }
+  }, [auth]);
+
+  console.log('AnonymousUserContextProvider render', {
+    auth,
+    setupData: setup.data,
+  });
 
   return (
     <AnonymousUserContext.Provider
       value={{
-        id: resolvedId,
-        token: resolvedToken,
+        id: setup.data?.data?.id ?? null,
+        token: setup.data?.data?.token ?? null,
       }}
     >
       {children}

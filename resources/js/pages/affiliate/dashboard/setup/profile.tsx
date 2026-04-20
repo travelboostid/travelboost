@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Head, useForm, usePage } from '@inertiajs/react';
+import axios from 'axios';
 import {
   Camera,
   ImagePlus,
@@ -19,7 +20,7 @@ import {
   Save,
   User as UserIcon,
 } from 'lucide-react';
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 export default function AffiliateProfileEdit() {
   const { user } = usePage().props as any;
@@ -42,6 +43,7 @@ export default function AffiliateProfileEdit() {
 
   const { data, setData, post, processing, errors, recentlySuccessful } =
     useForm({
+      name: user.name || '',
       phone: profile.phone || '',
       address: profile.address || '',
       province: profile.province || '',
@@ -54,6 +56,49 @@ export default function AffiliateProfileEdit() {
       profile_photo: null as File | null,
       _method: 'POST',
     });
+
+  const [provinces, setProvinces] = useState<any[]>([]);
+  const [cities, setCities] = useState<any[]>([]);
+  const [districts, setDistricts] = useState<any[]>([]);
+  const [villages, setVillages] = useState<any[]>([]);
+
+  // load data wilayah dinamis
+  useEffect(() => {
+    axios.get('/api/regions/provinces').then((res) => setProvinces(res.data));
+  }, []);
+
+  useEffect(() => {
+    const p = provinces.find((x) => x.name === data.province);
+    if (p) {
+      axios
+        .get(`/api/regions/cities/${p.code}`)
+        .then((res) => setCities(res.data));
+    } else {
+      setCities([]);
+    }
+  }, [data.province, provinces]);
+
+  useEffect(() => {
+    const c = cities.find((x) => x.name === data.city);
+    if (c) {
+      axios
+        .get(`/api/regions/districts/${c.code}`)
+        .then((res) => setDistricts(res.data));
+    } else {
+      setDistricts([]);
+    }
+  }, [data.city, cities]);
+
+  useEffect(() => {
+    const d = districts.find((x) => x.name === data.district);
+    if (d) {
+      axios
+        .get(`/api/regions/villages/${d.code}`)
+        .then((res) => setVillages(res.data));
+    } else {
+      setVillages([]);
+    }
+  }, [data.district, districts]);
 
   const handleIdChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -109,7 +154,6 @@ export default function AffiliateProfileEdit() {
         )}
 
         <form onSubmit={submit} className="space-y-6">
-          {/* FOTO PROFIL & AKUN DASAR */}
           <Card className="border-slate-200 shadow-sm">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -121,7 +165,6 @@ export default function AffiliateProfileEdit() {
             </CardHeader>
             <CardContent>
               <div className="flex flex-col md:flex-row gap-8 items-start">
-                {/* Upload Avatar */}
                 <div className="flex flex-col items-center gap-3 shrink-0 mx-auto md:mx-0">
                   <div className="relative group">
                     <div className="w-32 h-32 rounded-full border-4 border-slate-100 overflow-hidden bg-slate-50 flex items-center justify-center shadow-sm">
@@ -156,15 +199,14 @@ export default function AffiliateProfileEdit() {
                   <InputError message={errors.profile_photo} />
                 </div>
 
-                {/* Data Akun ReadOnly */}
                 <div className="flex-1 grid gap-4 md:grid-cols-2 w-full">
                   <div className="space-y-2">
-                    <Label>Full Name</Label>
+                    <Label>Full Name *</Label>
                     <Input
-                      value={user.name}
-                      disabled
-                      className="bg-slate-50 cursor-not-allowed"
+                      value={data.name}
+                      onChange={(e) => setData('name', e.target.value)}
                     />
+                    <InputError message={errors.name} />
                   </div>
                   <div className="space-y-2">
                     <Label>Email Address</Label>
@@ -175,61 +217,24 @@ export default function AffiliateProfileEdit() {
                     />
                   </div>
 
-                  {/* LOGIKA INFORMASI REFERRAL */}
                   {(() => {
-                    const profile =
-                      user?.affiliate_profile || user?.affiliateProfile;
                     const tier = profile?.tier;
-                    const uplineMA = profile?.upline; // Master Affiliate
-                    const uplinePartner =
-                      uplineMA?.affiliate_profile?.upline ||
-                      uplineMA?.affiliateProfile?.upline; // Partner
+                    const uplineMA = profile?.upline;
 
-                    // Jika user adalah Affiliator Biasa
-                    if (tier === 'affiliate') {
-                      return (
-                        <>
-                          <div className="space-y-2">
-                            <Label className="text-blue-700">
-                              Invited By (Master Affiliate)
-                            </Label>
-                            <Input
-                              value={uplineMA?.name || '-'}
-                              disabled
-                              className="bg-blue-50/50 border-blue-100 font-medium"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="text-blue-700">
-                              Network Partner
-                            </Label>
-                            <Input
-                              value={uplinePartner?.name || '-'}
-                              disabled
-                              className="bg-blue-50/50 border-blue-100 font-medium"
-                            />
-                          </div>
-                        </>
-                      );
-                    }
-
-                    // Jika user adalah Master Affiliate
-                    if (
-                      tier === 'master_affiliate' ||
-                      tier === 'master-affiliate'
-                    ) {
+                    if (tier === 'affiliate' && uplineMA) {
                       return (
                         <div className="space-y-2">
-                          <Label className="text-blue-700">Partner Under</Label>
+                          <Label className="text-blue-700">
+                            Invited By (Master Affiliate)
+                          </Label>
                           <Input
-                            value={uplineMA?.name || '-'}
+                            value={uplineMA.name}
                             disabled
                             className="bg-blue-50/50 border-blue-100 font-medium"
                           />
                         </div>
                       );
                     }
-
                     return null;
                   })()}
 
@@ -241,7 +246,7 @@ export default function AffiliateProfileEdit() {
                       className="bg-slate-50 cursor-not-allowed"
                     />
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-2 md:col-span-2">
                     <Label className="flex items-center gap-1 text-blue-700">
                       <LinkIcon className="w-3 h-3" /> Landing Page Link
                     </Label>
@@ -256,7 +261,6 @@ export default function AffiliateProfileEdit() {
             </CardContent>
           </Card>
 
-          {/* KONTAK & ALAMAT */}
           <Card className="border-slate-200 shadow-sm">
             <CardHeader>
               <CardTitle>Contact & Address</CardTitle>
@@ -266,7 +270,7 @@ export default function AffiliateProfileEdit() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2 md:w-1/2">
-                <Label htmlFor="phone">Phone / WhatsApp Number</Label>
+                <Label htmlFor="phone">Phone / WhatsApp Number *</Label>
                 <Input
                   id="phone"
                   value={data.phone}
@@ -291,35 +295,88 @@ export default function AffiliateProfileEdit() {
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="province">Province</Label>
-                  <Input
+                  <select
                     id="province"
+                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                     value={data.province}
-                    onChange={(e) => setData('province', e.target.value)}
-                  />
+                    onChange={(e) => {
+                      setData('province', e.target.value);
+                      setData('city', '');
+                      setData('district', '');
+                      setData('village', '');
+                    }}
+                  >
+                    <option value="">Select Province</option>
+                    {provinces.map((p) => (
+                      <option key={p.code} value={p.name}>
+                        {p.name}
+                      </option>
+                    ))}
+                  </select>
                   <InputError message={errors.province} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="city">City / Regency</Label>
-                  <Input
+                  <select
                     id="city"
+                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                     value={data.city}
-                    onChange={(e) => setData('city', e.target.value)}
-                  />
+                    onChange={(e) => {
+                      setData('city', e.target.value);
+                      setData('district', '');
+                      setData('village', '');
+                    }}
+                    disabled={!data.province}
+                  >
+                    <option value="">Select City</option>
+                    {cities.map((c) => (
+                      <option key={c.code} value={c.name}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
                   <InputError message={errors.city} />
                 </div>
 
-                {/* HIDE KECAMATAN & KELURAHAN (Bisa diaktifkan kembali nanti) */}
-                {/* <div className="space-y-2">
+                <div className="space-y-2">
                   <Label htmlFor="district">District (Kecamatan)</Label>
-                  <Input id="district" value={data.district} onChange={e => setData('district', e.target.value)} />
+                  <select
+                    id="district"
+                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                    value={data.district}
+                    onChange={(e) => {
+                      setData('district', e.target.value);
+                      setData('village', '');
+                    }}
+                    disabled={!data.city}
+                  >
+                    <option value="">Select District</option>
+                    {districts.map((d) => (
+                      <option key={d.code} value={d.name}>
+                        {d.name}
+                      </option>
+                    ))}
+                  </select>
                   <InputError message={errors.district} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="village">Village (Kelurahan)</Label>
-                  <Input id="village" value={data.village} onChange={e => setData('village', e.target.value)} />
+                  <select
+                    id="village"
+                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                    value={data.village}
+                    onChange={(e) => setData('village', e.target.value)}
+                    disabled={!data.district}
+                  >
+                    <option value="">Select Village</option>
+                    {villages.map((v) => (
+                      <option key={v.code} value={v.name}>
+                        {v.name}
+                      </option>
+                    ))}
+                  </select>
                   <InputError message={errors.village} />
-                </div> 
-                */}
+                </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="postal_code">Postal Code</Label>
@@ -334,7 +391,6 @@ export default function AffiliateProfileEdit() {
             </CardContent>
           </Card>
 
-          {/* IDENTITAS */}
           <Card className="border-slate-200 shadow-sm">
             <CardHeader>
               <CardTitle>Identity Verification</CardTitle>
@@ -346,7 +402,7 @@ export default function AffiliateProfileEdit() {
             <CardContent className="space-y-6">
               <div className="space-y-2 md:w-1/2">
                 <Label htmlFor="identity_number">
-                  ID Number (KTP/SIM/Passport)
+                  ID Number (KTP/SIM/Passport) *
                 </Label>
                 <Input
                   id="identity_number"

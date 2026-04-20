@@ -6,7 +6,6 @@ use App\Http\Middleware\DomainResolver;
 use App\Http\Middleware\EnsureAgentSubscriptionIsActive;
 use App\Http\Middleware\EnsureHasAdminAccess;
 use App\Http\Middleware\EnsureHasCompanyAccess;
-use App\Http\Middleware\TenantResolver;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
 use Illuminate\Console\Scheduling\Schedule;

@@ -15,6 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import {
   Table,
   TableBody,
@@ -24,7 +25,17 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Head, router, usePage } from '@inertiajs/react';
-import { Check, Eye, Mail, ShieldAlert, X } from 'lucide-react';
+import {
+  Check,
+  Eye,
+  IdCard,
+  Mail,
+  MapPin,
+  Phone,
+  Search,
+  ShieldAlert,
+  X,
+} from 'lucide-react';
 import { useState } from 'react';
 
 export default function NetworkApprovals() {
@@ -33,19 +44,24 @@ export default function NetworkApprovals() {
   const isPartner = user?.affiliate_profile?.tier === 'partner';
 
   const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [activeTab, setActiveTab] = useState<'pending' | 'rejected'>('pending');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
 
-  const dataList = pending_approvals || [
-    {
-      id: 3,
-      name: 'Alex Wijaya',
-      username: 'alex-wj',
-      email: 'alex@mail.com',
-      registered_at: '2026-04-14',
-    },
-  ];
+  const dataList = pending_approvals || [];
+
+  const filteredList = dataList.filter(
+    (item: any) =>
+      item.status === activeTab &&
+      (item.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.username?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.email?.toLowerCase().includes(searchTerm.toLowerCase())),
+  );
 
   const handleAction = (id: number, action: 'approve' | 'reject') => {
-    if (confirm(`Are you sure you want to ${action} this application?`)) {
+    const actionText =
+      action === 'approve' ? 'approve and activate' : 'reject and deactivate';
+    if (confirm(`Are you sure you want to ${actionText} this application?`)) {
       router.post(`/affiliate/dashboard/network/approvals/${id}/${action}`);
     }
   };
@@ -70,19 +86,59 @@ export default function NetworkApprovals() {
           </h1>
           <p className="text-slate-500 text-sm mt-1">
             {isPartner
-              ? 'Review and approve new Master Affiliate applications.'
-              : 'Review and approve new Affiliators joining your network.'}
+              ? 'Review and manage Master Affiliate applications.'
+              : 'Review and manage Affiliators joining your network.'}
           </p>
         </div>
 
-        <Card className="border-amber-200 dark:border-amber-900/50">
-          <CardHeader className="bg-amber-50/50 dark:bg-amber-900/10 border-b border-amber-100 dark:border-amber-900/50 rounded-t-xl">
-            <CardTitle className="text-lg flex items-center gap-2 text-amber-800 dark:text-amber-500">
+        <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+          <div className="flex bg-slate-100 p-1 rounded-lg">
+            <button
+              onClick={() => setActiveTab('pending')}
+              className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${activeTab === 'pending' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}
+            >
+              Pending
+            </button>
+            <button
+              onClick={() => setActiveTab('rejected')}
+              className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${activeTab === 'rejected' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}
+            >
+              Rejected
+            </button>
+          </div>
+
+          <div className="relative w-full sm:w-80">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-500" />
+            <Input
+              type="text"
+              placeholder="Search name, username, email..."
+              className="pl-9"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+        </div>
+
+        <Card
+          className={
+            activeTab === 'pending' ? 'border-amber-200' : 'border-slate-200'
+          }
+        >
+          <CardHeader
+            className={`${activeTab === 'pending' ? 'bg-amber-50/50' : 'bg-slate-50'} border-b rounded-t-xl`}
+          >
+            <CardTitle
+              className={`text-lg flex items-center gap-2 ${activeTab === 'pending' ? 'text-amber-800' : 'text-slate-800'}`}
+            >
               <ShieldAlert className="size-5" />
-              Pending Applications
+              {activeTab === 'pending'
+                ? 'Pending Applications'
+                : 'Rejected Applications'}
             </CardTitle>
-            <CardDescription className="text-amber-700/70 dark:text-amber-600/70">
-              Users waiting for your approval to activate their account.
+            <CardDescription>
+              {activeTab === 'pending'
+                ? 'Users waiting for your approval to activate their account.'
+                : 'Users whose applications were previously rejected.'}
             </CardDescription>
           </CardHeader>
           <CardContent className="pt-6">
@@ -92,22 +148,23 @@ export default function NetworkApprovals() {
                   <TableRow>
                     <TableHead>Applicant Name</TableHead>
                     <TableHead>Username</TableHead>
+                    <TableHead>Email</TableHead>
                     <TableHead>Date Applied</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {dataList.length === 0 ? (
+                  {filteredList.length === 0 ? (
                     <TableRow>
                       <TableCell
-                        colSpan={4}
+                        colSpan={5}
                         className="h-24 text-center text-slate-500"
                       >
-                        No pending approvals at the moment.
+                        No {activeTab} applications found.
                       </TableCell>
                     </TableRow>
                   ) : (
-                    dataList.map((item: any) => (
+                    filteredList.map((item: any) => (
                       <TableRow key={item.id}>
                         <TableCell className="font-medium">
                           {item.name}
@@ -117,12 +174,12 @@ export default function NetworkApprovals() {
                             {item.username}
                           </span>
                         </TableCell>
+                        <TableCell className="text-sm">{item.email}</TableCell>
                         <TableCell className="text-slate-500 text-sm">
                           {item.registered_at}
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-2">
-                            {/* [VIEW BUTTON ADDED] */}
                             <Button
                               size="sm"
                               variant="outline"
@@ -131,14 +188,18 @@ export default function NetworkApprovals() {
                             >
                               <Eye className="size-4 mr-1" /> View
                             </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="text-rose-600 hover:text-rose-700 hover:bg-rose-50 border-rose-200"
-                              onClick={() => handleAction(item.id, 'reject')}
-                            >
-                              <X className="size-4 mr-1" /> Reject
-                            </Button>
+
+                            {activeTab === 'pending' && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="text-rose-600 hover:text-rose-700 hover:bg-rose-50 border-rose-200"
+                                onClick={() => handleAction(item.id, 'reject')}
+                              >
+                                <X className="size-4 mr-1" /> Reject
+                              </Button>
+                            )}
+
                             <Button
                               size="sm"
                               className="bg-emerald-600 hover:bg-emerald-700 text-white"
@@ -158,16 +219,15 @@ export default function NetworkApprovals() {
         </Card>
       </div>
 
-      {/* [MODAL PROFILE] */}
       <Dialog
         open={!!selectedUser}
         onOpenChange={(open) => !open && setSelectedUser(null)}
       >
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Applicant Profile</DialogTitle>
             <DialogDescription>
-              Review applicant details before approving.
+              Review complete applicant details.
             </DialogDescription>
           </DialogHeader>
 
@@ -187,8 +247,8 @@ export default function NetworkApprovals() {
                 </span>
               </div>
 
-              <div className="w-full grid gap-4 mt-4 bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-100 dark:border-slate-800">
-                <div className="flex flex-col">
+              <div className="w-full grid grid-cols-2 gap-4 mt-4 bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-100 dark:border-slate-800">
+                <div className="flex flex-col col-span-2 md:col-span-1">
                   <span className="text-xs text-slate-500 mb-1 flex items-center gap-1">
                     <Mail className="size-3" /> Email Address
                   </span>
@@ -196,19 +256,70 @@ export default function NetworkApprovals() {
                     {selectedUser.email || '-'}
                   </span>
                 </div>
-                <div className="flex flex-col">
-                  <span className="text-xs text-slate-500 mb-1">
-                    Applied Date
+                <div className="flex flex-col col-span-2 md:col-span-1">
+                  <span className="text-xs text-slate-500 mb-1 flex items-center gap-1">
+                    <Phone className="size-3" /> Phone Number
                   </span>
                   <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                    {selectedUser.registered_at}
+                    {selectedUser.phone || '-'}
                   </span>
+                </div>
+                <div className="flex flex-col col-span-2">
+                  <span className="text-xs text-slate-500 mb-1 flex items-center gap-1">
+                    <MapPin className="size-3" /> Address
+                  </span>
+                  <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                    {selectedUser.address || '-'}
+                  </span>
+                </div>
+                <div className="flex flex-col col-span-2 border-t pt-4 mt-2">
+                  <span className="text-xs text-slate-500 mb-1 flex items-center gap-1">
+                    <IdCard className="size-3" /> Identity Number (NIK)
+                  </span>
+                  <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                    {selectedUser.identity_number || '-'}
+                  </span>
+                </div>
+                <div className="flex flex-col col-span-2">
+                  <span className="text-xs text-slate-500 mb-2">
+                    ID Photo Document
+                  </span>
+                  {selectedUser.identity_photo_path ? (
+                    <img
+                      src={`/storage/${selectedUser.identity_photo_path}`}
+                      alt="ID Document"
+                      className="w-full max-w-sm rounded-lg border border-slate-200 cursor-pointer hover:opacity-90 transition-opacity"
+                      onClick={() =>
+                        setPreviewImage(
+                          `/storage/${selectedUser.identity_photo_path}`,
+                        )
+                      }
+                    />
+                  ) : (
+                    <span className="text-sm italic text-slate-400">
+                      No document uploaded
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Fullscreen Image Preview */}
+      {previewImage && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 p-4"
+          onClick={() => setPreviewImage(null)}
+        >
+          <img
+            src={previewImage}
+            alt="Full Preview"
+            className="max-w-full max-h-full rounded shadow-2xl"
+          />
+        </div>
+      )}
     </AffiliateDashboardLayout>
   );
 }

@@ -33,6 +33,7 @@ class Tour extends Model
     'promote_title',
     'promote_price',
     'promote_note',
+    'currency',
   ];
 
   protected $guarded = [
@@ -129,6 +130,18 @@ class Tour extends Model
   //27032026
   public function schedules()
   {
-      return $this->hasMany(TourSchedule::class);
+      return $this->hasMany(TourSchedule::class, 'tour_id');
   }
+
+  //01042026
+  public function agents()
+  {
+      return $this->belongsToMany(
+          Company::class,
+          'agent_tours',   // nama pivot table
+          'tour_id',       // foreign key di pivot ke tour
+          'company_id'     // foreign key di pivot ke company
+      );
+  }
+  
 }

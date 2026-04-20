@@ -5,9 +5,11 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\AffiliateProfile;
+use App\Models\Domain;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Context;
 use Illuminate\Support\Facades\Hash;
 use Inertia\Inertia;
 
@@ -26,33 +28,42 @@ class AffiliateAuthController extends Controller
     ]);
 
     $loginType = filter_var($request->login, FILTER_VALIDATE_EMAIL) ? 'email' : 'username';
-
     $user = User::where($loginType, $request->login)->first();
 
     if (!$user || !Hash::check($request->password, $user->password)) {
       return back()->withErrors([
-        'login' => 'The provided credentials do not match our records.',
+        'login' => 'Kredensial yang diberikan tidak cocok dengan data kami.',
       ])->onlyInput('login');
     }
 
-    if (!$user->hasVerifiedEmail()) {
-      return redirect()->route('affiliate.verify.notice')->with('warning', 'Your email address is not verified.');
+    $statusValue = $user->status instanceof \BackedEnum ? $user->status->value : $user->status;
+
+    if (strtolower(trim((string)$statusValue)) === 'inactive') {
+      return back()->with('account_inactive', 'Akun anda sudah di nonaktifkan, hubungi admin travelboost di email care@travelboost.co.id untuk keterangan lebih lanjut.');
     }
 
     Auth::login($user, $request->boolean('remember'));
     $request->session()->regenerate();
 
+    $profile = AffiliateProfile::where('user_id', $user->id)->first();
+    if ($profile && $profile->status !== 'approved') {
+      $request->session()->flash('warning', 'Akun Anda belum disetujui, harap lengkapi profil Anda.');
+    }
+
     return redirect()->intended('/affiliate/dashboard');
   }
 
-  public function showRegister(Request $request, $subdomain = null)
+  public function showRegister(Request $request)
   {
-    $referralCode = $subdomain;
+    $referralCode = null;
     $uplineName = null;
 
-    if ($referralCode) {
-      $upline = User::where('username', $referralCode)->first();
-      $uplineName = $upline ? $upline->name : null;
+    /** @var Domain|null $domainData */
+    $domainData = Context::get('domain');
+
+    if ($domainData && $domainData->owner instanceof AffiliateProfile) {
+      $referralCode = $domainData->owner->referral_code;
+      $uplineName = $domainData->owner->user->name;
     }
 
     return Inertia::render('affiliate/auth/register', [
@@ -69,16 +80,17 @@ class AffiliateAuthController extends Controller
       'username' => 'required|string|max:255|unique:users,username',
       'password' => 'required|string|confirmed|min:8',
       'referral_code' => 'nullable|string',
-    ], [
-      'username.unique' => 'This username is already taken.',
+      'ktp_number' => 'required|numeric|digits:16',
+      'ktp_file' => 'required|image|mimes:jpeg,png,jpg|max:2048',
     ]);
 
-    // Cari ID Upline
     $uplineId = null;
     if ($request->referral_code) {
-      $upline = User::where('username', $request->referral_code)->first();
-      $uplineId = $upline ? $upline->id : null;
+      $uplineProfile = AffiliateProfile::where('referral_code', $request->referral_code)->first();
+      $uplineId = $uplineProfile ? $uplineProfile->user_id : null;
     }
+
+    $ktpPath = $request->hasFile('ktp_file') ? $request->file('ktp_file')->store('ktp_uploads', 'public') : null;
 
     $user = User::create([
       'name' => $request->name,
@@ -88,22 +100,26 @@ class AffiliateAuthController extends Controller
       'status' => 'active',
     ]);
 
-    // Role Laratrust (Affiliator)
-    // if (method_exists($user, 'addRole')) {
-    //   $user->addRole('affiliator');
-    // }
-
-    AffiliateProfile::create([
-      'user_id'       => $user->id,
-      'upline_id'     => $uplineId,
+    $affiliate = AffiliateProfile::create([
+      'user_id' => $user->id,
+      'upline_id' => $uplineId,
       'referral_code' => $request->username,
-      'tier'          => 'affiliate',
+      'tier' => 'affiliate',
       'status' => 'pending',
+      'identity_number' => $request->ktp_number,
+      'identity_photo_path' => $ktpPath,
+    ]);
+
+    Domain::create([
+      'owner_id' => $affiliate->id,
+      'owner_type' => AffiliateProfile::class,
+      'subdomain' => $request->username,
     ]);
 
     event(new Registered($user));
+    Auth::login($user);
 
-    return redirect('/affiliate/verify-notice');
+    return redirect('/affiliate/dashboard')->with('warning', 'Registrasi berhasil. Akun Anda sedang menunggu persetujuan tim.');
   }
 
   public function logout(Request $request)
@@ -111,7 +127,6 @@ class AffiliateAuthController extends Controller
     Auth::guard('web')->logout();
     $request->session()->invalidate();
     $request->session()->regenerateToken();
-
     return redirect('/affiliate');
   }
 }

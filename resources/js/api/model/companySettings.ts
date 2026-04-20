@@ -13,9 +13,7 @@ export interface CompanySettings {
   id: number;
   company_id: number;
   chatbot_enabled: boolean;
-  chatbot_tone: string;
-  chatbot_emoji_usage: string;
-  chatbot_personality: string;
+  chatbot_response_style: string;
   chatbot_default_language: string;
   chatbot_model_id: CompanySettingsChatbotModelId;
   landing_page_data: CompanySettingsLandingPageData;

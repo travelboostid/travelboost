@@ -63,11 +63,16 @@ return new class extends Migration
       $table->string(column: 'address')->default('');
       $table->string(column: 'phone')->default('');
       $table->string(column: 'customer_service_phone')->default('');
+      //09042026
+      $table->string(column: 'province')->default('');
+      $table->string(column: 'city')->default('');
+      //
       $table->string('note')->nullable();
       $table->jsonb('meta')->nullable();
       $table->rememberToken();
       $table->timestamps();
     });
+
 
     Schema::create('ai_models', function (Blueprint $table) {
       $table->id();
@@ -80,10 +85,8 @@ return new class extends Migration
     Schema::create('company_settings', function (Blueprint $table) {
       $table->id();
       $table->foreignId('company_id')->unique()->constrained('companies')->cascadeOnDelete();
-      $table->boolean('chatbot_enabled')->default(false);
-      $table->string('chatbot_tone')->default('professional'); // professional | friendly | casual | enthusiastic
-      $table->string('chatbot_emoji_usage')->default('minimal'); // none | minimal | moderate | expressive
-      $table->string('chatbot_personality')->default('assistant'); // assistant | sales | support | travel_consultant
+      $table->boolean('chatbot_enabled')->default(true);
+      $table->string('chatbot_response_style')->default('professional'); // professional | friendly | casual
       $table->string('chatbot_default_language')->default('auto'); // auto | id | en
       $table->foreignId('chatbot_model_id')->nullable()->constrained('ai_models')->nullOnDelete();
       $table->text('landing_page_data')->nullable();
@@ -109,6 +112,7 @@ return new class extends Migration
 
       $table->timestamps();
     });
+
 
     Schema::create('ai_credits', function (Blueprint $table) {
       $table->id();

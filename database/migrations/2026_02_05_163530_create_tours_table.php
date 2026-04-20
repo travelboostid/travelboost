@@ -64,6 +64,7 @@ return new class extends Migration
       $table->decimal('showprice', 15, 2)->default(0);
       $table->decimal('earlybird', 15, 2)->default(0);
       $table->string('earlybird_note')->default('');
+      $table->string('currency')->default('');
       $table->foreignId('company_id')
         ->constrained('companies')
         ->cascadeOnDelete();

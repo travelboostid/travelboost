@@ -5,18 +5,15 @@ namespace App\Http\Controllers\Tenant;
 use App\Http\Controllers\Controller;
 use Inertia\Inertia;
 
-use App\Models\Tour;
-use App\Models\TourCategory;
-
 class HomeController extends Controller
 {
   public function index()
   {
-    /*$tenant = request()->attributes->get('tenant');
+    $tenant = request()->attributes->get('tenant');
     $tenant->load('settings');
     return Inertia::render('companies/landing-page', [
       'company' => $tenant,
-    ]);*/
+    ]);
 
     /*$tenant = request()->attributes->get('tenant');
 
@@ -59,11 +56,13 @@ class HomeController extends Controller
     $tenant = request()->attributes->get('tenant');
     $tenant->load('settings');
     $hasCustomLandingPage = $tenant->settings && !empty($tenant->settings->landing_page_data);
+    $tenant->load('settings');
+    $hasCustomLandingPage = $tenant->settings && !empty($tenant->settings->landing_page_data);
 
     if ($hasCustomLandingPage) {
-      return Inertia::render('companies/landing-page', [
-        'company' => $tenant,
-      ]);
+        return Inertia::render('companies/landing-page', [
+            'company' => $tenant,
+        ]);
     }
     // 🏢 Tour milik vendor
     $ownTours = Tour::where('company_id', $tenant->id)

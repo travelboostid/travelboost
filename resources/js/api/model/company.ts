@@ -11,6 +11,8 @@ import type { CompanyCreatedAt } from './companyCreatedAt';
 import type { CompanyUpdatedAt } from './companyUpdatedAt';
 import type { CompanyLogoId } from './companyLogoId';
 import type { CompanyPhotoId } from './companyPhotoId';
+import type { CompanyIdentityId } from './companyIdentityId';
+import type { CompanyReferredBy } from './companyReferredBy';
 
 export interface Company {
   id: number;
@@ -21,6 +23,8 @@ export interface Company {
   address: string;
   phone: string;
   customer_service_phone: string;
+  province: string;
+  city: string;
   note: CompanyNote;
   meta: CompanyMeta;
   remember_token: CompanyRememberToken;
@@ -28,5 +32,7 @@ export interface Company {
   updated_at: CompanyUpdatedAt;
   logo_id: CompanyLogoId;
   photo_id: CompanyPhotoId;
+  identity_id: CompanyIdentityId;
+  referred_by: CompanyReferredBy;
   photo_url: string;
 }

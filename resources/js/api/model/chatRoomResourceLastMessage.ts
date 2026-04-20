@@ -4,6 +4,7 @@
  * Travelboost
  * OpenAPI spec version: 0.0.1
  */
+import type { ChatRoomResourceLastMessageMessage } from './chatRoomResourceLastMessageMessage';
 import type { ChatRoomResourceLastMessageUserId } from './chatRoomResourceLastMessageUserId';
 import type { ChatRoomResourceLastMessageCreatedAt } from './chatRoomResourceLastMessageCreatedAt';
 import type { ChatRoomResourceLastMessageAttachmentData } from './chatRoomResourceLastMessageAttachmentData';
@@ -11,7 +12,7 @@ import type { ChatRoomResourceLastMessageAttachmentType } from './chatRoomResour
 
 export type ChatRoomResourceLastMessage = {
   id: number;
-  message: string;
+  message: ChatRoomResourceLastMessageMessage;
   user_id: ChatRoomResourceLastMessageUserId;
   created_at: ChatRoomResourceLastMessageCreatedAt;
   is_bot: string;

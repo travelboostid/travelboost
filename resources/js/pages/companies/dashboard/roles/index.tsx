@@ -16,6 +16,11 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { DEFAULT_PHOTO } from '@/config';
 import { Head, router } from '@inertiajs/react';
 import AddRoleButton from './components/add-role-button';
@@ -30,9 +35,16 @@ function RolePermissions({ role }: { role: any }) {
   return (
     <div>
       {permissionsToDisplay.map((perm: any) => (
-        <Badge key={perm.id} className="mr-1 mb-1">
-          {perm.name}
-        </Badge>
+        <Tooltip key={perm.id}>
+          <TooltipTrigger>
+            <Badge key={perm.id} className="mr-1 mb-1">
+              {perm.name}
+            </Badge>
+          </TooltipTrigger>
+          <TooltipContent>
+            {perm.description || 'No description provided.'}
+          </TooltipContent>
+        </Tooltip>
       ))}
       {remainingPermissionsCount > 0 && (
         <Badge className="mr-1 mb-1">+{remainingPermissionsCount} more</Badge>
@@ -48,10 +60,20 @@ function RoleUsers({ role }: { role: any }) {
   return (
     <AvatarGroup className="grayscale">
       {usersToDisplay.map((user: any) => (
-        <Avatar key={user.id}>
-          <AvatarImage src={user.photoUrl || DEFAULT_PHOTO} alt={user.name} />
-          <AvatarFallback>{user.name.slice(0, 2).toUpperCase()}</AvatarFallback>
-        </Avatar>
+        <Tooltip>
+          <TooltipTrigger>
+            <Avatar key={user.id}>
+              <AvatarImage
+                src={user.photoUrl || DEFAULT_PHOTO}
+                alt={user.name}
+              />
+              <AvatarFallback>
+                {user.name.slice(0, 2).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+          </TooltipTrigger>
+          <TooltipContent>{user.name}</TooltipContent>
+        </Tooltip>
       ))}
       {remainingUsersCount > 0 && (
         <AvatarGroupCount>+{remainingUsersCount}</AvatarGroupCount>
@@ -106,37 +128,30 @@ export default function Roles({ roles, permissions }: Props) {
       openMenuIds={['settings']}
       activeMenuIds={[`settings.roles`]}
       applet={<AddRoleButton permissions={permissions} />}
+      containerClassName="p-4"
     >
       <Head title="Roles" />
 
-      <div className="p-4 overflow-x-auto">
+      <div className="[&>div]:rounded-sm [&>div]:border overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="sticky left-0 z-20 bg-background w-[250px]">
-                Role Code
-              </TableHead>
-              <TableHead className="sticky left-0 z-20 bg-background w-[250px]">
-                Role Name
-              </TableHead>
-              <TableHead className="sticky left-0 z-20 bg-background w-[250px]">
-                Role Description
-              </TableHead>
-              <TableHead className="sticky left-0 z-20 bg-background w-[250px]">
-                Assigned Permissions
-              </TableHead>
-              <TableHead className="sticky left-0 z-20 bg-background w-[250px]">
-                Assigned Users
-              </TableHead>
-              <TableHead>Actions</TableHead>
+              <TableHead>Role</TableHead>
+              <TableHead>Role Description</TableHead>
+              <TableHead>Assigned Permissions</TableHead>
+              <TableHead>Assigned Users</TableHead>
+              <TableHead className="w-0">Actions</TableHead>
             </TableRow>
           </TableHeader>
-
           <TableBody>
             {roles.map((role) => (
               <TableRow key={role.id}>
-                <TableCell>{role.name}</TableCell>
-                <TableCell>{role.display_name}</TableCell>
+                <TableCell>
+                  <div className="font-semibold">{role.display_name}</div>
+                  <div className="text-sm text-muted-foreground">
+                    {role.name.split(':')?.pop() || ''}
+                  </div>
+                </TableCell>
                 <TableCell>{role.description}</TableCell>
                 <TableCell>
                   <RolePermissions role={role} />

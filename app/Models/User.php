@@ -2,8 +2,6 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
-
 use App\Enums\UserGender;
 use App\Enums\UserStatus;
 use App\Traits\HasBankAccounts;
@@ -12,7 +10,6 @@ use Bavix\Wallet\Interfaces\Wallet;
 use Bavix\Wallet\Traits\CanPay;
 use Bavix\Wallet\Traits\HasWallet;
 use Bavix\Wallet\Traits\HasWallets;
-use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -21,16 +18,10 @@ use Laratrust\Contracts\LaratrustUser;
 use Laratrust\Traits\HasRolesAndPermissions;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 
-class User extends Authenticatable implements Customer, LaratrustUser, Wallet
+class User extends Authenticatable implements Wallet, Customer, LaratrustUser
 {
-  /** @use HasFactory<UserFactory> */
-  use CanPay, HasBankAccounts, HasFactory, HasRolesAndPermissions, HasWallet, HasWallets, Notifiable, TwoFactorAuthenticatable;
+  use HasFactory, Notifiable, TwoFactorAuthenticatable, HasRolesAndPermissions, CanPay, HasWallet, HasWallets, HasBankAccounts;
 
-  /**
-   * The attributes that are mass assignable.
-   *
-   * @var list<string>
-   */
   protected $fillable = [
     'name',
     'username',
@@ -46,24 +37,14 @@ class User extends Authenticatable implements Customer, LaratrustUser, Wallet
     'note',
   ];
 
-  /**
-   * The attributes that should be hidden for serialization.
-   *
-   * @var list<string>
-   */
   protected $hidden = [
     'password',
-    'two_factor_secret',
-    'two_factor_recovery_codes',
     'remember_token',
-    'photo',
+    'two_factor_recovery_codes',
+    'two_factor_secret',
+    'photo'
   ];
 
-  /**
-   * Get the attributes that should be cast.
-   *
-   * @return array<string, string>
-   */
   protected function casts(): array
   {
     return [
@@ -76,12 +57,18 @@ class User extends Authenticatable implements Customer, LaratrustUser, Wallet
   }
 
   protected $appends = ['photo_url'];
-
-  // protected $with = ['photo'];
   protected $with = ['affiliateProfile', 'roles'];
 
-  // Relationship
-  // Relationship
+  protected static function booted()
+  {
+    static::created(function ($user) {
+      $user->wallet()->create([
+        'name' => 'Main Wallet',
+        'slug' => 'main',
+        'description' => 'Primary wallet for user transactions',
+      ]);
+    });
+  }
 
   public function photo()
   {
@@ -96,20 +83,18 @@ class User extends Authenticatable implements Customer, LaratrustUser, Wallet
   {
     return $this->hasMany(BankAccount::class);
   }
-  public function bankAccounts()
+  public function affiliateProfile()
   {
-    return $this->hasMany(BankAccount::class);
-  }
-
-  public function companies()
-  {
-    return $this->belongsToMany(Company::class, 'company_teams')
-      ->withTimestamps();
+    return $this->hasOne(AffiliateProfile::class);
   }
   public function companies()
   {
     return $this->belongsToMany(Company::class, 'company_teams')
       ->withTimestamps();
+  }
+  public function companies()
+  {
+    return $this->belongsToMany(Company::class, 'company_teams')->withTimestamps();
   }
 
   protected function photoUrl(): Attribute
