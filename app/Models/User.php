@@ -81,12 +81,21 @@ class User extends Authenticatable implements Customer, LaratrustUser, Wallet
   protected $with = ['affiliateProfile', 'roles'];
 
   // Relationship
+  // Relationship
 
   public function photo()
   {
     return $this->belongsTo(Media::class, 'photo_id');
   }
+  public function photo()
+  {
+    return $this->belongsTo(Media::class, 'photo_id');
+  }
 
+  public function bankAccounts()
+  {
+    return $this->hasMany(BankAccount::class);
+  }
   public function bankAccounts()
   {
     return $this->hasMany(BankAccount::class);
@@ -97,7 +106,18 @@ class User extends Authenticatable implements Customer, LaratrustUser, Wallet
     return $this->belongsToMany(Company::class, 'company_teams')
       ->withTimestamps();
   }
+  public function companies()
+  {
+    return $this->belongsToMany(Company::class, 'company_teams')
+      ->withTimestamps();
+  }
 
+  protected function photoUrl(): Attribute
+  {
+    return Attribute::make(
+      get: function () {
+        $files = collect($this->photo?->data['files'] ?? []);
+        $file = $files->firstWhere('code', 'small');
   protected function photoUrl(): Attribute
   {
     return Attribute::make(
@@ -115,7 +135,15 @@ class User extends Authenticatable implements Customer, LaratrustUser, Wallet
   {
     return $this->morphMany(Media::class, 'owner');
   }
+  public function medias()
+  {
+    return $this->morphMany(Media::class, 'owner');
+  }
 
+  public function company()
+  {
+    return $this->belongsTo(Company::class, 'company_id');
+  }
   public function company()
   {
     return $this->belongsTo(Company::class, 'company_id');
@@ -125,7 +153,14 @@ class User extends Authenticatable implements Customer, LaratrustUser, Wallet
   {
     return $this->hasMany(Booking::class);
   }
+  public function bookings()
+  {
+    return $this->hasMany(Booking::class);
+  }
 
+  public function savedPassengers()
+  {
+    return $this->hasMany(SavedPassenger::class);
   public function savedPassengers()
   {
     return $this->hasMany(SavedPassenger::class);
