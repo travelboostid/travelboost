@@ -22,6 +22,11 @@ class TourSchedule extends Model
         'note',
     ];
 
+    public function addOns()
+    {
+        return $this->hasMany(TourAddOn::class, 'schedule_id');
+    }
+
     public function availability()
     {
         return $this->hasOne(TourAvailability::class, 'schedule_id');

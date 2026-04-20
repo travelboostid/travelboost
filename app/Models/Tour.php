@@ -148,5 +148,10 @@ class Tour extends Model
   {
       return $this->hasMany(TourAvailability::class, 'tour_id');
   }
+
+  public function addOns()
+  {
+      return $this->hasMany(TourAddOn::class);
+  }
   
 }

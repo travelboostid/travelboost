@@ -86,7 +86,8 @@ class TourController extends Controller
   {
     $tour->load([
         'schedules.prices',
-        'schedules.availability' 
+        'schedules.availability',
+        'schedules.addOns',
     ]);
 
     //dd($tour->schedules->toArray());
@@ -277,9 +278,17 @@ class TourController extends Controller
 
         DB::commit();
 
-        return back()->with([
+        //20042026
+        /*return back()->with([
             'success' => true,
             'tab' => 'schedule',
+        ]);*/
+        return redirect()->route('company.tours.edit', [
+            'company' => $company->username,
+            'tour' => $tour->id,
+        ])->with([
+            'success' => true,
+            'tab' => 'availability',
         ]);
 
     } catch (\Throwable $e) {

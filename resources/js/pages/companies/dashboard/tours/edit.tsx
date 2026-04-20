@@ -219,21 +219,48 @@ export default function Page({ tour }: Props) {
         price: String(p.price ?? ''),
 
         promotion: {
-          type: p.promotion_rate > 0 ? 'percent' : 'value',
+          /*type: p.promotion_rate > 0 ? 'percent' : 'value',
           value: String(
             p.promotion_rate > 0
               ? p.promotion_rate
               : p.promotion ?? ''
+          ),*/
+          type: p.promotion_rate > 0
+            ? 'percent'
+            : p.promotion > 0
+              ? 'value'
+              : 'percent', // default
+
+          value: String(
+            p.promotion_rate > 0
+              ? p.promotion_rate
+              : p.promotion > 0
+                ? p.promotion
+                : ''
           ),
+
         },
 
         commission: {
-          type: p.commission_rate > 0 ? 'percent' : 'value',
+          /*type: p.commission_rate > 0 ? 'percent' : 'value',
           value: String(
             p.commission_rate > 0
               ? p.commission_rate
               : p.commission ?? ''
-          ),
+          ),*/
+          type: p.commission_rate > 0
+                ? 'percent'
+                : p.commission > 0
+                  ? 'value'
+                  : 'percent', // default
+
+              value: String(
+                p.commission_rate > 0
+                  ? p.commission_rate
+                  : p.commission > 0
+                    ? p.commission
+                    : ''
+              ),
         },
       }))
     }))
@@ -459,6 +486,62 @@ export default function Page({ tour }: Props) {
     }))
   }
 
+  //20042026
+  useEffect(() => {
+    if (tour?.schedules) {
+      setSchedules(
+        tour.schedules.map((s: any) => ({
+          id: s.id,
+          departure_date: s.departure_date ?? '',
+          return_date: s.return_date ?? '',
+          quota: String(s.quota ?? ''),
+          availability: s.availability || null,
+          prices: (s.prices || []).map((p: any) => ({
+            id: p.id,
+            room_type_id: p.price_category_id,
+            price: String(p.price ?? ''),
+            promotion: {
+              /*type: p.promotion_rate > 0 ? 'percent' : 'value',
+              value: String(p.promotion_rate || p.promotion || ''),*/
+              type: p.promotion_rate > 0
+                ? 'percent'
+                : p.promotion > 0
+                  ? 'value'
+                  : 'percent', // default
+
+              value: String(
+                p.promotion_rate > 0
+                  ? p.promotion_rate
+                  : p.promotion > 0
+                    ? p.promotion
+                    : ''
+              ),
+
+            },
+            commission: {
+              /*type: p.commission_rate > 0 ? 'percent' : 'value',
+              value: String(p.commission_rate || p.commission || ''),*/
+              type: p.commission_rate > 0
+                ? 'percent'
+                : p.commission > 0
+                  ? 'value'
+                  : 'percent', // default
+
+              value: String(
+                p.commission_rate > 0
+                  ? p.commission_rate
+                  : p.commission > 0
+                    ? p.commission
+                    : ''
+              ),
+
+            },
+          })),
+        }))
+      )
+    }
+  }, [tour])
+
   return (
     <CompanyDashboardLayout
       openMenuIds={['tours']}
@@ -550,6 +633,7 @@ export default function Page({ tour }: Props) {
                 <TabsTrigger value="tour">Master</TabsTrigger>
                 <TabsTrigger value="schedule">Schedule and Price</TabsTrigger>
                 <TabsTrigger value="availability">Availability</TabsTrigger>
+                <TabsTrigger value="addons">Adds On</TabsTrigger>
               </TabsList>
 
               {/* ================= TAB 1 — TOUR ================= */}
@@ -935,10 +1019,17 @@ export default function Page({ tour }: Props) {
                 <div className="space-y-4">
                 
                                   {/* HEADER */}
+                                  <div className="flex justify-between items-center px-4 py-2">
+                                    <h3><span className="font-semibold">Tour Schedule and Price — {tour.name}</span></h3>
+                                    <span className="text-sm text-muted-foreground">
+                                      Currency: {tour.currency}
+                                    </span>
+                                  </div>
+
                                   <div className="flex items-center justify-between">
-                                    <h3 className="text-lg font-semibold">Tour Schedule and Price
+                                    <h3 className="text-lg font-semibold">
                                       <span className="text-foreground font-semibold ml-2">
-                                        — {tour.name}
+                                       
                                       </span>
                                     </h3>
                 
@@ -946,6 +1037,7 @@ export default function Page({ tour }: Props) {
                                       + Add New Schedule
                                     </Button>
                                   </div>
+
                 
                                   {/* DESKTOP TABLE */}
                                   <div className="rounded-lg border overflow-hidden hidden md:block">
@@ -1359,12 +1451,11 @@ export default function Page({ tour }: Props) {
               <TabsContent value="availability">
                 <div className="space-y-4">
 
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold">Availability
-                      <span className="text-foreground font-semibold ml-2">
-                        — {tour.name}
-                      </span>
-                    </h3>
+                  <div className="flex justify-between items-center px-4 py-2">
+                    <h3><span className="font-semibold">Availability — {tour.name}</span></h3>
+                    <span className="text-sm text-muted-foreground">
+                      Quantity: pax
+                    </span>
                   </div>
 
                   <div className="rounded-lg border overflow-hidden">
@@ -1545,6 +1636,79 @@ export default function Page({ tour }: Props) {
                   >
                     {savingAvailability && <Spinner />}
                     Save Availability
+                  </Button>
+                </div>
+              </TabsContent>
+
+              {/* ================= TAB 4 — ADD ONS ================= */} 
+              <TabsContent value="addons">
+                <div className="space-y-4">
+
+                  <div className="flex justify-between items-center px-4 py-2">
+                    <h3><span className="font-semibold">Add Ons Table — {tour.name}</span></h3>
+                    <span className="text-sm text-muted-foreground">
+                      Currency: {tour.currency}
+                    </span>
+                  </div>
+
+                  <div className="rounded-lg border overflow-hidden">
+                    <table className="w-full text-sm">
+                      
+                      <thead className="bg-muted">
+                        <tr>
+                          <th className="p-3 text-left">Departure → Return</th>
+                          <th className="p-3 text-left">Descriptions</th>
+                          <th className="p-3 text-left">Prices</th>
+                        </tr>
+                      </thead>
+
+                      <tbody>
+                        
+                      </tbody>
+
+                    </table>
+                  </div>
+
+                </div>
+
+                <div className="flex justify-start pt-6 border-t">
+                  <Button
+                    type="button"
+                    disabled={savingAvailability}
+                    onClick={async () => {
+                      setSavingAvailability(true)
+
+                      try {
+                        const payload = buildAvailabilityPayload()
+
+                        console.log('SEND AVAILABILITY:', payload)
+
+                        //`/companies/${company.username}/dashboard/tour-availabilities`
+                        
+                        router.post(
+                          `/companies/${company.username}/dashboard/tour-availabilities`,
+                          {
+                            availabilities: payload,
+                          },
+                          {
+                            onSuccess: () => {
+                              toast.success('Availability saved')
+                            },
+                            onError: () => {
+                              toast.error('Failed to save availability')
+                            },
+                            onFinish: () => {
+                              setSavingAvailability(false)
+                            },
+                          }
+                        )
+                      } catch (err) {
+                        setSavingAvailability(false)
+                      }
+                    }}
+                  >
+                    {savingAvailability && <Spinner />}
+                    Save Add Ons
                   </Button>
                 </div>
               </TabsContent>
