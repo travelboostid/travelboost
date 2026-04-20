@@ -148,49 +148,31 @@ class ChatbotAgent implements Agent, Conversational
   {
     $settings = $this->company?->settings;
 
-    $baseInstructions = 'You are an AI travel assistant in a private chat. Keep answers short, clear, and helpful.';
+    $baseInstructions = 'You are a helpful assistant that will help answers user inquiries. Keep answers short, clear, and helpful.';
 
     // Define tone options
-    $toneMap = [
+    $responseStyleMap = [
       'professional' => 'Use formal, business-appropriate language.',
       'friendly' => 'Be warm and conversational.',
       'casual' => 'Use relaxed, informal language.',
-      'enthusiastic' => 'Be upbeat and energetic.',
     ];
 
-    // Define personality options
-    $personalityMap = [
-      'assistant' => 'Help users with information and questions.',
-      'sales' => 'Focus on promoting tours and closing bookings.',
-      'support' => 'Prioritize solving problems and addressing concerns.',
-      'travel_consultant' => 'Provide expert travel advice and personalized recommendations.',
+    // Define language options
+    $languageMap = [
+      'auto' => 'Detect language from user input',
+      'en' => 'Use English',
+      'id' => 'Use Bahasa Indonesia',
+      // Add more languages as needed
     ];
-
-    // Determine emoji usage based on settings
-    $emojiUsage = match ($settings?->chatbot_emoji_usage ?? 'minimal') {
-      'none' => 'Do not use emojis.',
-      'minimal' => 'Use emojis sparingly.',
-      'moderate' => 'Use emojis occasionally to enhance messaging.',
-      'expressive' => 'Use emojis liberally to express emotion.',
-      default => 'Use emojis sparingly.',
-    };
 
     return "{$baseInstructions}\n"
-      . "Tone: " . ($toneMap[$settings?->chatbot_tone ?? 'professional'] ?? $toneMap['professional']) . "\n"
-      . "Role: " . ($personalityMap[$settings?->chatbot_personality ?? 'assistant'] ?? $personalityMap['assistant']) . "\n"
-      . "Emoji usage: {$emojiUsage}\n"
+      . "Default Language: " . ($languageMap[$settings?->chatbot_default_language ?? 'auto'] ?? $languageMap['auto']) . "\n"
+      . "Response Style: " . ($responseStyleMap[$settings?->chatbot_response_style ?? 'professional'] ?? $responseStyleMap['professional']) . "\n"
       . "If unsure, ask for clarification. Do not mention embeddings or internal systems.";
   }
 
   public function messages(): iterable
   {
-    // Retrieve the last 10 messages in reverse order
-    $rawMessages = $this->message->room->messages()
-      ->latest()
-      ->take(10)
-      ->get()
-      ->reverse();
-
     return Arr::map($this->chatMessages->toArray(), function ($rawMessage) {
       $msg = $rawMessage['message'];
 
@@ -201,9 +183,9 @@ class ChatbotAgent implements Agent, Conversational
         if ($tour) {
           $msg .= "\n\n---\n\n Additional context:\n"
             . "This message related with tour details below: \n"
-            . "Tour ID: {$tour->id}\n"
-            . "Tour name: {$tour->name}\n"
-            . "Tour code: ({$tour->code})\n"
+            . "ID: {$tour->id}\n"
+            . "Name: {$tour->name}\n"
+            . "Code: ({$tour->code})\n"
             . "Duration: {$tour->duration_days} days\n"
             . "Destination: {$tour->destination}\n"
             . "Country: {$tour->country_name}";
@@ -224,15 +206,7 @@ class ChatbotAgent implements Agent, Conversational
   public function reply()
   {
     // Exit if the message is from a bot or not in a private room
-    if ($this->message->is_bot || $this->message->room->type !== 'private') {
-      return;
-    }
-
-    $receiver = $this->getReceiver();
-    if (!$receiver) {
-      return;
-    }
-    if (!$receiver->member->settings?->chatbot_enabled) {
+    if (!$this->shouldRespond) {
       return;
     }
 
@@ -247,24 +221,7 @@ class ChatbotAgent implements Agent, Conversational
       default => null,
     };
 
-  private function getCompany(): ?Company
-  {
-    $receiver = $this->getReceiver();
-    return $receiver?->member_type === 'company' ? $receiver->member : null;
-  }
-
-  private function getReceiver(): ?object
-  {
-    // Get the sender of the message
-    $sender = $this->message->room->members()
-      ->where('member_id', $this->message->sender_id)
-      ->where('member_type', $this->message->sender_type)
-      ->first();
-
-    // Return the first member that is not the sender
-    return $this->message->room->members()
-      ->where('id', '!=', $sender?->id)
-      ->first();
+    $this->saveUsageLog();
   }
 
   private function detectIntent(): AgentResponse
@@ -336,7 +293,7 @@ class ChatbotAgent implements Agent, Conversational
     $response = $this->prompt(prompt: $prompt, model: $this->chatbotModel->code);
 
     // Save the bot's response
-    $this->saveBotMessage($response->text, $receiver, [
+    $this->saveBotMessage($response->text, [
       'attachment_type' => 'bot-hints',
       'attachment_data' => "This response is based on detected search filters: " . json_encode($filters),
     ]);

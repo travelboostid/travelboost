@@ -153,7 +153,7 @@ export const createTopupPayment = (
   
 
 
-export const getCreateTopupPaymentMutationOptions = <TError = AuthenticationExceptionResponse | ValidationExceptionResponse,
+export const getCreateTopupPaymentMutationOptions = <TError = ValidationExceptionResponse,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createTopupPayment>>, TError,{data: CreateTopupPaymentBody}, TContext>, request?: SecondParameter<typeof apiInstance>}
 ): UseMutationOptions<Awaited<ReturnType<typeof createTopupPayment>>, TError,{data: CreateTopupPaymentBody}, TContext> => {
 
@@ -180,12 +180,12 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type CreateTopupPaymentMutationResult = NonNullable<Awaited<ReturnType<typeof createTopupPayment>>>
     export type CreateTopupPaymentMutationBody = CreateTopupPaymentBody
-    export type CreateTopupPaymentMutationError = AuthenticationExceptionResponse | ValidationExceptionResponse
+    export type CreateTopupPaymentMutationError = ValidationExceptionResponse
 
     /**
  * @summary Create wallet topup payment (Midtrans Snap)
  */
-export const useCreateTopupPayment = <TError = AuthenticationExceptionResponse | ValidationExceptionResponse,
+export const useCreateTopupPayment = <TError = ValidationExceptionResponse,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createTopupPayment>>, TError,{data: CreateTopupPaymentBody}, TContext>, request?: SecondParameter<typeof apiInstance>}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof createTopupPayment>>,
@@ -217,7 +217,7 @@ export const createAgentSubscriptionPayment = (
   
 
 
-export const getCreateAgentSubscriptionPaymentMutationOptions = <TError = AuthenticationExceptionResponse | ValidationExceptionResponse,
+export const getCreateAgentSubscriptionPaymentMutationOptions = <TError = ValidationExceptionResponse,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAgentSubscriptionPayment>>, TError,{data: CreateAgentSubscriptionPaymentBody}, TContext>, request?: SecondParameter<typeof apiInstance>}
 ): UseMutationOptions<Awaited<ReturnType<typeof createAgentSubscriptionPayment>>, TError,{data: CreateAgentSubscriptionPaymentBody}, TContext> => {
 
@@ -244,12 +244,12 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type CreateAgentSubscriptionPaymentMutationResult = NonNullable<Awaited<ReturnType<typeof createAgentSubscriptionPayment>>>
     export type CreateAgentSubscriptionPaymentMutationBody = CreateAgentSubscriptionPaymentBody
-    export type CreateAgentSubscriptionPaymentMutationError = AuthenticationExceptionResponse | ValidationExceptionResponse
+    export type CreateAgentSubscriptionPaymentMutationError = ValidationExceptionResponse
 
     /**
  * @summary Create payment for agent subscription
  */
-export const useCreateAgentSubscriptionPayment = <TError = AuthenticationExceptionResponse | ValidationExceptionResponse,
+export const useCreateAgentSubscriptionPayment = <TError = ValidationExceptionResponse,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAgentSubscriptionPayment>>, TError,{data: CreateAgentSubscriptionPaymentBody}, TContext>, request?: SecondParameter<typeof apiInstance>}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof createAgentSubscriptionPayment>>,

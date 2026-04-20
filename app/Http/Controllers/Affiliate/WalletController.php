@@ -13,41 +13,35 @@ class WalletController extends Controller
   {
     $user = $request->user();
 
-    // ====================================================================
-    // [DEPLOYMENT] UNCOMMENT BLOK INI
-    // ====================================================================
-    /*
-        $wallet = $user->wallet; 
-        $balance = $wallet->balance;
+    $wallet = $user->wallet;
 
-        $thisMonthStart = now()->startOfMonth();
-        $thisMonthEnd   = now()->endOfMonth();
-        $lastMonthStart = now()->subMonth()->startOfMonth();
-        $lastMonthEnd   = now()->subMonth()->endOfMonth();
+    if (!$wallet) {
+      $wallet = $user->wallet()->create([
+        'name' => 'Main Wallet',
+        'slug' => 'main',
+        'description' => 'Primary wallet for user transactions',
+      ]);
+    }
 
-        $thisIncome = $wallet->transactions()->where('amount', '>', 0)->whereBetween('created_at', [$thisMonthStart, $thisMonthEnd])->sum('amount');
-        $thisExpense = abs($wallet->transactions()->where('amount', '<', 0)->whereBetween('created_at', [$thisMonthStart, $thisMonthEnd])->sum('amount'));
+    $balance = $wallet->balance;
 
-        $lastIncome = $wallet->transactions()->where('amount', '>', 0)->whereBetween('created_at', [$lastMonthStart, $lastMonthEnd])->sum('amount');
-        $lastExpense = abs($wallet->transactions()->where('amount', '<', 0)->whereBetween('created_at', [$lastMonthStart, $lastMonthEnd])->sum('amount'));
+    $thisMonthStart = now()->startOfMonth();
+    $thisMonthEnd   = now()->endOfMonth();
+    $lastMonthStart = now()->subMonth()->startOfMonth();
+    $lastMonthEnd   = now()->subMonth()->endOfMonth();
 
-        $transactions = $wallet->transactions()->latest()->take(5)->get();
+    $thisIncome = $wallet->transactions()->where('amount', '>', 0)->whereBetween('created_at', [$thisMonthStart, $thisMonthEnd])->sum('amount');
+    $thisExpense = abs($wallet->transactions()->where('amount', '<', 0)->whereBetween('created_at', [$thisMonthStart, $thisMonthEnd])->sum('amount'));
 
-        // Menggunakan polymorphic matching persis seperti tim backend
-        $pendingWithdrawal = Withdrawal::where('owner_type', get_class($user))
-            ->where('owner_id', $user->id)
-            ->whereIn('status', [Withdrawal::STATUS_REQUESTED, Withdrawal::STATUS_PROCESSING])
-            ->first();
-        */
+    $lastIncome = $wallet->transactions()->where('amount', '>', 0)->whereBetween('created_at', [$lastMonthStart, $lastMonthEnd])->sum('amount');
+    $lastExpense = abs($wallet->transactions()->where('amount', '<', 0)->whereBetween('created_at', [$lastMonthStart, $lastMonthEnd])->sum('amount'));
 
-    // [DUMMY]
-    $balance = 5000000;
-    $thisIncome = 1500000;
-    $lastIncome = 1000000;
-    $thisExpense = 500000;
-    $lastExpense = 200000;
-    $transactions = collect([]);
-    $pendingWithdrawal = null;
+    $transactions = $wallet->transactions()->latest()->take(5)->get();
+
+    $pendingWithdrawal = Withdrawal::where('owner_type', get_class($user))
+      ->where('owner_id', $user->id)
+      ->whereIn('status', [Withdrawal::STATUS_REQUESTED, Withdrawal::STATUS_PROCESSING])
+      ->first();
 
     return Inertia::render('affiliate/dashboard/fund/wallet/index', [
       'balance' => (int) $balance,

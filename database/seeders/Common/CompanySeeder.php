@@ -3,8 +3,10 @@
 namespace Database\Seeders\Common;
 
 use App\Enums\CompanyTeamStatus;
+use App\Enums\CompanyType;
+use App\Enums\VendorAgentPartnerStatus;
+use App\Models\AgentSubscription;
 use App\Models\AgentSubscriptionPackage;
-use App\Models\User;
 use App\Models\Company;
 use App\Models\Role;
 use App\Models\Team;
@@ -17,8 +19,6 @@ class CompanySeeder extends Seeder
 {
   public function run(): void
   {
-    // Define the target packages to create
-    $packages = [
     // Define the target packages to create
     $packages = [
       [
@@ -48,8 +48,8 @@ class CompanySeeder extends Seeder
     // Define the target companies to create
     $companies = [
       [
-        'username' => 'root',
-        'subdomain' => 'root',
+        'username' => 'vendor',
+        'subdomain' => 'vendor',
         'company_type' => CompanyType::VENDOR,
       ],
       [
@@ -64,17 +64,16 @@ class CompanySeeder extends Seeder
       ],
     ];
 
-    foreach ($companies as $company) {
-      $user = User::where('username', $company['username'])->first();
+    foreach ($companies as $seed) {
+      $user = User::where('username', $seed['username'])->first();
       if (!$user) {
-        $this->command->error("User with username '{$company['username']}' not found. Please run UserSeeder first.");
+        $this->command->error("User with username '{$seed['username']}' not found. Please run UserSeeder first.");
         continue;
       }
       $company = Company::factory()->create([
-        'username' => $company['username'],
-        'subdomain' => $company['subdomain'],
-        'type' => $company['company_type'],
-        'name' => ucfirst($company['username']) . ' Company',
+        'username' => $seed['username'],
+        'type' => $seed['company_type'],
+        'name' => ucfirst($seed['username']) . ' Company',
         'email' => $user->email,
         'address' => 'Jakarta',
         'phone' => '0123456789',
@@ -86,8 +85,8 @@ class CompanySeeder extends Seeder
         'status' => CompanyTeamStatus::ACTIVE,
         'is_owner' => true,
       ]);
-      $team = Team::where('name', "company:{$company->id}")->first();
-      $superadmin = Role::where('name', "company:{$company->id}:superadmin")->first();
+      $team = Team::where('name', "company:{$company->id}")->firstOrCreate();
+      $superadmin = Role::where('name', "company:{$company->id}:superadmin")->firstOrCreate();
       $user->addRole($superadmin, $team);
 
       if ($company['type'] === CompanyType::AGENT) {

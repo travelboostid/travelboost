@@ -45,30 +45,30 @@ class VendorTourCatalogController extends Controller
         $query->where('name', 'ilike', "%{$search}%");
       })
       ->get();
-      /*->map(function ($tour) use ($company) {
+    /*->map(function ($tour) use ($company) {
         $tour->has_copied = $company->agentTours()->where('tour_id', $tour->id)->exists();
         return $tour;
       });*/
-    
+
     //01042026
     $agentTours = \App\Models\AgentTour::where('company_id', $vendor->id)
-        ->whereHas('tour', function ($q) {
-            $q->where('status', 'active');
-        })
-        ->with(['tour' => function ($q) {
-            $q->where('status', 'active')
-              ->with('company:id,username,name');
-        }])
-        ->get()
-        ->pluck('tour')
-        ->filter();
+      ->whereHas('tour', function ($q) {
+        $q->where('status', 'active');
+      })
+      ->with(['tour' => function ($q) {
+        $q->where('status', 'active')
+          ->with('company:id,username,name');
+      }])
+      ->get()
+      ->pluck('tour')
+      ->filter();
 
-      $tours = $ownTours
-        ->merge($agentTours)
-        ->unique('id')
-        ->sortByDesc('created_at')
-        ->values();
-      //
+    $tours = $tours
+      ->merge($agentTours)
+      ->unique('id')
+      ->sortByDesc('created_at')
+      ->values();
+    //
 
     $partnership = VendorAgentPartner::where('vendor_id', $vendor->id)
       ->where('agent_id', $company->id)

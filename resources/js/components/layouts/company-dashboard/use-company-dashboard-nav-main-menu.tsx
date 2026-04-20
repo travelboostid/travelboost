@@ -71,12 +71,12 @@ export function useCompanyDashboardNavMainMenu() {
       icon: FolderSearchIcon,
       items:
         (data?.data || []).map((vendor) => ({
-          id: `vendor-tours.${vendor.id}`,
+          id: `vendor-tours.${vendor.username}`,
           title: vendor.name,
           urlOrAction: `/companies/${company.username}/dashboard/vendors/${vendor.username}/tours`,
         })) || [],
       visibleToCompanyTypes: ['agent'],
-      visibleToPermissions: ['tour.read'],
+      visibleToPermissions: ['tour.query'],
     },
     {
       id: 'agent-registrations',
@@ -113,7 +113,7 @@ export function useCompanyDashboardNavMainMenu() {
         },
       ],
       visibleToCompanyTypes: ['vendor'],
-      visibleToPermissions: ['tour.read'],
+      visibleToPermissions: ['tour.query'],
     },
     {
       id: 'tours',
@@ -143,7 +143,7 @@ export function useCompanyDashboardNavMainMenu() {
         },
       ],
       visibleToCompanyTypes: ['agent'],
-      visibleToPermissions: ['tour.read'],
+      visibleToPermissions: ['tour.query'],
     },
     {
       id: 'customers',
@@ -151,7 +151,7 @@ export function useCompanyDashboardNavMainMenu() {
       urlOrAction: `/companies/${company.username}/dashboard/customers`,
       icon: BookUserIcon,
       visibleToCompanyTypes: ['agent'],
-      visibleToPermissions: ['user.read'],
+      visibleToPermissions: ['user.query'],
     },
     {
       id: 'funds',
@@ -186,7 +186,7 @@ export function useCompanyDashboardNavMainMenu() {
         },
       ],
       visibleToCompanyTypes: ['agent', 'vendor'],
-      visibleToPermissions: ['wallet.read'],
+      visibleToPermissions: ['fund.query'],
     },
     {
       id: 'marketings',
@@ -248,42 +248,9 @@ export function useCompanyDashboardNavMainMenu() {
           urlOrAction: `/companies/${company.username}/dashboard/profile`,
         },
         {
-          id: 'settings',
-          title: 'Settings',
-          urlOrAction: '#',
-          icon: SettingsIcon,
-          items: [
-            {
-              id: 'settings.subscriptions',
-              title: 'Agent Subscriptions',
-              urlOrAction: `/companies/${company.username}/dashboard/agent-subscriptions`,
-            },
-            {
-              id: 'settings.profile',
-              title: 'Profile',
-              urlOrAction: `/companies/${company.username}/dashboard/profile`,
-            },
-            {
-              id: 'settings.teams',
-              title: 'User Management',
-              urlOrAction: `/companies/${company.username}/dashboard/teams`,
-            },
-            {
-              id: 'settings.roles',
-              title: 'Access Roles',
-              urlOrAction: `/companies/${company.username}/dashboard/roles`,
-            },
-            {
-              id: 'settings.chatbot',
-              title: 'Chat AI',
-              urlOrAction: `/companies/${company.username}/dashboard/chatbot`,
-            },
-            {
-              id: 'settings.vendor-regs',
-              title: 'Vendor Registrations',
-              urlOrAction: `/companies/${company.username}/dashboard/vendor-registrations`,
-            },
-          ],
+          id: 'settings.teams',
+          title: <FormattedMessage defaultMessage="User Management" />,
+          urlOrAction: `/companies/${company.username}/dashboard/teams`,
         },
         {
           id: 'settings.roles',
@@ -308,7 +275,7 @@ export function useCompanyDashboardNavMainMenu() {
         },
       ],
       visibleToCompanyTypes: ['agent', 'vendor'],
-      visibleToPermissions: ['company.read'],
+      visibleToPermissions: ['company.query'],
     },
   ] as MenuItem[];
 

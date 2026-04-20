@@ -2,9 +2,8 @@ import {
   BadgeCheck,
   Bell,
   ChevronsUpDown,
-  CreditCard,
+  KeyIcon,
   LogOut,
-  SettingsIcon,
   UserIcon,
 } from 'lucide-react';
 
@@ -27,7 +26,9 @@ import {
 } from '@/components/ui/sidebar';
 import { DEFAULT_PHOTO } from '@/config';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
+import { edit as editPassword } from '@/routes/me/user-password';
 import { Link, router } from '@inertiajs/react';
+import { FormattedMessage } from 'react-intl';
 
 export function NavUser() {
   const { isMobile } = useSidebar();
@@ -92,21 +93,23 @@ export function NavUser() {
                   href={edit().url}
                   prefetch
                 >
-                  <SettingsIcon />
-                  Settings
+                  <BadgeCheck />
+                  My Profile
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link
+                  className="block w-full cursor-pointer"
+                  href={editPassword().url}
+                  prefetch
+                >
+                  <KeyIcon />
+                  <FormattedMessage defaultMessage="Change Password" />
                 </Link>
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem>
-                <BadgeCheck />
-                Account
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <CreditCard />
-                Billing
-              </DropdownMenuItem>
               <DropdownMenuItem>
                 <Bell />
                 Notifications

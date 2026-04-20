@@ -73,38 +73,6 @@ return new class extends Migration
       $table->timestamps();
     });
 
-    Schema::create('company_settings', function (Blueprint $table) {
-      $table->id();
-      $table->foreignId('company_id')->unique()->constrained('companies')->cascadeOnDelete();
-      $table->boolean('chatbot_enabled')->default(false);
-      $table->string('chatbot_tone')->default('professional'); // professional | friendly | casual | enthusiastic
-      $table->string('chatbot_emoji_usage')->default('minimal'); // none | minimal | moderate | expressive
-      $table->string('chatbot_personality')->default('assistant'); // assistant | sales | support | travel_consultant
-      $table->string('chatbot_default_language')->default('auto'); // auto | id | en
-      $table->string('chatbot_model_code')->default('gpt-3.5-turbo');
-      $table->text('landing_page_data')->nullable();
-      $table->timestamps();
-    });
-
-    Schema::create('agent_subscription_packages', function (Blueprint $table) {
-      $table->id();
-      $table->string('name'); // e.g. Basic, Pro, Enterprise
-      $table->integer('duration_months'); // 1, 3, 6, 12
-      $table->decimal('price', 14, 2); // final price after discount
-      $table->boolean('is_active')->default(true);
-      $table->timestamps();
-    });
-
-    Schema::create('agent_subscriptions', function (Blueprint $table) {
-      $table->id();
-      $table->foreignId('company_id')->constrained('companies')->onDelete('cascade');
-      $table->foreignId('package_id')->constrained('agent_subscription_packages');
-      // lifecycle
-      $table->timestamp('started_at')->nullable();
-      $table->timestamp('ended_at')->nullable();
-
-      $table->timestamps();
-    });
 
     Schema::create('ai_models', function (Blueprint $table) {
       $table->id();
@@ -117,10 +85,8 @@ return new class extends Migration
     Schema::create('company_settings', function (Blueprint $table) {
       $table->id();
       $table->foreignId('company_id')->unique()->constrained('companies')->cascadeOnDelete();
-      $table->boolean('chatbot_enabled')->default(false);
-      $table->string('chatbot_tone')->default('professional'); // professional | friendly | casual | enthusiastic
-      $table->string('chatbot_emoji_usage')->default('minimal'); // none | minimal | moderate | expressive
-      $table->string('chatbot_personality')->default('assistant'); // assistant | sales | support | travel_consultant
+      $table->boolean('chatbot_enabled')->default(true);
+      $table->string('chatbot_response_style')->default('professional'); // professional | friendly | casual
       $table->string('chatbot_default_language')->default('auto'); // auto | id | en
       $table->foreignId('chatbot_model_id')->nullable()->constrained('ai_models')->nullOnDelete();
       $table->text('landing_page_data')->nullable();
@@ -146,6 +112,7 @@ return new class extends Migration
 
       $table->timestamps();
     });
+
 
     Schema::create('ai_credits', function (Blueprint $table) {
       $table->id();

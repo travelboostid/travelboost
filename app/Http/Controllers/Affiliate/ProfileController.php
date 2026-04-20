@@ -12,7 +12,7 @@ class ProfileController extends Controller
   public function edit(Request $request)
   {
     $user = $request->user()->load([
-      'affiliateProfile.upline.affiliateProfile.upline'
+      'affiliateProfile.upline'
     ]);
 
     return Inertia::render('affiliate/dashboard/setup/profile', [
@@ -25,14 +25,15 @@ class ProfileController extends Controller
     $user = $request->user();
 
     $validated = $request->validate([
-      'phone' => 'nullable|string|max:20',
+      'name' => 'required|string|max:255',
+      'phone' => 'required|string|max:20',
       'address' => 'nullable|string',
       'province' => 'nullable|string|max:100',
       'city' => 'nullable|string|max:100',
       'district' => 'nullable|string|max:100',
       'village' => 'nullable|string|max:100',
       'postal_code' => 'nullable|string|max:20',
-      'identity_number' => 'nullable|string|max:50',
+      'identity_number' => 'required|string|max:50',
       'identity_photo' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
       'profile_photo' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
     ]);
@@ -52,16 +53,14 @@ class ProfileController extends Controller
       if ($user->affiliateProfile && $user->affiliateProfile->identity_photo_path) {
         Storage::disk('public')->delete($user->affiliateProfile->identity_photo_path);
       }
-      $pathId = $request->file('identity_photo')->store('affiliate/identities', 'public');
-      $profileData['identity_photo_path'] = $pathId;
+      $profileData['identity_photo_path'] = $request->file('identity_photo')->store('affiliate/identities', 'public');
     }
 
     if ($request->hasFile('profile_photo')) {
       if ($user->affiliateProfile && $user->affiliateProfile->profile_photo_path) {
         Storage::disk('public')->delete($user->affiliateProfile->profile_photo_path);
       }
-      $pathProfile = $request->file('profile_photo')->store('affiliate/profiles', 'public');
-      $profileData['profile_photo_path'] = $pathProfile;
+      $profileData['profile_photo_path'] = $request->file('profile_photo')->store('affiliate/profiles', 'public');
     }
 
     $user->affiliateProfile()->updateOrCreate(
@@ -70,6 +69,7 @@ class ProfileController extends Controller
     );
 
     $user->update([
+      'name' => $validated['name'],
       'phone' => $validated['phone'],
       'address' => $validated['address'],
     ]);

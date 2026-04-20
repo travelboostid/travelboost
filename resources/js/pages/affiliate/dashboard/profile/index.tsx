@@ -119,7 +119,7 @@ export default function ProfileIndex({ user }: { user: any }) {
                             className="bg-blue-50/50 border-blue-100 font-medium"
                           />
                         </div>
-                        <div className="space-y-2">
+                        {/* <div className="space-y-2">
                           <Label className="text-blue-700">
                             Network Partner
                           </Label>
@@ -128,27 +128,27 @@ export default function ProfileIndex({ user }: { user: any }) {
                             disabled
                             className="bg-blue-50/50 border-blue-100 font-medium"
                           />
-                        </div>
+                        </div> */}
                       </>
                     );
                   }
 
                   // Jika user adalah Master Affiliate
-                  if (
-                    tier === 'master_affiliate' ||
-                    tier === 'master-affiliate'
-                  ) {
-                    return (
-                      <div className="space-y-2">
-                        <Label className="text-blue-700">Partner Under</Label>
-                        <Input
-                          value={uplineMA?.name || '-'}
-                          disabled
-                          className="bg-blue-50/50 border-blue-100 font-medium"
-                        />
-                      </div>
-                    );
-                  }
+                  // if (
+                  //   tier === 'master_affiliate' ||
+                  //   tier === 'master-affiliate'
+                  // ) {
+                  //   return (
+                  //     <div className="space-y-2">
+                  //       <Label className="text-blue-700">Partner Under</Label>
+                  //       <Input
+                  //         value={uplineMA?.name || '-'}
+                  //         disabled
+                  //         className="bg-blue-50/50 border-blue-100 font-medium"
+                  //       />
+                  //     </div>
+                  //   );
+                  // }
 
                   return null;
                 })()}

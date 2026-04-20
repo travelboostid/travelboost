@@ -12,6 +12,11 @@ import {
 import { Field, FieldGroup } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { store } from '@/routes/company/roles';
 import { useForm } from '@inertiajs/react';
@@ -44,30 +49,42 @@ export default function AddRoleButton({ permissions }: { permissions: any[] }) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button>
-          <PlusIcon />
-          Add Role
-        </Button>
+      <DialogTrigger>
+        <Tooltip>
+          <TooltipTrigger>
+            <Button variant="default" aria-label="Add role">
+              <PlusIcon />
+              Add Role
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Add Role</TooltipContent>
+        </Tooltip>
       </DialogTrigger>
 
-      <DialogContent className="sm:max-w-sm">
-        <form onSubmit={handleSubmit}>
+      <DialogContent className="max-h-[90dvh] flex flex-col">
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
           <DialogHeader>
-            <DialogTitle>Add New Role</DialogTitle>
+            <DialogTitle>Add Role</DialogTitle>
             <DialogDescription>
-              Enter the details of the new role you want to add. Click add role
-              when you're done.
+              Add a new role to your company and assign permissions to it. You
+              can always edit the role later to update its permissions or
+              details.
             </DialogDescription>
           </DialogHeader>
 
-          <FieldGroup>
+          <FieldGroup className="flex flex-col flex-1 min-h-0">
             <Field>
-              <Label htmlFor="name">Name</Label>
+              <Label htmlFor="name">Code</Label>
               <Input
                 name="name"
                 value={form.data.name}
-                onChange={(e) => form.setData('name', e.target.value)}
+                onChange={(e) => {
+                  const formattedValue = (e.target.value || '')
+                    .toLowerCase()
+                    .replace(/\s+/g, '_')
+                    .replace(/[^a-z0-9_]/g, '');
+                  form.setData('name', formattedValue);
+                }}
               />
 
               <InputError message={form.errors.name} />
@@ -90,23 +107,23 @@ export default function AddRoleButton({ permissions }: { permissions: any[] }) {
                 value={form.data.description}
                 onChange={(e) => form.setData('description', e.target.value)}
               />
-
               <InputError message={form.errors.description} />
             </Field>
-
-            <Field>
+            <Field className="flex flex-col flex-1 min-h-0">
               <Label>Permissions</Label>
-              <PermissionsSelector
-                permissions={permissions}
-                value={form.data.permissions}
-                onChange={(value) => form.setData('permissions', value)}
-              ></PermissionsSelector>
+              <div className="flex flex-col flex-1 min-h-75 overflow-y-auto">
+                <PermissionsSelector
+                  permissions={permissions}
+                  value={form.data.permissions}
+                  onChange={(value) => form.setData('permissions', value)}
+                ></PermissionsSelector>
+              </div>
             </Field>
           </FieldGroup>
 
           <DialogFooter className="mt-4">
             <Button type="submit" disabled={form.processing}>
-              {form.processing ? 'Sending...' : 'Send Invitation'}
+              {form.processing ? 'Creating...' : 'Create Role'}
             </Button>
           </DialogFooter>
         </form>

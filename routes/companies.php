@@ -33,19 +33,19 @@ Route::prefix('companies/{company:username}/dashboard')->middleware(['auth', 'co
   Route::get('/', [HomeController::class, 'index'])->name('index');
   Route::group(['prefix' => 'vendors/{vendor}', 'as' => 'vendor.'], function () {
     Route::get('/tours', [VendorTourCatalogController::class, 'index'])->name('tours.index');
-    Route::post('/tours/{tour}/copy', [VendorTourCatalogController::class, 'copy'])->name('tour.copy');
+    Route::middleware(['agent.subscription.active'])->post('/tours/{tour}/copy', [VendorTourCatalogController::class, 'copy'])->name('tour.copy');
     //Route::get('/tours/{tour}/brochure', [VendorTourCatalogController::class, 'viewBrochure'])->name('tour.view-brochure');
   });
 
   Route::resource('agent-registrations', AgentRegistrationController::class);
-  Route::resource('vendor-registrations', VendorRegistrationController::class);
+  Route::middleware(['agent.subscription.active'])->resource('vendor-registrations', VendorRegistrationController::class);
   Route::middleware(['agent.subscription.active'])->post('vendor-registrations/register', [VendorRegistrationController::class, 'register'])->name('vendor-registrations.register');
   Route::resource('tours', TourController::class);
 
   Route::post(
-  'tour-availabilities',
-  [TourAvailabilityController::class, 'store']
-)->name('tour-availabilities.store');
+    'tour-availabilities',
+    [TourAvailabilityController::class, 'store']
+  )->name('tour-availabilities.store');
 
   Route::resource('agent-tours', AgentTourController::class);
   Route::resource('categories', CategoryController::class);
@@ -65,6 +65,7 @@ Route::prefix('companies/{company:username}/dashboard')->middleware(['auth', 'co
   Route::singleton('chatbot', ChatbotController::class);
   Route::singleton('page', PageController::class);
   Route::singleton('agent-subscriptions', AgentSubscriptionController::class);
+  Route::singleton('ai-credits', AiCreditController::class);
 });
 
 Route::get(

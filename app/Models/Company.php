@@ -46,73 +46,28 @@ class Company extends Model
         'slug' => 'main',
         'description' => 'Primary wallet for company transactions',
       ]);
-      $company->settings()->create([
-        'chatbot_enabled' => false,
-        'chatbot_tone' => 'professional',
-        'chatbot_emoji_usage' => 'minimal',
-        'chatbot_personality' => 'assistant',
-        'chatbot_default_language' => 'auto',
-        'landing_page_data' => '',
-      ]);
+      $company->settings()->create(config('travelboost.company_default_settings'));
 
       // AI
       $company->aiCredit()->create([
         'balance' => 10000, // Default AI free credit balance for new companies
       ]);
 
-      // Access group and role setup
-      $team = Team::create([
+      Team::create([
         'name' => "company:{$company->id}",
         'display_name' => "Company {$company->id} Team",
         'description' => "Default team for company {$company->id}",
       ]);
-      $superadmin = Role::create([
-        'name' => "company:{$company->id}:superadmin",
-        'display_name' => "Superadmin",
-        'description' => "Superadmin role with full permissions",
-      ]);
-      $superadmin->givePermissions([
-        'user.create',
-        'user.read',
-        'user.update',
-        'user.delete',
 
-        'company.create',
-        'company.read',
-        'company.update',
-        'company.delete',
-
-        'wallet.create',
-        'wallet.read',
-        'wallet.update',
-        'wallet.delete',
-
-        'tour.create',
-        'tour.read',
-        'tour.update',
-        'tour.delete',
-      ]);
-
-      $admin = Role::create([
-        'name' => "company:{$company->id}:admin",
-        'display_name' => "Admin",
-        'description' => "Admin role with limited permissions",
-      ]);
-      $admin->givePermissions([
-        'user.read',
-
-        'company.read',
-
-        'wallet.create',
-        'wallet.read',
-        'wallet.update',
-        'wallet.delete',
-
-        'tour.create',
-        'tour.read',
-        'tour.update',
-        'tour.delete',
-      ]);
+      $roles = config('travelboost.company_default_roles', []);
+      foreach ($roles as $role) {
+        $newRole = Role::create([
+          'name' => "company:{$company->id}:{$role['name']}",
+          'display_name' => $role['display_name'],
+          'description' => $role['description'],
+        ]);
+        $newRole->givePermissions($role['permissions']);
+      }
     });
   }
 
