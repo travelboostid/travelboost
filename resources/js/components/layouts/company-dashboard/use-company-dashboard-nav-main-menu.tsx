@@ -71,7 +71,7 @@ export function useCompanyDashboardNavMainMenu() {
       icon: FolderSearchIcon,
       items:
         (data?.data || []).map((vendor) => ({
-          id: `vendor-tours.${vendor.id}`,
+          id: `vendor-tours.${vendor.username}`,
           title: vendor.name,
           urlOrAction: `/companies/${company.username}/dashboard/vendors/${vendor.username}/tours`,
         })) || [],

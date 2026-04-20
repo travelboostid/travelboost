@@ -86,8 +86,8 @@ export default function Page({
 
   return (
     <CompanyDashboardLayout
-      openMenuIds={['vendor-tour-catalogs']}
-      activeMenuIds={[`vendor-tour-catalogs.${username}`]}
+      openMenuIds={['vendor-tours']}
+      activeMenuIds={[`vendor-tours.${username}`]}
       breadcrumb={[{ title: 'Tour Catalogs' }, { title: username }]}
       containerClassName="space-y-4"
       applet={
