@@ -35,14 +35,14 @@ class TourController extends Controller
   public function create(Company $company)
   {
     $priceCategories = PriceCategory::where('company_id', $company->id)
-        ->orderBy('name')
-        ->get(['id', 'name']);
+      ->orderBy('name')
+      ->get(['id', 'name']);
 
     //return Inertia::render('companies/dashboard/tours/create');
     return Inertia::render('companies/dashboard/tours/create', [
       'currencies' => Currency::select('code', 'name')
-          ->orderBy('code')
-          ->get(),
+        ->orderBy('code')
+        ->get(),
 
       'priceCategories' => $priceCategories,
     ]);
@@ -53,7 +53,7 @@ class TourController extends Controller
     //27032026
     //$tour = $company->tours()->create($request->validated());
     //return back();
-    
+
     // 1️⃣ Ambil data valid
     $data = $request->validated();
 
@@ -65,21 +65,21 @@ class TourController extends Controller
 
     // 4️⃣ Simpan schedules jika ada
     foreach ($schedules as $schedule) {
-        $tour->schedules()->create([
-            'departure_date' => $schedule['departure_date'] ?? null,
-            'return_date'    => $schedule['return_date'] ?? null,
-            'quota'          => $schedule['quota'] ?? 0,
-        ]);
+      $tour->schedules()->create([
+        'departure_date' => $schedule['departure_date'] ?? null,
+        'return_date'    => $schedule['return_date'] ?? null,
+        'quota'          => $schedule['quota'] ?? 0,
+      ]);
     }
 
     // 5️⃣ Redirect / back
     //return back();
     return redirect()
-    ->route('company.tours.edit', [
+      ->route('company.tours.edit', [
         'company' => $company->username, // ✅ lebih clean URL
         'tour' => $tour->id,
-    ])
-    ->with('tab', 'schedule');
+      ])
+      ->with('tab', 'schedule');
   }
 
   public function edit(Company $company, Tour $tour)
@@ -93,8 +93,8 @@ class TourController extends Controller
     //dd($tour->schedules->toArray());
 
     $priceCategories = PriceCategory::where('company_id', $company->id)
-        ->orderBy('name')
-        ->get(['id', 'name']);
+      ->orderBy('name')
+      ->get(['id', 'name']);
 
     return Inertia::render('companies/dashboard/tours/edit', [
       'tour' => $tour,
@@ -130,8 +130,8 @@ class TourController extends Controller
     DB::beginTransaction();
 
     try {
-        // ================= UPDATE TOUR =================
-        $tour->update($data);
+      // ================= UPDATE TOUR =================
+      $tour->update($data);
 
         // ================= RESET SCHEDULE =================
         //$tour->schedules()->delete();
@@ -177,10 +177,10 @@ class TourController extends Controller
 
             /*foreach ($schedule['prices'] ?? [] as $price) {
 
-                if (empty($price['room_type_id'])) continue;
+          if (empty($price['room_type_id'])) continue;
 
-                $promotionRate = 0;
-                $promotionValue = 0;
+          $promotionRate = 0;
+          $promotionValue = 0;
 
                 if (($price['promotion']['type'] ?? '') === 'percent') {
                     $promotionRate = (float) ($price['promotion']['value'] ?? 0);
@@ -188,8 +188,8 @@ class TourController extends Controller
                     $promotionValue = (float) ($price['promotion']['value'] ?? 0);
                 }
 
-                $commissionRate = 0;
-                $commissionValue = 0;
+          $commissionRate = 0;
+          $commissionValue = 0;
 
                 if (($price['commission']['type'] ?? '') === 'percent') {
                     $commissionRate = (float) ($price['commission']['value'] ?? 0);
@@ -204,8 +204,8 @@ class TourController extends Controller
                     'price' => (int) ($price['price'] ?? 0),
                     'currency' => $data['currency'],
 
-                    'promotion_rate' => $promotionRate,
-                    'promotion' => $promotionValue,
+            'promotion_rate' => $promotionRate,
+            'promotion' => $promotionValue,
 
                     'commission_rate' => $commissionRate,
                     'commission' => $commissionValue,
@@ -276,7 +276,7 @@ class TourController extends Controller
             }
         }
 
-        DB::commit();
+      DB::commit();
 
         //20042026
         /*return back()->with([
@@ -292,14 +292,12 @@ class TourController extends Controller
         ]);
 
     } catch (\Throwable $e) {
-        DB::rollBack();
+      DB::rollBack();
 
-        /*return back()->withErrors([
-            'error' => $e->getMessage(),
-        ]);*/
-        dd($e->getMessage(), $e->getTraceAsString()); 
+      return back()->withErrors([
+        'error' => $e->getMessage(),
+      ]);
     }
-
   }
 
   public function destroy(Company $company, Tour $tour)
