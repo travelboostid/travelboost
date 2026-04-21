@@ -88,28 +88,18 @@ class User extends Authenticatable implements Wallet, Customer, LaratrustUser
     return $this->belongsToMany(Company::class, 'company_teams')
       ->withTimestamps();
   }
-  public function companies()
+
+  protected function photoUrl(): Attribute
   {
-    return $this->belongsToMany(Company::class, 'company_teams')->withTimestamps();
+    return Attribute::make(
+      get: function () {
+        $files = collect($this->photo?->data['files'] ?? []);
+        $file = $files->firstWhere('code', 'small');
+
+        return data_get($file, 'url');
+      }
+    );
   }
-
-  protected function photoUrl(): Attribute
-  {
-    return Attribute::make(
-      get: function () {
-        $files = collect($this->photo?->data['files'] ?? []);
-        $file = $files->firstWhere('code', 'small');
-  protected function photoUrl(): Attribute
-  {
-    return Attribute::make(
-      get: function () {
-        $files = collect($this->photo?->data['files'] ?? []);
-        $file = $files->firstWhere('code', 'small');
-
-                return data_get($file, 'url');
-            }
-        );
-    }
 
     public function medias()
     {
@@ -131,10 +121,6 @@ class User extends Authenticatable implements Wallet, Customer, LaratrustUser
         return $this->hasMany(SavedPassenger::class);
     }
 
-  public function affiliateProfile()
-  {
-    return $this->hasOne(AffiliateProfile::class);
-  }
 
   public function affiliateCommissionRates()
   {
