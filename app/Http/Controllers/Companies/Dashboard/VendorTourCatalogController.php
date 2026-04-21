@@ -45,12 +45,6 @@ class VendorTourCatalogController extends Controller
         $query->where('name', 'ilike', "%{$search}%");
       })
       ->get();
-    /*->map(function ($tour) use ($company) {
-        $tour->has_copied = $company->agentTours()->where('tour_id', $tour->id)->exists();
-        return $tour;
-      });*/
-
-    //01042026
     $agentTours = \App\Models\AgentTour::where('company_id', $vendor->id)
       ->whereHas('tour', function ($q) {
         $q->where('status', 'active');
@@ -63,12 +57,17 @@ class VendorTourCatalogController extends Controller
       ->pluck('tour')
       ->filter();
 
+    $copiedTourIds = $company->agentTours()->pluck('tour_id');
+
     $tours = $tours
       ->merge($agentTours)
       ->unique('id')
       ->sortByDesc('created_at')
-      ->values();
-    //
+      ->values()
+      ->map(function ($tour) use ($copiedTourIds) {
+        $tour->has_copied = $copiedTourIds->contains($tour->id);
+        return $tour;
+      });
 
     $partnership = VendorAgentPartner::where('vendor_id', $vendor->id)
       ->where('agent_id', $company->id)
@@ -88,7 +87,7 @@ class VendorTourCatalogController extends Controller
   {
     $vendor = Company::where('username', $vendor)->firstOrFail();
 
-    $company->agentTours()->create([
+    $company->agentTours()->firstOrCreate([
       'tour_id' => $tour->id,
     ]);
 
