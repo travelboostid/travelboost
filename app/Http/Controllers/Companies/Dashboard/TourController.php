@@ -35,14 +35,14 @@ class TourController extends Controller
   public function create(Company $company)
   {
     $priceCategories = PriceCategory::where('company_id', $company->id)
-        ->orderBy('name')
-        ->get(['id', 'name']);
+      ->orderBy('name')
+      ->get(['id', 'name']);
 
     //return Inertia::render('companies/dashboard/tours/create');
     return Inertia::render('companies/dashboard/tours/create', [
       'currencies' => Currency::select('code', 'name')
-          ->orderBy('code')
-          ->get(),
+        ->orderBy('code')
+        ->get(),
 
       'priceCategories' => $priceCategories,
     ]);
@@ -53,7 +53,7 @@ class TourController extends Controller
     //27032026
     //$tour = $company->tours()->create($request->validated());
     //return back();
-    
+
     // 1️⃣ Ambil data valid
     $data = $request->validated();
 
@@ -65,32 +65,32 @@ class TourController extends Controller
 
     // 4️⃣ Simpan schedules jika ada
     foreach ($schedules as $schedule) {
-        $tour->schedules()->create([
-            'departure_date' => $schedule['departure_date'] ?? null,
-            'return_date'    => $schedule['return_date'] ?? null,
-            'quota'          => $schedule['quota'] ?? 0,
-        ]);
+      $tour->schedules()->create([
+        'departure_date' => $schedule['departure_date'] ?? null,
+        'return_date'    => $schedule['return_date'] ?? null,
+        'quota'          => $schedule['quota'] ?? 0,
+      ]);
     }
 
     // 5️⃣ Redirect / back
     //return back();
     return redirect()
-    ->route('company.tours.edit', [
+      ->route('company.tours.edit', [
         'company' => $company->username, // ✅ lebih clean URL
         'tour' => $tour->id,
-    ])
-    ->with('tab', 'schedule');
+      ])
+      ->with('tab', 'schedule');
   }
 
   public function edit(Company $company, Tour $tour)
   {
     $tour->load([
-        'schedules.prices' // 🔥 WAJIB
+      'schedules.prices' // 🔥 WAJIB
     ]);
 
     $priceCategories = PriceCategory::where('company_id', $company->id)
-        ->orderBy('name')
-        ->get(['id', 'name']);
+      ->orderBy('name')
+      ->get(['id', 'name']);
 
     return Inertia::render('companies/dashboard/tours/edit', [
       'tour' => $tour,
@@ -126,82 +126,79 @@ class TourController extends Controller
     DB::beginTransaction();
 
     try {
-        // ================= UPDATE TOUR =================
-        $tour->update($data);
+      // ================= UPDATE TOUR =================
+      $tour->update($data);
 
-        // ================= RESET SCHEDULE =================
-        $tour->schedules()->delete();
+      // ================= RESET SCHEDULE =================
+      $tour->schedules()->delete();
 
-        // ================= INSERT SCHEDULE =================
+      // ================= INSERT SCHEDULE =================
 
-        foreach ($data['schedules'] ?? [] as $schedule) {
-            $scheduleModel = $tour->schedules()->create([
-                'tour_id' => $tour->id, 
-                'company_id' => $company->id, 
-                'tour_code' => $tour->code,   
+      foreach ($data['schedules'] ?? [] as $schedule) {
+        $scheduleModel = $tour->schedules()->create([
+          'tour_id' => $tour->id,
+          'company_id' => $company->id,
+          'tour_code' => $tour->code,
 
-                'departure_date' => $schedule['departure_date'],
-                'return_date' => $schedule['return_date'] ?? null,
-                'quota' => (int) ($schedule['quota'] ?: 0),
-            ]);
-
-            foreach ($schedule['prices'] ?? [] as $price) {
-
-                if (empty($price['room_type_id'])) continue;
-
-                $promotionRate = 0;
-                $promotionValue = 0;
-
-                if (($price['promotion']['type'] ?? '') === 'percent') {
-                    $promotionRate = (float) ($price['promotion']['value'] ?: 0);
-                } else {
-                    $promotionValue = (float) ($price['promotion']['value'] ?: 0);
-                }
-
-                $commissionRate = 0;
-                $commissionValue = 0;
-
-                if (($price['commission']['type'] ?? '') === 'percent') {
-                    $commissionRate = (float) ($price['commission']['value'] ?: 0);
-                } else {
-                    $commissionValue = (float) ($price['commission']['value'] ?: 0);
-                }
-
-                $scheduleModel->prices()->create([
-                    'schedule_id' => $scheduleModel->id, // optional (auto sebenarnya)
-
-                    'company_id' => $company->id,
-                    'tour_code' => $tour->code,
-                
-                    'price_category_id' => $price['room_type_id'],
-                    'price' => (int) ($price['price'] ?: 0),
-                    'currency' => $data['currency'],
-
-                    'promotion_rate' => $promotionRate,
-                    'promotion' => $promotionValue,
-
-                    'commission_rate' => $commissionRate,
-                    'commission' => $commissionValue,
-                ]);
-            }
-        }
-
-        DB::commit();
-
-        return back()->with([
-            'success' => true,
-            'tab' => 'schedule',
+          'departure_date' => $schedule['departure_date'],
+          'return_date' => $schedule['return_date'] ?? null,
+          'quota' => (int) ($schedule['quota'] ?: 0),
         ]);
 
+        foreach ($schedule['prices'] ?? [] as $price) {
+
+          if (empty($price['room_type_id'])) continue;
+
+          $promotionRate = 0;
+          $promotionValue = 0;
+
+          if (($price['promotion']['type'] ?? '') === 'percent') {
+            $promotionRate = (float) ($price['promotion']['value'] ?: 0);
+          } else {
+            $promotionValue = (float) ($price['promotion']['value'] ?: 0);
+          }
+
+          $commissionRate = 0;
+          $commissionValue = 0;
+
+          if (($price['commission']['type'] ?? '') === 'percent') {
+            $commissionRate = (float) ($price['commission']['value'] ?: 0);
+          } else {
+            $commissionValue = (float) ($price['commission']['value'] ?: 0);
+          }
+
+          $scheduleModel->prices()->create([
+            'schedule_id' => $scheduleModel->id, // optional (auto sebenarnya)
+
+            'company_id' => $company->id,
+            'tour_code' => $tour->code,
+
+            'price_category_id' => $price['room_type_id'],
+            'price' => (int) ($price['price'] ?: 0),
+            'currency' => $data['currency'],
+
+            'promotion_rate' => $promotionRate,
+            'promotion' => $promotionValue,
+
+            'commission_rate' => $commissionRate,
+            'commission' => $commissionValue,
+          ]);
+        }
+      }
+
+      DB::commit();
+
+      return back()->with([
+        'success' => true,
+        'tab' => 'schedule',
+      ]);
     } catch (\Throwable $e) {
-        DB::rollBack();
+      DB::rollBack();
 
-        /*return back()->withErrors([
-            'error' => $e->getMessage(),
-        ]);*/
-        dd($e->getMessage(), $e->getTraceAsString()); 
+      return back()->withErrors([
+        'error' => $e->getMessage(),
+      ]);
     }
-
   }
 
   public function destroy(Company $company, Tour $tour)
