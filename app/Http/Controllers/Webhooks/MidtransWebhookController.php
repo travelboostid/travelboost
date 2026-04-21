@@ -147,6 +147,14 @@ class MidtransWebhookController extends Controller
       Log::error('Payable not found', ['payment_id' => $payment->id]);
       return;
     }
+    $aiCredit = $owner->aiCredit()->first();
+    if (!$aiCredit) {
+      $owner->aiCredit()->create([
+        'balance' => $payable->amount,
+      ]);
+    } else {
+      $aiCredit->increment('balance', $payable->amount);
+    }
   }
 
   private function processWalletTopup(Payment $payment)

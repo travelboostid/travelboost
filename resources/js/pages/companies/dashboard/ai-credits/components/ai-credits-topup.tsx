@@ -20,7 +20,7 @@ const MIN_AMOUNT = 100_000;
 
 export default function AiCreditsTopup() {
   const [amount, setAmount] = useState<number | null>(null);
-  const [ongoing, setOngoing] = useState(false);
+  const [ongoing] = useState(false);
   const isValid = amount !== null && amount >= MIN_AMOUNT;
   const { company } = usePageSharedDataProps();
   const topup = useCreateTopupPayment();
@@ -33,9 +33,9 @@ export default function AiCreditsTopup() {
         onSuccess: (payment) => {
           const snapToken = (payment.data.payload as any)?.snap_token as string;
           (window as any).snap.pay(snapToken, {
-            onSuccess: () => setOngoing(false),
-            onError: () => setOngoing(false),
-            onClose: () => setOngoing(false),
+            onSuccess: () => window.location.reload(),
+            onError: () => window.location.reload(),
+            onClose: () => window.location.reload(),
           });
         },
       },
