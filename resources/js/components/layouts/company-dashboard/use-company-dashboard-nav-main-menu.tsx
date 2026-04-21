@@ -273,6 +273,12 @@ export function useCompanyDashboardNavMainMenu() {
           urlOrAction: `/companies/${company.username}/dashboard/vendor-registrations`,
           visibleToCompanyTypes: ['agent'],
         },
+        {
+          id: 'settings.agent-subscriptions',
+          title: 'Agent Subscriptions',
+          urlOrAction: `/companies/${company.username}/dashboard/agent-subscriptions`,
+          visibleToCompanyTypes: ['agent'],
+        },
       ],
       visibleToCompanyTypes: ['agent', 'vendor'],
       visibleToPermissions: ['company.query'],
