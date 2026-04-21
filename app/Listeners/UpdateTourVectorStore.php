@@ -45,7 +45,8 @@ class UpdateTourVectorStore
     //01042026
     /*$chunks = $this->splitText($text, 2000, '.', 50);
     $embeddings = Embeddings::for($chunks)->cache(3600)->generate();*/
-    $chunks = collect(
+    //20042026
+    /*$chunks = collect(
         $this->splitText($text, 2000, '.', 50)
     );
 
@@ -73,7 +74,66 @@ class UpdateTourVectorStore
         'content' => $chunk,
         'embedding' => $embeddings->embeddings[$index] ?? null,
       ]);
+    }*/
+
+    $chunks = collect(
+        $this->splitText($text, 2000, '.', 50)
+    )->values();
+
+    if ($chunks->isEmpty()) {
+        return;
     }
+
+    // reset dulu KB
+    TourDocumentKnowledgeBase::where('tour_id', $tour->id)->delete();
+
+    // batching + langsung simpan
+    $chunks
+        ->chunk(1)
+        ->each(function ($batch) use ($tour) {
+
+            // 🔥 FIX: convert ke array
+            $batchArray = $batch->values()->toArray();
+
+            $maxRetry = 3;
+            $attempt = 0;
+
+            do {
+                try {
+                    $result = Embeddings::for($batchArray)
+                        ->cache(3600)
+                        ->generate();
+
+                    foreach ($batchArray as $i => $chunk) {
+                        TourDocumentKnowledgeBase::create([
+                            'tour_id' => $tour->id,
+                            'content' => $chunk,
+                            'embedding' => $result->embeddings[$i] ?? null,
+                        ]);
+                    }
+
+                    break; // sukses → keluar loop
+
+                } catch (\Throwable $e) {
+                    $attempt++;
+
+                    // detect rate limit
+                    if (str_contains(strtolower($e->getMessage()), 'rate limit')) {
+                        sleep(10 * $attempt); // lebih lama kalau kena limit
+                    } else {
+                        sleep(3 * $attempt);
+                    }
+
+                    if ($attempt >= $maxRetry) {
+                        throw $e;
+                    }
+                }
+
+            } while ($attempt < $maxRetry);
+
+            sleep(5); // optional rate limit
+        });
+
   }
 
   private function readPdfAsPlainText(string $filePath): string
