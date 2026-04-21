@@ -36,6 +36,9 @@ import SelectCurrency from './components/select-currency';
 
 import { useEffect } from "react"
 
+import React from 'react'
+import { Fragment } from 'react'
+
 import {
   Tabs,
   TabsContent,
@@ -75,6 +78,18 @@ type PriceCategory = {
 type Props = {
   tour: any;
 };
+
+type AddOn = {
+  id?: number
+  description: string
+  price: number | ''
+  edit_status: boolean
+}
+
+type AddOnsState = {
+  [scheduleId: number]: AddOn[]
+}
+
 export default function Page({ tour }: Props) {
   const { props } = usePage() as any // ✅ di sini
 
@@ -541,6 +556,70 @@ export default function Page({ tour }: Props) {
       )
     }
   }, [tour])
+
+  //Add Ons
+  const [addOns, setAddOns] = useState<AddOnsState>({})
+
+  const addRow = (scheduleId: number) => {
+    setAddOns((prev) => ({
+      ...prev,
+      [scheduleId]: [
+        ...(prev[scheduleId] || []),
+        { description: '', price: '', edit_status: false },
+      ],
+    }))
+  }
+
+  const updateRow = (
+    scheduleId: number,
+    index: number,
+    field: keyof AddOn,
+    value: any
+  ) => {
+    setAddOns((prev) => {
+      const rows = [...(prev[scheduleId] || [])]
+      rows[index] = { ...rows[index], [field]: value }
+
+      return {
+        ...prev,
+        [scheduleId]: rows,
+      }
+    })
+  }
+
+  const deleteRow = (scheduleId: number, index: number) => {
+    setAddOns((prev) => {
+      const rows = [...(prev[scheduleId] || [])]
+      rows.splice(index, 1)
+
+      return {
+        ...prev,
+        [scheduleId]: rows,
+      }
+    })
+  }
+
+  const [savingAddOns, setSavingAddOns] = useState(false)
+
+  const buildAddOnsPayload = () => {
+    const result: any[] = []
+
+    Object.entries(addOns).forEach(([scheduleId, rows]) => {
+      rows.forEach((row) => {
+        if (!row.description) return
+
+        result.push({
+          tour_id: tour.id,
+          schedule_id: Number(scheduleId),
+          description: row.description,
+          price: row.price || 0,
+          edit_status: row.edit_status,
+        })
+      })
+    })
+
+    return result
+  }
 
   return (
     <CompanyDashboardLayout
@@ -1659,11 +1738,104 @@ export default function Page({ tour }: Props) {
                           <th className="p-3 text-left">Departure → Return</th>
                           <th className="p-3 text-left">Descriptions</th>
                           <th className="p-3 text-left">Prices</th>
+                          <th className="p-3 text-left">Editable</th>
+                          <th className="p-3"></th>
                         </tr>
                       </thead>
 
                       <tbody>
-                        
+                        {schedules.map((schedule) => {
+                          const rows = addOns[schedule.id] || []
+                          const rowCount = rows.length
+
+                          return (
+                            <Fragment key={schedule.id}>
+                              
+                              {/* KALAU ADA DATA */}
+                              {rows.length > 0 &&
+                                rows.map((row, index) => (
+                                  <tr key={index} className="border-t">
+                                    
+                                    {/* SCHEDULE */}
+                                    {index === 0 && (
+                                      <td
+                                        className="p-3 font-medium align-top"
+                                        rowSpan={rowCount + 1}
+                                      >
+                                        {schedule.departure_date} → {schedule.return_date}
+                                      </td>
+                                    )}
+
+                                    {/* DESCRIPTION */}
+                                    <td className="p-3">
+                                      <input
+                                        type="text"
+                                        className="w-full border rounded px-2 py-1"
+                                        value={row.description}
+                                        onChange={(e) =>
+                                          updateRow(schedule.id, index, 'description', e.target.value)
+                                        }
+                                      />
+                                    </td>
+
+                                    {/* PRICE */}
+                                    <td className="p-3">
+                                      <MoneyInput
+                                        className="text-right"
+                                        value={row.price}
+                                        onChange={(val) =>
+                                          updateRow(schedule.id, index, 'price', Number(val))
+                                        }
+                                      />
+                                    </td>
+
+                                    {/* CHECKBOX */}
+                                    <td className="p-3 text-center">
+                                      <input
+                                        type="checkbox"
+                                        checked={row.edit_status}
+                                        onChange={(e) =>
+                                          updateRow(schedule.id, index, 'edit_status', e.target.checked)
+                                        }
+                                      />
+                                    </td>
+
+                                    {/* DELETE */}
+                                    <td className="p-3 text-center">
+                                      <button
+                                        type="button"
+                                        onClick={() => deleteRow(schedule.id, index)}
+                                        className="text-red-500"
+                                      >
+                                        ✕
+                                      </button>
+                                    </td>
+                                  </tr>
+                                ))}
+
+                              {/* ADD ROW BUTTON */}
+                              <tr className="border-t">
+                                {/* kalau belum ada row → schedule tetap tampil */}
+                                {rows.length === 0 && (
+                                  <td className="p-3 font-medium">
+                                    {schedule.departure_date} → {schedule.return_date}
+                                  </td>
+                                )}
+
+                                <td colSpan={rows.length === 0 ? 4 : 4} className="p-3">
+                                  <button
+                                    type="button"
+                                    onClick={() => addRow(schedule.id)}
+                                    className="text-blue-600 text-sm"
+                                  >
+                                    + Add Row
+                                  </button>
+                                </td>
+                              </tr>
+
+                            </Fragment>
+                          )
+                        })}
                       </tbody>
 
                     </table>
@@ -1674,40 +1846,45 @@ export default function Page({ tour }: Props) {
                 <div className="flex justify-start pt-6 border-t">
                   <Button
                     type="button"
-                    disabled={savingAvailability}
+                    disabled={savingAddOns}
                     onClick={async () => {
-                      setSavingAvailability(true)
+                      setSavingAddOns(true)
 
                       try {
-                        const payload = buildAvailabilityPayload()
+                        const payload = buildAddOnsPayload()
 
-                        console.log('SEND AVAILABILITY:', payload)
+                        if (payload.length === 0) {
+                          toast.error('Add Ons masih kosong')
+                          setSavingAddOns(false)
+                          return
+                        }
 
-                        //`/companies/${company.username}/dashboard/tour-availabilities`
-                        
+                        console.log('SEND ADD ONS:', payload)
+
                         router.post(
-                          `/companies/${company.username}/dashboard/tour-availabilities`,
+                          `/companies/${company.username}/dashboard/tour-add-ons`,
                           {
-                            availabilities: payload,
+                            add_ons: payload,
                           },
                           {
                             onSuccess: () => {
-                              toast.success('Availability saved')
+                              toast.success('Add Ons saved')
                             },
                             onError: () => {
-                              toast.error('Failed to save availability')
+                              console.error(errors)
+                              toast.error('Failed to save Add Ons')
                             },
                             onFinish: () => {
-                              setSavingAvailability(false)
+                              setSavingAddOns(false)
                             },
                           }
                         )
                       } catch (err) {
-                        setSavingAvailability(false)
+                        setSavingAddOns(false)
                       }
                     }}
                   >
-                    {savingAvailability && <Spinner />}
+                    {savingAddOns && <Spinner />}
                     Save Add Ons
                   </Button>
                 </div>

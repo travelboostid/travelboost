@@ -17,6 +17,7 @@ class TourAddOn extends Model
         'schedule_id',
         'description',
         'price',
+        'edit_status',
     ];
 
     protected $casts = [
