@@ -20,82 +20,86 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
 
 class User extends Authenticatable implements Wallet, Customer, LaratrustUser
 {
-    use HasFactory, Notifiable, TwoFactorAuthenticatable, HasRolesAndPermissions, CanPay, HasWallet, HasWallets, HasBankAccounts;
+  use HasFactory, Notifiable, TwoFactorAuthenticatable, HasRolesAndPermissions, CanPay, HasWallet, HasWallets, HasBankAccounts;
 
-    protected $fillable = [
-        'name',
-        'username',
-        'email',
-        'password',
-        'phone',
-        'address',
-        'photo_id',
-        'company_id',
-        'gender',
-        'status',
-        'meta',
-        'note',
+  protected $fillable = [
+    'name',
+    'username',
+    'email',
+    'password',
+    'phone',
+    'address',
+    'photo_id',
+    'company_id',
+    'gender',
+    'status',
+    'meta',
+    'note',
+  ];
+
+  protected $hidden = [
+    'password',
+    'remember_token',
+    'two_factor_recovery_codes',
+    'two_factor_secret',
+    'photo'
+  ];
+
+  protected function casts(): array
+  {
+    return [
+      'email_verified_at' => 'datetime',
+      'password' => 'hashed',
+      'two_factor_confirmed_at' => 'datetime',
+      'status' => UserStatus::class,
+      'gender' => UserGender::class,
     ];
-
-    protected $hidden = [
-        'password',
-        'remember_token',
-        'two_factor_recovery_codes',
-        'two_factor_secret',
-        'photo'
-    ];
-
-    protected function casts(): array
-    {
-        return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
-            'two_factor_confirmed_at' => 'datetime',
-            'status' => UserStatus::class,
-            'gender' => UserGender::class,
-        ];
-    }
+  }
 
     protected $appends = ['photo_url'];
     protected $with = ['affiliateProfile', 'roles'];
 
-    protected static function booted()
-    {
-        static::created(function ($user) {
-            $user->wallet()->create([
-                'name' => 'Main Wallet',
-                'slug' => 'main',
-                'description' => 'Primary wallet for user transactions',
-            ]);
-        });
-    }
+  protected static function booted()
+  {
+    static::created(function ($user) {
+      $user->wallet()->create([
+        'name' => 'Main Wallet',
+        'slug' => 'main',
+        'description' => 'Primary wallet for user transactions',
+      ]);
+    });
+  }
 
     public function photo()
     {
         return $this->belongsTo(Media::class, 'photo_id');
     }
 
-    public function bankAccounts()
-    {
-        return $this->hasMany(BankAccount::class);
-    }
+  public function bankAccounts()
+  {
+    return $this->hasMany(BankAccount::class);
+  }
+  public function affiliateProfile()
+  {
+    return $this->hasOne(AffiliateProfile::class);
+  }
+  public function companies()
+  {
+    return $this->belongsToMany(Company::class, 'company_teams')
+      ->withTimestamps();
+  }
 
-    public function companies()
-    {
-        return $this->belongsToMany(Company::class, 'company_teams')->withTimestamps();
-    }
+  protected function photoUrl(): Attribute
+  {
+    return Attribute::make(
+      get: function () {
+        $files = collect($this->photo?->data['files'] ?? []);
+        $file = $files->firstWhere('code', 'small');
 
-    protected function photoUrl(): Attribute
-    {
-        return Attribute::make(
-            get: function () {
-                $files = collect($this->photo?->data['files'] ?? []);
-                $file = $files->firstWhere('code', 'small');
-
-                return data_get($file, 'url');
-            }
-        );
-    }
+        return data_get($file, 'url');
+      }
+    );
+  }
 
     public function medias()
     {
@@ -117,13 +121,9 @@ class User extends Authenticatable implements Wallet, Customer, LaratrustUser
         return $this->hasMany(SavedPassenger::class);
     }
 
-    public function affiliateProfile()
-    {
-        return $this->hasOne(AffiliateProfile::class);
-    }
 
-    public function affiliateCommissionRates()
-    {
-        return $this->hasMany(AffiliateCommissionRate::class);
-    }
+  public function affiliateCommissionRates()
+  {
+    return $this->hasMany(AffiliateCommissionRate::class);
+  }
 }
