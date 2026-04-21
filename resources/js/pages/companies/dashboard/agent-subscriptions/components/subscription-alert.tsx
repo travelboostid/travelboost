@@ -33,7 +33,11 @@ export default function SubscriptionAlert() {
       {
         onSuccess: (payment) => {
           const snapToken = (payment.data.payload as any)?.snap_token as string;
-          (window as any).snap.pay(snapToken);
+          (window as any).snap.pay(snapToken, {
+            onSuccess: () => window.location.reload(),
+            onError: () => window.location.reload(),
+            onClose: () => window.location.reload(),
+          });
         },
       },
     );

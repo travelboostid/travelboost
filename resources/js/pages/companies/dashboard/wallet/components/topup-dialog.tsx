@@ -41,9 +41,9 @@ export function TopupDialog({ children }: TopupDialogProps) {
           setOpen(false);
           const snapToken = (payment.data.payload as any)?.snap_token as string;
           (window as any).snap.pay(snapToken, {
-            onSuccess: () => setOngoing(false),
-            onError: () => setOngoing(false),
-            onClose: () => setOngoing(false),
+            onSuccess: () => window.location.reload(),
+            onError: () => window.location.reload(),
+            onClose: () => window.location.reload(),
           });
         },
       },
