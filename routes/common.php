@@ -44,14 +44,7 @@ Route::get('/tours', [BaseHomeController::class, 'tours'])->name('tours');
 
 // route default
 Route::get('/login', function (Request $request) {
-  /** @var Domain|null $domain */
-  $domain = Context::get('domain');
-  $owner = $domain?->owner;
-
-  return match (true) {
-    $owner instanceof Company => app(TenantHomeController::class)->index(),
-    default => app(BaseAuthController::class)->showLogin($request),
-  };
+  return app(BaseAuthController::class)->showLogin($request);
 })->name('login');
 
 Route::get('/register', [BaseAuthController::class, 'showRegister'])->name('register');

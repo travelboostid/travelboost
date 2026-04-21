@@ -56,8 +56,8 @@ class User extends Authenticatable implements Wallet, Customer, LaratrustUser
     ];
   }
 
-  protected $appends = ['photo_url'];
-  protected $with = ['affiliateProfile', 'roles'];
+    protected $appends = ['photo_url'];
+    protected $with = ['affiliateProfile', 'roles'];
 
   protected static function booted()
   {
@@ -70,25 +70,60 @@ class User extends Authenticatable implements Wallet, Customer, LaratrustUser
     });
   }
 
-  public function photo()
-  {
-    return $this->belongsTo(Media::class, 'photo_id');
-  }
+    public function photo()
+    {
+        return $this->belongsTo(Media::class, 'photo_id');
+    }
 
+  public function bankAccounts()
+  {
+    return $this->hasMany(BankAccount::class);
+  }
   public function affiliateProfile()
   {
     return $this->hasOne(AffiliateProfile::class);
   }
   public function companies()
   {
-    return $this->belongsToMany(Company::class, 'company_teams')->withTimestamps();
+    return $this->belongsToMany(Company::class, 'company_teams')
+      ->withTimestamps();
   }
 
   protected function photoUrl(): Attribute
   {
-    return Attribute::make(get: function () {
-      $file = collect($this->photo?->data['files'] ?? [])->firstWhere('code', 'small');
-      return data_get($file, 'url');
-    });
+    return Attribute::make(
+      get: function () {
+        $files = collect($this->photo?->data['files'] ?? []);
+        $file = $files->firstWhere('code', 'small');
+
+        return data_get($file, 'url');
+      }
+    );
+  }
+
+    public function medias()
+    {
+        return $this->morphMany(Media::class, 'owner');
+    }
+
+    public function company()
+    {
+        return $this->belongsTo(Company::class, 'company_id');
+    }
+
+    public function bookings()
+    {
+        return $this->hasMany(Booking::class);
+    }
+
+    public function savedPassengers()
+    {
+        return $this->hasMany(SavedPassenger::class);
+    }
+
+
+  public function affiliateCommissionRates()
+  {
+    return $this->hasMany(AffiliateCommissionRate::class);
   }
 }
