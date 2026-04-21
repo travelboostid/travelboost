@@ -5,14 +5,14 @@ namespace App\Listeners;
 use App\Events\TourCreated;
 use App\Events\TourUpdated;
 use App\Models\TourDocumentKnowledgeBase;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Ai\Embeddings;
 
-class UpdateTourVectorStore
+class UpdateTourVectorStore implements ShouldQueue
 {
   /**
    * Create the event listener.
-   * 
    */
   public function __construct()
   {
@@ -23,8 +23,8 @@ class UpdateTourVectorStore
    * Handle the TourCreated and TourUpdated events.
    * Rebuilds the vector store when a tour is created or updated.
    * This ensures chatbot knowledge base stays current with tour changes.
-   * 
-   * @param TourCreated|TourUpdated $event Contains the tour instance
+   *
+   * @param  TourCreated|TourUpdated  $event  Contains the tour instance
    */
   public function handle(TourCreated|TourUpdated $event): void
   {
@@ -33,8 +33,8 @@ class UpdateTourVectorStore
       return;
     }
 
-    // Resolve absolute file path
-    $relativePath = ltrim($tour->document->data['url'], '/storage/');
+    $url = $tour->document->data['url'];
+    $relativePath = str_starts_with($url, '/storage/') ? substr($url, 9) : $url;
     $absolutePath = Storage::disk('public')->path($relativePath);
 
     if (! file_exists($absolutePath)) {
@@ -42,105 +42,47 @@ class UpdateTourVectorStore
     }
 
     $text = $this->readPdfAsPlainText($absolutePath);
-    //01042026
-    /*$chunks = $this->splitText($text, 2000, '.', 50);
-    $embeddings = Embeddings::for($chunks)->cache(3600)->generate();*/
-    //20042026
-    /*$chunks = collect(
-        $this->splitText($text, 2000, '.', 50)
+    $chunks = collect(
+      $this->splitText($text, 2000, '.', 50)
     );
 
     if ($chunks->isEmpty()) {
-        return;
+      return;
     }
 
+    $allEmbeddings = [];
+
     $chunks
-        ->chunk(10)
-        ->each(function ($batch) {
-            Embeddings::for($batch->values())
-                ->cache(3600)
-                ->generate();
+      ->chunk(10)
+      ->each(function ($batch) use (&$allEmbeddings) {
+        $result = Embeddings::for($batch->values()->all())
+          ->cache(3600)
+          ->generate();
 
-            sleep(1);
-        });
+        foreach ($result->embeddings as $embedding) {
+          $allEmbeddings[] = $embedding;
+        }
 
-    // Clear existing knowledge base entries for the tour
+        sleep(1);
+      });
+
     TourDocumentKnowledgeBase::where('tour_id', $tour->id)->delete();
 
-    // Store new chunks and their embeddings in the knowledge base
-    foreach ($chunks as $index => $chunk) {
+    foreach ($chunks->values() as $index => $chunk) {
       TourDocumentKnowledgeBase::create([
         'tour_id' => $tour->id,
         'content' => $chunk,
-        'embedding' => $embeddings->embeddings[$index] ?? null,
+        'embedding' => $allEmbeddings[$index] ?? null,
       ]);
-    }*/
-
-    $chunks = collect(
-        $this->splitText($text, 2000, '.', 50)
-    )->values();
-
-    if ($chunks->isEmpty()) {
-        return;
     }
-
-    // reset dulu KB
-    TourDocumentKnowledgeBase::where('tour_id', $tour->id)->delete();
-
-    // batching + langsung simpan
-    $chunks
-        ->chunk(1)
-        ->each(function ($batch) use ($tour) {
-
-            // 🔥 FIX: convert ke array
-            $batchArray = $batch->values()->toArray();
-
-            $maxRetry = 3;
-            $attempt = 0;
-
-            do {
-                try {
-                    $result = Embeddings::for($batchArray)
-                        ->cache(3600)
-                        ->generate();
-
-                    foreach ($batchArray as $i => $chunk) {
-                        TourDocumentKnowledgeBase::create([
-                            'tour_id' => $tour->id,
-                            'content' => $chunk,
-                            'embedding' => $result->embeddings[$i] ?? null,
-                        ]);
-                    }
-
-                    break; // sukses → keluar loop
-
-                } catch (\Throwable $e) {
-                    $attempt++;
-
-                    // detect rate limit
-                    if (str_contains(strtolower($e->getMessage()), 'rate limit')) {
-                        sleep(10 * $attempt); // lebih lama kalau kena limit
-                    } else {
-                        sleep(3 * $attempt);
-                    }
-
-                    if ($attempt >= $maxRetry) {
-                        throw $e;
-                    }
-                }
-
-            } while ($attempt < $maxRetry);
-
-            sleep(5); // optional rate limit
-        });
-
   }
 
   private function readPdfAsPlainText(string $filePath): string
   {
-    $parser = new \Smalot\PdfParser\Parser();
+    $parser = new \Smalot\PdfParser\Parser;
     $pdf = $parser->parseFile($filePath);
     $text = $pdf->getText();
+
     return $text;
   }
 
@@ -165,16 +107,11 @@ class UpdateTourVectorStore
     if ($wordOverlap > 0) {
       $chunks = $this->createChunksWithOverlap($words, $maxLength, $separator, $wordOverlap, $keepSeparator);
     } else {
-      // This method is not really necessary anymore.
-      // The new `createChunksWithOverlap` method handles this too.
-      // But to prevent possible bugs when introducing the new method,
-      // We will handle this case with the old method for now.
       $chunks = $this->createChunksWithoutOverlap($words, $maxLength, $separator, $keepSeparator);
     }
 
     return $chunks;
   }
-
 
   /**
    * @param  array<string>  $words
@@ -222,15 +159,12 @@ class UpdateTourVectorStore
         $currentChunk[] = $word;
         $currentChunkLength = $this->calcChunkLength($currentChunk, $separator);
       } else {
-        // Add the chunk with overlap
         $chunkText = implode($separator, $currentChunk);
         $chunks[] = $keepSeparator ? $chunkText . $separator : $chunkText;
 
-        // Calculate overlap words
         $calculatedOverlap = min($wordOverlap, count($currentChunk) - 1);
         $overlapWords = $calculatedOverlap > 0 ? array_slice($currentChunk, -$calculatedOverlap) : [];
 
-        // Start a new chunk with overlap words
         $currentChunk = [...$overlapWords, $word];
         $currentChunk[0] = trim($currentChunk[0]);
         $currentChunkLength = $this->calcChunkLength($currentChunk, $separator);
