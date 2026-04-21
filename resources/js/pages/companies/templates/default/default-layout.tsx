@@ -1,7 +1,7 @@
 import AppLogoIcon from '@/components/app-logo-icon';
 import { Button } from '@/components/ui/button';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
-import { router, Link } from '@inertiajs/react';
+import { Link, router } from '@inertiajs/react';
 import type { WithId, WithPuckProps } from '@puckeditor/core';
 import { MenuIcon, XIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -30,7 +30,8 @@ export default function DefaultLayout({
           const stored = JSON.parse(pendingStr);
           if (
             stored.returnUrl &&
-            window.location.pathname + window.location.search !== stored.returnUrl
+            window.location.pathname + window.location.search !==
+              stored.returnUrl
           ) {
             router.visit(stored.returnUrl);
           }
@@ -75,12 +76,6 @@ export default function DefaultLayout({
                 className="text-muted-foreground hover:text-foreground transition-colors font-medium"
               >
                 Tours
-              </a>
-              <a
-                href="#about-us"
-                className="text-muted-foreground hover:text-foreground transition-colors font-medium"
-              >
-                About Us
               </a>
               <a
                 href="#about-us"
