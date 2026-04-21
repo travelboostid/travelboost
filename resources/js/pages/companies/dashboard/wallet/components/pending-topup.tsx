@@ -12,19 +12,11 @@ import CancelPayment from '../../payments/components/cancel-payment';
 import ContinuePayment from './continue-payment';
 
 export default function PendingTopup() {
-  const { data, refetch } = useGetPayments();
+  const { data } = useGetPayments();
   const pendingTopup = data?.data.find(
     (payment) => payment.status === 'pending',
   );
 
-  const handlePay = () => {
-    const snapToken = (pendingTopup?.payload as any)?.snap_token as string;
-    (window as any).snap.pay(snapToken, {
-      onSuccess: () => refetch(),
-      onError: () => refetch(),
-      onClose: () => refetch(),
-    });
-  };
   return pendingTopup ? (
     <Item variant="outline">
       <ItemMedia variant="icon">
