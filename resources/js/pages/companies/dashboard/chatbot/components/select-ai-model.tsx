@@ -8,6 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { formatIDR } from '@/lib/utils';
 
 interface SelectAiModelProps {
   name?: string;
@@ -39,9 +40,19 @@ export default function SelectAiModel({
       <SelectContent>
         <SelectGroup>
           <SelectLabel>AI Model</SelectLabel>
-          {data?.data.map((cat) => (
-            <SelectItem key={cat.id} value={cat.id.toString()} className="flex">
-              <div>{cat.code}</div>
+          {data?.data.map((model) => (
+            <SelectItem
+              key={model.id}
+              value={model.id.toString()}
+              className="flex"
+            >
+              <div>
+                {model.code} (
+                <span className="text-muted-foreground">
+                  {formatIDR(model.flat_rate)}/interaction
+                </span>
+                )
+              </div>
             </SelectItem>
           ))}
         </SelectGroup>

@@ -82,9 +82,8 @@ export default function Page({ settings }: { settings: any }) {
                 <FieldLegend variant="label">AI Model</FieldLegend>
                 <FieldDescription>
                   Select the AI model that powers your chatbot. Different models
-                  may have different capabilities, response styles, and
-                  performance characteristics. Choose the one that best fits
-                  your business needs and customer interaction style.
+                  may have different capabilities, response styles, and costs.
+                  Choose the one that best fits your business needs and budget.
                 </FieldDescription>
                 <SelectAiModel
                   defaultValue={settings.chatbot_model_id}
