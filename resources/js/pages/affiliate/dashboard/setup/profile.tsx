@@ -62,7 +62,6 @@ export default function AffiliateProfileEdit() {
   const [districts, setDistricts] = useState<any[]>([]);
   const [villages, setVillages] = useState<any[]>([]);
 
-  // load data wilayah dinamis
   useEffect(() => {
     axios.get('/api/regions/provinces').then((res) => setProvinces(res.data));
   }, []);
@@ -201,6 +200,22 @@ export default function AffiliateProfileEdit() {
 
                 <div className="flex-1 grid gap-4 md:grid-cols-2 w-full">
                   <div className="space-y-2">
+                    <Label className="text-muted-foreground">
+                      Account Status
+                    </Label>
+                    <div className="pt-1 flex items-center h-10">
+                      {profile?.approved_at ? (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                          Approved
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">
+                          Pending Approval
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="space-y-2">
                     <Label>Full Name *</Label>
                     <Input
                       value={data.name}
@@ -213,7 +228,7 @@ export default function AffiliateProfileEdit() {
                     <Input
                       value={user.email}
                       disabled
-                      className="bg-slate-50 cursor-not-allowed"
+                      className="bg-slate-50 cursor-not-allowed text-muted-foreground"
                     />
                   </div>
 
@@ -243,10 +258,37 @@ export default function AffiliateProfileEdit() {
                     <Input
                       value={user.username}
                       disabled
-                      className="bg-slate-50 cursor-not-allowed"
+                      className="bg-slate-50 cursor-not-allowed text-dark"
                     />
                   </div>
-                  <div className="space-y-2 md:col-span-2">
+
+                  <div className="space-y-2">
+                    <Label
+                      htmlFor="join_date"
+                      className="text-muted-foreground"
+                    >
+                      Join Date
+                    </Label>
+                    <Input
+                      id="join_date"
+                      value={
+                        profile?.approved_at
+                          ? new Date(profile.approved_at).toLocaleDateString(
+                              'en-US',
+                              {
+                                year: 'numeric',
+                                month: 'long',
+                                day: 'numeric',
+                              },
+                            )
+                          : '-'
+                      }
+                      disabled
+                      className="bg-slate-50 cursor-not-allowed text-dark"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
                     <Label className="flex items-center gap-1 text-blue-700">
                       <LinkIcon className="w-3 h-3" /> Landing Page Link
                     </Label>
@@ -406,10 +448,23 @@ export default function AffiliateProfileEdit() {
                 </Label>
                 <Input
                   id="identity_number"
+                  type="text"
+                  maxLength={16}
+                  minLength={16}
+                  pattern="\d{16}"
                   value={data.identity_number}
-                  onChange={(e) => setData('identity_number', e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/\D/g, '');
+                    setData('identity_number', val);
+                  }}
                   placeholder="16 digit ID number"
                 />
+                {data.identity_number.length > 0 &&
+                  data.identity_number.length < 16 && (
+                    <p className="text-[0.8rem] font-medium text-destructive">
+                      ID Number must be exactly 16 digits.
+                    </p>
+                  )}
                 <InputError message={errors.identity_number} />
               </div>
 

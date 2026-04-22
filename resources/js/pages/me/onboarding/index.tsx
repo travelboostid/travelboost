@@ -1,9 +1,17 @@
 import UserDashboardLayout from '@/components/layouts/user-dashboard';
-
 import AcceptInvitation from './accept-invitation';
 import RegisterAgentAccount from './register-agent-account';
 
-export default function Onboarding({ invitations }: { invitations: any[] }) {
+interface Props {
+  invitations: any[];
+  affiliate?: {
+    id: number;
+    name: string;
+    username: string;
+  };
+}
+
+export default function Onboarding({ invitations, affiliate }: Props) {
   return (
     <UserDashboardLayout
       containerClassName="p-4"
@@ -12,7 +20,7 @@ export default function Onboarding({ invitations }: { invitations: any[] }) {
       {invitations.length ? (
         <AcceptInvitation invitations={invitations} />
       ) : (
-        <RegisterAgentAccount />
+        <RegisterAgentAccount affiliate={affiliate} />
       )}
     </UserDashboardLayout>
   );

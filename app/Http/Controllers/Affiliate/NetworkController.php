@@ -33,6 +33,7 @@ class NetworkController extends Controller
       'ap.approved_at',
       'ap.identity_number',
       'ap.identity_photo_path',
+      'ap.profile_photo_path',
       'ap.address',
       'ap.city',
       'ap.province',
@@ -94,6 +95,7 @@ class NetworkController extends Controller
         'address' => trim($network->address . ' ' . $network->city . ' ' . $network->province),
         'identity_number' => $network->identity_number,
         'identity_photo_path' => $network->identity_photo_path,
+        'profile_photo_path' => $network->profile_photo_path,
         'upline_name' => $network->upline_name,
         'tier' => $network->tier,
         'created_at' => $network->created_at,
@@ -157,6 +159,7 @@ class NetworkController extends Controller
         'address' => trim($profile->address . ' ' . $profile->city . ' ' . $profile->province),
         'identity_number' => $profile->identity_number ?? '-',
         'identity_photo_path' => $profile->identity_photo_path ?? null,
+        'profile_photo_path' => $profile->profile_photo_path ?? null,
         'registered_at' => $profile->created_at ? $profile->created_at->format('Y-m-d') : '-',
       ];
     });

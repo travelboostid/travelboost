@@ -32,14 +32,14 @@ class AffiliateAuthController extends Controller
 
     if (!$user || !Hash::check($request->password, $user->password)) {
       return back()->withErrors([
-        'login' => 'Kredensial yang diberikan tidak cocok dengan data kami.',
+        'login' => 'The provided credentials are incorrect.',
       ])->onlyInput('login');
     }
 
     $statusValue = $user->status instanceof \BackedEnum ? $user->status->value : $user->status;
 
     if (strtolower(trim((string)$statusValue)) === 'inactive') {
-      return back()->with('account_inactive', 'Akun anda sudah di nonaktifkan, hubungi admin travelboost di email care@travelboost.co.id untuk keterangan lebih lanjut.');
+      return back()->with('account_inactive', 'Your account has been deactivated, contact the Travelboost admin at care@travelboost.co.id for further information.');
     }
 
     Auth::login($user, $request->boolean('remember'));
@@ -47,7 +47,7 @@ class AffiliateAuthController extends Controller
 
     $profile = AffiliateProfile::where('user_id', $user->id)->first();
     if ($profile && $profile->status !== 'approved') {
-      $request->session()->flash('warning', 'Akun Anda belum disetujui, harap lengkapi profil Anda.');
+      $request->session()->flash('warning', 'Your account has not been approved yet. Please complete your profile.');
     }
 
     return redirect()->intended('/affiliate/dashboard');
@@ -119,7 +119,7 @@ class AffiliateAuthController extends Controller
     event(new Registered($user));
     Auth::login($user);
 
-    return redirect('/affiliate/dashboard')->with('warning', 'Registrasi berhasil. Akun Anda sedang menunggu persetujuan tim.');
+    return redirect('/affiliate/dashboard')->with('warning', 'Registration successful. Your account is awaiting team approval.');
   }
 
   public function logout(Request $request)

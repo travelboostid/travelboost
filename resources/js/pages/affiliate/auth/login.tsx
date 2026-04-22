@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { Head, useForm, usePage } from '@inertiajs/react';
+import { Eye, EyeOff } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import { useIntl } from 'react-intl';
 
@@ -15,6 +16,7 @@ export default function Login() {
 
   const [showModal, setShowModal] = useState(false);
   const [modalMessage, setModalMessage] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   const { data, setData, post, processing, errors, reset } = useForm({
     login: '',
@@ -71,6 +73,7 @@ export default function Login() {
                 name="login"
                 value={data.login}
                 autoFocus
+                required
                 onChange={(e) => setData('login', e.target.value)}
                 placeholder="email@example.com or username"
               />
@@ -84,14 +87,24 @@ export default function Login() {
                   defaultMessage: 'Password',
                 })}
               </Label>
-              <Input
-                id="password"
-                type="password"
-                name="password"
-                value={data.password}
-                onChange={(e) => setData('password', e.target.value)}
-                placeholder="Password"
-              />
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  name="password"
+                  required
+                  value={data.password}
+                  onChange={(e) => setData('password', e.target.value)}
+                  placeholder="Password"
+                />
+                <button
+                  type="button"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
               <InputError message={errors.password} />
             </div>
 
@@ -139,7 +152,7 @@ export default function Login() {
                 />
               </svg>
             </div>
-            <h3 className="text-lg font-semibold mb-2">Akun Dinonaktifkan</h3>
+            <h3 className="text-lg font-semibold mb-2">Account Deactivated</h3>
             <p className="text-sm text-muted-foreground mb-6">{modalMessage}</p>
             <Button onClick={handleCloseModal} className="w-full">
               OK

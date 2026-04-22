@@ -70,7 +70,7 @@ class HandleInertiaRequests extends Middleware
       'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
 
       //13042026
-      'currencies' => fn() => Currency::select('code', 'name')->get(),
+      // 'currencies' => fn() => Currency::select('code', 'name')->get(),
 
       'flash' => [
         'tab' => $request->session()->get('tab'),
