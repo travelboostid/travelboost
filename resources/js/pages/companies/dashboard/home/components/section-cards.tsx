@@ -2,7 +2,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatIDR } from '@/lib/utils';
 import {
-  Briefcase,
+  CreditCard,
   ShoppingBag,
   TrendingUp,
   Users,
@@ -21,25 +21,25 @@ export function SectionCards({ stats, type }: { stats: any; type: string }) {
             Total Sales
           </div>
           <CardTitle className="text-2xl font-bold">
-            {formatIDR(stats.sales.total.idr)}
+            {formatIDR(stats.sales?.total?.idr || 0)}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="flex gap-4 text-xs text-slate-500 font-medium">
-            <span>{stats.sales.total.pax} PAX</span>
-            <span>{stats.sales.total.order} Orders</span>
+            <span>{stats.sales?.total?.pax || 0} PAX</span>
+            <span>{stats.sales?.total?.order || 0} Orders</span>
           </div>
           <div className="pt-2 border-t">
             <div className="text-[10px] text-slate-400 mb-1">This Month:</div>
             <div className="flex items-center justify-between">
               <span className="font-bold text-emerald-600">
-                {formatIDR(stats.sales.monthly.idr)}
+                {formatIDR(stats.sales?.monthly?.idr || 0)}
               </span>
               <Badge
                 variant="secondary"
                 className="text-[10px] bg-emerald-50 text-emerald-600 border-none"
               >
-                +{stats.sales.monthly.pax} Pax
+                +{stats.sales?.monthly?.pax || 0} Pax
               </Badge>
             </div>
           </div>
@@ -55,13 +55,13 @@ export function SectionCards({ stats, type }: { stats: any; type: string }) {
             {type === 'vendor' ? 'Total Profit' : 'Total Commission'}
           </div>
           <CardTitle className="text-2xl font-bold text-emerald-600">
-            {formatIDR(stats.commission.total)}
+            {formatIDR(stats.commission?.total || 0)}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="text-[10px] text-slate-400 mb-1">This Month:</div>
           <div className="text-lg font-bold">
-            {formatIDR(stats.commission.monthly)}
+            {formatIDR(stats.commission?.monthly || 0)}
           </div>
           <p className="text-[10px] text-emerald-500 flex items-center gap-1 mt-1">
             <TrendingUp size={10} /> 12% increase from last month
@@ -78,7 +78,7 @@ export function SectionCards({ stats, type }: { stats: any; type: string }) {
             Total Customers
           </div>
           <CardTitle className="text-3xl font-bold">
-            {stats.counters.customers}
+            {stats.counters?.customers || 0}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -91,25 +91,43 @@ export function SectionCards({ stats, type }: { stats: any; type: string }) {
 
       <Card className="border-none shadow-sm bg-white overflow-hidden relative group">
         <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:scale-110 transition-transform">
-          <Briefcase size={80} />
+          <CreditCard size={80} />
         </div>
         <CardHeader className="pb-2">
           <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-            {type === 'vendor' ? 'Partner Agents' : 'Agent Ranking'}
+            Wallet Balance
           </div>
-          <CardTitle className="text-3xl font-bold">
-            {type === 'vendor' ? stats.counters.agents : '#4'}
+          <CardTitle className="text-2xl font-bold text-slate-800">
+            {formatIDR(stats.wallet?.balance || 5000000)}
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-xs text-slate-500">
-            {type === 'vendor'
-              ? 'Active agents in network'
-              : 'Top 5% national agents'}
-          </p>
-          <Badge className="mt-4 bg-blue-50 text-blue-600 border-none">
-            Keep growing! 🚀
-          </Badge>
+          {type === 'agent' ? (
+            <div className="mt-2 border-t pt-2">
+              <p className="text-[10px] text-slate-400 mb-1">
+                Subscription Status:
+              </p>
+              {stats.subscription?.ended_at ? (
+                <Badge className="bg-emerald-50 text-emerald-600 border-none font-medium">
+                  Valid until {stats.subscription.ended_at}
+                </Badge>
+              ) : (
+                <Badge
+                  variant="destructive"
+                  className="border-none font-medium"
+                >
+                  Not subscribed yet
+                </Badge>
+              )}
+            </div>
+          ) : (
+            <div className="mt-2 border-t pt-2">
+              <p className="text-[10px] text-slate-400 mb-1">Account Status:</p>
+              <Badge className="bg-blue-50 text-blue-600 border-none font-medium">
+                Active Vendor
+              </Badge>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

@@ -16,10 +16,9 @@ import { FormEventHandler } from 'react';
 import { toast } from 'sonner';
 
 export default function ProfileIndex({ user }: { user: any }) {
-  const profile = user.affiliate_profile;
+  const profile = user?.affiliate_profile || user?.affiliateProfile;
   const upline = profile?.upline;
 
-  // Form hanya untuk field yang boleh diubah (Nama & WhatsApp)
   const { data, setData, patch, processing, errors, isDirty } = useForm({
     name: user.name,
     phone: user.phone,
@@ -46,7 +45,6 @@ export default function ProfileIndex({ user }: { user: any }) {
       <Head title="Profil Pribadi - Mitra" />
 
       <div className="max-w-4xl space-y-6">
-        {/* --- FORM UPDATE PROFIL --- */}
         <Card>
           <CardHeader>
             <CardTitle>Profil Pribadi</CardTitle>
@@ -58,7 +56,6 @@ export default function ProfileIndex({ user }: { user: any }) {
           <CardContent>
             <form onSubmit={submit} className="space-y-6">
               <div className="grid gap-4 md:grid-cols-2">
-                {/* Nama Lengkap (Editable) */}
                 <div className="space-y-2">
                   <Label htmlFor="name">Nama Lengkap</Label>
                   <Input
@@ -70,7 +67,6 @@ export default function ProfileIndex({ user }: { user: any }) {
                   <InputError message={errors.name} />
                 </div>
 
-                {/* Nomor WA (Editable) */}
                 <div className="space-y-2">
                   <Label htmlFor="phone">Nomor WhatsApp</Label>
                   <Input
@@ -82,7 +78,6 @@ export default function ProfileIndex({ user }: { user: any }) {
                   <InputError message={errors.phone} />
                 </div>
 
-                {/* Email (Readonly) */}
                 <div className="space-y-2">
                   <Label htmlFor="email" className="text-muted-foreground">
                     Email Terdaftar
@@ -95,17 +90,62 @@ export default function ProfileIndex({ user }: { user: any }) {
                   />
                 </div>
 
-                {/* LOGIKA INFORMASI REFERRAL */}
-                {(() => {
-                  const profile =
-                    user?.affiliate_profile || user?.affiliateProfile;
-                  const tier = profile?.tier;
-                  const uplineMA = profile?.upline; // Master Affiliate
-                  const uplinePartner =
-                    uplineMA?.affiliate_profile?.upline ||
-                    uplineMA?.affiliateProfile?.upline; // Partner
+                <div className="space-y-2">
+                  <Label htmlFor="username" className="text-muted-foreground">
+                    Username / Subdomain
+                  </Label>
+                  <Input
+                    id="username"
+                    value={user.username}
+                    disabled
+                    className="bg-slate-50 dark:bg-slate-900 cursor-not-allowed text-muted-foreground"
+                  />
+                </div>
 
-                  // Jika user adalah Affiliator Biasa
+                <div className="space-y-2 pt-2">
+                  <Label className="text-muted-foreground">
+                    Account Status
+                  </Label>
+                  <div className="pt-1">
+                    {profile?.approved_at ? (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                        Approved
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">
+                        Pending Approval
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-2 pt-2">
+                  <Label htmlFor="join_date" className="text-muted-foreground">
+                    Join Date
+                  </Label>
+                  <Input
+                    id="join_date"
+                    value={
+                      profile?.approved_at
+                        ? new Date(profile.approved_at).toLocaleDateString(
+                            'en-US',
+                            {
+                              year: 'numeric',
+                              month: 'long',
+                              day: 'numeric',
+                            },
+                          )
+                        : '-'
+                    }
+                    disabled
+                    className="bg-slate-50 dark:bg-slate-900 cursor-not-allowed text-muted-foreground"
+                  />
+                </div>
+
+                {(() => {
+                  const tier = profile?.tier;
+                  const uplineMA = profile?.upline;
+
                   if (tier === 'affiliate') {
                     return (
                       <>
@@ -119,52 +159,12 @@ export default function ProfileIndex({ user }: { user: any }) {
                             className="bg-blue-50/50 border-blue-100 font-medium"
                           />
                         </div>
-                        {/* <div className="space-y-2">
-                          <Label className="text-blue-700">
-                            Network Partner
-                          </Label>
-                          <Input
-                            value={uplinePartner?.name || '-'}
-                            disabled
-                            className="bg-blue-50/50 border-blue-100 font-medium"
-                          />
-                        </div> */}
                       </>
                     );
                   }
 
-                  // Jika user adalah Master Affiliate
-                  // if (
-                  //   tier === 'master_affiliate' ||
-                  //   tier === 'master-affiliate'
-                  // ) {
-                  //   return (
-                  //     <div className="space-y-2">
-                  //       <Label className="text-blue-700">Partner Under</Label>
-                  //       <Input
-                  //         value={uplineMA?.name || '-'}
-                  //         disabled
-                  //         className="bg-blue-50/50 border-blue-100 font-medium"
-                  //       />
-                  //     </div>
-                  //   );
-                  // }
-
                   return null;
                 })()}
-
-                {/* Username (Readonly) */}
-                <div className="space-y-2">
-                  <Label htmlFor="username" className="text-muted-foreground">
-                    Username / Subdomain
-                  </Label>
-                  <Input
-                    id="username"
-                    value={user.username}
-                    disabled
-                    className="bg-slate-50 dark:bg-slate-900 cursor-not-allowed text-muted-foreground"
-                  />
-                </div>
               </div>
 
               <div className="flex justify-end pt-4">
@@ -181,7 +181,6 @@ export default function ProfileIndex({ user }: { user: any }) {
           </CardContent>
         </Card>
 
-        {/* --- INFO JARINGAN & REFERAL (Read-only) --- */}
         <Card>
           <CardHeader>
             <CardTitle>Informasi Jaringan</CardTitle>

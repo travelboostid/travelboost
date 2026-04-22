@@ -53,14 +53,18 @@ class ProfileController extends Controller
       if ($user->affiliateProfile && $user->affiliateProfile->identity_photo_path) {
         Storage::disk('public')->delete($user->affiliateProfile->identity_photo_path);
       }
-      $profileData['identity_photo_path'] = $request->file('identity_photo')->store('affiliate/identities', 'public');
+      $identityFile = $request->file('identity_photo');
+      $identityFileName = time() . '_identity_' . uniqid() . '.' . $identityFile->getClientOriginalExtension();
+      $profileData['identity_photo_path'] = $identityFile->storeAs('affiliate/identities', $identityFileName, 'public');
     }
 
     if ($request->hasFile('profile_photo')) {
       if ($user->affiliateProfile && $user->affiliateProfile->profile_photo_path) {
         Storage::disk('public')->delete($user->affiliateProfile->profile_photo_path);
       }
-      $profileData['profile_photo_path'] = $request->file('profile_photo')->store('affiliate/profiles', 'public');
+      $profileFile = $request->file('profile_photo');
+      $profileFileName = time() . '_profile_' . uniqid() . '.' . $profileFile->getClientOriginalExtension();
+      $profileData['profile_photo_path'] = $profileFile->storeAs('affiliate/profiles', $profileFileName, 'public');
     }
 
     $user->affiliateProfile()->updateOrCreate(
