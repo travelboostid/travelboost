@@ -12,11 +12,10 @@ class AiUsageLog extends Model
     'model_id',
     'input_tokens',
     'output_tokens',
-    'total_tokens',
-    'cost',
+    'token_usage_cost',
+    'user_cost',
     'feature',
     'meta',
-    'billing_cycle_id', // Added billing_cycle_id
   ];
 
   protected function casts(): array
@@ -24,19 +23,19 @@ class AiUsageLog extends Model
     return [
       'input_tokens' => 'integer',
       'output_tokens' => 'integer',
-      'total_tokens' => 'integer',
-      'cost' => 'decimal:16,8', // Updated precision
+      'token_usage_cost' => 'decimal:16,8', // Updated precision
+      'user_cost' => 'decimal:16,8', // Updated precision
       'meta' => 'array',
     ];
+  }
+
+  public function aiModel(): BelongsTo
+  {
+    return $this->belongsTo(AiModel::class, 'model_id');
   }
 
   public function company(): BelongsTo
   {
     return $this->belongsTo(Company::class);
-  }
-
-  public function billingCycle(): BelongsTo // Added relationship for billing_cycle_id
-  {
-    return $this->belongsTo(AiBillingCycle::class);
   }
 }

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Companies\Dashboard;
 
 use App\Http\Controllers\Controller;
 use App\Models\Company;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class AiCreditController extends Controller
@@ -22,11 +23,15 @@ class AiCreditController extends Controller
       'settings' => $settings,
       'credit' => $credit,
       // Fetch the last 30 billing cycles ordered by date
-      'billingCycles' => $company->aiBillingCycles()->orderBy('date', 'asc')->limit(30)->get(),
+      'dailyStats' => $company->aiUsageLogs()
+        ->select(DB::raw('DATE(created_at) as date'), DB::raw('SUM(user_cost) as cost'), DB::raw('COUNT(*) as num_interactions'))
+        ->groupBy('date')
+        ->orderBy('date')
+        ->get(),
       // Calculate today's usage cost
-      'usageCostToday' => $company->aiBillingCycles()->where('date', now()->toDateString())->sum('cost'),
+      'usageCostToday' => $company->aiUsageLogs()->whereDate('created_at', now()->toDateString())->sum('user_cost'),
       // Calculate usage cost for the last 30 days
-      'usageCostIn30Days' => $company->aiBillingCycles()->where('date', '>=', now()->subDays(30)->toDateString())->sum('cost'),
+      'usageCostIn30Days' => $company->aiUsageLogs()->where('created_at', '>=', now()->subDays(30)->toDateString())->sum('user_cost'),
     ]);
   }
 }

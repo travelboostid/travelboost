@@ -24,38 +24,33 @@ const chartConfig = {
     label: 'Cost',
     color: 'var(--primary)',
   },
-  input_tokens: {
-    label: 'Input Tokens',
+  num_interactions: {
+    label: 'Interactions',
     color: 'var(--chart-2)',
-  },
-  output_tokens: {
-    label: 'Output Tokens',
-    color: 'var(--chart-3)',
   },
 } satisfies ChartConfig;
 
 export default function DailyUsageStats() {
-  const { billingCycles } = usePageProps<AiCreditsPageProps>();
+  const { dailyStats } = usePageProps<AiCreditsPageProps>();
 
   // ✅ Normalize + fill missing dates
   const normalizedData = (() => {
-    if (!billingCycles?.length) return [];
+    if (!dailyStats?.length) return [];
 
     const map = new Map(
-      billingCycles.map((item) => [
+      dailyStats.map((item) => [
         new Date(item.date).toISOString().slice(0, 10),
         item,
       ]),
     );
 
-    const start = new Date(billingCycles[0].date);
-    const end = new Date(billingCycles[billingCycles.length - 1].date);
+    const start = new Date(dailyStats[0].date);
+    const end = new Date(dailyStats[dailyStats.length - 1].date);
 
     const result: {
       date: string;
       cost: number;
-      input_tokens: number;
-      output_tokens: number;
+      num_interactions: number;
     }[] = [];
 
     for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
@@ -65,8 +60,7 @@ export default function DailyUsageStats() {
       result.push({
         date: key,
         cost: item ? Number(item.cost) : 0,
-        input_tokens: item ? item.input_tokens : 0,
-        output_tokens: item ? item.output_tokens : 0,
+        num_interactions: item ? item.num_interactions : 0,
       });
     }
 
@@ -135,11 +129,9 @@ export default function DailyUsageStats() {
                     })
                   }
                   formatter={(value, name) => {
-                    if (name === 'cost') return [formatIDR(+value), ' Cost'];
-                    if (name === 'input_tokens')
-                      return [value, ' Input Tokens'];
-                    if (name === 'output_tokens')
-                      return [value, ' Output Tokens'];
+                    if (name === 'cost') return ['Cost ', formatIDR(+value)];
+                    if (name === 'num_interactions')
+                      return [value, ' Interactions'];
                     return [value, name];
                   }}
                   indicator="dot"
@@ -147,7 +139,7 @@ export default function DailyUsageStats() {
               }
             />
 
-            {/* ✅ Cost (main area) */}
+            {/* Cost (area) */}
             <Area
               dataKey="cost"
               type="natural"
@@ -155,19 +147,11 @@ export default function DailyUsageStats() {
               stroke="var(--color-cost)"
             />
 
-            {/* ✅ Input Tokens (line) */}
+            {/* Interactions (line) */}
             <Area
-              dataKey="input_tokens"
+              dataKey="num_interactions"
               type="natural"
-              stroke="var(--color-input_tokens)"
-              fillOpacity={0}
-            />
-
-            {/* ✅ Output Tokens (line) */}
-            <Area
-              dataKey="output_tokens"
-              type="natural"
-              stroke="var(--color-output_tokens)"
+              stroke="var(--color-num_interactions)"
               fillOpacity={0}
             />
           </AreaChart>
