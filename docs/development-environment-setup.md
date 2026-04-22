@@ -26,6 +26,8 @@ VS Code is mandatory for this project.
 - [Laravel Extension Pack](https://marketplace.visualstudio.com/items?itemName=laravel.vscode-laravel) — Laravel tooling
 - [PHP Tools](https://marketplace.visualstudio.com/items?itemName=DEVSENSE.phptools-vscode) — PHP debugging and tools
 
+Make sure **PHP Intelephense** is set as the default formatter for PHP, and **Prettier** is set as the default formatter for TSX.
+
 #### Recommended Extensions
 
 - [Composer PHP Extension](https://marketplace.visualstudio.com/items?itemName=DEVSENSE.composer-php-vscode) — Composer management
