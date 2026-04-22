@@ -56,8 +56,8 @@ class User extends Authenticatable implements Wallet, Customer, LaratrustUser
     ];
   }
 
-  protected $appends = ['photo_url'];
-  protected $with = ['affiliateProfile', 'roles'];
+    protected $appends = ['photo_url'];
+    protected $with = ['affiliateProfile', 'roles'];
 
   protected static function booted()
   {
@@ -70,11 +70,15 @@ class User extends Authenticatable implements Wallet, Customer, LaratrustUser
     });
   }
 
-  public function photo()
-  {
-    return $this->belongsTo(Media::class, 'photo_id');
-  }
+    public function photo()
+    {
+        return $this->belongsTo(Media::class, 'photo_id');
+    }
 
+  public function bankAccounts()
+  {
+    return $this->hasMany(BankAccount::class);
+  }
   public function affiliateProfile()
   {
     return $this->hasOne(AffiliateProfile::class);
