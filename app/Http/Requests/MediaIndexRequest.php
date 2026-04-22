@@ -27,6 +27,7 @@ class MediaIndexRequest extends FormRequest
       'page' => ['sometimes', 'integer', 'min:1'],
       'page_size' => ['sometimes', 'integer', 'min:1', 'max:100'],
       'type' => ['sometimes', new Enum(MediaType::class)],
+      'subtype' => ['sometimes', 'string', 'max:50'],
       'owner_id' => ['sometimes', 'integer', 'min:1'],
       'owner_type' => ['sometimes', 'string'],
     ];

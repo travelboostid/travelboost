@@ -1,7 +1,7 @@
 import { update } from '@/actions/App/Http/Controllers/Companies/Dashboard/ProfileController';
 import InputError from '@/components/input-error';
 import CompanyDashboardLayout from '@/components/layouts/company-dashboard';
-import { MediaPicker } from '@/components/media-picker';
+import { PhotoPicker } from '@/components/media/photo-picker';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -23,10 +23,9 @@ import { Spinner } from '@/components/ui/spinner';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
-import { extractImageSrc } from '@/lib/utils';
 import { Head, useForm } from '@inertiajs/react';
 import axios from 'axios';
-import { Building, Camera, ImagePlus, Save } from 'lucide-react';
+import { Building, ImagePlus, Save } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { toast } from 'sonner';
@@ -169,58 +168,13 @@ export default function Profile({ profile }: ProfilePageProps) {
             </CardHeader>
             <CardContent>
               <div className="flex flex-col md:flex-row gap-8 items-start">
-                <MediaPicker
-                  params={{ owner_type: 'company', owner_id: profile.id }}
-                  uploadParams={{
-                    owner_type: 'company',
-                    owner_id: profile.id,
-                  }}
-                  type="photo"
+                <PhotoPicker
+                  owner={{ type: 'company', id: profile.id }}
                   onChange={(media) =>
                     form.setData('photo_id', (media as any)?.id)
                   }
-                >
-                  {(media, change) => {
-                    let imgSrc = null;
-                    if (media) {
-                      imgSrc =
-                        typeof media === 'string'
-                          ? media
-                          : extractImageSrc(media as any).src;
-                    } else if (profile.photo) {
-                      imgSrc = profile.photo.original_url || profile.photo.url;
-                    } else if (profile.photo_url) {
-                      imgSrc = profile.photo_url;
-                    }
-
-                    return (
-                      <div className="flex flex-col items-center gap-3 shrink-0 mx-auto md:mx-0">
-                        <div className="relative group">
-                          <div className="w-32 h-32 rounded-full border-4 border-slate-100 overflow-hidden bg-slate-50 flex items-center justify-center shadow-sm">
-                            {imgSrc ? (
-                              <img
-                                className="w-full h-full object-cover"
-                                src={imgSrc}
-                              />
-                            ) : (
-                              <ImagePlus className="w-12 h-12 text-slate-300" />
-                            )}
-                          </div>
-                          <button
-                            type="button"
-                            onClick={change}
-                            className="absolute bottom-0 right-0 w-10 h-10 bg-blue-600 text-white rounded-full flex items-center justify-center shadow-md hover:bg-blue-700 transition-colors"
-                          >
-                            <Camera className="w-5 h-5" />
-                          </button>
-                        </div>
-                        <span className="text-xs text-muted-foreground font-medium">
-                          <FormattedMessage defaultMessage="Company Logo" />
-                        </span>
-                      </div>
-                    );
-                  }}
-                </MediaPicker>
+                  defaultValue={profile.photo_url}
+                />
 
                 <div className="flex-1 grid gap-4 md:grid-cols-2 w-full">
                   <div className="space-y-2">

@@ -153,6 +153,7 @@ if(storeMediaRequest.description !== undefined && storeMediaRequest.description 
  formData.append(`description`, storeMediaRequest.description)
  }
 formData.append(`type`, storeMediaRequest.type)
+formData.append(`subtype`, storeMediaRequest.subtype)
 formData.append(`data`, storeMediaRequest.data)
 
       return apiInstance<MediaResource>(

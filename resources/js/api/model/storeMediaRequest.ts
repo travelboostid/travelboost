@@ -16,5 +16,7 @@ export interface StoreMediaRequest {
   name?: StoreMediaRequestName;
   description?: StoreMediaRequestDescription;
   type: StoreMediaRequestType;
+  /** @maxLength 50 */
+  subtype: string;
   data: Blob;
 }

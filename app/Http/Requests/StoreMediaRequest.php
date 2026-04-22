@@ -15,6 +15,16 @@ class StoreMediaRequest extends FormRequest
   }
 
   /**
+   * Prepare the data for validation.
+   */
+  protected function prepareForValidation(): void
+  {
+    $this->merge([
+      'subtype' => $this->input('subtype', 'other'),
+    ]);
+  }
+
+  /**
    * Get the validation rules that apply to the request.
    *
    * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
@@ -26,7 +36,8 @@ class StoreMediaRequest extends FormRequest
       'owner_type' => ['required', 'string'],
       'name' => ['nullable', 'string', 'max:255'],
       'description' => ['nullable', 'string'],
-      'type' => ['required', 'in:image,photo,document'],
+      'type' => ['required', 'in:image,document,raw'],
+      'subtype' => ['required', 'string', 'max:50'],
       'data' => ['required', 'file'],
     ];
   }

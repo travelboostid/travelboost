@@ -38,7 +38,7 @@ class ProfileController extends Controller
       'domain' => 'nullable|string|max:255|unique:domains,domain,' . ($company->domain->id ?? 'NULL'),
       'photo_id' => 'nullable|integer',
       'identity_number' => 'required|string|size:16',
-      'identity_photo' => 'nullable|image|max:2048',
+      'identity_id' => 'nullable|image|max:2048',
     ]);
 
     $updateDomainDto = Arr::only($validated, ['subdomain', 'domain', 'domain_enabled']);
