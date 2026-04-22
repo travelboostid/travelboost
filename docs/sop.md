@@ -33,6 +33,21 @@ For production releases, it is recommended to recreate pull requests from the pr
 
 However, if all changes in `dev` are stable and both `dev` and `main` share the same base commit, you can merge `dev` directly into `main`.
 
+### ✅ Do
+
+- Keep your branch up to date with the target branch (e.g. `dev`)
+- Use clear and meaningful commit messages
+- Pull latest changes from base branch (e.g. `dev`) before starting new work
+- Use feature branches for isolated work
+
+### ❌ Don’t
+
+- **Never force push** if your branch has ever been merged to the remote (`origin`)
+- **Never rebase** a branch that has already been pushed and shared with others. Once a branch is shared (your branch also used by your friend), prefer **merge over rebase** to avoid breaking history for others
+- **Never rebase** if your branch has been merged with the target branch (e.g. `origin/dev`) — use merge instead
+- Don’t commit directly to protected branches (e.g. `main`, `dev`)
+- Don’t mix unrelated changes in a single commit
+
 ## Coding Standards
 
 - Follow best practices and common patterns. Avoid reinventing solutions. Using widely accepted approaches helps reduce bugs and makes issues easier to debug. It also makes it easier to find solutions online, since similar problems have likely already been encountered and solved by others.
