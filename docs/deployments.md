@@ -62,3 +62,13 @@ Run this command on the server:
 ```bash
 php artisan optimize:clear
 ```
+
+## Shortcut
+
+To simplify the process, a helper script has been added:
+
+```sh
+pnpm deploy:dev
+```
+
+This command handles the deployment steps automatically, so you don’t need to run them manually.

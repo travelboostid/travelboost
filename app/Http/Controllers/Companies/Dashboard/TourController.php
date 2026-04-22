@@ -291,6 +291,10 @@ class TourController extends Controller
             'tab' => 'availability',
         ]);
 
+      return back()->with([
+        'success' => true,
+        'tab' => 'schedule',
+      ]);
     } catch (\Throwable $e) {
       DB::rollBack();
 
