@@ -17,6 +17,7 @@ return new class extends Migration
       $table->string('name', 255);
       $table->string('description', 1000)->nullable();
       $table->enum('type', MediaType::cases()); // Enum will be stored as string
+      $table->string('subtype', 50)->default('other');
       $table->json('data')->nullable();
       $table->morphs('owner'); // creates owner_id + owner_type
       $table->timestamps();

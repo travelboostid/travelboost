@@ -16,6 +16,7 @@ class Media extends Model
     'name',
     'description',
     'type',
+    'subtype',
     'data',
     'created_at',
     'updated_at'

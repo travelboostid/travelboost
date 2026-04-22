@@ -1,7 +1,8 @@
 import { update } from '@/actions/App/Http/Controllers/Companies/Dashboard/ProfileController';
 import InputError from '@/components/input-error';
 import CompanyDashboardLayout from '@/components/layouts/company-dashboard';
-import { MediaPicker } from '@/components/media-picker';
+import { IdentityCardPicker } from '@/components/media/identity-card-picker';
+import { PhotoPicker } from '@/components/media/photo-picker';
 import { Button } from '@/components/ui/button';
 import { FieldDescription } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
@@ -15,7 +16,6 @@ import { Separator } from '@/components/ui/separator';
 import { Spinner } from '@/components/ui/spinner';
 import { Switch } from '@/components/ui/switch';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
-import { extractImageSrc } from '@/lib/utils';
 import { Head, useForm } from '@inertiajs/react';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { toast } from 'sonner';
@@ -71,32 +71,15 @@ export default function Profile({ profile }: ProfilePageProps) {
       >
         <div className="grid grid-cols-2 gap-6">
           <div className="grid gap-2 col-span-2">
-            <MediaPicker
-              params={{ owner_type: 'company', owner_id: profile.id }}
-              uploadParams={{
-                owner_type: 'company',
-                owner_id: profile.id,
+            <PhotoPicker
+              owner={{
+                type: 'company',
+                id: profile.id,
               }}
-              type="photo"
+              defaultValue={profile.photo_url}
               onChange={(media) => form.setData('photo_id', (media as any)?.id)}
-            >
-              {(media, change) => (
-                <div className="flex flex-col items-center justify-items-center gap-2">
-                  <img
-                    className="aspect-square max-w-30 rounded-full object-cover shadow"
-                    src={
-                      typeof media === 'string'
-                        ? media
-                        : extractImageSrc(media as any).src
-                    }
-                  />
-                  <Button className="w-fit" onClick={change} type="button">
-                    Change
-                  </Button>
-                </div>
-              )}
-            </MediaPicker>
-            <InputError message={form.errors.name} className="mt-2" />
+            />
+            <InputError message={form.errors.photo_id} className="mt-2" />
           </div>
           <div className="grid gap-2 col-span-2">
             <Label htmlFor="name">
@@ -271,34 +254,15 @@ export default function Profile({ profile }: ProfilePageProps) {
 
           <div className="grid gap-2 col-span-2">
             <Label htmlFor="identity_card">Identity Card</Label>
-            <MediaPicker
-              params={{ owner_type: 'company', owner_id: company.id }}
-              uploadParams={{
-                owner_type: 'company',
-                owner_id: company.id,
-              }}
-              type="photo"
+            <IdentityCardPicker
+              defaultValue={company.identity}
               onChange={(media) =>
                 form.setData('identity_id', (media as any)?.id)
               }
-            >
-              {(media, change) => (
-                <div className="flex flex-col gap-2">
-                  <img
-                    className="aspect-square max-w-80 object-cover shadow"
-                    src={
-                      typeof media === 'string'
-                        ? media
-                        : extractImageSrc(media as any).src
-                    }
-                  />
-                  <Button className="w-fit" onClick={change} type="button">
-                    Change
-                  </Button>
-                </div>
-              )}
-            </MediaPicker>
-            <InputError message={form.errors.name} className="mt-2" />
+              owner={{ type: 'company', id: company.id }}
+            />
+
+            <InputError message={form.errors.identity_id} className="mt-2" />
           </div>
 
           <div className="grid gap-2 col-span-2">

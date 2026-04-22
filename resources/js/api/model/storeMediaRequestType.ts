@@ -11,6 +11,6 @@ export type StoreMediaRequestType = typeof StoreMediaRequestType[keyof typeof St
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const StoreMediaRequestType = {
   image: 'image',
-  photo: 'photo',
   document: 'document',
+  raw: 'raw',
 } as const;

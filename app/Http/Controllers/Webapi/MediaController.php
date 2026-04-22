@@ -43,6 +43,10 @@ class MediaController extends Controller
         $request->filled('type'),
         fn($q) => $q->where('type', $request->query('type'))
       )
+      ->when(
+        $request->filled('subtype'),
+        fn($q) => $q->where('subtype', $request->query('subtype'))
+      )
       ->latest()
       ->paginate($pageSize);
 
@@ -61,14 +65,15 @@ class MediaController extends Controller
     $file = $request->file('data');
     // Dispatch to correct private method
     switch ($validated['type']) {
-      case 'photo':
-        $data = $this->createPhotoOrImage($validated, $this->photoVariants());
-        break;
       case 'image':
-        $data = $this->createPhotoOrImage($validated, $this->imageVariants());
+        $variants = $validated['subtype'] === 'photo' ? $this->photoVariants() : $this->imageVariants();
+        $data = $this->createPhotoOrImage($validated, $variants);
         break;
       case 'document':
         $data = $this->createDocument($validated);
+        break;
+      case 'raw':
+        $data = $this->createRaw($validated);
         break;
       default:
         throw new \Exception("Type {$validated['type']} not implemented");
@@ -81,6 +86,7 @@ class MediaController extends Controller
       'name' => $validated['name'] ?? $file->getClientOriginalName(),
       'description' => $validated['description'] ?? "",
       'type' => $validated['type'],
+      'subtype' => $validated['subtype'],
       'data' => $data,
     ]);
 
@@ -188,6 +194,21 @@ class MediaController extends Controller
     $filename = uniqid() . '.' . $file->getClientOriginalExtension();
     $path = "media/documents/$filename";
     Storage::disk('public')->putFileAs('media/documents', $file, $filename);
+
+    return [
+      'url' => Storage::url($path),
+      'size' => Storage::disk('public')->size($path),
+      'media_type' => $file->getClientMimeType(),
+    ];
+  }
+
+  private function createRaw(array $validated)
+  {
+    $file = $validated['data'];
+
+    $filename = uniqid() . '.' . $file->getClientOriginalExtension();
+    $path = "media/raw/$filename";
+    Storage::disk('public')->putFileAs('media/raw', $file, $filename);
 
     return [
       'url' => Storage::url($path),

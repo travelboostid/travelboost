@@ -15,6 +15,7 @@ export interface Media {
   name: string;
   description: MediaDescription;
   type: MediaType;
+  subtype: string;
   data: MediaData;
   owner_type: string;
   owner_id: number;

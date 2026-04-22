@@ -2,8 +2,7 @@ import ProfileController from '@/actions/App/Http/Controllers/Me/Settings/Profil
 import type { MediaResource } from '@/api/model';
 import InputError from '@/components/input-error';
 import UserDashboardLayout from '@/components/layouts/user-dashboard';
-import { MediaPicker } from '@/components/media-picker';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { PhotoPicker } from '@/components/media/photo-picker';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -20,7 +19,7 @@ import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { send } from '@/routes/verification';
 import { Transition } from '@headlessui/react';
 import { Form, Head, Link } from '@inertiajs/react';
-import { UserIcon } from 'lucide-react';
+import { useState } from 'react';
 
 export default function Profile({
   mustVerifyEmail,
@@ -30,6 +29,7 @@ export default function Profile({
   status?: string;
 }) {
   const { auth } = usePageSharedDataProps();
+  const [photoId, setPhotoId] = useState<number | undefined>(undefined);
 
   return (
     <UserDashboardLayout breadcrumb={[{ title: 'Profile Settings' }]}>
@@ -47,37 +47,12 @@ export default function Profile({
           <>
             <div className="grid grid-cols-2 gap-4">
               <div className="grid justify-items-center gap-2 col-span-2">
-                <MediaPicker
-                  params={{ owner_type: 'user', owner_id: auth.user.id }}
-                  uploadParams={{ owner_type: 'user', owner_id: auth.user.id }}
+                <PhotoPicker
                   defaultValue={auth.user.photo_url}
-                  type="photo"
-                >
-                  {(media, change) => (
-                    <>
-                      <Avatar className="h-40 w-40">
-                        <AvatarImage
-                          src={
-                            typeof media === 'string'
-                              ? media
-                              : ((media?.data as any)?.files as any[])?.[0]?.url
-                          }
-                        />
-                        <AvatarFallback>
-                          <UserIcon />
-                        </AvatarFallback>
-                      </Avatar>
-                      <input
-                        type="hidden"
-                        name="photo_id"
-                        value={(media as MediaResource)?.id}
-                      />
-                      <Button className="w-fit" onClick={change} type="button">
-                        Change
-                      </Button>
-                    </>
-                  )}
-                </MediaPicker>
+                  owner={{ type: 'user', id: auth.user.id }}
+                  onChange={(media) => setPhotoId((media as MediaResource)?.id)}
+                />
+                <input type="hidden" name="photo_id" value={photoId} />
               </div>
               <div className="grid gap-2 col-span-2">
                 <Label htmlFor="name">Full name</Label>

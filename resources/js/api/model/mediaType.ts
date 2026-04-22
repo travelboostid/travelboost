@@ -10,7 +10,7 @@ export type MediaType = typeof MediaType[keyof typeof MediaType];
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const MediaType = {
-  photo: 'photo',
   image: 'image',
   document: 'document',
+  raw: 'raw',
 } as const;

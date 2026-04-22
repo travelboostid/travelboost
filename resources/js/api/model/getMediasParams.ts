@@ -18,6 +18,10 @@ page?: number;
 page_size?: number;
 type?: MediaType;
 /**
+ * @maxLength 50
+ */
+subtype?: string;
+/**
  * @minimum 1
  */
 owner_id?: number;
