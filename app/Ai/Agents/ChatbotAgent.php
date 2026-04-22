@@ -37,7 +37,6 @@ class ChatbotAgent implements Agent, Conversational
   private ?CompanySettings $settings = null; // Cached company settings
   private ?AiModel $chatbotModel = null; // Cached chatbot model
   private ?Collection $chatMessages = null; // Cache for raw chat messages
-  private ?AiBillingCycle $currentBillingCycle = null; // Cache for current billing cycle
   private int $inputTokenUsage = 0;
   private int $outputTokenUsage = 0;
   private string $usageCost = '0.0';
@@ -73,6 +72,12 @@ class ChatbotAgent implements Agent, Conversational
       return;
     }
 
+    // If balance is zero or negative, do not respond and exit early
+    if (bccomp((string) $this->credit->balance, '0', 10) <= 0) {
+      $this->shouldRespond = false;
+      return;
+    }
+
     $this->settings = $this->company->settings;
 
     if (!$this->settings?->chatbot_enabled) {
@@ -92,54 +97,6 @@ class ChatbotAgent implements Agent, Conversational
       ->take(10)
       ->get()
       ->reverse();
-
-    $this->currentBillingCycle = AiBillingCycle::firstOrCreate([
-      'company_id' => $this->company->id,
-      'date' => now()->startOfDay(),
-    ]);
-
-    // Only run when NEW cycle created
-    if ($this->currentBillingCycle->wasRecentlyCreated) {
-
-      DB::transaction(function () {
-
-        $previousCycles = AiBillingCycle::where('company_id', $this->company->id)
-          ->whereNull('charged_at')
-          ->where('id', '!=', $this->currentBillingCycle->id)
-          ->lockForUpdate()
-          ->get();
-
-        $totalCost = '0';
-
-        foreach ($previousCycles as $cycle) {
-          $totalCost = bcadd($totalCost, $cycle->cost, 16);
-        }
-
-        // Deduct balance
-        // Optional: prevent negative balance
-        if (bccomp((string) $this->credit->balance, $totalCost, 16) < 0) {
-          $this->credit->balance = '0';
-        } else {
-          $this->credit->balance = bcsub(
-            (string) $this->credit->balance,
-            $totalCost,
-            10
-          );
-        }
-
-        $this->credit->save();
-
-        // Mark cycles as charged
-        AiBillingCycle::whereIn('id', $previousCycles->pluck('id'))
-          ->update(['charged_at' => now()]);
-      });
-    }
-
-    // If balance is zero or negative, do not respond and exit early
-    if (bccomp((string) $this->credit->balance, '0', 10) <= 0) {
-      $this->shouldRespond = false;
-      return;
-    }
 
     $this->shouldRespond = true;
   }
@@ -396,26 +353,25 @@ class ChatbotAgent implements Agent, Conversational
 
     // total
     $totalCost = bcadd($inputCost, $outputCost, 16);
-    $this->usageCost = bcadd($this->usageCost, $totalCost, 16);
+    $usageCost = bcadd($this->usageCost, $totalCost, 16);
+    $this->usageCost = $usageCost;
+    $userCost = $this->chatbotModel->flat_rate;
 
-    // TODO: use transaction
-    AiUsageLog::create([
-      'company_id' => $this->company->id,
-      'model_id' => $this->chatbotModel->id,
-      'input_tokens' => $this->inputTokenUsage,
-      'output_tokens' => $this->outputTokenUsage,
-      'cost' => $this->usageCost,
-      'feature' => 'chatbot',
-      'billing_cycle_id' => $this->currentBillingCycle->id,
-    ]);
-    $this->currentBillingCycle->input_tokens += $this->inputTokenUsage;
-    $this->currentBillingCycle->output_tokens += $this->outputTokenUsage;
-    $this->currentBillingCycle->cost = bcadd(
-      $this->currentBillingCycle->cost,
-      $this->usageCost,
-      16
-    );
-    $this->currentBillingCycle->save();
+    DB::transaction(function () use ($userCost, $usageCost) {
+      $credit = $this->credit->lockForUpdate()->first();
+
+      $credit->decrement('balance', $userCost);
+
+      AiUsageLog::create([
+        'company_id' => $this->company->id,
+        'model_id' => $this->chatbotModel->id,
+        'input_tokens' => $this->inputTokenUsage,
+        'output_tokens' => $this->outputTokenUsage,
+        'token_usage_cost' => $usageCost,
+        'user_cost' => $userCost,
+        'feature' => 'chatbot',
+      ]);
+    });
   }
 
   private function trackTokenUsage($response)

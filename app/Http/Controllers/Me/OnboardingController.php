@@ -7,48 +7,98 @@ use App\Enums\CompanyTeamStatus;
 use App\Enums\CompanyType;
 use App\Enums\UserStatus;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Me\CreateCompanyRequest;
+use App\Models\AffiliateProfile;
 use App\Models\Company;
 use App\Models\CompanyTeam;
+use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Context;
 use Inertia\Inertia;
 
 class OnboardingController extends Controller
 {
-  /**
-   * Show the form for creating the resource.
-   */
   public function index()
   {
-    $invitations = CompanyTeam::where('invite_email', Auth::user()->email)
+    /** @var \App\Models\User $user */
+    $user = Auth::user();
+    $domain = Context::get('domain');
+
+    $affiliate = null;
+    if ($domain && $domain->owner_type === AffiliateProfile::class) {
+      $profile = $domain->owner;
+      $affiliate = [
+        'id' => $profile->user_id,
+        'name' => $profile->user->name ?? '',
+        'username' => $domain->subdomain
+      ];
+    }
+
+    $invitations = CompanyTeam::where('invite_email', $user->email)
       ->where('status', CompanyTeamStatus::PENDING)
       ->with('company')
       ->get();
+
     return Inertia::render('me/onboarding/index', [
       'invitations' => $invitations,
+      'affiliate' => $affiliate,
     ]);
   }
 
-  public function createCompany(CreateCompanyRequest $request)
+  public function createCompany(Request $request)
   {
-    $user = Auth::user()->fresh();
-    $validated = $request->validated();
-    $validatedCompanyDto = Arr::except($validated, ['subdomain']);
+    /** @var \App\Models\User $user */
+    $user = Auth::user();
+
+    $validated = $request->validate([
+      'name' => 'required|string|max:255',
+      'email' => 'required|email|max:255',
+      'username' => 'required|string|max:255|unique:companies,username',
+      'subdomain' => 'required|string|max:255|unique:domains,subdomain',
+      'phone' => 'required|string|max:255',
+      'customer_service_phone' => 'required|string|max:255',
+      'address' => 'required|string',
+      'province' => 'required|string',
+      'city' => 'required|string',
+      'district' => 'required|string',
+      'village' => 'required|string',
+      'postal_code' => 'nullable|string',
+      'identity_number' => 'required|string|size:16',
+      'identity_photo' => 'required|image|max:2048',
+      'photo_id' => 'nullable|integer',
+    ]);
+
+    $validatedCompanyDto = Arr::except($validated, ['subdomain', 'identity_photo']);
     $validatedCompanyDto['type'] = CompanyType::AGENT;
-    $company = Company::create($validatedCompanyDto);
+
+    if ($request->hasFile('identity_photo')) {
+      $file = $request->file('identity_photo');
+      $filename = time() . '_company_identity_' . uniqid() . '.' . $file->getClientOriginalExtension();
+      $validatedCompanyDto['identity_photo_path'] = $file->storeAs('companies/identities', $filename, 'public');
+    }
+
+    $domain = Context::get('domain');
+    if ($domain && $domain->owner_type === AffiliateProfile::class) {
+      $validatedCompanyDto['referred_by'] = $domain->owner->user_id;
+    }
+
+    $company = Company::forceCreate($validatedCompanyDto);
+
     $company->domain()->create([
       'subdomain' => $validated['subdomain'],
     ]);
+
     CompanyTeam::create([
       'company_id' => $company->id,
       'user_id' => $user->id,
       'role' => CompanyTeamRole::SUPERADMIN,
       'status' => CompanyTeamStatus::ACTIVE,
     ]);
+
     $user->update([
       'status' => UserStatus::ACTIVE,
     ]);
+
     $user->addRole("company:{$company->id}:superadmin", "company:{$company->id}");
 
     return redirect()->route('company.index', [
@@ -58,22 +108,28 @@ class OnboardingController extends Controller
 
   public function acceptInvitation(CompanyTeam $invitation)
   {
-    $user = Auth::user()->fresh();
+    /** @var \App\Models\User $user */
+    $user = Auth::user();
+
     if ($invitation->invite_email !== $user->email) {
       abort(403);
     }
     if ($invitation->status !== CompanyTeamStatus::PENDING) {
       abort(400, 'Invitation invalid');
     }
+
     $invitation->update([
       'user_id' => $user->id,
       'status' => CompanyTeamStatus::ACTIVE,
     ]);
+
     $user->update([
       'status' => UserStatus::ACTIVE,
     ]);
+
     $user->addRole($invitation->invite_role, "company:{$invitation->company_id}");
-    CompanyTeam::where('invite_email', Auth::user()->email)
+
+    CompanyTeam::where('invite_email', $user->email)
       ->where('status', CompanyTeamStatus::PENDING)
       ->where('id', '!=', $invitation->id)
       ->update(['status' => CompanyTeamStatus::REJECTED]);
@@ -85,7 +141,10 @@ class OnboardingController extends Controller
 
   public function declineInvitations()
   {
-    CompanyTeam::where('invite_email', Auth::user()->email)
+    /** @var \App\Models\User $user */
+    $user = Auth::user();
+
+    CompanyTeam::where('invite_email', $user->email)
       ->where('status', CompanyTeamStatus::PENDING)
       ->update(['status' => CompanyTeamStatus::REJECTED]);
 

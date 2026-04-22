@@ -1,5 +1,5 @@
 import AffiliateDashboardLayout from '@/components/layouts/affiliate-dashboard';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -399,6 +399,13 @@ export default function NetworkList() {
           {selectedUser && (
             <div className="flex flex-col items-center justify-center space-y-4 pt-4 pb-2">
               <Avatar className="h-20 w-20 border-4 border-slate-100 dark:border-slate-800">
+                {selectedUser.profile_photo_path && (
+                  <AvatarImage
+                    src={`/storage/${selectedUser.profile_photo_path}`}
+                    alt={selectedUser.name}
+                    className="object-cover"
+                  />
+                )}
                 <AvatarFallback className="bg-blue-100 text-blue-700 text-2xl font-bold">
                   {selectedUser.name.charAt(0)}
                 </AvatarFallback>

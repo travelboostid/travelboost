@@ -79,6 +79,7 @@ return new class extends Migration
       $table->string('code')->unique();
       $table->decimal('input_token_rate', 16, 8)->default(1);
       $table->decimal('output_token_rate', 16, 8)->default(1);
+      $table->decimal('flat_rate', 16, 8)->default(1);
       $table->timestamps();
     });
 
@@ -121,19 +122,6 @@ return new class extends Migration
       $table->timestamps();
     });
 
-    // Daily billing cycle for AI usage, used for billing and analytics
-    Schema::create('ai_billing_cycles', function (Blueprint $table) {
-      $table->id();
-      $table->foreignId('company_id')->constrained('companies')->cascadeOnDelete();
-      $table->date('date'); // Billing cycle date
-      $table->unsignedInteger('input_tokens')->default(0);
-      $table->unsignedInteger('output_tokens')->default(0);
-      $table->decimal('cost', 16, 8)->default(0);
-      $table->timestamp('charged_at')->nullable(); // When the cost was charged to the company
-      $table->timestamps();
-
-      $table->unique(['company_id', 'date']);
-    });
 
     // AI usage logs for each request, linked to billing cycle
     Schema::create('ai_usage_logs', function (Blueprint $table) {
@@ -142,10 +130,10 @@ return new class extends Migration
       $table->foreignId('model_id')->nullable()->constrained('ai_models')->onDelete('set null');
       $table->unsignedInteger('input_tokens')->default(0);
       $table->unsignedInteger('output_tokens')->default(0);
-      $table->decimal('cost', 16, 8)->default(0);
+      $table->decimal('token_usage_cost', 16, 8)->default(0); // cost calculated from token rates
+      $table->decimal('user_cost', 16, 8)->default(0);  // cost charged to user
       $table->string('feature')->nullable();
       $table->json('meta')->nullable();
-      $table->foreignId('billing_cycle_id')->nullable()->constrained('ai_billing_cycles')->nullOnDelete();
       $table->timestamps();
 
       $table->index(['company_id']);

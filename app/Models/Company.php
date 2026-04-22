@@ -161,9 +161,4 @@ class Company extends Model
   {
     return $this->morphMany(Payment::class, 'owner');
   }
-
-  public function aiBillingCycles()
-  {
-    return $this->hasMany(AiBillingCycle::class, 'company_id');
-  }
 }

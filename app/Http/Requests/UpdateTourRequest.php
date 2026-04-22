@@ -44,11 +44,15 @@ class UpdateTourRequest extends FormRequest
       //13042026
       'schedules' => 'nullable|array',
 
+      'schedules.*.id' => ['nullable', 'integer'],
+
       'schedules.*.departure_date' => 'nullable|date',
       'schedules.*.return_date' => 'nullable|date',
       'schedules.*.quota' => 'nullable|numeric',
 
       'schedules.*.prices' => 'nullable|array',
+
+      'schedules.*.prices.*.id' => 'nullable|integer',
 
       'schedules.*.prices.*.room_type_id' => 'nullable|integer',
       'schedules.*.prices.*.price' => 'nullable|numeric',
@@ -92,6 +96,8 @@ class UpdateTourRequest extends FormRequest
             'prices' => collect($schedule['prices'] ?? [])->map(function ($price) {
 
                 return [
+                    'id' => $price['id'] ?? null, 
+
                     'room_type_id' => is_numeric($price['room_type_id'] ?? null)
                         ? (int) $price['room_type_id']
                         : null,

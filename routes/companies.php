@@ -21,6 +21,7 @@ use App\Http\Controllers\Companies\Dashboard\WalletController;
 use App\Http\Controllers\Companies\Dashboard\WalletTransactionsController;
 use App\Http\Controllers\Companies\Dashboard\WithdrawalController;
 use App\Http\Controllers\Companies\Dashboard\TourAvailabilityController;
+use App\Http\Controllers\Companies\Dashboard\TourAddOnController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('companies/{company:username}/dashboard')->middleware(['auth'])->name('company.')->group(function () {
@@ -46,6 +47,11 @@ Route::prefix('companies/{company:username}/dashboard')->middleware(['auth', 'co
     'tour-availabilities',
     [TourAvailabilityController::class, 'store']
   )->name('tour-availabilities.store');
+
+  Route::post(
+    'tour-add-ons',
+    [TourAddOnController::class, 'store']
+  )->name('tour-add-ons.store');
 
   Route::resource('agent-tours', AgentTourController::class);
   Route::resource('categories', CategoryController::class);

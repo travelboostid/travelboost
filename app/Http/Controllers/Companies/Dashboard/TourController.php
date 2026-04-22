@@ -76,7 +76,7 @@ class TourController extends Controller
     //return back();
     return redirect()
       ->route('company.tours.edit', [
-        'company' => $company->username, // ✅ lebih clean URL
+        'company' => $company->username, 
         'tour' => $tour->id,
       ])
       ->with('tab', 'schedule');
@@ -85,16 +85,32 @@ class TourController extends Controller
   public function edit(Company $company, Tour $tour)
   {
     $tour->load([
-      'schedules.prices' // 🔥 WAJIB
+        'schedules.prices',
+        'schedules.availability',
+        'schedules.addOns',
     ]);
 
     $priceCategories = PriceCategory::where('company_id', $company->id)
       ->orderBy('name')
       ->get(['id', 'name']);
 
+    $addOns = $tour->schedules
+      ->mapWithKeys(function ($schedule) {
+          return [
+              $schedule->id => $schedule->addOns->map(function ($item) {
+                  return [
+                      'description' => $item->description,
+                      'price' => (float) $item->price,
+                      'edit_status' => (bool) $item->edit_status,
+                  ];
+              })->values(),
+          ];
+      });
+
     return Inertia::render('companies/dashboard/tours/edit', [
       'tour' => $tour,
       'priceCategories' => $priceCategories,
+      'addOnsFromDb' => $addOns,
     ]);
   }
 
@@ -129,64 +145,163 @@ class TourController extends Controller
       // ================= UPDATE TOUR =================
       $tour->update($data);
 
-      // ================= RESET SCHEDULE =================
-      $tour->schedules()->delete();
+        // ================= RESET SCHEDULE =================
+        //$tour->schedules()->delete();
+        // ambil semua id schedule lama
+        $existingIds = $tour->schedules()->pluck('id')->toArray();
 
-      // ================= INSERT SCHEDULE =================
+        // ambil id dari request (yang masih ada)
+        $incomingIds = collect($data['schedules'] ?? [])
+            ->pluck('id')
+            ->filter()
+            ->toArray();
 
-      foreach ($data['schedules'] ?? [] as $schedule) {
-        $scheduleModel = $tour->schedules()->create([
-          'tour_id' => $tour->id,
-          'company_id' => $company->id,
-          'tour_code' => $tour->code,
+        // ================= DELETE YANG DIHAPUS USER =================
+        $toDelete = array_diff($existingIds, $incomingIds);
 
-          'departure_date' => $schedule['departure_date'],
-          'return_date' => $schedule['return_date'] ?? null,
-          'quota' => (int) ($schedule['quota'] ?: 0),
-        ]);
+        if (!empty($toDelete)) {
+            TourSchedule::whereIn('id', $toDelete)->delete();
+        }
 
-        foreach ($schedule['prices'] ?? [] as $price) {
+        // ================= UPSERT =================
+        foreach ($data['schedules'] ?? [] as $schedule) {
+
+        //dd($data['schedules']);
+
+            // 🔥 penting: kalau ada id → update, kalau tidak → create
+            $scheduleModel = TourSchedule::updateOrCreate(
+                [
+                    'id' => $schedule['id'] ?? null,
+                ],
+                [
+                    'tour_id' => $tour->id,
+                    'company_id' => $company->id,
+                    'tour_code' => $tour->code,
+
+                    'departure_date' => $schedule['departure_date'],
+                    'return_date' => $schedule['return_date'] ?? null,
+                    'quota' => (int) ($schedule['quota'] ?? 0),
+                ]
+            );
+
+            // ================= RESET PRICES PER SCHEDULE (AMAN) =================
+            //$scheduleModel->prices()->delete();
+
+            /*foreach ($schedule['prices'] ?? [] as $price) {
 
           if (empty($price['room_type_id'])) continue;
 
           $promotionRate = 0;
           $promotionValue = 0;
 
-          if (($price['promotion']['type'] ?? '') === 'percent') {
-            $promotionRate = (float) ($price['promotion']['value'] ?: 0);
-          } else {
-            $promotionValue = (float) ($price['promotion']['value'] ?: 0);
-          }
+                if (($price['promotion']['type'] ?? '') === 'percent') {
+                    $promotionRate = (float) ($price['promotion']['value'] ?? 0);
+                } else {
+                    $promotionValue = (float) ($price['promotion']['value'] ?? 0);
+                }
 
           $commissionRate = 0;
           $commissionValue = 0;
 
-          if (($price['commission']['type'] ?? '') === 'percent') {
-            $commissionRate = (float) ($price['commission']['value'] ?: 0);
-          } else {
-            $commissionValue = (float) ($price['commission']['value'] ?: 0);
-          }
+                if (($price['commission']['type'] ?? '') === 'percent') {
+                    $commissionRate = (float) ($price['commission']['value'] ?? 0);
+                } else {
+                    $commissionValue = (float) ($price['commission']['value'] ?? 0);
+                }
 
-          $scheduleModel->prices()->create([
-            'schedule_id' => $scheduleModel->id, // optional (auto sebenarnya)
-
-            'company_id' => $company->id,
-            'tour_code' => $tour->code,
-
-            'price_category_id' => $price['room_type_id'],
-            'price' => (int) ($price['price'] ?: 0),
-            'currency' => $data['currency'],
+                $scheduleModel->prices()->create([
+                    'company_id' => $company->id,
+                    'tour_code' => $tour->code,
+                    'price_category_id' => $price['room_type_id'],
+                    'price' => (int) ($price['price'] ?? 0),
+                    'currency' => $data['currency'],
 
             'promotion_rate' => $promotionRate,
             'promotion' => $promotionValue,
 
-            'commission_rate' => $commissionRate,
-            'commission' => $commissionValue,
-          ]);
+                    'commission_rate' => $commissionRate,
+                    'commission' => $commissionValue,
+                ]);
+            }*/
+
+            // ambil existing price ids
+            $existingPriceIds = $scheduleModel->prices()->pluck('id')->toArray();
+
+            // ambil incoming ids
+            $incomingPriceIds = collect($schedule['prices'] ?? [])
+                ->pluck('id')
+                ->filter()
+                ->toArray();
+
+            // DELETE yang dihapus user
+            $toDelete = array_diff($existingPriceIds, $incomingPriceIds);
+
+            if (!empty($toDelete)) {
+                TourPrice::whereIn('id', $toDelete)->delete();
+            }
+
+            // UPSERT
+            foreach ($schedule['prices'] ?? [] as $price) {
+
+                //dd($data['schedules']);
+
+                if (empty($price['room_type_id'])) continue;
+
+                $promotionRate = 0;
+                $promotionValue = 0;
+
+                if (($price['promotion']['type'] ?? '') === 'percent') {
+                    $promotionRate = (float) ($price['promotion']['value'] ?? 0);
+                } else {
+                    $promotionValue = (float) ($price['promotion']['value'] ?? 0);
+                }
+
+                $commissionRate = 0;
+                $commissionValue = 0;
+
+                if (($price['commission']['type'] ?? '') === 'percent') {
+                    $commissionRate = (float) ($price['commission']['value'] ?? 0);
+                } else {
+                    $commissionValue = (float) ($price['commission']['value'] ?? 0);
+                }
+
+                TourPrice::updateOrCreate(
+                    [
+                        'id' => $price['id'] ?? null,
+                    ],
+                    [
+                        'schedule_id' => $scheduleModel->id,
+                        'company_id' => $company->id,
+                        'tour_code' => $tour->code,
+
+                        'price_category_id' => $price['room_type_id'],
+                        'price' => (int) ($price['price'] ?? 0),
+                        'currency' => $data['currency'],
+
+                        'promotion_rate' => $promotionRate,
+                        'promotion' => $promotionValue,
+
+                        'commission_rate' => $commissionRate,
+                        'commission' => $commissionValue,
+                    ]
+                );
+            }
         }
-      }
 
       DB::commit();
+
+        //20042026
+        /*return back()->with([
+            'success' => true,
+            'tab' => 'schedule',
+        ]);*/
+        return redirect()->route('company.tours.edit', [
+            'company' => $company->username,
+            'tour' => $tour->id,
+        ])->with([
+            'success' => true,
+            'tab' => 'availability',
+        ]);
 
       return back()->with([
         'success' => true,

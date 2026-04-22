@@ -6,12 +6,16 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { Head, useForm, usePage } from '@inertiajs/react';
-import React from 'react';
+import { Eye, EyeOff } from 'lucide-react';
+import React, { useState } from 'react';
 import { useIntl } from 'react-intl';
 
 export default function Register() {
   const intl = useIntl();
   const { referralCode, uplineName } = usePage().props as any;
+
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const { data, setData, post, processing, errors } = useForm({
     name: '',
@@ -67,6 +71,7 @@ export default function Register() {
               id="name"
               value={data.name}
               onChange={(e) => setData('name', e.target.value)}
+              placeholder="Full name"
               required
             />
             <InputError message={errors.name} />
@@ -84,6 +89,7 @@ export default function Register() {
               type="email"
               value={data.email}
               onChange={(e) => setData('email', e.target.value)}
+              placeholder="email@example.com"
               required
             />
             <InputError message={errors.email} />
@@ -100,6 +106,7 @@ export default function Register() {
               id="username"
               value={data.username}
               onChange={(e) => setData('username', e.target.value)}
+              placeholder="Username"
               required
             />
             <InputError message={errors.username} />
@@ -117,10 +124,24 @@ export default function Register() {
               id="ktp_number"
               type="text"
               maxLength={16}
+              minLength={16}
+              pattern="\d{16}"
               value={data.ktp_number}
-              onChange={(e) => setData('ktp_number', e.target.value)}
+              onChange={(e) => {
+                const val = e.target.value.replace(/\D/g, '');
+                setData('ktp_number', val);
+              }}
+              placeholder="16-digit KTP number"
               required
             />
+            {data.ktp_number.length > 0 && data.ktp_number.length < 16 && (
+              <p className="text-[0.8rem] font-medium text-destructive">
+                {intl.formatMessage({
+                  id: 'auth.ktp_warning',
+                  defaultMessage: 'KTP Number must be exactly 16 digits.',
+                })}
+              </p>
+            )}
             <InputError message={errors.ktp_number} />
           </div>
 
@@ -151,13 +172,23 @@ export default function Register() {
                 defaultMessage: 'Password',
               })}
             </Label>
-            <Input
-              id="password"
-              type="password"
-              value={data.password}
-              onChange={(e) => setData('password', e.target.value)}
-              required
-            />
+            <div className="relative">
+              <Input
+                id="password"
+                type={showPassword ? 'text' : 'password'}
+                value={data.password}
+                onChange={(e) => setData('password', e.target.value)}
+                placeholder="Password"
+                required
+              />
+              <button
+                type="button"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
             <InputError message={errors.password} />
           </div>
 
@@ -168,13 +199,25 @@ export default function Register() {
                 defaultMessage: 'Confirm password',
               })}
             </Label>
-            <Input
-              id="password_confirmation"
-              type="password"
-              value={data.password_confirmation}
-              onChange={(e) => setData('password_confirmation', e.target.value)}
-              required
-            />
+            <div className="relative">
+              <Input
+                id="password_confirmation"
+                type={showConfirmPassword ? 'text' : 'password'}
+                value={data.password_confirmation}
+                onChange={(e) =>
+                  setData('password_confirmation', e.target.value)
+                }
+                placeholder="Confirm password"
+                required
+              />
+              <button
+                type="button"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              >
+                {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
           </div>
 
           <Button type="submit" className="w-full" disabled={processing}>

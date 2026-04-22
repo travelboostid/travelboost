@@ -8,7 +8,7 @@ import DailyUsageStats from './components/daily-usage-stats';
 export type AiCreditsPageProps = {
   settings: any;
   credit: any;
-  billingCycles: any[];
+  dailyStats: any[];
   usageCostToday: any;
   usageCostIn30Days: any;
 };
