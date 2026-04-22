@@ -609,6 +609,7 @@ export default function Page({ tour }: Props) {
         if (!row.description) return
 
         result.push({
+          company_id: company.id,
           tour_id: tour.id,
           schedule_id: Number(scheduleId),
           description: row.description,
