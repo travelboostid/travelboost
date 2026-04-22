@@ -6,10 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Models\TourAddOn;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use App\Models\Company;
 
 class TourAddOnController extends Controller
 {
-    public function store(Request $request)
+    public function store(Request $request, Company $company)
     {
         $data = $request->validate([
             'add_ons' => ['required', 'array'],
@@ -20,7 +21,7 @@ class TourAddOnController extends Controller
             'add_ons.*.edit_status' => ['boolean'],
         ]);
 
-        $companyId = auth()->user()->company_id;
+        $companyId = $company->id;
 
         $items = collect($data['add_ons'])
             ->map(function ($item) use ($companyId) {
@@ -38,11 +39,29 @@ class TourAddOnController extends Controller
             ->values()
             ->all();
 
-        DB::transaction(function () use ($items) {
+        DB::transaction(function () use ($items, $companyId) {
+
+            $scheduleIds = collect($items)
+                ->pluck('schedule_id')
+                ->unique();
+
+            foreach ($scheduleIds as $scheduleId) {
+
+                $descriptions = collect($items)
+                    ->where('schedule_id', $scheduleId)
+                    ->pluck('description')
+                    ->toArray();
+
+                TourAddOn::where('company_id', $companyId)
+                    ->where('schedule_id', $scheduleId)
+                    ->whereNotIn('description', $descriptions)
+                    ->delete();
+            }
+
             TourAddOn::upsert(
                 $items,
-                ['schedule_id', 'description'],   // ⬅️ unique key
-                ['price', 'edit_status', 'updated_at'] // ⬅️ fields to update
+                ['company_id', 'schedule_id', 'description'],
+                ['price', 'edit_status', 'updated_at']
             );
         });
 

@@ -76,7 +76,7 @@ class TourController extends Controller
     //return back();
     return redirect()
       ->route('company.tours.edit', [
-        'company' => $company->username, // ✅ lebih clean URL
+        'company' => $company->username, 
         'tour' => $tour->id,
       ])
       ->with('tab', 'schedule');
@@ -90,15 +90,27 @@ class TourController extends Controller
         'schedules.addOns',
     ]);
 
-    //dd($tour->schedules->toArray());
-
     $priceCategories = PriceCategory::where('company_id', $company->id)
       ->orderBy('name')
       ->get(['id', 'name']);
 
+    $addOns = $tour->schedules
+      ->mapWithKeys(function ($schedule) {
+          return [
+              $schedule->id => $schedule->addOns->map(function ($item) {
+                  return [
+                      'description' => $item->description,
+                      'price' => (float) $item->price,
+                      'edit_status' => (bool) $item->edit_status,
+                  ];
+              })->values(),
+          ];
+      });
+
     return Inertia::render('companies/dashboard/tours/edit', [
       'tour' => $tour,
       'priceCategories' => $priceCategories,
+      'addOnsFromDb' => $addOns,
     ]);
   }
 
