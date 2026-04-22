@@ -143,5 +143,15 @@ class Tour extends Model
           'company_id'     // foreign key di pivot ke company
       );
   }
+
+  public function availabilities()
+  {
+      return $this->hasMany(TourAvailability::class, 'tour_id');
+  }
+
+  public function addOns()
+  {
+      return $this->hasMany(TourAddOn::class);
+  }
   
 }

@@ -45,7 +45,8 @@ class TourAvailabilityController
         } catch (\Throwable $e) {
             DB::rollBack();
 
-            return back()->withErrors('Failed to save availability');
+            //return back()->withErrors('Failed to save availability');
+            dd($e->getMessage(), $e->getTraceAsString());
         }
     }
 }

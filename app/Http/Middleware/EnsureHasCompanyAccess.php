@@ -8,6 +8,8 @@ use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
+use App\Models\Company;
+
 class EnsureHasCompanyAccess
 {
   /**
@@ -18,6 +20,11 @@ class EnsureHasCompanyAccess
   public function handle(Request $request, Closure $next): Response
   {
     $company = $request->route('company');
+
+    if (is_string($company)) {
+        $company = Company::where('username', $company)->firstOrFail();
+    }
+
     $user = $request->user();
 
     $team = CompanyTeam::where('company_id', $company->id)
