@@ -1,17 +1,16 @@
 <?php
 
 use App\Http\Controllers\BookingController;
-use App\Http\Controllers\Tenant\HomeController;
 use App\Http\Controllers\Tenant\TourController;
 use Illuminate\Support\Facades\Route;
 
 $appHost = env('APP_HOST', 'localhost');
-Route::domain('{username}.'.$appHost)->group(function () {
-    Route::get('/', [HomeController::class, 'index']);
-    Route::get('/tours', [TourController::class, 'index']);
 
-    Route::middleware(['auth'])->group(function () {
-        Route::get('/bookings/{tour}/create', [BookingController::class, 'create'])->name('bookings.create');
-        Route::post('/bookings/{tour}', [BookingController::class, 'store'])->name('bookings.store');
-    });
+Route::domain('{username}.' . $appHost)->group(function () {
+  Route::get('/tours', [TourController::class, 'index']);
+
+  Route::middleware(['auth'])->group(function () {
+    Route::get('/bookings/{tour}/create', [BookingController::class, 'create'])->name('bookings.create');
+    Route::post('/bookings/{tour}', [BookingController::class, 'store'])->name('bookings.store');
+  });
 });
