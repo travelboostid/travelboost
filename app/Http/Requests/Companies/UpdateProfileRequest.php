@@ -83,44 +83,60 @@ class UpdateProfileRequest extends FormRequest
         'nullable',
         'exists:medias,id',
       ],
-      'province' => ['nullable', 'string', 'max:50'],
-      'city' => ['nullable', 'string', 'max:50'],
-      'identity_id' => ['nullable', 'exists:medias,id'],
+      'province_id' => [
+        'nullable',
+        'exists:' . config('laravolt.indonesia.table_prefix') . 'provinces,id',
+      ],
+      'city_id' => [
+        'nullable',
+        'exists:' . config('laravolt.indonesia.table_prefix') . 'cities,id',
+      ],
+      'district_id' => [
+        'nullable',
+        'exists:' . config('laravolt.indonesia.table_prefix') . 'districts,id',
+      ],
+      'village_id' => [
+        'nullable',
+        'exists:' . config('laravolt.indonesia.table_prefix') . 'villages,id',
+      ],
+      'identity_card_id' => ['nullable', 'exists:medias,id'],
+      'postal_code' => 'nullable|string',
+      'identity_number' => 'required|string|size:16',
     ];
   }
 
-  public function withValidator(Validator $validator)
-  {
-    $validator->after(function ($validator) {
-      $domain = $this->input('domain');
+  // public function withValidator(Validator $validator)
+  // {
+  //   $validator->after(function ($validator) {
+  //     $domain = $this->input('domain');
 
-      // skip if domain_enabled is false or not present
-      if (!$this->boolean('domain_enabled')) {
-        return;
-      }
+  //     // skip if domain_enabled is false or not present
+  //     if (!$this->boolean('domain_enabled')) {
+  //       return true;
+  //     }
 
-      if (!$domain) return;
+  //     if (!$domain) return;
 
-      // skip if domain hasn't changed or is same as current domain (to allow saving other fields without changing domain)
-      if ($this->company && $domain === optional($this->company->domain)->domain) {
-        return;
-      }
+  //     // skip if domain hasn't changed or is same as current domain (to allow saving other fields without changing domain)
+  //     if ($this->company && $domain === optional($this->company->domain)->domain) {
+  //       return;
+  //     }
 
-      if (!$this->verifyDomainOwnership($domain)) {
-        $validator->errors()->add(
-          'domain',
-          "Domain ownership verification failed. Please read the instructions to verify your domain ownership."
-        );
-      }
-    });
-  }
-  protected function verifyDomainOwnership(string $domain): bool
-  {
-    $records = dns_get_record($domain, DNS_A) ?: [];
-    $expectedIp = request()->server('SERVER_ADDR');
+  //     if (!$this->verifyDomainOwnership($domain)) {
+  //       $validator->errors()->add(
+  //         'domain',
+  //         "Domain ownership verification failed. Please read the instructions to verify your domain ownership."
+  //       );
+  //     }
+  //   });
+  // }
+  // protected function verifyDomainOwnership(string $domain): bool
+  // {
+  //   $records = dns_get_record($domain, DNS_A) ?: [];
+  //   $expectedIp = request()->server('SERVER_ADDR');
 
-    return collect($records)
-      ->pluck('ip')
-      ->contains($expectedIp);
-  }
+  //   return collect($records)
+  //     ->pluck('ip')
+  //     ->contains($expectedIp);
+  // }
 }

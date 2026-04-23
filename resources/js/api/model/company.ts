@@ -4,6 +4,14 @@
  * Travelboost
  * OpenAPI spec version: 0.0.1
  */
+import type { CompanyProvinceId } from './companyProvinceId';
+import type { CompanyCityId } from './companyCityId';
+import type { CompanyDistrictId } from './companyDistrictId';
+import type { CompanyVillageId } from './companyVillageId';
+import type { CompanyDistrict } from './companyDistrict';
+import type { CompanyVillage } from './companyVillage';
+import type { CompanyPostalCode } from './companyPostalCode';
+import type { CompanyIdentityNumber } from './companyIdentityNumber';
 import type { CompanyNote } from './companyNote';
 import type { CompanyMeta } from './companyMeta';
 import type { CompanyRememberToken } from './companyRememberToken';
@@ -11,7 +19,7 @@ import type { CompanyCreatedAt } from './companyCreatedAt';
 import type { CompanyUpdatedAt } from './companyUpdatedAt';
 import type { CompanyLogoId } from './companyLogoId';
 import type { CompanyPhotoId } from './companyPhotoId';
-import type { CompanyIdentityId } from './companyIdentityId';
+import type { CompanyIdentityCardId } from './companyIdentityCardId';
 import type { CompanyReferredBy } from './companyReferredBy';
 
 export interface Company {
@@ -23,8 +31,16 @@ export interface Company {
   address: string;
   phone: string;
   customer_service_phone: string;
+  province_id: CompanyProvinceId;
+  city_id: CompanyCityId;
+  district_id: CompanyDistrictId;
+  village_id: CompanyVillageId;
   province: string;
   city: string;
+  district: CompanyDistrict;
+  village: CompanyVillage;
+  postal_code: CompanyPostalCode;
+  identity_number: CompanyIdentityNumber;
   note: CompanyNote;
   meta: CompanyMeta;
   remember_token: CompanyRememberToken;
@@ -32,7 +48,7 @@ export interface Company {
   updated_at: CompanyUpdatedAt;
   logo_id: CompanyLogoId;
   photo_id: CompanyPhotoId;
-  identity_id: CompanyIdentityId;
+  identity_card_id: CompanyIdentityCardId;
   referred_by: CompanyReferredBy;
   photo_url: string;
 }

@@ -1,6 +1,10 @@
-import { update } from '@/actions/App/Http/Controllers/Companies/Dashboard/ProfileController';
+import { useGetGeoCities } from '@/api/geo-city/geo-city';
+import { useGetGeoDistricts } from '@/api/geo-district/geo-district';
+import { useGetGeoProvinces } from '@/api/geo-province/geo-province';
+import { useGetGeoVillages } from '@/api/geo-village/geo-village';
 import InputError from '@/components/input-error';
 import CompanyDashboardLayout from '@/components/layouts/company-dashboard';
+import { IdentityCardPicker } from '@/components/media/identity-card-picker';
 import { PhotoPicker } from '@/components/media/photo-picker';
 import { Button } from '@/components/ui/button';
 import {
@@ -22,11 +26,10 @@ import { Separator } from '@/components/ui/separator';
 import { Spinner } from '@/components/ui/spinner';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
-import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
+import { update } from '@/routes/company/settings/profile';
 import { Head, useForm } from '@inertiajs/react';
-import axios from 'axios';
-import { Building, ImagePlus, Save } from 'lucide-react';
-import React, { useEffect, useRef, useState } from 'react';
+import { Building, Save } from 'lucide-react';
+import React from 'react';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { toast } from 'sonner';
 
@@ -35,20 +38,7 @@ export type ProfilePageProps = {
 };
 
 export default function Profile({ profile }: ProfilePageProps) {
-  const { company } = usePageSharedDataProps();
   const intl = useIntl();
-
-  const idInputRef = useRef<HTMLInputElement>(null);
-  const [idPreview, setIdPreview] = useState<string | null>(
-    profile.identity_photo_path
-      ? `/storage/${profile.identity_photo_path}`
-      : null,
-  );
-
-  const [provinces, setProvinces] = useState<any[]>([]);
-  const [cities, setCities] = useState<any[]>([]);
-  const [districts, setDistricts] = useState<any[]>([]);
-  const [villages, setVillages] = useState<any[]>([]);
 
   const form = useForm({
     name: profile.name || '',
@@ -57,6 +47,10 @@ export default function Profile({ profile }: ProfilePageProps) {
     phone: (profile.phone || '') as string,
     customer_service_phone: profile.customer_service_phone || '',
     address: profile.address || '',
+    province_id: profile.province_id || '',
+    city_id: profile.city_id || '',
+    district_id: profile.district_id || '',
+    village_id: profile.village_id || '',
     province: profile.province || '',
     city: profile.city || '',
     district: profile.district || '',
@@ -67,61 +61,55 @@ export default function Profile({ profile }: ProfilePageProps) {
     domain: profile.domain?.domain || '',
     photo_id: profile.photo_id || undefined,
     identity_number: profile.identity_number || '',
-    identity_photo: null as File | null,
-    _method: 'PUT',
+    identity_card_id: profile.identity_card_id || undefined,
   });
 
-  useEffect(() => {
-    axios.get('/api/regions/provinces').then((res) => setProvinces(res.data));
-  }, []);
+  const { data: provincesData } = useGetGeoProvinces({
+    query: { queryKey: ['geo-provinces'] },
+  });
+  const { data: citiesData } = useGetGeoCities(
+    {
+      province_id: form.data.province_id,
+    },
+    {
+      query: {
+        enabled: !!form.data.province_id,
+        queryKey: ['geo-cities', form.data.province_id],
+      },
+    },
+  );
+  const { data: districtsData } = useGetGeoDistricts(
+    {
+      city_id: form.data.city_id,
+    },
+    {
+      query: {
+        enabled: !!form.data.city_id,
+        queryKey: ['geo-districts', form.data.city_id],
+      },
+    },
+  );
+  const { data: villagesData } = useGetGeoVillages(
+    {
+      district_id: form.data.district_id,
+    },
+    {
+      query: {
+        enabled: !!form.data.district_id,
+        queryKey: ['geo-villages', form.data.district_id],
+      },
+    },
+  );
 
-  useEffect(() => {
-    const p = provinces.find((x) => x.name === form.data.province);
-    if (p) {
-      axios
-        .get(`/api/regions/cities/${p.code}`)
-        .then((res) => setCities(res.data));
-    } else {
-      setCities([]);
-    }
-  }, [form.data.province, provinces]);
-
-  useEffect(() => {
-    const c = cities.find((x) => x.name === form.data.city);
-    if (c) {
-      axios
-        .get(`/api/regions/districts/${c.code}`)
-        .then((res) => setDistricts(res.data));
-    } else {
-      setDistricts([]);
-    }
-  }, [form.data.city, cities]);
-
-  useEffect(() => {
-    const d = districts.find((x) => x.name === form.data.district);
-    if (d) {
-      axios
-        .get(`/api/regions/villages/${d.code}`)
-        .then((res) => setVillages(res.data));
-    } else {
-      setVillages([]);
-    }
-  }, [form.data.district, districts]);
-
-  const handleIdChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      form.setData('identity_photo', file);
-      const reader = new FileReader();
-      reader.onload = (e) => setIdPreview(e.target?.result as string);
-      reader.readAsDataURL(file);
-    }
-  };
+  const provinces = provincesData?.data || [];
+  const cities = citiesData?.data || [];
+  const districts = districtsData?.data || [];
+  const villages = villagesData?.data || [];
 
   const handleSubmit = (e: React.FormEvent) => {
+    console.log('Submitting form with data:', form.data);
     e.preventDefault();
-    form.setData('photo_id', form.data.photo_id || undefined);
-    form.post(update({ company: profile.username }).url, {
+    form.put(update({ company: profile.username }).url, {
       preserveScroll: true,
       onSuccess: () => {
         toast.success(
@@ -355,7 +343,7 @@ export default function Profile({ profile }: ProfilePageProps) {
                   required
                   name="address"
                   placeholder="Street name, building, house number..."
-                  className="min-h-[100px]"
+                  className="min-h-25"
                   value={form.data.address}
                   onChange={(e) => form.setData('address', e.target.value)}
                 />
@@ -371,22 +359,22 @@ export default function Profile({ profile }: ProfilePageProps) {
                     id="province"
                     required
                     className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                    value={form.data.province}
+                    value={form.data.province_id}
                     onChange={(e) => {
-                      form.setData('province', e.target.value);
-                      form.setData('city', '');
-                      form.setData('district', '');
-                      form.setData('village', '');
+                      form.setData('province_id', e.target.value);
+                      form.setData('city_id', '');
+                      form.setData('district_id', '');
+                      form.setData('village_id', '');
                     }}
                   >
                     <option value="">Select Province</option>
-                    {provinces.map((p) => (
-                      <option key={p.code} value={p.name}>
+                    {provinces.map((p: any) => (
+                      <option key={p.code} value={p.id}>
                         {p.name}
                       </option>
                     ))}
                   </select>
-                  <InputError message={form.errors.province} />
+                  <InputError message={form.errors.province_id} />
                 </div>
 
                 <div className="space-y-2">
@@ -397,22 +385,21 @@ export default function Profile({ profile }: ProfilePageProps) {
                     id="city"
                     required
                     className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                    value={form.data.city}
+                    value={form.data.city_id}
                     onChange={(e) => {
-                      form.setData('city', e.target.value);
-                      form.setData('district', '');
-                      form.setData('village', '');
+                      form.setData('city_id', e.target.value);
+                      form.setData('district_id', '');
+                      form.setData('village_id', '');
                     }}
-                    disabled={!form.data.province}
                   >
                     <option value="">Select City</option>
-                    {cities.map((c) => (
-                      <option key={c.code} value={c.name}>
+                    {cities.map((c: any) => (
+                      <option key={c.code} value={c.id}>
                         {c.name}
                       </option>
                     ))}
                   </select>
-                  <InputError message={form.errors.city} />
+                  <InputError message={form.errors.city_id} />
                 </div>
 
                 <div className="space-y-2">
@@ -423,21 +410,20 @@ export default function Profile({ profile }: ProfilePageProps) {
                     id="district"
                     required
                     className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                    value={form.data.district}
+                    value={form.data.district_id}
                     onChange={(e) => {
-                      form.setData('district', e.target.value);
-                      form.setData('village', '');
+                      form.setData('district_id', e.target.value);
+                      form.setData('village_id', '');
                     }}
-                    disabled={!form.data.city}
                   >
                     <option value="">Select District</option>
-                    {districts.map((d) => (
-                      <option key={d.code} value={d.name}>
+                    {districts.map((d: any) => (
+                      <option key={d.code} value={d.id}>
                         {d.name}
                       </option>
                     ))}
                   </select>
-                  <InputError message={form.errors.district} />
+                  <InputError message={form.errors.district_id} />
                 </div>
 
                 <div className="space-y-2">
@@ -450,11 +436,10 @@ export default function Profile({ profile }: ProfilePageProps) {
                     className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                     value={form.data.village}
                     onChange={(e) => form.setData('village', e.target.value)}
-                    disabled={!form.data.district}
                   >
                     <option value="">Select Village</option>
-                    {villages.map((v) => (
-                      <option key={v.code} value={v.name}>
+                    {villages.map((v: any) => (
+                      <option key={v.code} value={v.id}>
                         {v.name}
                       </option>
                     ))}
@@ -507,12 +492,6 @@ export default function Profile({ profile }: ProfilePageProps) {
                   placeholder="16 digit ID number"
                   required
                 />
-                {form.data.identity_number.length > 0 &&
-                  form.data.identity_number.length < 16 && (
-                    <p className="text-[0.8rem] font-medium text-destructive">
-                      ID Number must be exactly 16 digits.
-                    </p>
-                  )}
                 <InputError message={form.errors.identity_number} />
               </div>
 
@@ -521,47 +500,15 @@ export default function Profile({ profile }: ProfilePageProps) {
                   <FormattedMessage defaultMessage="Upload ID Photo *" />
                 </Label>
                 <div className="flex flex-col sm:flex-row gap-4 items-start">
-                  <div
-                    onClick={() => idInputRef.current?.click()}
-                    className="w-full sm:w-64 h-40 border-2 border-dashed border-slate-300 rounded-xl flex flex-col items-center justify-center bg-slate-50 hover:bg-slate-100 cursor-pointer overflow-hidden transition-colors"
-                  >
-                    {idPreview ? (
-                      <img
-                        src={idPreview}
-                        alt="ID Preview"
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <>
-                        <ImagePlus className="w-8 h-8 text-slate-400 mb-2" />
-                        <span className="text-sm text-slate-500 font-medium">
-                          Click to upload photo
-                        </span>
-                        <span className="text-xs text-slate-400 mt-1">
-                          JPG, PNG (Max 2MB)
-                        </span>
-                      </>
-                    )}
-                  </div>
-                  <Input
-                    type="file"
-                    ref={idInputRef}
-                    className="hidden"
-                    accept="image/jpeg, image/png, image/jpg"
-                    onChange={handleIdChange}
+                  <IdentityCardPicker
+                    owner={{ type: 'company', id: profile.id }}
+                    onChange={(media: any) => {
+                      form.setData('identity_card_id', media.id);
+                    }}
+                    defaultValue={profile.identity_card}
                   />
-                  {idPreview && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => idInputRef.current?.click()}
-                    >
-                      Change Photo
-                    </Button>
-                  )}
                 </div>
-                <InputError message={form.errors.identity_photo} />
+                <InputError message={form.errors.identity_card_id} />
               </div>
             </CardContent>
           </Card>
@@ -570,7 +517,7 @@ export default function Profile({ profile }: ProfilePageProps) {
             <Button
               type="submit"
               disabled={form.processing}
-              className="min-w-[200px]"
+              className="min-w-50"
             >
               {form.processing ? <Spinner className="mr-2" /> : null}
               <Save className="w-4 h-4 mr-2" />

@@ -4,6 +4,14 @@
  * Travelboost
  * OpenAPI spec version: 0.0.1
  */
+import type { CompanyResourceProvinceId } from './companyResourceProvinceId';
+import type { CompanyResourceCityId } from './companyResourceCityId';
+import type { CompanyResourceDistrictId } from './companyResourceDistrictId';
+import type { CompanyResourceVillageId } from './companyResourceVillageId';
+import type { CompanyResourceDistrict } from './companyResourceDistrict';
+import type { CompanyResourceVillage } from './companyResourceVillage';
+import type { CompanyResourcePostalCode } from './companyResourcePostalCode';
+import type { CompanyResourceIdentityNumber } from './companyResourceIdentityNumber';
 import type { CompanyResourceNote } from './companyResourceNote';
 import type { CompanyResourceMeta } from './companyResourceMeta';
 import type { CompanyResourceRememberToken } from './companyResourceRememberToken';
@@ -11,7 +19,7 @@ import type { CompanyResourceCreatedAt } from './companyResourceCreatedAt';
 import type { CompanyResourceUpdatedAt } from './companyResourceUpdatedAt';
 import type { CompanyResourceLogoId } from './companyResourceLogoId';
 import type { CompanyResourcePhotoId } from './companyResourcePhotoId';
-import type { CompanyResourceIdentityId } from './companyResourceIdentityId';
+import type { CompanyResourceIdentityCardId } from './companyResourceIdentityCardId';
 import type { CompanyResourceReferredBy } from './companyResourceReferredBy';
 
 export interface CompanyResource {
@@ -23,8 +31,16 @@ export interface CompanyResource {
   address: string;
   phone: string;
   customer_service_phone: string;
+  province_id: CompanyResourceProvinceId;
+  city_id: CompanyResourceCityId;
+  district_id: CompanyResourceDistrictId;
+  village_id: CompanyResourceVillageId;
   province: string;
   city: string;
+  district: CompanyResourceDistrict;
+  village: CompanyResourceVillage;
+  postal_code: CompanyResourcePostalCode;
+  identity_number: CompanyResourceIdentityNumber;
   note: CompanyResourceNote;
   meta: CompanyResourceMeta;
   remember_token: CompanyResourceRememberToken;
@@ -32,7 +48,7 @@ export interface CompanyResource {
   updated_at: CompanyResourceUpdatedAt;
   logo_id: CompanyResourceLogoId;
   photo_id: CompanyResourcePhotoId;
-  identity_id: CompanyResourceIdentityId;
+  identity_card_id: CompanyResourceIdentityCardId;
   referred_by: CompanyResourceReferredBy;
   photo_url: string;
 }

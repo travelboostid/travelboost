@@ -8,6 +8,10 @@ use App\Http\Controllers\Webapi\ChatRoomController;
 use App\Http\Controllers\Webapi\CompanyController;
 use App\Http\Controllers\Webapi\ContinentController;
 use App\Http\Controllers\Webapi\CountryController;
+use App\Http\Controllers\Webapi\GeoCityController;
+use App\Http\Controllers\Webapi\GeoDistrictController;
+use App\Http\Controllers\Webapi\GeoProvinceController;
+use App\Http\Controllers\Webapi\GeoVillageController;
 use App\Http\Controllers\Webapi\MediaController;
 use App\Http\Controllers\Webapi\PaymentController;
 use App\Http\Controllers\Webapi\RegionController;
@@ -36,6 +40,14 @@ Route::prefix('webapi')->group(function () {
     Route::post('payments/create-topup-payment', [PaymentController::class, 'createTopupPayment']);
     Route::post('payments/create-agent-subscription-payment', [PaymentController::class, 'createAgentSubscriptionPayment']);
   });
+
+  Route::middleware(['web', 'auth'])->prefix('geo')->group(function () {
+    Route::apiResource('provinces', GeoProvinceController::class);
+    Route::apiResource('cities', GeoCityController::class);
+    Route::apiResource('districts', GeoDistrictController::class);
+    Route::apiResource('villages', GeoVillageController::class);
+  });
+
   Route::middleware(['web'])->group(function () {
     Route::apiResource('ai-models', AiModelController::class);
     Route::apiResource('tours', TourController::class);
