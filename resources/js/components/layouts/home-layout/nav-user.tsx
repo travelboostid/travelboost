@@ -4,14 +4,22 @@ import { DEFAULT_PHOTO } from '@/config';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { Link } from '@inertiajs/react';
 import { UserIcon } from 'lucide-react';
+import { useMemo } from 'react';
 import { useAvailableDashboards } from '../components/hooks';
 
 export function NavUser() {
   const { auth } = usePageSharedDataProps();
+  console.log('Auth data in NavUser:', auth);
   const dashboards = useAvailableDashboards();
-  const defaultDashboard =
-    dashboards.find((d) => d.id.startsWith('company:')) || dashboards[0];
-
+  const defaultDashboard = useMemo(() => {
+    if (auth.roles.includes('company:0:superadmin')) {
+      return dashboards.find((d) => d.id === 'admin:default') || dashboards[0];
+    } else {
+      return (
+        dashboards.find((d) => d.id.startsWith('company:')) || dashboards[0]
+      );
+    }
+  }, [auth.roles, dashboards]);
   return (
     <Button asChild variant="ghost" className="gap-2 px-2">
       <Link href={defaultDashboard.baseUrl}>
