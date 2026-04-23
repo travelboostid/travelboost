@@ -5,8 +5,8 @@ namespace App\Models;
 use App\Enums\TourStatus;
 use App\Events\TourCreated;
 use App\Events\TourUpdated;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 
 class Tour extends Model
 {
@@ -77,10 +77,10 @@ class Tour extends Model
   }
 
   /*
-    |--------------------------------------------------------------------------
-    | Relationships
-    |--------------------------------------------------------------------------
-    */
+      |--------------------------------------------------------------------------
+      | Relationships
+      |--------------------------------------------------------------------------
+      */
 
   public function category()
   {
@@ -126,32 +126,27 @@ class Tour extends Model
   {
     return $this->belongsTo(Country::class, 'country_id');
   }
-
-  //27032026
   public function schedules()
   {
-      return $this->hasMany(TourSchedule::class, 'tour_id');
-  }
-
-  //01042026
-  public function agents()
-  {
-      return $this->belongsToMany(
-          Company::class,
-          'agent_tours',   // nama pivot table
-          'tour_id',       // foreign key di pivot ke tour
-          'company_id'     // foreign key di pivot ke company
-      );
+    return $this->hasMany(TourSchedule::class, 'tour_id');
   }
 
   public function availabilities()
   {
-      return $this->hasMany(TourAvailability::class, 'tour_id');
+    return $this->hasMany(TourAvailability::class, 'tour_id');
+  }
+  public function agents()
+  {
+    return $this->belongsToMany(
+      Company::class,
+      'agent_tours',
+      'tour_id',
+      'company_id'
+    );
   }
 
   public function addOns()
   {
-      return $this->hasMany(TourAddOn::class);
+    return $this->hasMany(TourAddOn::class);
   }
-  
 }
