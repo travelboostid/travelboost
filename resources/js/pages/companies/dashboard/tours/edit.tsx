@@ -61,7 +61,8 @@ type Schedule = {
   return_date: string;
   quota: string;
   prices: RoomPrice[];
-  availability?: any;
+  //promotion: Adjustment
+  //commission: Adjustment
 };
 
 type PriceCategory = {
@@ -74,7 +75,7 @@ type Props = {
 };
 
 type AddOn = {
-  id?: number;
+  id?: number | null;
   description: string;
   price: number | '';
   edit_status: boolean;
@@ -273,6 +274,11 @@ export default function Page({ tour }: Props) {
     })),
   );
 
+  // 🔥 TAMBAHKAN DI SINI 17042026
+  /*useEffect(() => {
+  console.log('FROM SERVER:', tour.schedules)
+}, [])*/
+
   useEffect(() => {
     setData('schedules', schedules);
   }, [schedules]);
@@ -293,6 +299,8 @@ export default function Page({ tour }: Props) {
             commission: { type: 'percent', value: '' },
           },
         ],
+        //promotion: { type: 'percent', value: '' },
+        //commission: { type: 'percent', value: '' },
       },
     ]);
   };
@@ -430,13 +438,17 @@ export default function Page({ tour }: Props) {
     });
   }, [schedules]);
 
-  const [availability, setAvailability] = useState<any[]>([]);
+  const [availability, setAvailability] = useState([]);
 
   useEffect(() => {
     setAvailability(availabilityData);
   }, [availabilityData]);
 
   const [savingAvailability, setSavingAvailability] = useState(false);
+
+  /*useEffect(() => {
+    setAvailability(availabilityData)
+  }, [schedules])*/
 
   const updateAvailability = (index: number, field: string, value: number) => {
     const updated = [...availability];
@@ -457,8 +469,8 @@ export default function Page({ tour }: Props) {
   const buildAvailabilityPayload = () => {
     return availability.map((row, i) => ({
       company_id: company.id,
-      tour_id: tour.id,
-      schedule_id: schedules[i]?.id ?? null,
+      tour_id: tour.id, // ⚠️ di DB namanya tour_code tapi isinya id
+      schedule_id: schedules[i]?.id ?? null, // pastikan schedule punya id dari DB
       max_pax: row.max_pax,
       WP: row.WP,
       DP: row.DP,
@@ -472,6 +484,7 @@ export default function Page({ tour }: Props) {
     }));
   };
 
+  //20042026
   useEffect(() => {
     if (tour?.schedules) {
       setSchedules(
@@ -486,12 +499,14 @@ export default function Page({ tour }: Props) {
             room_type_id: p.price_category_id,
             price: String(p.price ?? ''),
             promotion: {
+              /*type: p.promotion_rate > 0 ? 'percent' : 'value',
+              value: String(p.promotion_rate || p.promotion || ''),*/
               type:
                 p.promotion_rate > 0
                   ? 'percent'
                   : p.promotion > 0
                     ? 'value'
-                    : 'percent',
+                    : 'percent', // default
 
               value: String(
                 p.promotion_rate > 0
@@ -502,12 +517,14 @@ export default function Page({ tour }: Props) {
               ),
             },
             commission: {
+              /*type: p.commission_rate > 0 ? 'percent' : 'value',
+              value: String(p.commission_rate || p.commission || ''),*/
               type:
                 p.commission_rate > 0
                   ? 'percent'
                   : p.commission > 0
                     ? 'value'
-                    : 'percent',
+                    : 'percent', // default
 
               value: String(
                 p.commission_rate > 0
@@ -532,7 +549,12 @@ export default function Page({ tour }: Props) {
     const initial: AddOnsState = {};
 
     schedules.forEach((s) => {
-      initial[s.id] = addOnsFromDb?.[s.id] || [];
+      initial[s.id] = (addOnsFromDb?.[s.id] || []).map((item) => ({
+        id: item.id,
+        description: item.description,
+        price: item.price,
+        edit_status: item.edit_status,
+      }));
     });
 
     setAddOns(initial);
@@ -543,7 +565,7 @@ export default function Page({ tour }: Props) {
       ...prev,
       [scheduleId]: [
         ...(prev[scheduleId] || []),
-        { description: '', price: '', edit_status: false },
+        { id: null, description: '', price: '', edit_status: false },
       ],
     }));
   };
@@ -579,14 +601,15 @@ export default function Page({ tour }: Props) {
 
   const [savingAddOns, setSavingAddOns] = useState(false);
 
-  const buildAddOnsPayload = () => {
+  const buildAddOnsPayload = (source = addOns) => {
     const result: any[] = [];
 
-    Object.entries(addOns).forEach(([scheduleId, rows]) => {
+    Object.entries(source).forEach(([scheduleId, rows]) => {
       rows.forEach((row) => {
         if (!row.description) return;
 
         result.push({
+          id: row.id || null,
           company_id: company.id,
           tour_id: tour.id,
           schedule_id: Number(scheduleId),
@@ -598,6 +621,60 @@ export default function Page({ tour }: Props) {
     });
 
     return result;
+  };
+
+  const syncAddOns = async (data) => {
+    setSavingAddOns(true);
+
+    try {
+      const payload = buildAddOnsPayload(data);
+
+      if (payload.length === 0) {
+        toast.error('Add Ons masih kosong');
+        return;
+      }
+
+      console.log('SYNC PAYLOAD:', payload);
+
+      router.post(
+        `/companies/${company.username}/dashboard/tour-add-ons`,
+        { add_ons: payload },
+        {
+          preserveState: true,
+          onSuccess: () => {
+            toast.success('Success delete Add Ons');
+          },
+          onError: (err) => {
+            console.error(err);
+            toast.error('Failed to delete Add Ons');
+          },
+          onFinish: () => {
+            setSavingAddOns(false);
+          },
+        },
+      );
+    } catch (err) {
+      setSavingAddOns(false);
+    }
+  };
+
+  const handleDelete = (scheduleId: number, index: number) => {
+    setAddOns((prev) => {
+      const rows = [...(prev[scheduleId] || [])];
+
+      const deletedItem = rows[index];
+
+      rows.splice(index, 1);
+
+      const updated = {
+        ...prev,
+        [scheduleId]: rows,
+      };
+
+      syncAddOns(updated);
+
+      return updated;
+    });
   };
 
   return (
@@ -620,8 +697,8 @@ export default function Page({ tour }: Props) {
 
           console.log('SEND DATA:', {
             ...data,
-            schedules,
-          });
+            schedules
+          })
 
           // 🔥 update state dulu
           setData((prev) => ({
@@ -629,7 +706,7 @@ export default function Page({ tour }: Props) {
             showprice: Number(rawPrice),
             promote_price: Number(rawPrice1),
             schedules: schedules, // ✅ langsung object (JANGAN stringify)
-          }));
+          }))
 
           // 🔥 kirim TANPA data:
           put(update.url({
@@ -668,6 +745,23 @@ export default function Page({ tour }: Props) {
               },
             },
           );
+
+          /*put(update.url({
+            company: company.username,
+            tour: tour.id
+          }), {
+            data: {
+              ...data,
+              showprice: Number(rawPrice),
+              promote_price: Number(rawPrice1),
+              schedules: schedules, // 🔥 langsung kirim
+            },
+            forceFormData: false, 
+            onSuccess: () => {
+              handleSuccess()
+              setActiveTab('schedule')
+            },
+          })*/
         }}
       >
         <div className="container mx-auto space-y-4 p-4">
@@ -726,7 +820,7 @@ export default function Page({ tour }: Props) {
                       );
                     }}
                   </MediaPicker>
-                  <InputError message={errors.image_id} />
+                  <InputError message={errors.media_id} />
                 </div>
 
                 {/* Code */}
@@ -1677,7 +1771,7 @@ export default function Page({ tour }: Props) {
                           Refund <br /> (RF)
                         </th>
                         <th className="p-3 text-right">
-                          Expired <br /> (EX)
+                          Expired <br /> EX)
                         </th>
                         <th className="p-3 text-right">
                           Waiting List <br /> (WL)
@@ -1889,16 +1983,14 @@ export default function Page({ tour }: Props) {
 
                     <tbody>
                       {schedules.map((schedule) => {
-                        const rows = schedule.id
-                          ? addOns[schedule.id] || []
-                          : [];
+                        const rows = addOns[schedule.id] || [];
                         const rowCount = rows.length;
 
                         return (
                           <Fragment key={schedule.id}>
                             {/* KALAU ADA DATA */}
                             {rows.length > 0 &&
-                              rows.map((row: AddOn, index: number) => (
+                              rows.map((row, index) => (
                                 <tr key={index} className="border-t">
                                   {/* SCHEDULE */}
                                   {index === 0 && (
@@ -1919,7 +2011,7 @@ export default function Page({ tour }: Props) {
                                       value={row.description}
                                       onChange={(e) =>
                                         updateRow(
-                                          schedule.id!,
+                                          schedule.id,
                                           index,
                                           'description',
                                           e.target.value,
@@ -1935,7 +2027,7 @@ export default function Page({ tour }: Props) {
                                       value={row.price}
                                       onChange={(val) =>
                                         updateRow(
-                                          schedule.id!,
+                                          schedule.id,
                                           index,
                                           'price',
                                           Number(val),
@@ -1951,7 +2043,7 @@ export default function Page({ tour }: Props) {
                                       checked={row.edit_status}
                                       onChange={(e) =>
                                         updateRow(
-                                          schedule.id!,
+                                          schedule.id,
                                           index,
                                           'edit_status',
                                           e.target.checked,
@@ -1968,7 +2060,7 @@ export default function Page({ tour }: Props) {
                                         variant="destructive"
                                         size="icon"
                                         onClick={() =>
-                                          deleteRow(schedule.id!, index)
+                                          handleDelete(schedule.id, index)
                                         }
                                       >
                                         <Trash2 className="h-4 w-4" />
@@ -1977,52 +2069,7 @@ export default function Page({ tour }: Props) {
                                       <Button
                                         type="button"
                                         disabled={savingAddOns}
-                                        onClick={async () => {
-                                          setSavingAddOns(true);
-
-                                          try {
-                                            const payload =
-                                              buildAddOnsPayload();
-
-                                            if (payload.length === 0) {
-                                              toast.error(
-                                                'Add Ons masih kosong',
-                                              );
-                                              setSavingAddOns(false);
-                                              return;
-                                            }
-
-                                            console.log(
-                                              'SEND ADD ONS:',
-                                              payload,
-                                            );
-
-                                            router.post(
-                                              `/companies/${company.username}/dashboard/tour-add-ons`,
-                                              {
-                                                add_ons: payload,
-                                              },
-                                              {
-                                                onSuccess: () => {
-                                                  toast.success(
-                                                    'Add Ons saved',
-                                                  );
-                                                },
-                                                onError: () => {
-                                                  console.error(errors);
-                                                  toast.error(
-                                                    'Failed to save Add Ons',
-                                                  );
-                                                },
-                                                onFinish: () => {
-                                                  setSavingAddOns(false);
-                                                },
-                                              },
-                                            );
-                                          } catch (err) {
-                                            setSavingAddOns(false);
-                                          }
-                                        }}
+                                        onClick={() => syncAddOns(addOns)}
                                       >
                                         {savingAddOns && <Spinner />}
                                         <Save className="h-4 w-4" />
@@ -2048,7 +2095,7 @@ export default function Page({ tour }: Props) {
                               >
                                 <button
                                   type="button"
-                                  onClick={() => addRow(schedule.id!)}
+                                  onClick={() => addRow(schedule.id)}
                                   className="text-blue-600 text-sm"
                                 >
                                   + Add Ons

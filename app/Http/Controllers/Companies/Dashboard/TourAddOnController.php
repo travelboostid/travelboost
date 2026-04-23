@@ -39,30 +39,39 @@ class TourAddOnController extends Controller
             ->values()
             ->all();
 
-        DB::transaction(function () use ($items, $companyId) {
+        DB::transaction(function () use ($companyId, $data) {
 
-            $scheduleIds = collect($items)
-                ->pluck('schedule_id')
+            $incomingIds = collect($data['add_ons'])
+                ->pluck('id')
+                ->filter()
+                ->values();
+
+            $tourIds = collect($data['add_ons'])
+                ->pluck('tour_id')
                 ->unique();
 
-            foreach ($scheduleIds as $scheduleId) {
+            $query = TourAddOn::where('company_id', $companyId)
+                ->whereIn('tour_id', $tourIds);
 
-                $descriptions = collect($items)
-                    ->where('schedule_id', $scheduleId)
-                    ->pluck('description')
-                    ->toArray();
-
-                TourAddOn::where('company_id', $companyId)
-                    ->where('schedule_id', $scheduleId)
-                    ->whereNotIn('description', $descriptions)
-                    ->delete();
+            if ($incomingIds->isNotEmpty()) {
+                $query->whereNotIn('id', $incomingIds);
             }
 
-            TourAddOn::upsert(
-                $items,
-                ['company_id', 'schedule_id', 'description'],
-                ['price', 'edit_status', 'updated_at']
-            );
+            $query->delete();
+
+            foreach ($data['add_ons'] as $item) {
+                TourAddOn::updateOrCreate(
+                    ['id' => $item['id'] ?? null],
+                    [
+                        'company_id'  => $companyId,
+                        'tour_id'     => $item['tour_id'],
+                        'schedule_id' => $item['schedule_id'],
+                        'description' => $item['description'],
+                        'price'       => $item['price'] ?? 0,
+                        'edit_status' => $item['edit_status'] ?? false,
+                    ]
+                );
+            }
         });
 
         return back()->with('success', 'Add Ons saved');
