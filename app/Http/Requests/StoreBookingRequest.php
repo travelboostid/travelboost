@@ -35,9 +35,10 @@ class StoreBookingRequest extends FormRequest
 
             // Passengers
             'passengers' => ['required', 'array', 'min:1'],
+            'passengers.*.title' => ['nullable', 'string', 'max:20'],
             'passengers.*.first_name' => ['required', 'string', 'max:255'],
             'passengers.*.last_name' => ['nullable', 'string', 'max:255'],
-            'passengers.*.gender' => ['required', Rule::enum(UserGender::class)],
+            'passengers.*.gender' => ['nullable', Rule::enum(UserGender::class)],
             'passengers.*.dob' => ['nullable', 'date', 'before:today'],
             'passengers.*.pob' => ['nullable', 'string', 'max:255'],
             'passengers.*.room_type' => ['nullable', 'string', 'max:255'],

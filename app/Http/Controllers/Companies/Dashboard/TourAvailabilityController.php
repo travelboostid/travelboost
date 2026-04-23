@@ -2,24 +2,52 @@
 
 namespace App\Http\Controllers\Companies\Dashboard;
 
+use App\Models\Company;
+use App\Models\TourSchedule;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class TourAvailabilityController
 {
-    public function store(Request $request)
+    public function store(Request $request, Company $company)
     {
         $rows = $request->input('availabilities', []);
+
+        if (empty($rows)) {
+            return back()->withErrors('No availability data provided.');
+        }
+
+        $tourId = $rows[0]['tour_id'] ?? null;
+
+        if (! $tourId) {
+            return back()->withErrors('Tour ID is missing.');
+        }
+
+        $currentSchedules = TourSchedule::where('tour_id', $tourId)
+            ->where('company_id', $company->id)
+            ->orderBy('departure_date')
+            ->get();
+
+        if ($currentSchedules->isEmpty()) {
+            return back()->withErrors('No schedules found for this tour.');
+        }
 
         DB::beginTransaction();
 
         try {
-            foreach ($rows as $row) {
+            foreach ($rows as $index => $row) {
+                $schedule = $currentSchedules->get($index);
+
+                if (! $schedule) {
+                    continue;
+                }
+
                 DB::table('tour_availabilities')->updateOrInsert(
                     [
-                        'company_id' => $row['company_id'],
-                        'tour_id' => $row['tour_id'],
-                        'schedule_id' => $row['schedule_id'],
+                        'company_id' => $company->id,
+                        'tour_id' => $tourId,
+                        'schedule_id' => $schedule->id,
                     ],
                     [
                         'max_pax' => $row['max_pax'] ?? 0,
@@ -41,11 +69,15 @@ class TourAvailabilityController
             DB::commit();
 
             return back()->with('success', 'Availability saved');
-
         } catch (\Throwable $e) {
             DB::rollBack();
+            Log::error('TourAvailability save failed', [
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
 
-            return back()->withErrors('Failed to save availability');
+            return back()->withErrors('Failed to save availability: '.$e->getMessage());
         }
     }
 }
