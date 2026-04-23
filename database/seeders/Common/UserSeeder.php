@@ -15,7 +15,7 @@ class UserSeeder extends Seeder
   {
     $team = Team::where('name', 'company:0')->first();
     $superadmin = Role::where('name', 'company:0:superadmin')->first();
-    $root = User::factory()->create([
+    $root = User::create([
       'name' => 'Root',
       'email' => 'root@travelboost.co.id',
       'username' => 'root',
@@ -28,7 +28,7 @@ class UserSeeder extends Seeder
 
     $root->syncRoles([$superadmin], $team);
 
-    $vendor = User::factory()->create([
+    $vendor = User::create([
       'name' => 'Vendor',
       'email' => 'vendor@travelboost.co.id',
       'username' => 'vendor',
@@ -38,7 +38,7 @@ class UserSeeder extends Seeder
       'password' => Hash::make('vendor'),
     ]);
 
-    $greatChinaTourUser = User::factory()->create([
+    $greatChinaTourUser = User::create([
       'name' => 'Great China Tour',
       'email' => 'greatchinatour@travelboost.co.id',
       'username' => 'greatchinatour',
@@ -48,7 +48,7 @@ class UserSeeder extends Seeder
       'password' => Hash::make('greatchinatour'),
     ]);
 
-    $john = User::factory()->create([
+    $john = User::create([
       'name' => 'John',
       'email' => 'john@travelboost.co.id',
       'username' => 'john',
