@@ -43,7 +43,7 @@ export function useAvailableDashboards() {
       id: 'admin:default',
       title: `Admin Dashboard`,
       subtitle: 'Admin',
-      baseUrl: '/admin',
+      baseUrl: '/admin/dashboard',
       thumbnailUrl: DEFAULT_PHOTO,
     });
   }
