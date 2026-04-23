@@ -1353,7 +1353,7 @@ export default function Page({ tour }: Props) {
                                       className="text-red-500"
                                       onClick={() => removeRoom(index, rIndex)}
                                     >
-                                      Delete Category
+                                      x Delete Category
                                     </Button>
                                   </div>
                                 </div>
