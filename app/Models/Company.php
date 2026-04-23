@@ -26,10 +26,14 @@ class Company extends Model
     'photo_id',
     'meta',
     'note',
-    //10042026
-    'province',
-    'city',
-    'identity_id',
+    'province_id',
+    'city_id',
+    'district_id',
+    'village_id',
+    'village_id',
+    'postal_code',
+    'identity_number',
+    'identity_card_id',
   ];
 
   protected $hidden = [
@@ -160,5 +164,10 @@ class Company extends Model
   public function payments()
   {
     return $this->morphMany(Payment::class, 'owner');
+  }
+
+  public function identityCard()
+  {
+    return $this->belongsTo(Media::class, 'identity_card_id');
   }
 }

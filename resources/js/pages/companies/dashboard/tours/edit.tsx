@@ -61,8 +61,7 @@ type Schedule = {
   return_date: string;
   quota: string;
   prices: RoomPrice[];
-  //promotion: Adjustment
-  //commission: Adjustment
+  availability?: any;
 };
 
 type PriceCategory = {
@@ -274,11 +273,6 @@ export default function Page({ tour }: Props) {
     })),
   );
 
-  // 🔥 TAMBAHKAN DI SINI 17042026
-  /*useEffect(() => {
-  console.log('FROM SERVER:', tour.schedules)
-}, [])*/
-
   useEffect(() => {
     setData('schedules', schedules);
   }, [schedules]);
@@ -299,8 +293,6 @@ export default function Page({ tour }: Props) {
             commission: { type: 'percent', value: '' },
           },
         ],
-        //promotion: { type: 'percent', value: '' },
-        //commission: { type: 'percent', value: '' },
       },
     ]);
   };
@@ -438,17 +430,13 @@ export default function Page({ tour }: Props) {
     });
   }, [schedules]);
 
-  const [availability, setAvailability] = useState([]);
+  const [availability, setAvailability] = useState<any[]>([]);
 
   useEffect(() => {
     setAvailability(availabilityData);
   }, [availabilityData]);
 
   const [savingAvailability, setSavingAvailability] = useState(false);
-
-  /*useEffect(() => {
-    setAvailability(availabilityData)
-  }, [schedules])*/
 
   const updateAvailability = (index: number, field: string, value: number) => {
     const updated = [...availability];
@@ -469,8 +457,8 @@ export default function Page({ tour }: Props) {
   const buildAvailabilityPayload = () => {
     return availability.map((row, i) => ({
       company_id: company.id,
-      tour_id: tour.id, // ⚠️ di DB namanya tour_code tapi isinya id
-      schedule_id: schedules[i]?.id ?? null, // pastikan schedule punya id dari DB
+      tour_id: tour.id,
+      schedule_id: schedules[i]?.id ?? null,
       max_pax: row.max_pax,
       WP: row.WP,
       DP: row.DP,
@@ -484,7 +472,6 @@ export default function Page({ tour }: Props) {
     }));
   };
 
-  //20042026
   useEffect(() => {
     if (tour?.schedules) {
       setSchedules(
@@ -499,14 +486,12 @@ export default function Page({ tour }: Props) {
             room_type_id: p.price_category_id,
             price: String(p.price ?? ''),
             promotion: {
-              /*type: p.promotion_rate > 0 ? 'percent' : 'value',
-              value: String(p.promotion_rate || p.promotion || ''),*/
               type:
                 p.promotion_rate > 0
                   ? 'percent'
                   : p.promotion > 0
                     ? 'value'
-                    : 'percent', // default
+                    : 'percent',
 
               value: String(
                 p.promotion_rate > 0
@@ -517,14 +502,12 @@ export default function Page({ tour }: Props) {
               ),
             },
             commission: {
-              /*type: p.commission_rate > 0 ? 'percent' : 'value',
-              value: String(p.commission_rate || p.commission || ''),*/
               type:
                 p.commission_rate > 0
                   ? 'percent'
                   : p.commission > 0
                     ? 'value'
-                    : 'percent', // default
+                    : 'percent',
 
               value: String(
                 p.commission_rate > 0
@@ -637,8 +620,8 @@ export default function Page({ tour }: Props) {
 
           console.log('SEND DATA:', {
             ...data,
-            schedules
-          })
+            schedules,
+          });
 
           // 🔥 update state dulu
           setData((prev) => ({
@@ -646,7 +629,7 @@ export default function Page({ tour }: Props) {
             showprice: Number(rawPrice),
             promote_price: Number(rawPrice1),
             schedules: schedules, // ✅ langsung object (JANGAN stringify)
-          }))
+          }));
 
           // 🔥 kirim TANPA data:
           put(update.url({
@@ -685,23 +668,6 @@ export default function Page({ tour }: Props) {
               },
             },
           );
-
-          /*put(update.url({
-            company: company.username,
-            tour: tour.id
-          }), {
-            data: {
-              ...data,
-              showprice: Number(rawPrice),
-              promote_price: Number(rawPrice1),
-              schedules: schedules, // 🔥 langsung kirim
-            },
-            forceFormData: false, 
-            onSuccess: () => {
-              handleSuccess()
-              setActiveTab('schedule')
-            },
-          })*/
         }}
       >
         <div className="container mx-auto space-y-4 p-4">
@@ -760,7 +726,7 @@ export default function Page({ tour }: Props) {
                       );
                     }}
                   </MediaPicker>
-                  <InputError message={errors.media_id} />
+                  <InputError message={errors.image_id} />
                 </div>
 
                 {/* Code */}
@@ -1711,7 +1677,7 @@ export default function Page({ tour }: Props) {
                           Refund <br /> (RF)
                         </th>
                         <th className="p-3 text-right">
-                          Expired <br /> EX)
+                          Expired <br /> (EX)
                         </th>
                         <th className="p-3 text-right">
                           Waiting List <br /> (WL)
@@ -1923,14 +1889,16 @@ export default function Page({ tour }: Props) {
 
                     <tbody>
                       {schedules.map((schedule) => {
-                        const rows = addOns[schedule.id] || [];
+                        const rows = schedule.id
+                          ? addOns[schedule.id] || []
+                          : [];
                         const rowCount = rows.length;
 
                         return (
                           <Fragment key={schedule.id}>
                             {/* KALAU ADA DATA */}
                             {rows.length > 0 &&
-                              rows.map((row, index) => (
+                              rows.map((row: AddOn, index: number) => (
                                 <tr key={index} className="border-t">
                                   {/* SCHEDULE */}
                                   {index === 0 && (
@@ -1951,7 +1919,7 @@ export default function Page({ tour }: Props) {
                                       value={row.description}
                                       onChange={(e) =>
                                         updateRow(
-                                          schedule.id,
+                                          schedule.id!,
                                           index,
                                           'description',
                                           e.target.value,
@@ -1967,7 +1935,7 @@ export default function Page({ tour }: Props) {
                                       value={row.price}
                                       onChange={(val) =>
                                         updateRow(
-                                          schedule.id,
+                                          schedule.id!,
                                           index,
                                           'price',
                                           Number(val),
@@ -1983,7 +1951,7 @@ export default function Page({ tour }: Props) {
                                       checked={row.edit_status}
                                       onChange={(e) =>
                                         updateRow(
-                                          schedule.id,
+                                          schedule.id!,
                                           index,
                                           'edit_status',
                                           e.target.checked,
@@ -2000,7 +1968,7 @@ export default function Page({ tour }: Props) {
                                         variant="destructive"
                                         size="icon"
                                         onClick={() =>
-                                          deleteRow(schedule.id, index)
+                                          deleteRow(schedule.id!, index)
                                         }
                                       >
                                         <Trash2 className="h-4 w-4" />
@@ -2080,7 +2048,7 @@ export default function Page({ tour }: Props) {
                               >
                                 <button
                                   type="button"
-                                  onClick={() => addRow(schedule.id)}
+                                  onClick={() => addRow(schedule.id!)}
                                   className="text-blue-600 text-sm"
                                 >
                                   + Add Ons

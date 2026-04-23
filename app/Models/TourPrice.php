@@ -2,11 +2,7 @@
 
 namespace App\Models;
 
-use App\Enums\TourStatus;
-use App\Events\TourCreated;
-use App\Events\TourUpdated;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class TourPrice extends Model
 {
@@ -26,5 +22,10 @@ class TourPrice extends Model
     public function tour()
     {
         return $this->belongsTo(Tour::class);
+    }
+
+    public function priceCategory()
+    {
+        return $this->belongsTo(PriceCategory::class, 'price_category_id');
     }
 }

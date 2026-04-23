@@ -12,6 +12,7 @@ export interface AiModelResource {
   code: string;
   input_token_rate: string;
   output_token_rate: string;
+  flat_rate: string;
   created_at: AiModelResourceCreatedAt;
   updated_at: AiModelResourceUpdatedAt;
 }

@@ -4,6 +4,7 @@ import {
 } from '@/actions/App/Http/Controllers/Companies/Dashboard/VendorTourCatalogController';
 import type { TourResource } from '@/api/model';
 import { useFloatingChatWidgetContext } from '@/components/chat/state';
+import TourBookingModal from '@/components/tours/tour-booking-modal';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -56,7 +57,10 @@ export default function TourCard({
   const [startingPrivateChat, setStartingPrivateChat] = useState(false);
   const [liked, setLiked] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
-  const [pendingAction, setPendingAction] = useState<'like' | 'book' | null>(null);
+  const [pendingAction, setPendingAction] = useState<'like' | 'book' | null>(
+    null,
+  );
+  const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
   const hasDocument = Boolean(tour.document);
 
   useEffect(() => {
@@ -67,13 +71,14 @@ export default function TourCard({
           const stored = JSON.parse(pendingStr);
           if (
             stored.tourId === tour.id &&
-            window.location.pathname + window.location.search === stored.returnUrl
+            window.location.pathname + window.location.search ===
+              stored.returnUrl
           ) {
             sessionStorage.removeItem('pendingTourAction');
             if (stored.action === 'like') {
               setLiked(true);
             } else if (stored.action === 'book') {
-              // TODO: Trigger book action UI if needed
+              setIsBookingModalOpen(true);
             }
           }
         } catch (e) {
@@ -362,7 +367,7 @@ export default function TourCard({
                   if (!auth?.user) {
                     setPendingAction('book');
                   } else {
-                    // TODO: trigger actual book functionality
+                    setIsBookingModalOpen(true);
                   }
                 }}
               >
@@ -493,16 +498,19 @@ export default function TourCard({
         </Dialog>
       )}
 
-      <AlertDialog open={!!pendingAction} onOpenChange={(open) => !open && setPendingAction(null)}>
+      <AlertDialog
+        open={!!pendingAction}
+        onOpenChange={(open) => !open && setPendingAction(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Login Diperlukan</AlertDialogTitle>
+            <AlertDialogTitle>Login Required</AlertDialogTitle>
             <AlertDialogDescription>
-              Silakan mendaftar atau masuk terlebih dahulu untuk melanjutkan aksi ini.
+              Please login or register first to continue this action.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
                 sessionStorage.setItem(
@@ -510,8 +518,9 @@ export default function TourCard({
                   JSON.stringify({
                     tourId: tour.id,
                     action: pendingAction,
-                    returnUrl: window.location.pathname + window.location.search,
-                  })
+                    returnUrl:
+                      window.location.pathname + window.location.search,
+                  }),
                 );
                 router.visit('/login');
               }}
@@ -521,6 +530,12 @@ export default function TourCard({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <TourBookingModal
+        isOpen={isBookingModalOpen}
+        onClose={() => setIsBookingModalOpen(false)}
+        tour={tour}
+      />
     </>
   );
 }

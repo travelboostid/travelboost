@@ -3,6 +3,10 @@
 namespace App\Http\Controllers\Tenant;
 
 use App\Http\Controllers\Controller;
+use App\Models\AgentTour;
+use App\Models\AffiliateProfile;
+use App\Models\TourCategory;
+use App\Models\Tour;
 use Inertia\Inertia;
 
 class HomeController extends Controller
@@ -10,109 +14,56 @@ class HomeController extends Controller
   public function index()
   {
     $tenant = request()->attributes->get('tenant');
-    $tenant->load('settings');
-    return Inertia::render('companies/landing-page', [
-      'company' => $tenant,
-    ]);
 
-    /*$tenant = request()->attributes->get('tenant');
-
-    return Inertia::render('companies/dashboard/vendor-tours/index', [
-        'username' => $tenant->username,
-        'data' => [],        // sementara kosong
-        'categories' => [],
-        'filters' => [],
-        'vendor' => $tenant,
-        'partnership' => null,
-        'company' => $tenant,
-    ]);*/
-
-    //////////////////////////////////////
-
-    /*$tenant = request()->attributes->get('tenant');
-
-    $tours = Tour::where('company_id', $tenant->id)
-        //->where('is_published', true)
-        ->where('status', 'active')
-        ->with('company:id,username,name') // ⭐ penting
-        ->latest()
-        ->get();
-
-    //$categories = TourCategory::all();
-    $categories = TourCategory::where('company_id', $tenant->id)
-    ->orderBy('name')
-    ->get();
-
-    return Inertia::render('tenant/home', [
-        'username' => $tenant->username,
-        'vendor' => $tenant,
-        'company' => $tenant,
-        'data' => $tours,
-        'categories' => $categories,
-        'filters' => [],
-        'partnership' => null,
-    ]); */
-
-    $tenant = request()->attributes->get('tenant');
-    $tenant->load('settings');
-    $hasCustomLandingPage = $tenant->settings && !empty($tenant->settings->landing_page_data);
-    $tenant->load('settings');
-    $hasCustomLandingPage = $tenant->settings && !empty($tenant->settings->landing_page_data);
-
-    if ($hasCustomLandingPage) {
-        return Inertia::render('companies/landing-page', [
-            'company' => $tenant,
-        ]);
+    // Guard: jika tenant bukan Company (e.g. affiliator), bail out
+    if (!$tenant || $tenant instanceof AffiliateProfile) {
+      abort(404);
     }
-    // 🏢 Tour milik vendor
+
+    $tenant->load('settings');
+
+    // Jika vendor punya custom landing page, render langsung
+    if ($tenant->settings && !empty($tenant->settings->landing_page_data)) {
+      return Inertia::render('companies/landing-page', [
+        'company' => $tenant,
+      ]);
+    }
+
+    // Tour milik vendor sendiri
     $ownTours = Tour::where('company_id', $tenant->id)
       ->where('status', 'active')
       ->with('company:id,username,name')
       ->get();
 
-    // 🤝 Tour dari agent
-    /*$agentTours = \App\Models\AgentTour::where('company_id', $tenant->id)
-        ->with('tour.company:id,username,name')
-        ->get()
-        ->pluck('tour')
-        ->filter();*/
-
-    $agentTours = \App\Models\AgentTour::where('company_id', $tenant->id)
-      ->whereHas('tour', function ($q) {
-        $q->where('status', 'active');
-      })
-      ->with(['tour' => function ($q) {
-        $q->where('status', 'active')
-          ->with('company:id,username,name');
-      }])
+    // Tour dari agent
+    $agentTours = AgentTour::where('company_id', $tenant->id)
+      ->whereHas('tour', fn($q) => $q->where('status', 'active'))
+      ->with(['tour' => fn($q) => $q->where('status', 'active')->with('company:id,username,name')])
       ->get()
       ->pluck('tour')
       ->filter();
 
-    // 🔥 Gabungkan
     $tours = $ownTours
       ->merge($agentTours)
       ->unique('id')
       ->sortByDesc('created_at')
       ->values();
 
-    // 📂 Kategori milik tenant
     $categories = TourCategory::where('company_id', $tenant->id)
       ->orderBy('position_no')
       ->get();
 
-    // 📱 Phone vendor
     $phone = $tenant->customer_service_phone ?: $tenant->phone;
 
     return Inertia::render('tenant/home', [
-      'username' => $tenant->username,
-      'vendor' => $tenant,
-      'company' => $tenant,
-      'data' => $tours,
-      'categories' => $categories,
-      'filters' => [],
+      'username'    => $tenant->username,
+      'vendor'      => $tenant,
+      'company'     => $tenant,
+      'data'        => $tours,
+      'categories'  => $categories,
+      'filters'     => [],
       'partnership' => null,
-      'phone' => $phone,
+      'phone'       => $phone,
     ]);
   }
 }
