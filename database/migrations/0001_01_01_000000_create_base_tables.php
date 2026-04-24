@@ -551,16 +551,16 @@ return new class extends Migration
         ->constrained('tour_schedules')
         ->cascadeOnDelete();
 
-      $table->decimal('max_pax', 12, 2)->default(0);
-      $table->decimal('WP', 12, 2)->default(0);
-      $table->decimal('DP', 12, 2)->default(0);
-      $table->decimal('FP', 12, 2)->default(0);
-      $table->decimal('RS', 12, 2)->default(0);
-      $table->decimal('CA', 12, 2)->default(0);
-      $table->decimal('RF', 12, 2)->default(0);
-      $table->decimal('EX', 12, 2)->default(0);
-      $table->decimal('WL', 12, 2)->default(0);
-      $table->decimal('available', 12, 2)->default(0);
+      $table->unsignedInteger('max_pax')->default(0);
+      $table->unsignedInteger('WP')->default(0);
+      $table->unsignedInteger('DP')->default(0);
+      $table->unsignedInteger('FP')->default(0);
+      $table->unsignedInteger('RS')->default(0);
+      $table->unsignedInteger('CA')->default(0);
+      $table->unsignedInteger('RF')->default(0);
+      $table->unsignedInteger('EX')->default(0);
+      $table->unsignedInteger('WL')->default(0);
+      $table->unsignedInteger('available')->default(0);
 
       $table->timestamps();
     });

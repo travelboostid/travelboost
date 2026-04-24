@@ -44,7 +44,7 @@ export default function MoneyInput({
   return (
     <Input
       type="text"
-      className={`no-spinner ${className}`}
+      className={`no-spinner w-full ${className}`}
       placeholder={placeholder}
       value={display}
       onChange={(e) => handleChange(e.target.value)}

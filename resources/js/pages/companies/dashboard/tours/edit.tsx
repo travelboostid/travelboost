@@ -283,6 +283,14 @@ export default function Page({ tour }: Props) {
     setData('schedules', schedules);
   }, [schedules]);
 
+  const addDays = (date: string, days: number) => {
+    if (!date || !days) return '';
+
+    const d = new Date(date);
+    d.setDate(d.getDate() + Number(days) - 1);
+    return d.toISOString().split('T')[0];
+  };
+
   const addSchedule = () => {
     setSchedules([
       ...schedules,
@@ -310,9 +318,27 @@ export default function Page({ tour }: Props) {
     field: keyof Schedule,
     value: string,
   ) => {
-    const updated = [...schedules];
-    updated[index][field] = value as any;
-    setSchedules(updated);
+    setSchedules((prev) => {
+      const updated = [...prev];
+      const row = { ...updated[index], [field]: value };
+
+      // 🔥 AUTO SET return_date
+      if (field === 'departure_date' && data.duration_days) {
+        row.return_date = addDays(value, Number(data.duration_days));
+      }
+
+      // 🔥 VALIDASI: return tidak boleh sebelum departure
+      if (
+        row.return_date &&
+        row.departure_date &&
+        row.return_date < row.departure_date
+      ) {
+        row.return_date = '';
+      }
+
+      updated[index] = row;
+      return updated;
+    });
   };
 
   const removeSchedule = (index: number) => {
@@ -1245,6 +1271,9 @@ export default function Page({ tour }: Props) {
                             <Input
                               type="date"
                               value={item.return_date}
+                              min={item.departure_date}
+                              readOnly
+                              className="bg-muted cursor-not-allowed"
                               onChange={(e) =>
                                 updateSchedule(
                                   index,
@@ -1295,87 +1324,104 @@ export default function Page({ tour }: Props) {
                                   />
 
                                   {/* PROMOTION */}
-                                  <div className="grid grid-cols-2 gap-2">
+                                  <div className="flex gap-2 w-full min-w-0">
                                     {/* PERCENT */}
-                                    <MoneyInput
-                                      value={
-                                        room.promotion.type === 'percent'
-                                          ? room.promotion.value
-                                          : ''
-                                      }
-                                      placeholder="%"
-                                      onChange={(val) => {
-                                        updateRoomAdjustment(
-                                          index,
-                                          rIndex,
-                                          'promotion',
-                                          'type',
-                                          'percent',
-                                        );
-                                        updateRoomAdjustment(
-                                          index,
-                                          rIndex,
-                                          'promotion',
-                                          'value',
-                                          val,
-                                        );
-                                      }}
-                                    />
+                                    <div className="w-[90px] shrink-0 relative">
+                                      <MoneyInput
+                                        value={
+                                          room.promotion.type === 'percent'
+                                            ? room.promotion.value
+                                            : ''
+                                        }
+                                        placeholder="0"
+                                        className="w-full pr-8"
+                                        onChange={(val) => {
+                                          updateRoomAdjustment(
+                                            index,
+                                            rIndex,
+                                            'promotion',
+                                            'type',
+                                            'percent',
+                                          );
+                                          updateRoomAdjustment(
+                                            index,
+                                            rIndex,
+                                            'promotion',
+                                            'value',
+                                            val,
+                                          );
+                                        }}
+                                      />
+
+                                      <span className="absolute right-2 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                                        %
+                                      </span>
+                                    </div>
 
                                     {/* VALUE */}
-                                    <MoneyInput
-                                      value={
-                                        room.promotion.type === 'value'
-                                          ? room.promotion.value
-                                          : ''
-                                      }
-                                      placeholder="Value"
-                                      onChange={(val) => {
-                                        updateRoomAdjustment(
-                                          index,
-                                          rIndex,
-                                          'promotion',
-                                          'type',
-                                          'value',
-                                        );
-                                        updateRoomAdjustment(
-                                          index,
-                                          rIndex,
-                                          'promotion',
-                                          'value',
-                                          val,
-                                        );
-                                      }}
-                                    />
+                                    <div className="flex-1 min-w-0">
+                                      <MoneyInput
+                                        className="w-full"
+                                        value={
+                                          room.promotion.type === 'value'
+                                            ? room.promotion.value
+                                            : ''
+                                        }
+                                        placeholder="Value"
+                                        onChange={(val) => {
+                                          updateRoomAdjustment(
+                                            index,
+                                            rIndex,
+                                            'promotion',
+                                            'type',
+                                            'value',
+                                          );
+                                          updateRoomAdjustment(
+                                            index,
+                                            rIndex,
+                                            'promotion',
+                                            'value',
+                                            val,
+                                          );
+                                        }}
+                                      />
+                                    </div>
                                   </div>
 
                                   {/* COMMISSION */}
                                   <div className="grid grid-cols-2 gap-2">
                                     {/* PERCENT */}
-                                    <MoneyInput
-                                      value={
-                                        room.commission.type === 'percent'
-                                          ? room.commission.value
-                                          : ''
-                                      }
-                                      placeholder="%"
-                                      onChange={(val) => {
-                                        updateRoomAdjustment(
-                                          index,
-                                          rIndex,
-                                          'commission',
-                                          'type',
-                                          'percent',
-                                        );
-                                        updateRoomAdjustment(
-                                          index,
-                                          rIndex,
-                                          'commission',
-                                          'value',
-                                          val,
-                                        );
-                                      }}
-                                    />
+                                    <div className="relative">
+                                      <MoneyInput
+                                        value={
+                                          room.commission.type === 'percent'
+                                            ? room.commission.value
+                                            : ''
+                                        }
+                                        placeholder="0"
+                                        className="pr-8"
+                                        onChange={(val) => {
+                                          updateRoomAdjustment(
+                                            index,
+                                            rIndex,
+                                            'commission',
+                                            'type',
+                                            'percent',
+                                          );
+                                          updateRoomAdjustment(
+                                            index,
+                                            rIndex,
+                                            'commission',
+                                            'value',
+                                            val,
+                                          );
+                                        }}
+                                      />
+
+                                      <span className="absolute right-2 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                                        %
+                                      </span>
+                                    </div>
 
                                     {/* VALUE */}
                                     <MoneyInput
@@ -1466,19 +1512,29 @@ export default function Page({ tour }: Props) {
                       className="border rounded-lg p-3 space-y-3"
                     >
                       {/* HEADER */}
-                      <div className="flex justify-between items-center">
+                      <div className="flex justify-between items-start">
                         <p className="font-medium text-sm">
                           Schedule #{index + 1}
                         </p>
 
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => removeSchedule(index)}
-                        >
-                          Delete
-                        </Button>
+                        <div className="flex flex-col items-end gap-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => removeSchedule(index)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+
+                          <Button
+                            type="submit"
+                            size="icon"
+                            disabled={processing || schedules.length === 0}
+                          >
+                            <Save className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
 
                       {/* DATES */}
@@ -1507,6 +1563,9 @@ export default function Page({ tour }: Props) {
                           <Input
                             type="date"
                             value={item.return_date}
+                            min={item.departure_date}
+                            readOnly
+                            className="bg-muted cursor-not-allowed"
                             onChange={(e) =>
                               updateSchedule(
                                 index,
@@ -1538,7 +1597,7 @@ export default function Page({ tour }: Props) {
                                 className="text-red-500"
                                 onClick={() => removeRoom(index, rIndex)}
                               >
-                                Delete Room
+                                x Delete Category
                               </Button>
                             </div>
 
@@ -1592,30 +1651,37 @@ export default function Page({ tour }: Props) {
 
                               <div className="grid grid-cols-2 gap-2">
                                 {/* % */}
-                                <MoneyInput
-                                  value={
-                                    room.promotion.type === 'percent'
-                                      ? room.promotion.value
-                                      : ''
-                                  }
-                                  placeholder="%"
-                                  onChange={(val) => {
-                                    updateRoomAdjustment(
-                                      index,
-                                      rIndex,
-                                      'promotion',
-                                      'type',
-                                      'percent',
-                                    );
-                                    updateRoomAdjustment(
-                                      index,
-                                      rIndex,
-                                      'promotion',
-                                      'value',
-                                      val,
-                                    );
-                                  }}
-                                />
+                                <div className="relative">
+                                  <MoneyInput
+                                    value={
+                                      room.promotion.type === 'percent'
+                                        ? room.promotion.value
+                                        : ''
+                                    }
+                                    placeholder="0"
+                                    className="pr-8"
+                                    onChange={(val) => {
+                                      updateRoomAdjustment(
+                                        index,
+                                        rIndex,
+                                        'promotion',
+                                        'type',
+                                        'percent',
+                                      );
+                                      updateRoomAdjustment(
+                                        index,
+                                        rIndex,
+                                        'promotion',
+                                        'value',
+                                        val,
+                                      );
+                                    }}
+                                  />
+
+                                  <span className="absolute right-2 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                                    %
+                                  </span>
+                                </div>
 
                                 {/* VALUE */}
                                 <MoneyInput
@@ -1653,30 +1719,37 @@ export default function Page({ tour }: Props) {
 
                               <div className="grid grid-cols-2 gap-2">
                                 {/* % */}
-                                <MoneyInput
-                                  value={
-                                    room.commission.type === 'percent'
-                                      ? room.commission.value
-                                      : ''
-                                  }
-                                  placeholder="%"
-                                  onChange={(val) => {
-                                    updateRoomAdjustment(
-                                      index,
-                                      rIndex,
-                                      'commission',
-                                      'type',
-                                      'percent',
-                                    );
-                                    updateRoomAdjustment(
-                                      index,
-                                      rIndex,
-                                      'commission',
-                                      'value',
-                                      val,
-                                    );
-                                  }}
-                                />
+                                <div className="relative">
+                                  <MoneyInput
+                                    value={
+                                      room.commission.type === 'percent'
+                                        ? room.commission.value
+                                        : ''
+                                    }
+                                    placeholder="0"
+                                    className="pr-8"
+                                    onChange={(val) => {
+                                      updateRoomAdjustment(
+                                        index,
+                                        rIndex,
+                                        'commission',
+                                        'type',
+                                        'percent',
+                                      );
+                                      updateRoomAdjustment(
+                                        index,
+                                        rIndex,
+                                        'commission',
+                                        'value',
+                                        val,
+                                      );
+                                    }}
+                                  />
+
+                                  <span className="absolute right-2 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                                    %
+                                  </span>
+                                </div>
 
                                 {/* VALUE */}
                                 <MoneyInput
@@ -1716,7 +1789,7 @@ export default function Page({ tour }: Props) {
                           onClick={() => addRoom(index)}
                           className="w-full"
                         >
-                          + Add Room
+                          + Add Category
                         </Button>
                       </div>
                     </div>
@@ -1746,8 +1819,8 @@ export default function Page({ tour }: Props) {
                   </h3>
                 </div>
 
-                <div className="rounded-lg border overflow-hidden">
-                  <table className="w-full text-sm">
+                <div className="hidden md:block rounded-lg border overflow-x-auto">
+                  <table className="w-full text-sm min-w-[1000px]">
                     <thead className="bg-muted">
                       <tr>
                         <th className="p-3 text-left">Departure → Return</th>
@@ -1944,6 +2017,92 @@ export default function Page({ tour }: Props) {
                     </tbody>
                   </table>
                 </div>
+                {/* MOBILE */}
+                <div className="md:hidden space-y-4">
+                  {availability.map((row, i) => (
+                    <div
+                      key={row.id}
+                      className="border rounded-xl p-4 space-y-3 shadow-sm"
+                    >
+                      {/* Header */}
+                      <div className="flex justify-between items-start">
+                        <div className="font-semibold text-sm">
+                          {row.schedule}
+                        </div>
+
+                        <div
+                          className={`text-sm font-semibold ${
+                            row.available <= 0
+                              ? 'text-red-500'
+                              : 'text-green-600'
+                          }`}
+                        >
+                          {row.available} pax
+                        </div>
+                      </div>
+
+                      {/* Input grid */}
+                      <div className="grid grid-cols-2 gap-2 text-sm">
+                        {[
+                          { key: 'max_pax', label: 'Max' },
+                          { key: 'WP', label: 'WP' },
+                          { key: 'DP', label: 'DP' },
+                          { key: 'FP', label: 'FP' },
+                          { key: 'RS', label: 'RS' },
+                          { key: 'CA', label: 'CA' },
+                          { key: 'RF', label: 'RF' },
+                          { key: 'EX', label: 'EX' },
+                          { key: 'WL', label: 'WL' },
+                        ].map((field) => (
+                          <>
+                            <div className="text-muted-foreground">
+                              {field.label}
+                            </div>
+
+                            <MoneyInput
+                              className="text-right"
+                              value={row[field.key]}
+                              onChange={(val) =>
+                                updateAvailability(i, field.key, Number(val))
+                              }
+                            />
+                          </>
+                        ))}
+                      </div>
+
+                      {/* Action */}
+                      <Button
+                        className="w-full"
+                        type="button"
+                        disabled={savingAvailability}
+                        onClick={async () => {
+                          setSavingAvailability(true);
+
+                          try {
+                            const payload = buildAvailabilityPayload();
+
+                            router.post(
+                              `/companies/${company.username}/dashboard/tour-availabilities`,
+                              { availabilities: payload },
+                              {
+                                onSuccess: () =>
+                                  toast.success('Availability saved'),
+                                onError: () =>
+                                  toast.error('Failed to save availability'),
+                                onFinish: () => setSavingAvailability(false),
+                              },
+                            );
+                          } catch {
+                            setSavingAvailability(false);
+                          }
+                        }}
+                      >
+                        {savingAvailability && <Spinner />}
+                        Save
+                      </Button>
+                    </div>
+                  ))}
+                </div>
               </div>
 
               <div className="flex justify-start pt-6 border-t"></div>
@@ -1998,8 +2157,8 @@ export default function Page({ tour }: Props) {
                                       className="p-3 font-medium align-top"
                                       rowSpan={rowCount + 1}
                                     >
-                                      {schedule.departure_date} →{' '}
-                                      {schedule.return_date}
+                                      {formatDate(schedule.departure_date)} →{' '}
+                                      {formatDate(schedule.return_date)}
                                     </td>
                                   )}
 
@@ -2053,7 +2212,7 @@ export default function Page({ tour }: Props) {
                                   </td>
 
                                   {/* DELETE and SAVE */}
-                                  <td className="p-3 text-center">
+                                  <td className="p-3 text-left">
                                     <div className="flex items-center justify-center gap-2">
                                       <Button
                                         type="button"
