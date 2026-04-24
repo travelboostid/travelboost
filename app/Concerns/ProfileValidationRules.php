@@ -49,7 +49,6 @@ trait ProfileValidationRules
         'string',
         new Enum(UserGender::class),
       ],
-
       'address' => [
         'nullable',
         'string',
@@ -58,7 +57,8 @@ trait ProfileValidationRules
       'photo_id' => [
         'nullable',
         'int'
-      ]
+      ],
+      'referral_code' => ['nullable', 'string', 'exists:affiliate_profiles,referral_code'],
     ];
   }
 }

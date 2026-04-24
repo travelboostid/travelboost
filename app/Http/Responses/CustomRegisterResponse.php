@@ -15,6 +15,7 @@ class CustomRegisterResponse implements RegisterResponse
       'register-as-agent' => $this->processRegisterAsAgent($user, $request),
       'register-as-vendor' => $this->processRegisterAsVendor($user, $request),
       'register-as-customer' => $this->processRegisterAsCustomer($user, $request),
+      'register-as-team' => $this->processRegisterAsTeam($user, $request),
       default => $this->processRegisterDefault($user, $request),
     };
   }
@@ -32,6 +33,12 @@ class CustomRegisterResponse implements RegisterResponse
   private function processRegisterAsCustomer(User $user, Request $request)
   {
     return redirect()->route('me.index');
+  }
+
+  private function processRegisterAsTeam(User $user, Request $request)
+  {
+    $company = $user->companies()->first();
+    return redirect()->route('company.index', ['company' => $company->username]);
   }
 
   private function processRegisterDefault(User $user, Request $request)

@@ -6,6 +6,7 @@ use App\Http\Controllers\AgentAuthController;
 use App\Http\Controllers\AuthController as BaseAuthController;
 use App\Http\Controllers\CustomerAuthController;
 use App\Http\Controllers\HomeController as BaseHomeController;
+use App\Http\Controllers\TeamInvitationAuthController;
 use App\Http\Controllers\Tenant\HomeController as TenantHomeController;
 use App\Http\Controllers\VendorAuthController;
 use App\Http\Controllers\Webhooks\MidtransWebhookController;
@@ -53,6 +54,7 @@ Route::middleware(['guest'])->group(function () {
   Route::get('/customer/login', [CustomerAuthController::class, 'showLogin'])->name('customer.login');
   Route::get('/customer/register', [CustomerAuthController::class, 'showRegister'])->name('customer.register');
   Route::get('/admin/login', [AdminAuthController::class, 'showLogin'])->name('admin.login');
+  Route::get('/team-invitation/accept', [TeamInvitationAuthController::class, 'showAccept'])->name('team-invitation.accept');
 });
 
 // route default

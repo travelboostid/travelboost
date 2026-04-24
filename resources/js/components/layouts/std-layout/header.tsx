@@ -9,6 +9,7 @@ import { Link } from '@inertiajs/react';
 import { MenuIcon, MoonIcon, SunIcon, XIcon } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { useState } from 'react';
+import { FormattedMessage } from 'react-intl';
 import { NavUser } from './nav-user';
 
 export function Header() {
@@ -21,6 +22,31 @@ export function Header() {
   };
   const { VITE_APP_HOST, VITE_APP_PORT, VITE_APP_SCHEME } = import.meta.env;
   const affiliateBaseUrl = `${VITE_APP_SCHEME}://affiliate.${VITE_APP_HOST}${VITE_APP_PORT ? `:${VITE_APP_PORT}` : ''}`;
+
+  const MENUS = [
+    {
+      name: <FormattedMessage defaultMessage="Features" id="features" />,
+      href: '#features',
+    },
+    {
+      name: <FormattedMessage defaultMessage="Benefits" id="benefits" />,
+      href: '#benefits',
+    },
+    {
+      name: (
+        <FormattedMessage defaultMessage="Testimonials" id="testimonials" />
+      ),
+      href: '#testimonials',
+    },
+    {
+      name: <FormattedMessage defaultMessage="Contact" id="contact" />,
+      href: '#contact',
+    },
+    {
+      name: <FormattedMessage defaultMessage="Affiliate" id="affiliate" />,
+      href: affiliateBaseUrl,
+    },
+  ];
 
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-sm">
@@ -36,36 +62,15 @@ export function Header() {
 
           {/* DESKTOP MENU */}
           <nav className="hidden md:flex items-center gap-8 flex-1 justify-center">
-            <a
-              href="#features"
-              className="text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Fitur
-            </a>
-            <a
-              href="#benefits"
-              className="text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Keunggulan
-            </a>
-            <a
-              href="#testimonials"
-              className="text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Testimoni
-            </a>
-            <a
-              href="#contact"
-              className="text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Kontak
-            </a>
-            <a
-              href={affiliateBaseUrl}
-              className="text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Afiliate
-            </a>
+            {MENUS.map((menu) => (
+              <a
+                key={menu.href}
+                href={menu.href}
+                className="text-muted-foreground hover:text-foreground transition-colors"
+              >
+                {menu.name}
+              </a>
+            ))}
             <Button
               variant="ghost"
               size="icon"
@@ -87,10 +92,14 @@ export function Header() {
             ) : (
               <>
                 <Button asChild variant="ghost">
-                  <Link href={loginAsAgent()}>Masuk</Link>
+                  <Link href={loginAsAgent()}>
+                    <FormattedMessage defaultMessage="Login" />
+                  </Link>
                 </Button>
                 <Button asChild>
-                  <Link href={registerAsAgent()}>Daftar Gratis</Link>
+                  <Link href={registerAsAgent()}>
+                    <FormattedMessage defaultMessage="Free Registration" />
+                  </Link>
                 </Button>
               </>
             )}
@@ -133,44 +142,27 @@ export function Header() {
                 ) : (
                   <>
                     <Button asChild variant="ghost" className="w-full">
-                      <Link href={loginAsAgent()}>Masuk</Link>
+                      <Link href={loginAsAgent()}>
+                        <FormattedMessage defaultMessage="Login" />
+                      </Link>
                     </Button>
                     <Button asChild className="w-full">
-                      <Link href={registerAsAgent()}>Daftar Gratis</Link>
+                      <Link href={registerAsAgent()}>
+                        <FormattedMessage defaultMessage="Free Registration" />
+                      </Link>
                     </Button>
                   </>
                 )}
               </div>
-              <a
-                href="#features"
-                className="text-muted-foreground hover:text-foreground"
-              >
-                Fitur
-              </a>
-              <a
-                href="#benefits"
-                className="text-muted-foreground hover:text-foreground"
-              >
-                Keunggulan
-              </a>
-              <a
-                href="#testimonials"
-                className="text-muted-foreground hover:text-foreground"
-              >
-                Testimoni
-              </a>
-              <a
-                href="#contact"
-                className="text-muted-foreground hover:text-foreground"
-              >
-                Kontak
-              </a>
-              <a
-                href={affiliateBaseUrl}
-                className="text-muted-foreground hover:text-foreground"
-              >
-                Afiliate
-              </a>
+              {MENUS.map((menu) => (
+                <a
+                  key={menu.href}
+                  href={menu.href}
+                  className="text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {menu.name}
+                </a>
+              ))}
             </nav>
           </div>
         )}
