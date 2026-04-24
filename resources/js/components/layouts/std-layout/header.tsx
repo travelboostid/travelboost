@@ -1,6 +1,10 @@
 import AppLogoIcon from '@/components/app-logo-icon';
 import { Button } from '@/components/ui/button';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
+import {
+  login as loginAsAgent,
+  register as registerAsAgent,
+} from '@/routes/agent';
 import { Link } from '@inertiajs/react';
 import { MenuIcon, MoonIcon, SunIcon, XIcon } from 'lucide-react';
 import { useTheme } from 'next-themes';
@@ -15,13 +19,15 @@ export function Header() {
   const toggleTheme = () => {
     setTheme(resolvedTheme === 'light' ? 'dark' : 'light');
   };
+  const { VITE_APP_HOST, VITE_APP_PORT, VITE_APP_SCHEME } = import.meta.env;
+  const affiliateBaseUrl = `${VITE_APP_SCHEME}://affiliate.${VITE_APP_HOST}${VITE_APP_PORT ? `:${VITE_APP_PORT}` : ''}`;
 
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-sm">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
+      <div className="max-w-7xl mx-auto">
+        <div className="flex items-center justify-between h-16 w-full px-4 sm:px-6 lg:px-8">
           {/* LOGO */}
-          <Link href="/" className="flex items-center gap-2">
+          <Link href="/" className="flex items-center gap-2 flex-none">
             <AppLogoIcon className="w-9 h-9 text-primary-foreground" />
             <span className="text-xl font-bold text-foreground">
               TravelBoost
@@ -29,7 +35,7 @@ export function Header() {
           </Link>
 
           {/* DESKTOP MENU */}
-          <nav className="hidden md:flex items-center gap-8">
+          <nav className="hidden md:flex items-center gap-8 flex-1 justify-center">
             <a
               href="#features"
               className="text-muted-foreground hover:text-foreground transition-colors"
@@ -54,6 +60,12 @@ export function Header() {
             >
               Kontak
             </a>
+            <a
+              href={affiliateBaseUrl}
+              className="text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Afiliate
+            </a>
             <Button
               variant="ghost"
               size="icon"
@@ -69,16 +81,16 @@ export function Header() {
 
           {/* DESKTOP BUTTON */}
 
-          <div className="hidden md:flex items-center gap-4">
+          <div className="hidden md:flex items-center gap-4 flex-none">
             {auth?.user ? (
               <NavUser />
             ) : (
               <>
                 <Button asChild variant="ghost">
-                  <Link href="/login">Masuk</Link>
+                  <Link href={loginAsAgent()}>Masuk</Link>
                 </Button>
                 <Button asChild>
-                  <Link href="/register">Daftar Gratis</Link>
+                  <Link href={registerAsAgent()}>Daftar Gratis</Link>
                 </Button>
               </>
             )}
@@ -113,8 +125,22 @@ export function Header() {
 
         {/* MOBILE MENU */}
         {isMenuOpen && (
-          <div className="md:hidden py-4 border-t border-border">
+          <div className="md:hidden px-4 sm:px-6 lg:px-8 py-4 border-t border-border">
             <nav className="flex flex-col gap-4">
+              <div className="flex flex-col gap-2 pt-4">
+                {auth?.user ? (
+                  <NavUser />
+                ) : (
+                  <>
+                    <Button asChild variant="ghost" className="w-full">
+                      <Link href={loginAsAgent()}>Masuk</Link>
+                    </Button>
+                    <Button asChild className="w-full">
+                      <Link href={registerAsAgent()}>Daftar Gratis</Link>
+                    </Button>
+                  </>
+                )}
+              </div>
               <a
                 href="#features"
                 className="text-muted-foreground hover:text-foreground"
@@ -139,21 +165,12 @@ export function Header() {
               >
                 Kontak
               </a>
-
-              <div className="flex flex-col gap-2 pt-4">
-                {auth?.user ? (
-                  <NavUser />
-                ) : (
-                  <>
-                    <Button asChild variant="ghost" className="w-full">
-                      <Link href="/login">Masuk</Link>
-                    </Button>
-                    <Button asChild className="w-full">
-                      <Link href="/register">Daftar Gratis</Link>
-                    </Button>
-                  </>
-                )}
-              </div>
+              <a
+                href={affiliateBaseUrl}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                Afiliate
+              </a>
             </nav>
           </div>
         )}

@@ -2,24 +2,40 @@
 
 namespace App\Http\Responses;
 
+use App\Models\User;
+use Illuminate\Http\Request;
 use Laravel\Fortify\Contracts\RegisterResponse;
 
 class CustomRegisterResponse implements RegisterResponse
 {
-    public function toResponse($request)
-    {
-        $tenant = $request->attributes->get('tenant');
+  public function toResponse($request)
+  {
+    $user = $request->user();
+    return match ($request->input('intent')) {
+      'register-as-agent' => $this->processRegisterAsAgent($user, $request),
+      'register-as-vendor' => $this->processRegisterAsVendor($user, $request),
+      'register-as-customer' => $this->processRegisterAsCustomer($user, $request),
+      default => $this->processRegisterDefault($user, $request),
+    };
+  }
 
-        if ($tenant != null) {
-            return redirect('/');
-        }
-        $company = $request->user()->companies()->first();
-        if ($company != null) {
-            return redirect()->route('company.index', [
-                'company' => $company->username,
-            ]);
-        }
+  private function processRegisterAsAgent(User $user, Request $request)
+  {
+    return redirect()->route('me.index');
+  }
 
-        return redirect()->route('me.index');
-    }
+  private function processRegisterAsVendor(User $user, Request $request)
+  {
+    return redirect()->route('me.index');
+  }
+
+  private function processRegisterAsCustomer(User $user, Request $request)
+  {
+    return redirect()->route('me.index');
+  }
+
+  private function processRegisterDefault(User $user, Request $request)
+  {
+    return redirect()->route('me.index');
+  }
 }

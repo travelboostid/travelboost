@@ -40,6 +40,11 @@ class Company extends Model
     'photo'
   ];
 
+  protected $casts = [
+    'meta' => 'array',
+    'type' => CompanyType::class,
+  ];
+
   protected $appends = ['photo_url'];
 
   protected static function booted()
