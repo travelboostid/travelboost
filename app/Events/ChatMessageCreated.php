@@ -43,7 +43,7 @@ class ChatMessageCreated implements ShouldBroadcast
     foreach ($this->message->room->members as $member) {
       if ($member->member_type === 'user') {
         $channels[] = new PrivateChannel("users.{$member->member_id}");
-      } else if ($member->member_type === 'anonymous_user') {
+      } else if ($member->member_type === 'anonymous-user') {
         $channels[] = new PrivateChannel("anonymous-users.{$member->member_id}");
       } else if ($member->member_type === 'company') {
         /** @var \App\Models\Company $company */
