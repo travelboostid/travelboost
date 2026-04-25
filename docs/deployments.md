@@ -68,7 +68,7 @@ php artisan optimize:clear
 To simplify the process, a helper script has been added:
 
 ```sh
-pnpm deploy:dev
+pnpm dev:deploy
 ```
 
 This command handles the deployment steps automatically, so you don’t need to run them manually.
