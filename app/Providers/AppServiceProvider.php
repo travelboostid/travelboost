@@ -4,9 +4,10 @@ namespace App\Providers;
 
 use App\Models\AgentSubscriptionPayment;
 use App\Models\WalletTopupPayment;
-use App\Services\ChatbotService;
 use Carbon\CarbonImmutable;
+use Illuminate\Auth\Middleware\Authenticate;
 use Illuminate\Database\Eloquent\Relations\Relation;
+use Illuminate\Support\Facades\Context;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\ServiceProvider;
@@ -37,7 +38,26 @@ class AppServiceProvider extends ServiceProvider
       'company' => \App\Models\Company::class,
       'user' => \App\Models\User::class,
       'anonymous-user' => \App\Models\AnonymousUser::class,
+      'affiliator' => \App\Models\AffiliateProfile::class,
     ]);
+    Authenticate::redirectUsing(function ($request) {
+      if ($request->expectsJson()) {
+        return null; // → 401 (important for API/Inertia)
+      }
+
+      $redirectPath = '/'; // Default redirect path
+      $domain = Context::get('domain');
+      if ($domain == null) {
+        $redirectPath = route('agent.login');
+      } else if ($domain->owner instanceof \App\Models\Company) {
+        $redirectPath = route('customer.login');
+      } else if ($domain->owner instanceof \App\Models\AffiliateProfile) {
+        $redirectPath = '/affiliate/login';
+      } else {
+        $redirectPath = '/'; // Fallback to general login if domain owner type is unrecognized
+      }
+      return $redirectPath;
+    });
 
     $this->configureDefaults();
   }

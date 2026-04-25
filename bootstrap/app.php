@@ -8,6 +8,7 @@ use App\Http\Middleware\EnsureHasAdminAccess;
 use App\Http\Middleware\EnsureHasCompanyAccess;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
+use Illuminate\Auth\Middleware\Authenticate;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -39,6 +40,10 @@ return Application::configure(basePath: dirname(__DIR__))
       HandleAppearance::class,
       HandleInertiaRequests::class,
       AddLinkHeadersForPreloadedAssets::class,
+    ]);
+    $middleware->priority([
+      DomainResolver::class,
+      Authenticate::class,
     ]);
   })
   ->withSchedule(function (Schedule $schedule) {
