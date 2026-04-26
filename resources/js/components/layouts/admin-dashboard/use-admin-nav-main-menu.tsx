@@ -3,6 +3,7 @@ import {
   DatabaseIcon,
   HomeIcon,
   PlaneIcon,
+  Settings2Icon,
   SettingsIcon,
   WalletIcon,
 } from 'lucide-react';
@@ -141,6 +142,12 @@ export default function useAdminNavMainMenu() {
               urlOrAction: '/admin/vouchers',
             },
           ],
+        },
+        {
+          id: 'configurations',
+          title: 'App Configurations',
+          urlOrAction: '/admin/app-configs',
+          icon: Settings2Icon,
         },
       ] as MenuItem[],
     [],
