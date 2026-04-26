@@ -21,6 +21,12 @@ return new class extends Migration
    */
   public function up(): void
   {
+    Schema::create('app_configs', function (Blueprint $table) {
+      $table->id();
+      $table->string('key')->unique();
+      $table->jsonb('value')->nullable();
+      $table->timestamps();
+    });
     // BEGIN Laravolt Indonesia tables
     Schema::connection(config('indonesia.database.connection') ?? config('database.default'))->create(config('laravolt.indonesia.table_prefix') . 'provinces', function (Blueprint $table) {
       $table->bigIncrements('id');
@@ -856,5 +862,6 @@ return new class extends Migration
     Schema::drop(config('laravolt.indonesia.table_prefix') . 'districts');
     Schema::drop(config('laravolt.indonesia.table_prefix') . 'cities');
     Schema::drop(config('laravolt.indonesia.table_prefix') . 'provinces');
+    Schema::dropIfExists('app_configs');
   }
 };
