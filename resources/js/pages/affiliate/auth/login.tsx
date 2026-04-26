@@ -18,22 +18,34 @@ export default function Login() {
   const [modalMessage, setModalMessage] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
-  const { data, setData, post, processing, errors, reset } = useForm({
-    login: '',
-    password: '',
-    remember: false,
-  });
+  const { data, setData, post, processing, errors, reset, clearErrors } =
+    useForm({
+      login: '',
+      password: '',
+      remember: false,
+    });
 
   useEffect(() => {
     if (flash?.account_inactive) {
       setModalMessage(flash.account_inactive);
       setShowModal(true);
     }
-  }, [flash]);
+
+    if ((errors as any)?.access_denied) {
+      setModalMessage((errors as any).access_denied);
+      setShowModal(true);
+    } else if (flash?.not_affiliate) {
+      setModalMessage(flash.not_affiliate);
+      setShowModal(true);
+    }
+  }, [flash, errors]);
 
   const handleCloseModal = () => {
     setShowModal(false);
-    window.location.href = '/';
+    clearErrors('access_denied' as any);
+    if (modalMessage === flash?.account_inactive) {
+      window.location.href = '/';
+    }
   };
 
   const submit = (e: React.FormEvent) => {
@@ -51,9 +63,8 @@ export default function Login() {
           defaultMessage: 'Log in to your account',
         })}
         description={intl.formatMessage({
-          id: 'auth.login_desc',
-          defaultMessage:
-            'Enter your email or username and password to access your dashboard',
+          id: 'auth.login_description',
+          defaultMessage: 'Welcome back! Please enter your details.',
         })}
       >
         <Head title="Log in" />
@@ -70,32 +81,44 @@ export default function Login() {
               <Input
                 id="login"
                 type="text"
+                required
+                autoFocus
+                autoComplete="username"
                 name="login"
                 value={data.login}
-                autoFocus
-                required
                 onChange={(e) => setData('login', e.target.value)}
-                placeholder="email@example.com or username"
+                placeholder="name@example.com / username"
               />
               <InputError message={errors.login} />
             </div>
-
             <div className="grid gap-2">
-              <Label htmlFor="password">
-                {intl.formatMessage({
-                  id: 'auth.password',
-                  defaultMessage: 'Password',
-                })}
-              </Label>
+              <div className="flex items-center">
+                <Label htmlFor="password">
+                  {intl.formatMessage({
+                    id: 'auth.password',
+                    defaultMessage: 'Password',
+                  })}
+                </Label>
+                <TextLink
+                  href="/forgot-password"
+                  className="ml-auto text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                  tabIndex={5}
+                >
+                  {intl.formatMessage({
+                    id: 'auth.forgot_password',
+                    defaultMessage: 'Forgot password?',
+                  })}
+                </TextLink>
+              </div>
               <div className="relative">
                 <Input
                   id="password"
                   type={showPassword ? 'text' : 'password'}
-                  name="password"
                   required
+                  autoComplete="current-password"
+                  name="password"
                   value={data.password}
                   onChange={(e) => setData('password', e.target.value)}
-                  placeholder="Password"
                 />
                 <button
                   type="button"
@@ -107,19 +130,17 @@ export default function Login() {
               </div>
               <InputError message={errors.password} />
             </div>
-
             <Button type="submit" className="w-full" disabled={processing}>
-              {processing && <Spinner />}
+              {processing && <Spinner className="mr-2" />}
               {intl.formatMessage({
-                id: 'auth.btn_login',
-                defaultMessage: 'Log in',
+                id: 'auth.sign_in',
+                defaultMessage: 'Sign in',
               })}
             </Button>
           </div>
-
           <div className="text-center text-sm text-muted-foreground">
             {intl.formatMessage({
-              id: 'auth.no_account',
+              id: 'auth.dont_have_account',
               defaultMessage: "Don't have an account?",
             })}{' '}
             <TextLink href="/affiliate/register">
@@ -132,11 +153,9 @@ export default function Login() {
         </form>
       </AuthLayout>
 
-      {/* komponen modal popup */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
           <div className="bg-background p-6 rounded-lg shadow-xl max-w-sm w-full text-center border border-border">
-            {/* icon warning */}
             <div className="mb-4">
               <svg
                 className="mx-auto h-12 w-12 text-destructive"
@@ -152,10 +171,12 @@ export default function Login() {
                 />
               </svg>
             </div>
-            <h3 className="text-lg font-semibold mb-2">Account Deactivated</h3>
-            <p className="text-sm text-muted-foreground mb-6">{modalMessage}</p>
+            <h3 className="text-lg font-bold text-foreground mb-2">
+              Access Denied
+            </h3>
+            <p className="text-muted-foreground text-sm mb-6">{modalMessage}</p>
             <Button onClick={handleCloseModal} className="w-full">
-              OK
+              Understood
             </Button>
           </div>
         </div>

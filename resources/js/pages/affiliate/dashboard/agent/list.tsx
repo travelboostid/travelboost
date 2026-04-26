@@ -1,5 +1,7 @@
+// list.tsx
 import AffiliateDashboardLayout from '@/components/layouts/affiliate-dashboard';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -76,9 +78,8 @@ export default function AgentList({ agents, userTier }: any) {
   );
 
   const handleSort = (key: string) => {
-    if (sortKey === key) {
-      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-    } else {
+    if (sortKey === key) setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    else {
       setSortKey(key);
       setSortOrder('asc');
     }
@@ -98,11 +99,13 @@ export default function AgentList({ agents, userTier }: any) {
     >
       <Head title="Agent List" />
       <div className="space-y-6">
-        <h1 className="text-2xl font-bold">Agent</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-foreground">
+          Agent
+        </h1>
 
         <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
           <div className="relative w-full sm:w-80">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-500" />
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               type="text"
               placeholder="Search agent, email, MA, or affiliator..."
@@ -113,19 +116,19 @@ export default function AgentList({ agents, userTier }: any) {
           </div>
         </div>
 
-        <Card>
-          <CardHeader className="bg-slate-50/50 border-b">
+        <Card className="border-border">
+          <CardHeader className="bg-muted/50 border-b border-border">
             <CardTitle className="text-base flex items-center gap-2">
-              <Building2 className="size-4 text-blue-600" /> Agent Directory
+              <Building2 className="size-4 text-primary" /> Agent Directory
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
-                  <TableRow>
+                  <TableRow className="hover:bg-muted/50">
                     <TableHead
-                      className="cursor-pointer hover:bg-slate-100"
+                      className="cursor-pointer hover:bg-muted"
                       onClick={() => handleSort('name')}
                     >
                       <div className="flex items-center gap-1">
@@ -139,7 +142,7 @@ export default function AgentList({ agents, userTier }: any) {
                       </div>
                     </TableHead>
                     <TableHead
-                      className="cursor-pointer hover:bg-slate-100"
+                      className="cursor-pointer hover:bg-muted"
                       onClick={() => handleSort('email')}
                     >
                       <div className="flex items-center gap-1">
@@ -153,7 +156,7 @@ export default function AgentList({ agents, userTier }: any) {
                       </div>
                     </TableHead>
                     <TableHead
-                      className="cursor-pointer hover:bg-slate-100"
+                      className="cursor-pointer hover:bg-muted"
                       onClick={() => handleSort('phone')}
                     >
                       <div className="flex items-center gap-1">
@@ -169,7 +172,7 @@ export default function AgentList({ agents, userTier }: any) {
 
                     {isPartner && (
                       <TableHead
-                        className="cursor-pointer hover:bg-slate-100"
+                        className="cursor-pointer hover:bg-muted"
                         onClick={() => handleSort('ma_name')}
                       >
                         <div className="flex items-center gap-1">
@@ -186,7 +189,7 @@ export default function AgentList({ agents, userTier }: any) {
 
                     {(isPartner || isMaster) && (
                       <TableHead
-                        className="cursor-pointer hover:bg-slate-100"
+                        className="cursor-pointer hover:bg-muted"
                         onClick={() => handleSort('affiliator_name')}
                       >
                         <div className="flex items-center gap-1">
@@ -202,7 +205,7 @@ export default function AgentList({ agents, userTier }: any) {
                     )}
 
                     <TableHead
-                      className="cursor-pointer hover:bg-slate-100"
+                      className="cursor-pointer hover:bg-muted"
                       onClick={() => handleSort('join_date')}
                     >
                       <div className="flex items-center gap-1">
@@ -223,7 +226,7 @@ export default function AgentList({ agents, userTier }: any) {
                     <TableRow>
                       <TableCell
                         colSpan={isPartner ? 7 : isMaster ? 6 : 5}
-                        className="h-24 text-center text-slate-500"
+                        className="h-24 text-center text-muted-foreground"
                       >
                         No agents found.
                       </TableCell>
@@ -231,7 +234,7 @@ export default function AgentList({ agents, userTier }: any) {
                   ) : (
                     paginatedData.map((item: any) => (
                       <TableRow key={item.id}>
-                        <TableCell className="font-semibold">
+                        <TableCell className="font-semibold text-foreground">
                           {item.name}
                         </TableCell>
                         <TableCell>{item.email}</TableCell>
@@ -247,7 +250,7 @@ export default function AgentList({ agents, userTier }: any) {
                             size="sm"
                             onClick={() => setSelectedAgent(item)}
                           >
-                            <Eye className="size-4 text-blue-600" />
+                            <Eye className="size-4 text-primary" />
                           </Button>
                         </TableCell>
                       </TableRow>
@@ -257,8 +260,8 @@ export default function AgentList({ agents, userTier }: any) {
               </Table>
             </div>
 
-            <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100">
-              <span className="text-sm text-slate-500">
+            <div className="flex items-center justify-between px-4 py-3 border-t border-border">
+              <span className="text-sm text-muted-foreground">
                 Showing {(currentPage - 1) * itemsPerPage + 1} to{' '}
                 {Math.min(currentPage * itemsPerPage, filteredData.length)} of{' '}
                 {filteredData.length} entries
@@ -301,7 +304,7 @@ export default function AgentList({ agents, userTier }: any) {
 
           {selectedAgent && (
             <div className="flex flex-col items-center justify-center space-y-4 pt-4 pb-2">
-              <Avatar className="h-20 w-20 border-4 border-slate-100 dark:border-slate-800">
+              <Avatar className="h-20 w-20 border-4 border-border">
                 {selectedAgent.photo_url && (
                   <AvatarImage
                     src={selectedAgent.photo_url}
@@ -309,99 +312,104 @@ export default function AgentList({ agents, userTier }: any) {
                     className="object-cover"
                   />
                 )}
-                <AvatarFallback className="bg-blue-100 text-blue-700 text-2xl font-bold">
+                <AvatarFallback className="bg-primary/20 text-primary text-2xl font-bold">
                   {selectedAgent.name.charAt(0)}
                 </AvatarFallback>
               </Avatar>
               <div className="text-center space-y-1">
-                <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+                <h3 className="text-lg font-bold text-foreground">
                   {selectedAgent.name}
                 </h3>
-                <span className="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded text-xs font-mono text-slate-600">
+                <Badge
+                  variant="outline"
+                  className="uppercase bg-muted text-muted-foreground tracking-wider text-[10px]"
+                >
                   Agent Partner
-                </span>
+                </Badge>
               </div>
 
-              <div className="w-full grid grid-cols-2 gap-4 mt-4 bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-100 dark:border-slate-800">
+              <div className="w-full grid grid-cols-2 gap-4 mt-4 bg-muted/50 p-4 rounded-xl border border-border">
                 <div className="flex flex-col col-span-2 md:col-span-1">
-                  <span className="text-xs text-slate-500 mb-1 flex items-center gap-1">
+                  <span className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
                     <Mail className="size-3" /> Email Address
                   </span>
-                  <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                  <span className="text-sm font-medium text-foreground">
                     {selectedAgent.email || '-'}
                   </span>
                 </div>
                 <div className="flex flex-col col-span-2 md:col-span-1">
-                  <span className="text-xs text-slate-500 mb-1 flex items-center gap-1">
+                  <span className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
                     <Phone className="size-3" /> Phone Number
                   </span>
-                  <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                  <span className="text-sm font-medium text-foreground">
                     {selectedAgent.phone || '-'}
                   </span>
                 </div>
                 <div className="flex flex-col col-span-2 md:col-span-1">
-                  <span className="text-xs text-slate-500 mb-1 flex items-center gap-1">
+                  <span className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
                     <HeadphonesIcon className="size-3" /> CS Phone
                   </span>
-                  <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                  <span className="text-sm font-medium text-foreground">
                     {selectedAgent.customer_service_phone || '-'}
                   </span>
                 </div>
                 <div className="flex flex-col col-span-2 md:col-span-1">
-                  <span className="text-xs text-slate-500 mb-1">Join Date</span>
-                  <span className="font-mono text-sm font-semibold text-blue-600 dark:text-blue-400">
+                  <span className="text-xs text-muted-foreground mb-1">
+                    Join Date
+                  </span>
+                  <span className="font-mono text-sm font-semibold text-primary">
                     {selectedAgent.join_date}
                   </span>
                 </div>
                 <div className="flex flex-col col-span-2">
-                  <span className="text-xs text-slate-500 mb-1 flex items-center gap-1">
+                  <span className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
                     <MapPin className="size-3" /> Address
                   </span>
-                  <span className="text-sm font-medium text-slate-700 dark:text-slate-300 leading-relaxed">
+                  <span className="text-sm font-medium text-foreground leading-relaxed">
                     {selectedAgent.address || '-'}
                   </span>
                 </div>
 
                 {(isPartner || isMaster) && (
-                  <div className="col-span-2 grid grid-cols-2 gap-4 border-t pt-4 mt-2">
+                  <div className="col-span-2 grid grid-cols-2 gap-4 border-t border-border pt-4 mt-2">
                     {isPartner && (
                       <div className="flex flex-col">
-                        <span className="text-xs text-slate-500 mb-1">
+                        <span className="text-xs text-muted-foreground mb-1">
                           Master Affiliate
                         </span>
-                        <span className="text-sm font-medium text-blue-700">
+                        <span className="text-sm font-medium text-primary">
                           {selectedAgent.ma_name}
                         </span>
                       </div>
                     )}
                     <div className="flex flex-col">
-                      <span className="text-xs text-slate-500 mb-1">
+                      <span className="text-xs text-muted-foreground mb-1">
                         Affiliator
                       </span>
-                      <span className="text-sm font-medium text-blue-700">
+                      <span className="text-sm font-medium text-primary">
                         {selectedAgent.affiliator_name}
                       </span>
                     </div>
                   </div>
                 )}
 
-                <div className="flex flex-col col-span-2 border-t pt-4 mt-2">
-                  <span className="text-xs text-slate-500 mb-1 flex items-center gap-1">
+                <div className="flex flex-col col-span-2 border-t border-border pt-4 mt-2">
+                  <span className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
                     <IdCard className="size-3" /> Identity Number (NIK)
                   </span>
-                  <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                  <span className="text-sm font-medium text-foreground">
                     {selectedAgent.identity_number || '-'}
                   </span>
                 </div>
                 <div className="flex flex-col col-span-2">
-                  <span className="text-xs text-slate-500 mb-2">
+                  <span className="text-xs text-muted-foreground mb-2">
                     ID Photo Document
                   </span>
                   {selectedAgent.identity_photo_path ? (
                     <img
                       src={`/storage/${selectedAgent.identity_photo_path}`}
                       alt="ID Document"
-                      className="w-full max-w-sm rounded-lg border border-slate-200 cursor-pointer hover:opacity-90 transition-opacity"
+                      className="w-full max-w-sm rounded-lg border border-border cursor-pointer hover:opacity-90 transition-opacity"
                       onClick={() =>
                         setPreviewImage(
                           `/storage/${selectedAgent.identity_photo_path}`,
@@ -409,7 +417,7 @@ export default function AgentList({ agents, userTier }: any) {
                       }
                     />
                   ) : (
-                    <span className="text-sm italic text-slate-400">
+                    <span className="text-sm italic text-muted-foreground">
                       No document uploaded
                     </span>
                   )}

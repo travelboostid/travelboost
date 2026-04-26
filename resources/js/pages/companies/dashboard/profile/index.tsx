@@ -7,13 +7,7 @@ import CompanyDashboardLayout from '@/components/layouts/company-dashboard';
 import { IdentityCardPicker } from '@/components/media/identity-card-picker';
 import { PhotoPicker } from '@/components/media/photo-picker';
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { FieldDescription } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import {
@@ -22,22 +16,22 @@ import {
   InputGroupInput,
 } from '@/components/ui/input-group';
 import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
 import { Spinner } from '@/components/ui/spinner';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { update } from '@/routes/company/settings/profile';
 import { Head, useForm } from '@inertiajs/react';
-import { Building, Save } from 'lucide-react';
+import { Building, CreditCard, MapPin, Save, ShieldCheck } from 'lucide-react';
 import React from 'react';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { toast } from 'sonner';
 
 export type ProfilePageProps = {
   profile: any;
+  account_status: string;
 };
 
-export default function Profile({ profile }: ProfilePageProps) {
+export default function Profile({ profile, account_status }: ProfilePageProps) {
   const intl = useIntl();
 
   const form = useForm({
@@ -51,10 +45,6 @@ export default function Profile({ profile }: ProfilePageProps) {
     city_id: profile.city_id || '',
     district_id: profile.district_id || '',
     village_id: profile.village_id || '',
-    province: profile.province || '',
-    city: profile.city || '',
-    district: profile.district || '',
-    village: profile.village || '',
     postal_code: profile.postal_code || '',
     subdomain: profile.domain?.subdomain || '',
     domain_enabled: profile.domain?.domain_enabled || false,
@@ -68,9 +58,7 @@ export default function Profile({ profile }: ProfilePageProps) {
     query: { queryKey: ['geo-provinces'] },
   });
   const { data: citiesData } = useGetGeoCities(
-    {
-      province_id: form.data.province_id,
-    },
+    { province_id: form.data.province_id },
     {
       query: {
         enabled: !!form.data.province_id,
@@ -79,9 +67,7 @@ export default function Profile({ profile }: ProfilePageProps) {
     },
   );
   const { data: districtsData } = useGetGeoDistricts(
-    {
-      city_id: form.data.city_id,
-    },
+    { city_id: form.data.city_id },
     {
       query: {
         enabled: !!form.data.city_id,
@@ -90,9 +76,7 @@ export default function Profile({ profile }: ProfilePageProps) {
     },
   );
   const { data: villagesData } = useGetGeoVillages(
-    {
-      district_id: form.data.district_id,
-    },
+    { district_id: form.data.district_id },
     {
       query: {
         enabled: !!form.data.district_id,
@@ -107,7 +91,6 @@ export default function Profile({ profile }: ProfilePageProps) {
   const villages = villagesData?.data || [];
 
   const handleSubmit = (e: React.FormEvent) => {
-    console.log('Submitting form with data:', form.data);
     e.preventDefault();
     form.put(update({ company: profile.username }).url, {
       preserveScroll: true,
@@ -121,6 +104,8 @@ export default function Profile({ profile }: ProfilePageProps) {
     });
   };
 
+  const isStatusActive = account_status === 'active';
+
   return (
     <CompanyDashboardLayout
       breadcrumb={[
@@ -129,129 +114,127 @@ export default function Profile({ profile }: ProfilePageProps) {
       ]}
       openMenuIds={['settings']}
       activeMenuIds={[`settings.profile`]}
-      containerClassName=""
     >
       <Head title={intl.formatMessage({ defaultMessage: 'Profile' })} />
 
-      <div className="max-w-4xl mx-auto space-y-6 pt-2 pb-10">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">
-            <FormattedMessage defaultMessage="Company Profile" />
-          </h1>
-          <p className="text-muted-foreground">
-            <FormattedMessage defaultMessage="Manage your agency information, branding, and verification details." />
-          </p>
+      <div className="max-w-5xl mx-auto space-y-6 pb-20">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">
+              <FormattedMessage defaultMessage="Profile Settings" />
+            </h1>
+            <p className="text-muted-foreground">
+              <FormattedMessage defaultMessage="Manage your agency identity and verification documents." />
+            </p>
+          </div>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          <Card className="border-slate-200 shadow-sm">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Building className="w-5 h-5" />{' '}
-                <FormattedMessage defaultMessage="Company Information" />
+          {/* Agency Identity Card */}
+          <Card className="shadow-sm border-border">
+            <CardHeader className="bg-muted/30 flex flex-row items-center justify-between py-4 border-b">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Building className="w-5 h-5 text-primary" />
+                <FormattedMessage defaultMessage="Agency Identity" />
               </CardTitle>
-              <CardDescription>
-                <FormattedMessage defaultMessage="Provide your core business details and branding." />
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-col md:flex-row gap-8 items-start">
-                <PhotoPicker
-                  owner={{ type: 'company', id: profile.id }}
-                  onChange={(media) =>
-                    form.setData('photo_id', (media as any)?.id)
-                  }
-                  defaultValue={profile.photo_url}
+              <div
+                className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${isStatusActive ? 'bg-primary/15 text-primary' : 'bg-destructive/15 text-destructive'}`}
+              >
+                <span
+                  className={`w-2 h-2 rounded-full ${isStatusActive ? 'bg-primary' : 'bg-destructive'}`}
                 />
+                {isStatusActive ? 'Active' : 'Inactive'}
+              </div>
+            </CardHeader>
+            <CardContent className="pt-6">
+              <div className="flex flex-col md:flex-row gap-8">
+                <div className="flex flex-col items-center gap-4">
+                  <PhotoPicker
+                    owner={{ type: 'company', id: profile.id }}
+                    onChange={(media) =>
+                      form.setData('photo_id', (media as any)?.id)
+                    }
+                    defaultValue={profile.photo_url}
+                  />
+                  <Label className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">
+                    Agency Logo
+                  </Label>
+                </div>
 
-                <div className="flex-1 grid gap-4 md:grid-cols-2 w-full">
+                <div className="flex-1 grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor="name">
-                      <FormattedMessage defaultMessage="Company Name *" />
+                      <FormattedMessage defaultMessage="Agency Name" />{' '}
+                      <span className="text-destructive">*</span>
                     </Label>
                     <Input
                       id="name"
-                      type="text"
-                      required
-                      name="name"
-                      placeholder={intl.formatMessage({
-                        defaultMessage: 'Professional Travel Agency',
-                      })}
                       value={form.data.name}
                       onChange={(e) => form.setData('name', e.target.value)}
+                      className="focus-visible:ring-primary"
                     />
                     <InputError message={form.errors.name} />
                   </div>
-
+                  <div className="space-y-2">
+                    <Label htmlFor="username">
+                      <FormattedMessage defaultMessage="Username" />{' '}
+                      <span className="text-destructive">*</span>
+                    </Label>
+                    <Input
+                      id="username"
+                      value={form.data.username}
+                      onChange={(e) => form.setData('username', e.target.value)}
+                      className="focus-visible:ring-primary"
+                    />
+                    <InputError message={form.errors.username} />
+                  </div>
                   <div className="space-y-2">
                     <Label htmlFor="email">
-                      <FormattedMessage defaultMessage="Company Email *" />
+                      <FormattedMessage defaultMessage="Business Email" />{' '}
+                      <span className="text-destructive">*</span>
                     </Label>
                     <Input
                       id="email"
                       type="email"
-                      required
-                      name="email"
-                      placeholder="email@example.com"
                       value={form.data.email}
                       onChange={(e) => form.setData('email', e.target.value)}
+                      className="focus-visible:ring-primary"
                     />
                     <InputError message={form.errors.email} />
                   </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="username">
-                      <FormattedMessage defaultMessage="Company Username *" />
-                    </Label>
-                    <Input
-                      id="username"
-                      type="text"
-                      required
-                      name="username"
-                      placeholder="Username"
-                      value={form.data.username}
-                      onChange={(e) => {
-                        if (form.data.subdomain === form.data.username) {
-                          form.setData('subdomain', e.target.value);
-                        }
-                        form.setData('username', e.target.value);
-                      }}
-                    />
-                    <InputError message={form.errors.username} />
-                  </div>
-
                   <div className="space-y-2">
                     <Label htmlFor="subdomain">
-                      <FormattedMessage defaultMessage="Subdomain *" />
+                      <FormattedMessage defaultMessage="Subdomain" />{' '}
+                      <span className="text-destructive">*</span>
                     </Label>
                     <InputGroup>
                       <InputGroupInput
                         id="subdomain"
-                        type="text"
-                        required
-                        name="subdomain"
-                        placeholder="example"
                         value={form.data.subdomain}
                         onChange={(e) =>
                           form.setData('subdomain', e.target.value)
                         }
                       />
-                      <InputGroupAddon align="inline-end">
+                      <InputGroupAddon
+                        align="inline-end"
+                        className="bg-muted text-muted-foreground italic"
+                      >
                         .{import.meta.env.VITE_APP_HOST}
-                        {import.meta.env.VITE_APP_PORT
-                          ? `:${import.meta.env.VITE_APP_PORT}`
-                          : ''}
                       </InputGroupAddon>
                     </InputGroup>
                     <InputError message={form.errors.subdomain} />
                   </div>
 
-                  <div className="space-y-2 col-span-2 pt-2">
-                    <Separator className="mb-4" />
-                    <div className="flex gap-2">
-                      <Label htmlFor="domain">
-                        <FormattedMessage defaultMessage="Custom Domain" />
-                      </Label>
+                  <div className="sm:col-span-2 pt-4">
+                    <div className="flex items-center justify-between p-4 rounded-xl border border-primary/20 bg-primary/5">
+                      <div className="space-y-0.5">
+                        <Label className="text-sm font-bold">
+                          <FormattedMessage defaultMessage="Custom Domain" />
+                        </Label>
+                        <FieldDescription>
+                          <FormattedMessage defaultMessage="Enable this to use your professional domain (e.g. travel.com)" />
+                        </FieldDescription>
+                      </div>
                       <Switch
                         checked={form.data.domain_enabled}
                         onCheckedChange={(checked) =>
@@ -259,268 +242,266 @@ export default function Profile({ profile }: ProfilePageProps) {
                         }
                       />
                     </div>
-                    <FieldDescription>
-                      <FormattedMessage defaultMessage="You can setup custom domain like example.com that points to your landing page and public tour catalog. This requires additional DNS configuration." />
-                    </FieldDescription>
-                    <div className="flex gap-2 mt-2">
-                      {form.data.domain_enabled ? (
+                    {form.data.domain_enabled && (
+                      <div className="mt-3 animate-in fade-in slide-in-from-top-2">
                         <Input
-                          className="flex-1"
-                          id="domain"
-                          type="text"
-                          name="domain"
-                          placeholder="example.com"
+                          placeholder="www.yourdomain.com"
                           value={form.data.domain}
                           onChange={(e) =>
                             form.setData('domain', e.target.value)
                           }
+                          className="focus-visible:ring-primary"
                         />
-                      ) : (
-                        <div className="text-muted-foreground text-xs">
-                          <FormattedMessage defaultMessage="Custom domain is not enabled." />
-                        </div>
-                      )}
-                    </div>
-                    <InputError message={form.errors.domain} />
+                        <InputError message={form.errors.domain} />
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="border-slate-200 shadow-sm">
-            <CardHeader>
-              <CardTitle>
-                <FormattedMessage defaultMessage="Contact & Address" />
+          {/* Location & Contact Card */}
+          <Card className="shadow-sm border-border">
+            <CardHeader className="bg-muted/30 border-b py-4">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <MapPin className="w-5 h-5 text-secondary" />
+                <FormattedMessage defaultMessage="Location & Contact" />
               </CardTitle>
-              <CardDescription>
-                <FormattedMessage defaultMessage="Where can customers reach your agency?" />
-              </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="phone">
-                    <FormattedMessage defaultMessage="Company Phone *" />
-                  </Label>
-                  <Input
-                    id="phone"
-                    type="text"
-                    required
-                    name="phone"
-                    placeholder="Phone number"
-                    value={form.data.phone}
-                    onChange={(e) => form.setData('phone', e.target.value)}
-                  />
-                  <InputError message={form.errors.phone} />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="customer_service_phone">
-                    <FormattedMessage defaultMessage="Customer Service Phone *" />
-                  </Label>
-                  <Input
-                    id="customer_service_phone"
-                    type="text"
-                    required
-                    name="customer_service_phone"
-                    placeholder="Phone number"
-                    value={form.data.customer_service_phone}
-                    onChange={(e) =>
-                      form.setData('customer_service_phone', e.target.value)
-                    }
-                  />
-                  <InputError message={form.errors.customer_service_phone} />
-                </div>
-              </div>
-
+            <CardContent className="pt-6 grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
+                <Label htmlFor="phone">
+                  <FormattedMessage defaultMessage="Office Phone" />{' '}
+                  <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="phone"
+                  value={form.data.phone}
+                  onChange={(e) => form.setData('phone', e.target.value)}
+                />
+                <InputError message={form.errors.phone} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="cs_phone">
+                  <FormattedMessage defaultMessage="Customer Service Phone" />{' '}
+                  <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="cs_phone"
+                  value={form.data.customer_service_phone}
+                  onChange={(e) =>
+                    form.setData('customer_service_phone', e.target.value)
+                  }
+                />
+                <InputError message={form.errors.customer_service_phone} />
+              </div>
+              <div className="sm:col-span-2 space-y-2">
                 <Label htmlFor="address">
-                  <FormattedMessage defaultMessage="Detail Address *" />
+                  <FormattedMessage defaultMessage="Detail Address" />{' '}
+                  <span className="text-destructive">*</span>
                 </Label>
                 <Textarea
                   id="address"
-                  required
-                  name="address"
-                  placeholder="Street name, building, house number..."
-                  className="min-h-25"
                   value={form.data.address}
                   onChange={(e) => form.setData('address', e.target.value)}
+                  className="min-h-[80px]"
                 />
                 <InputError message={form.errors.address} />
               </div>
 
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="province">
-                    <FormattedMessage defaultMessage="Province *" />
-                  </Label>
-                  <select
-                    id="province"
-                    required
-                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                    value={form.data.province_id}
-                    onChange={(e) => {
-                      form.setData('province_id', e.target.value);
-                      form.setData('city_id', '');
-                      form.setData('district_id', '');
-                      form.setData('village_id', '');
-                    }}
-                  >
-                    <option value="">Select Province</option>
-                    {provinces.map((p: any) => (
-                      <option key={p.code} value={p.id}>
-                        {p.name}
-                      </option>
-                    ))}
-                  </select>
-                  <InputError message={form.errors.province_id} />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="city">
-                    <FormattedMessage defaultMessage="City / Regency *" />
-                  </Label>
-                  <select
-                    id="city"
-                    required
-                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                    value={form.data.city_id}
-                    onChange={(e) => {
-                      form.setData('city_id', e.target.value);
-                      form.setData('district_id', '');
-                      form.setData('village_id', '');
-                    }}
-                  >
-                    <option value="">Select City</option>
-                    {cities.map((c: any) => (
-                      <option key={c.code} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
-                  <InputError message={form.errors.city_id} />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="district">
-                    <FormattedMessage defaultMessage="District (Kecamatan) *" />
-                  </Label>
-                  <select
-                    id="district"
-                    required
-                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                    value={form.data.district_id}
-                    onChange={(e) => {
-                      form.setData('district_id', e.target.value);
-                      form.setData('village_id', '');
-                    }}
-                  >
-                    <option value="">Select District</option>
-                    {districts.map((d: any) => (
-                      <option key={d.code} value={d.id}>
-                        {d.name}
-                      </option>
-                    ))}
-                  </select>
-                  <InputError message={form.errors.district_id} />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="village">
-                    <FormattedMessage defaultMessage="Village (Kelurahan) *" />
-                  </Label>
-                  <select
-                    id="village"
-                    required
-                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                    value={form.data.village}
-                    onChange={(e) => form.setData('village', e.target.value)}
-                  >
-                    <option value="">Select Village</option>
-                    {villages.map((v: any) => (
-                      <option key={v.code} value={v.id}>
-                        {v.name}
-                      </option>
-                    ))}
-                  </select>
-                  <InputError message={form.errors.village} />
-                </div>
-
-                <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="postal_code">
-                    <FormattedMessage defaultMessage="Postal Code (Optional)" />
-                  </Label>
-                  <Input
-                    id="postal_code"
-                    value={form.data.postal_code}
-                    onChange={(e) =>
-                      form.setData('postal_code', e.target.value)
-                    }
-                  />
-                  <InputError message={form.errors.postal_code} />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-slate-200 shadow-sm">
-            <CardHeader>
-              <CardTitle>
-                <FormattedMessage defaultMessage="Identity Verification" />
-              </CardTitle>
-              <CardDescription>
-                <FormattedMessage defaultMessage="Provide valid identity information for legal and operational compliance." />
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-2 md:w-1/2">
-                <Label htmlFor="identity_number">
-                  <FormattedMessage defaultMessage="ID Number (KTP/SIM/Passport) *" />
+              <div className="space-y-2">
+                <Label>
+                  <FormattedMessage defaultMessage="Province" />{' '}
+                  <span className="text-destructive">*</span>
                 </Label>
-                <Input
-                  id="identity_number"
-                  type="text"
-                  maxLength={16}
-                  minLength={16}
-                  pattern="\d{16}"
-                  value={form.data.identity_number}
+                <select
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-primary"
+                  value={form.data.province_id}
                   onChange={(e) => {
-                    const val = e.target.value.replace(/\D/g, '');
-                    form.setData('identity_number', val);
+                    form.setData('province_id', e.target.value);
+                    form.setData('city_id', '');
+                    form.setData('district_id', '');
+                    form.setData('village_id', '');
                   }}
-                  placeholder="16 digit ID number"
-                  required
-                />
-                <InputError message={form.errors.identity_number} />
+                >
+                  <option value="">Select Province</option>
+                  {provinces.map((p: any) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div className="space-y-2">
                 <Label>
-                  <FormattedMessage defaultMessage="Upload ID Photo *" />
+                  <FormattedMessage defaultMessage="City" />{' '}
+                  <span className="text-destructive">*</span>
                 </Label>
-                <div className="flex flex-col sm:flex-row gap-4 items-start">
-                  <IdentityCardPicker
-                    owner={{ type: 'company', id: profile.id }}
-                    onChange={(media: any) => {
-                      form.setData('identity_card_id', media.id);
-                    }}
-                    defaultValue={profile.identity_card}
-                  />
-                </div>
-                <InputError message={form.errors.identity_card_id} />
+                <select
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-primary"
+                  value={form.data.city_id}
+                  onChange={(e) => {
+                    form.setData('city_id', e.target.value);
+                    form.setData('district_id', '');
+                    form.setData('village_id', '');
+                  }}
+                  disabled={!form.data.province_id}
+                >
+                  <option value="">Select City</option>
+                  {cities.map((c: any) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>
+                  <FormattedMessage defaultMessage="District (Kecamatan)" />{' '}
+                  <span className="text-destructive">*</span>
+                </Label>
+                <select
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-primary"
+                  value={form.data.district_id}
+                  onChange={(e) => {
+                    form.setData('district_id', e.target.value);
+                    form.setData('village_id', '');
+                  }}
+                  disabled={!form.data.city_id}
+                >
+                  <option value="">Select District</option>
+                  {districts.map((d: any) => (
+                    <option key={d.id} value={d.id}>
+                      {d.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>
+                  <FormattedMessage defaultMessage="Village (Kelurahan)" />{' '}
+                  <span className="text-destructive">*</span>
+                </Label>
+                <select
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-primary"
+                  value={form.data.village_id}
+                  onChange={(e) => form.setData('village_id', e.target.value)}
+                  disabled={!form.data.district_id}
+                >
+                  <option value="">Select Village</option>
+                  {villages.map((v: any) => (
+                    <option key={v.id} value={v.id}>
+                      {v.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="postal_code">
+                  <FormattedMessage defaultMessage="Postal Code" />
+                </Label>
+                <Input
+                  id="postal_code"
+                  value={form.data.postal_code}
+                  onChange={(e) => form.setData('postal_code', e.target.value)}
+                  className="focus-visible:ring-primary"
+                  placeholder="12345"
+                />
+                <InputError message={form.errors.postal_code} />
               </div>
             </CardContent>
           </Card>
 
-          <div className="flex justify-end gap-4">
+          {/* Verification Card with Preview KTP */}
+          <Card className="shadow-sm border-primary/20 border-l-4">
+            <CardHeader className="bg-primary/5 py-4 border-b">
+              <CardTitle className="text-lg flex items-center gap-2 text-primary font-bold">
+                <ShieldCheck className="w-5 h-5" />
+                <FormattedMessage defaultMessage="Verification Documents" />
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-6">
+              <div className="grid gap-8 md:grid-cols-2 items-start">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label
+                      htmlFor="identity_number"
+                      className="font-bold flex items-center gap-2 text-foreground"
+                    >
+                      <CreditCard className="w-4 h-4 text-muted-foreground" />
+                      <FormattedMessage defaultMessage="National ID Number (NIK)" />{' '}
+                      <span className="text-destructive">*</span>
+                    </Label>
+                    <Input
+                      id="identity_number"
+                      value={form.data.identity_number}
+                      onChange={(e) =>
+                        form.setData(
+                          'identity_number',
+                          e.target.value.replace(/\D/g, ''),
+                        )
+                      }
+                      className="text-xl tracking-widest font-mono h-12 focus-visible:ring-primary"
+                      placeholder="16 Digit NIK"
+                      maxLength={16}
+                    />
+                    <InputError message={form.errors.identity_number} />
+                  </div>
+
+                  <div className="p-4 rounded-xl border-2 border-dashed bg-muted/10 flex flex-col gap-3">
+                    <Label className="font-bold text-sm">
+                      <FormattedMessage defaultMessage="Change Identity Photo" />{' '}
+                      <span className="text-destructive">*</span>
+                    </Label>
+                    <IdentityCardPicker
+                      owner={{ type: 'company', id: profile.id }}
+                      onChange={(media: any) =>
+                        form.setData('identity_card_id', media.id)
+                      }
+                      defaultValue={profile.identity_card}
+                    />
+                    <InputError message={form.errors.identity_card_id} />
+                  </div>
+                </div>
+
+                {/* Identity Preview Section */}
+                <div className="space-y-3">
+                  <Label className="font-bold text-sm text-muted-foreground uppercase tracking-wider">
+                    <FormattedMessage defaultMessage="Current Identity Preview" />
+                  </Label>
+                  <div className="relative aspect-[3/2] w-full rounded-xl overflow-hidden bg-slate-200 border-2 border-slate-300 flex items-center justify-center shadow-inner group">
+                    {profile.identity_card?.data?.url ? (
+                      <img
+                        src={profile.identity_card.data.url}
+                        className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                        alt="KTP Preview"
+                      />
+                    ) : (
+                      <div className="text-center p-6 text-muted-foreground italic">
+                        <ShieldCheck className="w-12 h-12 mx-auto mb-2 opacity-20" />
+                        <FormattedMessage defaultMessage="No ID uploaded yet" />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <div className="flex justify-end pt-4">
             <Button
               type="submit"
               disabled={form.processing}
-              className="min-w-50"
+              size="lg"
+              className="bg-primary text-primary-foreground hover:bg-primary/90 px-12 h-12 font-bold shadow-xl shadow-primary/20"
             >
               {form.processing ? <Spinner className="mr-2" /> : null}
-              <Save className="w-4 h-4 mr-2" />
+              <Save className="w-5 h-5 mr-2" />
               <FormattedMessage defaultMessage="Save Changes" />
             </Button>
           </div>

@@ -11,6 +11,7 @@ return new class extends Migration
    */
   public function up(): void
   {
+    Schema::dropIfExists('app_configs');
     Schema::create('app_configs', function (Blueprint $table) {
       $table->id();
       $table->string('key')->unique();

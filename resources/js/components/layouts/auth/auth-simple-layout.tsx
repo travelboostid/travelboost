@@ -1,4 +1,3 @@
-import AppLogoIcon from '@/components/app-logo-icon';
 import type { AuthLayoutProps } from '@/types';
 import { Link } from '@inertiajs/react';
 
@@ -16,8 +15,12 @@ export default function AuthSimpleLayout({
               href={'/'}
               className="flex flex-col items-center gap-2 font-medium"
             >
-              <div className="mb-1 flex size-16 items-center justify-center rounded-md">
-                <AppLogoIcon className="size-16 fill-current text-foreground dark:text-white" />
+              <div className="-mb-5 flex size-32 items-center justify-center rounded-md">
+                <img
+                  src="/storage/logo/square/android-chrome-512x512.png"
+                  alt="Travelboost Logo"
+                  className="size-32 object-contain drop-shadow-sm"
+                />
               </div>
               <span className="sr-only">{title}</span>
             </Link>

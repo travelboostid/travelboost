@@ -59,7 +59,7 @@ export function useCompanyDashboardNavMainMenu() {
   const unfilteredMenus = [
     {
       id: 'home',
-      title: <FormattedMessage defaultMessage="Home" />,
+      title: <FormattedMessage defaultMessage="Dashboard" />,
       urlOrAction: `/companies/${company.username}/dashboard`,
       icon: HomeIcon,
       visibleToCompanyTypes: ['vendor', 'agent'],

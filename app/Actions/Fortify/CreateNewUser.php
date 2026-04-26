@@ -57,22 +57,19 @@ class CreateNewUser implements CreatesNewUsers
       'register-as-customer' => $this->processRegisterAsCustomer($input),
       'register-as-agent' => $this->processRegisterAsAgent($input),
       'register-as-team' => $this->processRegisterAsTeam($input),
-      default => null, // this should not happen due to validation, but just in case
+      default => null,
     };
   }
 
   private function processRegisterAsAgent(array $input)
   {
-    // make sure user not registering as agent under domain context
-    if ($this->domain) {
+    if ($this->domain && $this->domain->owner instanceof Company) {
       return null;
     }
 
-    // validate input and fill affiliate data if referral code is provided
     $validated = Validator::validate($input, $this->registerAsAgentValidatorRules);
     $validated = $this->fillAffiliateDataIfProvided($validated);
 
-    // create user with company_id = null
     $validated['company_id'] = null;
     $user = User::create($validated);
 
@@ -81,8 +78,6 @@ class CreateNewUser implements CreatesNewUsers
 
   private function processRegisterAsCustomer(array $input)
   {
-    // make sure user registering as customer under domain context with valid company owner
-    // then validate input and fill affiliate data if referral code is provided
     if (!$this->domain) {
       return null;
     }
@@ -90,9 +85,8 @@ class CreateNewUser implements CreatesNewUsers
       return null;
     }
     $validated = Validator::validate($input, $this->registerAsCustomerValidatorRules);
-    $validated = $this->fillAffiliateDataIfProvided($validated); // TODO: do we need affiliate data for customer registration?
+    $validated = $this->fillAffiliateDataIfProvided($validated);
 
-    // create user with company_id = domain owner's company_id and status = active
     $validated['company_id'] = $this->domain->owner->id;
     $validated['status'] = UserStatus::ACTIVE;
 
@@ -103,22 +97,21 @@ class CreateNewUser implements CreatesNewUsers
 
   private function processRegisterAsTeam(array $input)
   {
-    if ($this->domain) {
+    if ($this->domain && $this->domain->owner instanceof Company) {
       return null;
     }
 
     $validated = Validator::validate($input, $this->registerAsTeamValidatorRules);
 
-    // create user with company_id = domain owner's company_id and status = active
     $validated['company_id'] = null;
     $validated['status'] = UserStatus::ACTIVE;
 
     $team = CompanyTeam::where('invite_token', $validated['invite_token'])->first();
     if (!$team) {
-      return null; // this should not happen due to validation, but just in case
+      return null;
     }
 
-    $validated['email'] = $team->invite_email; // override email with invite email to prevent user from registering with different email than the one invited
+    $validated['email'] = $team->invite_email;
 
     $user = User::create($validated);
     $team->update([
@@ -127,7 +120,6 @@ class CreateNewUser implements CreatesNewUsers
     ]);
     $user->addRole($team->invite_role, "company:{$team->company_id}");
 
-    // if user has other pending invitation(s) from other team(s), reject them since user already accepted one invitation and can only be part of one team for now
     CompanyTeam::where('invite_email', $user->email)
       ->where('status', CompanyTeamStatus::PENDING)
       ->where('id', '!=', $team->id)
@@ -138,11 +130,11 @@ class CreateNewUser implements CreatesNewUsers
   private function fillAffiliateDataIfProvided(array $input)
   {
     if (empty($input['referral_code'])) {
-      return $input; // no referral code, no changes needed;
+      return $input;
     }
     $affiliate = AffiliateProfile::where('referral_code', $input['referral_code'])->first();
     if (!$affiliate) {
-      return $input; // referral code invalid, no changes needed;
+      return $input;
     }
 
     $input['referred_by'] = $affiliate->user_id;

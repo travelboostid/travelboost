@@ -30,6 +30,15 @@ class AffiliateAuthController extends Controller
     $loginType = filter_var($request->login, FILTER_VALIDATE_EMAIL) ? 'email' : 'username';
     $user = User::where($loginType, $request->login)->first();
 
+    if ($user) {
+      $hasAffiliateProfile = AffiliateProfile::where('user_id', $user->id)->exists();
+      if (!$hasAffiliateProfile) {
+        return back()->withErrors([
+          'access_denied' => 'The email or username entered is not registered as an Affiliate, MA, or Partner here. Please make sure you are logging into the correct portal.',
+        ])->onlyInput('login');
+      }
+    }
+
     if (!$user || !Hash::check($request->password, $user->password)) {
       return back()->withErrors([
         'login' => 'The provided credentials are incorrect.',
@@ -58,7 +67,6 @@ class AffiliateAuthController extends Controller
     $referralCode = null;
     $uplineName = null;
 
-    /** @var Domain|null $domainData */
     $domainData = Context::get('domain');
 
     if ($domainData && $domainData->owner instanceof AffiliateProfile) {
@@ -127,6 +135,6 @@ class AffiliateAuthController extends Controller
     Auth::guard('web')->logout();
     $request->session()->invalidate();
     $request->session()->regenerateToken();
-    return redirect('/affiliate');
+    return redirect('');
   }
 }
