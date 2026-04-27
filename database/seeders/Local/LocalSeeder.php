@@ -15,6 +15,8 @@ use Database\Seeders\Common\UserSeeder;
 use Database\Seeders\Common\CurrencySeeder;
 use Database\Seeders\Common\PriceCategorySeeder;
 use Illuminate\Database\Seeder;
+use Database\Seeders\Common\ParameterTravelboostSeeder;
+use Database\Seeders\Common\ParameterVendorSeeder;
 
 class LocalSeeder extends Seeder
 {
@@ -36,6 +38,8 @@ class LocalSeeder extends Seeder
       AffiliateSeeder::class,
       CurrencySeeder::class,
       PriceCategorySeeder::class,
+      ParameterTravelboostSeeder::class,
+      ParameterVendorSeeder::class,
     ]);
   }
 }

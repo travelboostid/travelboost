@@ -11,12 +11,27 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('parameter_travelboost', function (Blueprint $table) {
+        Schema::create('parameter_travelboosts', function (Blueprint $table) {
             $table->id();
-            $table->string('description');
-            $table->decimal('amount', 18, 2)->default(0);
-            $table->decimal('percentage', 12, 2)->default(0);
+
+            $table->string('category', 100);
+            $table->string('param_key', 100);
+            $table->string('param_label', 150)->nullable();
+
+            // value | percent | text
+            $table->string('data_type', 20);
+
+            $table->decimal('number_value', 18, 2)->nullable();
+            $table->text('text_value')->nullable();
+
+            $table->boolean('is_active')->default(true);
+
             $table->timestamps();
+
+            $table->unique(['category', 'param_key']);
+            $table->index('category');
+            $table->index('data_type');
+            $table->index('is_active');
         });
     }
 
@@ -25,6 +40,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('parameter_travelboost');
+        Schema::dropIfExists('parameter_travelboosts');
     }
 };
