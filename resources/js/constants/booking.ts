@@ -19,9 +19,9 @@ export type WizardStepId = (typeof WIZARD_STEPS)[number]['id'];
 // ─── Title Options ──────────────────────────────────────────────────────────────
 
 export const TITLE_OPTIONS: Record<string, string[]> = {
-  adult: ['Mr', 'Mrs', 'Ms', 'Dr', 'Prof'],
-  child: ['Master', 'Miss'],
-  infant: ['Master', 'Miss'],
+  adult: ['Mr', 'Mrs', 'Ms'],
+  child: ['Mstr (Male)', 'Miss (Female)'],
+  infant: ['Mstr (Male)', 'Miss (Female)'],
 };
 
 // ─── Category Filter (maps guest type → allowed price_categories.name values) ──

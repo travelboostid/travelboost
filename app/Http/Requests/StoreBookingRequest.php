@@ -40,7 +40,7 @@ class StoreBookingRequest extends FormRequest
             'passengers.*.last_name' => ['nullable', 'string', 'max:255'],
             'passengers.*.gender' => ['nullable', Rule::enum(UserGender::class)],
             'passengers.*.dob' => ['nullable', 'date', 'before:today'],
-            'passengers.*.pob' => ['nullable', 'string', 'max:255'],
+            'passengers.*.pob' => ['required', 'string', 'max:255'],
             'passengers.*.room_type' => ['nullable', 'string', 'max:255'],
             'passengers.*.room_number' => ['nullable', 'string', 'max:50'],
             // Support for saving address book entries

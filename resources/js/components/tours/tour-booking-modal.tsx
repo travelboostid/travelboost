@@ -38,6 +38,7 @@ type TourBookingModalProps = {
   isOpen: boolean;
   onClose: () => void;
   tour: TourResource & { schedules?: TourSchedule[] };
+  onRequireLogin?: () => void;
 };
 
 const formatCurrency = (value: number) =>
@@ -58,6 +59,7 @@ export default function TourBookingModal({
   isOpen,
   onClose,
   tour,
+  onRequireLogin,
 }: TourBookingModalProps) {
   const schedules = tour.schedules ?? [];
   const activeSchedules = schedules.filter((s) => s.is_active);
@@ -79,6 +81,13 @@ export default function TourBookingModal({
 
   const handleSelectDate = (schedule: TourSchedule) => {
     if (schedule.quota <= 0) return;
+
+    if (onRequireLogin) {
+      onClose();
+      onRequireLogin();
+      return;
+    }
+
     onClose();
     router.visit(`/bookings/${tour.id}/create?date=${schedule.departure_date}`);
   };

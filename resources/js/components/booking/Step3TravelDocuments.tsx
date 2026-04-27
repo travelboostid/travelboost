@@ -1,17 +1,24 @@
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import type { GuestEntry, TravelDocumentEntry } from '@/types/booking';
 import { motion } from 'framer-motion';
 import {
   FileTextIcon,
+  HelpCircleIcon,
   InfoIcon,
   TrashIcon,
   UploadCloudIcon,
   XIcon,
 } from 'lucide-react';
-import { useCallback, useRef } from 'react';
+import { useCallback, useMemo, useRef } from 'react';
 
 const itemVariants = {
   hidden: { opacity: 0, y: 14 },
@@ -22,6 +29,7 @@ type Step3Props = {
   guests: GuestEntry[];
   travelDocuments: TravelDocumentEntry[];
   onTravelDocumentsChange: (docs: TravelDocumentEntry[]) => void;
+  departureDate: string;
 };
 
 // ─── Travel Document Card ───────────────────────────────────────────────────────
@@ -32,12 +40,14 @@ function TravelDocumentCard({
   guestName,
   guestType,
   onChange,
+  departureDate,
 }: {
   doc: TravelDocumentEntry;
   guestIndex: number;
   guestName: string;
   guestType: 'adult' | 'child';
   onChange: (updated: TravelDocumentEntry) => void;
+  departureDate: string;
 }) {
   const passportInputRef = useRef<HTMLInputElement>(null);
   const visaInputRef = useRef<HTMLInputElement>(null);
@@ -134,17 +144,58 @@ function TravelDocumentCard({
             />
           </div>
           <div className="grid gap-1">
-            <Label className="text-[11px] text-muted-foreground">
-              Expiry Date
-            </Label>
+            <div className="flex items-center gap-1">
+              <Label className="text-[11px] text-muted-foreground">
+                Expiry Date
+              </Label>
+              <TooltipProvider delayDuration={200}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <HelpCircleIcon className="size-3.5 cursor-help text-muted-foreground" />
+                  </TooltipTrigger>
+                  <TooltipContent
+                    side="right"
+                    className="max-w-[220px] text-xs"
+                  >
+                    Passport must be valid for at least 6 months beyond the
+                    departure date.
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
             <Input
               type="date"
               value={doc.passportExpiryDate}
               onChange={(e) =>
                 onChange({ ...doc, passportExpiryDate: e.target.value })
               }
-              className="h-9 text-sm"
+              className={cn(
+                'h-9 text-sm',
+                doc.passportExpiryDate &&
+                  departureDate &&
+                  (() => {
+                    const expiry = new Date(doc.passportExpiryDate);
+                    const departure = new Date(departureDate);
+                    const sixMonthsAfter = new Date(departure);
+                    sixMonthsAfter.setMonth(sixMonthsAfter.getMonth() + 6);
+                    return expiry < sixMonthsAfter;
+                  })() &&
+                  'border-destructive focus-visible:ring-destructive',
+              )}
             />
+            {doc.passportExpiryDate &&
+              departureDate &&
+              (() => {
+                const expiry = new Date(doc.passportExpiryDate);
+                const departure = new Date(departureDate);
+                const sixMonthsAfter = new Date(departure);
+                sixMonthsAfter.setMonth(sixMonthsAfter.getMonth() + 6);
+                return expiry < sixMonthsAfter;
+              })() && (
+                <span className="text-[10px] text-destructive">
+                  Passport must be valid for at least 6 months beyond departure.
+                </span>
+              )}
           </div>
           <div className="grid gap-1">
             <Label className="text-[11px] text-muted-foreground">
@@ -260,6 +311,7 @@ export default function Step3TravelDocuments({
   guests,
   travelDocuments,
   onTravelDocumentsChange,
+  departureDate,
 }: Step3Props) {
   const handleDocUpdate = useCallback(
     (updated: TravelDocumentEntry) => {
@@ -314,6 +366,7 @@ export default function Step3TravelDocuments({
               guestName={guestName}
               guestType={guest.type}
               onChange={handleDocUpdate}
+              departureDate={departureDate}
             />
           );
         })}
