@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\AgentController;
+use App\Http\Controllers\Admin\AppConfigController;
 use App\Http\Controllers\Admin\CustomerController;
 use App\Http\Controllers\Admin\HomeController;
 use App\Http\Controllers\Admin\ProfileController;
@@ -12,7 +13,8 @@ use App\Http\Middleware\EnsureHasAdminAccess;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('admin')->middleware(['auth', EnsureHasAdminAccess::class])->name('admin.')->group(function () {
-
+  //
+  Route::resource('app-configs', AppConfigController::class)->names('app-configs');
   // 2. Dashboard
   Route::get('/dashboard', [HomeController::class, 'show'])->name('dashboard');
 

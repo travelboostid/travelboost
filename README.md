@@ -1,10 +1,11 @@
 # Travelboost Project
 
-Welcome to the Travelboost Project!
+Travelboost is a platform designed to streamline travel planning and management.
+This repository contains the core application along with tools to support development and deployment.
 
-This application is designed to enhance your travel experience by providing a seamless platform for managing your travel plans. Explore the features, contribute to the project, and enjoy your journey with us!
+---
 
-## Documentation
+## 📚 Documentation
 
 - [Standard Operating Procedures (SOP)](./docs/sop.md)
 - [Development Environment Setup](./docs/development-environment-setup.md)
@@ -12,28 +13,76 @@ This application is designed to enhance your travel experience by providing a se
 - [Architecture Overview](./docs/architecture.md)
 - [Translations](./docs/technical/translations.md)
 
-## Getting Started
+---
 
-1. **Clone the Repository**:
+## 🚀 Getting Started
+
+Before starting, ask your teammate for the required `.env` configuration.
+We provide preset files (`.env.preset.*`)—place them in the root of the project.
+
+### 1. Clone the repository
 
 ```bash
 git clone <this-repository>
+cd <project-folder>
 ```
 
-2. **Install Dependencies**:
+### 2. Initialize environment
 
 ```bash
-composer install
-pnpm install
+pnpm dev:init
 ```
 
-3. **Fill .env**:
-   Ask your teammate for .env setup.
+This will:
 
-4. **Run the Development Server**:
+- Install PHP dependencies (`composer install`)
+- Install JS dependencies (`pnpm install`)
+- Prompt you to select an available `.env` preset
+
+### 3. Run development server
+
+**Full stack (recommended)**
+Includes:
+
+- Laravel server
+- Vite
+- Queue worker
+- Reverb
 
 ```bash
-pnpm dev:laravel
+pnpm dev:full
 ```
 
-For deployment instructions, please refer to the [Deployment Guidelines](./docs/deployments.md).
+**Minimal setup**
+Includes:
+
+- Laravel server
+- Vite
+
+```bash
+pnpm dev:min
+```
+
+---
+
+## 🛠 Dev CLI
+
+A helper CLI is available to simplify common tasks:
+
+```bash
+pnpm dev
+```
+
+This will open an interactive menu for:
+
+- Switching environment presets
+- Running development servers
+- Deployment helpers
+- i18n utilities
+
+---
+
+## 🚢 Deployment
+
+For deployment instructions, refer to:
+👉 [Deployment Guidelines](./docs/deployments.md)

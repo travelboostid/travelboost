@@ -114,16 +114,14 @@ class ChatbotAgent implements Agent, Conversational
       'casual' => 'Use relaxed, informal language.',
     ];
 
-    // Define language options
-    $languageMap = [
-      'auto' => 'Detect language from user input',
-      'en' => 'Use English',
-      'id' => 'Use Bahasa Indonesia',
-      // Add more languages as needed
-    ];
+    $languageInstruction = match ($settings?->chatbot_default_language) {
+      'en' => 'CRITICAL: You MUST reply entirely in English.',
+      'id' => 'CRITICAL: You MUST reply entirely in Bahasa Indonesia.',
+      default => 'CRITICAL: You MUST detect the language of the user\'s message and reply in that EXACT same language. If they ask in Indonesian, you must reply in Indonesian.',
+    };
 
     return "{$baseInstructions}\n"
-      . "Default Language: " . ($languageMap[$settings?->chatbot_default_language ?? 'auto'] ?? $languageMap['auto']) . "\n"
+      . "{$languageInstruction}\n"
       . "Response Style: " . ($responseStyleMap[$settings?->chatbot_response_style ?? 'professional'] ?? $responseStyleMap['professional']) . "\n"
       . "If unsure, ask for clarification. Do not mention embeddings or internal systems.";
   }
@@ -245,7 +243,8 @@ class ChatbotAgent implements Agent, Conversational
 
     $prompt = "Respond to the user's tour search based on filters: "
       . json_encode($filters) . ".\n\nMatching tours:\n{$tourList}\n\n"
-      . ($tours->isEmpty() ? "No tours found matching the criteria." : "");
+      . ($tours->isEmpty() ? "No tours found matching the criteria." : "")
+      . "\n\nIMPORTANT: Remember to reply in the appropriate language as defined in system instructions.";
 
     $response = $this->prompt(prompt: $prompt, model: $this->chatbotModel->code);
 
@@ -301,7 +300,7 @@ class ChatbotAgent implements Agent, Conversational
     if ($documents) {
       $prompt .= "Retrieved relevant tour documents from system based on the user's question:\n{$documents}\n\n";
     }
-    $prompt .= "Answer the user's question about the tour using the above information. If the question is not clear, ask for clarification.";
+    $prompt .= "Answer the user's question about the tour using the above information. If the question is not clear, ask for clarification.\nIMPORTANT: Remember to reply in the appropriate language as defined in system instructions.";
 
     $response = $this->prompt(prompt: $prompt, model: $this->chatbotModel->code);
 
@@ -316,7 +315,7 @@ class ChatbotAgent implements Agent, Conversational
   private function handleGeneralIntent(AgentResponse $detected): void
   {
     $response = $this->prompt(
-      prompt: "Respond to the user's general travel question in a helpful way. If unsure, offer to help differently.",
+      prompt: "Respond to the user's general travel question in a helpful way. If unsure, offer to help differently.\nIMPORTANT: Remember to reply in the appropriate language as defined in system instructions.",
       model: $this->chatbotModel->code
     );
 
