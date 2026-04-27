@@ -110,6 +110,7 @@
     "react-resizable-panels": "^4",
     "react-use": "^17.6.0",
     "recharts": "2.15.4",
+    "remark-gfm": "^4.0.1",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.0.1",
     "tailwindcss": "^4.0.0",
