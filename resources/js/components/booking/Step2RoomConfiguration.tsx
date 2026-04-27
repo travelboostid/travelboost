@@ -141,7 +141,6 @@ export function autoRecommendRooms(guests: GuestEntry[]): RoomConfig[] {
   const doubles = guests.filter((g) => g.priceCategory === 'Double');
   const twins = guests.filter((g) => g.priceCategory === 'Twin');
   const triples = guests.filter((g) => g.priceCategory === 'Triple');
-  const quads = guests.filter((g) => g.priceCategory === 'Quad');
   const childWithBed = guests.filter((g) => g.priceCategory === 'Child With Bed');
 
   // Non-bed guests
@@ -163,16 +162,6 @@ export function autoRecommendRooms(guests: GuestEntry[]): RoomConfig[] {
   // Triple rooms (groups of 3)
   for (let i = 0; i < triples.length; i += 3) {
     rooms.push(makeRoom('triple', triples.slice(i, i + 3).map((g) => g.id)));
-  }
-
-  // Quad — treat as extra_bed for now (double + extra)
-  for (const g of quads) {
-    const withSpace = rooms.find((r) => r.guestIds.length < r.capacity);
-    if (withSpace) {
-      withSpace.guestIds.push(g.id);
-    } else {
-      rooms.push(makeRoom('single', [g.id]));
-    }
   }
 
   // Child With Bed → extra bed in an existing room, or new single

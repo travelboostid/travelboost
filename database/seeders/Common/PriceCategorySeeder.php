@@ -26,10 +26,6 @@ class PriceCategorySeeder extends Seeder
                 'description' => 'Triple room (3 persons)',
             ],
             [
-                'name' => 'Quad',
-                'description' => 'Quad room (4 persons)',
-            ],
-            [
                 'name' => 'Child With Bed',
                 'description' => 'Child with extra bed',
             ],
