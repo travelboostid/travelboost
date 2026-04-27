@@ -25,9 +25,4 @@ class CompanySettings extends Model
   {
     return $this->belongsTo(Company::class);
   }
-
-  public function chatbotModel()
-  {
-    return $this->belongsTo(AiModel::class, 'chatbot_model_id');
-  }
 }

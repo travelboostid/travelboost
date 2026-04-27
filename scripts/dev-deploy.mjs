@@ -1,4 +1,5 @@
 import { execSync } from 'child_process';
+import fs from 'fs';
 import process from 'process';
 
 // CONFIGS
@@ -38,6 +39,9 @@ try {
 
   const { branch, remotePath, buildPath } = CONFIG;
 
+  // --- 0. Pre-checks ---
+  const env = fs.readFileSync('.env', 'utf-8');
+  assert(env.includes('APP_ENV=development\n'), 'APP_ENV must be development');
   // --- 1. Git safety checks ---
   const currentBranch = getOutput('git rev-parse --abbrev-ref HEAD');
   assert(

@@ -17,6 +17,7 @@ class ChatMessage extends Model
     'sender_id',
     'user_id',
     'message',
+    'meta',
     'attachment_data',
     'attachment_type',
     'is_bot',
@@ -30,6 +31,11 @@ class ChatMessage extends Model
 
   protected $dispatchesEvents = [
     'created' => ChatMessageCreated::class,
+  ];
+
+  protected $casts = [
+    'meta' => 'array',
+    'is_bot' => 'boolean',
   ];
 
   public function room()

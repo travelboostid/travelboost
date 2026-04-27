@@ -1,6 +1,10 @@
 <?php
 
 return [
+  'default_embeddings_model_provider' => 'mistral',
+  'default_embeddings_model' => 'mistral-embed',
+  'default_chatbot_model_provider' => 'mistral',
+  'default_chatbot_model' => 'mistral-small-latest',
   'permissions' => [
     ['name' => 'user.query', 'display_name' => 'Query User', 'description' => 'Allow viewing users'],
     ['name' => 'user.mutation', 'display_name' => 'Mutate User', 'description' => 'Allow creating, editing, or deleting users'],
@@ -64,6 +68,5 @@ return [
     'chatbot_enabled' => true,
     'chatbot_response_style' => 'professional',
     'chatbot_default_language' => 'auto',
-    'chatbot_model_id' => '9',
   ],
 ];

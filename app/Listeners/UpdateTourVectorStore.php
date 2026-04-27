@@ -4,12 +4,14 @@ namespace App\Listeners;
 
 use App\Events\TourCreated;
 use App\Events\TourUpdated;
+use App\Models\AppConfig;
 use App\Models\TourDocumentKnowledgeBase;
 use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Contracts\Queue\ShouldQueueAfterCommit;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Ai\Embeddings;
 
-class UpdateTourVectorStore implements ShouldQueue
+class UpdateTourVectorStore
 {
   /**
    * Create the event listener.
@@ -28,6 +30,9 @@ class UpdateTourVectorStore implements ShouldQueue
    */
   public function handle(TourCreated|TourUpdated $event): void
   {
+    $config = AppConfig::where('key', 'chatbot')->first()?->value;
+    if ($config == null) return;
+
     $tour = $event->tour->fresh()->load('document');
     if (! $tour?->document?->data['url']) {
       return;
@@ -42,8 +47,9 @@ class UpdateTourVectorStore implements ShouldQueue
     }
 
     $text = $this->readPdfAsPlainText($absolutePath);
+    $text = $this->cleanText($text);
     $chunks = collect(
-      $this->splitText($text, 2000, '.', 50)
+      $this->splitText($text, 1200, '.', 150)
     );
 
     if ($chunks->isEmpty()) {
@@ -54,10 +60,13 @@ class UpdateTourVectorStore implements ShouldQueue
 
     $chunks
       ->chunk(10)
-      ->each(function ($batch) use (&$allEmbeddings) {
+      ->each(function ($batch) use (&$allEmbeddings, $config) {
         $result = Embeddings::for($batch->values()->all())
           ->cache(3600)
-          ->generate();
+          ->generate(
+            provider: $config['embedding_model_provider'],
+            model: $config['embedding_model_name'],
+          );
 
         foreach ($result->embeddings as $embedding) {
           $allEmbeddings[] = $embedding;
@@ -184,5 +193,21 @@ class UpdateTourVectorStore implements ShouldQueue
   private function calcChunkLength(array $currentChunk, string $separator): int
   {
     return array_sum(array_map('strlen', $currentChunk)) + count($currentChunk) * strlen($separator) - 1;
+  }
+
+  private function cleanText(string $text): string
+  {
+    // 1. Fix hyphenated line breaks
+    $text = preg_replace('/(\w)-\s+(\w)/u', '$1$2', $text);
+    // 2. Normalize all newlines to space
+    $text = preg_replace("/\s*\n\s*/u", ' ', $text);
+    // 3. Normalize whitespace
+    $text = preg_replace('/\s+/u', ' ', $text);
+    // 4. Fix multiple dots
+    $text = preg_replace('/\.{2,}/', '.', $text);
+    // 5. Remove invisible characters
+    $text = preg_replace('/[\x{200B}-\x{200D}\x{FEFF}]/u', '', $text);
+
+    return trim($text);
   }
 }
