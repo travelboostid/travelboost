@@ -24,7 +24,6 @@ export default function CancelPayment({ payment }: { payment: any }) {
         preserveScroll: true,
         onSuccess: () => {
           // optional: toast / notification
-          console.log('Payment cancelled');
         },
       },
     );

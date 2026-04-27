@@ -33,8 +33,13 @@ export default function EditButton({ data }: { data: any }) {
 
   useEffect(() => {
     if (!open) return;
-    form.reset();
-  }, [form, open]);
+    form.setData({
+      key: data.key,
+      description: data.description,
+      value: data.value,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>

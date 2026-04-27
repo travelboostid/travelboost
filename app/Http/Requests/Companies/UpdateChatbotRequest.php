@@ -23,7 +23,6 @@ class UpdateChatbotRequest extends FormRequest
   {
     return [
       'chatbot_enabled' => 'sometimes|boolean',
-      'chatbot_model_id' => 'sometimes|exists:ai_models,id',
       'chatbot_response_style' => 'sometimes|string|in:professional,friendly,casual',
       'chatbot_default_language' => 'sometimes|string|in:en,id,auto'
     ];
