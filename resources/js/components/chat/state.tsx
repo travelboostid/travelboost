@@ -16,7 +16,7 @@ import type {
   StoreChatMessageRequest,
 } from '@/api/model';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
-import { useEcho } from '@laravel/echo-react';
+import { useEcho, useEchoPublic } from '@laravel/echo-react';
 import { MessageSquareIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { createContext, useContext, useState } from 'react';
@@ -30,8 +30,8 @@ export type ChatActor = {
 
 type ChatState = {
   actor: ChatActor | null;
-  roomById: { [id: number]: ChatRoomResource };
-  messageById: { [id: number]: ChatMessageResource };
+  roomById: Record<number, ChatRoomResource>;
+  messageById: Record<number, ChatMessageResource>;
 };
 
 type ChatActions = {
@@ -42,11 +42,135 @@ type ChatActions = {
   ) => Promise<GetChatMessages200>;
   loadRoom: (roomId: number) => Promise<any>;
   loadRooms: (options: GetChatRoomsParams) => Promise<any>;
+  setMessageById: (val: Record<number, ChatMessageResource>) => void;
+  setRoomById: (val: Record<number, ChatRoomResource>) => void;
 };
 
 type ChatContextType = ChatState & ChatActions;
 
 export const ChatContext = createContext<ChatContextType>(null!);
+
+function AuthenticatedChatMessageListener() {
+  const { auth } = usePageSharedDataProps();
+  const { messageById, roomById, setMessageById, setRoomById, actor } =
+    useChatContext();
+  const channelName = `users.${auth?.user?.id}`;
+
+  // 🔔 Message created
+  useEcho(
+    channelName,
+    '.ChatMessageCreated',
+    (e) => {
+      setMessageById({
+        ...messageById,
+        [e.id]: {
+          ...messageById[e.id],
+          ...e,
+        },
+      });
+
+      // Toast new message notification
+      if (actor?.type !== e.sender_type && actor?.id !== e.sender_id) {
+        toast(e.sender.name, {
+          description: <p className="line-clamp-1">{e.message || '???'}</p>,
+          icon: <MessageSquareIcon />,
+          position: 'top-center',
+        });
+      }
+    },
+    [channelName, actor, messageById, setMessageById],
+  );
+
+  // 🔔 Room updated
+  useEcho(
+    channelName,
+    '.ChatRoomUpdated',
+    (e) => {
+      setRoomById({
+        ...roomById,
+        [e.room.id]: {
+          ...roomById[e.room.id],
+          ...e.room,
+        },
+      });
+    },
+    [channelName, roomById, setRoomById],
+  );
+
+  // 🔔 Room created
+  useEcho(
+    channelName,
+    '.ChatRoomCreated',
+    (e) => {
+      setRoomById({
+        ...roomById,
+        [e.room.id]: {
+          ...roomById[e.room.id],
+          ...e.room,
+        },
+      });
+    },
+    [channelName, roomById, setRoomById],
+  );
+
+  return null;
+}
+
+function UnauthenticatedChatMessageListener() {
+  const { messageById, roomById, setMessageById, setRoomById, actor } =
+    useChatContext();
+  const anonymousUser = useAnonymousUserContext();
+  const channelName = `anonymous-users.${anonymousUser?.id}`;
+
+  // 🔔 Message created
+  useEchoPublic(channelName, '.ChatMessageCreated', (e: any) => {
+    console.log(
+      'Received ChatMessageCreated event for unauthenticated user',
+      e,
+      actor,
+    );
+    setMessageById({
+      ...messageById,
+      [e.id]: {
+        ...messageById[e.id],
+        ...e,
+      },
+    });
+
+    // Toast new message notification
+    if (actor?.type !== e.sender_type && actor?.id !== e.sender_id) {
+      toast(e.sender.name, {
+        description: <p className="line-clamp-1">{e.message || '???'}</p>,
+        icon: <MessageSquareIcon />,
+        position: 'top-center',
+      });
+    }
+  });
+
+  // 🔔 Room updated
+  useEchoPublic(channelName, '.ChatRoomUpdated', (e: any) => {
+    setRoomById({
+      ...roomById,
+      [e.room.id]: {
+        ...roomById[e.room.id],
+        ...e.room,
+      },
+    });
+  });
+
+  // 🔔 Room created
+  useEchoPublic(channelName, '.ChatRoomCreated', (e: any) => {
+    setRoomById({
+      ...roomById,
+      [e.room.id]: {
+        ...roomById[e.room.id],
+        ...e.room,
+      },
+    });
+  });
+
+  return null;
+}
 
 export function ChatContextProvider({
   children,
@@ -56,7 +180,6 @@ export function ChatContextProvider({
   actor: ChatActor;
 }) {
   const { auth } = usePageSharedDataProps();
-  const anonymousUser = useAnonymousUserContext();
   const [roomById, setRoomById] = useState<Record<number, ChatRoomResource>>(
     {},
   );
@@ -111,48 +234,6 @@ export function ChatContextProvider({
     return result;
   };
 
-  const userId = auth?.user?.id;
-  const anonymousUserId = anonymousUser?.id;
-  const channelName = userId
-    ? `users.${userId}`
-    : `anonymous-users.${anonymousUserId}`;
-
-  // 🔔 Message created
-  useEcho(channelName, '.ChatMessageCreated', (e) => {
-    setMessageById((prev) => ({
-      ...prev,
-      [e.id]: e,
-    }));
-
-    // Toast new message notification
-    if (actor.type !== e.sender_type || actor.id !== e.sender_id) {
-      toast(e.sender.name, {
-        description: <p className="line-clamp-1">{e.message || '???'}</p>,
-        icon: <MessageSquareIcon />,
-        position: 'top-center',
-      });
-    }
-  });
-
-  // 🔔 Room updated
-  useEcho(channelName, '.ChatRoomUpdated', (e) => {
-    setRoomById((prev) => ({
-      ...prev,
-      [e.room.id]: {
-        ...prev[e.room.id],
-        ...e.room,
-      },
-    }));
-  });
-
-  // 🔔 Room created
-  useEcho(channelName, '.ChatRoomCreated', (e) => {
-    setRoomById((prev) => ({
-      ...prev,
-      [e.room.id]: e.room,
-    }));
-  });
-
   return (
     <ChatContext.Provider
       value={{
@@ -163,8 +244,15 @@ export function ChatContextProvider({
         messageById,
         roomById,
         sendMessage,
+        setMessageById,
+        setRoomById,
       }}
     >
+      {auth?.user ? (
+        <AuthenticatedChatMessageListener />
+      ) : (
+        <UnauthenticatedChatMessageListener />
+      )}
       {children}
     </ChatContext.Provider>
   );

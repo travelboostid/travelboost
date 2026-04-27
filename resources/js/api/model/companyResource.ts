@@ -4,6 +4,7 @@
  * Travelboost
  * OpenAPI spec version: 0.0.1
  */
+import type { CompanyType } from './companyType';
 import type { CompanyResourceProvinceId } from './companyResourceProvinceId';
 import type { CompanyResourceCityId } from './companyResourceCityId';
 import type { CompanyResourceDistrictId } from './companyResourceDistrictId';
@@ -24,7 +25,7 @@ import type { CompanyResourceReferredBy } from './companyResourceReferredBy';
 
 export interface CompanyResource {
   id: number;
-  type: string;
+  type: CompanyType;
   name: string;
   username: string;
   email: string;
@@ -50,5 +51,7 @@ export interface CompanyResource {
   photo_id: CompanyResourcePhotoId;
   identity_card_id: CompanyResourceIdentityCardId;
   referred_by: CompanyResourceReferredBy;
+  payment_mode: string;
+  commission: number;
   photo_url: string;
 }

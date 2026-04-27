@@ -59,8 +59,6 @@ function PrivateChatHeader() {
       member?.member_type !== actor?.type || member?.member_id !== actor?.id,
   ) as any;
 
-  console.log('partner', room.members, actor);
-
   const partnerPhoto = partner?.member?.photo_url || DEFAULT_PHOTO;
 
   const handleExitRoom = () => {
@@ -128,7 +126,9 @@ export default function FloatingChatWidget() {
   const phone = company?.customer_service_phone || company?.phone;
   let whatsappUrl = '';
   if (phone) {
-    const message = encodeURIComponent(`Halo, saya ingin bertanya tentang layanan Anda.`);
+    const message = encodeURIComponent(
+      `Halo, saya ingin bertanya tentang layanan Anda.`,
+    );
     whatsappUrl = `https://wa.me/${phone}?text=${message}`;
   }
 
@@ -174,7 +174,7 @@ export default function FloatingChatWidget() {
       </div>
 
       <Sheet open={open} onOpenChange={setOpen}>
-        <SheetContent className="flex min-h-screen flex-col gap-0">
+        <SheetContent className="flex min-h-screen flex-col gap-0 w-full sm:max-w-[480px]">
           <ChatHeader />
           <div className="flex flex-1 flex-col">
             <div className="relative flex-1">

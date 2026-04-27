@@ -3,6 +3,7 @@ import { cn } from '@/lib/utils';
 import { useEffect, useRef, useState } from 'react';
 import { useInView } from 'react-intersection-observer';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import RenderAttachment from './render-attachment';
 import {
   useChatContext,
@@ -26,7 +27,7 @@ function ChatMessage({ message }: { message: ChatMessageResource }) {
       className={`flex ${mine ? 'justify-end' : 'justify-start'}`}
     >
       <div
-        className={`flex max-w-3/4 flex-col gap-2 rounded-lg px-4 py-3 ${
+        className={`flex max-w-11/12 flex-col gap-2 rounded-lg px-4 py-3 ${
           mine
             ? 'rounded-br-none bg-primary text-primary-foreground'
             : 'rounded-bl-none border border-border bg-card text-foreground'
@@ -59,7 +60,11 @@ export function MessageContentRenderer({
 }: {
   message: ChatMessageResource;
 }) {
-  return <ReactMarkdown>{message?.message || ''}</ReactMarkdown>;
+  return (
+    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+      {message?.message || ''}
+    </ReactMarkdown>
+  );
 }
 
 /**

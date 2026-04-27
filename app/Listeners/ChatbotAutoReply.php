@@ -27,10 +27,10 @@ class ChatbotAutoReply implements ShouldQueue
   public function handle(ChatMessageCreated $event): void
   {
     try {
-        $agent = ChatbotAgent::make($event->message);
-        $agent->reply();
+      $agent = ChatbotAgent::make($event->message);
+      $agent->reply();
     } catch (\Throwable $e) {
-        Log::error('ChatbotAutoReply Error: ' . $e->getMessage());
+      Log::error('ChatbotAutoReply Error: ' . $e->getMessage());
     }
   }
 }

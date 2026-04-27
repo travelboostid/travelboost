@@ -15,7 +15,7 @@ export type ChatRoomResourceLastMessage = {
   message: ChatRoomResourceLastMessageMessage;
   user_id: ChatRoomResourceLastMessageUserId;
   created_at: ChatRoomResourceLastMessageCreatedAt;
-  is_bot: string;
+  is_bot: boolean;
   attachment_data: ChatRoomResourceLastMessageAttachmentData;
   attachment_type: ChatRoomResourceLastMessageAttachmentType;
 };
