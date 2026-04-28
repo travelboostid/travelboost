@@ -35,11 +35,11 @@
 
   <title inertia>{{ config('app.name', 'Travelboost') }}</title>
 
-  <link rel="icon" href="/storage/logo/logo-square/favicon.ico" sizes="any">
-  <link rel="icon" type="image/png" sizes="32x32" href="/storage/logo/logo-square/favicon-32x32.png">
-  <link rel="icon" type="image/png" sizes="16x16" href="/storage/logo/logo-square/favicon-16x16.png">
-  <link rel="apple-touch-icon" href="/storage/logo/logo-square/apple-touch-icon.png">
-  <link rel="manifest" href="/storage/logo/logo-square/site.webmanifest">
+  <link rel="icon" href="/images/logo/logo-square/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/logo/logo-square/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/logo/logo-square/favicon-16x16.png">
+  <link rel="apple-touch-icon" href="/images/logo/logo-square/apple-touch-icon.png">
+  <link rel="manifest" href="/images/logo/logo-square/site.webmanifest">
 
   <link rel="preconnect" href="https://fonts.bunny.net">
   <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600" rel="stylesheet" />

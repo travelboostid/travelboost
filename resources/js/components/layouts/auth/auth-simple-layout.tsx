@@ -17,7 +17,7 @@ export default function AuthSimpleLayout({
             >
               <div className="-mb-5 flex size-32 items-center justify-center rounded-md">
                 <img
-                  src="/storage/logo/square/android-chrome-512x512.png"
+                  src="/images/logo/square/android-chrome-512x512.png"
                   alt="Travelboost Logo"
                   className="size-32 object-contain drop-shadow-sm"
                 />

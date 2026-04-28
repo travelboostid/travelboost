@@ -19,7 +19,7 @@ export function SidebarSection(props: AffiliateDashboardLayoutProps) {
             <SidebarMenuButton size="lg" asChild>
               <a href="/affiliate/dashboard" className="flex items-center">
                 <img
-                  src="/storage/logo/hori.png"
+                  src="/images/logo/hori.png"
                   alt="Travelboost Logo"
                   className="h-11 w-auto drop-shadow-sm"
                 />

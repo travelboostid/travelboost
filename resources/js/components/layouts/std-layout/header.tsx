@@ -55,7 +55,7 @@ export function Header() {
           {/* LOGO */}
           <Link href="/" className="flex items-center gap-2 flex-none">
             <img
-              src="/storage/logo/hori.png"
+              src="/images/logo/hori.png"
               alt="Travelboost Logo"
               className="h-12 w-auto drop-shadow-sm"
             />

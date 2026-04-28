@@ -300,7 +300,7 @@ export default function Landing() {
           <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
             <a href="#home" className="flex items-center">
               <img
-                src="/storage/logo/hori.png"
+                src="/images/logo/hori.png"
                 alt="Travelboost Affiliate Logo"
                 className="h-10 w-auto drop-shadow-sm"
               />
