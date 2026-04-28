@@ -44,6 +44,8 @@ type BookingInfoCardProps = {
   contactPhone: string;
   pricing: BookingPricing;
   timeLeftSeconds: number;
+  currentStep?: number;
+  totalPaid?: number;
 };
 
 export default function BookingInfoCard({
@@ -59,6 +61,8 @@ export default function BookingInfoCard({
   contactPhone,
   pricing,
   timeLeftSeconds,
+  currentStep = 1,
+  totalPaid = 0,
 }: BookingInfoCardProps) {
   const statusConfig = BOOKING_STATUS_CONFIG[status];
 
@@ -94,6 +98,7 @@ export default function BookingInfoCard({
             </div>
           </div>
         </div>
+        {currentStep >= 2 && (
         <div
           className="flex flex-col text-left sm:items-end sm:text-right"
           role="timer"
@@ -110,6 +115,7 @@ export default function BookingInfoCard({
             <span>{formatTime(timeLeftSeconds)}</span>
           </div>
         </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
@@ -213,7 +219,7 @@ export default function BookingInfoCard({
                 Total Price:
               </span>{' '}
               <span className="font-bold text-foreground">
-                <AnimatedPrice value={pricing.totalPrice} />
+                <AnimatedPrice value={pricing.subtotalGuests} />
               </span>
             </p>
             <p>
@@ -221,7 +227,7 @@ export default function BookingInfoCard({
                 Total Payment:
               </span>{' '}
               <span className="font-bold text-primary">
-                <AnimatedPrice value={pricing.totalPayment} />
+                <AnimatedPrice value={totalPaid ?? 0} />
               </span>
             </p>
           </div>

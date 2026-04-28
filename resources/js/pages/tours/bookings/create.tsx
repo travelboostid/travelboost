@@ -13,6 +13,16 @@ import Step4BookingSummary, {
 } from '@/components/booking/Step4BookingSummary';
 import WizardStepIndicator from '@/components/booking/WizardStepIndicator';
 import type { TourSchedule } from '@/components/tours/tour-booking-modal';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import type { WizardStepId } from '@/constants/booking';
 import type {
@@ -37,8 +47,15 @@ type PageProps = {
 };
 
 export default function Page() {
-  const { tour, tourPrices, vendor, auth, tenant, bookingNumber } =
-    usePage<any>().props as any;
+  const {
+    tour,
+    tourPrices,
+    vendor,
+    auth,
+    tenant,
+    bookingNumber,
+    availability,
+  } = usePage<any>().props as any;
   const user = auth?.user;
 
   const urlParams = useMemo(
@@ -51,7 +68,9 @@ export default function Page() {
   const [currentStep, setCurrentStep] = useState<WizardStepId>(1);
   const [direction, setDirection] = useState(1); // 1=forward, -1=back
   const [hasAgreedToTnc, setHasAgreedToTnc] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(15 * 60);
+  const [timeLeft, setTimeLeft] = useState(10 * 60);
+  const [timerStarted, setTimerStarted] = useState(false);
+  const [showStep2ConfirmModal, setShowStep2ConfirmModal] = useState(false);
 
   // ─── Contact ────────────────────────────────────────────────────────
   const [contact, setContact] = useState<BookingContact>({
@@ -149,14 +168,16 @@ export default function Page() {
     [guests, vendor],
   );
 
-  // ─── Timer ──────────────────────────────────────────────────────────
+  // ─── Timer (starts when entering Step 2) ────────────────────────────
   useEffect(() => {
-    if (!hasAgreedToTnc) return;
+    if (!timerStarted) return;
     const interval = setInterval(() => {
       setTimeLeft((prev) => {
         if (prev <= 1) {
           clearInterval(interval);
-          alert('Waktu pengisian form telah habis.');
+          alert(
+            'Your time to complete this form has expired. Please refresh the page to try again.',
+          );
           window.history.back();
           return 0;
         }
@@ -164,30 +185,59 @@ export default function Page() {
       });
     }, 1000);
     return () => clearInterval(interval);
-  }, [hasAgreedToTnc]);
+  }, [timerStarted]);
 
   // ─── Navigation ─────────────────────────────────────────────────────
   const goNext = () => {
     if (currentStep === 1) {
-      const currentFingerprint = JSON.stringify(
-        guests.map((g) => `${g.id}-${g.priceCategory}`),
-      );
-      if (
-        rooms.length === 0 ||
-        roomsGuestFingerprint.current !== currentFingerprint
-      ) {
-        setRooms(autoRecommendRooms(guests));
-        roomsGuestFingerprint.current = currentFingerprint;
-      }
+      // Show confirmation modal before going to Step 2
+      setShowStep2ConfirmModal(true);
+      return;
     }
     setDirection(1);
     setCurrentStep((s) => Math.min(4, s + 1) as WizardStepId);
   };
 
+  const confirmGoToStep2 = () => {
+    setShowStep2ConfirmModal(false);
+
+    const currentFingerprint = JSON.stringify(
+      guests.map((g) => `${g.id}-${g.priceCategory}`),
+    );
+    if (
+      rooms.length === 0 ||
+      roomsGuestFingerprint.current !== currentFingerprint
+    ) {
+      setRooms(autoRecommendRooms(guests));
+      roomsGuestFingerprint.current = currentFingerprint;
+    }
+
+    // Start timer and set booking status to reserved
+    if (!timerStarted) {
+      setTimerStarted(true);
+      // POST to backend to reserve the booking
+      router.post(
+        `/bookings/${tour.id}/reserve`,
+        {
+          tour_id: tour.id,
+          departure_date: preselectedDate,
+          pax_adult: adults,
+          pax_child: children,
+          pax_infant: infants,
+          booking_number: bookingNumber,
+        } as any,
+        { preserveScroll: true, preserveState: true },
+      );
+    }
+
+    setDirection(1);
+    setCurrentStep(2);
+  };
+
   const goBack = () => {
     if (currentStep === 1 && hasAgreedToTnc) {
       setHasAgreedToTnc(false);
-      setTimeLeft(15 * 60);
+      setTimeLeft(10 * 60);
       return;
     }
     if (currentStep === 1) {
@@ -240,6 +290,7 @@ export default function Page() {
         g.firstName.trim() !== '' &&
         g.lastName.trim() !== '' &&
         g.dateOfBirth.trim() !== '' &&
+        g.placeOfBirth.trim() !== '' &&
         g.priceCategory !== null,
     );
 
@@ -382,8 +433,8 @@ export default function Page() {
               </ul>
               <p className="mt-6 rounded-lg bg-muted/50 p-4 text-sm font-medium leading-relaxed text-foreground">
                 By clicking &quot;I Agree & Continue&quot;, you agree to the
-                Terms & Conditions and will have 15 minutes to complete the
-                booking details.
+                Terms & Conditions. A 10-minute timer will start on the room
+                arrangement step to complete your booking.
               </p>
             </div>
             <div className="mt-8 flex items-center justify-end gap-3 border-t pt-6">
@@ -458,6 +509,7 @@ export default function Page() {
                 contactPhone={contact.phone}
                 pricing={pricing}
                 timeLeftSeconds={timeLeft}
+                currentStep={currentStep}
               />
             </div>
 
@@ -486,6 +538,7 @@ export default function Page() {
                       onGuestUpdate={handleGuestUpdate}
                       onGuestRemove={handleGuestRemove}
                       tourPrices={tourPrices}
+                      maxGuests={availability ?? 99}
                     />
                   )}
                   {currentStep === 2 && (
@@ -500,6 +553,7 @@ export default function Page() {
                       guests={guests}
                       travelDocuments={travelDocuments}
                       onTravelDocumentsChange={setTravelDocuments}
+                      departureDate={preselectedDate}
                     />
                   )}
                   {currentStep === 4 && (
@@ -565,6 +619,28 @@ export default function Page() {
           <div className="hidden w-12 shrink-0 md:block" />
         </div>
       </div>
+
+      {/* ─── Step 1 → Step 2 Confirmation Modal ────────────────────────── */}
+      <AlertDialog
+        open={showStep2ConfirmModal}
+        onOpenChange={setShowStep2ConfirmModal}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Before you continue</AlertDialogTitle>
+            <AlertDialogDescription>
+              On the next screen, please complete your transaction within 10
+              minutes to avoid cancellation.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmGoToStep2}>
+              I understand, continue
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

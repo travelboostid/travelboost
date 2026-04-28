@@ -19,15 +19,15 @@ export type WizardStepId = (typeof WIZARD_STEPS)[number]['id'];
 // ─── Title Options ──────────────────────────────────────────────────────────────
 
 export const TITLE_OPTIONS: Record<string, string[]> = {
-  adult: ['Mr', 'Mrs', 'Ms', 'Dr', 'Prof'],
-  child: ['Master', 'Miss'],
-  infant: ['Master', 'Miss'],
+  adult: ['Mr', 'Mrs', 'Ms'],
+  child: ['Mstr (Male)', 'Miss (Female)'],
+  infant: ['Mstr (Male)', 'Miss (Female)'],
 };
 
 // ─── Category Filter (maps guest type → allowed price_categories.name values) ──
 
 export const CATEGORY_FILTER: Record<string, string[]> = {
-  adult: ['Single', 'Double', 'Triple', 'Quad'],
+  adult: ['Single', 'Double', 'Triple'],
   child: ['Child With Bed', 'Child No Bed'],
   infant: ['Infant'],
 };
@@ -38,7 +38,6 @@ export const PRICE_CATEGORY_LABELS: Record<string, string> = {
   Single: 'Single',
   Double: 'Double',
   Triple: 'Triple',
-  Quad: 'Quad',
   'Child With Bed': 'Child With Bed',
   'Child No Bed': 'Child No Bed',
   Infant: 'Infant',
