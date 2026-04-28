@@ -24,7 +24,6 @@ import {
 import { useTheme } from 'next-themes';
 import React, { useEffect, useState } from 'react';
 
-// --- KAMUS BAHASA ---
 const dict = {
   id: {
     navHome: 'Beranda',
@@ -219,7 +218,6 @@ const dict = {
   },
 };
 
-// --- CSS ANIMASI ---
 const animationStyles = `
   @keyframes float {
     0% { transform: translateY(0px) rotate(0deg); }
@@ -232,29 +230,28 @@ const animationStyles = `
   html { scroll-behavior: smooth; }
 `;
 
-// --- KOMPONEN FAQ ---
 const FaqItem: React.FC<{ question: string; answer: string }> = ({
   question,
   answer,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   return (
-    <div className="border-b border-slate-200 dark:border-slate-800 last:border-b-0">
+    <div className="border-b border-border last:border-b-0">
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="flex justify-between items-center w-full py-6 text-left group"
       >
-        <h4 className="text-lg font-semibold text-slate-800 dark:text-slate-200 group-hover:text-blue-600 transition-colors tracking-tight">
+        <h4 className="text-lg font-semibold text-foreground group-hover:text-primary transition-colors tracking-tight">
           {question}
         </h4>
         <ChevronDown
-          className={`w-5 h-5 text-slate-500 transition-transform duration-300 ${isOpen ? 'rotate-180 text-blue-600' : ''}`}
+          className={`w-5 h-5 text-muted-foreground transition-transform duration-300 ${isOpen ? 'rotate-180 text-primary' : ''}`}
         />
       </button>
       <div
         className={`overflow-hidden transition-all duration-300 ease-in-out ${isOpen ? 'max-h-96 pb-6' : 'max-h-0'}`}
       >
-        <p className="text-slate-600 dark:text-slate-400 leading-relaxed text-base">
+        <p className="text-muted-foreground leading-relaxed text-base">
           {answer}
         </p>
       </div>
@@ -298,61 +295,43 @@ export default function Landing() {
       <Head title="TravelBoost Affiliate Program" />
       <style>{animationStyles}</style>
 
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans selection:bg-blue-500/30 transition-colors duration-200">
-        {/* --- NAVIGASI --- */}
-        <nav className="sticky top-0 z-50 bg-white/80 dark:bg-slate-950/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800">
+      <div className="min-h-screen bg-background text-foreground font-sans selection:bg-primary/30 transition-colors duration-200">
+        <nav className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
           <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-            {/* Logo */}
-            <a
-              href="#home"
-              className="text-2xl font-bold tracking-tight text-blue-600 dark:text-blue-500"
-            >
-              TB
-              <span className="text-slate-900 dark:text-white font-medium">
-                Affiliate
-              </span>
+            <a href="#home" className="flex items-center">
+              <img
+                src="/images/logo/hori.png"
+                alt="Travelboost Affiliate Logo"
+                className="h-10 w-auto drop-shadow-sm"
+              />
             </a>
 
-            {/* Menu Desktop */}
-            <div className="hidden lg:flex items-center gap-8 font-medium text-sm text-slate-600 dark:text-slate-300">
-              <a
-                href="#home"
-                className="hover:text-blue-600 dark:hover:text-blue-400 transition"
-              >
+            <div className="hidden lg:flex items-center gap-8 font-medium text-sm text-muted-foreground">
+              <a href="#home" className="hover:text-primary transition">
                 {t.navHome}
               </a>
-              <a
-                href="#steps"
-                className="hover:text-blue-600 dark:hover:text-blue-400 transition"
-              >
+              <a href="#steps" className="hover:text-primary transition">
                 {t.navSteps}
               </a>
-              <a
-                href="#features"
-                className="hover:text-blue-600 dark:hover:text-blue-400 transition"
-              >
+              <a href="#features" className="hover:text-primary transition">
                 {t.navFeatures}
               </a>
-              <a
-                href="#faq"
-                className="hover:text-blue-600 dark:hover:text-blue-400 transition"
-              >
+              <a href="#faq" className="hover:text-primary transition">
                 {t.navFaq}
               </a>
             </div>
 
-            {/* Aksi & Toggles */}
             <div className="flex items-center gap-2 md:gap-4">
-              <div className="hidden sm:flex items-center gap-3 mr-2 border-r border-slate-200 dark:border-slate-700 pr-4">
+              <div className="hidden sm:flex items-center gap-3 mr-2 border-r border-border pr-4">
                 <a
                   href="/affiliate/login"
-                  className="text-sm font-bold text-slate-700 dark:text-slate-200 hover:text-blue-600 transition px-2"
+                  className="text-sm font-bold text-foreground hover:text-primary transition px-2"
                 >
                   {t.navLogin}
                 </a>
                 <a
                   href="/affiliate/register"
-                  className="text-sm font-bold bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition shadow-sm"
+                  className="text-sm font-bold bg-primary text-primary-foreground px-4 py-2 rounded-lg hover:bg-primary/90 transition shadow-sm"
                 >
                   {t.navRegister}
                 </a>
@@ -360,7 +339,7 @@ export default function Landing() {
 
               <button
                 onClick={toggleLang}
-                className="flex items-center gap-2 p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+                className="flex items-center gap-2 p-2 rounded-lg hover:bg-muted transition"
               >
                 <Languages size={18} />
                 <span className="text-sm font-bold uppercase hidden sm:block">
@@ -369,7 +348,7 @@ export default function Landing() {
               </button>
               <button
                 onClick={toggleTheme}
-                className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+                className="p-2 rounded-lg hover:bg-muted transition"
               >
                 {resolvedTheme === 'light' ? (
                   <Moon size={18} />
@@ -378,19 +357,17 @@ export default function Landing() {
                 )}
               </button>
 
-              {/* Menu Hamburger Mobile */}
               <button
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                className="lg:hidden p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+                className="lg:hidden p-2 rounded-lg hover:bg-muted transition"
               >
                 {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
               </button>
             </div>
           </div>
 
-          {/* Dropdown Mobile Menu */}
           {isMobileMenuOpen && (
-            <div className="lg:hidden absolute top-16 left-0 w-full bg-white dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 py-4 px-6 shadow-xl flex flex-col gap-4">
+            <div className="lg:hidden absolute top-16 left-0 w-full bg-background border-b border-border py-4 px-6 shadow-xl flex flex-col gap-4">
               <a
                 href="#home"
                 onClick={() => setIsMobileMenuOpen(false)}
@@ -419,16 +396,16 @@ export default function Landing() {
               >
                 {t.navFaq}
               </a>
-              <div className="flex flex-col gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
+              <div className="flex flex-col gap-3 pt-4 border-t border-border">
                 <a
                   href="/login"
-                  className="text-center font-bold py-2 bg-slate-100 dark:bg-slate-800 rounded-lg"
+                  className="text-center font-bold py-2 bg-muted rounded-lg"
                 >
                   {t.navLogin}
                 </a>
                 <a
                   href="/register"
-                  className="text-center font-bold py-2 bg-blue-600 text-white rounded-lg"
+                  className="text-center font-bold py-2 bg-primary text-primary-foreground rounded-lg"
                 >
                   {t.navRegister}
                 </a>
@@ -437,32 +414,31 @@ export default function Landing() {
           )}
         </nav>
 
-        {/* --- HERO SECTION --- */}
         <section
           id="home"
-          className="relative pt-20 pb-28 overflow-hidden bg-white dark:bg-slate-900"
+          className="relative pt-20 pb-28 overflow-hidden bg-background"
         >
           <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-20 dark:opacity-10">
             <PlaneTakeoff
-              className="absolute top-20 left-10 text-blue-600 animate-float"
+              className="absolute top-20 left-10 text-primary animate-float"
               size={60}
             />
             <Luggage
-              className="absolute bottom-10 right-20 text-blue-600 animate-float delay-1"
+              className="absolute bottom-10 right-20 text-primary animate-float delay-1"
               size={80}
             />
             <Hotel
-              className="absolute top-1/2 left-1/2 text-blue-600 animate-float delay-2"
+              className="absolute top-1/2 left-1/2 text-primary animate-float delay-2"
               size={50}
             />
           </div>
 
           <div className="max-w-7xl mx-auto px-6 grid lg:grid-cols-5 gap-12 items-center relative z-10">
             <div className="lg:col-span-3 space-y-8 text-center lg:text-left">
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.1] bg-gradient-to-r from-slate-950 to-slate-800 dark:from-white dark:to-slate-300 bg-clip-text text-transparent">
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.1] text-foreground">
                 {t.heroTitle}
               </h1>
-              <p className="text-lg md:text-xl text-slate-600 dark:text-slate-400 leading-relaxed max-w-2xl mx-auto lg:mx-0">
+              <p className="text-lg md:text-xl text-muted-foreground leading-relaxed max-w-2xl mx-auto lg:mx-0">
                 {t.heroDesc
                   .replace('afiliasi.travelboost.co.id', currentDomain)
                   .replace('affiliate.travelboost.co.id', currentDomain)}
@@ -470,13 +446,13 @@ export default function Landing() {
               <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
                 <a
                   href="/register"
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-xl font-semibold shadow-lg shadow-blue-600/20 transition-all active:scale-95 flex justify-center items-center gap-2"
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-4 rounded-xl font-semibold shadow-lg shadow-primary/20 transition-all active:scale-95 flex justify-center items-center gap-2"
                 >
                   {t.heroBtn1} <ArrowRight size={18} />
                 </a>
                 <a
                   href="#features"
-                  className="bg-white dark:bg-slate-950 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 px-8 py-4 rounded-xl font-semibold transition-all text-center"
+                  className="bg-background text-foreground border border-border hover:bg-muted px-8 py-4 rounded-xl font-semibold transition-all text-center"
                 >
                   {t.heroBtn2}
                 </a>
@@ -486,34 +462,31 @@ export default function Landing() {
               <img
                 src="https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&q=80&w=600"
                 alt="Collaboration"
-                className="rounded-3xl object-cover w-full h-auto shadow-2xl border-4 border-white dark:border-slate-800"
+                className="rounded-3xl object-cover w-full h-auto shadow-2xl border-4 border-background"
               />
             </div>
           </div>
         </section>
 
-        {/* --- PELUANG CUAN (BENTO GRID DESIGN - DIPERBAIKI) --- */}
-        <section className="py-20 bg-slate-50 dark:bg-slate-950">
+        <section className="py-20 bg-muted/30">
           <div className="max-w-7xl mx-auto px-6">
-            <div className="bg-blue-600 dark:bg-blue-900/30 rounded-[2rem] overflow-hidden shadow-2xl flex flex-col lg:flex-row">
-              {/* Sisi Kiri: Teks (Biru) */}
-              <div className="lg:w-1/2 p-10 md:p-14 lg:p-16 flex flex-col justify-center text-white relative overflow-hidden">
+            <div className="bg-primary rounded-[2rem] overflow-hidden shadow-2xl flex flex-col lg:flex-row">
+              <div className="lg:w-1/2 p-10 md:p-14 lg:p-16 flex flex-col justify-center text-primary-foreground relative overflow-hidden">
                 <div className="absolute -top-20 -right-20 w-64 h-64 bg-white/10 rounded-full blur-3xl pointer-events-none"></div>
 
-                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-500/50 dark:bg-blue-500/20 border border-blue-400/30 text-sm font-bold mb-6 w-max shadow-sm">
+                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/20 border border-white/30 text-sm font-bold mb-6 w-max shadow-sm">
                   <TrendingUp size={16} /> {t.marketTag}
                 </div>
 
                 <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight mb-6 leading-tight">
                   {t.marketTitle}
                 </h2>
-                <p className="text-blue-100 text-lg leading-relaxed opacity-90">
+                <p className="text-primary-foreground/90 text-lg leading-relaxed">
                   {t.marketDesc}
                 </p>
               </div>
 
-              {/* Sisi Kanan: Stats Card (Putih/Gelap) */}
-              <div className="lg:w-1/2 bg-white dark:bg-slate-900 p-8 md:p-14 lg:p-16 flex items-center lg:rounded-l-3xl shadow-[-10px_0_30px_rgba(0,0,0,0.05)]">
+              <div className="lg:w-1/2 bg-card p-8 md:p-14 lg:p-16 flex items-center lg:rounded-l-3xl shadow-[-10px_0_30px_rgba(0,0,0,0.05)]">
                 <div className="grid sm:grid-cols-2 gap-6 w-full">
                   {[
                     {
@@ -529,15 +502,15 @@ export default function Landing() {
                   ].map((item, i) => (
                     <div
                       key={i}
-                      className="bg-slate-50 dark:bg-slate-800/50 p-8 rounded-2xl border border-slate-100 dark:border-slate-700 hover:-translate-y-1 transition-transform duration-300"
+                      className="bg-muted/50 p-8 rounded-2xl border border-border hover:-translate-y-1 transition-transform duration-300"
                     >
-                      <div className="w-14 h-14 rounded-xl bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-6">
+                      <div className="w-14 h-14 rounded-xl bg-primary/20 text-primary flex items-center justify-center mb-6">
                         {item.icon}
                       </div>
-                      <div className="text-3xl md:text-4xl font-black text-slate-900 dark:text-white mb-2 tracking-tight">
+                      <div className="text-3xl md:text-4xl font-black text-foreground mb-2 tracking-tight">
                         {item.stat}
                       </div>
-                      <div className="text-sm font-semibold text-slate-500 dark:text-slate-400">
+                      <div className="text-sm font-semibold text-muted-foreground">
                         {item.desc}
                       </div>
                     </div>
@@ -548,20 +521,19 @@ export default function Landing() {
           </div>
         </section>
 
-        {/* --- LANGKAH MUDAH --- */}
-        <section id="steps" className="py-28 bg-white dark:bg-slate-900">
+        <section id="steps" className="py-28 bg-background">
           <div className="max-w-6xl mx-auto px-6">
             <div className="text-center mb-20 space-y-3">
               <h2 className="text-4xl font-extrabold tracking-tight">
                 {t.stepTitle}
               </h2>
-              <p className="text-xl text-slate-600 dark:text-slate-400 max-w-xl mx-auto">
+              <p className="text-xl text-muted-foreground max-w-xl mx-auto">
                 {t.stepDesc}
               </p>
             </div>
 
             <div className="relative">
-              <div className="absolute top-1/2 left-0 w-full h-1 bg-slate-100 dark:bg-slate-800 hidden lg:block -translate-y-1/2 z-0"></div>
+              <div className="absolute top-1/2 left-0 w-full h-1 bg-border hidden lg:block -translate-y-1/2 z-0"></div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-4 relative z-10">
                 {[
@@ -588,16 +560,18 @@ export default function Landing() {
                 ].map((step, i) => (
                   <div
                     key={i}
-                    className="bg-slate-50 dark:bg-slate-800 p-8 rounded-3xl text-center flex flex-col items-center border border-slate-100 dark:border-slate-700 hover:border-blue-200 dark:hover:border-blue-800 transition-colors relative"
+                    className="bg-card p-8 rounded-3xl text-center flex flex-col items-center border border-border hover:border-primary/50 transition-colors relative"
                   >
-                    <div className="w-20 h-20 rounded-full bg-blue-600 text-white flex items-center justify-center mb-6 shadow-xl shadow-blue-500/20">
+                    <div className="w-20 h-20 rounded-full bg-primary text-primary-foreground flex items-center justify-center mb-6 shadow-xl shadow-primary/20">
                       {step.icon}
                     </div>
-                    <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 rounded-full w-10 h-10 flex items-center justify-center font-bold text-blue-600">
+                    <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-background border-2 border-border rounded-full w-10 h-10 flex items-center justify-center font-bold text-primary">
                       {i + 1}
                     </div>
-                    <h3 className="text-xl font-bold mb-2">{step.title}</h3>
-                    <p className="text-slate-600 dark:text-slate-400 text-sm leading-relaxed">
+                    <h3 className="text-xl font-bold mb-2 text-foreground">
+                      {step.title}
+                    </h3>
+                    <p className="text-muted-foreground text-sm leading-relaxed">
                       {step.desc}
                     </p>
                   </div>
@@ -607,10 +581,9 @@ export default function Landing() {
           </div>
         </section>
 
-        {/* --- KEUNGGULAN --- */}
         <section
           id="features"
-          className="py-24 bg-slate-50 dark:bg-slate-950 border-y border-slate-200 dark:border-slate-800/50"
+          className="py-24 bg-muted/30 border-y border-border"
         >
           <div className="max-w-7xl mx-auto px-6">
             <h2 className="text-4xl font-extrabold tracking-tight text-center mb-16">
@@ -631,16 +604,16 @@ export default function Landing() {
               ].map((item, i) => (
                 <div
                   key={i}
-                  className="p-8 rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-sm flex gap-5 hover:shadow-md transition-shadow"
+                  className="p-8 rounded-2xl bg-card border border-border shadow-sm flex gap-5 hover:shadow-md transition-shadow"
                 >
-                  <div className="flex-shrink-0 mt-1 text-blue-600 dark:text-blue-400">
+                  <div className="flex-shrink-0 mt-1 text-primary">
                     {React.cloneElement(item.icon, { size: 28 })}
                   </div>
                   <div>
-                    <h3 className="text-xl font-bold mb-2 tracking-tight">
+                    <h3 className="text-xl font-bold mb-2 tracking-tight text-foreground">
                       {item.title}
                     </h3>
-                    <p className="text-slate-600 dark:text-slate-400 leading-relaxed text-sm">
+                    <p className="text-muted-foreground leading-relaxed text-sm">
                       {item.desc}
                     </p>
                   </div>
@@ -650,8 +623,7 @@ export default function Landing() {
           </div>
         </section>
 
-        {/* --- TESTIMONI --- */}
-        <section className="py-24 bg-white dark:bg-slate-900">
+        <section className="py-24 bg-background">
           <div className="max-w-7xl mx-auto px-6">
             <h2 className="text-4xl font-extrabold tracking-tight text-center mb-16">
               {t.testiTitle}
@@ -661,26 +633,23 @@ export default function Landing() {
                 { quote: t.testi1, name: t.testi1N, job: t.testi1J },
                 { quote: t.testi2, name: t.testi2N, job: t.testi2J },
               ].map((item, i) => (
-                <div
-                  key={i}
-                  className="bg-slate-50 dark:bg-slate-800/50 p-10 rounded-3xl relative"
-                >
+                <div key={i} className="bg-muted/50 p-10 rounded-3xl relative">
                   <MessageSquareQuote
-                    className="absolute -top-5 -left-5 text-blue-100 dark:text-blue-900/50"
+                    className="absolute -top-5 -left-5 text-primary/20"
                     size={60}
                   />
-                  <p className="text-lg text-slate-700 dark:text-slate-300 leading-relaxed italic mb-8 relative z-10">
+                  <p className="text-lg text-foreground/90 leading-relaxed italic mb-8 relative z-10">
                     "{item.quote}"
                   </p>
-                  <div className="flex items-center gap-4 border-t border-slate-200 dark:border-slate-700 pt-6">
-                    <div className="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center font-bold text-blue-600 dark:text-blue-400 text-xl">
+                  <div className="flex items-center gap-4 border-t border-border pt-6">
+                    <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center font-bold text-primary text-xl">
                       {item.name.charAt(0)}
                     </div>
                     <div>
-                      <div className="font-bold text-slate-900 dark:text-white">
+                      <div className="font-bold text-foreground">
                         {item.name}
                       </div>
-                      <div className="text-sm text-slate-500 dark:text-slate-400 font-medium">
+                      <div className="text-sm text-muted-foreground font-medium">
                         {item.job}
                       </div>
                     </div>
@@ -691,16 +660,12 @@ export default function Landing() {
           </div>
         </section>
 
-        {/* --- FAQ --- */}
-        <section
-          id="faq"
-          className="py-24 bg-slate-50 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800/50"
-        >
+        <section id="faq" className="py-24 bg-muted/30 border-t border-border">
           <div className="max-w-4xl mx-auto px-6">
             <h2 className="text-4xl font-extrabold tracking-tight text-center mb-16">
               {t.faqTitle}
             </h2>
-            <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 md:p-10 border border-slate-100 dark:border-slate-800 shadow-sm">
+            <div className="bg-card rounded-3xl p-8 md:p-10 border border-border shadow-sm">
               <FaqItem question={t.faq1Q} answer={t.faq1A} />
               <FaqItem question={t.faq2Q} answer={t.faq2A} />
               <FaqItem question={t.faq3Q} answer={t.faq3A} />
@@ -708,24 +673,23 @@ export default function Landing() {
           </div>
         </section>
 
-        {/* --- CTA --- */}
-        <section className="py-24 bg-white dark:bg-slate-900">
+        <section className="py-24 bg-background">
           <div className="max-w-5xl mx-auto px-6 text-center">
-            <div className="bg-blue-600 rounded-[2.5rem] p-10 md:p-16 lg:p-20 shadow-2xl shadow-blue-600/20 text-white relative overflow-hidden">
+            <div className="bg-primary rounded-[2.5rem] p-10 md:p-16 lg:p-20 shadow-2xl shadow-primary/20 text-primary-foreground relative overflow-hidden">
               <PlaneTakeoff
-                className="absolute -bottom-10 -left-10 text-blue-700 opacity-50"
+                className="absolute -bottom-10 -left-10 text-primary-foreground/30 opacity-50"
                 size={150}
               />
               <div className="relative z-10 space-y-8">
                 <h2 className="text-3xl md:text-4xl lg:text-5xl font-extrabold tracking-tight">
                   {t.ctaTitle}
                 </h2>
-                <p className="text-blue-100 text-lg md:text-xl leading-relaxed max-w-2xl mx-auto">
+                <p className="text-primary-foreground/90 text-lg md:text-xl leading-relaxed max-w-2xl mx-auto">
                   {t.ctaDesc}
                 </p>
                 <a
                   href="/register"
-                  className="inline-block bg-white text-blue-600 hover:bg-slate-50 px-10 py-5 rounded-2xl font-bold transition-all active:scale-95 shadow-xl text-lg"
+                  className="inline-block bg-background text-primary hover:bg-muted px-10 py-5 rounded-2xl font-bold transition-all active:scale-95 shadow-xl text-lg"
                 >
                   {t.ctaBtn}
                 </a>
@@ -734,34 +698,31 @@ export default function Landing() {
           </div>
         </section>
 
-        {/* --- FOOTER --- */}
-        <footer className="bg-slate-100 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800/50 pt-16 pb-8 text-sm text-slate-600 dark:text-slate-400">
+        <footer className="bg-muted border-t border-border pt-16 pb-8 text-sm text-muted-foreground">
           <div className="max-w-7xl mx-auto px-6 text-center space-y-12">
             <div>
-              <h3 className="text-xl font-bold mb-3 text-slate-900 dark:text-white">
+              <h3 className="text-xl font-bold mb-3 text-foreground">
                 {t.contactTitle}
               </h3>
               <p className="mb-6 max-w-xl mx-auto leading-relaxed">
                 {t.contactDesc}
               </p>
-              <div className="flex flex-col sm:flex-row justify-center items-center gap-2 sm:gap-6 font-medium text-slate-800 dark:text-slate-200">
-                <a href="#" className="hover:text-blue-600 transition">
+              <div className="flex flex-col sm:flex-row justify-center items-center gap-2 sm:gap-6 font-medium text-foreground">
+                <a href="#" className="hover:text-primary transition">
                   WhatsApp: +62 812-XXXX-XXXX
                 </a>
-                <span className="hidden sm:block text-slate-300 dark:text-slate-700">
-                  |
-                </span>
-                <a href="#" className="hover:text-blue-600 transition">
+                <span className="hidden sm:block text-muted-foreground">|</span>
+                <a href="#" className="hover:text-primary transition">
                   dev.travelboost.co.id
                 </a>
               </div>
             </div>
 
-            <div className="pt-8 border-t border-slate-200 dark:border-slate-800">
-              <div className="text-2xl font-bold text-blue-600 mb-2">
+            <div className="pt-8 border-t border-border">
+              <div className="text-2xl font-bold text-primary mb-2">
                 TravelBoost
               </div>
-              <p className="font-medium text-slate-500">
+              <p className="font-medium">
                 &copy; {new Date().getFullYear()}. {t.footerText}
               </p>
             </div>

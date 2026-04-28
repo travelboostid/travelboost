@@ -17,7 +17,7 @@ export function NavMain({
         {company.type === 'vendor' ? 'Vendor Menu' : 'Agent Menu'}
       </SidebarGroupLabel>
       <SidebarMenuRenderer
-        menu={menus}
+        menu={menus as any}
         activeMenuIds={activeMenuIds || []}
         openMenuIds={openMenuIds || []}
       />

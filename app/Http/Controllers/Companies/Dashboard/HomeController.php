@@ -12,7 +12,6 @@ class HomeController extends Controller
   {
     $agentSubscription = $company->agentSubscription()->with('package')->latest()->first();
 
-    // Dummy Data
     $stats = [
       'sales' => [
         'total' => ['idr' => 250000000, 'pax' => 120, 'order' => 45],
@@ -26,6 +25,10 @@ class HomeController extends Controller
         'agents' => 15,
         'customers' => 156,
       ],
+      'ai_credit' => 150,
+      'wallet' => [
+        'balance' => 5000000
+      ]
     ];
 
     $chartData = [
