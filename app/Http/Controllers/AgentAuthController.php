@@ -7,6 +7,7 @@ use App\Models\AffiliateProfile;
 use App\Models\CompanyTeam;
 use App\Models\User;
 use App\Enums\CompanyType;
+use App\Enums\UserStatus;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Context;
@@ -52,7 +53,7 @@ class AgentAuthController extends Controller
 
     $statusValue = $user->status instanceof \BackedEnum ? $user->status->value : $user->status;
 
-    if (strtolower(trim((string)$statusValue)) === 'inactive') {
+    if ($user->status === UserStatus::INACTIVE) {
       return back()->with('account_inactive', 'Your account has been deactivated, contact the Travelboost admin at care@travelboost.co.id for further information.');
     }
 
