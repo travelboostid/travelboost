@@ -342,8 +342,25 @@ export default function Page({ tour }: Props) {
   };
 
   const removeSchedule = (index: number) => {
-    const updated = schedules.filter((_, i) => i !== index);
-    setSchedules(updated);
+    const item = schedules[index];
+
+    // kalau belum tersimpan di DB
+    if (!item.id) {
+      setSchedules(schedules.filter((_, i) => i !== index));
+      return;
+    }
+
+    if (!confirm('Delete this schedule?')) return;
+
+    router.delete(
+      `/companies/${company.username}/dashboard/tours/${tour.id}/schedules/${item.id}`,
+      {
+        preserveScroll: true,
+        onSuccess: () => {
+          setSchedules(schedules.filter((_, i) => i !== index));
+        },
+      },
+    );
   };
 
   const addRoom = (index: number) => {
@@ -399,11 +416,35 @@ export default function Page({ tour }: Props) {
   };
 
   const removeRoom = (scheduleIndex: number, roomIndex: number) => {
-    const updated = [...schedules];
-    updated[scheduleIndex].prices = updated[scheduleIndex].prices.filter(
-      (_, i) => i !== roomIndex,
+    const room = schedules[scheduleIndex].prices[roomIndex];
+
+    // kalau belum ada id = belum tersimpan
+    if (!room.id) {
+      const updated = [...schedules];
+      updated[scheduleIndex].prices = updated[scheduleIndex].prices.filter(
+        (_, i) => i !== roomIndex,
+      );
+
+      setSchedules(updated);
+      return;
+    }
+
+    if (!confirm('Delete this category?')) return;
+
+    router.delete(
+      `/companies/${company.username}/dashboard/tours/${tour.id}/prices/${room.id}`,
+      {
+        preserveScroll: true,
+        onSuccess: () => {
+          const updated = [...schedules];
+          updated[scheduleIndex].prices = updated[scheduleIndex].prices.filter(
+            (_, i) => i !== roomIndex,
+          );
+
+          setSchedules(updated);
+        },
+      },
     );
-    setSchedules(updated);
   };
 
   const updateAdjustment = (

@@ -43,6 +43,16 @@ Route::prefix('companies/{company:username}/dashboard')->middleware(['auth', 'co
   Route::middleware(['agent.subscription.active'])->post('vendor-registrations/register', [VendorRegistrationController::class, 'register'])->name('vendor-registrations.register');
   Route::resource('tours', TourController::class);
 
+  Route::delete(
+    'tours/{tour}/schedules/{schedule}',
+      [TourController::class, 'destroySchedule']
+  )->name('tours.schedule.destroy');
+
+  Route::delete(
+    'tours/{tour}/prices/{price}',
+      [TourController::class, 'destroyPrice']
+  )->name('tours.prices.destroy');
+
   Route::post(
     'tour-availabilities',
     [TourAvailabilityController::class, 'store']

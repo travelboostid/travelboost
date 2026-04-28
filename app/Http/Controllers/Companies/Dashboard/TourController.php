@@ -218,6 +218,48 @@ class TourController extends Controller
     }
   }
 
+  public function destroySchedule(
+    Company $company,
+    Tour $tour,
+    TourSchedule $schedule
+  ) {
+      if ($schedule->tour_id !== $tour->id) {
+          abort(404);
+      }
+
+      $schedule->delete();
+
+      return back()->with([
+          'success' => true
+      ]);
+  }
+
+  public function destroyPrice(
+    Company $company,
+    Tour $tour,
+    TourPrice $price
+  ) {
+      // pastikan price milik company ini
+      if ($price->company_id !== $company->id) {
+          abort(404);
+      }
+
+      // pastikan price milik salah satu schedule tour ini
+      $belongsToTour = TourSchedule::where('id', $price->schedule_id)
+          ->where('tour_id', $tour->id)
+          ->exists();
+
+      if (!$belongsToTour) {
+          abort(404);
+      }
+
+      $price->delete();
+
+      return back()->with([
+          'success' => true,
+      ]);
+  }
+
   public function destroy(Company $company, Tour $tour)
   {
     $tour->delete();
