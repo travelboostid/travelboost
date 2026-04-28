@@ -2,7 +2,7 @@
 
 namespace Database\Seeders\Production;
 
-use Database\Seeders\Common\AiModelSeeder;
+use Database\Seeders\Common\AppConfigSeeder;
 use Database\Seeders\Common\CompanySeeder;
 use Database\Seeders\Common\ContinentSeeder;
 use Database\Seeders\Common\CountrySeeder;
@@ -24,7 +24,7 @@ class ProductionSeeder extends Seeder
   public function run(): void
   {
     $this->call([
-      AiModelSeeder::class,
+      AppConfigSeeder::class,
       RolePermissionSeeder::class,
       UserSeeder::class,
       CompanySeeder::class,

@@ -36,7 +36,7 @@ export default function Home() {
           </p>
         </div>
 
-        <SectionCards stats={stats} type={company.type} />
+        <SectionCards stats={stats} company={company} />
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2">

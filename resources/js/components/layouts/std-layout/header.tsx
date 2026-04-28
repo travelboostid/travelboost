@@ -1,4 +1,4 @@
-import AppLogoIcon from '@/components/app-logo-icon';
+// import AppLogoIcon from '@/components/app-logo-icon';
 import { Button } from '@/components/ui/button';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import {
@@ -54,10 +54,14 @@ export function Header() {
         <div className="flex items-center justify-between h-16 w-full px-4 sm:px-6 lg:px-8">
           {/* LOGO */}
           <Link href="/" className="flex items-center gap-2 flex-none">
-            <AppLogoIcon className="w-9 h-9 text-primary-foreground" />
-            <span className="text-xl font-bold text-foreground">
+            <img
+              src="/images/logo/hori.png"
+              alt="Travelboost Logo"
+              className="h-12 w-auto drop-shadow-sm"
+            />
+            {/* <span className="text-xl font-bold text-foreground">
               TravelBoost
-            </span>
+            </span> */}
           </Link>
 
           {/* DESKTOP MENU */}

@@ -111,6 +111,7 @@ export * from './companySettingsChatbotModelId';
 export * from './companySettingsCreatedAt';
 export * from './companySettingsLandingPageData';
 export * from './companySettingsUpdatedAt';
+export * from './companyType';
 export * from './companyUpdateSettings200';
 export * from './companyUpdatedAt';
 export * from './companyVillage';

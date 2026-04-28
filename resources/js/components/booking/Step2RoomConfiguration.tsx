@@ -20,6 +20,7 @@ import type { GuestEntry } from '@/types/booking';
 import { motion } from 'framer-motion';
 import {
   AlertTriangleIcon,
+  Baby,
   BedDoubleIcon,
   BedSingleIcon,
   CheckIcon,
@@ -39,6 +40,7 @@ export type RoomConfig = {
   label: string;
   capacity: number;
   guestIds: string[];
+  sharingGuestIds: string[]; // child no bed, infant — no bed slot
 };
 
 export type BedAssignment = {
@@ -115,66 +117,78 @@ const itemVariants = {
 
 // ─── Auto Recommendation Logic ──────────────────────────────────────────────────
 
+/** Categories that do NOT occupy a bed slot */
+const NO_BED_CATEGORIES = ['Child No Bed', 'Infant'];
+
 export function autoRecommendRooms(guests: GuestEntry[]): RoomConfig[] {
   const rooms: RoomConfig[] = [];
   let roomIdx = 0;
 
-  // Group by price category (using DB names from price_categories.name)
+  const makeRoom = (type: BedType, ids: string[]): RoomConfig => {
+    roomIdx++;
+    return {
+      id: `room-${roomIdx}`,
+      type,
+      label: `Room ${roomIdx}`,
+      capacity: BED_TYPES[type].capacity,
+      guestIds: ids,
+      sharingGuestIds: [],
+    };
+  };
+
+  // Bed-occupying guests grouped by category
   const singles = guests.filter((g) => g.priceCategory === 'Single');
   const doubles = guests.filter((g) => g.priceCategory === 'Double');
+  const twins = guests.filter((g) => g.priceCategory === 'Twin');
   const triples = guests.filter((g) => g.priceCategory === 'Triple');
-  const others = guests.filter(
-    (g) => !['Single', 'Double', 'Triple'].includes(g.priceCategory ?? ''),
-  );
+  const childWithBed = guests.filter((g) => g.priceCategory === 'Child With Bed');
+
+  // Non-bed guests
+  const noBedGuests = guests.filter((g) => NO_BED_CATEGORIES.includes(g.priceCategory ?? ''));
 
   // Single rooms
-  for (const guest of singles) {
-    rooms.push({
-      id: `room-${roomIdx++}`,
-      type: 'single',
-      label: `Room ${roomIdx}`,
-      capacity: 1,
-      guestIds: [guest.id],
-    });
-  }
+  for (const g of singles) rooms.push(makeRoom('single', [g.id]));
 
   // Double rooms (pairs)
   for (let i = 0; i < doubles.length; i += 2) {
-    const pair = doubles.slice(i, i + 2);
-    rooms.push({
-      id: `room-${roomIdx++}`,
-      type: 'double',
-      label: `Room ${roomIdx}`,
-      capacity: 2,
-      guestIds: pair.map((g) => g.id),
-    });
+    rooms.push(makeRoom('double', doubles.slice(i, i + 2).map((g) => g.id)));
+  }
+
+  // Twin rooms (pairs)
+  for (let i = 0; i < twins.length; i += 2) {
+    rooms.push(makeRoom('twin', twins.slice(i, i + 2).map((g) => g.id)));
   }
 
   // Triple rooms (groups of 3)
   for (let i = 0; i < triples.length; i += 3) {
-    const group = triples.slice(i, i + 3);
-    rooms.push({
-      id: `room-${roomIdx++}`,
-      type: 'triple',
-      label: `Room ${roomIdx}`,
-      capacity: 3,
-      guestIds: group.map((g) => g.id),
-    });
+    rooms.push(makeRoom('triple', triples.slice(i, i + 3).map((g) => g.id)));
   }
 
-  // Others: assign to existing rooms with space or create new single rooms
-  for (const guest of others) {
-    const roomWithSpace = rooms.find((r) => r.guestIds.length < r.capacity);
-    if (roomWithSpace) {
-      roomWithSpace.guestIds.push(guest.id);
+  // Child With Bed → extra bed in an existing room, or new single
+  for (const g of childWithBed) {
+    const target = rooms.find((r) => r.guestIds.length < r.capacity);
+    if (target) {
+      target.guestIds.push(g.id);
+    } else if (rooms.length > 0) {
+      // Add as extra bed to last room (expand capacity by 1)
+      const last = rooms[rooms.length - 1];
+      last.type = 'extra_bed';
+      last.capacity = BED_TYPES['extra_bed'].capacity;
+      last.guestIds.push(g.id);
     } else {
-      rooms.push({
-        id: `room-${roomIdx++}`,
-        type: 'single',
-        label: `Room ${roomIdx}`,
-        capacity: 1,
-        guestIds: [guest.id],
-      });
+      rooms.push(makeRoom('single', [g.id]));
+    }
+  }
+
+  // No-bed guests → share with first room that exists
+  for (const g of noBedGuests) {
+    if (rooms.length > 0) {
+      rooms[0].sharingGuestIds.push(g.id);
+    } else {
+      // Edge case: only infants/no-bed children, create a placeholder room
+      const r = makeRoom('single', []);
+      r.sharingGuestIds.push(g.id);
+      rooms.push(r);
     }
   }
 
@@ -431,6 +445,69 @@ function BedArrangementModal({
           })}
         </div>
 
+        {/* Sharing guests (no bed) */}
+        {rooms.some((r) => (r.sharingGuestIds ?? []).length > 0) && (
+          <div className="rounded-xl border border-dashed border-purple-300/50 bg-purple-50/30 p-4 dark:border-purple-700/30 dark:bg-purple-950/10">
+            <p className="mb-3 text-center text-[10px] font-bold uppercase tracking-widest text-purple-600 dark:text-purple-400">
+              Sharing Guests (No Bed)
+            </p>
+            <div className="space-y-2">
+              {rooms.map((room, roomIdx) =>
+                (room.sharingGuestIds ?? []).map((guestId) => {
+                  const guest = guests.find((g) => g.id === guestId);
+                  if (!guest) return null;
+                  return (
+                    <div
+                      key={guestId}
+                      className="flex items-center gap-3 rounded-lg bg-white/80 px-3 py-2 dark:bg-background/50"
+                    >
+                      <Baby className="size-4 shrink-0 text-purple-500" />
+                      <span className="min-w-0 flex-1 truncate text-xs font-medium">
+                        {[guest.firstName, guest.lastName]
+                          .filter(Boolean)
+                          .join(' ') || 'Unnamed'}
+                      </span>
+                      <Badge
+                        variant="secondary"
+                        className="shrink-0 px-1.5 py-0 text-[9px] uppercase text-purple-600"
+                      >
+                        {guest.priceCategory ?? 'No Bed'}
+                      </Badge>
+                      <Select
+                        value={String(roomIdx)}
+                        onValueChange={(val) => {
+                          const newRooms = rooms.map((r) => ({
+                            ...r,
+                            sharingGuestIds: [...(r.sharingGuestIds ?? [])],
+                          }));
+                          // Remove from current room
+                          newRooms[roomIdx].sharingGuestIds = newRooms[
+                            roomIdx
+                          ].sharingGuestIds.filter((id) => id !== guestId);
+                          // Add to target room
+                          newRooms[Number(val)].sharingGuestIds.push(guestId);
+                          onRoomsChange(newRooms);
+                        }}
+                      >
+                        <SelectTrigger className="h-6 w-[120px] shrink-0 text-[10px]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {rooms.map((r, ri) => (
+                            <SelectItem key={r.id} value={String(ri)}>
+                              {r.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  );
+                }),
+              )}
+            </div>
+          </div>
+        )}
+
         {swapSource !== null && (
           <p className="text-center text-xs font-medium text-primary">
             {rooms[swapSource.roomIdx]?.label} - Slot {swapSource.slotIdx + 1}{' '}
@@ -479,6 +556,10 @@ function RoomCard({
     .filter((id) => !!id)
     .map((id) => guests.find((g) => g.id === id))
     .filter(Boolean);
+  const sharingGuests = (room.sharingGuestIds ?? [])
+    .filter((id) => !!id)
+    .map((id) => guests.find((g) => g.id === id))
+    .filter(Boolean);
 
   return (
     <motion.div
@@ -523,6 +604,36 @@ function RoomCard({
           </div>
         ))}
       </div>
+
+      {/* Sharing guests (no bed) */}
+      {sharingGuests.length > 0 && (
+        <div className="mt-3 border-t border-dashed border-border/60 pt-3">
+          <p className="mb-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">
+            Sharing (No Bed)
+          </p>
+          <div className="space-y-1">
+            {sharingGuests.map((guest) => (
+              <div
+                key={guest!.id}
+                className="flex items-center gap-2 rounded-lg bg-purple-50/50 px-3 py-1.5 dark:bg-purple-950/20"
+              >
+                <Baby className="size-3.5 text-purple-500" />
+                <span className="text-xs font-medium text-purple-700 dark:text-purple-400">
+                  {[guest!.firstName, guest!.lastName]
+                    .filter(Boolean)
+                    .join(' ') || 'Unnamed guest'}
+                </span>
+                <Badge
+                  variant="secondary"
+                  className="ml-auto px-1.5 py-0 text-[9px] font-bold uppercase text-purple-600 dark:text-purple-400"
+                >
+                  {guest!.priceCategory ?? 'No Bed'}
+                </Badge>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </motion.div>
   );
 }
@@ -546,7 +657,10 @@ export default function Step2RoomConfiguration({
     onRoomsChange(autoRecommendRooms(guests));
   }, [guests, onRoomsChange]);
 
-  const assignedGuestIds = rooms.flatMap((r) => r.guestIds);
+  const assignedGuestIds = [
+    ...rooms.flatMap((r) => r.guestIds),
+    ...rooms.flatMap((r) => r.sharingGuestIds ?? []),
+  ];
   const unassignedGuests = guests.filter(
     (g) => !assignedGuestIds.includes(g.id),
   );

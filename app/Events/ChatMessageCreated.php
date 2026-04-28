@@ -4,12 +4,12 @@ namespace App\Events;
 
 use App\Http\Resources\ChatMessageResource;
 use App\Models\ChatMessage;
+use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\Log;
 
 class ChatMessageCreated implements ShouldBroadcast
 {
@@ -44,7 +44,7 @@ class ChatMessageCreated implements ShouldBroadcast
       if ($member->member_type === 'user') {
         $channels[] = new PrivateChannel("users.{$member->member_id}");
       } else if ($member->member_type === 'anonymous-user') {
-        $channels[] = new PrivateChannel("anonymous-users.{$member->member_id}");
+        $channels[] = new Channel("anonymous-users.{$member->member_id}");
       } else if ($member->member_type === 'company') {
         /** @var \App\Models\Company $company */
         $company = $member->member;

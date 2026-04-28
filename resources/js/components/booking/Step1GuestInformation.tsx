@@ -1,5 +1,3 @@
-import { useState } from 'react';
-import { Badge } from '@/components/ui/badge';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -10,6 +8,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -37,6 +36,7 @@ import {
   UserMinusIcon,
   XIcon,
 } from 'lucide-react';
+import { useState } from 'react';
 
 const containerVariants = {
   hidden: {},
@@ -68,16 +68,18 @@ function Stepper({
 }) {
   return (
     <div className="flex items-center justify-between rounded-xl border bg-card px-4 py-3 transition-colors hover:border-primary/20">
-      <div className="flex items-center gap-3">
-        <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+      <div className="flex items-center gap-3 min-w-0">
+        <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
           <Icon className="size-5" />
         </div>
-        <div>
+        <div className="min-w-0">
           <p className="text-sm font-semibold text-foreground">{label}</p>
-          <p className="text-xs text-muted-foreground">{sublabel}</p>
+          <p className="text-[11px] leading-tight text-muted-foreground">
+            {sublabel}
+          </p>
         </div>
       </div>
-      <div className="flex items-center gap-1">
+      <div className="flex shrink-0 items-center gap-1">
         <button
           type="button"
           onClick={() => onChange(Math.max(min, value - 1))}
@@ -223,7 +225,7 @@ function GuestDetailForm({
       </div>
 
       {/* Row 1: Title, First Name, Last Name */}
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-[130px_1fr_1fr]">
         <div className="grid gap-1">
           <Label className="text-[11px] text-muted-foreground">Title *</Label>
           <Select
@@ -283,7 +285,7 @@ function GuestDetailForm({
         </div>
         <div className="grid gap-1">
           <Label className="text-[11px] text-muted-foreground">
-            Place of Birth
+            Place of Birth *
           </Label>
           <Input
             placeholder="e.g. Jakarta"
@@ -296,8 +298,8 @@ function GuestDetailForm({
         </div>
       </div>
 
-      {/* Row 3: Price Category + Price (read-only) */}
-      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+      {/* Row 3: Price Category + Price + Room Type */}
+      <div className="mt-3 grid gap-3 sm:grid-cols-3">
         <div className="grid gap-1">
           <Label className="text-[11px] text-muted-foreground">
             Price Category *
@@ -320,23 +322,19 @@ function GuestDetailForm({
           </Select>
         </div>
         <div className="grid gap-1">
-          <Label className="text-[11px] text-muted-foreground">Price</Label>
-          <Input
-            value={guest.price ? formatCurrency(guest.price) : ''}
-            disabled
-            className="h-9 text-sm text-muted-foreground"
-          />
-        </div>
-      </div>
-
-      {/* Row 4: Room Type (read-only) */}
-      <div className="mt-3 grid gap-3 sm:grid-cols-2">
-        <div className="grid gap-1">
-          <Label className="text-[11px] text-muted-foreground">Room Type</Label>
+          <Label className="text-[11px]">Room Type</Label>
           <Input
             value={guest.roomTypeDescription || ''}
             disabled
-            className="h-9 text-sm text-muted-foreground"
+            className="h-9 text-sm"
+          />
+        </div>
+        <div className="grid gap-1">
+          <Label className="text-[11px]">Price</Label>
+          <Input
+            value={guest.price ? formatCurrency(guest.price) : ''}
+            disabled
+            className="h-9 text-sm"
           />
         </div>
       </div>
@@ -359,6 +357,7 @@ type Step1Props = {
   onGuestUpdate: (g: GuestEntry) => void;
   onGuestRemove: (guestId: string) => void;
   tourPrices: TourPrice[];
+  maxGuests?: number;
 };
 
 export default function Step1GuestInformation({
@@ -374,6 +373,7 @@ export default function Step1GuestInformation({
   onGuestUpdate,
   onGuestRemove,
   tourPrices,
+  maxGuests = 99,
 }: Step1Props) {
   const filledCount = guests.filter(
     (g) =>
@@ -479,33 +479,35 @@ export default function Step1GuestInformation({
       {/* Guest Count */}
       <motion.div variants={itemVariants} className="space-y-2">
         <h3 className="text-sm font-semibold">Number of Guest</h3>
-        <Stepper
-          label="Adult"
-          sublabel="12 years and above"
-          icon={UserIcon}
-          value={adults}
-          min={1}
-          max={10}
-          onChange={onAdultsChange}
-        />
-        <Stepper
-          label="Child"
-          sublabel="2 – 11 years"
-          icon={UserMinusIcon}
-          value={children}
-          min={0}
-          max={10}
-          onChange={onChildrenChange}
-        />
-        <Stepper
-          label="Infant"
-          sublabel="Under 2 years old (no bed)"
-          icon={Baby}
-          value={infants}
-          min={0}
-          max={5}
-          onChange={onInfantsChange}
-        />
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+          <Stepper
+            label="Adult"
+            sublabel="12 years and above"
+            icon={UserIcon}
+            value={adults}
+            min={1}
+            max={maxGuests}
+            onChange={onAdultsChange}
+          />
+          <Stepper
+            label="Child"
+            sublabel="2 – 12 years"
+            icon={UserMinusIcon}
+            value={children}
+            min={0}
+            max={Math.max(0, maxGuests - adults)}
+            onChange={onChildrenChange}
+          />
+          <Stepper
+            label="Infant"
+            sublabel="Under 2 years (no bed)"
+            icon={Baby}
+            value={infants}
+            min={0}
+            max={Math.max(0, maxGuests - adults - children)}
+            onChange={onInfantsChange}
+          />
+        </div>
       </motion.div>
 
       {/* Guest Details */}

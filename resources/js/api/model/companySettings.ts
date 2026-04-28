@@ -4,7 +4,6 @@
  * Travelboost
  * OpenAPI spec version: 0.0.1
  */
-import type { CompanySettingsChatbotModelId } from './companySettingsChatbotModelId';
 import type { CompanySettingsLandingPageData } from './companySettingsLandingPageData';
 import type { CompanySettingsCreatedAt } from './companySettingsCreatedAt';
 import type { CompanySettingsUpdatedAt } from './companySettingsUpdatedAt';
@@ -15,7 +14,6 @@ export interface CompanySettings {
   chatbot_enabled: boolean;
   chatbot_response_style: string;
   chatbot_default_language: string;
-  chatbot_model_id: CompanySettingsChatbotModelId;
   landing_page_data: CompanySettingsLandingPageData;
   created_at: CompanySettingsCreatedAt;
   updated_at: CompanySettingsUpdatedAt;

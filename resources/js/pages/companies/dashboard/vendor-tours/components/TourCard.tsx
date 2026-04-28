@@ -363,15 +363,9 @@ export default function TourCard({
               <Button
                 size="sm"
                 className="flex-1 bg-[#1ebe5d] hover:bg-[#19a34f] text-white text-xs px-0"
-                onClick={() => {
-                  if (!auth?.user) {
-                    setPendingAction('book');
-                  } else {
-                    setIsBookingModalOpen(true);
-                  }
-                }}
+                onClick={() => setIsBookingModalOpen(true)}
               >
-                BOOK
+                VIEW SCHEDULE
               </Button>
             </div>
             <div className="flex w-full items-center justify-between mt-1">
@@ -522,7 +516,7 @@ export default function TourCard({
                       window.location.pathname + window.location.search,
                   }),
                 );
-                router.visit('/login');
+                router.visit('/customer/login');
               }}
             >
               Login
@@ -535,6 +529,9 @@ export default function TourCard({
         isOpen={isBookingModalOpen}
         onClose={() => setIsBookingModalOpen(false)}
         tour={tour}
+        onRequireLogin={
+          !auth?.user ? () => setPendingAction('book') : undefined
+        }
       />
     </>
   );

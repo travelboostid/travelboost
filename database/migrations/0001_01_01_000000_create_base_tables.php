@@ -24,6 +24,7 @@ return new class extends Migration
     /*Schema::create('app_configs', function (Blueprint $table) {
       $table->id();
       $table->string('key')->unique();
+      $table->string('description')->nullable();
       $table->jsonb('value')->nullable();
       $table->timestamps();
     });*/
@@ -225,22 +226,12 @@ return new class extends Migration
         ->nullOnDelete();
     });
 
-    Schema::create('ai_models', function (Blueprint $table) {
-      $table->id();
-      $table->string('code')->unique();
-      $table->decimal('input_token_rate', 16, 8)->default(1);
-      $table->decimal('output_token_rate', 16, 8)->default(1);
-      $table->decimal('flat_rate', 16, 8)->default(1);
-      $table->timestamps();
-    });
-
     Schema::create('company_settings', function (Blueprint $table) {
       $table->id();
       $table->foreignId('company_id')->unique()->constrained('companies')->cascadeOnDelete();
       $table->boolean('chatbot_enabled')->default(true);
       $table->string('chatbot_response_style')->default('professional'); // professional | friendly | casual
       $table->string('chatbot_default_language')->default('auto'); // auto | id | en
-      $table->foreignId('chatbot_model_id')->nullable()->constrained('ai_models')->nullOnDelete();
       $table->text('landing_page_data')->nullable();
       $table->timestamps();
     });
@@ -277,10 +268,10 @@ return new class extends Migration
     Schema::create('ai_usage_logs', function (Blueprint $table) {
       $table->id();
       $table->foreignId('company_id')->constrained('companies')->cascadeOnDelete();
-      $table->foreignId('model_id')->nullable()->constrained('ai_models')->onDelete('set null');
-      $table->unsignedInteger('input_tokens')->default(0);
-      $table->unsignedInteger('output_tokens')->default(0);
-      $table->decimal('token_usage_cost', 16, 8)->default(0); // cost calculated from token rates
+      $table->unsignedInteger('embedding_tokens')->default(0);
+      $table->unsignedInteger('prompt_tokens')->default(0);
+      $table->unsignedInteger('completion_tokens')->default(0);
+      $table->decimal('usage_cost', 16, 8)->default(0); // cost calculated from token rates
       $table->decimal('user_cost', 16, 8)->default(0);  // cost charged to user
       $table->string('feature')->nullable();
       $table->json('meta')->nullable();
@@ -605,6 +596,7 @@ return new class extends Migration
       $table->text('message')->nullable();
       $table->string('attachment_data')->nullable(); // File/image/video path
       $table->string('attachment_type')->nullable(); // 'image', 'video', 'file', etc.
+      $table->jsonb('meta')->nullable(); // For storing additional info
       $table->timestamps();
       $table->foreignId('room_id')
         ->constrained('chat_rooms')
@@ -779,6 +771,33 @@ return new class extends Migration
       $table->string('passport_number')->nullable();
       $table->timestamps();
     });
+
+    Schema::create('agent_conversations', function (Blueprint $table) {
+      $table->string('id', 36)->primary();
+      $table->foreignId('user_id');
+      $table->string('title');
+      $table->timestamps();
+
+      $table->index(['user_id', 'updated_at']);
+    });
+
+    Schema::create('agent_conversation_messages', function (Blueprint $table) {
+      $table->string('id', 36)->primary();
+      $table->string('conversation_id', 36)->index();
+      $table->foreignId('user_id');
+      $table->string('agent');
+      $table->string('role', 25);
+      $table->text('content');
+      $table->text('attachments');
+      $table->text('tool_calls');
+      $table->text('tool_results');
+      $table->text('usage');
+      $table->text('meta');
+      $table->timestamps();
+
+      $table->index(['conversation_id', 'user_id', 'updated_at'], 'conversation_index');
+      $table->index(['user_id']);
+    });
   }
 
   /**
@@ -786,6 +805,8 @@ return new class extends Migration
    */
   public function down(): void
   {
+    Schema::dropIfExists('agent_conversations');
+    Schema::dropIfExists('agent_conversation_messages');
     Schema::dropIfExists('saved_passengers');
     Schema::dropIfExists('booking_addons');
     Schema::dropIfExists('booking_passengers');
@@ -832,7 +853,6 @@ return new class extends Migration
     Schema::dropIfExists('agent_subscriptions');
     Schema::dropIfExists('agent_subscription_packages');
     Schema::dropIfExists('company_settings');
-    Schema::dropIfExists('ai_models');
     Schema::table('companies', function (Blueprint $table) {
       $table->dropForeign(['identity_card_id']);
       $table->dropColumn('identity_card_id');

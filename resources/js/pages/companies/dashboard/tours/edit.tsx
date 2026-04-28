@@ -5,12 +5,6 @@ import CompanyDashboardLayout from '@/components/layouts/company-dashboard';
 import { MediaPicker } from '@/components/media-picker';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import {
-  Item,
-  ItemActions,
-  ItemContent,
-  ItemTitle,
-} from '@/components/ui/item';
 import { Label } from '@/components/ui/label';
 import {
   Select,
@@ -38,6 +32,7 @@ import { useEffect } from 'react';
 
 import { Fragment } from 'react';
 
+import { TourDocumentPicker } from '@/components/media/tour-document-picker';
 import MoneyInput from '@/components/ui/money-input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Save, Trash2 } from 'lucide-react';
@@ -1056,55 +1051,11 @@ export default function Page({ tour }: Props) {
                 <div className="grid gap-2">
                   {/* <div className="grid gap-2 md:col-span-2"> */}
                   <Label htmlFor="name">Document Itinerary</Label>
-                  <MediaPicker
-                    type="document"
-                    defaultValue={tour.document}
-                    params={{ owner_type: 'company', owner_id: company.id }}
-                    uploadParams={{
-                      owner_type: 'company',
-                      owner_id: company.id,
-                    }}
-                  >
-                    {(media, change) => {
-                      const mediaId = (media as any)?.id;
-                      const url =
-                        (media as any)?.url || (media as any)?.data?.url;
-
-                      // 🔥 sync ke inertia
-                      if (mediaId && data.document_id !== mediaId) {
-                        setData('document_id', mediaId);
-                      }
-
-                      return (
-                        <Item variant="outline" className="space-y-2">
-                          <ItemContent className="space-y-2">
-                            {url ? (
-                              <iframe
-                                src={window.location.origin + url}
-                                className="w-full h-56 rounded border"
-                                title="PDF Preview"
-                              />
-                            ) : (
-                              <ItemTitle>No document selected</ItemTitle>
-                            )}
-
-                            <ItemTitle>{(media as any)?.name || ''}</ItemTitle>
-                          </ItemContent>
-
-                          <ItemActions>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={change}
-                              type="button"
-                            >
-                              Change
-                            </Button>
-                          </ItemActions>
-                        </Item>
-                      );
-                    }}
-                  </MediaPicker>
+                  <TourDocumentPicker
+                    owner={{ type: 'company', id: company.id }}
+                    value={tour.document}
+                    onChange={(doc: any) => setData('document_id', doc?.id)}
+                  />
                   <InputError message={errors.document_id} />
                 </div>
 

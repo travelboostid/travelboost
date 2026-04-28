@@ -64,18 +64,12 @@ class OnboardingController extends Controller
       'village' => 'required|string',
       'postal_code' => 'nullable|string',
       'identity_number' => 'required|string|size:16',
-      'identity_photo' => 'required|image|max:2048',
-      'photo_id' => 'nullable|integer',
+      'identity_card_id' => 'required|integer|exists:medias,id',
+      'photo_id' => 'nullable|integer|exists:medias,id',
     ]);
 
-    $validatedCompanyDto = Arr::except($validated, ['subdomain', 'identity_photo']);
+    $validatedCompanyDto = Arr::except($validated, ['subdomain']);
     $validatedCompanyDto['type'] = CompanyType::AGENT;
-
-    if ($request->hasFile('identity_photo')) {
-      $file = $request->file('identity_photo');
-      $filename = time() . '_company_identity_' . uniqid() . '.' . $file->getClientOriginalExtension();
-      $validatedCompanyDto['identity_photo_path'] = $file->storeAs('companies/identities', $filename, 'public');
-    }
 
     $domain = Context::get('domain');
     if ($domain && $domain->owner_type === AffiliateProfile::class) {

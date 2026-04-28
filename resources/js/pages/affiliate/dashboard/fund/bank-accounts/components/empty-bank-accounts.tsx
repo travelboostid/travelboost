@@ -28,7 +28,7 @@ export function EmptyBankAccounts() {
       </EmptyHeader>
       <EmptyContent className="flex justify-center mt-4">
         <CreateBankAccountDialog>
-          <Button className="bg-emerald-600 hover:bg-emerald-700 shadow-sm">
+          <Button className="bg-primary hover:bg-primary/90 shadow-sm">
             <PlusIcon className="w-4 h-4 mr-2" /> Add Your First Account
           </Button>
         </CreateBankAccountDialog>

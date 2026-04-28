@@ -45,7 +45,7 @@ export default function WizardStepIndicator({
               <div className="flex items-center gap-2">
                 <div
                   className={cn(
-                    'flex size-8 items-center justify-center rounded-full border-2 transition-all duration-300',
+                    'flex size-10 shrink-0 items-center justify-center rounded-full border-2 transition-all duration-300',
                     isCompleted
                       ? 'border-primary bg-primary text-white'
                       : isActive

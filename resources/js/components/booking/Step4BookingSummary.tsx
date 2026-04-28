@@ -228,19 +228,6 @@ export default function Step4BookingSummary({
                 </div>
               ))}
 
-              {/* Platform Fee */}
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Platform Fee</span>
-                <div className="flex items-center gap-3">
-                  <span className="text-xs text-muted-foreground">
-                    x{pricing.paxCount}
-                  </span>
-                  <span className="min-w-[100px] text-right font-medium">
-                    {formatCurrency(pricing.platformFee)}
-                  </span>
-                </div>
-              </div>
-
               {/* Subtotal + PPN summary block (right-aligned) */}
               <div className="mt-1 border-t border-dashed pt-2">
                 <div className="flex justify-end">
@@ -248,9 +235,7 @@ export default function Step4BookingSummary({
                     <div className="flex justify-between text-muted-foreground">
                       <span>Subtotal</span>
                       <span className="font-medium text-foreground">
-                        {formatCurrency(
-                          pricing.subtotalGuests + pricing.platformFee,
-                        )}
+                        {formatCurrency(pricing.subtotalGuests)}
                       </span>
                     </div>
                     <div className="flex justify-between text-muted-foreground">
@@ -269,6 +254,24 @@ export default function Step4BookingSummary({
                     )}
                   </div>
                 </div>
+              </div>
+            </div>
+          </div>
+
+          {/* ─── Platform Fee ────────────────────────────────────────── */}
+          <div className="p-4">
+            <p className="mb-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+              Platform Fee
+            </p>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Platform Fee</span>
+              <div className="flex items-center gap-3">
+                <span className="text-xs text-muted-foreground">
+                  x{pricing.paxCount}
+                </span>
+                <span className="min-w-[100px] text-right font-medium">
+                  {formatCurrency(pricing.platformFee)}
+                </span>
               </div>
             </div>
           </div>
@@ -459,9 +462,9 @@ export default function Step4BookingSummary({
                     >
                       <BanknoteIcon className="size-5 text-emerald-600" />
                       <div className="text-left">
-                        <p className="font-semibold">Manual Transfer</p>
+                        <p className="font-semibold">Manual Payment</p>
                         <p className="text-xs text-muted-foreground">
-                          Bank transfer / cash
+                          Bank Transfer
                         </p>
                       </div>
                     </button>
@@ -472,9 +475,9 @@ export default function Step4BookingSummary({
                     >
                       <CreditCardIcon className="size-5 text-blue-600" />
                       <div className="text-left">
-                        <p className="font-semibold">Midtrans</p>
+                        <p className="font-semibold">Online Payment</p>
                         <p className="text-xs text-muted-foreground">
-                          Payment gateway (CC, e-wallet)
+                          Visa, Mastercard, Amex, QRIS, Virtual Account
                         </p>
                       </div>
                     </button>

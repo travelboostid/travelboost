@@ -5,4 +5,4 @@
  * OpenAPI spec version: 0.0.1
  */
 
-export type CompanyMeta = string | null;
+export type CompanyMeta = unknown[] | null;

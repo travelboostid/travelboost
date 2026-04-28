@@ -4,7 +4,7 @@ namespace Database\Seeders\Local;
 
 use Database\Seeders\Common\AffiliateCommissionRateSeeder;
 use Database\Seeders\Common\AffiliateSeeder;
-use Database\Seeders\Common\AiModelSeeder;
+use Database\Seeders\Common\AppConfigSeeder;
 use Database\Seeders\Common\CompanySeeder;
 use Database\Seeders\Common\ContinentSeeder;
 use Database\Seeders\Common\CountrySeeder;
@@ -26,7 +26,7 @@ class LocalSeeder extends Seeder
   public function run(): void
   {
     $this->call([
-      AiModelSeeder::class,
+      AppConfigSeeder::class,
       RolePermissionSeeder::class,
       UserSeeder::class,
       CompanySeeder::class,

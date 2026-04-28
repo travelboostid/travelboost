@@ -1,3 +1,4 @@
+import { useGetTourCategories } from '@/api/tour-category/tour-category';
 import CompanyDashboardLayout from '@/components/layouts/company-dashboard';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -10,6 +11,13 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
   Table,
   TableBody,
   TableCell,
@@ -17,7 +25,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { extractImageSrc } from '@/lib/utils';
+import { router } from '@inertiajs/react';
 import {
   flexRender,
   getCoreRowModel,
@@ -32,8 +42,9 @@ import {
 } from '@tanstack/react-table';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
-import { ChevronDown, EyeIcon, TrashIcon } from 'lucide-react';
+import { ChevronDown, EyeIcon, Search, TrashIcon } from 'lucide-react';
 import * as React from 'react';
+import { toast } from 'sonner';
 import TourDeleteConfirmDialog from './components/tour-delete-confirm-dialog';
 import TourDetailDialog from './components/tour-detail-dialog';
 import type { AgentTour } from './type';
@@ -43,17 +54,63 @@ dayjs.extend(relativeTime);
 function RowActions({ tour }: { tour: AgentTour }) {
   return (
     <div className="flex gap-2">
-      <TourDeleteConfirmDialog tour={tour}>
-        <Button variant="destructive" size="sm">
-          <TrashIcon className="h-4 w-4" />
-        </Button>
-      </TourDeleteConfirmDialog>
-
       <TourDetailDialog tour={tour}>
-        <Button size="sm">
+        <Button
+          size="icon"
+          variant="secondary"
+          className="h-8 w-8 text-secondary-foreground hover:bg-secondary/80 shadow-sm"
+        >
           <EyeIcon className="h-4 w-4" />
         </Button>
       </TourDetailDialog>
+
+      <TourDeleteConfirmDialog tour={tour}>
+        <Button variant="destructive" size="icon" className="h-8 w-8 shadow-sm">
+          <TrashIcon className="h-4 w-4" />
+        </Button>
+      </TourDeleteConfirmDialog>
+    </div>
+  );
+}
+
+function CategoryCell({ row }: { row: any }) {
+  const { company } = usePageSharedDataProps();
+  const { data, isLoading } = useGetTourCategories({ company_id: company.id });
+  const agentTour = row.original;
+  const [value, setValue] = React.useState(
+    agentTour.category_id?.toString() || 'none',
+  );
+
+  const handleChange = (val: string) => {
+    setValue(val);
+    router.put(
+      `/companies/${company.username}/dashboard/agent-tours/${agentTour.id}`,
+      { category_id: val === 'none' ? null : val },
+      {
+        preserveScroll: true,
+        preserveState: true,
+        onSuccess: () => {
+          toast.success('Category updated successfully');
+        },
+      },
+    );
+  };
+
+  return (
+    <div onClick={(e) => e.stopPropagation()}>
+      <Select value={value} onValueChange={handleChange} disabled={isLoading}>
+        <SelectTrigger className="w-[120px] h-8 text-xs border-slate-200">
+          <SelectValue placeholder="Select Category" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="none">No Category</SelectItem>
+          {data?.data.map((cat: any) => (
+            <SelectItem key={cat.id} value={cat.id.toString()}>
+              {cat.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </div>
   );
 }
@@ -62,21 +119,27 @@ export const columns: ColumnDef<AgentTour>[] = [
   {
     id: 'select',
     header: ({ table }) => (
-      <Checkbox
-        checked={
-          table.getIsAllPageRowsSelected() ||
-          (table.getIsSomePageRowsSelected() && 'indeterminate')
-        }
-        onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-        aria-label="Select all"
-      />
+      <div className="px-1 flex items-center justify-center">
+        <Checkbox
+          checked={
+            table.getIsAllPageRowsSelected() ||
+            (table.getIsSomePageRowsSelected() && 'indeterminate')
+          }
+          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+          aria-label="Select all"
+          className="border-primary/50 data-[state=checked]:bg-primary"
+        />
+      </div>
     ),
     cell: ({ row }) => (
-      <Checkbox
-        checked={row.getIsSelected()}
-        onCheckedChange={(value) => row.toggleSelected(!!value)}
-        aria-label="Select row"
-      />
+      <div className="px-1 flex items-center justify-center">
+        <Checkbox
+          checked={row.getIsSelected()}
+          onCheckedChange={(value) => row.toggleSelected(!!value)}
+          aria-label="Select row"
+          className="border-primary/40 data-[state=checked]:bg-primary"
+        />
+      </div>
     ),
     enableSorting: false,
     enableHiding: false,
@@ -85,52 +148,101 @@ export const columns: ColumnDef<AgentTour>[] = [
     id: 'vendor',
     accessorFn: (row) => row.tour.company?.name || '-',
     header: 'Vendor',
-  },
-  {
-    id: 'code',
-    accessorFn: (row) => row.tour.code,
-    header: 'Code',
     cell: ({ getValue }) => (
-      <div className="capitalize">{getValue<string>()}</div>
+      <div
+        className="font-semibold text-slate-700 max-w-[120px] xl:max-w-[150px] truncate"
+        title={getValue<string>()}
+      >
+        {getValue<string>()}
+      </div>
     ),
   },
   {
     id: 'name',
     accessorFn: (row) => row.tour.name,
-    header: 'Name',
+    header: 'Tour Details',
+    cell: ({ row }) => (
+      <div className="flex flex-col gap-1.5 max-w-[200px] xl:max-w-[250px]">
+        <span
+          className="font-bold text-primary truncate"
+          title={row.original.tour.name}
+        >
+          {row.original.tour.name}
+        </span>
+        <span className="uppercase font-mono text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded w-fit border border-slate-200">
+          {row.original.tour.code || '-'}
+        </span>
+      </div>
+    ),
   },
   {
     id: 'destination',
-    accessorFn: (row) =>
-      `${row.tour.continent} - ${row.tour.country} - ${row.tour.destination}`,
+    accessorFn: (row) => {
+      const t = row.tour as any;
+      const continent = t.continent?.name || t.continent;
+      const country = t.country?.name || t.country;
+      const destination = t.destination;
+
+      const parts = [continent, country, destination].filter(Boolean);
+      return parts.length > 0 ? parts.join(' - ') : '-';
+    },
     header: 'Destination',
+    cell: ({ getValue }) => (
+      <div
+        className="max-w-[150px] xl:max-w-[180px] truncate text-slate-600"
+        title={getValue<string>()}
+      >
+        {getValue<string>()}
+      </div>
+    ),
   },
   {
     id: 'image',
     header: 'Image',
     cell: ({ row }) => {
-      const { src } = extractImageSrc(row.original.tour.image);
+      const image = (row.original.tour as any).image;
+      const src = image
+        ? extractImageSrc(image as any).src
+        : 'https://placehold.co/400x300/e2e8f0/94a3b8?text=No+Image';
+
       return (
-        <img src={src} alt="Tour" className="aspect-video w-16 object-cover" />
+        <div className="overflow-hidden rounded-lg border border-slate-200 bg-slate-50 shadow-sm w-16 h-10 flex items-center justify-center shrink-0">
+          <img src={src} alt="Tour" className="w-full h-full object-cover" />
+        </div>
       );
     },
     enableSorting: false,
   },
   {
-    id: 'created_at',
-    accessorFn: (row) => row.tour.created_at,
-    header: 'Created At',
-    cell: ({ getValue }) => <div>{dayjs(getValue<string>()).fromNow()}</div>,
+    id: 'category',
+    header: 'Category',
+    cell: ({ row }) => <CategoryCell row={row} />,
   },
   {
     id: 'status',
     accessorFn: (row) => row.tour.status,
     header: 'Status',
+    cell: ({ getValue }) => {
+      const status = getValue<string>() || 'unknown';
+      const isActive = status.toLowerCase() === 'active';
+      return (
+        <span
+          className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${isActive ? 'bg-primary/10 text-primary' : 'bg-slate-100 text-slate-500'}`}
+        >
+          {status}
+        </span>
+      );
+    },
   },
   {
-    id: 'category',
-    accessorFn: (row) => row.tour.category?.name ?? '-',
-    header: 'Category',
+    id: 'created_at',
+    accessorFn: (row) => row.tour.created_at,
+    header: 'Created At',
+    cell: ({ getValue }) => (
+      <div className="text-xs text-slate-500 whitespace-nowrap">
+        {dayjs(getValue<string>()).fromNow()}
+      </div>
+    ),
   },
   {
     id: 'actions',
@@ -179,24 +291,43 @@ export default function AgentToursPage({ data }: PageProps) {
       activeMenuIds={['tours.index']}
       breadcrumb={[{ title: 'My Tours' }]}
     >
-      <div className="w-full space-y-4 p-4">
-        {/* Toolbar */}
-        <div className="flex items-center gap-2">
-          <Input
-            placeholder="Filter tour name..."
-            value={(table.getColumn('name')?.getFilterValue() as string) ?? ''}
-            onChange={(event) =>
-              table.getColumn('name')?.setFilterValue(event.target.value)
-            }
-            className="max-w-sm"
-          />
+      <div className="w-full space-y-6 p-4 md:p-6 max-w-screen-2xl mx-auto pb-20">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">
+              My Tours Catalog
+            </h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              Manage and monitor the tours distributed by vendors to your
+              agency.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex flex-col sm:flex-row items-center gap-3 justify-between bg-slate-50/50 p-1 rounded-lg">
+          <div className="relative w-full sm:max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search tour name..."
+              value={
+                (table.getColumn('name')?.getFilterValue() as string) ?? ''
+              }
+              onChange={(event) =>
+                table.getColumn('name')?.setFilterValue(event.target.value)
+              }
+              className="pl-9 w-full focus-visible:ring-primary border-slate-200"
+            />
+          </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="ml-auto">
-                Columns <ChevronDown className="ml-2 h-4 w-4" />
+              <Button
+                variant="outline"
+                className="w-full sm:w-auto ml-auto bg-white border-slate-200"
+              >
+                View Columns <ChevronDown className="ml-2 h-4 w-4 opacity-50" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
+            <DropdownMenuContent align="end" className="w-[200px]">
               <DropdownMenuGroup>
                 {table
                   .getAllColumns()
@@ -204,13 +335,13 @@ export default function AgentToursPage({ data }: PageProps) {
                   .map((column) => (
                     <DropdownMenuCheckboxItem
                       key={column.id}
-                      className="capitalize"
+                      className="capitalize cursor-pointer"
                       checked={column.getIsVisible()}
                       onCheckedChange={(value) =>
                         column.toggleVisibility(!!value)
                       }
                     >
-                      {column.id}
+                      {column.id.replace('_', ' ')}
                     </DropdownMenuCheckboxItem>
                   ))}
               </DropdownMenuGroup>
@@ -218,59 +349,77 @@ export default function AgentToursPage({ data }: PageProps) {
           </DropdownMenu>
         </div>
 
-        {/* Table */}
-        <Table className="min-w-175 table-fixed border">
-          <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id}>
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext(),
-                        )}
-                  </TableHead>
+        <div className="rounded-xl border border-border bg-card shadow-sm w-full overflow-hidden">
+          <div className="w-full overflow-x-auto">
+            <Table className="w-full text-sm">
+              <TableHeader className="bg-primary/5">
+                {table.getHeaderGroups().map((headerGroup) => (
+                  <TableRow
+                    key={headerGroup.id}
+                    className="border-primary/10 hover:bg-primary/5"
+                  >
+                    {headerGroup.headers.map((header) => (
+                      <TableHead
+                        key={header.id}
+                        className="text-primary font-bold h-12 px-3 whitespace-nowrap"
+                      >
+                        {header.isPlaceholder
+                          ? null
+                          : flexRender(
+                              header.column.columnDef.header,
+                              header.getContext(),
+                            )}
+                      </TableHead>
+                    ))}
+                  </TableRow>
                 ))}
-              </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {table.getRowModel().rows.length ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  data-state={row.getIsSelected() && 'selected'}
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext(),
-                      )}
+              </TableHeader>
+              <TableBody>
+                {table.getRowModel().rows.length ? (
+                  table.getRowModel().rows.map((row) => (
+                    <TableRow
+                      key={row.id}
+                      data-state={row.getIsSelected() && 'selected'}
+                      className="hover:bg-slate-50 transition-colors"
+                    >
+                      {row.getVisibleCells().map((cell) => (
+                        <TableCell key={cell.id} className="py-3 px-3">
+                          {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext(),
+                          )}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell
+                      colSpan={columns.length}
+                      className="h-32 text-center text-muted-foreground"
+                    >
+                      <div className="flex flex-col items-center justify-center">
+                        <span className="text-lg mb-1">📭</span>
+                        <p>No tours found matching your search.</p>
+                      </div>
                     </TableCell>
-                  ))}
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell
-                  colSpan={columns.length}
-                  className="h-24 text-center"
-                >
-                  No results.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
 
-        {/* Pagination */}
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-muted-foreground">
-            {table.getFilteredSelectedRowModel().rows.length} of{' '}
-            {table.getFilteredRowModel().rows.length} row(s) selected.
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2">
+          <p className="text-sm text-muted-foreground bg-slate-50 px-3 py-1.5 rounded-md border border-slate-100">
+            <span className="font-semibold text-foreground">
+              {table.getFilteredSelectedRowModel().rows.length}
+            </span>{' '}
+            of{' '}
+            <span className="font-semibold text-foreground">
+              {table.getFilteredRowModel().rows.length}
+            </span>{' '}
+            row(s) selected.
           </p>
           <div className="flex gap-2">
             <Button
@@ -278,6 +427,7 @@ export default function AgentToursPage({ data }: PageProps) {
               size="sm"
               onClick={() => table.previousPage()}
               disabled={!table.getCanPreviousPage()}
+              className="border-slate-200"
             >
               Previous
             </Button>
@@ -286,6 +436,7 @@ export default function AgentToursPage({ data }: PageProps) {
               size="sm"
               onClick={() => table.nextPage()}
               disabled={!table.getCanNextPage()}
+              className="border-slate-200"
             >
               Next
             </Button>

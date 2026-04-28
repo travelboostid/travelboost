@@ -1,3 +1,4 @@
+// profile.tsx
 import InputError from '@/components/input-error';
 import AffiliateDashboardLayout from '@/components/layouts/affiliate-dashboard';
 import { Button } from '@/components/ui/button';
@@ -34,7 +35,6 @@ export default function AffiliateProfileEdit() {
       ? `/storage/${profile.identity_photo_path}`
       : null,
   );
-
   const [avatarPreview, setAvatarPreview] = useState<string | null>(
     profile.profile_photo_path
       ? `/storage/${profile.profile_photo_path}`
@@ -68,35 +68,29 @@ export default function AffiliateProfileEdit() {
 
   useEffect(() => {
     const p = provinces.find((x) => x.name === data.province);
-    if (p) {
+    if (p)
       axios
         .get(`/api/regions/cities/${p.code}`)
         .then((res) => setCities(res.data));
-    } else {
-      setCities([]);
-    }
+    else setCities([]);
   }, [data.province, provinces]);
 
   useEffect(() => {
     const c = cities.find((x) => x.name === data.city);
-    if (c) {
+    if (c)
       axios
         .get(`/api/regions/districts/${c.code}`)
         .then((res) => setDistricts(res.data));
-    } else {
-      setDistricts([]);
-    }
+    else setDistricts([]);
   }, [data.city, cities]);
 
   useEffect(() => {
     const d = districts.find((x) => x.name === data.district);
-    if (d) {
+    if (d)
       axios
         .get(`/api/regions/villages/${d.code}`)
         .then((res) => setVillages(res.data));
-    } else {
-      setVillages([]);
-    }
+    else setVillages([]);
   }, [data.district, districts]);
 
   const handleIdChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -121,9 +115,7 @@ export default function AffiliateProfileEdit() {
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    post('/affiliate/dashboard/setup/profile', {
-      preserveScroll: true,
-    });
+    post('/affiliate/dashboard/setup/profile', { preserveScroll: true });
   };
 
   return (
@@ -147,13 +139,13 @@ export default function AffiliateProfileEdit() {
         </div>
 
         {recentlySuccessful && (
-          <div className="p-4 mb-4 text-sm text-emerald-800 rounded-lg bg-emerald-50 border border-emerald-200">
+          <div className="p-4 mb-4 text-sm text-green-800 rounded-lg bg-green-50 border border-green-200">
             Profile has been successfully updated!
           </div>
         )}
 
         <form onSubmit={submit} className="space-y-6">
-          <Card className="border-slate-200 shadow-sm">
+          <Card className="border-border shadow-sm">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <UserIcon className="w-5 h-5" /> Account Details
@@ -166,7 +158,7 @@ export default function AffiliateProfileEdit() {
               <div className="flex flex-col md:flex-row gap-8 items-start">
                 <div className="flex flex-col items-center gap-3 shrink-0 mx-auto md:mx-0">
                   <div className="relative group">
-                    <div className="w-32 h-32 rounded-full border-4 border-slate-100 overflow-hidden bg-slate-50 flex items-center justify-center shadow-sm">
+                    <div className="w-32 h-32 rounded-full border-4 border-border overflow-hidden bg-muted/50 flex items-center justify-center shadow-sm">
                       {avatarPreview ? (
                         <img
                           src={avatarPreview}
@@ -174,13 +166,13 @@ export default function AffiliateProfileEdit() {
                           className="w-full h-full object-cover"
                         />
                       ) : (
-                        <UserIcon className="w-12 h-12 text-slate-300" />
+                        <UserIcon className="w-12 h-12 text-muted-foreground" />
                       )}
                     </div>
                     <button
                       type="button"
                       onClick={() => avatarInputRef.current?.click()}
-                      className="absolute bottom-0 right-0 w-10 h-10 bg-blue-600 text-white rounded-full flex items-center justify-center shadow-md hover:bg-blue-700 transition-colors"
+                      className="absolute bottom-0 right-0 w-10 h-10 bg-primary text-primary-foreground rounded-full flex items-center justify-center shadow-md hover:bg-primary/90 transition-colors"
                     >
                       <Camera className="w-5 h-5" />
                     </button>
@@ -205,11 +197,11 @@ export default function AffiliateProfileEdit() {
                     </Label>
                     <div className="pt-1 flex items-center h-10">
                       {profile?.approved_at ? (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-800">
                           Approved
                         </span>
                       ) : (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">
                           Pending Approval
                         </span>
                       )}
@@ -228,24 +220,23 @@ export default function AffiliateProfileEdit() {
                     <Input
                       value={user.email}
                       disabled
-                      className="bg-slate-50 cursor-not-allowed text-muted-foreground"
+                      className="bg-muted/50 cursor-not-allowed text-muted-foreground"
                     />
                   </div>
 
                   {(() => {
                     const tier = profile?.tier;
                     const uplineMA = profile?.upline;
-
                     if (tier === 'affiliate' && uplineMA) {
                       return (
                         <div className="space-y-2">
-                          <Label className="text-blue-700">
+                          <Label className="text-primary">
                             Invited By (Master Affiliate)
                           </Label>
                           <Input
                             value={uplineMA.name}
                             disabled
-                            className="bg-blue-50/50 border-blue-100 font-medium"
+                            className="bg-primary/5 border-primary/20 font-medium"
                           />
                         </div>
                       );
@@ -258,7 +249,7 @@ export default function AffiliateProfileEdit() {
                     <Input
                       value={user.username}
                       disabled
-                      className="bg-slate-50 cursor-not-allowed text-dark"
+                      className="bg-muted/50 cursor-not-allowed text-foreground"
                     />
                   </div>
 
@@ -284,18 +275,18 @@ export default function AffiliateProfileEdit() {
                           : '-'
                       }
                       disabled
-                      className="bg-slate-50 cursor-not-allowed text-dark"
+                      className="bg-muted/50 cursor-not-allowed text-foreground"
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label className="flex items-center gap-1 text-blue-700">
+                    <Label className="flex items-center gap-1 text-primary">
                       <LinkIcon className="w-3 h-3" /> Landing Page Link
                     </Label>
                     <Input
                       value={`${user.username}.travelboost.co.id`}
                       disabled
-                      className="bg-blue-50/50 border-blue-200 text-blue-800 font-medium cursor-not-allowed"
+                      className="bg-primary/5 border-primary/20 text-primary font-medium cursor-not-allowed"
                     />
                   </div>
                 </div>
@@ -303,7 +294,7 @@ export default function AffiliateProfileEdit() {
             </CardContent>
           </Card>
 
-          <Card className="border-slate-200 shadow-sm">
+          <Card className="border-border shadow-sm">
             <CardHeader>
               <CardTitle>Contact & Address</CardTitle>
               <CardDescription>
@@ -379,7 +370,6 @@ export default function AffiliateProfileEdit() {
                   </select>
                   <InputError message={errors.city} />
                 </div>
-
                 <div className="space-y-2">
                   <Label htmlFor="district">District (Kecamatan)</Label>
                   <select
@@ -419,7 +409,6 @@ export default function AffiliateProfileEdit() {
                   </select>
                   <InputError message={errors.village} />
                 </div>
-
                 <div className="space-y-2">
                   <Label htmlFor="postal_code">Postal Code</Label>
                   <Input
@@ -433,7 +422,7 @@ export default function AffiliateProfileEdit() {
             </CardContent>
           </Card>
 
-          <Card className="border-slate-200 shadow-sm">
+          <Card className="border-border shadow-sm">
             <CardHeader>
               <CardTitle>Identity Verification</CardTitle>
               <CardDescription>
@@ -467,13 +456,12 @@ export default function AffiliateProfileEdit() {
                   )}
                 <InputError message={errors.identity_number} />
               </div>
-
               <div className="space-y-2">
                 <Label>Upload ID Photo</Label>
                 <div className="flex flex-col sm:flex-row gap-4 items-start">
                   <div
                     onClick={() => idInputRef.current?.click()}
-                    className="w-full sm:w-64 h-40 border-2 border-dashed border-slate-300 rounded-xl flex flex-col items-center justify-center bg-slate-50 hover:bg-slate-100 cursor-pointer overflow-hidden transition-colors"
+                    className="w-full sm:w-64 h-40 border-2 border-dashed border-border rounded-xl flex flex-col items-center justify-center bg-muted/50 hover:bg-muted cursor-pointer overflow-hidden transition-colors"
                   >
                     {idPreview ? (
                       <img
@@ -483,11 +471,11 @@ export default function AffiliateProfileEdit() {
                       />
                     ) : (
                       <>
-                        <ImagePlus className="w-8 h-8 text-slate-400 mb-2" />
-                        <span className="text-sm text-slate-500 font-medium">
+                        <ImagePlus className="w-8 h-8 text-muted-foreground mb-2" />
+                        <span className="text-sm text-muted-foreground font-medium">
                           Click to upload photo
                         </span>
-                        <span className="text-xs text-slate-400 mt-1">
+                        <span className="text-xs text-muted-foreground mt-1">
                           JPG, PNG (Max 2MB)
                         </span>
                       </>

@@ -126,7 +126,7 @@ export default function CreateBankAccountDialog({
             <Button
               type="submit"
               disabled={form.processing}
-              className="bg-emerald-600 hover:bg-emerald-700"
+              className="bg-primary hover:bg-primary/90"
             >
               {form.processing && <Spinner className="mr-2" />} Save
             </Button>
