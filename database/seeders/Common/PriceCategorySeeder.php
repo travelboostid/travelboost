@@ -23,11 +23,15 @@ class PriceCategorySeeder extends Seeder
             ],
             [
                 'name' => 'Adult Twin',
-                'description' => 'Double room (2 persons)',
+                'description' => 'Twin room (2 persons)',
             ],
             [
                 'name' => 'Adult Triple',
                 'description' => 'Triple room (3 persons)',
+            ],
+            [
+                'name' => 'Adult Extra Bed',
+                'description' => 'Adult Extra Bed',
             ],
             [
                 'name' => 'Child With Bed',

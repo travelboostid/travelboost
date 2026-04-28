@@ -53,7 +53,6 @@ class TourController extends Controller
         $tour->schedules()->create([
           'departure_date' => $schedule['departure_date'] ?? null,
           'return_date'    => $schedule['return_date'] ?? null,
-          'quota'          => $schedule['quota'] ?? 0,
           'tour_code'      => $tour->code,
           'company_id'     => $company->id,
         ]);
@@ -144,7 +143,6 @@ class TourController extends Controller
             'tour_code'      => $tour->code,
             'departure_date' => $schedule['departure_date'],
             'return_date'    => $schedule['return_date'] ?? null,
-            'quota'          => (int) ($schedule['quota'] ?? 0),
           ]
         );
 
@@ -207,7 +205,7 @@ class TourController extends Controller
         'tour'    => $tour->id,
       ])->with([
         'success' => true,
-        'tab'     => 'availability',
+        'tab' => request('tab', 'schedule'),
       ]);
     } catch (\Throwable $e) {
       DB::rollBack();

@@ -35,7 +35,15 @@ import { Fragment } from 'react';
 import { TourDocumentPicker } from '@/components/media/tour-document-picker';
 import MoneyInput from '@/components/ui/money-input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Save, Trash2 } from 'lucide-react';
+import { Copy, Save, Trash2 } from 'lucide-react';
+
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 ///////////tab 2
 type RoomPrice = {
@@ -54,7 +62,6 @@ type Schedule = {
   id?: number;
   departure_date: string;
   return_date: string;
-  quota: string;
   prices: RoomPrice[];
   //promotion: Adjustment
   //commission: Adjustment
@@ -200,7 +207,6 @@ export default function Page({ tour }: Props) {
       id: s.id,
       departure_date: s.departure_date ?? '',
       return_date: s.return_date ?? '',
-      quota: String(s.quota ?? ''),
       availability: s.availability || null,
       /*prices: (s.prices || []).map((p: any) => ({
         room_type_id: p.room_type_id,
@@ -293,7 +299,6 @@ export default function Page({ tour }: Props) {
         id: null,
         departure_date: '',
         return_date: '',
-        quota: '',
         prices: [
           {
             room_type_id: null,
@@ -479,7 +484,7 @@ export default function Page({ tour }: Props) {
     return schedules.map((s) => {
       const a = s.availability || {};
 
-      const max_pax = Number(a.max_pax ?? s.quota ?? 0);
+      const max_pax = Number(a.max_pax ?? 0);
 
       return {
         id: s.id,
@@ -554,7 +559,6 @@ export default function Page({ tour }: Props) {
           id: s.id,
           departure_date: s.departure_date ?? '',
           return_date: s.return_date ?? '',
-          quota: String(s.quota ?? ''),
           availability: s.availability || null,
           prices: (s.prices || []).map((p: any) => ({
             id: p.id,
@@ -737,6 +741,91 @@ export default function Page({ tour }: Props) {
 
       return updated;
     });
+  };
+
+  //copy
+  const copySchedulePrices = (fromIndex: number, toIndex: number) => {
+    if (fromIndex === toIndex) return;
+
+    const updated = [...schedules];
+
+    updated[toIndex].prices = updated[fromIndex].prices.map((room) => ({
+      ...room,
+      id: undefined, // supaya dianggap baru / update fresh
+    }));
+
+    setSchedules(updated);
+  };
+
+  const [copyOpen, setCopyOpen] = useState(false);
+  const [copySourceIndex, setCopySourceIndex] = useState<number | null>(null);
+  const [copyDates, setCopyDates] = useState<string[]>(['']);
+
+  const openCopyModal = (index: number) => {
+    setCopySourceIndex(index);
+    setCopyDates(['']);
+    setCopyOpen(true);
+  };
+
+  const addCopyDate = () => {
+    setCopyDates((prev) => [...prev, '']);
+  };
+
+  const updateCopyDate = (idx: number, value: string) => {
+    setCopyDates((prev) => prev.map((d, i) => (i === idx ? value : d)));
+  };
+
+  const removeCopyDate = (idx: number) => {
+    setCopyDates((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  const submitCopySchedules = () => {
+    if (copySourceIndex === null) return;
+
+    const source = schedules[copySourceIndex];
+
+    const validDates = copyDates.filter((d) => d);
+
+    if (validDates.length === 0) {
+      alert('Please input at least one departure date');
+      return;
+    }
+
+    const newRows = validDates.map((date) => ({
+      id: null,
+      departure_date: date,
+      return_date: addDays(date, Number(data.duration_days)),
+      prices: source.prices.map((room) => ({
+        ...room,
+        id: null,
+      })),
+    }));
+
+    const newSchedules = [...schedules, ...newRows];
+
+    setSchedules(newSchedules);
+
+    router.put(
+      `/companies/${company.username}/dashboard/tours/${tour.id}`,
+      {
+        ...data,
+        schedules: newSchedules,
+      },
+      {
+        preserveScroll: true,
+        preserveState: true,
+
+        onSuccess: () => {
+          setCopyOpen(false);
+          setCopyDates(['']);
+          toast.success('Schedule copied successfully');
+        },
+
+        onError: () => {
+          toast.error('Failed copy schedule');
+        },
+      },
+    );
   };
 
   return (
@@ -1249,6 +1338,7 @@ export default function Page({ tour }: Props) {
                             <Input
                               type="date"
                               value={item.departure_date}
+                              min={new Date().toISOString().split('T')[0]}
                               onChange={(e) =>
                                 updateSchedule(
                                   index,
@@ -1299,11 +1389,23 @@ export default function Page({ tour }: Props) {
                                   >
                                     <option value="">Select Category</option>
 
-                                    {priceCategories.map((cat) => (
-                                      <option key={cat.id} value={cat.id}>
-                                        {cat.name}
-                                      </option>
-                                    ))}
+                                    {priceCategories
+                                      .filter((cat) => {
+                                        const selectedIds = item.prices
+                                          .map((p, i) =>
+                                            i !== rIndex
+                                              ? p.room_type_id
+                                              : null,
+                                          )
+                                          .filter(Boolean);
+
+                                        return !selectedIds.includes(cat.id);
+                                      })
+                                      .map((cat) => (
+                                        <option key={cat.id} value={cat.id}>
+                                          {cat.name}
+                                        </option>
+                                      ))}
                                   </select>
 
                                   {/* PRICE */}
@@ -1464,6 +1566,9 @@ export default function Page({ tour }: Props) {
                                   size="sm"
                                   variant="outline"
                                   onClick={() => addRoom(index)}
+                                  disabled={
+                                    item.prices.length >= priceCategories.length
+                                  }
                                 >
                                   + Add Category
                                 </Button>
@@ -1488,6 +1593,16 @@ export default function Page({ tour }: Props) {
                               disabled={processing || schedules.length === 0}
                             >
                               <Save className="h-4 w-4" />
+                            </Button>
+
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className="bg-blue-600 text-white hover:bg-blue-700 border-blue-600"
+                              size="icon"
+                              onClick={() => openCopyModal(index)}
+                            >
+                              <Copy className="h-4 w-4" />
                             </Button>
                           </td>
                         </tr>
@@ -1525,6 +1640,15 @@ export default function Page({ tour }: Props) {
                             disabled={processing || schedules.length === 0}
                           >
                             <Save className="h-4 w-4" />
+                          </Button>
+
+                          <Button
+                            type="button"
+                            size="sm"
+                            className="bg-blue-600 text-white hover:bg-blue-700"
+                            onClick={() => openCopyModal(index)}
+                          >
+                            <Copy className="h-4 w-4" />
                           </Button>
                         </div>
                       </div>
@@ -1613,11 +1737,21 @@ export default function Page({ tour }: Props) {
                               >
                                 <option value="">Select Category</option>
 
-                                {priceCategories.map((cat) => (
-                                  <option key={cat.id} value={cat.id}>
-                                    {cat.name}
-                                  </option>
-                                ))}
+                                {priceCategories
+                                  .filter((cat) => {
+                                    const selectedIds = item.prices
+                                      .map((p, i) =>
+                                        i !== rIndex ? p.room_type_id : null,
+                                      )
+                                      .filter(Boolean);
+
+                                    return !selectedIds.includes(cat.id);
+                                  })
+                                  .map((cat) => (
+                                    <option key={cat.id} value={cat.id}>
+                                      {cat.name}
+                                    </option>
+                                  ))}
                               </select>
                             </div>
 
@@ -1779,6 +1913,9 @@ export default function Page({ tour }: Props) {
                           size="sm"
                           variant="outline"
                           onClick={() => addRoom(index)}
+                          disabled={
+                            item.prices.length >= priceCategories.length
+                          }
                           className="w-full"
                         >
                           + Add Category
@@ -2264,6 +2401,62 @@ export default function Page({ tour }: Props) {
               <div className="flex justify-start pt-6 border-t"></div>
             </TabsContent>
           </Tabs>
+
+          <Dialog open={copyOpen} onOpenChange={setCopyOpen}>
+            <DialogContent className="max-w-lg">
+              <DialogHeader>
+                <DialogTitle>Copy Schedule To New Departure Dates</DialogTitle>
+              </DialogHeader>
+
+              <div className="space-y-3">
+                {copyDates.map((date, i) => (
+                  <div key={i} className="flex gap-2">
+                    <Input
+                      type="date"
+                      value={date}
+                      min={new Date().toISOString().split('T')[0]}
+                      onChange={(e) => updateCopyDate(i, e.target.value)}
+                    />
+
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      onClick={() => removeCopyDate(i)}
+                    >
+                      x
+                    </Button>
+                  </div>
+                ))}
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={addCopyDate}
+                  className="w-full"
+                >
+                  + Add Date
+                </Button>
+              </div>
+
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setCopyOpen(false)}
+                >
+                  Cancel
+                </Button>
+
+                <Button
+                  type="button"
+                  className="bg-blue-600 text-white hover:bg-blue-700"
+                  onClick={submitCopySchedules}
+                >
+                  Copy Schedule
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
       </form>
     </CompanyDashboardLayout>

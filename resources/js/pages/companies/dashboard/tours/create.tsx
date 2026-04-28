@@ -54,7 +54,6 @@ type Adjustment = {
 type Schedule = {
   departure_date: string;
   return_date: string;
-  quota: string;
   prices: RoomPrice[];
   //promotion: Adjustment
   //commission: Adjustment
@@ -141,7 +140,6 @@ export default function Page() {
       {
         departure_date: '',
         return_date: '',
-        quota: '',
         prices: [
           {
             room_type_id: null,

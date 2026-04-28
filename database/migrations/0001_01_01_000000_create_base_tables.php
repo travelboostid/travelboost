@@ -21,13 +21,13 @@ return new class extends Migration
    */
   public function up(): void
   {
-    /*Schema::create('app_configs', function (Blueprint $table) {
+    Schema::create('app_configs', function (Blueprint $table) {
       $table->id();
       $table->string('key')->unique();
       $table->string('description')->nullable();
       $table->jsonb('value')->nullable();
       $table->timestamps();
-    });*/
+    });
     // BEGIN Laravolt Indonesia tables
     Schema::connection(config('indonesia.database.connection') ?? config('database.default'))->create(config('laravolt.indonesia.table_prefix') . 'provinces', function (Blueprint $table) {
       $table->bigIncrements('id');
@@ -233,6 +233,14 @@ return new class extends Migration
       $table->string('chatbot_response_style')->default('professional'); // professional | friendly | casual
       $table->string('chatbot_default_language')->default('auto'); // auto | id | en
       $table->text('landing_page_data')->nullable();
+      $table->integer('booking_deadline')->default(0);
+      $table->integer('minimum_down_payment')->default(0);
+      $table->integer('minimum_vat')->default(0);
+      $table->text('term_conditions')->nullable();
+      $table->integer('booking_entry_time_limit')->default(0);
+      $table->string('manual_bank_transfer')->nullable();
+      $table->string('manual_bank_transfer_account_name')->nullable();
+      $table->string('manual_bank_transfer_account_number')->nullable();
       $table->timestamps();
     });
 
@@ -456,13 +464,7 @@ return new class extends Migration
       // Dates
       $table->date('departure_date');
       $table->date('return_date')->nullable();
-      // Capacity
-      $table->unsignedInteger('quota')->default(0);
-      //$table->unsignedInteger('booked')->default(0);
-      // Pricing per departure
-      //$table->decimal('price', 12, 2)->nullable();
-      //$table->decimal('agent_price', 12, 2)->nullable();
-
+      
       // Booking control
       $table->date('cutoff_date')->nullable();
       // Status
