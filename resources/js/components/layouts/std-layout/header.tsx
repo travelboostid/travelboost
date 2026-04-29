@@ -42,10 +42,10 @@ export function Header() {
       name: <FormattedMessage defaultMessage="Contact" id="contact" />,
       href: '#contact',
     },
-    {
-      name: <FormattedMessage defaultMessage="Affiliate" id="affiliate" />,
-      href: affiliateBaseUrl,
-    },
+    // {
+    //   name: <FormattedMessage defaultMessage="Affiliate" id="affiliate" />,
+    //   href: affiliateBaseUrl,
+    // },
   ];
 
   return (
