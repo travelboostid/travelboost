@@ -12,7 +12,6 @@ use App\Models\CompanySettings;
 use App\Models\Tour;
 use App\Models\TourDocumentKnowledgeBase;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
-use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Laravel\Ai\Contracts\Agent;
@@ -63,11 +62,19 @@ class ChatbotAgent implements Agent, Conversational
 
   public function instructions(): Stringable|string
   {
-    $baseInstructions = $this->useBaseInstructions();
-    $responseStyleInstruction = $this->useConfiguredResponseStyleInstructions();
-    $languageInstruction = $this->useConfiguredLanguageInstructions();
+    return <<<PROMPT
+      You are a helpful professional assistant that answers user questions.
 
-    return "$baseInstructions {$responseStyleInstruction} {$languageInstruction}";
+      Rules:
+      - Use ONLY the provided context to answer.
+      - If the answer is not in the context, say you don't know.
+      - Do not guess or make up information.
+      - Keep answers short, clear, and helpful.
+      - If unclear, ask for clarification.
+      - Do not mention internal systems or processes.
+
+      You MUST detect the language of the user's message and reply in that EXACT same language.
+      PROMPT;
   }
 
   public function messages(): array
@@ -261,41 +268,6 @@ class ChatbotAgent implements Agent, Conversational
       $this->promptTokens += $response->usage->promptTokens ?? 0;
       $this->completionTokens += $response->usage->completionTokens ?? 0;
     }
-  }
-
-  private function useBaseInstructions(): string
-  {
-    return <<<PROPMT
-      You are a helpful assistant that answers user questions.
-
-      Rules:
-      - Use ONLY the provided context to answer.
-      - If the answer is not in the context, say you don't know.
-      - Do not guess or make up information.
-      - Keep answers short, clear, and helpful.
-      - If unclear, ask for clarification.
-      - Do not mention internal systems or processes.
-      PROPMT;
-  }
-
-  private function useConfiguredResponseStyleInstructions(): string
-  {
-    $responseStyleMap = [
-      'professional' => 'Use formal, business-appropriate language.',
-      'friendly' => 'Be warm and conversational.',
-      'casual' => 'Use relaxed, informal language.',
-    ];
-
-    return $responseStyleMap[$this->settings?->chatbot_response_style ?? 'professional'] ?? $responseStyleMap['professional'];
-  }
-
-  private function useConfiguredLanguageInstructions(): string
-  {
-    return match ($this->settings?->chatbot_default_language) {
-      'en' => 'CRITICAL: You MUST reply entirely in English.',
-      'id' => 'CRITICAL: You MUST reply entirely in Bahasa Indonesia.',
-      default => 'CRITICAL: You MUST detect the language of the user\'s message and reply in that EXACT same language.',
-    };
   }
 
   private function setup()

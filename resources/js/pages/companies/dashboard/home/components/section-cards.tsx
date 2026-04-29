@@ -137,7 +137,7 @@ export function SectionCards({ stats, company }: { stats: any; company: any }) {
                 </Badge>
               </div>
               <Link
-                href={`/companies/${company.username}/dashboard/ai-credits`}
+                href={`/companies/${company.username}/dashboard/chatbot`}
                 className="mt-4"
               >
                 <Button

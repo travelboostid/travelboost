@@ -263,11 +263,6 @@ export function useCompanyDashboardNavMainMenu() {
           urlOrAction: `/companies/${company.username}/dashboard/chatbot`,
         },
         {
-          id: 'settings.ai-credits',
-          title: <FormattedMessage defaultMessage="AI Credits" />,
-          urlOrAction: `/companies/${company.username}/dashboard/ai-credits`,
-        },
-        {
           id: 'settings.vendor-registrations',
           title: <FormattedMessage defaultMessage="Vendor Registrations" />,
           urlOrAction: `/companies/${company.username}/dashboard/vendor-registrations`,
