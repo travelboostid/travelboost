@@ -37,6 +37,7 @@ import MoneyInput from '@/components/ui/money-input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Copy, Save, Trash2 } from 'lucide-react';
 
+import { Calendar } from '@/components/ui/calendar';
 import {
   Dialog,
   DialogContent,
@@ -44,6 +45,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { format } from 'date-fns';
 
 ///////////tab 2
 type RoomPrice = {
@@ -744,20 +746,39 @@ export default function Page({ tour }: Props) {
   };
 
   //copy
-  const copySchedulePrices = (fromIndex: number, toIndex: number) => {
-    if (fromIndex === toIndex) return;
+  const copySchedule = (item) => {
+    const addons = item.add_ons?.length
+      ? item.add_ons
+      : addOnsFromDb[item.id] || [];
 
-    const updated = [...schedules];
+    const cloned = {
+      ...item,
+      id: null,
 
-    updated[toIndex].prices = updated[fromIndex].prices.map((room) => ({
-      ...room,
-      id: undefined, // supaya dianggap baru / update fresh
-    }));
+      prices: (item.prices || []).map((p) => ({
+        ...p,
+        id: null,
+      })),
 
-    setSchedules(updated);
+      add_ons: addons.map((a) => ({
+        ...a,
+        id: null,
+      })),
+
+      availability: item.availability
+        ? {
+            ...item.availability,
+            id: null,
+            schedule_id: null,
+          }
+        : null,
+    };
+
+    setSchedules([...schedules, cloned]);
   };
 
   const [copyOpen, setCopyOpen] = useState(false);
+  const [selectedDates, setSelectedDates] = useState<Date[]>([]);
   const [copySourceIndex, setCopySourceIndex] = useState<number | null>(null);
   const [copyDates, setCopyDates] = useState<string[]>(['']);
 
@@ -784,20 +805,64 @@ export default function Page({ tour }: Props) {
 
     const source = schedules[copySourceIndex];
 
-    const validDates = copyDates.filter((d) => d);
+    const validDates = selectedDates
+      .map((d) => format(d, 'yyyy-MM-dd'))
+      .filter(Boolean);
 
     if (validDates.length === 0) {
-      alert('Please input at least one departure date');
+      toast.error('Please select at least one departure date');
       return;
     }
 
-    const newRows = validDates.map((date) => ({
+    const existingDates = schedules.map((s) => s.departure_date);
+
+    const filteredDates = validDates.filter(
+      (date) => !existingDates.includes(date),
+    );
+
+    if (filteredDates.length === 0) {
+      toast.error('Selected dates already exist');
+      return;
+    }
+
+    const sourceAddons =
+      source.add_ons?.length > 0
+        ? source.add_ons
+        : addOnsFromDb?.[source.id] || [];
+
+    const newRows = filteredDates.map((date) => ({
       id: null,
       departure_date: date,
       return_date: addDays(date, Number(data.duration_days)),
+
+      // prices
       prices: source.prices.map((room) => ({
         ...room,
         id: null,
+        schedule_id: null,
+      })),
+
+      // availability => copy hanya max_pax
+      availability: (() => {
+        const avail = Array.isArray(source.availability)
+          ? source.availability[0]
+          : source.availability;
+
+        return avail
+          ? {
+              id: null,
+              schedule_id: null,
+              max_pax: avail.max_pax,
+              available: avail.available,
+            }
+          : null;
+      })(),
+
+      // add ons
+      add_ons: sourceAddons.map((item) => ({
+        ...item,
+        id: null,
+        schedule_id: null,
       })),
     }));
 
@@ -817,7 +882,7 @@ export default function Page({ tour }: Props) {
 
         onSuccess: () => {
           setCopyOpen(false);
-          setCopyDates(['']);
+          setSelectedDates([]);
           toast.success('Schedule copied successfully');
         },
 
@@ -2403,39 +2468,61 @@ export default function Page({ tour }: Props) {
           </Tabs>
 
           <Dialog open={copyOpen} onOpenChange={setCopyOpen}>
-            <DialogContent className="max-w-lg">
+            <DialogContent className="max-w-xl">
               <DialogHeader>
-                <DialogTitle>Copy Schedule To New Departure Dates</DialogTitle>
+                <DialogTitle>
+                  Copy Schedule To New Departure Dates <br></br>
+                  <br></br>
+                  {tour.name}
+                </DialogTitle>
               </DialogHeader>
 
-              <div className="space-y-3">
-                {copyDates.map((date, i) => (
-                  <div key={i} className="flex gap-2">
-                    <Input
-                      type="date"
-                      value={date}
-                      min={new Date().toISOString().split('T')[0]}
-                      onChange={(e) => updateCopyDate(i, e.target.value)}
-                    />
+              <div className="space-y-4">
+                <div className="border rounded-lg p-3 flex justify-center">
+                  <Calendar
+                    mode="multiple"
+                    selected={selectedDates}
+                    onSelect={(dates) => setSelectedDates(dates || [])}
+                    disabled={(date) =>
+                      date < new Date(new Date().setHours(0, 0, 0, 0))
+                    }
+                    className="rounded-md"
+                  />
+                </div>
 
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      onClick={() => removeCopyDate(i)}
+                <div className="space-y-2 max-h-48 overflow-auto">
+                  {selectedDates.length === 0 && (
+                    <p className="text-sm text-muted-foreground">
+                      No date selected
+                    </p>
+                  )}
+
+                  {selectedDates.map((date, i) => (
+                    <div
+                      key={i}
+                      className="flex items-center justify-between border rounded-md px-3 py-2"
                     >
-                      x
-                    </Button>
-                  </div>
-                ))}
+                      <span>{format(date, 'dd MMM yyyy')}</span>
 
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={addCopyDate}
-                  className="w-full"
-                >
-                  + Add Date
-                </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="destructive"
+                        onClick={() =>
+                          setSelectedDates((prev) =>
+                            prev.filter(
+                              (d) =>
+                                format(d, 'yyyy-MM-dd') !==
+                                format(date, 'yyyy-MM-dd'),
+                            ),
+                          )
+                        }
+                      >
+                        Remove
+                      </Button>
+                    </div>
+                  ))}
+                </div>
               </div>
 
               <DialogFooter>
@@ -2452,7 +2539,7 @@ export default function Page({ tour }: Props) {
                   className="bg-blue-600 text-white hover:bg-blue-700"
                   onClick={submitCopySchedules}
                 >
-                  Copy Schedule
+                  Generate
                 </Button>
               </DialogFooter>
             </DialogContent>

@@ -10,6 +10,8 @@ use App\Models\Company;
 use App\Models\Currency;
 use App\Models\PriceCategory;
 use App\Models\Tour;
+use App\Models\TourAddOn;
+use App\Models\TourAvailability;
 use App\Models\TourPrice;
 use App\Models\TourSchedule;
 use Illuminate\Support\Facades\DB;
@@ -196,6 +198,106 @@ class TourController extends Controller
             ]
           );
         }
+
+        /*
+        |--------------------------------------------------------------------------
+        | AVAILABILITY
+        |--------------------------------------------------------------------------
+        */
+        if (!empty($schedule['availability'])) {
+
+            TourAvailability::updateOrCreate(
+                ['schedule_id' => $scheduleModel->id],
+                [
+                    'tour_id' => $tour->id,
+                    'company_id' => $company->id,
+                    'max_pax' => (int) ($schedule['availability']['max_pax'] ?? 0),
+                    'available' => (int) ($schedule['availability']['available'] ?? 0),
+                ]
+            );
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | ADD ONS
+        |--------------------------------------------------------------------------
+        */
+
+        $isNewSchedule = !TourSchedule::where(
+            'id',
+            $schedule['id'] ?? 0
+        )->where(
+            'tour_id',
+            $tour->id
+        )->exists();
+
+        /*
+        |--------------------------------------------------------------------------
+        | JIKA SCHEDULE BARU (HASIL COPY)
+        |--------------------------------------------------------------------------
+        */
+        if ($isNewSchedule) {
+
+            foreach ($schedule['add_ons'] ?? [] as $addon) {
+
+                TourAddOn::create([
+                    'tour_id' => $tour->id,
+                    'schedule_id' => $scheduleModel->id,
+                    'company_id' => $company->id,
+                    'description' => $addon['description'] ?? '',
+                    'price' => (float) ($addon['price'] ?? 0),
+                    'edit_status' => (bool) ($addon['edit_status'] ?? false),
+                ]);
+            }
+
+        } else {
+
+            /*
+            |--------------------------------------------------------------------------
+            | SCHEDULE LAMA (EDIT NORMAL)
+            |--------------------------------------------------------------------------
+            */
+
+            $existingIds = TourAddOn::where('schedule_id', $scheduleModel->id)
+                ->pluck('id')
+                ->toArray();
+
+            $incomingIds = collect($schedule['add_ons'] ?? [])
+                ->pluck('id')
+                ->filter()
+                ->toArray();
+
+            /*
+            | HANYA delete jika request memang mengirim addon existing id
+            | kalau kosong = hasil copy / frontend clone
+            */
+            if (count($incomingIds) > 0) {
+
+                $deleteIds = array_diff($existingIds, $incomingIds);
+
+                if (!empty($deleteIds)) {
+                    TourAddOn::whereIn('id', $deleteIds)->delete();
+                }
+            }
+
+            foreach ($schedule['add_ons'] ?? [] as $addon) {
+
+                TourAddOn::updateOrCreate(
+                    [
+                        'id' => $addon['id'] ?? null,
+                    ],
+                    [
+                        'tour_id' => $tour->id,
+                        'schedule_id' => $scheduleModel->id,
+                        'company_id' => $company->id,
+                        'description' => $addon['description'] ?? '',
+                        'price' => (float) ($addon['price'] ?? 0),
+                        'edit_status' => (bool) ($addon['edit_status'] ?? false),
+                    ]
+                );
+            }
+        }
+
       }
 
       DB::commit();
