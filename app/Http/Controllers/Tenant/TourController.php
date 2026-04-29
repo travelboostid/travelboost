@@ -38,7 +38,7 @@ class TourController extends Controller
           'tour_id' => $avail->schedule->tour_id,
           'departure_date' => $avail->schedule->departure_date,
           'return_date' => $avail->schedule->return_date,
-          'quota' => (int) $avail->max_pax,
+          'quota' => (int) $avail->available,
           'price' => (float) ($agentTour->tour->showprice ?? 0),
           'agent_price' => 0,
           'cutoff_date' => $avail->schedule->cutoff_date,
