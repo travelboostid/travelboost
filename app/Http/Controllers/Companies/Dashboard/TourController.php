@@ -19,7 +19,7 @@ class TourController extends Controller
 {
   public function index(Company $company)
   {
-    $tours = $company->tours()->get();
+    $tours = $company->tours()->orderBy('id', 'desc')->get();
 
     return Inertia::render('companies/dashboard/tours/index', [
       'data' => $tours,
@@ -107,6 +107,21 @@ class TourController extends Controller
 
   public function update(UpdateTourRequest $request, Company $company, Tour $tour)
   {
+    if ($request->has('quick_update')) {
+      $payload = $request->all();
+
+      if (array_key_exists('status', $payload)) {
+        $tour->status = $payload['status'];
+      }
+
+      if (array_key_exists('category_id', $payload)) {
+        $tour->category_id = $payload['category_id'];
+      }
+
+      $tour->save();
+      return back();
+    }
+
     $data = $request->validated();
 
     $data['showprice']    = (int) ($data['showprice'] ?? 0);
@@ -118,11 +133,9 @@ class TourController extends Controller
     DB::beginTransaction();
 
     try {
-      // ── Update master tour ──────────────────────────────────────────
       $tour->update($data);
       TourUpdated::dispatch($tour);
 
-      // ── Delete schedules removed by user ────────────────────────────
       $existingScheduleIds = $tour->schedules()->pluck('id')->toArray();
       $incomingScheduleIds = collect($data['schedules'] ?? [])
         ->pluck('id')
@@ -134,7 +147,6 @@ class TourController extends Controller
         TourSchedule::whereIn('id', $schedulesToDelete)->delete();
       }
 
-      // ── Upsert schedules and their prices ───────────────────────────
       foreach ($data['schedules'] ?? [] as $schedule) {
         $scheduleModel = TourSchedule::updateOrCreate(
           ['id' => $schedule['id'] ?? null],
@@ -148,7 +160,6 @@ class TourController extends Controller
           ]
         );
 
-        // Delete prices removed by user
         $existingPriceIds = $scheduleModel->prices()->pluck('id')->toArray();
         $incomingPriceIds = collect($schedule['prices'] ?? [])
           ->pluck('id')
@@ -160,7 +171,6 @@ class TourController extends Controller
           TourPrice::whereIn('id', $pricesToDelete)->delete();
         }
 
-        // Upsert prices
         foreach ($schedule['prices'] ?? [] as $price) {
           if (empty($price['room_type_id'])) {
             continue;
@@ -185,16 +195,16 @@ class TourController extends Controller
           TourPrice::updateOrCreate(
             ['id' => $price['id'] ?? null],
             [
-              'schedule_id'      => $scheduleModel->id,
-              'company_id'       => $company->id,
-              'tour_code'        => $tour->code,
+              'schedule_id'       => $scheduleModel->id,
+              'company_id'        => $company->id,
+              'tour_code'         => $tour->code,
               'price_category_id' => $price['room_type_id'],
-              'price'            => (int) ($price['price'] ?? 0),
-              'currency'         => $data['currency'],
-              'promotion_rate'   => $promotionRate,
-              'promotion'        => $promotionValue,
-              'commission_rate'  => $commissionRate,
-              'commission'       => $commissionValue,
+              'price'             => (int) ($price['price'] ?? 0),
+              'currency'          => $data['currency'],
+              'promotion_rate'    => $promotionRate,
+              'promotion'         => $promotionValue,
+              'commission_rate'   => $commissionRate,
+              'commission'        => $commissionValue,
             ]
           );
         }

@@ -103,9 +103,7 @@ export default function CustomersPage({ data }: CustomersPageProps) {
         cell: ({ row }) => {
           const companyName = (row.original as any).company?.name;
           return (
-            <div className="text-muted-foreground">
-              {companyName ?? '—'}
-            </div>
+            <div className="text-muted-foreground">{companyName ?? '—'}</div>
           );
         },
       },
@@ -145,10 +143,8 @@ export default function CustomersPage({ data }: CustomersPageProps) {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem>Edit</DropdownMenuItem>
-                <DropdownMenuItem variant="destructive">
-                  Delete
-                </DropdownMenuItem>
+                <DropdownMenuItem>History Booking</DropdownMenuItem>
+                <DropdownMenuItem>Send Notification</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           );

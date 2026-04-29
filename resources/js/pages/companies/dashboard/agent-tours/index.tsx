@@ -240,7 +240,7 @@ export const columns: ColumnDef<AgentTour>[] = [
     header: 'Created At',
     cell: ({ getValue }) => (
       <div className="text-xs text-slate-500 whitespace-nowrap">
-        {dayjs(getValue<string>()).fromNow()}
+        {dayjs(getValue<string>()).format('D MMMM YYYY')}
       </div>
     ),
   },

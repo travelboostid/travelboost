@@ -23,20 +23,8 @@ class CompanySeeder extends Seeder
     $packages = [
       [
         'name' => 'Basic',
-        'duration_months' => 1,
-        'price' => 100000,
-        'is_active' => true,
-      ],
-      [
-        'name' => 'Pro',
-        'duration_months' => 6,
-        'price' => 500000,
-        'is_active' => true,
-      ],
-      [
-        'name' => 'Enterprise',
         'duration_months' => 12,
-        'price' => 1000000,
+        'price' => 6000000,
         'is_active' => true,
       ],
     ];
