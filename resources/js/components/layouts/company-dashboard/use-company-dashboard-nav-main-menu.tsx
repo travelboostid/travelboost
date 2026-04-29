@@ -108,8 +108,8 @@ export function useCompanyDashboardNavMainMenu() {
         },
         {
           id: 'tours.orders',
-          title: <FormattedMessage defaultMessage="Orders" />,
-          urlOrAction: `/companies/${company.username}/dashboard/orders`,
+          title: <FormattedMessage defaultMessage="Bookings" />,
+          urlOrAction: `/companies/${company.username}/dashboard/bookings`,
         },
       ],
       visibleToCompanyTypes: ['vendor'],
@@ -138,8 +138,8 @@ export function useCompanyDashboardNavMainMenu() {
         },
         {
           id: 'tours.bookings',
-          title: <FormattedMessage defaultMessage="Order" />,
-          urlOrAction: `#`,
+          title: <FormattedMessage defaultMessage="Bookings" />,
+          urlOrAction: `/companies/${company.username}/dashboard/bookings`,
         },
       ],
       visibleToCompanyTypes: ['agent'],

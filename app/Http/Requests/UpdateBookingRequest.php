@@ -1,0 +1,69 @@
+<?php
+
+namespace App\Http\Requests;
+
+use App\Enums\BookingStatus;
+use App\Enums\UserGender;
+use Illuminate\Contracts\Validation\ValidationRule;
+use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
+
+class UpdateBookingRequest extends FormRequest
+{
+    /**
+     * Determine if the user is authorized to make this request.
+     */
+    public function authorize(): bool
+    {
+        $booking = $this->route('booking');
+
+        return in_array($booking->status, [
+            BookingStatus::RESERVED,
+            BookingStatus::AWAITING_PAYMENT,
+        ]);
+    }
+
+    /**
+     * Get the validation rules that apply to the request.
+     *
+     * @return array<string, ValidationRule|array<mixed>|string>
+     */
+    public function rules(): array
+    {
+        return [
+            'contact_name' => ['required', 'string', 'max:255'],
+            'contact_email' => ['required', 'email', 'max:255'],
+            'contact_phone' => ['required', 'string', 'max:50'],
+            'contact_notes' => ['nullable', 'string', 'max:1000'],
+
+            'passengers' => ['required', 'array', 'min:1'],
+            'passengers.*.id' => ['required', 'integer', 'exists:booking_passengers,id'],
+            'passengers.*.title' => ['nullable', 'string', 'max:20'],
+            'passengers.*.first_name' => ['required', 'string', 'max:255'],
+            'passengers.*.last_name' => ['nullable', 'string', 'max:255'],
+            'passengers.*.gender' => ['nullable', Rule::enum(UserGender::class)],
+            'passengers.*.dob' => ['nullable', 'date'],
+            'passengers.*.pob' => ['nullable', 'string', 'max:255'],
+            'passengers.*.nationality' => ['nullable', 'string', 'max:255'],
+            'passengers.*.passport_number' => ['nullable', 'string', 'max:255'],
+            'passengers.*.passport_issue_date' => ['nullable', 'date'],
+            'passengers.*.passport_expiry_date' => ['nullable', 'date'],
+            'passengers.*.visa_number' => ['nullable', 'string', 'max:255'],
+            'passengers.*.price_category' => ['nullable', 'string', 'max:255'],
+            'passengers.*.price_amount' => ['nullable', 'numeric'],
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'passengers.*.first_name.required' => 'First name is required for each passenger.',
+            'contact_name.required' => 'Contact name is required.',
+            'contact_email.required' => 'Contact email is required.',
+            'contact_phone.required' => 'Contact phone is required.',
+        ];
+    }
+}

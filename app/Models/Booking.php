@@ -21,6 +21,7 @@ class Booking extends Model
         'tour_id',
         'departure_date',
         'status',
+        'reserved_type',
         'pax_adult',
         'pax_child',
         'pax_infant',
@@ -29,6 +30,10 @@ class Booking extends Model
         'platform_fee',
         'commission_amount',
         'grand_total',
+        'contact_name',
+        'contact_email',
+        'contact_phone',
+        'contact_notes',
     ];
 
     protected function casts(): array
@@ -72,6 +77,11 @@ class Booking extends Model
     public function addons(): HasMany
     {
         return $this->hasMany(BookingAddon::class);
+    }
+
+    public function rooms(): HasMany
+    {
+        return $this->hasMany(BookingRoom::class);
     }
 
     public function payments(): MorphMany
