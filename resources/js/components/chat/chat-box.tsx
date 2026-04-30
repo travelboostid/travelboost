@@ -103,7 +103,7 @@ export default function ChatBox({
    * Pagination is handled via cursor-based loading for better performance.
    */
   useEffect(() => {
-    if (!inView || nextCursor === '') return;
+    if (!inView || !nextCursor) return;
     loadRoom(roomId);
     loadMessages(roomId, {
       cursor: nextCursor,
