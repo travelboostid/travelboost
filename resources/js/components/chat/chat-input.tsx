@@ -50,7 +50,7 @@ export default function ChatInput({
     return data;
   };
   return (
-    <div className={cn('divide-y border-t', className)}>
+    <div className={cn('divide-y flex flex-col min-h-16', className)}>
       {attachment && (
         <div className="p-4">
           <RenderAttachment type={attachment.type} data={attachment.data} />

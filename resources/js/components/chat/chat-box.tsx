@@ -33,7 +33,7 @@ function ChatMessage({ message }: { message: ChatMessageResource }) {
             : 'rounded-bl-none border border-border bg-card text-foreground'
         }`}
       >
-        <p className="text-sm leading-relaxed">
+        <p className="text-sm leading-relaxed space-y-1.5">
           <MessageContentRenderer message={message} />
         </p>
         {message.attachment_data && !message.is_bot && (
@@ -61,7 +61,39 @@ export function MessageContentRenderer({
   message: ChatMessageResource;
 }) {
   return (
-    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+    <ReactMarkdown
+      remarkPlugins={[remarkGfm]}
+      components={{
+        table: ({ children }) => (
+          <div className="border w-full overflow-x-auto">
+            <table className="w-full  min-w-75 text-sm border-collapse">
+              {children}
+            </table>
+          </div>
+        ),
+        thead: ({ children }) => <thead className="border-b">{children}</thead>,
+        th: ({ children }) => (
+          <th className="px-4 py-2 text-left font-medium whitespace-nowrap">
+            {children}
+          </th>
+        ),
+        td: ({ children }) => (
+          <td className="px-4 py-2 whitespace-nowrap">{children}</td>
+        ),
+        tr: ({ children }) => (
+          <tr className="border-b last:border-0 hover:bg-muted/50">
+            {children}
+          </tr>
+        ),
+        ul: ({ children }) => (
+          <ul className="mb-4 bt-2 ml-6 list-disc space-y-2">{children}</ul>
+        ),
+        ol: ({ children }) => (
+          <ol className="my-4 ml-6 list-decimal space-y-2">{children}</ol>
+        ),
+        li: ({ children }) => <li className="leading-normal">{children}</li>,
+      }}
+    >
       {message?.message || ''}
     </ReactMarkdown>
   );
@@ -84,6 +116,7 @@ export default function ChatBox({
   const loadRoom = useLoadRoom();
   const messages = useRoomMessages(roomId);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const lastMessageId = messages?.[messages.length - 1]?.id;
 
   /**
    * Scrolls the conversation to the bottom using smooth behavior.
@@ -117,7 +150,7 @@ export default function ChatBox({
    */
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [lastMessageId]);
 
   return (
     <div

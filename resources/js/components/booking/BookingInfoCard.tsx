@@ -46,6 +46,7 @@ type BookingInfoCardProps = {
   timeLeftSeconds: number;
   currentStep?: number;
   totalPaid?: number;
+  timerStarted?: boolean;
 };
 
 export default function BookingInfoCard({
@@ -63,8 +64,26 @@ export default function BookingInfoCard({
   timeLeftSeconds,
   currentStep = 1,
   totalPaid = 0,
+  timerStarted = false,
 }: BookingInfoCardProps) {
-  const statusConfig = BOOKING_STATUS_CONFIG[status];
+  const normalizeStatus = (s: string): BookingStatusCode => {
+    const map: Record<string, BookingStatusCode> = {
+      'awaiting payment': 'waiting_payment',
+      awaiting_payment: 'waiting_payment',
+      'down payment': 'down_payment',
+      'full payment': 'full_payment',
+      'waiting list': 'waiting_list',
+      waiting_list: 'waiting_list',
+      cancelled: 'cancel',
+      refunded: 'refund',
+    };
+    const key = s.toLowerCase();
+    return map[key] ?? (key as BookingStatusCode);
+  };
+
+  const statusConfig =
+    BOOKING_STATUS_CONFIG[normalizeStatus(status)] ??
+    BOOKING_STATUS_CONFIG.reserved;
 
   const formatTime = (seconds: number) => {
     const min = Math.floor(seconds / 60);
@@ -98,23 +117,23 @@ export default function BookingInfoCard({
             </div>
           </div>
         </div>
-        {currentStep >= 2 && (
-        <div
-          className="flex flex-col text-left sm:items-end sm:text-right"
-          role="timer"
-          aria-live="polite"
-          aria-label={`Time remaining: ${formatTime(timeLeftSeconds)}`}
-        >
-          <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-            Time Left
-          </span>
+        {(timerStarted || currentStep >= 2) && (
           <div
-            className={`mt-1 flex items-center gap-1.5 font-mono text-xl font-bold leading-none ${timerColor}`}
+            className="flex flex-col text-left sm:items-end sm:text-right"
+            role="timer"
+            aria-live="polite"
+            aria-label={`Time remaining: ${formatTime(timeLeftSeconds)}`}
           >
-            <ClockIcon className="size-5" />
-            <span>{formatTime(timeLeftSeconds)}</span>
+            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+              Time Left
+            </span>
+            <div
+              className={`mt-1 flex items-center gap-1.5 font-mono text-xl font-bold leading-none ${timerColor}`}
+            >
+              <ClockIcon className="size-5" />
+              <span>{formatTime(timeLeftSeconds)}</span>
+            </div>
           </div>
-        </div>
         )}
       </div>
 

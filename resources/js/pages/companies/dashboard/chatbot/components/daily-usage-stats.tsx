@@ -17,7 +17,7 @@ import {
 } from '@/components/ui/chart';
 import usePageProps from '@/hooks/use-page-props';
 import { formatIDR } from '@/lib/utils';
-import type { AiCreditsPageProps } from '..';
+import type { ChatbotPageProps } from '..';
 
 const chartConfig = {
   cost: {
@@ -31,7 +31,7 @@ const chartConfig = {
 } satisfies ChartConfig;
 
 export default function DailyUsageStats() {
-  const { dailyStats } = usePageProps<AiCreditsPageProps>();
+  const { dailyStats } = usePageProps<ChatbotPageProps>();
 
   // ✅ Normalize + fill missing dates
   const normalizedData = (() => {
