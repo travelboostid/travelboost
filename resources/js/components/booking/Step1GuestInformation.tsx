@@ -28,6 +28,7 @@ import { cn } from '@/lib/utils';
 import type { BookingContact, GuestEntry, TourPrice } from '@/types/booking';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
+  AlertCircleIcon,
   Baby,
   MinusIcon,
   PhoneIcon,
@@ -36,7 +37,7 @@ import {
   UserMinusIcon,
   XIcon,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 const containerVariants = {
   hidden: {},
@@ -46,6 +47,23 @@ const itemVariants = {
   hidden: { opacity: 0, y: 14 },
   visible: { opacity: 1, y: 0, transition: { duration: 0.22 } },
 };
+
+export function calculateAgeAtDeparture(
+  dob: string,
+  departure: string,
+): number | null {
+  if (!dob || !departure) return null;
+  const dobDate = new Date(dob);
+  const depDate = new Date(departure);
+  if (isNaN(dobDate.getTime()) || isNaN(depDate.getTime())) return null;
+
+  let age = depDate.getFullYear() - dobDate.getFullYear();
+  const m = depDate.getMonth() - dobDate.getMonth();
+  if (m < 0 || (m === 0 && depDate.getDate() < dobDate.getDate())) {
+    age--;
+  }
+  return age;
+}
 
 // ─── Stepper ────────────────────────────────────────────────────────────────────
 
@@ -112,12 +130,14 @@ function GuestDetailForm({
   onChange,
   onRemove,
   tourPrices,
+  departureDate,
 }: {
   guest: GuestEntry;
   index: number;
   onChange: (g: GuestEntry) => void;
   onRemove?: () => void;
   tourPrices: TourPrice[];
+  departureDate: string;
 }) {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const isAdult = guest.type === 'adult';
@@ -127,6 +147,19 @@ function GuestDetailForm({
   const availablePrices = tourPrices.filter((p) =>
     allowedCategories.includes(p.categoryName),
   );
+
+  useEffect(() => {
+    if (availablePrices.length === 1 && !guest.tourPriceId) {
+      const selected = availablePrices[0];
+      onChange({
+        ...guest,
+        priceCategory: selected.categoryName,
+        tourPriceId: selected.tourPriceId,
+        price: selected.price,
+        roomTypeDescription: selected.description,
+      });
+    }
+  }, [availablePrices.length, guest.tourPriceId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handlePriceCategoryChange = (tourPriceId: string) => {
     const selected = tourPrices.find(
@@ -142,6 +175,20 @@ function GuestDetailForm({
       });
     }
   };
+
+  const age = calculateAgeAtDeparture(guest.dateOfBirth, departureDate);
+  let ageError = '';
+  if (age !== null && age >= 0) {
+    if (guest.type === 'infant' && age >= 2) {
+      ageError = 'Infant must be under 2 years old at departure.';
+    } else if (guest.type === 'child' && (age < 2 || age >= 12)) {
+      ageError = 'Child must be between 2 and 11 years old at departure.';
+    } else if (guest.type === 'adult' && age < 12) {
+      ageError = 'Adult must be 12 years or older at departure.';
+    }
+  } else if (age !== null && age < 0) {
+    ageError = 'Date of birth cannot be after departure date.';
+  }
 
   return (
     <motion.div
@@ -272,7 +319,13 @@ function GuestDetailForm({
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
         <div className="grid gap-1">
           <Label className="text-[11px] text-muted-foreground">
-            Date of Birth *
+            Date of Birth{' '}
+            <span className="font-normal opacity-70">
+              {guest.type === 'infant' && '(0-2 years)'}
+              {guest.type === 'child' && '(2-11 years)'}
+              {guest.type === 'adult' && '(12+ years)'}
+            </span>{' '}
+            *
           </Label>
           <Input
             type="date"
@@ -280,8 +333,18 @@ function GuestDetailForm({
             onChange={(e) =>
               onChange({ ...guest, dateOfBirth: e.target.value })
             }
-            className="h-9 text-sm"
+            className={cn(
+              'h-9 text-sm',
+              ageError && 'border-destructive focus-visible:ring-destructive',
+            )}
+            aria-invalid={!!ageError}
           />
+          {ageError && (
+            <p className="mt-1 flex items-center gap-1 text-[10px] font-medium text-destructive">
+              <AlertCircleIcon className="size-3" />
+              {ageError}
+            </p>
+          )}
         </div>
         <div className="grid gap-1">
           <Label className="text-[11px] text-muted-foreground">
@@ -358,6 +421,7 @@ type Step1Props = {
   onGuestRemove: (guestId: string) => void;
   tourPrices: TourPrice[];
   maxGuests?: number;
+  departureDate: string;
 };
 
 export default function Step1GuestInformation({
@@ -374,6 +438,7 @@ export default function Step1GuestInformation({
   onGuestRemove,
   tourPrices,
   maxGuests = 99,
+  departureDate,
 }: Step1Props) {
   const filledCount = guests.filter(
     (g) =>
@@ -534,6 +599,7 @@ export default function Step1GuestInformation({
                   onChange={onGuestUpdate}
                   onRemove={() => onGuestRemove(guest.id)}
                   tourPrices={tourPrices}
+                  departureDate={departureDate}
                 />
               ))}
             </motion.div>

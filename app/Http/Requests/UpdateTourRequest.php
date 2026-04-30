@@ -16,6 +16,16 @@ class UpdateTourRequest extends FormRequest
 
   public function rules(): array
   {
+    if ($this->has('quick_update')) {
+      return [
+        'status' => ['nullable', Rule::in([
+          TourStatus::ACTIVE->value,
+          TourStatus::INACTIVE->value
+        ])],
+        'category_id' => 'nullable|exists:tour_categories,id',
+      ];
+    }
+
     return [
       'name'         => 'nullable|string|max:255',
       'description'  => 'nullable|string',
@@ -33,33 +43,22 @@ class UpdateTourRequest extends FormRequest
       'user_id'      => 'nullable|exists:users,id',
       'image_id'  => 'nullable|exists:medias,id',
       'document_id'  => 'nullable|exists:medias,id',
-      //'showprice' => 'nullable|integer|min:0',
       'showprice' => 'required|numeric|min:0',
       'promote_title' => 'nullable|string|max:255',
       'promote_note' => 'nullable|string|max:255',
-      //'promote_price' => 'nullable|integer|min:0',
       'promote_price' => 'nullable|numeric|min:0',
       'currency'  => 'nullable|string',
-
-      //13042026
       'schedules' => 'nullable|array',
-
       'schedules.*.id' => ['nullable', 'integer'],
-
       'schedules.*.departure_date' => 'nullable|date',
       'schedules.*.return_date' => 'nullable|date',
       'schedules.*.quota' => 'nullable|numeric',
-
       'schedules.*.prices' => 'nullable|array',
-
       'schedules.*.prices.*.id' => 'nullable|integer',
-
       'schedules.*.prices.*.room_type_id' => 'nullable|integer',
       'schedules.*.prices.*.price' => 'nullable|numeric',
-
       'schedules.*.prices.*.promotion.type' => 'nullable|string',
       'schedules.*.prices.*.promotion.value' => 'nullable|numeric',
-
       'schedules.*.prices.*.commission.type' => 'nullable|string',
       'schedules.*.prices.*.commission.value' => 'nullable|numeric',
 
@@ -89,18 +88,20 @@ class UpdateTourRequest extends FormRequest
 
   protected function prepareForValidation()
   {
-    // 🔥 STEP 1: normalize empty string → null
+    if ($this->has('quick_update')) {
+      return;
+    }
+
     $data = $this->all();
 
     array_walk_recursive($data, function (&$value) {
-        if ($value === '') {
-            $value = null;
-        }
+      if ($value === '') {
+        $value = null;
+      }
     });
 
     $this->merge($data);
 
-    // 🔥 STEP 2: baru ambil schedules yang sudah bersih
     $schedules = $this->input('schedules', []);
 
     $clean = collect($schedules)->map(function ($schedule) {
@@ -161,10 +162,9 @@ class UpdateTourRequest extends FormRequest
     })->values()->toArray();
 
     $this->merge([
-        'showprice' => (int) ($this->showprice ?? 0),
-        'promote_price' => (int) ($this->promote_price ?? 0),
-        'schedules' => $clean,
+      'showprice' => (int) ($this->showprice ?? 0),
+      'promote_price' => (int) ($this->promote_price ?? 0),
+      'schedules' => $clean,
     ]);
-
   }
 }

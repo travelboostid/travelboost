@@ -6,11 +6,11 @@ import {
 } from '@/components/ui/card';
 import usePageProps from '@/hooks/use-page-props';
 import { formatIDR } from '@/lib/utils';
-import type { AiCreditsPageProps } from '..';
+import type { ChatbotPageProps } from '..';
 
 export default function AiCreditsSummary() {
   const { credit, usageCostToday, usageCostIn30Days } =
-    usePageProps<AiCreditsPageProps>();
+    usePageProps<ChatbotPageProps>();
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
       <Card className="bg-linear-to-t from-primary/5 to-card shadow-xs dark:bg-card col-span-2">

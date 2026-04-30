@@ -13,15 +13,23 @@ class BookingPassenger extends Model
 
     protected $fillable = [
         'booking_id',
+        'title',
         'first_name',
         'last_name',
         'gender',
         'dob',
         'pob',
+        'nationality',
         'room_type',
         'room_number',
+        'passport_number',
+        'passport_issue_date',
+        'passport_expiry_date',
+        'visa_number',
         'passport_file_path',
         'visa_file_path',
+        'price_category',
+        'price_amount',
     ];
 
     protected function casts(): array
@@ -29,6 +37,8 @@ class BookingPassenger extends Model
         return [
             'gender' => UserGender::class,
             'dob' => 'date',
+            'passport_issue_date' => 'date',
+            'passport_expiry_date' => 'date',
         ];
     }
 

@@ -25,6 +25,7 @@ class StoreBookingRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'booking_number' => ['required', 'string'],
             'tour_id' => ['required', 'exists:tours,id'],
             'departure_date' => ['required', 'date', 'after_or_equal:today'],
             'pax_adult' => ['required', 'integer', 'min:1'],
@@ -33,6 +34,11 @@ class StoreBookingRequest extends FormRequest
             'vendor_id' => ['nullable', 'exists:companies,id'],
             'agent_id' => ['nullable', 'exists:companies,id'],
 
+            // Contact info
+            'contact_name' => ['required', 'string', 'max:255'],
+            'contact_email' => ['required', 'email', 'max:255'],
+            'contact_phone' => ['required', 'string', 'max:50'],
+            'contact_notes' => ['nullable', 'string', 'max:1000'],
             // Passengers
             'passengers' => ['required', 'array', 'min:1'],
             'passengers.*.title' => ['nullable', 'string', 'max:20'],
@@ -48,6 +54,8 @@ class StoreBookingRequest extends FormRequest
             'passengers.*.passport_number' => ['nullable', 'string', 'max:255'],
             'passengers.*.passport_file_path' => ['nullable', 'string'],
             'passengers.*.visa_file_path' => ['nullable', 'string'],
+            'passengers.*.price_category' => ['nullable', 'string', 'max:255'],
+            'passengers.*.price_amount' => ['nullable', 'numeric'],
 
             // Addons
             'addons' => ['nullable', 'array'],
