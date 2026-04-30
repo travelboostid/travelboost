@@ -234,8 +234,8 @@ return new class extends Migration
       $table->string('chatbot_default_language')->default('auto'); // auto | id | en
       $table->text('landing_page_data')->nullable();
       $table->integer('booking_deadline')->default(0);
-      $table->integer('minimum_down_payment')->default(0);
-      $table->integer('minimum_vat')->default(0);
+      $table->decimal('minimum_down_payment', 5, 2)->default(0);
+      $table->decimal('minimum_vat', 5, 2)->default(0);
       $table->text('term_conditions')->nullable();
       $table->integer('booking_entry_time_limit')->default(0);
       $table->string('manual_bank_transfer')->nullable();

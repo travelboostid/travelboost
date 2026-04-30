@@ -10,6 +10,7 @@ use App\Http\Controllers\Companies\Dashboard\ChatbotController;
 use App\Http\Controllers\Companies\Dashboard\CustomerController;
 use App\Http\Controllers\Companies\Dashboard\HomeController;
 use App\Http\Controllers\Companies\Dashboard\PageController;
+use App\Http\Controllers\Companies\Dashboard\ParameterVendorController;
 use App\Http\Controllers\Companies\Dashboard\PaymentController;
 use App\Http\Controllers\Companies\Dashboard\ProfileController;
 use App\Http\Controllers\Companies\Dashboard\RoleController;
@@ -72,6 +73,17 @@ Route::prefix('companies/{company:username}/dashboard')->middleware(['auth', 'co
   Route::get('wallet-transactions', [WalletTransactionsController::class, 'index'])->name('wallet-transaction.index');
   Route::get('withdrawals', [WithdrawalController::class, 'index'])->name('withdrawal.index');
   Route::get('profile', [ProfileController::class, 'show'])->name('settings.profile.show');
+
+  Route::get(
+      'parameter-vendor',
+      [ParameterVendorController::class, 'index']
+  )->name('parameter-vendor.index');
+
+  Route::put(
+    'parameter-vendor',
+    [ParameterVendorController::class, 'update']
+  )->name('parameter-vendor.update');
+
   Route::put('profile', [ProfileController::class, 'update'])->name('settings.profile.update');
   Route::post('teams/invite', [TeamController::class, 'invite'])->name('teams.invite');
   Route::resource('teams', TeamController::class);
