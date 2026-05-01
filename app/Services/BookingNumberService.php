@@ -24,10 +24,11 @@ class BookingNumberService
      * Generated at booking creation (before payment).
      * UNIQUE constraint in DB is the final safety net.
      */
-    public function generate(string $agentCode, string $tourCode): string
+    public function generate(string $companyId): string
     {
         $datePart = now()->format('Ym');
-        $prefix = strtoupper("{$agentCode}-{$tourCode}-{$datePart}");
+        $paddedId = str_pad($companyId, 4, '0', STR_PAD_LEFT);
+        $prefix = strtoupper("{$paddedId}-{$datePart}");
 
         for ($attempt = 0; $attempt < self::MAX_RETRY; $attempt++) {
             $candidate = $prefix.'-'.$this->randomString(self::RANDOM_LEN);

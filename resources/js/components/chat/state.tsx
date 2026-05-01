@@ -18,7 +18,7 @@ import type {
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { useEcho, useEchoPublic } from '@laravel/echo-react';
 import { MessageSquareIcon } from 'lucide-react';
-import type { ReactNode } from 'react';
+import type { Dispatch, ReactNode, SetStateAction } from 'react';
 import { createContext, useContext, useState } from 'react';
 import { toast } from 'sonner';
 import { useAnonymousUserContext } from '../anonymous-user-context-provider';
@@ -42,8 +42,8 @@ type ChatActions = {
   ) => Promise<GetChatMessages200>;
   loadRoom: (roomId: number) => Promise<any>;
   loadRooms: (options: GetChatRoomsParams) => Promise<any>;
-  setMessageById: (val: Record<number, ChatMessageResource>) => void;
-  setRoomById: (val: Record<number, ChatRoomResource>) => void;
+  setMessageById: Dispatch<SetStateAction<Record<number, ChatMessageResource>>>;
+  setRoomById: Dispatch<SetStateAction<Record<number, ChatRoomResource>>>;
 };
 
 type ChatContextType = ChatState & ChatActions;
@@ -52,8 +52,7 @@ export const ChatContext = createContext<ChatContextType>(null!);
 
 function AuthenticatedChatMessageListener() {
   const { auth } = usePageSharedDataProps();
-  const { messageById, roomById, setMessageById, setRoomById, actor } =
-    useChatContext();
+  const { setMessageById, setRoomById, actor } = useChatContext();
   const channelName = `users.${auth?.user?.id}`;
 
   // 🔔 Message created
@@ -61,13 +60,13 @@ function AuthenticatedChatMessageListener() {
     channelName,
     '.ChatMessageCreated',
     (e) => {
-      setMessageById({
+      setMessageById((messageById) => ({
         ...messageById,
         [e.id]: {
           ...messageById[e.id],
           ...e,
         },
-      });
+      }));
 
       // Toast new message notification
       if (actor?.type !== e.sender_type && actor?.id !== e.sender_id) {
@@ -78,7 +77,7 @@ function AuthenticatedChatMessageListener() {
         });
       }
     },
-    [channelName, actor, messageById, setMessageById],
+    [channelName, actor, setMessageById],
   );
 
   // 🔔 Room updated
@@ -86,15 +85,15 @@ function AuthenticatedChatMessageListener() {
     channelName,
     '.ChatRoomUpdated',
     (e) => {
-      setRoomById({
+      setRoomById((roomById) => ({
         ...roomById,
         [e.room.id]: {
           ...roomById[e.room.id],
           ...e.room,
         },
-      });
+      }));
     },
-    [channelName, roomById, setRoomById],
+    [channelName, setRoomById],
   );
 
   // 🔔 Room created
@@ -102,41 +101,34 @@ function AuthenticatedChatMessageListener() {
     channelName,
     '.ChatRoomCreated',
     (e) => {
-      setRoomById({
+      setRoomById((roomById) => ({
         ...roomById,
         [e.room.id]: {
           ...roomById[e.room.id],
           ...e.room,
         },
-      });
+      }));
     },
-    [channelName, roomById, setRoomById],
+    [channelName, setRoomById],
   );
 
   return null;
 }
 
 function UnauthenticatedChatMessageListener() {
-  const { messageById, roomById, setMessageById, setRoomById, actor } =
-    useChatContext();
+  const { setMessageById, setRoomById, actor } = useChatContext();
   const anonymousUser = useAnonymousUserContext();
   const channelName = `anonymous-users.${anonymousUser?.id}`;
 
   // 🔔 Message created
   useEchoPublic(channelName, '.ChatMessageCreated', (e: any) => {
-    console.log(
-      'Received ChatMessageCreated event for unauthenticated user',
-      e,
-      actor,
-    );
-    setMessageById({
+    setMessageById((messageById) => ({
       ...messageById,
       [e.id]: {
         ...messageById[e.id],
         ...e,
       },
-    });
-
+    }));
     // Toast new message notification
     if (actor?.type !== e.sender_type && actor?.id !== e.sender_id) {
       toast(e.sender.name, {
@@ -149,24 +141,24 @@ function UnauthenticatedChatMessageListener() {
 
   // 🔔 Room updated
   useEchoPublic(channelName, '.ChatRoomUpdated', (e: any) => {
-    setRoomById({
+    setRoomById((roomById) => ({
       ...roomById,
       [e.room.id]: {
         ...roomById[e.room.id],
         ...e.room,
       },
-    });
+    }));
   });
 
   // 🔔 Room created
   useEchoPublic(channelName, '.ChatRoomCreated', (e: any) => {
-    setRoomById({
+    setRoomById((roomById) => ({
       ...roomById,
       [e.room.id]: {
         ...roomById[e.room.id],
         ...e.room,
       },
-    });
+    }));
   });
 
   return null;

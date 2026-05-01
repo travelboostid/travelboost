@@ -14,6 +14,8 @@ import {
   format,
   isSameMonth,
   isSameYear,
+  isBefore,
+  startOfToday,
   max,
   min,
   parseISO,
@@ -32,6 +34,10 @@ export type TourSchedule = {
   cutoff_date: string;
   is_active: boolean;
   note: string | null;
+  availability?: {
+    available: number | string;
+    max_pax: number | string;
+  };
 };
 
 type TourBookingModalProps = {
@@ -62,7 +68,11 @@ export default function TourBookingModal({
   onRequireLogin,
 }: TourBookingModalProps) {
   const schedules = tour.schedules ?? [];
-  const activeSchedules = schedules.filter((s) => s.is_active);
+  const activeSchedules = schedules.filter((s) => {
+    if (!s.is_active) return false;
+    const departDate = parseISO(s.departure_date);
+    return !isBefore(departDate, startOfToday());
+  });
 
   let dateRangeText = 'Schedules TBA';
   if (activeSchedules.length > 0) {
@@ -80,7 +90,8 @@ export default function TourBookingModal({
   }
 
   const handleSelectDate = (schedule: TourSchedule) => {
-    if (schedule.quota <= 0) return;
+    const availableCount = schedule.availability ? Number(schedule.availability.available) : schedule.quota;
+    if (availableCount <= 0) return;
 
     if (onRequireLogin) {
       onClose();
@@ -147,8 +158,9 @@ export default function TourBookingModal({
                         );
 
                     const dateRangeDisplay = `${format(departDate, 'dd MMM yyyy')} - ${format(returnDate, 'dd MMM yyyy')}`;
-                    const availability = getAvailabilityInfo(schedule.quota);
-                    const isSoldOut = schedule.quota <= 0;
+                    const availableCount = schedule.availability ? Number(schedule.availability.available) : schedule.quota;
+                    const availability = getAvailabilityInfo(availableCount);
+                    const isSoldOut = availableCount <= 0;
 
                     return (
                       <motion.button

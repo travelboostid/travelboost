@@ -28,11 +28,12 @@ import {
   RefreshCwIcon,
   UserIcon,
 } from 'lucide-react';
-import { useCallback, useState } from 'react';
+import { useState } from 'react';
+import { toast } from 'sonner';
 
 // ─── Types ──────────────────────────────────────────────────────────────────────
 
-export type BedType = 'single' | 'double' | 'twin' | 'extra_bed' | 'triple';
+export type BedType = 'single' | 'double' | 'twin' | 'extra_bed' | 'triple' | 'double_extra_bed' | 'twin_extra_bed';
 
 export type RoomConfig = {
   id: string;
@@ -97,6 +98,27 @@ const BED_TYPES: Record<BedType, BedTypeInfo> = {
       { label: 'Extra Bed', icon: BedSingleIcon, slots: 1 },
     ],
   },
+  double_extra_bed: {
+    label: 'Double Room',
+    capacity: 3,
+    icon: BedDoubleIcon,
+    description: 'Double + extra bed',
+    physicalBeds: [
+      { label: 'Double Bed', icon: BedDoubleIcon, slots: 2 },
+      { label: 'Extra Bed', icon: BedSingleIcon, slots: 1 },
+    ],
+  },
+  twin_extra_bed: {
+    label: 'Twin Room',
+    capacity: 3,
+    icon: BedSingleIcon,
+    description: 'Twin + extra bed',
+    physicalBeds: [
+      { label: 'Single Bed 1', icon: BedSingleIcon, slots: 1 },
+      { label: 'Single Bed 2', icon: BedSingleIcon, slots: 1 },
+      { label: 'Extra Bed', icon: BedSingleIcon, slots: 1 },
+    ],
+  },
   triple: {
     label: 'Triple Room',
     capacity: 3,
@@ -118,7 +140,7 @@ const itemVariants = {
 // ─── Auto Recommendation Logic ──────────────────────────────────────────────────
 
 /** Categories that do NOT occupy a bed slot */
-const NO_BED_CATEGORIES = ['Child No Bed', 'Infant'];
+const NO_BED_CATEGORIES = ['Child No Bed', 'Infant', 'infant'];
 
 export function autoRecommendRooms(guests: GuestEntry[]): RoomConfig[] {
   const rooms: RoomConfig[] = [];
@@ -149,48 +171,71 @@ export function autoRecommendRooms(guests: GuestEntry[]): RoomConfig[] {
   // Single rooms
   for (const g of singles) rooms.push(makeRoom('single', [g.id]));
 
-  // Double rooms (pairs)
-  for (let i = 0; i < doubles.length; i += 2) {
-    rooms.push(makeRoom('double', doubles.slice(i, i + 2).map((g) => g.id)));
-  }
-
-  // Twin rooms (pairs)
-  for (let i = 0; i < twins.length; i += 2) {
-    rooms.push(makeRoom('twin', twins.slice(i, i + 2).map((g) => g.id)));
-  }
-
   // Triple rooms (groups of 3)
   for (let i = 0; i < triples.length; i += 3) {
     rooms.push(makeRoom('triple', triples.slice(i, i + 3).map((g) => g.id)));
   }
 
-  // Child With Bed → extra bed in an existing room, or new single
-  for (const g of childWithBed) {
-    const target = rooms.find((r) => r.guestIds.length < r.capacity);
-    if (target) {
-      target.guestIds.push(g.id);
-    } else if (rooms.length > 0) {
-      // Add as extra bed to last room (expand capacity by 1)
-      const last = rooms[rooms.length - 1];
-      last.type = 'extra_bed';
-      last.capacity = BED_TYPES['extra_bed'].capacity;
-      last.guestIds.push(g.id);
-    } else {
-      rooms.push(makeRoom('single', [g.id]));
-    }
+  const sharedGuests = [...doubles, ...twins, ...childWithBed];
+  if (sharedGuests.length > 0) {
+    const R = Math.max(1, Math.floor(sharedGuests.length / 2));
+    const sharedRooms: RoomConfig[] = Array.from({ length: R }, () =>
+      makeRoom('double', []),
+    );
+
+    sharedGuests.forEach((g, i) => {
+      const roomIdx = i % R;
+      const targetRoom = sharedRooms[roomIdx];
+      targetRoom.guestIds.push(g.id);
+
+      if (targetRoom.guestIds.length === 1) {
+        if (g.priceCategory === 'Twin') targetRoom.type = 'twin';
+        else targetRoom.type = 'double';
+        targetRoom.capacity = BED_TYPES[targetRoom.type].capacity;
+      }
+    });
+
+    sharedRooms.forEach((r) => {
+      const hasChildWithBed = r.guestIds.some(
+        (id) => guests.find((g) => g.id === id)?.priceCategory === 'Child With Bed',
+      );
+
+      if (hasChildWithBed) {
+        r.type = r.type === 'twin' ? 'twin_extra_bed' : 'double_extra_bed';
+        r.capacity = 3;
+
+        // If there are only 2 guests (e.g., 1 Adult + 1 Child With Bed),
+        // we must shift the child with bed to the 3rd slot (Extra Bed slot).
+        if (r.guestIds.length === 2) {
+          const childId = r.guestIds.find(
+            (id) => guests.find((g) => g.id === id)?.priceCategory === 'Child With Bed',
+          );
+          const otherId = r.guestIds.find((id) => id !== childId);
+          r.guestIds = [otherId || '', '', childId || ''];
+        } else if (r.guestIds.length === 1) {
+          r.guestIds = ['', '', r.guestIds[0]];
+        }
+      } else if (r.guestIds.length === 3) {
+        r.type = r.type === 'twin' ? 'twin_extra_bed' : 'double_extra_bed';
+        r.capacity = 3;
+      } else {
+        r.capacity = 2;
+      }
+      rooms.push(r);
+    });
   }
 
-  // No-bed guests → share with first room that exists
-  for (const g of noBedGuests) {
+  // No-bed guests → share across rooms evenly
+  noBedGuests.forEach((g, i) => {
     if (rooms.length > 0) {
-      rooms[0].sharingGuestIds.push(g.id);
+      rooms[i % rooms.length].sharingGuestIds.push(g.id);
     } else {
       // Edge case: only infants/no-bed children, create a placeholder room
       const r = makeRoom('single', []);
       r.sharingGuestIds.push(g.id);
       rooms.push(r);
     }
-  }
+  });
 
   return rooms;
 }
@@ -225,6 +270,51 @@ function BedArrangementModal({
     slotIdx: number;
   } | null>(null);
 
+  const isArrangementValid = (proposedRooms: RoomConfig[]) => {
+    for (const r of proposedRooms) {
+      if (r.type === 'double_extra_bed' || r.type === 'twin_extra_bed') {
+        const mainBedOccupied = !!r.guestIds[0] || !!r.guestIds[1];
+        const extraBedOccupied = !!r.guestIds[2];
+        if (!mainBedOccupied && extraBedOccupied) {
+          toast.error(`Room ${r.label}: Extra bed cannot be occupied if the main bed is empty.`);
+          return false;
+        }
+      }
+
+      // Check if guest's priceCategory matches the room type
+      for (const gid of r.guestIds) {
+        if (!gid) continue;
+        const g = guests.find((gu) => gu.id === gid);
+        if (!g || !g.priceCategory) continue;
+
+        const cat = g.priceCategory;
+        const name = [g.firstName, g.lastName].filter(Boolean).join(' ') || 'Guest';
+
+        if (cat === 'Single' && r.type !== 'single') {
+          toast.error(`${name} purchased a Single room but is placed in a ${r.label}.`);
+          return false;
+        }
+        if (cat === 'Double' && r.type !== 'double') {
+          toast.error(`${name} purchased a Double room but is placed in a ${r.label}.`);
+          return false;
+        }
+        if (cat === 'Twin' && r.type !== 'twin') {
+          toast.error(`${name} purchased a Twin room but is placed in a ${r.label}.`);
+          return false;
+        }
+        if (cat === 'Triple' && r.type !== 'triple') {
+          toast.error(`${name} purchased a Triple room but is placed in a ${r.label}.`);
+          return false;
+        }
+        if (cat === 'Child With Bed' && !['double_extra_bed', 'twin_extra_bed'].includes(r.type)) {
+          toast.error(`${name} (Child With Bed) must be placed in a room with an extra bed.`);
+          return false;
+        }
+      }
+    }
+    return true;
+  };
+
   const handleSlotClick = (roomIdx: number, slotIdx: number) => {
     if (swapSource === null) {
       setSwapSource({ roomIdx, slotIdx });
@@ -246,7 +336,9 @@ function BedArrangementModal({
         dstRoom.guestIds[slotIdx] = srcGuestId ?? '';
       }
 
-      onRoomsChange(newRooms);
+      if (isArrangementValid(newRooms)) {
+        onRoomsChange(newRooms);
+      }
       setSwapSource(null);
     }
   };
@@ -272,7 +364,9 @@ function BedArrangementModal({
     }
     targetRoom.guestIds[slotIdx] = guestId ?? '';
 
-    onRoomsChange(newRooms);
+    if (isArrangementValid(newRooms)) {
+      onRoomsChange(newRooms);
+    }
   };
 
   const handleAutoAssign = () => {
@@ -552,10 +646,6 @@ function RoomCard({
 }) {
   const info = BED_TYPES[room.type];
   const Icon = info.icon;
-  const assignedGuests = room.guestIds
-    .filter((id) => !!id)
-    .map((id) => guests.find((g) => g.id === id))
-    .filter(Boolean);
   const sharingGuests = (room.sharingGuestIds ?? [])
     .filter((id) => !!id)
     .map((id) => guests.find((g) => g.id === id))
@@ -579,30 +669,75 @@ function RoomCard({
           </div>
         </div>
       </div>
-      <div className="space-y-1.5">
-        {assignedGuests.map((guest) => (
-          <div
-            key={guest!.id}
-            className="flex items-center gap-2 rounded-lg bg-muted/50 px-3 py-1.5"
-          >
-            <UserIcon className="size-3.5 text-muted-foreground" />
-            <span className="text-xs font-medium">
-              {[guest!.firstName, guest!.lastName].filter(Boolean).join(' ') ||
-                'Unnamed guest'}
-            </span>
-          </div>
-        ))}
-        {Array.from({
-          length: Math.max(0, room.capacity - assignedGuests.length),
-        }).map((_, i) => (
-          <div
-            key={`empty-${i}`}
-            className="flex items-center gap-2 rounded-lg border border-dashed px-3 py-1.5 text-xs text-muted-foreground"
-          >
-            <UserIcon className="size-3.5" />
-            Empty slot
-          </div>
-        ))}
+      <div
+        className={cn(
+          'mt-3 grid gap-2',
+          info.physicalBeds.length === 1
+            ? 'grid-cols-1'
+            : info.physicalBeds.length === 2
+              ? 'grid-cols-2'
+              : 'grid-cols-3',
+        )}
+      >
+        {(() => {
+          const bedSlotMapping: { bed: any; slotIndices: number[] }[] = [];
+          let cursor = 0;
+          for (const bed of info.physicalBeds) {
+            const indices: number[] = [];
+            for (let s = 0; s < bed.slots; s++) {
+              indices.push(cursor);
+              cursor++;
+            }
+            bedSlotMapping.push({ bed, slotIndices: indices });
+          }
+
+          return bedSlotMapping.map(({ bed, slotIndices }, bedIdx) => {
+            const BedIcon = bed.icon;
+            return (
+              <div
+                key={bedIdx}
+                className="flex flex-col gap-1.5 rounded-lg border bg-muted/20 p-2"
+              >
+                <div className="flex items-center gap-1.5 text-muted-foreground">
+                  <BedIcon className="size-4" />
+                  <span className="text-[10px] font-bold uppercase tracking-wide">
+                    {bed.label}
+                  </span>
+                </div>
+                <div className="space-y-1">
+                  {slotIndices.map((slotIdx) => {
+                    const guestId = room.guestIds[slotIdx] || null;
+                    const guest = guestId
+                      ? guests.find((g) => g.id === guestId)
+                      : null;
+
+                    return guest ? (
+                      <div
+                        key={slotIdx}
+                        className="flex items-center gap-2 rounded-md bg-muted/50 px-2 py-1.5"
+                      >
+                        <UserIcon className="size-3 text-muted-foreground" />
+                        <span className="truncate text-[11px] font-medium">
+                          {[guest.firstName, guest.lastName]
+                            .filter(Boolean)
+                            .join(' ') || 'Unnamed guest'}
+                        </span>
+                      </div>
+                    ) : (
+                      <div
+                        key={slotIdx}
+                        className="flex items-center gap-2 rounded-md border border-dashed px-2 py-1.5 text-[11px] text-muted-foreground"
+                      >
+                        <UserIcon className="size-3" />
+                        Empty slot
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          });
+        })()}
       </div>
 
       {/* Sharing guests (no bed) */}
@@ -653,9 +788,7 @@ export default function Step2RoomConfiguration({
 }: Step2Props) {
   const [bedModalOpen, setBedModalOpen] = useState(false);
 
-  const handleResetToRecommendation = useCallback(() => {
-    onRoomsChange(autoRecommendRooms(guests));
-  }, [guests, onRoomsChange]);
+
 
   const assignedGuestIds = [
     ...rooms.flatMap((r) => r.guestIds),

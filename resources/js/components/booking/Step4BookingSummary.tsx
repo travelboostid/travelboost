@@ -32,7 +32,7 @@ import {
   PlusIcon,
   ReceiptIcon,
 } from 'lucide-react';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { RoomConfig } from './Step2RoomConfiguration';
 
 // ─── Types ───────────────────────────────────────────────────────────────────────
@@ -63,6 +63,7 @@ type Step4Props = {
     finalAmount: number,
   ) => void;
   isSubmitting?: boolean;
+  initialAddOns?: AddOnItem[];
 };
 
 // ─── Constants ───────────────────────────────────────────────────────────────────
@@ -80,25 +81,16 @@ export default function Step4BookingSummary({
   agentName,
   onPayNow,
   isSubmitting = false,
+  initialAddOns,
 }: Step4Props) {
   // ─── Add-ons state ──────────────────────────────────────────────────
-  const [addOns, setAddOns] = useState<AddOnItem[]>([
-    {
-      key: 'tipping',
-      label: 'Tipping',
-      unitPrice: 200_000,
-      qty: 1,
-      hasQty: false,
-    },
-    {
-      key: 'visa',
-      label: 'Visa',
-      unitPrice: 500_000,
-      qty: 0,
-      hasQty: true,
-      tooltip: 'Fill this in if any guest does not have a visa',
-    },
-  ]);
+  const [addOns, setAddOns] = useState<AddOnItem[]>(initialAddOns ?? []);
+
+  useEffect(() => {
+    setAddOns((prev) =>
+      prev.map((a) => (a.hasQty === false ? { ...a, qty: guests.length } : a)),
+    );
+  }, [guests.length]);
 
   // ─── Payment state ─────────────────────────────────────────────────
   const [paymentType, setPaymentType] = useState<PaymentType>('full_payment');
@@ -307,7 +299,7 @@ export default function Step4BookingSummary({
                   </div>
 
                   <div className="flex items-center gap-3">
-                    {addon.hasQty ? (
+                    {addon.hasQty && (
                       <div className="flex items-center gap-1.5">
                         <Button
                           type="button"
@@ -333,10 +325,6 @@ export default function Step4BookingSummary({
                           <PlusIcon className="size-3" />
                         </Button>
                       </div>
-                    ) : (
-                      <Badge variant="secondary" className="text-[10px]">
-                        Fixed
-                      </Badge>
                     )}
                     <span className="min-w-[100px] text-right font-medium">
                       {formatCurrency(addon.unitPrice * addon.qty)}

@@ -1,7 +1,7 @@
 import AppLogoIcon from '@/components/app-logo-icon';
 import { Button } from '@/components/ui/button';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
-import { login, register } from '@/routes/customer';
+import customer, { login, register } from '@/routes/customer';
 import { Link, router, usePage } from '@inertiajs/react';
 import { MenuIcon, XIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -100,10 +100,10 @@ export function Header() {
             ) : (
               <>
                 <Button asChild variant="ghost">
-                  <Link href="/login">Masuk</Link>
+                  <Link href="/customer/login">Masuk</Link>
                 </Button>
                 <Button asChild>
-                  <Link href="/register">Daftar</Link>
+                  <Link href="/customer/register">Daftar</Link>
                 </Button>
               </>
             )}
@@ -169,10 +169,10 @@ export function Header() {
                       variant="ghost"
                       className="w-full justify-start"
                     >
-                      <Link href={login()}>Masuk</Link>
+                      <Link href="/customer/login">Masuk</Link>
                     </Button>
                     <Button asChild className="w-full justify-start">
-                      <Link href={register()}>Daftar</Link>
+                      <Link href="/customer/register">Daftar</Link>
                     </Button>
                   </>
                 )}

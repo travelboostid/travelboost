@@ -29,7 +29,7 @@ export const TITLE_OPTIONS: Record<string, string[]> = {
 export const CATEGORY_FILTER: Record<string, string[]> = {
   adult: ['Single', 'Double', 'Triple'],
   child: ['Child With Bed', 'Child No Bed'],
-  infant: ['Infant'],
+  infant: ['Infant', 'infant'],
 };
 
 // ─── Price Category Labels ──────────────────────────────────────────────────────

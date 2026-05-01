@@ -1,6 +1,8 @@
 import type { TourResource } from '@/api/model';
 import BookingInfoCard from '@/components/booking/BookingInfoCard';
-import Step1GuestInformation from '@/components/booking/Step1GuestInformation';
+import Step1GuestInformation, {
+  calculateAgeAtDeparture,
+} from '@/components/booking/Step1GuestInformation';
 import Step2RoomConfiguration, {
   autoRecommendRooms,
   type RoomConfig,
@@ -55,6 +57,7 @@ export default function Page() {
     tenant,
     bookingNumber,
     availability,
+    addOns,
   } = usePage<any>().props as any;
   const user = auth?.user;
 
@@ -212,10 +215,8 @@ export default function Page() {
       roomsGuestFingerprint.current = currentFingerprint;
     }
 
-    // Start timer and set booking status to reserved
     if (!timerStarted) {
       setTimerStarted(true);
-      // POST to backend to reserve the booking
       router.post(
         `/bookings/${tour.id}/reserve`,
         {
@@ -225,6 +226,29 @@ export default function Page() {
           pax_child: children,
           pax_infant: infants,
           booking_number: bookingNumber,
+          vendor_id: vendor?.id ?? (tour.company as any)?.id,
+          agent_id: (tenant as any)?.id ?? null,
+          contact_name: contact.name,
+          contact_email: contact.email,
+          contact_phone: contact.phone,
+          contact_notes: contact.notes,
+          total_price: pricing.subtotalGuests,
+          tax_amount: pricing.ppn,
+          platform_fee: pricing.platformFee,
+          commission_amount: pricing.agentCommission,
+          grand_total: pricing.totalPrice,
+          passengers: guests.map((g) => ({
+            title: g.title || null,
+            first_name: g.firstName,
+            last_name: g.lastName || '',
+            gender: null,
+            dob: g.dateOfBirth || null,
+            pob: g.placeOfBirth || null,
+            price_category: g.priceCategory,
+            price_amount: g.price,
+            room_type: g.roomTypeDescription || null,
+            room_number: null,
+          })),
         } as any,
         { preserveScroll: true, preserveState: true },
       );
@@ -284,18 +308,31 @@ export default function Page() {
     contact.phone.trim() !== '' &&
     phoneRegex.test(contact.phone.trim()) &&
     guests.length > 0 &&
-    guests.every(
-      (g) =>
-        g.title.trim() !== '' &&
-        g.firstName.trim() !== '' &&
-        g.lastName.trim() !== '' &&
-        g.dateOfBirth.trim() !== '' &&
-        g.placeOfBirth.trim() !== '' &&
-        g.priceCategory !== null,
-    );
+    guests.every((g) => {
+      if (
+        g.title.trim() === '' ||
+        g.firstName.trim() === '' ||
+        g.lastName.trim() === '' ||
+        g.dateOfBirth.trim() === '' ||
+        g.placeOfBirth.trim() === '' ||
+        g.priceCategory === null
+      )
+        return false;
+
+      const age = calculateAgeAtDeparture(g.dateOfBirth, preselectedDate);
+      if (age === null || age < 0) return false;
+      if (g.type === 'infant' && age >= 2) return false;
+      if (g.type === 'child' && (age < 2 || age >= 12)) return false;
+      if (g.type === 'adult' && age < 12) return false;
+
+      return true;
+    });
 
   const canProceedStep2 = useMemo(() => {
-    const assignedGuestIds = rooms.flatMap((r) => r.guestIds);
+    const assignedGuestIds = [
+      ...rooms.flatMap((r) => r.guestIds),
+      ...rooms.flatMap((r) => r.sharingGuestIds ?? []),
+    ];
     return guests.every((g) => assignedGuestIds.includes(g.id));
   }, [guests, rooms]);
 
@@ -510,6 +547,7 @@ export default function Page() {
                 pricing={pricing}
                 timeLeftSeconds={timeLeft}
                 currentStep={currentStep}
+                timerStarted={timerStarted}
               />
             </div>
 
@@ -539,6 +577,7 @@ export default function Page() {
                       onGuestRemove={handleGuestRemove}
                       tourPrices={tourPrices}
                       maxGuests={availability ?? 99}
+                      departureDate={preselectedDate}
                     />
                   )}
                   {currentStep === 2 && (
@@ -566,6 +605,7 @@ export default function Page() {
                       agentName={tenant?.name || '-'}
                       onPayNow={handlePayNow}
                       isSubmitting={isSubmitting}
+                      initialAddOns={addOns}
                     />
                   )}
                 </motion.div>

@@ -374,9 +374,6 @@ export default function TourCard({
                   LOGO
                 </span>
               </div>
-              <span className="text-xs text-muted-foreground">
-                Availability: {(tour as any).quota ?? '99+'}
-              </span>
             </div>
           </CardFooter>
         ) : (

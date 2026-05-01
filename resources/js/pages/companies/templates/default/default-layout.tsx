@@ -101,10 +101,10 @@ export default function DefaultLayout({
               ) : (
                 <>
                   <Button asChild variant="ghost">
-                    <Link href="/login">Masuk</Link>
+                    <Link href="/customer/login">Masuk</Link>
                   </Button>
                   <Button asChild>
-                    <Link href="/register">Daftar</Link>
+                    <Link href="/customer/register">Daftar</Link>
                   </Button>
                 </>
               )}
@@ -175,10 +175,10 @@ export default function DefaultLayout({
                         variant="ghost"
                         className="w-full justify-start"
                       >
-                        <Link href="/login">Masuk</Link>
+                        <Link href="/customer/login">Masuk</Link>
                       </Button>
                       <Button asChild className="w-full justify-start">
-                        <Link href="/register">Daftar</Link>
+                        <Link href="/customer/register">Daftar</Link>
                       </Button>
                     </>
                   )}

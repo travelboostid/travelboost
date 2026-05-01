@@ -187,7 +187,9 @@ export default function FloatingChatWidget() {
                 <ChatList className="absolute top-0 left-0 h-full w-full"></ChatList>
               )}
             </div>
-            {!!roomId && <ChatInput roomId={roomId}></ChatInput>}
+            {!!roomId && (
+              <ChatInput roomId={roomId} className="flex-none border-t" />
+            )}
           </div>
         </SheetContent>
       </Sheet>

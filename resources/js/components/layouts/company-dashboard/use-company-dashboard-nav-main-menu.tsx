@@ -108,8 +108,8 @@ export function useCompanyDashboardNavMainMenu() {
         },
         {
           id: 'tours.orders',
-          title: <FormattedMessage defaultMessage="Orders" />,
-          urlOrAction: `/companies/${company.username}/dashboard/orders`,
+          title: <FormattedMessage defaultMessage="Bookings" />,
+          urlOrAction: `/companies/${company.username}/dashboard/bookings`,
         },
       ],
       visibleToCompanyTypes: ['vendor'],
@@ -138,8 +138,8 @@ export function useCompanyDashboardNavMainMenu() {
         },
         {
           id: 'tours.bookings',
-          title: <FormattedMessage defaultMessage="Order" />,
-          urlOrAction: `#`,
+          title: <FormattedMessage defaultMessage="Bookings" />,
+          urlOrAction: `/companies/${company.username}/dashboard/bookings`,
         },
       ],
       visibleToCompanyTypes: ['agent'],
@@ -261,11 +261,6 @@ export function useCompanyDashboardNavMainMenu() {
           id: 'settings.chatbot',
           title: <FormattedMessage defaultMessage="Chat AI" />,
           urlOrAction: `/companies/${company.username}/dashboard/chatbot`,
-        },
-        {
-          id: 'settings.ai-credits',
-          title: <FormattedMessage defaultMessage="AI Credits" />,
-          urlOrAction: `/companies/${company.username}/dashboard/ai-credits`,
         },
         {
           id: 'settings.vendor-registrations',
