@@ -123,41 +123,30 @@ export function SectionCards({ stats, company }: { stats: any; company: any }) {
           </Link>
         </CardHeader>
         <CardContent className="relative z-10">
-          {type === 'agent' ? (
-            <div className="mt-2 border-t border-border pt-2 flex items-center justify-between">
-              <div>
-                <p className="text-[10px] text-muted-foreground mb-1">
-                  AI Credits:
-                </p>
-                <Badge
-                  variant="outline"
-                  className="text-primary border-primary/20 bg-primary/5 font-medium flex items-center gap-1 w-max"
-                >
-                  <Sparkles size={12} /> {stats.ai_credit || 0} Credits
-                </Badge>
-              </div>
-              <Link
-                href={`/companies/${company.username}/dashboard/ai-credits`}
-                className="mt-4"
-              >
-                <Button
-                  variant="ghost"
-                  className="h-6 px-2 text-[10px] text-primary hover:bg-primary/10 font-semibold"
-                >
-                  Top Up
-                </Button>
-              </Link>
-            </div>
-          ) : (
-            <div className="mt-2 border-t border-border pt-2">
+          <div className="mt-2 border-t border-border pt-2 flex items-center justify-between">
+            <div>
               <p className="text-[10px] text-muted-foreground mb-1">
-                Account Status:
+                AI Credits:
               </p>
-              <Badge variant="secondary" className="font-medium">
-                Active Vendor
+              <Badge
+                variant="outline"
+                className="text-primary border-primary/20 bg-primary/5 font-medium flex items-center gap-1 w-max"
+              >
+                <Sparkles size={12} /> {formatIDR(stats.ai_credit || 0)}
               </Badge>
             </div>
-          )}
+            <Link
+              href={`/companies/${company.username}/dashboard/ai-credits`}
+              className="mt-4"
+            >
+              <Button
+                variant="ghost"
+                className="h-6 px-2 text-[10px] text-primary hover:bg-primary/10 font-semibold"
+              >
+                Top Up
+              </Button>
+            </Link>
+          </div>
         </CardContent>
       </Card>
     </div>

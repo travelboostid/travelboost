@@ -22,6 +22,7 @@ use App\Http\Controllers\Companies\Dashboard\WalletTransactionsController;
 use App\Http\Controllers\Companies\Dashboard\WithdrawalController;
 use App\Http\Controllers\Companies\Dashboard\TourAvailabilityController;
 use App\Http\Controllers\Companies\Dashboard\TourAddOnController;
+use App\Http\Controllers\Companies\Dashboard\NotificationController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('companies/{company:username}/dashboard')->middleware(['auth'])->name('company.')->group(function () {
@@ -72,6 +73,9 @@ Route::prefix('companies/{company:username}/dashboard')->middleware(['auth', 'co
   Route::singleton('page', PageController::class);
   Route::singleton('agent-subscriptions', AgentSubscriptionController::class);
   Route::singleton('ai-credits', AiCreditController::class);
+
+  Route::post('notifications/mark-all-as-read', [NotificationController::class, 'markAllAsRead'])->name('notifications.mark-all-read');
+  Route::resource('notifications', NotificationController::class)->only(['index', 'update', 'destroy']);
 });
 
 Route::get(

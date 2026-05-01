@@ -14,6 +14,7 @@ class AgentTour extends Model
     'category_id',
     'tour_id',
     'company_id',
+    'status',
   ];
 
   protected $casts = [
