@@ -4,6 +4,7 @@ use App\Http\Controllers\Affiliate\AgentController;
 use App\Http\Controllers\Affiliate\BankAccountController;
 use App\Http\Controllers\Affiliate\LandingController;
 use App\Http\Controllers\Affiliate\NetworkController;
+use App\Http\Controllers\Affiliate\NotificationController;
 use App\Http\Controllers\Affiliate\PasswordController;
 use App\Http\Controllers\Affiliate\PaymentController;
 use App\Http\Controllers\Affiliate\ProfileController;
@@ -71,6 +72,9 @@ Route::prefix('affiliate')
             Route::delete('/{bankAccount}', [BankAccountController::class, 'destroy'])->name('destroy');
           });
         });
+
+        Route::post('notifications/mark-all-as-read', [NotificationController::class, 'markAllAsRead'])->name('notifications.mark-all-read');
+        Route::resource('notifications', NotificationController::class)->only(['index', 'update', 'destroy']);
       });
     });
   });

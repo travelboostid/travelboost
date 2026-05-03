@@ -5,7 +5,7 @@ import React from 'react';
 
 export function HeroSection() {
   return (
-    <section className="relative min-h-screen flex items-center pt-16">
+    <section className="relative min-h-screen flex items-center pt-0">
       {/* BACKGROUND IMAGE */}
       <div className="absolute inset-0 z-0">
         <img

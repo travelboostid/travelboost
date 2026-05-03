@@ -24,6 +24,11 @@ use Symfony\Component\HttpFoundation\Request;
 Route::get('/', function () {
   $affiliateBaseUrl = 'affiliate.' . env('APP_HOST', 'localhost');
   $domain = Context::get('domain');
+
+  if ($domain && !$domain->domain_enabled) {
+    abort(404, 'Page Not Found');
+  }
+
   $owner = $domain?->owner;
 
   return match (true) {

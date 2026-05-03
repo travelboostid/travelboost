@@ -36,7 +36,6 @@ Route::prefix('companies/{company:username}/dashboard')->middleware(['auth', 'co
   Route::group(['prefix' => 'vendors/{vendor}', 'as' => 'vendor.'], function () {
     Route::get('/tours', [VendorTourCatalogController::class, 'index'])->name('tours.index');
     Route::middleware(['agent.subscription.active'])->post('/tours/{tour}/copy', [VendorTourCatalogController::class, 'copy'])->name('tour.copy');
-    // Route::get('/tours/{tour}/brochure', [VendorTourCatalogController::class, 'viewBrochure'])->name('tour.view-brochure');
   });
 
   Route::resource('agent-registrations', AgentRegistrationController::class);
@@ -77,6 +76,8 @@ Route::prefix('companies/{company:username}/dashboard')->middleware(['auth', 'co
   Route::singleton('page', PageController::class);
   Route::singleton('agent-subscriptions', AgentSubscriptionController::class);
 
+  Route::singleton('ai-credits', ChatbotController::class);
+
   Route::post('notifications/mark-all-as-read', [NotificationController::class, 'markAllAsRead'])->name('notifications.mark-all-read');
   Route::resource('notifications', NotificationController::class)->only(['index', 'update', 'destroy']);
 });
@@ -85,4 +86,3 @@ Route::get(
   '/brochure/{vendor}/{tour}',
   [VendorTourCatalogController::class, 'viewPublicBrochure']
 )->name('brochure.public');
-//

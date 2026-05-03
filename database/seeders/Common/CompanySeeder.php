@@ -19,7 +19,7 @@ class CompanySeeder extends Seeder
 {
   public function run(): void
   {
-    // Define the target packages to create
+    // Mendifinisikan paket langganan (subscription package) yang akan dibuat
     $packages = [
       [
         'name' => 'Basic',
@@ -33,7 +33,7 @@ class CompanySeeder extends Seeder
       AgentSubscriptionPackage::factory()->create($package);
     }
 
-    // Define the target companies to create
+    // Mendifinisikan perusahaan (company) yang akan dibuat
     $companies = [
       [
         'username' => 'vendor',
@@ -58,6 +58,7 @@ class CompanySeeder extends Seeder
         $this->command->error("User with username '{$seed['username']}' not found. Please run UserSeeder first.");
         continue;
       }
+
       $company = Company::factory()->create([
         'username' => $seed['username'],
         'type' => $seed['company_type'],
@@ -66,13 +67,18 @@ class CompanySeeder extends Seeder
         'address' => 'Jakarta',
         'phone' => '0123456789',
       ]);
+
+      // Update: Menambahkan domain_enabled => true saat membuat domain perusahaan
       $company->domain()->create([
         'subdomain' => $seed['subdomain'],
+        'domain_enabled' => true, // <-- Baris ini yang ditambahkan
       ]);
+
       $user->companies()->attach($company->id, [
         'status' => CompanyTeamStatus::ACTIVE,
         'is_owner' => true,
       ]);
+
       $team = Team::where('name', "company:{$company->id}")->firstOrCreate();
       $superadmin = Role::where('name', "company:{$company->id}:superadmin")->firstOrCreate();
       $user->addRole($superadmin, $team);
