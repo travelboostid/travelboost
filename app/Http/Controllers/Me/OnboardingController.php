@@ -18,130 +18,130 @@ use Inertia\Inertia;
 
 class OnboardingController extends Controller
 {
-    public function index()
-    {
-        /** @var \App\Models\User $user */
-        $user = Auth::user();
-        $domain = Context::get('domain');
+  public function index()
+  {
+    /** @var \App\Models\User $user */
+    $user = Auth::user();
+    $domain = Context::get('domain');
 
-        $affiliate = null;
-        if ($domain && $domain->owner_type === AffiliateProfile::class) {
-            $profile = $domain->owner;
-            $affiliate = [
-                'id' => $profile->user_id,
-                'name' => $profile->user->name ?? '',
-                'username' => $domain->subdomain,
-            ];
-        }
-
-        $invitations = CompanyTeam::where('invite_email', $user->email)
-            ->where('status', CompanyTeamStatus::PENDING)
-            ->with('company')
-            ->get();
-
-        return Inertia::render('me/onboarding/index', [
-            'invitations' => $invitations,
-            'affiliate' => $affiliate,
-        ]);
+    $affiliate = null;
+    if ($domain && $domain->owner_type === AffiliateProfile::class) {
+      $profile = $domain->owner;
+      $affiliate = [
+        'id' => $profile->user_id,
+        'name' => $profile->user->name ?? '',
+        'username' => $domain->subdomain
+      ];
     }
 
-    public function createCompany(Request $request)
-    {
-        /** @var \App\Models\User $user */
-        $user = Auth::user();
+    $invitations = CompanyTeam::where('invite_email', $user->email)
+      ->where('status', CompanyTeamStatus::PENDING)
+      ->with('company')
+      ->get();
 
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|email|max:255',
-            'username' => 'required|string|max:255|unique:companies,username',
-            'subdomain' => 'required|string|max:255|unique:domains,subdomain',
-            'phone' => 'required|string|max:255',
-            'customer_service_phone' => 'required|string|max:255',
-            'address' => 'required|string',
-            'province' => 'required|string',
-            'city' => 'required|string',
-            'district' => 'required|string',
-            'village' => 'required|string',
-            'postal_code' => 'nullable|string',
-            'identity_number' => 'required|string|size:16',
-            'identity_card_id' => 'required|integer|exists:medias,id',
-            'photo_id' => 'nullable|integer|exists:medias,id',
-        ]);
+    return Inertia::render('me/onboarding/index', [
+      'invitations' => $invitations,
+      'affiliate' => $affiliate,
+    ]);
+  }
 
-        $validatedCompanyDto = Arr::except($validated, ['subdomain']);
-        $validatedCompanyDto['type'] = CompanyType::AGENT;
+  public function createCompany(Request $request)
+  {
+    /** @var \App\Models\User $user */
+    $user = Auth::user();
 
-        $domain = Context::get('domain');
-        if ($domain && $domain->owner_type === AffiliateProfile::class) {
-            $validatedCompanyDto['referred_by'] = $domain->owner->user_id;
-        }
+    $validated = $request->validate([
+      'name' => 'required|string|max:255',
+      'email' => 'required|email|max:255',
+      'username' => 'required|string|max:255|unique:companies,username',
+      'subdomain' => 'required|string|max:255|unique:domains,subdomain',
+      'phone' => 'required|string|max:255',
+      'customer_service_phone' => 'required|string|max:255',
+      'address' => 'required|string',
+      'province' => 'required|string',
+      'city' => 'required|string',
+      'district' => 'required|string',
+      'village' => 'required|string',
+      'postal_code' => 'nullable|string',
+      'identity_number' => 'required|string|size:16',
+      'identity_card_id' => 'required|integer|exists:medias,id',
+      'photo_id' => 'nullable|integer|exists:medias,id',
+    ]);
 
-        $company = Company::forceCreate($validatedCompanyDto);
+    $validatedCompanyDto = Arr::except($validated, ['subdomain']);
+    $validatedCompanyDto['type'] = CompanyType::AGENT;
 
-        $company->domain()->create([
-            'subdomain' => $validated['subdomain'],
-        ]);
-
-        CompanyTeam::create([
-            'company_id' => $company->id,
-            'user_id' => $user->id,
-            'role' => CompanyTeamRole::SUPERADMIN,
-            'status' => CompanyTeamStatus::ACTIVE,
-        ]);
-
-        $user->update([
-            'status' => UserStatus::ACTIVE,
-        ]);
-
-        $user->addRole("company:{$company->id}:superadmin", "company:{$company->id}");
-
-        return redirect()->route('companies.dashboard.index', [
-            'company' => $company->username,
-        ]);
+    $domain = Context::get('domain');
+    if ($domain && $domain->owner_type === AffiliateProfile::class) {
+      $validatedCompanyDto['referred_by'] = $domain->owner->user_id;
     }
 
-    public function acceptInvitation(CompanyTeam $invitation)
-    {
-        /** @var \App\Models\User $user */
-        $user = Auth::user();
+    $company = Company::forceCreate($validatedCompanyDto);
 
-        if ($invitation->invite_email !== $user->email) {
-            abort(403);
-        }
-        if ($invitation->status !== CompanyTeamStatus::PENDING) {
-            abort(400, 'Invitation invalid');
-        }
+    $company->domain()->create([
+      'subdomain' => $validated['subdomain'],
+    ]);
 
-        $invitation->update([
-            'user_id' => $user->id,
-            'status' => CompanyTeamStatus::ACTIVE,
-        ]);
+    CompanyTeam::create([
+      'company_id' => $company->id,
+      'user_id' => $user->id,
+      'role' => CompanyTeamRole::SUPERADMIN,
+      'status' => CompanyTeamStatus::ACTIVE,
+    ]);
 
-        $user->update([
-            'status' => UserStatus::ACTIVE,
-        ]);
+    $user->update([
+      'status' => UserStatus::ACTIVE,
+    ]);
 
-        $user->addRole($invitation->invite_role, "company:{$invitation->company_id}");
+    $user->addRole("company:{$company->id}:superadmin", "company:{$company->id}");
 
-        CompanyTeam::where('invite_email', $user->email)
-            ->where('status', CompanyTeamStatus::PENDING)
-            ->where('id', '!=', $invitation->id)
-            ->update(['status' => CompanyTeamStatus::REJECTED]);
+    return redirect()->route('companies.dashboard.index', [
+      'company' => $company->username,
+    ]);
+  }
 
-        return redirect()->route('companies.dashboard.index', [
-            'company' => $invitation->company->username,
-        ]);
+  public function acceptInvitation(CompanyTeam $invitation)
+  {
+    /** @var \App\Models\User $user */
+    $user = Auth::user();
+
+    if ($invitation->invite_email !== $user->email) {
+      abort(403);
+    }
+    if ($invitation->status !== CompanyTeamStatus::PENDING) {
+      abort(400, 'Invitation invalid');
     }
 
-    public function declineInvitations()
-    {
-        /** @var \App\Models\User $user */
-        $user = Auth::user();
+    $invitation->update([
+      'user_id' => $user->id,
+      'status' => CompanyTeamStatus::ACTIVE,
+    ]);
 
-        CompanyTeam::where('invite_email', $user->email)
-            ->where('status', CompanyTeamStatus::PENDING)
-            ->update(['status' => CompanyTeamStatus::REJECTED]);
+    $user->update([
+      'status' => UserStatus::ACTIVE,
+    ]);
 
-        return back();
-    }
+    $user->addRole($invitation->invite_role, "company:{$invitation->company_id}");
+
+    CompanyTeam::where('invite_email', $user->email)
+      ->where('status', CompanyTeamStatus::PENDING)
+      ->where('id', '!=', $invitation->id)
+      ->update(['status' => CompanyTeamStatus::REJECTED]);
+
+    return redirect()->route('companies.dashboard.index', [
+      'company' => $invitation->company->username,
+    ]);
+  }
+
+  public function declineInvitations()
+  {
+    /** @var \App\Models\User $user */
+    $user = Auth::user();
+
+    CompanyTeam::where('invite_email', $user->email)
+      ->where('status', CompanyTeamStatus::PENDING)
+      ->update(['status' => CompanyTeamStatus::REJECTED]);
+
+    return back();
+  }
 }

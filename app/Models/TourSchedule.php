@@ -2,7 +2,11 @@
 
 namespace App\Models;
 
+use App\Enums\TourStatus;
+use App\Events\TourCreated;
+use App\Events\TourUpdated;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class TourSchedule extends Model
 {

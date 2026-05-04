@@ -9,13 +9,13 @@ use Illuminate\Queue\SerializesModels;
 
 class DomainUpdated
 {
-    use Dispatchable, InteractsWithSockets, SerializesModels;
+  use Dispatchable, InteractsWithSockets, SerializesModels;
 
-    /**
-     * Create a new event instance.
-     */
-    public function __construct(public Domain $domain)
-    {
-        //
-    }
+  /**
+   * Create a new event instance.
+   */
+  public function __construct(public Domain $domain)
+  {
+    //
+  }
 }

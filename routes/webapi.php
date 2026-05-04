@@ -15,45 +15,45 @@ use App\Http\Controllers\Webapi\MediaController;
 use App\Http\Controllers\Webapi\PaymentController;
 use App\Http\Controllers\Webapi\RegionController;
 use App\Http\Controllers\Webapi\TourCategoryController;
-use App\Http\Controllers\Webapi\TourController;
 use App\Http\Controllers\Webapi\UserController;
+use App\Http\Controllers\Webapi\TourController;
 use App\Http\Controllers\Webapi\WalletController;
 use App\Http\Controllers\Webapi\WithdrawalController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('webapi')->group(function () {
-    Route::middleware(['web', 'auth'])->group(function () {
-        Route::apiResource('companies', CompanyController::class);
-        Route::apiResource('payments', PaymentController::class);
-        Route::apiResource('withdrawals', WithdrawalController::class);
-        Route::apiResource('bank-accounts', BankAccountController::class);
-        Route::apiResource('users', UserController::class);
-        Route::apiResource('medias', MediaController::class);
-        Route::apiResource('wallets', WalletController::class);
-        Route::apiResource('continents', ContinentController::class);
-        Route::apiResource('regions', RegionController::class);
-        Route::apiResource('countries', CountryController::class);
-        Route::apiResource('categories', TourCategoryController::class);
-        Route::get('companies/{company}/settings', [CompanyController::class, 'showSettings']);
-        Route::put('companies/{company}/settings', [CompanyController::class, 'updateSettings']);
-        Route::post('payments/create-topup-payment', [PaymentController::class, 'createTopupPayment']);
-        Route::post('payments/create-agent-subscription-payment', [PaymentController::class, 'createAgentSubscriptionPayment']);
-    });
+  Route::middleware(['web', 'auth'])->group(function () {
+    Route::apiResource('companies', CompanyController::class);
+    Route::apiResource('payments', PaymentController::class);
+    Route::apiResource('withdrawals', WithdrawalController::class);
+    Route::apiResource('bank-accounts', BankAccountController::class);
+    Route::apiResource('users', UserController::class);
+    Route::apiResource('medias', MediaController::class);
+    Route::apiResource('wallets', WalletController::class);
+    Route::apiResource('continents', ContinentController::class);
+    Route::apiResource('regions', RegionController::class);
+    Route::apiResource('countries', CountryController::class);
+    Route::apiResource('categories', TourCategoryController::class);
+    Route::get('companies/{company}/settings', [CompanyController::class, 'showSettings']);
+    Route::put('companies/{company}/settings', [CompanyController::class, 'updateSettings']);
+    Route::post('payments/create-topup-payment', [PaymentController::class, 'createTopupPayment']);
+    Route::post('payments/create-agent-subscription-payment', [PaymentController::class, 'createAgentSubscriptionPayment']);
+  });
 
-    Route::middleware(['web', 'auth'])->prefix('geo')->group(function () {
-        Route::apiResource('provinces', GeoProvinceController::class);
-        Route::apiResource('cities', GeoCityController::class);
-        Route::apiResource('districts', GeoDistrictController::class);
-        Route::apiResource('villages', GeoVillageController::class);
-    });
+  Route::middleware(['web', 'auth'])->prefix('geo')->group(function () {
+    Route::apiResource('provinces', GeoProvinceController::class);
+    Route::apiResource('cities', GeoCityController::class);
+    Route::apiResource('districts', GeoDistrictController::class);
+    Route::apiResource('villages', GeoVillageController::class);
+  });
 
-    Route::middleware(['web'])->group(function () {
-        Route::apiResource('tours', TourController::class);
-        Route::post('anonymous-users/setup', [AnonymousUserController::class, 'setupAnonymousUser']);
-        Route::apiResource('chat/rooms.messages', ChatMessageController::class)->shallow(); // Messages nested under rooms
-        Route::apiResource('chat/rooms', ChatRoomController::class);
-        Route::post('chat/rooms/open', [ChatRoomController::class, 'open']);
-        Route::post('payments/create-topup-payment', [PaymentController::class, 'createTopupPayment']);
-        Route::post('payments/create-agent-subscription-payment', [PaymentController::class, 'createAgentSubscriptionPayment']);
-    });
+  Route::middleware(['web'])->group(function () {
+    Route::apiResource('tours', TourController::class);
+    Route::post('anonymous-users/setup', [AnonymousUserController::class, 'setupAnonymousUser']);
+    Route::apiResource('chat/rooms.messages', ChatMessageController::class)->shallow(); // Messages nested under rooms
+    Route::apiResource('chat/rooms', ChatRoomController::class);
+    Route::post('chat/rooms/open', [ChatRoomController::class, 'open']);
+    Route::post('payments/create-topup-payment', [PaymentController::class, 'createTopupPayment']);
+    Route::post('payments/create-agent-subscription-payment', [PaymentController::class, 'createAgentSubscriptionPayment']);
+  });
 });

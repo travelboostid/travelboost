@@ -3,10 +3,10 @@
 use Illuminate\Support\Facades\Broadcast;
 
 Broadcast::channel('users.{id}', function ($user, $id) {
-    // return (int) $user->id === (int) $id;
-    return true;
+  // return (int) $user->id === (int) $id;
+  return true;
 });
 Broadcast::channel('anonymous-users.{id}', function ($user, $id) {
-    // return (int) $user->id === (int) $id;
-    return true;
+  // return (int) $user->id === (int) $id;
+  return true;
 });

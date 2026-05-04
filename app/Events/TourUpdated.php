@@ -9,10 +9,10 @@ use Illuminate\Queue\SerializesModels;
 
 class TourUpdated
 {
-    use Dispatchable, InteractsWithSockets, SerializesModels;
+  use Dispatchable, InteractsWithSockets, SerializesModels;
 
-    public function __construct(public Tour $tour)
-    {
-        //
-    }
+  public function __construct(public Tour $tour)
+  {
+    //
+  }
 }

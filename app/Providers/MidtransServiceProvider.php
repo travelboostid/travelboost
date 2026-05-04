@@ -7,17 +7,17 @@ use Midtrans\Config as MidtransConfig;
 
 class MidtransServiceProvider extends ServiceProvider
 {
-    public function register(): void
-    {
-        //
-    }
+  public function register(): void
+  {
+    //
+  }
 
-    public function boot(): void
-    {
-        MidtransConfig::$serverKey = config('midtrans.server_key');
-        MidtransConfig::$clientKey = config('midtrans.client_key');
-        MidtransConfig::$isProduction = config('midtrans.is_production');
-        MidtransConfig::$isSanitized = config('midtrans.is_sanitized');
-        MidtransConfig::$is3ds = config('midtrans.is_3ds');
-    }
+  public function boot(): void
+  {
+    MidtransConfig::$serverKey    = config('midtrans.server_key');
+    MidtransConfig::$clientKey    = config('midtrans.client_key');
+    MidtransConfig::$isProduction = config('midtrans.is_production');
+    MidtransConfig::$isSanitized  = config('midtrans.is_sanitized');
+    MidtransConfig::$is3ds        = config('midtrans.is_3ds');
+  }
 }

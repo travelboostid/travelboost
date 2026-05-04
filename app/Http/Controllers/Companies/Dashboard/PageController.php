@@ -8,12 +8,11 @@ use Inertia\Inertia;
 
 class PageController extends Controller
 {
-    public function edit(Company $company)
-    {
-        $company->load('settings');
-
-        return Inertia::render('companies/edit-landing-page', [
-            'company' => $company,
-        ]);
-    }
+  public function edit(Company $company)
+  {
+    $company->load('settings');
+    return Inertia::render('companies/edit-landing-page', [
+      'company' => $company,
+    ]);
+  }
 }

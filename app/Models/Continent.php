@@ -2,19 +2,19 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Continent extends Model
 {
-    use HasFactory;
+  use HasFactory;
 
-    protected $fillable = [
-        'name',
-    ];
+  protected $fillable = [
+    'name',
+  ];
 
-    public function countries()
-    {
-        return $this->hasMany(Country::class, 'continent_id');
-    }
+  public function countries()
+  {
+    return $this->hasMany(Country::class, 'continent_id');
+  }
 }

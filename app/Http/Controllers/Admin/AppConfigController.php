@@ -8,44 +8,43 @@ use Inertia\Inertia;
 
 class AppConfigController extends Controller
 {
-    public function index()
-    {
-        $configs = AppConfig::get();
+  public function index()
+  {
+    $configs = AppConfig::get();
+    return Inertia::render('admin/app-configs/index', [
+      'data' => $configs,
+    ]);
+  }
 
-        return Inertia::render('admin/app-configs/index', [
-            'data' => $configs,
-        ]);
-    }
+  public function store()
+  {
+    $data = request()->validate([
+      'key' => 'required|string|unique:app_configs,key',
+      'description' => 'nullable|string',
+      'value' => 'nullable|json',
+    ]);
 
-    public function store()
-    {
-        $data = request()->validate([
-            'key' => 'required|string|unique:app_configs,key',
-            'description' => 'nullable|string',
-            'value' => 'nullable|json',
-        ]);
+    AppConfig::create($data);
 
-        AppConfig::create($data);
+    return redirect()->back()->with('success', 'App Config created successfully.');
+  }
 
-        return redirect()->back()->with('success', 'App Config created successfully.');
-    }
+  public function update(AppConfig $appConfig)
+  {
+    $data = request()->validate([
+      'description' => 'nullable|string',
+      'value' => 'nullable|json',
+    ]);
 
-    public function update(AppConfig $appConfig)
-    {
-        $data = request()->validate([
-            'description' => 'nullable|string',
-            'value' => 'nullable|json',
-        ]);
+    $appConfig->update($data);
 
-        $appConfig->update($data);
+    return redirect()->back()->with('success', 'App Config updated successfully.');
+  }
 
-        return redirect()->back()->with('success', 'App Config updated successfully.');
-    }
+  public function destroy(AppConfig $appConfig)
+  {
+    $appConfig->delete();
 
-    public function destroy(AppConfig $appConfig)
-    {
-        $appConfig->delete();
-
-        return redirect()->back()->with('success', 'App Config deleted successfully.');
-    }
+    return redirect()->back()->with('success', 'App Config deleted successfully.');
+  }
 }

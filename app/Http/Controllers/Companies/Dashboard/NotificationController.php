@@ -9,35 +9,35 @@ use Inertia\Inertia;
 
 class NotificationController extends Controller
 {
-    public function index(Company $company)
-    {
-        $notifications = $company->notifications()->paginate(15);
+  public function index(Company $company)
+  {
+    $notifications = $company->notifications()->paginate(15);
 
-        return Inertia::render('companies/dashboard/notifications/index', [
-            'data' => $notifications,
-        ]);
-    }
+    return Inertia::render('companies/dashboard/notifications/index', [
+      'data' => $notifications,
+    ]);
+  }
 
-    public function update(Request $request, Company $company, $id)
-    {
-        $notification = $company->notifications()->findOrFail($id);
-        $notification->markAsRead();
+  public function update(Request $request, Company $company, $id)
+  {
+    $notification = $company->notifications()->findOrFail($id);
+    $notification->markAsRead();
 
-        return back();
-    }
+    return back();
+  }
 
-    public function markAllAsRead(Company $company)
-    {
-        $company->unreadNotifications->markAsRead();
+  public function markAllAsRead(Company $company)
+  {
+    $company->unreadNotifications->markAsRead();
 
-        return back();
-    }
+    return back();
+  }
 
-    public function destroy(Company $company, $id)
-    {
-        $notification = $company->notifications()->findOrFail($id);
-        $notification->delete();
+  public function destroy(Company $company, $id)
+  {
+    $notification = $company->notifications()->findOrFail($id);
+    $notification->delete();
 
-        return back();
-    }
+    return back();
+  }
 }

@@ -10,27 +10,27 @@ use Illuminate\Support\Facades\Log;
 
 class ChatbotAutoReply implements ShouldQueue
 {
-    use InteractsWithQueue;
+  use InteractsWithQueue;
 
-    /**
-     * Create the event listener.
-     */
-    public function __construct()
-    {
-        // Dependency injection of ChatbotService
-    }
+  /**
+   * Create the event listener.
+   */
+  public function __construct()
+  {
+    // Dependency injection of ChatbotService
+  }
 
-    /**
-     * Handle the event.
-     * Processes a new chat message and triggers chatbot reply if conditions are met.
-     */
-    public function handle(ChatMessageCreated $event): void
-    {
-        try {
-            $agent = ChatbotAgent::make($event->message);
-            $agent->reply();
-        } catch (\Throwable $e) {
-            Log::error('ChatbotAutoReply Error: '.$e->getMessage());
-        }
+  /**
+   * Handle the event.
+   * Processes a new chat message and triggers chatbot reply if conditions are met.
+   */
+  public function handle(ChatMessageCreated $event): void
+  {
+    try {
+      $agent = ChatbotAgent::make($event->message);
+      $agent->reply();
+    } catch (\Throwable $e) {
+      Log::error('ChatbotAutoReply Error: ' . $e->getMessage());
     }
+  }
 }

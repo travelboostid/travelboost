@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class AnonymousUser extends Model
 {
-    protected $fillable = [
-        'token',
-    ];
+  protected $fillable = [
+    'token',
+  ];
 }

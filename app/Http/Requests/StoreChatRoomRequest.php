@@ -6,22 +6,22 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class StoreChatRoomRequest extends FormRequest
 {
-    /**
-     * Determine if the user is authorized to make this request.
-     */
-    public function authorize(): bool
-    {
-        return true; // or add your auth logic
-    }
+  /**
+   * Determine if the user is authorized to make this request.
+   */
+  public function authorize(): bool
+  {
+    return true; // or add your auth logic
+  }
 
-    /**
-     * Get the validation rules that apply to the request.
-     */
-    public function rules(): array
-    {
-        return [
-            'name' => 'required|string|max:255',
-            'type' => 'nullable|in:group,private', // optional room type
-        ];
-    }
+  /**
+   * Get the validation rules that apply to the request.
+   */
+  public function rules(): array
+  {
+    return [
+      'name' => 'required|string|max:255',
+      'type' => 'nullable|in:group,private', // optional room type
+    ];
+  }
 }

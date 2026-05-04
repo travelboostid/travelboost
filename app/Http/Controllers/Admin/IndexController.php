@@ -7,16 +7,15 @@ use Illuminate\Support\Facades\Auth;
 
 class IndexController extends Controller
 {
-    public function show()
-    {
-        $user = Auth::user();
-        if (! $user) {
-            return redirect()->route('admin.login.show');
-        }
-        if (! $user->hasRole('company:0:superadmin')) {
-            return redirect()->route('index');
-        }
-
-        return redirect()->route('admin.dashboard');
+  public function show()
+  {
+    $user = Auth::user();
+    if (!$user) {
+      return redirect()->route('admin.login.show');
     }
+    if (!$user->hasRole('company:0:superadmin')) {
+      return redirect()->route('index');
+    }
+    return redirect()->route('admin.dashboard');
+  }
 }

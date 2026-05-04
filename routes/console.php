@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schedule;
 
 Artisan::command('inspire', function () {
-    $this->comment(Inspiring::quote());
+  $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
 /*
@@ -28,63 +28,63 @@ Artisan::command('inspire', function () {
 |
 */
 Schedule::call(function () {
-    $expiredBookings = Booking::query()
+  $expiredBookings = Booking::query()
+    ->where('status', BookingStatus::RESERVED)
+    ->where('reserved_type', 'system')
+    ->where('updated_at', '<', now()->subMinutes(10))
+    ->get();
+
+  if ($expiredBookings->isEmpty()) {
+    return;
+  }
+
+  foreach ($expiredBookings as $booking) {
+    DB::transaction(function () use ($booking) {
+      $locked = Booking::query()
+        ->where('id', $booking->id)
         ->where('status', BookingStatus::RESERVED)
-        ->where('reserved_type', 'system')
-        ->where('updated_at', '<', now()->subMinutes(10))
-        ->get();
+        ->lockForUpdate()
+        ->first();
 
-    if ($expiredBookings->isEmpty()) {
+      if (! $locked) {
         return;
-    }
+      }
 
-    foreach ($expiredBookings as $booking) {
-        DB::transaction(function () use ($booking) {
-            $locked = Booking::query()
-                ->where('id', $booking->id)
-                ->where('status', BookingStatus::RESERVED)
-                ->lockForUpdate()
-                ->first();
+      $locked->update(['status' => BookingStatus::EXPIRED]);
 
-            if (! $locked) {
-                return;
-            }
+      $totalPax = $locked->pax_adult + $locked->pax_child;
 
-            $locked->update(['status' => BookingStatus::EXPIRED]);
+      $tour = $locked->tour;
 
-            $totalPax = $locked->pax_adult + $locked->pax_child;
+      if (! $tour) {
+        return;
+      }
 
-            $tour = $locked->tour;
+      $schedule = TourSchedule::where('tour_code', $tour->code)
+        ->whereDate('departure_date', $locked->departure_date)
+        ->first();
 
-            if (! $tour) {
-                return;
-            }
+      if ($schedule) {
+        $availability = TourAvailability::where('schedule_id', $schedule->id)
+          ->where('tour_id', $tour->id)
+          ->lockForUpdate()
+          ->first();
 
-            $schedule = TourSchedule::where('tour_code', $tour->code)
-                ->whereDate('departure_date', $locked->departure_date)
-                ->first();
+        if ($availability) {
+          $availability->decrement('RS', $totalPax);
+          $availability->increment('EX', $totalPax);
+          $availability->increment('available', $totalPax);
+        }
+      }
 
-            if ($schedule) {
-                $availability = TourAvailability::where('schedule_id', $schedule->id)
-                    ->where('tour_id', $tour->id)
-                    ->lockForUpdate()
-                    ->first();
-
-                if ($availability) {
-                    $availability->decrement('RS', $totalPax);
-                    $availability->increment('EX', $totalPax);
-                    $availability->increment('available', $totalPax);
-                }
-            }
-
-            Log::info('Booking reservation expired', [
-                'booking_number' => $locked->booking_number,
-                'tour_id' => $locked->tour_id,
-                'pax_released' => $totalPax,
-            ]);
-        });
-    }
+      Log::info('Booking reservation expired', [
+        'booking_number' => $locked->booking_number,
+        'tour_id' => $locked->tour_id,
+        'pax_released' => $totalPax,
+      ]);
+    });
+  }
 })->everyMinute()
-    ->name('release-expired-reservations')
-    ->withoutOverlapping()
-    ->onOneServer();
+  ->name('release-expired-reservations')
+  ->withoutOverlapping()
+  ->onOneServer();

@@ -10,22 +10,22 @@ use Inertia\Inertia;
 
 class PasswordController extends Controller
 {
-    public function edit()
-    {
-        return Inertia::render('affiliate/dashboard/setup/password');
-    }
+  public function edit()
+  {
+    return Inertia::render('affiliate/dashboard/setup/password');
+  }
 
-    public function update(Request $request)
-    {
-        $validated = $request->validate([
-            'current_password' => ['required', 'current_password'],
-            'password' => ['required', Password::defaults(), 'confirmed'],
-        ]);
+  public function update(Request $request)
+  {
+    $validated = $request->validate([
+      'current_password' => ['required', 'current_password'],
+      'password' => ['required', Password::defaults(), 'confirmed'],
+    ]);
 
-        $request->user()->update([
-            'password' => Hash::make($validated['password']),
-        ]);
+    $request->user()->update([
+      'password' => Hash::make($validated['password']),
+    ]);
 
-        return back()->with('success', 'Password updated successfully.');
-    }
+    return back()->with('success', 'Password updated successfully.');
+  }
 }

@@ -5,96 +5,97 @@ namespace App\Http\Controllers\Companies\Dashboard;
 use App\Http\Controllers\Controller;
 use App\Models\Company;
 use Bavix\Wallet\Models\Transaction;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 class WalletController extends Controller
 {
-    public function index(Company $company)
-    {
-        $wallet = $company->wallet; // Get the default wallet
-        $balance = $wallet->balance; // Current balance
+  public function index(Company $company)
+  {
+    $wallet = $company->wallet; // Get the default wallet
+    $balance = $wallet->balance; // Current balance
 
-        // Define date ranges for this month and last month
-        $thisMonthStart = now()->startOfMonth();
-        $thisMonthEnd = now()->endOfMonth();
-        $lastMonthStart = now()->subMonth()->startOfMonth();
-        $lastMonthEnd = now()->subMonth()->endOfMonth();
+    // Define date ranges for this month and last month
+    $thisMonthStart = now()->startOfMonth();
+    $thisMonthEnd   = now()->endOfMonth();
+    $lastMonthStart = now()->subMonth()->startOfMonth();
+    $lastMonthEnd   = now()->subMonth()->endOfMonth();
 
-        // --- THIS MONTH ---
-        // Calculate income and expenses for this month
-        $thisIncome = $wallet->transactions()
-            ->where('amount', '>', 0) // Income transactions
-            ->whereBetween('created_at', [$thisMonthStart, $thisMonthEnd])
-            ->sum('amount');
+    // --- THIS MONTH ---
+    // Calculate income and expenses for this month
+    $thisIncome = $wallet->transactions()
+      ->where('amount', '>', 0) // Income transactions
+      ->whereBetween('created_at', [$thisMonthStart, $thisMonthEnd])
+      ->sum('amount');
 
-        $thisExpense = abs(
-            $wallet->transactions()
-                ->where('amount', '<', 0) // Expense transactions
-                ->whereBetween('created_at', [$thisMonthStart, $thisMonthEnd])
-                ->sum('amount')
-        );
+    $thisExpense = abs(
+      $wallet->transactions()
+        ->where('amount', '<', 0) // Expense transactions
+        ->whereBetween('created_at', [$thisMonthStart, $thisMonthEnd])
+        ->sum('amount')
+    );
 
-        // --- LAST MONTH ---
-        // Calculate income and expenses for last month
-        $lastIncome = $wallet->transactions()
-            ->where('amount', '>', 0)
-            ->whereBetween('created_at', [$lastMonthStart, $lastMonthEnd])
-            ->sum('amount');
+    // --- LAST MONTH ---
+    // Calculate income and expenses for last month
+    $lastIncome = $wallet->transactions()
+      ->where('amount', '>', 0)
+      ->whereBetween('created_at', [$lastMonthStart, $lastMonthEnd])
+      ->sum('amount');
 
-        $lastExpense = abs(
-            $wallet->transactions()
-                ->where('amount', '<', 0)
-                ->whereBetween('created_at', [$lastMonthStart, $lastMonthEnd])
-                ->sum('amount')
-        );
+    $lastExpense = abs(
+      $wallet->transactions()
+        ->where('amount', '<', 0)
+        ->whereBetween('created_at', [$lastMonthStart, $lastMonthEnd])
+        ->sum('amount')
+    );
 
-        // Calculate net movement for this month and last month
-        $thisNet = $thisIncome - $thisExpense;
-        $lastNet = $lastIncome - $lastExpense;
+    // Calculate net movement for this month and last month
+    $thisNet = $thisIncome - $thisExpense;
+    $lastNet = $lastIncome - $lastExpense;
 
-        // Retrieve the last 10 transactions
-        $transactions = $wallet->transactions()
-            ->latest()
-            ->take(10)
-            ->get()
-            ->map(fn (Transaction $t) => [
-                'id' => $t->id,
-                'type' => $t->amount > 0 ? 'income' : 'expense', // Determine transaction type
-                'amount' => $t->amount,
-                'confirmed' => $t->confirmed,
-                'meta' => $t->meta,
-                'created_at' => $t->created_at,
-            ]);
+    // Retrieve the last 10 transactions
+    $transactions = $wallet->transactions()
+      ->latest()
+      ->take(10)
+      ->get()
+      ->map(fn(Transaction $t) => [
+        'id'        => $t->id,
+        'type'      => $t->amount > 0 ? 'income' : 'expense', // Determine transaction type
+        'amount'    => $t->amount,
+        'confirmed' => $t->confirmed,
+        'meta'      => $t->meta,
+        'created_at' => $t->created_at,
+      ]);
 
-        // Render the Inertia view with wallet data
-        return Inertia::render('companies/dashboard/wallet/index', [
-            'balance' => $balance,
-            'income' => [
-                'this_month' => $thisIncome,
-                'last_month' => $lastIncome,
-                'growth_pct' => $this->growthPercentage($thisIncome, $lastIncome),
-            ],
-            'expenses' => [
-                'this_month' => $thisExpense,
-                'last_month' => $lastExpense,
-                'growth_pct' => $this->growthPercentage($thisExpense, $lastExpense),
-            ],
-            'net_change' => [
-                'this_month' => $thisNet,
-                'last_month' => $lastNet,
-                'growth_pct' => $this->growthPercentage($thisNet, $lastNet),
-            ],
-            'transactions' => $transactions,
-        ]);
+    // Render the Inertia view with wallet data
+    return Inertia::render('companies/dashboard/wallet/index', [
+      'balance' => $balance,
+      'income' => [
+        'this_month' => $thisIncome,
+        'last_month' => $lastIncome,
+        'growth_pct' => $this->growthPercentage($thisIncome, $lastIncome),
+      ],
+      'expenses' => [
+        'this_month' => $thisExpense,
+        'last_month' => $lastExpense,
+        'growth_pct' => $this->growthPercentage($thisExpense, $lastExpense),
+      ],
+      'net_change' => [
+        'this_month' => $thisNet,
+        'last_month' => $lastNet,
+        'growth_pct' => $this->growthPercentage($thisNet, $lastNet),
+      ],
+      'transactions' => $transactions,
+    ]);
+  }
+
+  // Calculate growth percentage between current and previous values
+  private function growthPercentage(int $current, int $previous): float
+  {
+    if ($previous === 0) {
+      return $current > 0 ? 100.0 : 0.0; // Handle division by zero
     }
 
-    // Calculate growth percentage between current and previous values
-    private function growthPercentage(int $current, int $previous): float
-    {
-        if ($previous === 0) {
-            return $current > 0 ? 100.0 : 0.0; // Handle division by zero
-        }
-
-        return round((($current - $previous) / abs($previous)) * 100, 2); // Calculate percentage
-    }
+    return round((($current - $previous) / abs($previous)) * 100, 2); // Calculate percentage
+  }
 }

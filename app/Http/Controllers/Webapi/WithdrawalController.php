@@ -10,31 +10,35 @@ use Illuminate\Support\Facades\Auth;
 
 class WithdrawalController extends Controller
 {
-    /**
-     * get payment list
-     *
-     * @operationId getWithdrawals
-     */
-    public function index(PaymentIndexRequest $request)
-    {
-        $withdrawals = Withdrawal::query()
-            ->where('user_id', Auth::id())
-            ->when(
-                $request->filled('status'),
-                fn ($q) => $q->where('status', $request->status)
-            )
-            ->when(
-                $request->filled('from'),
-                fn ($q) => $q->whereDate('created_at', '>=', $request->from)
-            )
-            ->when(
-                $request->filled('to'),
-                fn ($q) => $q->whereDate('created_at', '<=', $request->to)
-            )
-            ->latest()
-            ->paginate($request->integer('per_page', 10))
-            ->withQueryString();
+  /**
+   * get payment list
+   *
+   * @operationId getWithdrawals
+   */
+  public function index(PaymentIndexRequest $request)
+  {
+    $withdrawals = Withdrawal::query()
+      ->where('user_id', Auth::id())
 
-        return WithdrawalResource::collection($withdrawals);
-    }
+      ->when(
+        $request->filled('status'),
+        fn($q) => $q->where('status', $request->status)
+      )
+
+      ->when(
+        $request->filled('from'),
+        fn($q) => $q->whereDate('created_at', '>=', $request->from)
+      )
+
+      ->when(
+        $request->filled('to'),
+        fn($q) => $q->whereDate('created_at', '<=', $request->to)
+      )
+
+      ->latest()
+      ->paginate($request->integer('per_page', 10))
+      ->withQueryString();
+
+    return WithdrawalResource::collection($withdrawals);
+  }
 }

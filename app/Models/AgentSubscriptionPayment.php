@@ -6,10 +6,10 @@ use Illuminate\Database\Eloquent\Model;
 
 class AgentSubscriptionPayment extends Model
 {
-    protected $fillable = ['package_id'];
+  protected $fillable = ['package_id'];
 
-    public function payment()
-    {
-        return $this->morphOne(Payment::class, 'payable');
-    }
+  public function payment()
+  {
+    return $this->morphOne(Payment::class, 'payable');
+  }
 }

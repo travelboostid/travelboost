@@ -7,20 +7,20 @@ use Illuminate\Database\Eloquent\Model;
 
 class AgentSubscriptionPackage extends Model
 {
-    use HasFactory;
+  use HasFactory;
 
-    protected $fillable = [
-        'name',
-        'duration_months',
-        'price',
-        'is_active',
+  protected $fillable = [
+    'name',
+    'duration_months',
+    'price',
+    'is_active',
+  ];
+
+  protected function casts(): array
+  {
+    return [
+      'price' => 'decimal:2',
+      'is_active' => 'boolean',
     ];
-
-    protected function casts(): array
-    {
-        return [
-            'price' => 'decimal:2',
-            'is_active' => 'boolean',
-        ];
-    }
+  }
 }

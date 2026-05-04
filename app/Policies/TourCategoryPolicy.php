@@ -4,6 +4,7 @@ namespace App\Policies;
 
 use App\Models\TourCategory;
 use App\Models\User;
+use Illuminate\Auth\Access\Response;
 
 class TourCategoryPolicy
 {

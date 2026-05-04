@@ -2,31 +2,30 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Region extends Model
 {
-    use HasFactory;
+  use HasFactory;
 
-    protected $fillable = [
-        'name',
-        'continent_id',
-    ];
+  protected $fillable = [
+    'name',
+    'continent_id',
+  ];
 
-    /*
-      |--------------------------------------------------------------------------
-      | Relationships
-      |--------------------------------------------------------------------------
-      */
+  /*
+    |--------------------------------------------------------------------------
+    | Relationships
+    |--------------------------------------------------------------------------
+    */
 
-    public function countries()
-    {
-        return $this->hasMany(Country::class, 'region_id');
-    }
-
-    public function continent()
-    {
-        return $this->belongsTo(Continent::class, 'continent_id');
-    }
+  public function countries()
+  {
+    return $this->hasMany(Country::class, 'region_id');
+  }
+  public function continent()
+  {
+    return $this->belongsTo(Continent::class, 'continent_id');
+  }
 }
