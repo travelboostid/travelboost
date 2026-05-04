@@ -22,6 +22,12 @@ class CompanySeeder extends Seeder
     // Mendifinisikan paket langganan (subscription package) yang akan dibuat
     $packages = [
       [
+        'name' => 'Free Trial 1 Month',
+        'duration_months' => 1,
+        'price' => 0,
+        'is_active' => true,
+      ],
+      [
         'name' => 'Basic',
         'duration_months' => 12,
         'price' => 6000000,
