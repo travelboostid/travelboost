@@ -84,7 +84,7 @@ class AgentController extends Controller
         'identity_number' => $agent->identity_number ?? data_get($meta, 'identity_number'),
         'identity_photo_path' => $agent->identity_photo_path ?? data_get($meta, 'identity_photo_path'),
         'photo_url' => $photoUrl,
-        'join_date' => $agent->created_at ? $agent->created_at->format('Y-m-d') : '-',
+        'join_date' => $agent->created_at ? $agent->created_at->format('d M Y') : '-',
         'affiliator_name' => $affiliatorName,
         'ma_name' => $maName,
       ];

@@ -5,8 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
-import { login } from '@/routes/customer';
-import { store } from '@/routes/register';
+import { show as showLogin } from '@/routes/companies/login';
+import { store } from '@/routes/companies/register';
 import { Form, Head, usePage } from '@inertiajs/react';
 import { Eye, EyeOff } from 'lucide-react';
 import { useState } from 'react';
@@ -18,8 +18,8 @@ export default function Register() {
 
   return (
     <AuthLayout
-      title="Create an account"
-      description="Enter your details below to create your account"
+      title="Create an agent account"
+      description="Enter your details below to create your agent account"
     >
       <Head title="Register" />
       <Form
@@ -30,7 +30,7 @@ export default function Register() {
       >
         {({ processing, errors }) => (
           <>
-            <input type="hidden" name="intent" value="register-as-customer" />
+            <input type="hidden" name="intent" value="register-as-agent" />
             <div className="grid gap-6">
               {affiliate && (
                 <div className="rounded-xl border bg-card text-card-foreground shadow-sm p-5 grid gap-1">
@@ -48,6 +48,7 @@ export default function Register() {
               )}
 
               <div className="grid gap-2">
+                <input type="hidden" name="intent" value="register-as-agent" />
                 <Label htmlFor="name">Name</Label>
                 <Input
                   id="name"
@@ -154,7 +155,7 @@ export default function Register() {
 
             <div className="text-center text-sm text-muted-foreground">
               Already have an account?{' '}
-              <TextLink href={login()} tabIndex={6}>
+              <TextLink href={showLogin()} tabIndex={6}>
                 Log in
               </TextLink>
             </div>

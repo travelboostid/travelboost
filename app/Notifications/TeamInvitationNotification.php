@@ -41,7 +41,7 @@ class TeamInvitationNotification extends Notification
       ->greeting('Hello!')
       ->line('You are invited to join the team "' . $this->team->company->name . '" on TravelBoost.')
       ->line('Please click the button below to register your account and join the team.')
-      ->action('Join Team', route('register'))
+      ->action('Join Team', route('companies.accept-team-invitation.show', ['token' => $this->team->invite_token]))
       ->line('If you did not expect this invitation, you can ignore this email.');
   }
 

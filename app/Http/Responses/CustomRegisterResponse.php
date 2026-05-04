@@ -38,7 +38,7 @@ class CustomRegisterResponse implements RegisterResponse
   private function processRegisterAsTeam(User $user, Request $request)
   {
     $company = $user->companies()->first();
-    return redirect()->route('company.index', ['company' => $company->username]);
+    return redirect()->route('companies.dashboard.index', ['company' => $company->username]);
   }
 
   private function processRegisterDefault(User $user, Request $request)

@@ -20,7 +20,7 @@ class EnsureAgentSubscriptionIsActive
     $company = $request->route('company');
     $subscription = AgentSubscription::where('company_id', $company->id)->latest()->first();
     if (! $subscription || $subscription->status !== AgentSubscriptionStatus::ACTIVE) {
-      return redirect()->route('company.agent-subscriptions.show', ['company' => $company->username]);
+      return redirect()->route('companies.agent-subscriptions.show', ['company' => $company->username]);
     }
     return $next($request);
   }

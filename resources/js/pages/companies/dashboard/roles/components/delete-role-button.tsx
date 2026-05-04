@@ -16,7 +16,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
-import { destroy } from '@/routes/company/roles';
+import { destroy } from '@/routes/companies/dashboard/roles';
 import { useForm } from '@inertiajs/react';
 import { Trash2Icon } from 'lucide-react';
 import { useState } from 'react';

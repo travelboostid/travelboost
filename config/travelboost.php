@@ -1,10 +1,6 @@
 <?php
 
 return [
-  'default_embeddings_model_provider' => 'mistral',
-  'default_embeddings_model' => 'mistral-embed',
-  'default_chatbot_model_provider' => 'mistral',
-  'default_chatbot_model' => 'mistral-small-latest',
   'permissions' => [
     ['name' => 'user.query', 'display_name' => 'Query User', 'description' => 'Allow viewing users'],
     ['name' => 'user.mutation', 'display_name' => 'Mutate User', 'description' => 'Allow creating, editing, or deleting users'],
@@ -23,6 +19,33 @@ return [
 
     ['name' => 'role.query', 'display_name' => 'Query Role', 'description' => 'Allow viewing roles'],
     ['name' => 'role.mutation', 'display_name' => 'Mutate Role', 'description' => 'Allow creating, editing, or deleting roles'],
+  ],
+  'roles' => [
+    [
+      'name' => 'user:admin',
+      'display_name' => 'Administrator',
+      'description' => 'Main role with all permissions',
+    ],
+    [
+      'name' => 'user:agent',
+      'display_name' => 'Agent',
+      'description' => 'Agent role with permissions to manage tours',
+    ],
+    [
+      'name' => 'user:vendor',
+      'display_name' => 'Vendor',
+      'description' => 'Vendor role with permissions to manage tours',
+    ],
+    [
+      'name' => 'user:customer',
+      'display_name' => 'Customer',
+      'description' => 'Customer role with permissions to view tours and manage their bookings',
+    ],
+    [
+      'name' => 'user:affiliator',
+      'display_name' => 'Affiliator',
+      'description' => 'Affiliator role with permissions to view tours and manage their referrals',
+    ]
   ],
   'company_default_roles' => [
     [

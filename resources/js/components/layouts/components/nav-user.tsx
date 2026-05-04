@@ -1,13 +1,5 @@
-import {
-  BadgeCheck,
-  Bell,
-  ChevronsUpDown,
-  KeyIcon,
-  LogOut,
-  UserIcon,
-} from 'lucide-react';
+import { Bell, ChevronsUpDown, KeyIcon, LogOut, UserIcon } from 'lucide-react';
 
-import { edit } from '@/actions/App/Http/Controllers/Me/Settings/ProfileController';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   DropdownMenu,
@@ -32,11 +24,12 @@ import { FormattedMessage } from 'react-intl';
 
 export function NavUser() {
   const { isMobile } = useSidebar();
-  const { auth } = usePageSharedDataProps();
+  const { auth, company } = usePageSharedDataProps();
 
   const handleLogout = () => {
     router.post('/logout');
   };
+
   return (
     <SidebarMenu>
       <SidebarMenuItem>
@@ -87,7 +80,7 @@ export function NavUser() {
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem asChild>
+              {/* <DropdownMenuItem asChild>
                 <Link
                   className="block w-full cursor-pointer"
                   href={edit().url}
@@ -96,7 +89,7 @@ export function NavUser() {
                   <BadgeCheck />
                   My Profile
                 </Link>
-              </DropdownMenuItem>
+              </DropdownMenuItem> */}
               <DropdownMenuItem asChild>
                 <Link
                   className="block w-full cursor-pointer"
@@ -110,13 +103,23 @@ export function NavUser() {
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem>
-                <Bell />
-                Notifications
+              <DropdownMenuItem asChild>
+                <Link
+                  className="block w-full cursor-pointer"
+                  href={
+                    company?.username
+                      ? `/companies/${company.username}/dashboard/notifications`
+                      : '#'
+                  }
+                  prefetch
+                >
+                  <Bell />
+                  Notifications
+                </Link>
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleLogout}>
+            <DropdownMenuItem onClick={handleLogout} className="cursor-pointer">
               <LogOut />
               Log out
             </DropdownMenuItem>

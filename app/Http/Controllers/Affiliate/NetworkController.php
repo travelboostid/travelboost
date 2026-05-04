@@ -160,7 +160,7 @@ class NetworkController extends Controller
         'identity_number' => $profile->identity_number ?? '-',
         'identity_photo_path' => $profile->identity_photo_path ?? null,
         'profile_photo_path' => $profile->profile_photo_path ?? null,
-        'registered_at' => $profile->created_at ? $profile->created_at->format('Y-m-d') : '-',
+        'registered_at' => $profile->created_at ? $profile->created_at->format('d M Y') : '-',
       ];
     });
 

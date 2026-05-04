@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import usePageProps from '@/hooks/use-page-props';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { formatIDR } from '@/lib/utils';
-import { index } from '@/routes/company/wallet-transaction';
+import { index } from '@/routes/companies/dashboard/wallet-transaction';
 import { Link } from '@inertiajs/react';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';

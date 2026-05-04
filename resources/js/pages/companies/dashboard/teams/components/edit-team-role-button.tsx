@@ -18,7 +18,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import usePageProps from '@/hooks/use-page-props';
-import { update } from '@/routes/company/teams';
+import { update } from '@/routes/companies/dashboard/teams';
 import { useForm } from '@inertiajs/react';
 import { IconUserShield } from '@tabler/icons-react';
 import { useState } from 'react';

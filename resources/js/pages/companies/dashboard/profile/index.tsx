@@ -19,7 +19,7 @@ import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
-import { update } from '@/routes/company/settings/profile';
+import { update } from '@/routes/companies/dashboard/settings/profile';
 import { Head, useForm } from '@inertiajs/react';
 import { Building, CreditCard, MapPin, Save, ShieldCheck } from 'lucide-react';
 import React from 'react';

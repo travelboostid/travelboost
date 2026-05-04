@@ -9,6 +9,7 @@ use App\Http\Controllers\Companies\Dashboard\CategoryController;
 use App\Http\Controllers\Companies\Dashboard\ChatbotController;
 use App\Http\Controllers\Companies\Dashboard\CustomerController;
 use App\Http\Controllers\Companies\Dashboard\HomeController;
+use App\Http\Controllers\Companies\Dashboard\NotificationController;
 use App\Http\Controllers\Companies\Dashboard\PageController;
 use App\Http\Controllers\Companies\Dashboard\ParameterVendorController;
 use App\Http\Controllers\Companies\Dashboard\PaymentController;
@@ -23,15 +24,17 @@ use App\Http\Controllers\Companies\Dashboard\VendorTourCatalogController;
 use App\Http\Controllers\Companies\Dashboard\WalletController;
 use App\Http\Controllers\Companies\Dashboard\WalletTransactionsController;
 use App\Http\Controllers\Companies\Dashboard\WithdrawalController;
+use App\Http\Controllers\Companies\IndexController;
 use Illuminate\Support\Facades\Route;
 
-Route::prefix('companies/{company:username}/dashboard')->middleware(['auth'])->name('company.')->group(function () {
+Route::get('/companies', [IndexController::class, 'show'])->name('companies.show');
+Route::prefix('companies/{company:username}/dashboard')->middleware(['auth'])->name('companies.dashboard.')->group(function () {
   Route::group(['prefix' => 'vendors/{vendor}', 'as' => 'vendor.'], function () {
     Route::get('/tours/{tour}/brochure', [VendorTourCatalogController::class, 'viewBrochure'])->name('tour.view-brochure');
   });
 });
 
-Route::prefix('companies/{company:username}/dashboard')->middleware(['auth', 'company.access'])->name('company.')->group(function () {
+Route::prefix('companies/{company:username}/dashboard')->middleware(['auth', 'company.access'])->name('companies.dashboard.')->group(function () {
   Route::get('/', [HomeController::class, 'index'])->name('index');
   Route::group(['prefix' => 'vendors/{vendor}', 'as' => 'vendor.'], function () {
     Route::get('/tours', [VendorTourCatalogController::class, 'index'])->name('tours.index');
@@ -97,6 +100,9 @@ Route::prefix('companies/{company:username}/dashboard')->middleware(['auth', 'co
   Route::singleton('chatbot', ChatbotController::class);
   Route::singleton('page', PageController::class);
   Route::singleton('agent-subscriptions', AgentSubscriptionController::class);
+
+  Route::post('notifications/mark-all-as-read', [NotificationController::class, 'markAllAsRead'])->name('notifications.mark-all-read');
+  Route::resource('notifications', NotificationController::class)->only(['index', 'update', 'destroy']);
 });
 
 Route::get(

@@ -77,15 +77,20 @@ function CategoryCell({ row }: { row: any }) {
   const { company } = usePageSharedDataProps();
   const { data, isLoading } = useGetTourCategories({ company_id: company.id });
   const agentTour = row.original;
+
   const [value, setValue] = React.useState(
     agentTour.category_id?.toString() || 'none',
   );
+
+  React.useEffect(() => {
+    setValue(agentTour.category_id?.toString() || 'none');
+  }, [agentTour.category_id]);
 
   const handleChange = (val: string) => {
     setValue(val);
     router.put(
       `/companies/${company.username}/dashboard/agent-tours/${agentTour.id}`,
-      { category_id: val === 'none' ? null : val },
+      { category_id: val === 'none' ? null : Number(val) },
       {
         preserveScroll: true,
         preserveState: true,
@@ -109,6 +114,55 @@ function CategoryCell({ row }: { row: any }) {
               {cat.name}
             </SelectItem>
           ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
+
+// ✅ Komponen Baru: StatusCell untuk Agen
+function StatusCell({ row }: { row: any }) {
+  const { company } = usePageSharedDataProps();
+  const agentTour = row.original;
+
+  const [value, setValue] = React.useState(agentTour.status || 'inactive');
+
+  React.useEffect(() => {
+    setValue(agentTour.status || 'inactive');
+  }, [agentTour.status]);
+
+  const handleChange = (val: string) => {
+    setValue(val);
+    router.put(
+      `/companies/${company.username}/dashboard/agent-tours/${agentTour.id}`,
+      { status: val },
+      {
+        preserveScroll: true,
+        preserveState: true,
+        onSuccess: () => {
+          toast.success('Status updated successfully');
+        },
+      },
+    );
+  };
+
+  const isActive = value.toLowerCase() === 'active';
+
+  return (
+    <div onClick={(e) => e.stopPropagation()}>
+      <Select value={value} onValueChange={handleChange}>
+        <SelectTrigger
+          className={`w-[110px] h-8 text-[10px] font-bold uppercase tracking-wider ${
+            isActive
+              ? 'bg-primary/10 text-primary border-primary/20'
+              : 'bg-slate-100 text-slate-500 border-slate-200'
+          }`}
+        >
+          <SelectValue placeholder="Select Status" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="active">ACTIVE</SelectItem>
+          <SelectItem value="inactive">INACTIVE</SelectItem>
         </SelectContent>
       </Select>
     </div>
@@ -150,7 +204,7 @@ export const columns: ColumnDef<AgentTour>[] = [
     header: 'Vendor',
     cell: ({ getValue }) => (
       <div
-        className="font-semibold text-slate-700 max-w-[120px] xl:max-w-[150px] truncate"
+        className="min-w-[120px] whitespace-normal break-words font-semibold text-slate-700 cursor-help"
         title={getValue<string>()}
       >
         {getValue<string>()}
@@ -164,7 +218,7 @@ export const columns: ColumnDef<AgentTour>[] = [
     cell: ({ row }) => (
       <div className="flex flex-col gap-1.5 max-w-[200px] xl:max-w-[250px]">
         <span
-          className="font-bold text-primary truncate"
+          className="font-bold text-primary truncate cursor-help"
           title={row.original.tour.name}
         >
           {row.original.tour.name}
@@ -189,7 +243,7 @@ export const columns: ColumnDef<AgentTour>[] = [
     header: 'Destination',
     cell: ({ getValue }) => (
       <div
-        className="max-w-[150px] xl:max-w-[180px] truncate text-slate-600"
+        className="min-w-[150px] whitespace-normal break-words text-slate-600 cursor-help"
         title={getValue<string>()}
       >
         {getValue<string>()}
@@ -220,19 +274,8 @@ export const columns: ColumnDef<AgentTour>[] = [
   },
   {
     id: 'status',
-    accessorFn: (row) => row.tour.status,
     header: 'Status',
-    cell: ({ getValue }) => {
-      const status = getValue<string>() || 'unknown';
-      const isActive = status.toLowerCase() === 'active';
-      return (
-        <span
-          className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${isActive ? 'bg-primary/10 text-primary' : 'bg-slate-100 text-slate-500'}`}
-        >
-          {status}
-        </span>
-      );
-    },
+    cell: ({ row }) => <StatusCell row={row} />,
   },
   {
     id: 'created_at',
@@ -269,6 +312,8 @@ export default function AgentToursPage({ data }: PageProps) {
   const table = useReactTable({
     data,
     columns,
+    // ✅ Memastikan urutan tidak melompat saat di-update
+    getRowId: (row) => row.id.toString(),
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     getCoreRowModel: getCoreRowModel(),
@@ -290,8 +335,10 @@ export default function AgentToursPage({ data }: PageProps) {
       openMenuIds={['tours']}
       activeMenuIds={['tours.index']}
       breadcrumb={[{ title: 'My Tours' }]}
+      // ✅ Lebar tabel 100% mengikuti kontainer
+      containerClassName="w-full flex-1 flex flex-col"
     >
-      <div className="w-full space-y-6 p-4 md:p-6 max-w-screen-2xl mx-auto pb-20">
+      <div className="w-full space-y-6 p-4 md:p-6 pb-20">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-foreground">
