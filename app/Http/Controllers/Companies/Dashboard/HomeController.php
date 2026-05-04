@@ -34,7 +34,8 @@ class HomeController extends Controller
     $agentsCount = $isVendor ? DB::table('vendor_agent_partners')->where('vendor_id', $company->id)->where('status', 'active')->count() : 0;
 
     $walletBalance = DB::table('wallets')->where('holder_type', 'company')->where('holder_id', $company->id)->where('slug', 'main')->value('balance') ?? 0;
-    $aiCredit = DB::table('ai_credits')->where('company_id', $company->id)->value('balance') ?? 0;
+
+    $aiCreditBalance = DB::table('ai_credits')->where('company_id', $company->id)->value('balance') ?? 0;
 
     $stats = [
       'sales' => [
@@ -49,7 +50,7 @@ class HomeController extends Controller
         'agents' => $agentsCount,
         'customers' => $customersCount,
       ],
-      'ai_credit' => (float)$aiCredit,
+      'ai_credit' => (float)$aiCreditBalance,
       'wallet' => [
         'balance' => (float)$walletBalance
       ]
@@ -105,6 +106,8 @@ class HomeController extends Controller
         ->toArray();
     }
 
+    $credit = $company->aiCredit()->first() ?: (object)['balance' => 0, 'limit' => 0];
+
     return Inertia::render('companies/dashboard/home/index', [
       'agentSubscription' => $agentSubscription,
       'stats' => $stats,
@@ -113,6 +116,7 @@ class HomeController extends Controller
       'topAgents' => $topAgents,
       'recentNotifications' => $recentNotifications,
       'unreadNotificationsCount' => $unreadNotificationsCount,
+      'ai_credit' => $credit,
     ]);
   }
 }

@@ -1,5 +1,8 @@
 import { Button } from '@/components/ui/button';
+import { show as showRegister } from '@/routes/companies/register';
+import { Link } from '@inertiajs/react';
 import { Heart, Rocket, Sparkles } from 'lucide-react';
+import { FormattedMessage } from 'react-intl';
 
 export function CTASection() {
   const cards = [
@@ -57,7 +60,9 @@ export function CTASection() {
 
         <div className="text-center">
           <Button size="lg" className="text-lg px-10 py-6">
-            Gabung TravelBoost Sekarang
+            <Link href={showRegister()}>
+              <FormattedMessage defaultMessage="Gabung TravelBoost Sekarang" />
+            </Link>
           </Button>
         </div>
       </div>

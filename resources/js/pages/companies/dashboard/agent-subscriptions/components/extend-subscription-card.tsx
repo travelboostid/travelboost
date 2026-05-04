@@ -19,17 +19,28 @@ import {
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Spinner } from '@/components/ui/spinner';
 import usePageProps from '@/hooks/use-page-props';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { AgentSubscriptionPageProps } from '..';
 
 export default function ExtendSubscriptionCard() {
-  const [packageId, setPackageId] = useState('1');
-  const { company } = usePageProps<AgentSubscriptionPageProps>();
-  const createPayment = useCreateAgentSubscriptionPayment();
-  const { agentSubscriptionPackages } =
+  const { company, agentSubscriptionPackages } =
     usePageProps<AgentSubscriptionPageProps>();
+  const createPayment = useCreateAgentSubscriptionPayment();
+
+  const availablePackages = agentSubscriptionPackages.filter(
+    (pkg) => Number(pkg.price) > 0,
+  );
+
+  const [packageId, setPackageId] = useState<string>('');
+
+  useEffect(() => {
+    if (availablePackages.length > 0 && !packageId) {
+      setPackageId(availablePackages[0].id.toString());
+    }
+  }, [availablePackages, packageId]);
 
   const handlePay = () => {
+    if (!packageId) return;
     createPayment.mutate(
       {
         data: {
@@ -49,8 +60,9 @@ export default function ExtendSubscriptionCard() {
       },
     );
   };
+
   return (
-    <Card className="border-slate-200 bg-white shadow-sm">
+    <Card className="mt-6 border-slate-200 bg-white shadow-sm">
       <CardHeader>
         <CardTitle>Extend Subscription</CardTitle>
         <CardDescription>
@@ -59,15 +71,32 @@ export default function ExtendSubscriptionCard() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <RadioGroup value={packageId} onValueChange={setPackageId}>
-          {agentSubscriptionPackages.map((pkg) => (
-            <FieldLabel htmlFor={`${pkg.name}-plan`} key={pkg.id}>
-              <Field orientation="horizontal">
+        <RadioGroup
+          value={packageId}
+          onValueChange={setPackageId}
+          className="grid gap-4"
+        >
+          {availablePackages.map((pkg) => (
+            <FieldLabel
+              htmlFor={`${pkg.name}-plan`}
+              key={pkg.id}
+              className={`cursor-pointer rounded-xl border-2 p-4 transition-all ${
+                packageId === pkg.id.toString()
+                  ? 'border-primary bg-primary/5'
+                  : 'border-slate-200 hover:border-primary/50'
+              }`}
+            >
+              <Field
+                orientation="horizontal"
+                className="flex w-full items-center justify-between"
+              >
                 <FieldContent>
-                  <FieldTitle>{pkg.name}</FieldTitle>
-                  <FieldDescription>
-                    IDR {pkg.price.toLocaleString('id-ID')} /{' '}
-                    {pkg.duration_months} months
+                  <FieldTitle className="text-lg font-bold text-slate-900">
+                    {pkg.name}
+                  </FieldTitle>
+                  <FieldDescription className="text-sm font-medium text-slate-600">
+                    Rp {Number(pkg.price).toLocaleString('id-ID')},- /{' '}
+                    {pkg.duration_months} Months
                   </FieldDescription>
                 </FieldContent>
                 <RadioGroupItem
@@ -82,12 +111,12 @@ export default function ExtendSubscriptionCard() {
       <CardFooter>
         <CardAction>
           <Button
-            className="w-full"
+            className="w-full py-6 text-base font-bold"
             onClick={handlePay}
-            disabled={createPayment.isPending}
+            disabled={createPayment.isPending || !packageId}
           >
-            {createPayment.isPending && <Spinner />}
-            Pay Now
+            {createPayment.isPending && <Spinner className="mr-2" />}
+            Proceed to Payment
           </Button>
         </CardAction>
       </CardFooter>

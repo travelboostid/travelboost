@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AffiliateProfile;
 use App\Models\Company;
 use App\Models\User;
+use App\Models\Domain;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -180,16 +181,26 @@ class NetworkController extends Controller
 
     if (!$isAuthorized) abort(403);
 
-    $profile->update([
-      'status' => 'approved',
-      'approved_at' => now(),
-    ]);
+    DB::transaction(function () use ($profile) {
+      // 1. Update Profile (Approved)
+      $profile->update([
+        'status' => 'approved',
+        'approved_at' => now(),
+      ]);
 
-    if ($profile->user) {
-      $profile->user->update(['status' => 'active']);
-    }
+      // 2. Update User (Active)
+      if ($profile->user) {
+        $profile->user->update(['status' => 'active']);
+      }
 
-    return back()->with('success', 'Affiliate has been approved.');
+      // 3. Update Domain (Enabled)
+      $domain = Domain::where('owner_type', AffiliateProfile::class)->where('owner_id', $profile->id)->first();
+      if ($domain) {
+        $domain->update(['domain_enabled' => true]);
+      }
+    });
+
+    return back()->with('success', 'Affiliate has been approved and domain is now active.');
   }
 
   public function reject(Request $request, $id)
@@ -201,14 +212,24 @@ class NetworkController extends Controller
       abort(403);
     }
 
-    $profile->update([
-      'status' => 'rejected',
-    ]);
+    DB::transaction(function () use ($profile) {
+      // 1. Update Profile (Rejected)
+      $profile->update([
+        'status' => 'rejected',
+      ]);
 
-    if ($profile->user) {
-      $profile->user->update(['status' => 'inactive']);
-    }
+      // 2. Update User (Inactive)
+      if ($profile->user) {
+        $profile->user->update(['status' => 'inactive']);
+      }
 
-    return back()->with('success', 'Account has been deactivated.');
+      // 3. Update Domain (Disabled)
+      $domain = Domain::where('owner_type', AffiliateProfile::class)->where('owner_id', $profile->id)->first();
+      if ($domain) {
+        $domain->update(['domain_enabled' => false]);
+      }
+    });
+
+    return back()->with('success', 'Account has been deactivated and domain access restricted.');
   }
 }

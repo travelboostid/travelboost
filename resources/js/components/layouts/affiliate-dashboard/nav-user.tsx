@@ -9,13 +9,15 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { DEFAULT_PHOTO } from '@/config';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
-import { router } from '@inertiajs/react';
-import { LogOut, Moon, Sun } from 'lucide-react';
+import { Link, router, usePage } from '@inertiajs/react';
+import { Bell, LogOut, Moon, Sun } from 'lucide-react';
 import { useTheme } from 'next-themes';
 
 export function NavUser() {
   const { auth } = usePageSharedDataProps();
   const { resolvedTheme, setTheme } = useTheme();
+
+  const { unreadNotificationsCount } = usePage<any>().props;
 
   const user = auth?.user;
   const profile = user?.affiliate_profile || user?.affiliateProfile;
@@ -24,6 +26,8 @@ export function NavUser() {
   const avatarUrl = profile?.profile_photo_path
     ? `/storage/${profile.profile_photo_path}`
     : user?.photo_url || DEFAULT_PHOTO;
+
+  const hasUnread = unreadNotificationsCount > 0;
 
   return (
     <DropdownMenu>
@@ -36,16 +40,26 @@ export function NavUser() {
             {tier}
           </span>
         </div>
-        <Avatar className="h-9 w-9 rounded-xl border border-slate-200 dark:border-slate-700">
-          <AvatarImage
-            src={avatarUrl}
-            alt={user?.name}
-            className="object-cover"
-          />
-          <AvatarFallback className="rounded-xl bg-emerald-100 text-emerald-700 font-bold dark:bg-emerald-900 dark:text-emerald-300">
-            {user?.name?.charAt(0)}
-          </AvatarFallback>
-        </Avatar>
+
+        <div className="relative">
+          <Avatar className="h-9 w-9 rounded-xl border border-slate-200 dark:border-slate-700">
+            <AvatarImage
+              src={avatarUrl}
+              alt={user?.name}
+              className="object-cover"
+            />
+            <AvatarFallback className="rounded-xl bg-emerald-100 text-emerald-700 font-bold dark:bg-emerald-900 dark:text-emerald-300">
+              {user?.name?.charAt(0)}
+            </AvatarFallback>
+          </Avatar>
+
+          {hasUnread && (
+            <span className="absolute -top-1 -right-1 flex h-3 w-3">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500 border-2 border-white dark:border-slate-900"></span>
+            </span>
+          )}
+        </div>
       </DropdownMenuTrigger>
 
       <DropdownMenuContent className="w-56" align="end" sideOffset={8}>
@@ -71,14 +85,40 @@ export function NavUser() {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
 
+        <DropdownMenuItem asChild>
+          <Link
+            href="/affiliate/dashboard/notifications"
+            className="cursor-pointer py-2 flex w-full items-center justify-between"
+          >
+            <div className="flex items-center">
+              <div className="relative mr-2">
+                <Bell className="h-4 w-4" />
+                {hasUnread && (
+                  <span className="absolute -top-0.5 -right-0.5 flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                  </span>
+                )}
+              </div>
+              <span>Notifications</span>
+            </div>
+            {/* Lencana Angka Notifikasi */}
+            {hasUnread && (
+              <span className="bg-red-100 text-red-600 text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                {unreadNotificationsCount} New
+              </span>
+            )}
+          </Link>
+        </DropdownMenuItem>
+
         <DropdownMenuItem
           onClick={() => setTheme(resolvedTheme === 'light' ? 'dark' : 'light')}
           className="cursor-pointer py-2"
         >
           {resolvedTheme === 'light' ? (
-            <Moon className="mr-2 h-4 w-4" />
+            <Moon className="mr-0 h-4 w-4" />
           ) : (
-            <Sun className="mr-2 h-4 w-4" />
+            <Sun className="mr-0 h-4 w-4" />
           )}
           <span>Toggle Theme</span>
         </DropdownMenuItem>

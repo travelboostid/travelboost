@@ -22,13 +22,13 @@ class BookingFactory extends Factory
     public function definition(): array
     {
         return [
-            'booking_number' => 'BKG-'.$this->faker->unique()->strtoupper($this->faker->bothify('?????-#####')),
+            'booking_number' => 'BKG-'.strtoupper($this->faker->unique()->bothify('?????-#####')),
             'user_id' => User::factory(),
             'vendor_id' => Company::factory(),
             'agent_id' => null,
             'tour_id' => Tour::factory(),
             'departure_date' => $this->faker->dateTimeBetween('+1 week', '+1 month')->format('Y-m-d'),
-            'status' => $this->faker->randomElement(array_map(fn ($enum) => $enum->value, BookingStatus::cases())),
+            'status' => $this->faker->randomElement(BookingStatus::cases()),
             'pax_adult' => $this->faker->numberBetween(1, 4),
             'pax_child' => $this->faker->numberBetween(0, 2),
             'pax_infant' => $this->faker->numberBetween(0, 1),

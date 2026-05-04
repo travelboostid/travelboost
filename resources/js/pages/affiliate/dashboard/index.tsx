@@ -1,8 +1,7 @@
-// index.tsx
 import AffiliateDashboardLayout from '@/components/layouts/affiliate-dashboard';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardTitle } from '@/components/ui/card';
 import {
   Table,
   TableBody,
@@ -13,23 +12,21 @@ import {
 } from '@/components/ui/table';
 import { formatIDR } from '@/lib/utils';
 import { Head, Link } from '@inertiajs/react';
-import { AlertCircle, Clock, LockKeyhole, Wallet } from 'lucide-react';
+import dayjs from 'dayjs';
+import relativeTime from 'dayjs/plugin/relativeTime';
+import { AlertCircle, Bell, Clock, LockKeyhole, Wallet } from 'lucide-react';
 
-const recentAgents = [
-  { id: 'AG-101', name: 'Budi Travel', package: 'Enterprise', status: 'Paid' },
-  { id: 'AG-102', name: 'Sinar Tour', package: 'Pro', status: 'Pending' },
-];
-
-const networkPerformance = [
-  { name: 'Diana Fitri (MA)', revenue: 5000000, status: 'Active' },
-  { name: 'Agus Pramono', revenue: 2500000, status: 'Active' },
-];
+dayjs.extend(relativeTime);
 
 export default function AffiliateDashboardIndex({
   auth,
   wallet_balance = 0,
   tier = 'affiliate',
   stats = {},
+  unreadNotificationsCount = 0,
+  recentNotifications = [],
+  recentAgents = [],
+  networkPerformance = [],
 }: any) {
   const user = auth?.user || { name: 'Affiliate Partner' };
   const profile = user?.affiliate_profile || user?.affiliateProfile;
@@ -126,235 +123,368 @@ export default function AffiliateDashboardIndex({
         <div
           className={`space-y-6 transition-all duration-300 ${isPendingApproval ? 'blur-[4px] opacity-40 pointer-events-none select-none grayscale-[30%]' : ''}`}
         >
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-card p-5 rounded-2xl border border-border shadow-sm">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
             <div>
-              <h1 className="text-2xl font-bold tracking-tight text-foreground uppercase">
+              <h1 className="text-2xl font-bold tracking-tight text-slate-800 uppercase">
                 Affiliate Dashboard
               </h1>
-              <p className="text-muted-foreground mt-1">
-                Welcome back, {user.name}!
+              <p className="text-sm text-slate-500 mt-1">
+                Welcome back,{' '}
+                <span className="font-semibold text-slate-700">
+                  {user.name}
+                </span>
+                !
               </p>
             </div>
-            <div className="flex items-center gap-4 bg-primary/10 px-5 py-3 rounded-xl border border-primary/20">
-              <div className="p-2 bg-primary/20 rounded-full text-primary">
+            <div className="flex items-center gap-4 bg-slate-50 px-5 py-3 rounded-xl border border-slate-100">
+              <div className="p-2.5 bg-white rounded-full text-primary shadow-sm border border-slate-100">
                 <Wallet className="w-5 h-5" />
               </div>
               <div>
-                <p className="text-xs font-semibold text-primary">
+                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                   Wallet Balance
                 </p>
-                <p className="text-xl font-bold text-primary">
+                <p className="text-xl font-bold text-slate-800 mt-0.5">
                   {formatIDR(wallet_balance)}
                 </p>
               </div>
             </div>
           </div>
 
-          <div
-            className={`grid gap-4 ${!isPartner && !isMaster ? 'grid-cols-1 md:grid-cols-3' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4'}`}
-          >
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-start">
             {isPartner && (
               <>
-                <Card className="shadow-sm border-border hover:shadow-md transition-all">
-                  <CardContent className="p-5">
-                    <p className="text-sm font-medium text-muted-foreground mb-2">
-                      Total Master Affiliates
+                <Card className="shadow-sm border border-slate-100 bg-white flex flex-col h-full">
+                  <div className="p-5 flex-1 flex flex-col">
+                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+                      TOTAL NETWORK
                     </p>
-                    <p className="text-2xl font-bold text-foreground">
-                      {stats.total_ma || 0}
-                    </p>
-                  </CardContent>
+                    <div className="flex-1 flex items-center">
+                      <div className="grid grid-cols-2 w-full divide-x divide-slate-100">
+                        <div className="pr-4">
+                          <h3 className="text-3xl font-bold text-slate-800">
+                            {stats.total_ma || 0}
+                          </h3>
+                          <p className="text-[11px] text-slate-500 font-medium mt-1">
+                            Master Affiliates
+                          </p>
+                        </div>
+                        <div className="pl-4">
+                          <h3 className="text-3xl font-bold text-slate-800">
+                            {stats.total_affiliate || 0}
+                          </h3>
+                          <p className="text-[11px] text-slate-500 font-medium mt-1">
+                            Affiliators
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="mt-4 pt-4 border-t border-slate-100">
+                      <p className="text-[10px] text-slate-400">
+                        All registered partners
+                      </p>
+                    </div>
+                  </div>
                 </Card>
-                <Card className="shadow-sm border-border hover:shadow-md transition-all">
-                  <CardContent className="p-5">
-                    <p className="text-sm font-medium text-muted-foreground mb-2">
-                      Total Affiliators
+                <Card className="shadow-sm border border-slate-100 bg-white flex flex-col h-full">
+                  <div className="p-5 flex-1 flex flex-col">
+                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+                      AGENTS
                     </p>
-                    <p className="text-2xl font-bold text-foreground">
-                      {stats.total_affiliate || 0}
-                    </p>
-                  </CardContent>
-                </Card>
-                <Card className="shadow-sm border-border hover:shadow-md transition-all">
-                  <CardContent className="p-5">
-                    <p className="text-sm font-medium text-muted-foreground mb-2">
-                      Total Agent Networks
-                    </p>
-                    <p className="text-2xl font-bold text-foreground">
+                    <h3 className="text-3xl font-bold text-slate-800 flex-1 flex items-center">
                       {stats.total_agent || 0}
-                    </p>
-                  </CardContent>
+                    </h3>
+                    <div className="mt-4 pt-4 border-t border-slate-100">
+                      <p className="text-[10px] text-slate-400">
+                        Active agents from your networks
+                      </p>
+                    </div>
+                  </div>
                 </Card>
               </>
             )}
 
             {isMaster && (
               <>
-                <Card className="shadow-sm border-border hover:shadow-md transition-all">
-                  <CardContent className="p-5">
-                    <p className="text-sm font-medium text-muted-foreground mb-2">
-                      Total Agent Networks
+                <Card className="shadow-sm border border-slate-100 bg-white flex flex-col h-full">
+                  <div className="p-5 flex-1 flex flex-col">
+                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+                      AFFILIATES STATUS
                     </p>
-                    <p className="text-2xl font-bold text-foreground">
+                    <div className="flex-1 flex items-center">
+                      <div className="grid grid-cols-2 w-full divide-x divide-slate-100">
+                        <div className="pr-4">
+                          <h3 className="text-3xl font-bold text-slate-800">
+                            {stats.total_affiliate_approved || 0}
+                          </h3>
+                          <p className="text-[11px] text-slate-500 font-medium mt-1">
+                            Active
+                          </p>
+                        </div>
+                        <div className="pl-4">
+                          <h3 className="text-3xl font-bold text-amber-600">
+                            {stats.total_affiliate_pending || 0}
+                          </h3>
+                          <p className="text-[11px] text-amber-600 font-medium mt-1">
+                            Pending Approvals
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="mt-4 pt-4 border-t border-slate-100">
+                      <p className="text-[10px] text-slate-400">
+                        Total affiliates in your network
+                      </p>
+                    </div>
+                  </div>
+                </Card>
+                <Card className="shadow-sm border border-slate-100 bg-white flex flex-col h-full">
+                  <div className="p-5 flex-1 flex flex-col">
+                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+                      AGENT NETWORKS
+                    </p>
+                    <h3 className="text-3xl font-bold text-slate-800 flex-1 flex items-center">
                       {stats.total_agent || 0}
-                    </p>
-                  </CardContent>
-                </Card>
-                <Card className="shadow-sm border-border hover:shadow-md transition-all">
-                  <CardContent className="p-5">
-                    <p className="text-sm font-medium text-muted-foreground mb-2">
-                      Total Affiliators
-                    </p>
-                    <p className="text-2xl font-bold text-foreground">
-                      {stats.total_affiliate_approved || 0}
-                    </p>
-                  </CardContent>
-                </Card>
-                <Card className="shadow-sm border-amber-200 bg-amber-50/30 hover:shadow-md transition-all">
-                  <CardContent className="p-5">
-                    <p className="text-sm font-medium text-amber-700 mb-2">
-                      Pending Approvals
-                    </p>
-                    <p className="text-2xl font-bold text-amber-600">
-                      {stats.total_affiliate_pending || 0}
-                    </p>
-                  </CardContent>
+                    </h3>
+                    <div className="mt-4 pt-4 border-t border-slate-100">
+                      <p className="text-[10px] text-slate-400">
+                        Active agents from your networks
+                      </p>
+                    </div>
+                  </div>
                 </Card>
               </>
             )}
 
             {!isPartner && !isMaster && (
               <>
-                <Card className="shadow-sm border-amber-200 bg-amber-50/30 hover:shadow-md transition-all">
-                  <CardContent className="p-5">
-                    <p className="text-sm font-medium text-amber-700 mb-2">
-                      Pending Agents (Unpaid)
+                <Card className="shadow-sm border border-slate-100 bg-white flex flex-col h-full">
+                  <div className="p-5 flex-1 flex flex-col">
+                    <p className="text-[11px] font-bold text-amber-600 uppercase tracking-wider mb-2">
+                      PENDING AGENTS
                     </p>
-                    <p className="text-2xl font-bold text-amber-600">
+                    <h3 className="text-3xl font-bold text-amber-600 flex-1 flex items-center">
                       {stats.total_agent_pending || 0}
-                    </p>
-                  </CardContent>
+                    </h3>
+                    <div className="mt-4 pt-4 border-t border-slate-100">
+                      <p className="text-[10px] text-slate-400">
+                        Unpaid agent registrations
+                      </p>
+                    </div>
+                  </div>
                 </Card>
-                <Card className="shadow-sm border-border hover:shadow-md transition-all">
-                  <CardContent className="p-5">
-                    <p className="text-sm font-medium text-muted-foreground mb-2">
-                      Subscribed Agents
+                <Card className="shadow-sm border border-slate-100 bg-white flex flex-col h-full">
+                  <div className="p-5 flex-1 flex flex-col">
+                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+                      SUBSCRIBED AGENTS
                     </p>
-                    <p className="text-2xl font-bold text-foreground">
+                    <h3 className="text-3xl font-bold text-slate-800 flex-1 flex items-center">
                       {stats.total_agent_subscribed || 0}
-                    </p>
-                  </CardContent>
+                    </h3>
+                    <div className="mt-4 pt-4 border-t border-slate-100">
+                      <p className="text-[10px] text-slate-400">
+                        Active and paid subscriptions
+                      </p>
+                    </div>
+                  </div>
                 </Card>
               </>
             )}
 
-            <Card className="shadow-sm border-primary/20 bg-primary/5 hover:shadow-md transition-all">
-              <CardContent className="p-5">
-                <p className="text-sm font-medium text-primary mb-2">
-                  Total Earned Commission
+            <Card className="shadow-sm border border-slate-100 bg-white flex flex-col h-full overflow-hidden relative">
+              <div className="p-5 flex-1 flex flex-col relative z-10">
+                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+                  EARNED COMMISSION
                 </p>
-                <p className="text-2xl font-bold text-primary">
+                <h3 className="text-3xl font-bold text-primary flex-1 flex items-center">
                   {formatIDR(stats.total_commission || 0)}
-                </p>
-              </CardContent>
+                </h3>
+                <div className="mt-4 pt-4 border-t border-slate-100">
+                  <p className="text-[10px] text-slate-400">
+                    Total income over time
+                  </p>
+                </div>
+              </div>
+              <Wallet className="absolute right-[-10px] top-[15px] w-16 h-16 text-slate-50 rotate-[-10deg] z-0 pointer-events-none" />
+            </Card>
+
+            <Card className="shadow-sm border border-slate-100 bg-white flex flex-col h-full">
+              <div className="p-5 flex-1 flex flex-col">
+                <div className="flex items-center justify-between mb-4">
+                  <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                    NOTIFICATIONS
+                  </p>
+                  <div className="relative">
+                    <Bell className="h-4 w-4 text-slate-400" />
+                    {unreadNotificationsCount > 0 && (
+                      <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span>
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div className="flex-1 flex flex-col">
+                  {recentNotifications?.length > 0 ? (
+                    <div className="divide-y divide-slate-50 border-t border-slate-100 pt-2">
+                      {recentNotifications.map((notif: any) => (
+                        <div
+                          key={notif.id}
+                          className="py-2.5 flex items-start gap-3"
+                        >
+                          <div className="mt-1 shrink-0">
+                            {!notif.read_at ? (
+                              <div className="h-1.5 w-1.5 rounded-full bg-red-500" />
+                            ) : (
+                              <div className="h-1.5 w-1.5 rounded-full bg-slate-200" />
+                            )}
+                          </div>
+                          <div className="flex flex-col overflow-hidden">
+                            <span className="text-xs font-medium text-slate-700 truncate">
+                              {notif.data?.title ||
+                                notif.data?.message ||
+                                'System Notification'}
+                            </span>
+                            <span className="text-[9px] text-slate-400 mt-0.5">
+                              {dayjs(notif.created_at).fromNow()}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="flex-1 flex items-center justify-center text-[10px] text-slate-400 border-t border-slate-100">
+                      No new notifications.
+                    </div>
+                  )}
+                </div>
+              </div>
             </Card>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <Card className="shadow-sm border-border overflow-hidden">
-              <CardHeader className="bg-muted/50 border-b border-border flex flex-row items-center justify-between py-4">
-                <CardTitle className="text-sm font-bold uppercase tracking-tight text-foreground">
+            <Card className="shadow-sm border border-slate-100 overflow-hidden bg-white">
+              <div className="bg-slate-50/50 border-b border-slate-100 flex flex-row items-center justify-between py-4 px-6">
+                <CardTitle className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
                   Recent Registrations
                 </CardTitle>
                 <a
                   href="/affiliate/dashboard/agent/list"
-                  className="text-xs font-semibold text-primary hover:text-primary/80"
+                  className="text-xs font-semibold text-primary hover:text-primary/80 transition-colors"
                 >
                   View all
                 </a>
-              </CardHeader>
+              </div>
               <Table>
                 <TableHeader>
-                  <TableRow className="hover:bg-transparent">
-                    <TableHead className="text-xs font-semibold">
+                  <TableRow className="hover:bg-transparent border-slate-100">
+                    <TableHead className="text-[11px] font-semibold text-slate-400 uppercase h-10 px-6">
                       Agent Name
                     </TableHead>
-                    <TableHead className="text-xs font-semibold">
+                    <TableHead className="text-[11px] font-semibold text-slate-400 uppercase h-10">
                       Package
                     </TableHead>
-                    <TableHead className="text-xs font-semibold text-right">
+                    <TableHead className="text-[11px] font-semibold text-slate-400 uppercase h-10 text-right px-6">
                       Status
                     </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {recentAgents.map((agent) => (
-                    <TableRow key={agent.id}>
-                      <TableCell className="text-xs text-muted-foreground font-medium">
-                        {agent.name}
-                      </TableCell>
-                      <TableCell className="text-xs text-muted-foreground">
-                        {agent.package}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Badge
-                          variant="outline"
-                          className={`text-[10px] px-2 py-0 ${agent.status === 'Paid' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200'}`}
-                        >
-                          {agent.status}
-                        </Badge>
+                  {recentAgents.length > 0 ? (
+                    recentAgents.map((agent: any) => (
+                      <TableRow
+                        key={agent.id}
+                        className="border-slate-50 hover:bg-slate-50/50 transition-colors"
+                      >
+                        <TableCell className="text-xs text-slate-700 font-medium px-6 py-3">
+                          {agent.name}
+                        </TableCell>
+                        <TableCell className="text-xs text-slate-500 py-3">
+                          {agent.package}
+                        </TableCell>
+                        <TableCell className="text-right px-6 py-3">
+                          <Badge
+                            variant="outline"
+                            className={`text-[10px] px-2 py-0.5 font-medium border-0 ${agent.status === 'Paid' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}`}
+                          >
+                            {agent.status}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell
+                        colSpan={3}
+                        className="text-center text-xs text-slate-400 py-8"
+                      >
+                        No recent registrations found.
                       </TableCell>
                     </TableRow>
-                  ))}
+                  )}
                 </TableBody>
               </Table>
             </Card>
 
-            <Card className="shadow-sm border-border overflow-hidden">
-              <CardHeader className="bg-muted/50 border-b border-border flex flex-row items-center justify-between py-4">
-                <CardTitle className="text-sm font-bold uppercase tracking-tight text-foreground">
+            <Card className="shadow-sm border border-slate-100 overflow-hidden bg-white">
+              <div className="bg-slate-50/50 border-b border-slate-100 flex flex-row items-center justify-between py-4 px-6">
+                <CardTitle className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
                   Network Performance
                 </CardTitle>
                 <a
                   href="/affiliate/dashboard/network/list"
-                  className="text-xs font-semibold text-primary hover:text-primary/80"
+                  className="text-xs font-semibold text-primary hover:text-primary/80 transition-colors"
                 >
                   View all
                 </a>
-              </CardHeader>
+              </div>
               <Table>
                 <TableHeader>
-                  <TableRow className="hover:bg-transparent">
-                    <TableHead className="text-xs font-semibold">
+                  <TableRow className="hover:bg-transparent border-slate-100">
+                    <TableHead className="text-[11px] font-semibold text-slate-400 uppercase h-10 px-6">
                       Affiliate Name
                     </TableHead>
-                    <TableHead className="text-xs font-semibold">
+                    <TableHead className="text-[11px] font-semibold text-slate-400 uppercase h-10">
                       Revenue
                     </TableHead>
-                    <TableHead className="text-xs font-semibold text-right">
+                    <TableHead className="text-[11px] font-semibold text-slate-400 uppercase h-10 text-right px-6">
                       Status
                     </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {networkPerformance.map((net, idx) => (
-                    <TableRow key={idx}>
-                      <TableCell className="font-semibold text-xs text-foreground">
-                        {net.name}
-                      </TableCell>
-                      <TableCell className="text-xs font-medium text-primary">
-                        {formatIDR(net.revenue)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Badge
-                          variant="outline"
-                          className="text-[10px] px-2 py-0 bg-emerald-50 text-emerald-700 border-emerald-200"
-                        >
-                          {net.status}
-                        </Badge>
+                  {networkPerformance.length > 0 ? (
+                    networkPerformance.map((net: any, idx: number) => (
+                      <TableRow
+                        key={idx}
+                        className="border-slate-50 hover:bg-slate-50/50 transition-colors"
+                      >
+                        <TableCell className="font-medium text-xs text-slate-700 px-6 py-3">
+                          {net.name}
+                        </TableCell>
+                        <TableCell className="text-xs font-semibold text-primary py-3">
+                          {formatIDR(net.revenue)}
+                        </TableCell>
+                        <TableCell className="text-right px-6 py-3">
+                          <Badge
+                            variant="outline"
+                            className={`text-[10px] px-2 py-0.5 font-medium border-0 ${net.status === 'Approved' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}`}
+                          >
+                            {net.status}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell
+                        colSpan={3}
+                        className="text-center text-xs text-slate-400 py-8"
+                      >
+                        No downlines network found.
                       </TableCell>
                     </TableRow>
-                  ))}
+                  )}
                 </TableBody>
               </Table>
             </Card>

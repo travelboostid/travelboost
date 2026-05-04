@@ -8,6 +8,8 @@ use App\Enums\CompanyType;
 use App\Enums\UserStatus;
 use App\Http\Controllers\Controller;
 use App\Models\AffiliateProfile;
+use App\Models\AgentSubscription;
+use App\Models\AgentSubscriptionPackage;
 use App\Models\Company;
 use App\Models\CompanyTeam;
 use Illuminate\Http\Request;
@@ -20,7 +22,6 @@ class OnboardingController extends Controller
 {
   public function index()
   {
-    /** @var \App\Models\User $user */
     $user = Auth::user();
     $domain = Context::get('domain');
 
@@ -47,6 +48,7 @@ class OnboardingController extends Controller
 
   public function createCompany(Request $request)
   {
+
     /** @var \App\Models\User $user */
     $user = Auth::user();
 
@@ -80,6 +82,7 @@ class OnboardingController extends Controller
 
     $company->domain()->create([
       'subdomain' => $validated['subdomain'],
+      'domain_enabled' => false,
     ]);
 
     CompanyTeam::create([
@@ -89,11 +92,29 @@ class OnboardingController extends Controller
       'status' => CompanyTeamStatus::ACTIVE,
     ]);
 
+    $trialPackage = AgentSubscriptionPackage::where('name', 'Free Trial 1 Month')->first();
+
+    if ($trialPackage) {
+      AgentSubscription::create([
+        'company_id' => $company->id,
+        'package_id' => $trialPackage->id,
+        'started_at' => now(),
+        'ended_at' => now()->addMonth(),
+      ]);
+    }
+
     $user->update([
       'status' => UserStatus::ACTIVE,
     ]);
 
     $user->addRole("company:{$company->id}:superadmin", "company:{$company->id}");
+
+    if (isset($company->referred_by) && $company->referred_by != null) {
+      $uplineUser = \App\Models\User::find($company->referred_by);
+      if ($uplineUser) {
+        $uplineUser->notify(new \App\Notifications\NewReferralNotification($company->name));
+      }
+    }
 
     return redirect()->route('companies.dashboard.index', [
       'company' => $company->username,
@@ -102,6 +123,7 @@ class OnboardingController extends Controller
 
   public function acceptInvitation(CompanyTeam $invitation)
   {
+
     /** @var \App\Models\User $user */
     $user = Auth::user();
 
@@ -135,7 +157,6 @@ class OnboardingController extends Controller
 
   public function declineInvitations()
   {
-    /** @var \App\Models\User $user */
     $user = Auth::user();
 
     CompanyTeam::where('invite_email', $user->email)

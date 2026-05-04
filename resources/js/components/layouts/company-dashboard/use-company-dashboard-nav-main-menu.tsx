@@ -12,6 +12,7 @@ import {
   WalletIcon,
 } from 'lucide-react';
 import type { HTMLAttributeAnchorTarget } from 'react';
+import React from 'react';
 import { FormattedMessage } from 'react-intl';
 
 type MenuItemBase = {
@@ -22,6 +23,7 @@ type MenuItemBase = {
   icon?: LucideIcon;
   visibleToPermissions?: string[];
   visibleToCompanyTypes?: string[];
+  disabled?: boolean;
 };
 
 type MenuItem =
@@ -39,7 +41,7 @@ type MenuItem =
     });
 
 export function useCompanyDashboardNavMainMenu() {
-  const { company, auth } = usePageSharedDataProps();
+  const { company, auth, subscription_rules } = usePageSharedDataProps() as any;
 
   const { data } = useGetCompanies(
     { type: 'vendor' },
@@ -55,6 +57,23 @@ export function useCompanyDashboardNavMainMenu() {
   const port = window.location.port ? `:${window.location.port}` : '';
 
   const companySubdomain = `${protocol}//${company.username}.${baseHost}${port}`;
+  const isMarketingDisabled = !!subscription_rules?.isMarketingDisabled;
+
+  const renderTitle = (node: React.ReactNode, isLocked: boolean) => {
+    if (isLocked) {
+      return (
+        <span className="pointer-events-none block w-full cursor-not-allowed select-none opacity-50">
+          {node}
+        </span>
+      );
+    }
+    return node;
+  };
+
+  const handleLockedClick = (e: any) => {
+    e?.preventDefault();
+    e?.stopPropagation();
+  };
 
   const unfilteredMenus = [
     {
@@ -70,7 +89,7 @@ export function useCompanyDashboardNavMainMenu() {
       urlOrAction: '#',
       icon: FolderSearchIcon,
       items:
-        (data?.data || []).map((vendor) => ({
+        (data?.data || []).map((vendor: any) => ({
           id: `vendor-tours.${vendor.username}`,
           title: vendor.name,
           urlOrAction: `/companies/${company.username}/dashboard/vendors/${vendor.username}/tours`,
@@ -201,24 +220,44 @@ export function useCompanyDashboardNavMainMenu() {
       items: [
         {
           id: 'marketings.landing-page.edit',
-          title: <FormattedMessage defaultMessage="Edit Landing Page" />,
-          urlOrAction: `/companies/${company.username}/dashboard/page/edit`,
+          title: renderTitle(
+            <FormattedMessage defaultMessage="Edit Landing Page" />,
+            isMarketingDisabled,
+          ),
+          urlOrAction: isMarketingDisabled
+            ? (handleLockedClick as any)
+            : `/companies/${company.username}/dashboard/page/edit`,
+          disabled: isMarketingDisabled,
         },
         {
           id: 'marketings.landing-page.view',
-          title: <FormattedMessage defaultMessage="My Landing Page" />,
-          urlOrAction: companySubdomain,
-          target: '_blank',
+          title: renderTitle(
+            <FormattedMessage defaultMessage="My Landing Page" />,
+            isMarketingDisabled,
+          ),
+          urlOrAction: isMarketingDisabled
+            ? (handleLockedClick as any)
+            : companySubdomain,
+          target: isMarketingDisabled ? undefined : '_blank',
+          disabled: isMarketingDisabled,
         },
         {
           id: 'marketings.socmed-analytics',
-          title: <FormattedMessage defaultMessage="Social Media Analytics" />,
-          urlOrAction: `#`,
+          title: renderTitle(
+            <FormattedMessage defaultMessage="Social Media Analytics" />,
+            isMarketingDisabled,
+          ),
+          urlOrAction: isMarketingDisabled ? (handleLockedClick as any) : '#',
+          disabled: isMarketingDisabled,
         },
         {
           id: 'marketings.budgeting',
-          title: <FormattedMessage defaultMessage="Promotion Budgetting" />,
-          urlOrAction: `#`,
+          title: renderTitle(
+            <FormattedMessage defaultMessage="Promotion Budgetting" />,
+            isMarketingDisabled,
+          ),
+          urlOrAction: isMarketingDisabled ? (handleLockedClick as any) : '#',
+          disabled: isMarketingDisabled,
         },
       ],
       visibleToCompanyTypes: ['agent'],
@@ -232,12 +271,12 @@ export function useCompanyDashboardNavMainMenu() {
         {
           id: 'reports.room-listings',
           title: <FormattedMessage defaultMessage="Room Listings" />,
-          urlOrAction: `#`,
+          urlOrAction: '#',
         },
         {
           id: 'reports.inventories',
           title: <FormattedMessage defaultMessage="Inventory Status" />,
-          urlOrAction: `#`,
+          urlOrAction: '#',
         },
       ],
     },
