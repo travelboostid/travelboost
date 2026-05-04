@@ -33,7 +33,7 @@ class AppConfigController extends Controller
   {
     $data = request()->validate([
       'description' => 'nullable|string',
-      'value' => 'nullable|json',
+      'value' => 'nullable|array',
     ]);
 
     $appConfig->update($data);
