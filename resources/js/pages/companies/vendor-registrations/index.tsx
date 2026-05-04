@@ -151,10 +151,10 @@ export default function Page({ data }: PageProps) {
   return (
     <CompanyDashboardLayout
       containerClassName="p-4"
-      breadcrumb={[{ title: 'Settings' }, { title: 'Vendor Registrations' }]}
+      breadcrumb={[{ title: 'Settings' }, { title: 'Registration to Vendor' }]}
       openMenuIds={['settings']}
     >
-      <Head title="Vendor Registrations" />
+      <Head title="Registration to Vendor" />
       <DataTable table={table} renderEmptyState={<EmptyRegistrations />}>
         <DataTableToolbar table={table} />
       </DataTable>

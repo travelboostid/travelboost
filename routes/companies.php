@@ -13,6 +13,7 @@ use App\Http\Controllers\Companies\Dashboard\NotificationController;
 use App\Http\Controllers\Companies\Dashboard\PageController;
 use App\Http\Controllers\Companies\Dashboard\ParameterVendorController;
 use App\Http\Controllers\Companies\Dashboard\PaymentController;
+use App\Http\Controllers\Companies\Dashboard\PriceCategoryController;
 use App\Http\Controllers\Companies\Dashboard\ProfileController;
 use App\Http\Controllers\Companies\Dashboard\RoleController;
 use App\Http\Controllers\Companies\Dashboard\TeamController;
@@ -69,6 +70,7 @@ Route::prefix('companies/{company:username}/dashboard')->middleware(['auth', 'co
 
   Route::resource('agent-tours', AgentTourController::class);
   Route::resource('categories', CategoryController::class);
+  Route::resource('price-categories', PriceCategoryController::class);
   Route::resource('wallets', WalletController::class);
   Route::resource('payments', PaymentController::class);
   Route::post('payments/{payment}/cancel', [PaymentController::class, 'cancel'])->name('payments.cancel');

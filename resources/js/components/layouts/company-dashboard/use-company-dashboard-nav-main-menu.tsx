@@ -112,9 +112,9 @@ export function useCompanyDashboardNavMainMenu() {
           urlOrAction: `/companies/${company.username}/dashboard/categories`,
         },
         {
-          id: 'tours.categories',
+          id: 'tours.price-categories',
           title: <FormattedMessage defaultMessage="Price Categories" />,
-          urlOrAction: `/companies/${company.username}/dashboard/categories`,
+          urlOrAction: `/companies/${company.username}/dashboard/price-categories`,
         },
       ],
       visibleToCompanyTypes: ['vendor'],
@@ -275,7 +275,7 @@ export function useCompanyDashboardNavMainMenu() {
         },
         {
           id: 'settings.vendor-registrations',
-          title: <FormattedMessage defaultMessage="Vendor Registrations" />,
+          title: <FormattedMessage defaultMessage="Registration to Vendor" />,
           urlOrAction: `/companies/${company.username}/dashboard/vendor-registrations`,
           visibleToCompanyTypes: ['agent'],
         },
