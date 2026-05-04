@@ -14,7 +14,11 @@ class EnsureAgentSubscriptionIsActive
   public function handle(Request $request, Closure $next): Response
   {
     $company = $request->route('company');
-    $subscription = AgentSubscription::where('company_id', $company->id)->latest()->first();
+
+    $subscription = AgentSubscription::with('package')
+      ->where('company_id', $company->id)
+      ->latest()
+      ->first();
 
     $isMarketingDisabled = false;
     $isSubscriptionExpired = false;
@@ -22,7 +26,7 @@ class EnsureAgentSubscriptionIsActive
     if (!$subscription) {
       $isSubscriptionExpired = true;
     } else {
-      $isFreeTrial = $subscription->package && $subscription->package->price == 0;
+      $isFreeTrial = $subscription->package && $subscription->package->price <= 0;
 
       if ($subscription->status !== AgentSubscriptionStatus::ACTIVE) {
         $isSubscriptionExpired = true;

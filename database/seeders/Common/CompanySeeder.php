@@ -19,7 +19,6 @@ class CompanySeeder extends Seeder
 {
   public function run(): void
   {
-    // Mendifinisikan paket langganan (subscription package) yang akan dibuat
     $packages = [
       [
         'name' => 'Free Trial 1 Month',
@@ -39,7 +38,6 @@ class CompanySeeder extends Seeder
       AgentSubscriptionPackage::factory()->create($package);
     }
 
-    // Mendifinisikan perusahaan (company) yang akan dibuat
     $companies = [
       [
         'username' => 'vendor',
@@ -74,10 +72,9 @@ class CompanySeeder extends Seeder
         'phone' => '0123456789',
       ]);
 
-      // Update: Menambahkan domain_enabled => true saat membuat domain perusahaan
       $company->domain()->create([
         'subdomain' => $seed['subdomain'],
-        'domain_enabled' => true, // <-- Baris ini yang ditambahkan
+        'domain_enabled' => true,
       ]);
 
       $user->companies()->attach($company->id, [
@@ -92,7 +89,7 @@ class CompanySeeder extends Seeder
       if ($company['type'] === CompanyType::AGENT) {
         AgentSubscription::create([
           'company_id' => $company->id,
-          'package_id' => 1,
+          'package_id' => 2,
           'started_at' => now(),
           'ended_at' => now()->addDays(999),
         ]);
