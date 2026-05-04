@@ -233,6 +233,14 @@ return new class extends Migration
       $table->string('chatbot_response_style')->default('professional'); // professional | friendly | casual
       $table->string('chatbot_default_language')->default('auto'); // auto | id | en
       $table->text('landing_page_data')->nullable();
+      $table->integer('booking_deadline')->default(0);
+      $table->decimal('minimum_down_payment', 5, 2)->default(0);
+      $table->decimal('minimum_vat', 5, 2)->default(0);
+      $table->text('term_conditions')->nullable();
+      $table->integer('booking_entry_time_limit')->default(0);
+      $table->string('manual_bank_transfer')->nullable();
+      $table->string('manual_bank_transfer_account_name')->nullable();
+      $table->string('manual_bank_transfer_account_number')->nullable();
       $table->timestamps();
     });
 
@@ -456,13 +464,7 @@ return new class extends Migration
       // Dates
       $table->date('departure_date');
       $table->date('return_date')->nullable();
-      // Capacity
-      $table->unsignedInteger('quota')->default(0);
-      //$table->unsignedInteger('booked')->default(0);
-      // Pricing per departure
-      //$table->decimal('price', 12, 2)->nullable();
-      //$table->decimal('agent_price', 12, 2)->nullable();
-
+      
       // Booking control
       $table->date('cutoff_date')->nullable();
       // Status
@@ -548,16 +550,16 @@ return new class extends Migration
         ->constrained('tour_schedules')
         ->cascadeOnDelete();
 
-      $table->decimal('max_pax', 12, 2)->default(0);
-      $table->decimal('WP', 12, 2)->default(0);
-      $table->decimal('DP', 12, 2)->default(0);
-      $table->decimal('FP', 12, 2)->default(0);
-      $table->decimal('RS', 12, 2)->default(0);
-      $table->decimal('CA', 12, 2)->default(0);
-      $table->decimal('RF', 12, 2)->default(0);
-      $table->decimal('EX', 12, 2)->default(0);
-      $table->decimal('WL', 12, 2)->default(0);
-      $table->decimal('available', 12, 2)->default(0);
+      $table->unsignedInteger('max_pax')->default(0);
+      $table->unsignedInteger('WP')->default(0);
+      $table->unsignedInteger('DP')->default(0);
+      $table->unsignedInteger('FP')->default(0);
+      $table->unsignedInteger('RS')->default(0);
+      $table->unsignedInteger('CA')->default(0);
+      $table->unsignedInteger('RF')->default(0);
+      $table->unsignedInteger('EX')->default(0);
+      $table->unsignedInteger('WL')->default(0);
+      $table->unsignedInteger('available')->default(0);
 
       $table->timestamps();
     });
@@ -882,6 +884,6 @@ return new class extends Migration
     Schema::drop(config('laravolt.indonesia.table_prefix') . 'districts');
     Schema::drop(config('laravolt.indonesia.table_prefix') . 'cities');
     Schema::drop(config('laravolt.indonesia.table_prefix') . 'provinces');
-    Schema::dropIfExists('app_configs');
+    //Schema::dropIfExists('app_configs');
   }
 };

@@ -14,16 +14,24 @@ class PriceCategorySeeder extends Seeder
 
         $categories = [
             [
-                'name' => 'Single',
+                'name' => 'Adult Single',
                 'description' => 'Single room (1 person)',
             ],
             [
-                'name' => 'Double',
+                'name' => 'Adult Double',
                 'description' => 'Double room (2 persons)',
             ],
             [
-                'name' => 'Triple',
+                'name' => 'Adult Twin',
+                'description' => 'Twin room (2 persons)',
+            ],
+            [
+                'name' => 'Adult Triple',
                 'description' => 'Triple room (3 persons)',
+            ],
+            [
+                'name' => 'Adult Extra Bed',
+                'description' => 'Adult Extra Bed',
             ],
             [
                 'name' => 'Child With Bed',

@@ -46,6 +46,9 @@ class VendorTourCatalogController extends Controller
       })
       ->get();
     $agentTours = \App\Models\AgentTour::where('company_id', $vendor->id)
+      ->when(request('category'), function ($q, $categoryId) {
+          $q->where('category_id', $categoryId);
+      })
       ->whereHas('tour', function ($q) {
         $q->where('status', 'active');
       })

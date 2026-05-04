@@ -54,9 +54,15 @@ export default function VendorPartnershipRegistrationButton({
     setShowRegistrationDetails(false);
   };
 
+  if (company.username === vendor.username) {
+    return null;
+  }
+
   return (
     <>
-      {!partnership && <Button onClick={handleRegister}>Register</Button>}
+      {!partnership && (
+        <Button onClick={handleRegister}>Registration to Vendor</Button>
+      )}
       {partnership?.status === 'pending' && (
         <Button onClick={() => setShowRegistrationDetails(true)}>
           Waiting Approval

@@ -61,6 +61,28 @@ class UpdateTourRequest extends FormRequest
       'schedules.*.prices.*.promotion.value' => 'nullable|numeric',
       'schedules.*.prices.*.commission.type' => 'nullable|string',
       'schedules.*.prices.*.commission.value' => 'nullable|numeric',
+
+       /*
+        |--------------------------------------------------------------------------
+        | AVAILABILITY
+        |--------------------------------------------------------------------------
+        */
+        'schedules.*.availability' => ['nullable', 'array'],
+        'schedules.*.availability.id' => ['nullable'],
+        'schedules.*.availability.schedule_id' => ['nullable'],
+        'schedules.*.availability.max_pax' => ['nullable', 'numeric'],
+        'schedules.*.availability.available' => ['nullable', 'numeric'],
+
+        /*
+        |--------------------------------------------------------------------------
+        | ADD ONS
+        |--------------------------------------------------------------------------
+        */
+        'schedules.*.add_ons' => ['nullable', 'array'],
+        'schedules.*.add_ons.*.id' => ['nullable'],
+        'schedules.*.add_ons.*.description' => ['nullable', 'string'],
+        'schedules.*.add_ons.*.price' => ['nullable', 'numeric'],
+        'schedules.*.add_ons.*.edit_status' => ['nullable', 'boolean'],
     ];
   }
 
@@ -83,37 +105,60 @@ class UpdateTourRequest extends FormRequest
     $schedules = $this->input('schedules', []);
 
     $clean = collect($schedules)->map(function ($schedule) {
-      return [
-        ...$schedule,
-        'departure_date' => $schedule['departure_date'] ?? null,
-        'return_date' => $schedule['return_date'] ?? null,
-        'quota' => is_numeric($schedule['quota'] ?? null)
-          ? (int) $schedule['quota']
-          : 0,
-        'prices' => collect($schedule['prices'] ?? [])->map(function ($price) {
-          return [
-            'id' => $price['id'] ?? null,
-            'room_type_id' => is_numeric($price['room_type_id'] ?? null)
-              ? (int) $price['room_type_id']
-              : null,
-            'price' => is_numeric($price['price'] ?? null)
-              ? (int) $price['price']
-              : 0,
-            'promotion' => [
-              'type' => $price['promotion']['type'] ?? 'percent',
-              'value' => is_numeric($price['promotion']['value'] ?? null)
-                ? (float) $price['promotion']['value']
-                : 0,
-            ],
-            'commission' => [
-              'type' => $price['commission']['type'] ?? 'percent',
-              'value' => is_numeric($price['commission']['value'] ?? null)
-                ? (float) $price['commission']['value']
-                : 0,
-            ],
-          ];
-        })->values()->toArray(),
-      ];
+        return [
+            'id' => $schedule['id'] ?? null,
+
+            'departure_date' => $schedule['departure_date'] ?? null,
+            'return_date' => $schedule['return_date'] ?? null,
+
+            // 🔥 FIX quota kosong
+            //'quota' => is_numeric($schedule['quota'] ?? null)
+            //    ? (int) $schedule['quota']
+            //    : 0,
+
+            'availability' => $schedule['availability'] ?? null,
+
+            'prices' => collect($schedule['prices'] ?? [])->map(function ($price) {
+
+                return [
+                    'id' => $price['id'] ?? null, 
+
+                    'room_type_id' => is_numeric($price['room_type_id'] ?? null)
+                        ? (int) $price['room_type_id']
+                        : null,
+
+                    'price' => is_numeric($price['price'] ?? null)
+                        ? (int) $price['price']
+                        : 0,
+
+                    'promotion' => [
+                        'type' => $price['promotion']['type'] ?? 'percent',
+                        'value' => is_numeric($price['promotion']['value'] ?? null)
+                            ? (float) $price['promotion']['value']
+                            : 0,
+                    ],
+
+                    'commission' => [
+                        'type' => $price['commission']['type'] ?? 'percent',
+                        'value' => is_numeric($price['commission']['value'] ?? null)
+                            ? (float) $price['commission']['value']
+                            : 0,
+                    ],
+                ];
+            })->values()->toArray(),
+            
+            'add_ons' => collect($schedule['add_ons'] ?? [])
+            ->map(function ($addon) {
+                return [
+                    'id' => $addon['id'] ?? null,
+                    'description' => $addon['description'] ?? '',
+                    'price' => is_numeric($addon['price'] ?? null)
+                        ? (float) $addon['price']
+                        : 0,
+                    'edit_status' => (bool) ($addon['edit_status'] ?? false),
+                ];
+            })->values()->toArray(),
+        ];
     })->values()->toArray();
 
     $this->merge([

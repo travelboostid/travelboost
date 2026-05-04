@@ -15,6 +15,14 @@ class CompanySettings extends Model
     'chatbot_default_language',
     'chatbot_model_code',
     'landing_page_data',
+    'booking_deadline',
+    'minimum_down_payment',
+    'minimum_vat',
+    'term_conditions',
+    'booking_entry_time_limit',
+    'manual_bank_transfer',
+    'manual_bank_transfer_account_name',
+    'manual_bank_transfer_account_number',
   ];
 
   protected $casts = [

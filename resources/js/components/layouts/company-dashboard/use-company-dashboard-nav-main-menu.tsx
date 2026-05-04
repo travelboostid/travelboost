@@ -116,11 +116,6 @@ export function useCompanyDashboardNavMainMenu() {
           urlOrAction: `/companies/${company.username}/dashboard/tours`,
         },
         {
-          id: 'tours.categories',
-          title: <FormattedMessage defaultMessage="Product Categories" />,
-          urlOrAction: `/companies/${company.username}/dashboard/categories`,
-        },
-        {
           id: 'tours.preview',
           title: <FormattedMessage defaultMessage="My Catalogs" />,
           urlOrAction: `/companies/${company.username}/dashboard/vendors/${company.username}/tours`,
@@ -129,6 +124,16 @@ export function useCompanyDashboardNavMainMenu() {
           id: 'tours.orders',
           title: <FormattedMessage defaultMessage="Bookings" />,
           urlOrAction: `/companies/${company.username}/dashboard/bookings`,
+        },
+        {
+          id: 'tours.categories',
+          title: <FormattedMessage defaultMessage="Product Categories" />,
+          urlOrAction: `/companies/${company.username}/dashboard/categories`,
+        },
+        {
+          id: 'tours.price-categories',
+          title: <FormattedMessage defaultMessage="Price Categories" />,
+          urlOrAction: `/companies/${company.username}/dashboard/price-categories`,
         },
       ],
       visibleToCompanyTypes: ['vendor'],
@@ -146,11 +151,6 @@ export function useCompanyDashboardNavMainMenu() {
           urlOrAction: `/companies/${company.username}/dashboard/agent-tours`,
         },
         {
-          id: 'tours.categories',
-          title: <FormattedMessage defaultMessage="Product Categories" />,
-          urlOrAction: `/companies/${company.username}/dashboard/categories`,
-        },
-        {
           id: 'tours.cats',
           title: <FormattedMessage defaultMessage="My Catalogs" />,
           urlOrAction: `/companies/${company.username}/dashboard/vendors/${company.username}/tours`,
@@ -159,6 +159,11 @@ export function useCompanyDashboardNavMainMenu() {
           id: 'tours.bookings',
           title: <FormattedMessage defaultMessage="Bookings" />,
           urlOrAction: `/companies/${company.username}/dashboard/bookings`,
+        },
+        {
+          id: 'tours.categories',
+          title: <FormattedMessage defaultMessage="Product Categories" />,
+          urlOrAction: `/companies/${company.username}/dashboard/categories`,
         },
       ],
       visibleToCompanyTypes: ['agent'],
@@ -287,6 +292,12 @@ export function useCompanyDashboardNavMainMenu() {
           urlOrAction: `/companies/${company.username}/dashboard/profile`,
         },
         {
+          id: 'settings.parameter-vendor',
+          title: <FormattedMessage defaultMessage="Parameters" />,
+          urlOrAction: `/companies/${company.username}/dashboard/parameter-vendor`,
+          visibleToCompanyTypes: ['vendor'],
+        },
+        {
           id: 'settings.teams',
           title: <FormattedMessage defaultMessage="User Management" />,
           urlOrAction: `/companies/${company.username}/dashboard/teams`,
@@ -303,7 +314,7 @@ export function useCompanyDashboardNavMainMenu() {
         },
         {
           id: 'settings.vendor-registrations',
-          title: <FormattedMessage defaultMessage="Vendor Registrations" />,
+          title: <FormattedMessage defaultMessage="Registration to Vendor" />,
           urlOrAction: `/companies/${company.username}/dashboard/vendor-registrations`,
           visibleToCompanyTypes: ['agent'],
         },

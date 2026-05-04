@@ -19,7 +19,7 @@ export function HeroSection() {
         <div className="absolute inset-0 bg-foreground/60" />
       </div>
 
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-20">
         <div className="max-w-3xl">
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-georgia font-bold text-card leading-tight">
             Selamat Datang di TravelBoost: Platform Promosi Agen Perjalanan

@@ -13,6 +13,7 @@ use Database\Seeders\Common\UserSeeder;
 use Database\Seeders\Common\CurrencySeeder;
 use Database\Seeders\Common\PriceCategorySeeder;
 use Illuminate\Database\Seeder;
+use Database\Seeders\Common\ParameterTravelboostSeeder;
 
 class ProductionSeeder extends Seeder
 {
@@ -32,6 +33,7 @@ class ProductionSeeder extends Seeder
       TourSeeder::class,
       CurrencySeeder::class,
       PriceCategorySeeder::class,
+      ParameterTravelboostSeeder::class,
     ]);
   }
 }

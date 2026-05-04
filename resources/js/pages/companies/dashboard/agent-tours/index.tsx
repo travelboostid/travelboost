@@ -342,7 +342,7 @@ export default function AgentToursPage({ data }: PageProps) {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-foreground">
-              My Tours Catalog
+              Product Table
             </h1>
             <p className="text-sm text-muted-foreground mt-1">
               Manage and monitor the tours distributed by vendors to your

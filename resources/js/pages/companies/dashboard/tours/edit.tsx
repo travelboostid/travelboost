@@ -35,7 +35,17 @@ import { Fragment } from 'react';
 import { TourDocumentPicker } from '@/components/media/tour-document-picker';
 import MoneyInput from '@/components/ui/money-input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Save, Trash2 } from 'lucide-react';
+import { Copy, Save, Trash2 } from 'lucide-react';
+
+import { Calendar } from '@/components/ui/calendar';
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { format } from 'date-fns';
 
 ///////////tab 2
 type RoomPrice = {
@@ -54,9 +64,9 @@ type Schedule = {
   id?: number;
   departure_date: string;
   return_date: string;
-  quota: string;
   prices: RoomPrice[];
-  availability?: any;
+  //promotion: Adjustment
+  //commission: Adjustment
 };
 
 type PriceCategory = {
@@ -69,7 +79,7 @@ type Props = {
 };
 
 type AddOn = {
-  id?: number;
+  id?: number | null;
   description: string;
   price: number | '';
   edit_status: boolean;
@@ -199,7 +209,6 @@ export default function Page({ tour }: Props) {
       id: s.id,
       departure_date: s.departure_date ?? '',
       return_date: s.return_date ?? '',
-      quota: String(s.quota ?? ''),
       availability: s.availability || null,
       /*prices: (s.prices || []).map((p: any) => ({
         room_type_id: p.room_type_id,
@@ -268,9 +277,22 @@ export default function Page({ tour }: Props) {
     })),
   );
 
+  // 🔥 TAMBAHKAN DI SINI 17042026
+  /*useEffect(() => {
+  console.log('FROM SERVER:', tour.schedules)
+}, [])*/
+
   useEffect(() => {
     setData('schedules', schedules);
   }, [schedules]);
+
+  const addDays = (date: string, days: number) => {
+    if (!date || !days) return '';
+
+    const d = new Date(date);
+    d.setDate(d.getDate() + Number(days) - 1);
+    return d.toISOString().split('T')[0];
+  };
 
   const addSchedule = () => {
     setSchedules([
@@ -279,7 +301,6 @@ export default function Page({ tour }: Props) {
         id: null,
         departure_date: '',
         return_date: '',
-        quota: '',
         prices: [
           {
             room_type_id: null,
@@ -288,6 +309,8 @@ export default function Page({ tour }: Props) {
             commission: { type: 'percent', value: '' },
           },
         ],
+        //promotion: { type: 'percent', value: '' },
+        //commission: { type: 'percent', value: '' },
       },
     ]);
   };
@@ -297,14 +320,49 @@ export default function Page({ tour }: Props) {
     field: keyof Schedule,
     value: string,
   ) => {
-    const updated = [...schedules];
-    updated[index][field] = value as any;
-    setSchedules(updated);
+    setSchedules((prev) => {
+      const updated = [...prev];
+      const row = { ...updated[index], [field]: value };
+
+      // 🔥 AUTO SET return_date
+      if (field === 'departure_date' && data.duration_days) {
+        row.return_date = addDays(value, Number(data.duration_days));
+      }
+
+      // 🔥 VALIDASI: return tidak boleh sebelum departure
+      if (
+        row.return_date &&
+        row.departure_date &&
+        row.return_date < row.departure_date
+      ) {
+        row.return_date = '';
+      }
+
+      updated[index] = row;
+      return updated;
+    });
   };
 
   const removeSchedule = (index: number) => {
-    const updated = schedules.filter((_, i) => i !== index);
-    setSchedules(updated);
+    const item = schedules[index];
+
+    // kalau belum tersimpan di DB
+    if (!item.id) {
+      setSchedules(schedules.filter((_, i) => i !== index));
+      return;
+    }
+
+    if (!confirm('Delete this schedule?')) return;
+
+    router.delete(
+      `/companies/${company.username}/dashboard/tours/${tour.id}/schedules/${item.id}`,
+      {
+        preserveScroll: true,
+        onSuccess: () => {
+          setSchedules(schedules.filter((_, i) => i !== index));
+        },
+      },
+    );
   };
 
   const addRoom = (index: number) => {
@@ -360,11 +418,35 @@ export default function Page({ tour }: Props) {
   };
 
   const removeRoom = (scheduleIndex: number, roomIndex: number) => {
-    const updated = [...schedules];
-    updated[scheduleIndex].prices = updated[scheduleIndex].prices.filter(
-      (_, i) => i !== roomIndex,
+    const room = schedules[scheduleIndex].prices[roomIndex];
+
+    // kalau belum ada id = belum tersimpan
+    if (!room.id) {
+      const updated = [...schedules];
+      updated[scheduleIndex].prices = updated[scheduleIndex].prices.filter(
+        (_, i) => i !== roomIndex,
+      );
+
+      setSchedules(updated);
+      return;
+    }
+
+    if (!confirm('Delete this category?')) return;
+
+    router.delete(
+      `/companies/${company.username}/dashboard/tours/${tour.id}/prices/${room.id}`,
+      {
+        preserveScroll: true,
+        onSuccess: () => {
+          const updated = [...schedules];
+          updated[scheduleIndex].prices = updated[scheduleIndex].prices.filter(
+            (_, i) => i !== roomIndex,
+          );
+
+          setSchedules(updated);
+        },
+      },
     );
-    setSchedules(updated);
   };
 
   const updateAdjustment = (
@@ -404,7 +486,7 @@ export default function Page({ tour }: Props) {
     return schedules.map((s) => {
       const a = s.availability || {};
 
-      const max_pax = Number(a.max_pax ?? s.quota ?? 0);
+      const max_pax = Number(a.max_pax ?? 0);
 
       return {
         id: s.id,
@@ -425,13 +507,17 @@ export default function Page({ tour }: Props) {
     });
   }, [schedules]);
 
-  const [availability, setAvailability] = useState<any[]>([]);
+  const [availability, setAvailability] = useState([]);
 
   useEffect(() => {
     setAvailability(availabilityData);
   }, [availabilityData]);
 
   const [savingAvailability, setSavingAvailability] = useState(false);
+
+  /*useEffect(() => {
+    setAvailability(availabilityData)
+  }, [schedules])*/
 
   const updateAvailability = (index: number, field: string, value: number) => {
     const updated = [...availability];
@@ -452,8 +538,8 @@ export default function Page({ tour }: Props) {
   const buildAvailabilityPayload = () => {
     return availability.map((row, i) => ({
       company_id: company.id,
-      tour_id: tour.id,
-      schedule_id: schedules[i]?.id ?? null,
+      tour_id: tour.id, // ⚠️ di DB namanya tour_code tapi isinya id
+      schedule_id: schedules[i]?.id ?? null, // pastikan schedule punya id dari DB
       max_pax: row.max_pax,
       WP: row.WP,
       DP: row.DP,
@@ -467,6 +553,7 @@ export default function Page({ tour }: Props) {
     }));
   };
 
+  //20042026
   useEffect(() => {
     if (tour?.schedules) {
       setSchedules(
@@ -474,19 +561,20 @@ export default function Page({ tour }: Props) {
           id: s.id,
           departure_date: s.departure_date ?? '',
           return_date: s.return_date ?? '',
-          quota: String(s.quota ?? ''),
           availability: s.availability || null,
           prices: (s.prices || []).map((p: any) => ({
             id: p.id,
             room_type_id: p.price_category_id,
             price: String(p.price ?? ''),
             promotion: {
+              /*type: p.promotion_rate > 0 ? 'percent' : 'value',
+              value: String(p.promotion_rate || p.promotion || ''),*/
               type:
                 p.promotion_rate > 0
                   ? 'percent'
                   : p.promotion > 0
                     ? 'value'
-                    : 'percent',
+                    : 'percent', // default
 
               value: String(
                 p.promotion_rate > 0
@@ -497,12 +585,14 @@ export default function Page({ tour }: Props) {
               ),
             },
             commission: {
+              /*type: p.commission_rate > 0 ? 'percent' : 'value',
+              value: String(p.commission_rate || p.commission || ''),*/
               type:
                 p.commission_rate > 0
                   ? 'percent'
                   : p.commission > 0
                     ? 'value'
-                    : 'percent',
+                    : 'percent', // default
 
               value: String(
                 p.commission_rate > 0
@@ -527,7 +617,12 @@ export default function Page({ tour }: Props) {
     const initial: AddOnsState = {};
 
     schedules.forEach((s) => {
-      initial[s.id] = addOnsFromDb?.[s.id] || [];
+      initial[s.id] = (addOnsFromDb?.[s.id] || []).map((item) => ({
+        id: item.id,
+        description: item.description,
+        price: item.price,
+        edit_status: item.edit_status,
+      }));
     });
 
     setAddOns(initial);
@@ -538,7 +633,7 @@ export default function Page({ tour }: Props) {
       ...prev,
       [scheduleId]: [
         ...(prev[scheduleId] || []),
-        { description: '', price: '', edit_status: false },
+        { id: null, description: '', price: '', edit_status: false },
       ],
     }));
   };
@@ -574,14 +669,15 @@ export default function Page({ tour }: Props) {
 
   const [savingAddOns, setSavingAddOns] = useState(false);
 
-  const buildAddOnsPayload = () => {
+  const buildAddOnsPayload = (source = addOns) => {
     const result: any[] = [];
 
-    Object.entries(addOns).forEach(([scheduleId, rows]) => {
+    Object.entries(source).forEach(([scheduleId, rows]) => {
       rows.forEach((row) => {
         if (!row.description) return;
 
         result.push({
+          id: row.id || null,
           company_id: company.id,
           tour_id: tour.id,
           schedule_id: Number(scheduleId),
@@ -593,6 +689,214 @@ export default function Page({ tour }: Props) {
     });
 
     return result;
+  };
+
+  const syncAddOns = async (data) => {
+    setSavingAddOns(true);
+
+    try {
+      const payload = buildAddOnsPayload(data);
+
+      if (payload.length === 0) {
+        toast.error('Add Ons masih kosong');
+        return;
+      }
+
+      console.log('SYNC PAYLOAD:', payload);
+
+      router.post(
+        `/companies/${company.username}/dashboard/tour-add-ons`,
+        { add_ons: payload },
+        {
+          preserveState: true,
+          onSuccess: () => {
+            toast.success('Success delete Add Ons');
+          },
+          onError: (err) => {
+            console.error(err);
+            toast.error('Failed to delete Add Ons');
+          },
+          onFinish: () => {
+            setSavingAddOns(false);
+          },
+        },
+      );
+    } catch (err) {
+      setSavingAddOns(false);
+    }
+  };
+
+  const handleDelete = (scheduleId: number, index: number) => {
+    setAddOns((prev) => {
+      const rows = [...(prev[scheduleId] || [])];
+
+      const deletedItem = rows[index];
+
+      rows.splice(index, 1);
+
+      const updated = {
+        ...prev,
+        [scheduleId]: rows,
+      };
+
+      syncAddOns(updated);
+
+      return updated;
+    });
+  };
+
+  //copy
+  const copySchedule = (item) => {
+    const addons = item.add_ons?.length
+      ? item.add_ons
+      : addOnsFromDb[item.id] || [];
+
+    const cloned = {
+      ...item,
+      id: null,
+
+      prices: (item.prices || []).map((p) => ({
+        ...p,
+        id: null,
+      })),
+
+      add_ons: addons.map((a) => ({
+        ...a,
+        id: null,
+      })),
+
+      availability: item.availability
+        ? {
+            ...item.availability,
+            id: null,
+            schedule_id: null,
+          }
+        : null,
+    };
+
+    setSchedules([...schedules, cloned]);
+  };
+
+  const [copyOpen, setCopyOpen] = useState(false);
+  const [selectedDates, setSelectedDates] = useState<Date[]>([]);
+  const [copySourceIndex, setCopySourceIndex] = useState<number | null>(null);
+  const [copyDates, setCopyDates] = useState<string[]>(['']);
+
+  const openCopyModal = (index: number) => {
+    setCopySourceIndex(index);
+    setCopyDates(['']);
+    setCopyOpen(true);
+  };
+
+  const addCopyDate = () => {
+    setCopyDates((prev) => [...prev, '']);
+  };
+
+  const updateCopyDate = (idx: number, value: string) => {
+    setCopyDates((prev) => prev.map((d, i) => (i === idx ? value : d)));
+  };
+
+  const removeCopyDate = (idx: number) => {
+    setCopyDates((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  const submitCopySchedules = () => {
+    if (copySourceIndex === null) return;
+
+    const source = schedules[copySourceIndex];
+
+    const validDates = selectedDates
+      .map((d) => format(d, 'yyyy-MM-dd'))
+      .filter(Boolean);
+
+    if (validDates.length === 0) {
+      toast.error('Please select at least one departure date');
+      return;
+    }
+
+    const existingDates = schedules.map((s) => s.departure_date);
+
+    const filteredDates = validDates.filter(
+      (date) => !existingDates.includes(date),
+    );
+
+    if (filteredDates.length === 0) {
+      toast.error('Selected dates already exist');
+      return;
+    }
+
+    const sourceAddons =
+      source.add_ons?.length > 0
+        ? source.add_ons
+        : addOnsFromDb?.[source.id] || [];
+
+    const newRows = filteredDates.map((date) => ({
+      id: null,
+      departure_date: date,
+      return_date: addDays(date, Number(data.duration_days)),
+
+      // prices
+      prices: source.prices.map((room) => ({
+        ...room,
+        id: null,
+        schedule_id: null,
+      })),
+
+      // availability => copy hanya max_pax
+      availability: (() => {
+        const avail = Array.isArray(source.availability)
+          ? source.availability[0]
+          : source.availability;
+
+        return avail
+          ? {
+              id: null,
+              schedule_id: null,
+              max_pax: avail.max_pax,
+              available: avail.available,
+            }
+          : null;
+      })(),
+
+      // add ons
+      add_ons: sourceAddons.map((item) => ({
+        ...item,
+        id: null,
+        schedule_id: null,
+      })),
+    }));
+
+    const newSchedules = [...schedules, ...newRows];
+
+    setSchedules(newSchedules);
+
+    router.put(
+      `/companies/${company.username}/dashboard/tours/${tour.id}`,
+      {
+        ...data,
+        schedules: newSchedules,
+      },
+      {
+        preserveScroll: true,
+        preserveState: true,
+
+        onSuccess: () => {
+          setCopyOpen(false);
+          setSelectedDates([]);
+          toast.success('Schedule copied successfully');
+          //console.log('SUCCESS');
+        },
+
+        onError: () => {
+          //console.log('ERROR:', errors);
+          if (Object.keys(errors).length === 0) {
+            toast.error('Server response error (check redirect)');
+          } else {
+            toast.error('Failed copy schedule');
+          }
+        },
+      },
+    );
   };
 
   return (
@@ -615,8 +919,8 @@ export default function Page({ tour }: Props) {
 
           console.log('SEND DATA:', {
             ...data,
-            schedules,
-          });
+            schedules
+          })
 
           // 🔥 update state dulu
           setData((prev) => ({
@@ -624,7 +928,7 @@ export default function Page({ tour }: Props) {
             showprice: Number(rawPrice),
             promote_price: Number(rawPrice1),
             schedules: schedules, // ✅ langsung object (JANGAN stringify)
-          }));
+          }))
 
           // 🔥 kirim TANPA data:
           put(update.url({
@@ -663,6 +967,23 @@ export default function Page({ tour }: Props) {
               },
             },
           );
+
+          /*put(update.url({
+            company: company.username,
+            tour: tour.id
+          }), {
+            data: {
+              ...data,
+              showprice: Number(rawPrice),
+              promote_price: Number(rawPrice1),
+              schedules: schedules, // 🔥 langsung kirim
+            },
+            forceFormData: false, 
+            onSuccess: () => {
+              handleSuccess()
+              setActiveTab('schedule')
+            },
+          })*/
         }}
       >
         <div className="container mx-auto space-y-4 p-4">
@@ -721,7 +1042,7 @@ export default function Page({ tour }: Props) {
                       );
                     }}
                   </MediaPicker>
-                  <InputError message={errors.image_id} />
+                  <InputError message={errors.media_id} />
                 </div>
 
                 {/* Code */}
@@ -1088,6 +1409,7 @@ export default function Page({ tour }: Props) {
                             <Input
                               type="date"
                               value={item.departure_date}
+                              min={new Date().toISOString().split('T')[0]}
                               onChange={(e) =>
                                 updateSchedule(
                                   index,
@@ -1102,6 +1424,9 @@ export default function Page({ tour }: Props) {
                             <Input
                               type="date"
                               value={item.return_date}
+                              min={item.departure_date}
+                              readOnly
+                              className="bg-muted cursor-not-allowed"
                               onChange={(e) =>
                                 updateSchedule(
                                   index,
@@ -1135,11 +1460,23 @@ export default function Page({ tour }: Props) {
                                   >
                                     <option value="">Select Category</option>
 
-                                    {priceCategories.map((cat) => (
-                                      <option key={cat.id} value={cat.id}>
-                                        {cat.name}
-                                      </option>
-                                    ))}
+                                    {priceCategories
+                                      .filter((cat) => {
+                                        const selectedIds = item.prices
+                                          .map((p, i) =>
+                                            i !== rIndex
+                                              ? p.room_type_id
+                                              : null,
+                                          )
+                                          .filter(Boolean);
+
+                                        return !selectedIds.includes(cat.id);
+                                      })
+                                      .map((cat) => (
+                                        <option key={cat.id} value={cat.id}>
+                                          {cat.name}
+                                        </option>
+                                      ))}
                                   </select>
 
                                   {/* PRICE */}
@@ -1152,87 +1489,104 @@ export default function Page({ tour }: Props) {
                                   />
 
                                   {/* PROMOTION */}
-                                  <div className="grid grid-cols-2 gap-2">
+                                  <div className="flex gap-2 w-full min-w-0">
                                     {/* PERCENT */}
-                                    <MoneyInput
-                                      value={
-                                        room.promotion.type === 'percent'
-                                          ? room.promotion.value
-                                          : ''
-                                      }
-                                      placeholder="%"
-                                      onChange={(val) => {
-                                        updateRoomAdjustment(
-                                          index,
-                                          rIndex,
-                                          'promotion',
-                                          'type',
-                                          'percent',
-                                        );
-                                        updateRoomAdjustment(
-                                          index,
-                                          rIndex,
-                                          'promotion',
-                                          'value',
-                                          val,
-                                        );
-                                      }}
-                                    />
+                                    <div className="w-[90px] shrink-0 relative">
+                                      <MoneyInput
+                                        value={
+                                          room.promotion.type === 'percent'
+                                            ? room.promotion.value
+                                            : ''
+                                        }
+                                        placeholder="0"
+                                        className="w-full pr-8"
+                                        onChange={(val) => {
+                                          updateRoomAdjustment(
+                                            index,
+                                            rIndex,
+                                            'promotion',
+                                            'type',
+                                            'percent',
+                                          );
+                                          updateRoomAdjustment(
+                                            index,
+                                            rIndex,
+                                            'promotion',
+                                            'value',
+                                            val,
+                                          );
+                                        }}
+                                      />
+
+                                      <span className="absolute right-2 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                                        %
+                                      </span>
+                                    </div>
 
                                     {/* VALUE */}
-                                    <MoneyInput
-                                      value={
-                                        room.promotion.type === 'value'
-                                          ? room.promotion.value
-                                          : ''
-                                      }
-                                      placeholder="Value"
-                                      onChange={(val) => {
-                                        updateRoomAdjustment(
-                                          index,
-                                          rIndex,
-                                          'promotion',
-                                          'type',
-                                          'value',
-                                        );
-                                        updateRoomAdjustment(
-                                          index,
-                                          rIndex,
-                                          'promotion',
-                                          'value',
-                                          val,
-                                        );
-                                      }}
-                                    />
+                                    <div className="flex-1 min-w-0">
+                                      <MoneyInput
+                                        className="w-full"
+                                        value={
+                                          room.promotion.type === 'value'
+                                            ? room.promotion.value
+                                            : ''
+                                        }
+                                        placeholder="Value"
+                                        onChange={(val) => {
+                                          updateRoomAdjustment(
+                                            index,
+                                            rIndex,
+                                            'promotion',
+                                            'type',
+                                            'value',
+                                          );
+                                          updateRoomAdjustment(
+                                            index,
+                                            rIndex,
+                                            'promotion',
+                                            'value',
+                                            val,
+                                          );
+                                        }}
+                                      />
+                                    </div>
                                   </div>
 
                                   {/* COMMISSION */}
                                   <div className="grid grid-cols-2 gap-2">
                                     {/* PERCENT */}
-                                    <MoneyInput
-                                      value={
-                                        room.commission.type === 'percent'
-                                          ? room.commission.value
-                                          : ''
-                                      }
-                                      placeholder="%"
-                                      onChange={(val) => {
-                                        updateRoomAdjustment(
-                                          index,
-                                          rIndex,
-                                          'commission',
-                                          'type',
-                                          'percent',
-                                        );
-                                        updateRoomAdjustment(
-                                          index,
-                                          rIndex,
-                                          'commission',
-                                          'value',
-                                          val,
-                                        );
-                                      }}
-                                    />
+                                    <div className="relative">
+                                      <MoneyInput
+                                        value={
+                                          room.commission.type === 'percent'
+                                            ? room.commission.value
+                                            : ''
+                                        }
+                                        placeholder="0"
+                                        className="pr-8"
+                                        onChange={(val) => {
+                                          updateRoomAdjustment(
+                                            index,
+                                            rIndex,
+                                            'commission',
+                                            'type',
+                                            'percent',
+                                          );
+                                          updateRoomAdjustment(
+                                            index,
+                                            rIndex,
+                                            'commission',
+                                            'value',
+                                            val,
+                                          );
+                                        }}
+                                      />
+
+                                      <span className="absolute right-2 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                                        %
+                                      </span>
+                                    </div>
 
                                     {/* VALUE */}
                                     <MoneyInput
@@ -1270,7 +1624,7 @@ export default function Page({ tour }: Props) {
                                       className="text-red-500"
                                       onClick={() => removeRoom(index, rIndex)}
                                     >
-                                      Delete Category
+                                      x Delete Category
                                     </Button>
                                   </div>
                                 </div>
@@ -1283,6 +1637,9 @@ export default function Page({ tour }: Props) {
                                   size="sm"
                                   variant="outline"
                                   onClick={() => addRoom(index)}
+                                  disabled={
+                                    item.prices.length >= priceCategories.length
+                                  }
                                 >
                                   + Add Category
                                 </Button>
@@ -1308,6 +1665,16 @@ export default function Page({ tour }: Props) {
                             >
                               <Save className="h-4 w-4" />
                             </Button>
+
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className="bg-blue-600 text-white hover:bg-blue-700 border-blue-600"
+                              size="icon"
+                              onClick={() => openCopyModal(index)}
+                            >
+                              <Copy className="h-4 w-4" />
+                            </Button>
                           </td>
                         </tr>
                       ))}
@@ -1323,19 +1690,38 @@ export default function Page({ tour }: Props) {
                       className="border rounded-lg p-3 space-y-3"
                     >
                       {/* HEADER */}
-                      <div className="flex justify-between items-center">
+                      <div className="flex justify-between items-start">
                         <p className="font-medium text-sm">
                           Schedule #{index + 1}
                         </p>
 
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => removeSchedule(index)}
-                        >
-                          Delete
-                        </Button>
+                        <div className="flex flex-col items-end gap-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => removeSchedule(index)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+
+                          <Button
+                            type="submit"
+                            size="icon"
+                            disabled={processing || schedules.length === 0}
+                          >
+                            <Save className="h-4 w-4" />
+                          </Button>
+
+                          <Button
+                            type="button"
+                            size="sm"
+                            className="bg-blue-600 text-white hover:bg-blue-700"
+                            onClick={() => openCopyModal(index)}
+                          >
+                            <Copy className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
 
                       {/* DATES */}
@@ -1364,6 +1750,9 @@ export default function Page({ tour }: Props) {
                           <Input
                             type="date"
                             value={item.return_date}
+                            min={item.departure_date}
+                            readOnly
+                            className="bg-muted cursor-not-allowed"
                             onChange={(e) =>
                               updateSchedule(
                                 index,
@@ -1395,7 +1784,7 @@ export default function Page({ tour }: Props) {
                                 className="text-red-500"
                                 onClick={() => removeRoom(index, rIndex)}
                               >
-                                Delete Room
+                                x Delete Category
                               </Button>
                             </div>
 
@@ -1419,11 +1808,21 @@ export default function Page({ tour }: Props) {
                               >
                                 <option value="">Select Category</option>
 
-                                {priceCategories.map((cat) => (
-                                  <option key={cat.id} value={cat.id}>
-                                    {cat.name}
-                                  </option>
-                                ))}
+                                {priceCategories
+                                  .filter((cat) => {
+                                    const selectedIds = item.prices
+                                      .map((p, i) =>
+                                        i !== rIndex ? p.room_type_id : null,
+                                      )
+                                      .filter(Boolean);
+
+                                    return !selectedIds.includes(cat.id);
+                                  })
+                                  .map((cat) => (
+                                    <option key={cat.id} value={cat.id}>
+                                      {cat.name}
+                                    </option>
+                                  ))}
                               </select>
                             </div>
 
@@ -1449,30 +1848,37 @@ export default function Page({ tour }: Props) {
 
                               <div className="grid grid-cols-2 gap-2">
                                 {/* % */}
-                                <MoneyInput
-                                  value={
-                                    room.promotion.type === 'percent'
-                                      ? room.promotion.value
-                                      : ''
-                                  }
-                                  placeholder="%"
-                                  onChange={(val) => {
-                                    updateRoomAdjustment(
-                                      index,
-                                      rIndex,
-                                      'promotion',
-                                      'type',
-                                      'percent',
-                                    );
-                                    updateRoomAdjustment(
-                                      index,
-                                      rIndex,
-                                      'promotion',
-                                      'value',
-                                      val,
-                                    );
-                                  }}
-                                />
+                                <div className="relative">
+                                  <MoneyInput
+                                    value={
+                                      room.promotion.type === 'percent'
+                                        ? room.promotion.value
+                                        : ''
+                                    }
+                                    placeholder="0"
+                                    className="pr-8"
+                                    onChange={(val) => {
+                                      updateRoomAdjustment(
+                                        index,
+                                        rIndex,
+                                        'promotion',
+                                        'type',
+                                        'percent',
+                                      );
+                                      updateRoomAdjustment(
+                                        index,
+                                        rIndex,
+                                        'promotion',
+                                        'value',
+                                        val,
+                                      );
+                                    }}
+                                  />
+
+                                  <span className="absolute right-2 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                                    %
+                                  </span>
+                                </div>
 
                                 {/* VALUE */}
                                 <MoneyInput
@@ -1510,30 +1916,37 @@ export default function Page({ tour }: Props) {
 
                               <div className="grid grid-cols-2 gap-2">
                                 {/* % */}
-                                <MoneyInput
-                                  value={
-                                    room.commission.type === 'percent'
-                                      ? room.commission.value
-                                      : ''
-                                  }
-                                  placeholder="%"
-                                  onChange={(val) => {
-                                    updateRoomAdjustment(
-                                      index,
-                                      rIndex,
-                                      'commission',
-                                      'type',
-                                      'percent',
-                                    );
-                                    updateRoomAdjustment(
-                                      index,
-                                      rIndex,
-                                      'commission',
-                                      'value',
-                                      val,
-                                    );
-                                  }}
-                                />
+                                <div className="relative">
+                                  <MoneyInput
+                                    value={
+                                      room.commission.type === 'percent'
+                                        ? room.commission.value
+                                        : ''
+                                    }
+                                    placeholder="0"
+                                    className="pr-8"
+                                    onChange={(val) => {
+                                      updateRoomAdjustment(
+                                        index,
+                                        rIndex,
+                                        'commission',
+                                        'type',
+                                        'percent',
+                                      );
+                                      updateRoomAdjustment(
+                                        index,
+                                        rIndex,
+                                        'commission',
+                                        'value',
+                                        val,
+                                      );
+                                    }}
+                                  />
+
+                                  <span className="absolute right-2 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                                    %
+                                  </span>
+                                </div>
 
                                 {/* VALUE */}
                                 <MoneyInput
@@ -1571,9 +1984,12 @@ export default function Page({ tour }: Props) {
                           size="sm"
                           variant="outline"
                           onClick={() => addRoom(index)}
+                          disabled={
+                            item.prices.length >= priceCategories.length
+                          }
                           className="w-full"
                         >
-                          + Add Room
+                          + Add Category
                         </Button>
                       </div>
                     </div>
@@ -1603,8 +2019,8 @@ export default function Page({ tour }: Props) {
                   </h3>
                 </div>
 
-                <div className="rounded-lg border overflow-hidden">
-                  <table className="w-full text-sm">
+                <div className="hidden md:block rounded-lg border overflow-x-auto">
+                  <table className="w-full text-sm min-w-[1000px]">
                     <thead className="bg-muted">
                       <tr>
                         <th className="p-3 text-left">Departure → Return</th>
@@ -1628,7 +2044,7 @@ export default function Page({ tour }: Props) {
                           Refund <br /> (RF)
                         </th>
                         <th className="p-3 text-right">
-                          Expired <br /> (EX)
+                          Expired <br /> EX)
                         </th>
                         <th className="p-3 text-right">
                           Waiting List <br /> (WL)
@@ -1801,6 +2217,92 @@ export default function Page({ tour }: Props) {
                     </tbody>
                   </table>
                 </div>
+                {/* MOBILE */}
+                <div className="md:hidden space-y-4">
+                  {availability.map((row, i) => (
+                    <div
+                      key={row.id}
+                      className="border rounded-xl p-4 space-y-3 shadow-sm"
+                    >
+                      {/* Header */}
+                      <div className="flex justify-between items-start">
+                        <div className="font-semibold text-sm">
+                          {row.schedule}
+                        </div>
+
+                        <div
+                          className={`text-sm font-semibold ${
+                            row.available <= 0
+                              ? 'text-red-500'
+                              : 'text-green-600'
+                          }`}
+                        >
+                          {row.available} pax
+                        </div>
+                      </div>
+
+                      {/* Input grid */}
+                      <div className="grid grid-cols-2 gap-2 text-sm">
+                        {[
+                          { key: 'max_pax', label: 'Max' },
+                          { key: 'WP', label: 'WP' },
+                          { key: 'DP', label: 'DP' },
+                          { key: 'FP', label: 'FP' },
+                          { key: 'RS', label: 'RS' },
+                          { key: 'CA', label: 'CA' },
+                          { key: 'RF', label: 'RF' },
+                          { key: 'EX', label: 'EX' },
+                          { key: 'WL', label: 'WL' },
+                        ].map((field) => (
+                          <>
+                            <div className="text-muted-foreground">
+                              {field.label}
+                            </div>
+
+                            <MoneyInput
+                              className="text-right"
+                              value={row[field.key]}
+                              onChange={(val) =>
+                                updateAvailability(i, field.key, Number(val))
+                              }
+                            />
+                          </>
+                        ))}
+                      </div>
+
+                      {/* Action */}
+                      <Button
+                        className="w-full"
+                        type="button"
+                        disabled={savingAvailability}
+                        onClick={async () => {
+                          setSavingAvailability(true);
+
+                          try {
+                            const payload = buildAvailabilityPayload();
+
+                            router.post(
+                              `/companies/${company.username}/dashboard/tour-availabilities`,
+                              { availabilities: payload },
+                              {
+                                onSuccess: () =>
+                                  toast.success('Availability saved'),
+                                onError: () =>
+                                  toast.error('Failed to save availability'),
+                                onFinish: () => setSavingAvailability(false),
+                              },
+                            );
+                          } catch {
+                            setSavingAvailability(false);
+                          }
+                        }}
+                      >
+                        {savingAvailability && <Spinner />}
+                        Save
+                      </Button>
+                    </div>
+                  ))}
+                </div>
               </div>
 
               <div className="flex justify-start pt-6 border-t"></div>
@@ -1840,16 +2342,14 @@ export default function Page({ tour }: Props) {
 
                     <tbody>
                       {schedules.map((schedule) => {
-                        const rows = schedule.id
-                          ? addOns[schedule.id] || []
-                          : [];
+                        const rows = addOns[schedule.id] || [];
                         const rowCount = rows.length;
 
                         return (
                           <Fragment key={schedule.id}>
                             {/* KALAU ADA DATA */}
                             {rows.length > 0 &&
-                              rows.map((row: AddOn, index: number) => (
+                              rows.map((row, index) => (
                                 <tr key={index} className="border-t">
                                   {/* SCHEDULE */}
                                   {index === 0 && (
@@ -1857,8 +2357,8 @@ export default function Page({ tour }: Props) {
                                       className="p-3 font-medium align-top"
                                       rowSpan={rowCount + 1}
                                     >
-                                      {schedule.departure_date} →{' '}
-                                      {schedule.return_date}
+                                      {formatDate(schedule.departure_date)} →{' '}
+                                      {formatDate(schedule.return_date)}
                                     </td>
                                   )}
 
@@ -1870,7 +2370,7 @@ export default function Page({ tour }: Props) {
                                       value={row.description}
                                       onChange={(e) =>
                                         updateRow(
-                                          schedule.id!,
+                                          schedule.id,
                                           index,
                                           'description',
                                           e.target.value,
@@ -1886,7 +2386,7 @@ export default function Page({ tour }: Props) {
                                       value={row.price}
                                       onChange={(val) =>
                                         updateRow(
-                                          schedule.id!,
+                                          schedule.id,
                                           index,
                                           'price',
                                           Number(val),
@@ -1902,7 +2402,7 @@ export default function Page({ tour }: Props) {
                                       checked={row.edit_status}
                                       onChange={(e) =>
                                         updateRow(
-                                          schedule.id!,
+                                          schedule.id,
                                           index,
                                           'edit_status',
                                           e.target.checked,
@@ -1912,14 +2412,14 @@ export default function Page({ tour }: Props) {
                                   </td>
 
                                   {/* DELETE and SAVE */}
-                                  <td className="p-3 text-center">
+                                  <td className="p-3 text-left">
                                     <div className="flex items-center justify-center gap-2">
                                       <Button
                                         type="button"
                                         variant="destructive"
                                         size="icon"
                                         onClick={() =>
-                                          deleteRow(schedule.id!, index)
+                                          handleDelete(schedule.id, index)
                                         }
                                       >
                                         <Trash2 className="h-4 w-4" />
@@ -1928,52 +2428,7 @@ export default function Page({ tour }: Props) {
                                       <Button
                                         type="button"
                                         disabled={savingAddOns}
-                                        onClick={async () => {
-                                          setSavingAddOns(true);
-
-                                          try {
-                                            const payload =
-                                              buildAddOnsPayload();
-
-                                            if (payload.length === 0) {
-                                              toast.error(
-                                                'Add Ons masih kosong',
-                                              );
-                                              setSavingAddOns(false);
-                                              return;
-                                            }
-
-                                            console.log(
-                                              'SEND ADD ONS:',
-                                              payload,
-                                            );
-
-                                            router.post(
-                                              `/companies/${company.username}/dashboard/tour-add-ons`,
-                                              {
-                                                add_ons: payload,
-                                              },
-                                              {
-                                                onSuccess: () => {
-                                                  toast.success(
-                                                    'Add Ons saved',
-                                                  );
-                                                },
-                                                onError: () => {
-                                                  console.error(errors);
-                                                  toast.error(
-                                                    'Failed to save Add Ons',
-                                                  );
-                                                },
-                                                onFinish: () => {
-                                                  setSavingAddOns(false);
-                                                },
-                                              },
-                                            );
-                                          } catch (err) {
-                                            setSavingAddOns(false);
-                                          }
-                                        }}
+                                        onClick={() => syncAddOns(addOns)}
                                       >
                                         {savingAddOns && <Spinner />}
                                         <Save className="h-4 w-4" />
@@ -1999,7 +2454,7 @@ export default function Page({ tour }: Props) {
                               >
                                 <button
                                   type="button"
-                                  onClick={() => addRow(schedule.id!)}
+                                  onClick={() => addRow(schedule.id)}
                                   className="text-blue-600 text-sm"
                                 >
                                   + Add Ons
@@ -2017,6 +2472,84 @@ export default function Page({ tour }: Props) {
               <div className="flex justify-start pt-6 border-t"></div>
             </TabsContent>
           </Tabs>
+
+          <Dialog open={copyOpen} onOpenChange={setCopyOpen}>
+            <DialogContent className="max-w-xl">
+              <DialogHeader>
+                <DialogTitle>
+                  Copy Schedule To New Departure Dates <br></br>
+                  <br></br>
+                  {tour.name}
+                </DialogTitle>
+              </DialogHeader>
+
+              <div className="space-y-4">
+                <div className="border rounded-lg p-3 flex justify-center">
+                  <Calendar
+                    mode="multiple"
+                    selected={selectedDates}
+                    onSelect={(dates) => setSelectedDates(dates || [])}
+                    disabled={(date) =>
+                      date < new Date(new Date().setHours(0, 0, 0, 0))
+                    }
+                    className="rounded-md"
+                  />
+                </div>
+
+                <div className="space-y-2 max-h-48 overflow-auto">
+                  {selectedDates.length === 0 && (
+                    <p className="text-sm text-muted-foreground">
+                      No date selected
+                    </p>
+                  )}
+
+                  {selectedDates.map((date, i) => (
+                    <div
+                      key={i}
+                      className="flex items-center justify-between border rounded-md px-3 py-2"
+                    >
+                      <span>{format(date, 'dd MMM yyyy')}</span>
+
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="destructive"
+                        onClick={() =>
+                          setSelectedDates((prev) =>
+                            prev.filter(
+                              (d) =>
+                                format(d, 'yyyy-MM-dd') !==
+                                format(date, 'yyyy-MM-dd'),
+                            ),
+                          )
+                        }
+                      >
+                        Remove
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setCopyOpen(false)}
+                >
+                  Cancel
+                </Button>
+
+                <Button
+                  type="button"
+                  className="bg-blue-600 text-white hover:bg-blue-700"
+                  onClick={submitCopySchedules}
+                >
+                  Generate
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
       </form>
     </CompanyDashboardLayout>

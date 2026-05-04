@@ -11,7 +11,9 @@ use App\Http\Controllers\Companies\Dashboard\CustomerController;
 use App\Http\Controllers\Companies\Dashboard\HomeController;
 use App\Http\Controllers\Companies\Dashboard\NotificationController;
 use App\Http\Controllers\Companies\Dashboard\PageController;
+use App\Http\Controllers\Companies\Dashboard\ParameterVendorController;
 use App\Http\Controllers\Companies\Dashboard\PaymentController;
+use App\Http\Controllers\Companies\Dashboard\PriceCategoryController;
 use App\Http\Controllers\Companies\Dashboard\ProfileController;
 use App\Http\Controllers\Companies\Dashboard\RoleController;
 use App\Http\Controllers\Companies\Dashboard\TeamController;
@@ -45,6 +47,16 @@ Route::prefix('companies/{company:username}/dashboard')->middleware(['auth', 'co
   Route::middleware(['agent.subscription.active'])->post('vendor-registrations/register', [VendorRegistrationController::class, 'register'])->name('vendor-registrations.register');
   Route::resource('tours', TourController::class);
 
+  Route::delete(
+    'tours/{tour}/schedules/{schedule}',
+      [TourController::class, 'destroySchedule']
+  )->name('tours.schedule.destroy');
+
+  Route::delete(
+    'tours/{tour}/prices/{price}',
+      [TourController::class, 'destroyPrice']
+  )->name('tours.prices.destroy');
+
   Route::post(
     'tour-availabilities',
     [TourAvailabilityController::class, 'store']
@@ -57,6 +69,7 @@ Route::prefix('companies/{company:username}/dashboard')->middleware(['auth', 'co
 
   Route::resource('agent-tours', AgentTourController::class);
   Route::resource('categories', CategoryController::class);
+  Route::resource('price-categories', PriceCategoryController::class);
   Route::resource('wallets', WalletController::class);
   Route::resource('payments', PaymentController::class);
   Route::post('payments/{payment}/cancel', [PaymentController::class, 'cancel'])->name('payments.cancel');
@@ -64,6 +77,17 @@ Route::prefix('companies/{company:username}/dashboard')->middleware(['auth', 'co
   Route::get('wallet-transactions', [WalletTransactionsController::class, 'index'])->name('wallet-transaction.index');
   Route::get('withdrawals', [WithdrawalController::class, 'index'])->name('withdrawal.index');
   Route::get('profile', [ProfileController::class, 'show'])->name('settings.profile.show');
+
+  Route::get(
+      'parameter-vendor',
+      [ParameterVendorController::class, 'index']
+  )->name('parameter-vendor.index');
+
+  Route::put(
+    'parameter-vendor',
+    [ParameterVendorController::class, 'update']
+  )->name('parameter-vendor.update');
+
   Route::put('profile', [ProfileController::class, 'update'])->name('settings.profile.update');
   Route::post('teams/invite', [TeamController::class, 'invite'])->name('teams.invite');
   Route::resource('teams', TeamController::class);

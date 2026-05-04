@@ -3,12 +3,14 @@
 namespace App\Models;
 
 use App\Enums\CompanyType;
+use App\Models\CompanySettings;
 use App\Traits\HasBankAccounts;
 use Bavix\Wallet\Traits\CanPay;
 use Bavix\Wallet\Traits\HasWallet;
 use Bavix\Wallet\Traits\HasWallets;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 
@@ -174,5 +176,10 @@ class Company extends Model
   public function identityCard()
   {
     return $this->belongsTo(Media::class, 'identity_card_id');
+  }
+
+  public function companySetting(): HasOne
+  {
+      return $this->hasOne(CompanySettings::class, 'company_id');
   }
 }
