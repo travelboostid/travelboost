@@ -26,11 +26,10 @@ class AgentTourController extends Controller
   {
     $request->validate([
       'category_id' => 'nullable|exists:tour_categories,id',
+      'status'      => 'nullable|in:active,inactive',
     ]);
 
-    $agent_tour->update([
-      'category_id' => $request->category_id,
-    ]);
+    $agent_tour->update($request->only(['category_id', 'status']));
 
     return back();
   }

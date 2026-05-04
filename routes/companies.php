@@ -9,6 +9,7 @@ use App\Http\Controllers\Companies\Dashboard\CategoryController;
 use App\Http\Controllers\Companies\Dashboard\ChatbotController;
 use App\Http\Controllers\Companies\Dashboard\CustomerController;
 use App\Http\Controllers\Companies\Dashboard\HomeController;
+use App\Http\Controllers\Companies\Dashboard\NotificationController;
 use App\Http\Controllers\Companies\Dashboard\PageController;
 use App\Http\Controllers\Companies\Dashboard\PaymentController;
 use App\Http\Controllers\Companies\Dashboard\ProfileController;
@@ -77,6 +78,9 @@ Route::prefix('companies/{company:username}/dashboard')->middleware(['auth', 'co
   Route::singleton('chatbot', ChatbotController::class);
   Route::singleton('page', PageController::class);
   Route::singleton('agent-subscriptions', AgentSubscriptionController::class);
+
+  Route::post('notifications/mark-all-as-read', [NotificationController::class, 'markAllAsRead'])->name('notifications.mark-all-read');
+  Route::resource('notifications', NotificationController::class)->only(['index', 'update', 'destroy']);
 });
 
 Route::get(
