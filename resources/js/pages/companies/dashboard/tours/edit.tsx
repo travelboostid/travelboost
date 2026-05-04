@@ -884,11 +884,11 @@ export default function Page({ tour }: Props) {
           setCopyOpen(false);
           setSelectedDates([]);
           toast.success('Schedule copied successfully');
-          console.log('SUCCESS');
+          //console.log('SUCCESS');
         },
 
         onError: () => {
-          console.log('ERROR:', errors);
+          //console.log('ERROR:', errors);
           if (Object.keys(errors).length === 0) {
             toast.error('Server response error (check redirect)');
           } else {
