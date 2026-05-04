@@ -1,4 +1,3 @@
-import InputError from '@/components/input-error';
 import {
   Field,
   FieldContent,
@@ -10,29 +9,35 @@ import {
 import { Switch } from '@/components/ui/switch';
 import usePageProps from '@/hooks/use-page-props';
 import { update } from '@/routes/companies/dashboard/chatbot';
-import { Form, useForm } from '@inertiajs/react';
+import { Form, router } from '@inertiajs/react';
+import { useState } from 'react';
 import { toast } from 'sonner';
 import type { ChatbotPageProps } from '..';
 
 export default function ChatbotSettings() {
   const { settings, company } = usePageProps<ChatbotPageProps>();
-  const form = useForm({
-    chatbot_enabled: settings.chatbot_enabled as boolean,
-  });
+  const [updating, setUpdating] = useState(false);
 
   const handleChange = (checked: boolean) => {
-    form.setData('chatbot_enabled', checked);
-    form.put(update.url({ company: company.username }), {
-      preserveScroll: true,
-      onSuccess: () => {
-        toast.success(
-          `Chatbot ${checked ? 'enabled' : 'disabled'} successfully`,
-        );
+    router.put(
+      update.url({ company: company.username }),
+      {
+        chatbot_enabled: checked,
       },
-      onError: () => {
-        toast.error('Failed to update chatbot settings');
+      {
+        preserveScroll: true,
+        onBefore: () => setUpdating(true),
+        onFinish: () => setUpdating(false),
+        onSuccess: () => {
+          toast.success(
+            `Chatbot ${checked ? 'enabled' : 'disabled'} successfully`,
+          );
+        },
+        onError: () => {
+          toast.error('Failed to update chatbot settings');
+        },
       },
-    });
+    );
   };
 
   return (
@@ -50,14 +55,13 @@ export default function ChatbotSettings() {
                 </FieldDescription>
               </FieldContent>
               <Switch
-                disabled={form.processing}
-                checked={form.data.chatbot_enabled}
+                disabled={updating}
+                defaultChecked={settings.chatbot_enabled}
                 onCheckedChange={handleChange}
               />
             </Field>
           </FieldLabel>
         </FieldGroup>
-        <InputError message={form.errors.chatbot_enabled} />
       </div>
     </Form>
   );
