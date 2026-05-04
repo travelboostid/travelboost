@@ -10,20 +10,26 @@ import { Button } from '@/components/ui/button';
 import { Field, FieldError, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { index, update } from '@/routes/admin/app-configs';
+import { json } from '@codemirror/lang-json';
 import { router, useForm } from '@inertiajs/react';
-import Editor from '@monaco-editor/react';
+import CodeMirror from '@uiw/react-codemirror';
 import { PencilIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 export default function EditButton({ data }: { data: any }) {
   const [open, setOpen] = useState(false);
+
   const form = useForm({
     key: data.key,
     description: data.description,
-    value: data.value,
+    value: data.value ? JSON.stringify(data.value, null, 2) : '',
   });
 
   const handleSubmit = () => {
+    form.transform((data) => ({
+      ...data,
+      value: data.value ? JSON.parse(data.value) : null,
+    }));
     form.put(update(data.id).url, {
       onSuccess: () => {
         router.push(index());
@@ -36,7 +42,7 @@ export default function EditButton({ data }: { data: any }) {
     form.setData({
       key: data.key,
       description: data.description,
-      value: data.value,
+      value: data.value ? JSON.stringify(data.value, null, 2) : '',
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
@@ -67,12 +73,11 @@ export default function EditButton({ data }: { data: any }) {
           </Field>
           <Field>
             <FieldLabel htmlFor="value">Initial Value</FieldLabel>
-            <Editor
-              height="400px"
-              theme="vs-dark"
-              defaultLanguage="json"
-              defaultValue={form.data.value}
-              onChange={(v) => form.setData('value', v || '')}
+            <CodeMirror
+              value={form.data.value}
+              height="200px"
+              extensions={[json()]}
+              onChange={(val) => form.setData('value', val)}
             />
             <FieldError>{form.errors.value}</FieldError>
           </Field>
