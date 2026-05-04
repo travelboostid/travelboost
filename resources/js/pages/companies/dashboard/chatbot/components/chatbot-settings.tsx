@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/field';
 import { Switch } from '@/components/ui/switch';
 import usePageProps from '@/hooks/use-page-props';
-import { update } from '@/routes/company/chatbot';
+import { update } from '@/routes/companies/dashboard/chatbot';
 import { Form, useForm } from '@inertiajs/react';
 import { toast } from 'sonner';
 import type { ChatbotPageProps } from '..';

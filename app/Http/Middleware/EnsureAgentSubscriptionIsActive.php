@@ -22,21 +22,17 @@ class EnsureAgentSubscriptionIsActive
     if (!$subscription) {
       $isSubscriptionExpired = true;
     } else {
-      // Jika sedang pakai Free Trial (harga = 0)
       $isFreeTrial = $subscription->package && $subscription->package->price == 0;
 
-      // Pengecekan Expired
       if ($subscription->status !== AgentSubscriptionStatus::ACTIVE) {
         $isSubscriptionExpired = true;
       }
 
-      // Pengecekan Menu Marketing (Disabled jika Trial ATAU Expired)
       if ($isFreeTrial || $isSubscriptionExpired) {
         $isMarketingDisabled = true;
       }
     }
 
-    // Membagikan variabel ke seluruh aplikasi React (Global Inertia Shared Data)
     Inertia::share('subscription_rules', [
       'isMarketingDisabled' => $isMarketingDisabled,
       'isExpired' => $isSubscriptionExpired

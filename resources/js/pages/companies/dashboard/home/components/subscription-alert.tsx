@@ -6,7 +6,7 @@ import {
 } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import usePageProps from '@/hooks/use-page-props';
-import { show } from '@/routes/company/agent-subscriptions';
+import { show } from '@/routes/companies/dashboard/agent-subscriptions';
 import { Link } from '@inertiajs/react';
 import {
   AlertTriangleIcon,

@@ -12,7 +12,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
-import { update } from '@/routes/company/agent-registrations';
+import { update } from '@/routes/companies/dashboard/agent-registrations';
 import { useForm } from '@inertiajs/react';
 import { UserX2Icon } from 'lucide-react';
 import { useState } from 'react';

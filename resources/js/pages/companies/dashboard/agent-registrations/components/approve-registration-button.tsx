@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
-import { update } from '@/routes/company/agent-registrations';
+import { update } from '@/routes/companies/dashboard/agent-registrations';
 import { useForm } from '@inertiajs/react';
 import { UserCheckIcon } from 'lucide-react';
 import { useState } from 'react';

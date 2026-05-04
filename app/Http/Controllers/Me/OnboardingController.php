@@ -108,7 +108,7 @@ class OnboardingController extends Controller
 
     $user->addRole("company:{$company->id}:superadmin", "company:{$company->id}");
 
-    return redirect()->route('company.index', [
+    return redirect()->route('companies.dashboard.index', [
       'company' => $company->username,
     ]);
   }
@@ -141,7 +141,7 @@ class OnboardingController extends Controller
       ->where('id', '!=', $invitation->id)
       ->update(['status' => CompanyTeamStatus::REJECTED]);
 
-    return redirect()->route('company.index', [
+    return redirect()->route('companies.dashboard.index', [
       'company' => $invitation->company->username,
     ]);
   }

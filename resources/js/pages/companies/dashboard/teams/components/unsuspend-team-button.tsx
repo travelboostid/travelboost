@@ -16,7 +16,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
-import { update } from '@/routes/company/teams';
+import { update } from '@/routes/companies/dashboard/teams';
 import { useForm } from '@inertiajs/react';
 import { UserCheckIcon } from 'lucide-react';
 import { useState } from 'react';

@@ -6,12 +6,9 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
-import {
-  login as loginAsAgent,
-  register as registerAsAgent,
-} from '@/routes/agent';
-import { login as loginAsVendor } from '@/routes/vendor';
-import { Head, Link, useForm, usePage } from '@inertiajs/react';
+import { store as login } from '@/routes/companies/login';
+import { show as showRegister } from '@/routes/companies/register';
+import { Head, useForm, usePage } from '@inertiajs/react';
 import { AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
@@ -19,7 +16,7 @@ type Props = {
   status?: string;
 };
 
-export default function AgentLogin({ status }: Props) {
+export default function CompanyLogin({ status }: Props) {
   const { flash } = usePage().props as any;
 
   const [showModal, setShowModal] = useState(false);
@@ -39,6 +36,7 @@ export default function AgentLogin({ status }: Props) {
 
   useEffect(() => {
     if (flash?.account_inactive) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setModalMessage(flash.account_inactive);
       setShowModal(true);
     }
@@ -61,7 +59,7 @@ export default function AgentLogin({ status }: Props) {
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    post('/agent/login', {
+    post(login().url, {
       onFinish: () => reset('password'),
     });
   };
@@ -69,26 +67,13 @@ export default function AgentLogin({ status }: Props) {
   return (
     <>
       <AuthLayout
-        title="Log in to your agent account"
+        title="Log in to your account"
         description="Enter your email and password below to log in"
       >
         <Head title="Log in" />
 
         <form onSubmit={submit} className="flex flex-col gap-6">
           <div className="grid gap-6">
-            <div className="grid grid-cols-2 gap-2">
-              <Link href={loginAsAgent()}>
-                <Button variant="default" className="w-full" type="button">
-                  Login as Agent
-                </Button>
-              </Link>
-              <Link href={loginAsVendor()}>
-                <Button variant="secondary" className="w-full" type="button">
-                  Login as Vendor
-                </Button>
-              </Link>
-            </div>
-
             <div className="grid gap-2">
               <Label htmlFor="username_or_email">Username or Email</Label>
               <Input
@@ -160,7 +145,7 @@ export default function AgentLogin({ status }: Props) {
 
           <div className="text-center text-sm text-muted-foreground">
             Don't have an account?{' '}
-            <TextLink href={registerAsAgent()} tabIndex={5}>
+            <TextLink href={showRegister()} tabIndex={5}>
               Sign up
             </TextLink>
           </div>

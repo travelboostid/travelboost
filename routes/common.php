@@ -1,25 +1,21 @@
 <?php
 
-use App\Http\Controllers\AdminAuthController;
+use App\Http\Controllers\Admin\AuthController as AdminAuthController;
+use App\Http\Controllers\Companies\AuthController as CompaniesAuthController;
 use App\Http\Controllers\Affiliate\LandingController as AffiliateHomeController;
-use App\Http\Controllers\AgentAuthController;
-use App\Http\Controllers\AuthController as BaseAuthController;
-use App\Http\Controllers\CustomerAuthController;
+use App\Http\Controllers\Customers\AuthController as CustomerAuthController;
 use App\Http\Controllers\HomeController as BaseHomeController;
 use App\Http\Controllers\TeamInvitationAuthController;
 use App\Http\Controllers\Tenant\HomeController as TenantHomeController;
-use App\Http\Controllers\VendorAuthController;
 use App\Http\Controllers\Webhooks\MidtransWebhookController;
 use App\Models\AffiliateProfile;
 use App\Models\Company;
-use App\Models\Domain;
 use Illuminate\Support\Facades\Context;
 use Illuminate\Support\Facades\Route;
 use Laravolt\Indonesia\Models\City;
 use Laravolt\Indonesia\Models\District;
 use Laravolt\Indonesia\Models\Province;
 use Laravolt\Indonesia\Models\Village;
-use Symfony\Component\HttpFoundation\Request;
 
 Route::get('/', function () {
   $affiliateBaseUrl = 'affiliate.' . env('APP_HOST', 'localhost');
@@ -48,26 +44,22 @@ Route::get('/privacy', [BaseHomeController::class, 'privacy'])->name('privacy');
 Route::get('/tours', [BaseHomeController::class, 'tours'])->name('tours');
 
 Route::middleware(['guest'])->group(function () {
-  Route::get('/agent/login', [AgentAuthController::class, 'showLogin'])->name('agent.login');
-  Route::post('/agent/login', [AgentAuthController::class, 'login']);
-  Route::get('/agent/register', [AgentAuthController::class, 'showRegister'])->name('agent.register');
+  Route::get('/companies/login', [CompaniesAuthController::class, 'showLogin'])->name('companies.login.show');
+  Route::post('/companies/login', [CompaniesAuthController::class, 'login'])->name('companies.login.store');
+  Route::get('/companies/register', [CompaniesAuthController::class, 'showRegister'])->name('companies.register.show');
+  Route::post('/companies/register', [CompaniesAuthController::class, 'register'])->name('companies.register.store');
+  Route::get('/companies/accept-team-invitation', [CompaniesAuthController::class, 'showAcceptTeamInvitation'])->name('companies.accept-team-invitation.show');
+  Route::post('/companies/accept-team-invitation', [CompaniesAuthController::class, 'acceptTeamInvitation'])->name('companies.accept-team-invitation.store');
 
-  Route::get('/vendor/login', [VendorAuthController::class, 'showLogin'])->name('vendor.login');
-  Route::post('/vendor/login', [VendorAuthController::class, 'login']);
-  Route::get('/vendor/register', [VendorAuthController::class, 'showRegister'])->name('vendor.register');
+  Route::get('/customers/login', [CustomerAuthController::class, 'showLogin'])->name('customers.login.show');
+  Route::post('/customers/login', [CustomerAuthController::class, 'login'])->name('customers.login.store');
+  Route::get('/customers/register', [CustomerAuthController::class, 'showRegister'])->name('customers.register.show');
+  Route::post('/customers/register', [CustomerAuthController::class, 'register'])->name('customers.register.store');
 
-  Route::get('/customer/login', [CustomerAuthController::class, 'showLogin'])->name('customer.login');
-  Route::get('/customer/register', [CustomerAuthController::class, 'showRegister'])->name('customer.register');
-
-  Route::get('/admin/login', [AdminAuthController::class, 'showLogin'])->name('admin.login');
+  Route::get('/admin/login', [AdminAuthController::class, 'showLogin'])->name('admin.login.show');
+  Route::post('/admin/login', [AdminAuthController::class, 'login'])->name('admin.login.store');
   Route::get('/team-invitation/accept', [TeamInvitationAuthController::class, 'showAccept'])->name('team-invitation.accept');
 });
-
-Route::get('/login', function (Request $request) {
-  return app(BaseAuthController::class)->showLogin($request);
-})->name('login');
-
-Route::get('/register', [BaseAuthController::class, 'showRegister'])->name('register');
 
 Route::prefix('webhooks')->group(function () {
   Route::middleware(['web'])->group(function () {

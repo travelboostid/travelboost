@@ -18,7 +18,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
-import { update } from '@/routes/company/roles';
+import { update } from '@/routes/companies/dashboard/roles';
 import { useForm } from '@inertiajs/react';
 import { EditIcon } from 'lucide-react';
 import { useState } from 'react';

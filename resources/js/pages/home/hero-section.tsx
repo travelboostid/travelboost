@@ -1,7 +1,10 @@
 import { Button } from '@/components/ui/button';
+import { show as showLogin } from '@/routes/companies/login';
+import { show as showRegister } from '@/routes/companies/register';
 import { Link } from '@inertiajs/react';
 import { Globe, Sparkles, Users } from 'lucide-react';
 import React from 'react';
+import { FormattedMessage } from 'react-intl';
 
 export function HeroSection() {
   return (
@@ -30,7 +33,9 @@ export function HeroSection() {
 
           <div className="mt-10 flex flex-col sm:flex-row gap-4">
             <Button asChild size="lg" className="text-base">
-              <Link href="/register">Daftar Sekarang</Link>
+              <Link href={showRegister()}>
+                <FormattedMessage defaultMessage="Register Now" />
+              </Link>
             </Button>
 
             <Button
@@ -39,7 +44,9 @@ export function HeroSection() {
               variant="outline"
               className="text-base bg-card/10 border-card/30 text-card hover:bg-card/20"
             >
-              <Link href="/login">Masuk</Link>
+              <Link href={showLogin()}>
+                <FormattedMessage defaultMessage="Log In" />
+              </Link>
             </Button>
           </div>
         </div>

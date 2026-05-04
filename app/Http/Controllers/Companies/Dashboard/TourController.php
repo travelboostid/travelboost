@@ -62,7 +62,7 @@ class TourController extends Controller
       DB::commit();
 
       return redirect()
-        ->route('company.tours.edit', [
+        ->route('companies.tours.edit', [
           'company' => $company->username,
           'tour'    => $tour->id,
         ])
@@ -212,7 +212,7 @@ class TourController extends Controller
 
       DB::commit();
 
-      return redirect()->route('company.tours.edit', [
+      return redirect()->route('companies.tours.edit', [
         'company' => $company->username,
         'tour'    => $tour->id,
       ])->with([

@@ -9,9 +9,11 @@ use App\Http\Controllers\Admin\TourProductController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\VendorCatalogController;
 use App\Http\Controllers\Admin\VendorController;
+use App\Http\Controllers\Admin\IndexController;
 use App\Http\Middleware\EnsureHasAdminAccess;
 use Illuminate\Support\Facades\Route;
 
+Route::get('/admin', [IndexController::class, 'show'])->name('admin.show');
 Route::prefix('admin')->middleware(['auth', EnsureHasAdminAccess::class])->name('admin.')->group(function () {
   //
   Route::resource('app-configs', AppConfigController::class)->names('app-configs');
