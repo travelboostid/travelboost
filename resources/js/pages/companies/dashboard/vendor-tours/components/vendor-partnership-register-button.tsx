@@ -1,6 +1,6 @@
 import { Button } from '@/components/ui/button';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
-import { register } from '@/routes/company/vendor-registrations';
+import { register } from '@/routes/companies/dashboard/vendor-registrations';
 import { router } from '@inertiajs/react';
 
 import { useFloatingChatWidgetContext } from '@/components/chat/state';

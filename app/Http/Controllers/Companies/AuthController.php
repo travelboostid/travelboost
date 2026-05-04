@@ -51,8 +51,6 @@ class AuthController extends Controller
       ]);
     }
 
-    $statusValue = $user->status instanceof \BackedEnum ? $user->status->value : $user->status;
-
     if ($user->status === UserStatus::INACTIVE) {
       return back()->with('account_inactive', 'Your account has been deactivated, contact the Travelboost admin at care@travelboost.co.id for further information.');
     }
@@ -60,7 +58,7 @@ class AuthController extends Controller
     Auth::login($user, $request->boolean('remember'));
     $request->session()->regenerate();
 
-    return redirect()->route('company.index', ['company' => $team->company->username]);
+    return redirect()->route('companies.dashboard.index', ['company' => $team->company->username]);
   }
 
   public function showRegister(Request $request): Response
@@ -151,6 +149,6 @@ class AuthController extends Controller
     Auth::login($user);
     $request->session()->regenerate();
 
-    return redirect()->route('company.index', ['company' => $team->company->username]);
+    return redirect()->route('companies.dashboard.index', ['company' => $team->company->username]);
   }
 }

@@ -12,13 +12,6 @@ class TeamInvitationController extends Controller
 {
   public function acceptInvitation(string $code)
   {
-    if (!Auth::check()) {
-      session([
-        'intent' => 'accept_company_team_invitation',
-        'company_team_invite_token' => $code,
-      ]);
-      return redirect()->route('login');
-    }
     $companyTeam = CompanyTeam::where('invite_token', $code)->first();
     if ($companyTeam == null) {
       return redirect('me.index');
@@ -38,6 +31,6 @@ class TeamInvitationController extends Controller
     $user->save();
     $user->addRole($companyTeam->invite_role, "company:{$companyTeam->company_id}");
     session()->forget('company_team_invite_token');
-    return redirect()->route('company.index', $companyTeam->company->username);
+    return redirect()->route('companies.dashboard.index', ['company' => $companyTeam->company->username]);
   }
 }

@@ -14,7 +14,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
-import { invite } from '@/routes/company/teams';
+import { invite } from '@/routes/companies/dashboard/teams';
 import { useForm } from '@inertiajs/react';
 import { PlusIcon } from 'lucide-react';
 import { useState } from 'react';

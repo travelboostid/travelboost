@@ -1,6 +1,6 @@
 import CompanyDashboardLayout from '@/components/layouts/company-dashboard';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
-import { index } from '@/routes/company/withdrawal';
+import { index } from '@/routes/companies/dashboard/withdrawal';
 import { Head, router } from '@inertiajs/react';
 import dayjs from 'dayjs';
 import { useMemo, useState } from 'react';

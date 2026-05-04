@@ -18,8 +18,8 @@ export function Header() {
   const toggleTheme = () => {
     setTheme(resolvedTheme === 'light' ? 'dark' : 'light');
   };
-  const { VITE_APP_HOST, VITE_APP_PORT, VITE_APP_SCHEME } = import.meta.env;
-  const affiliateBaseUrl = `${VITE_APP_SCHEME}://affiliate.${VITE_APP_HOST}${VITE_APP_PORT ? `:${VITE_APP_PORT}` : ''}`;
+  // const { VITE_APP_HOST, VITE_APP_PORT, VITE_APP_SCHEME } = import.meta.env;
+  // const affiliateBaseUrl = `${VITE_APP_SCHEME}://affiliate.${VITE_APP_HOST}${VITE_APP_PORT ? `:${VITE_APP_PORT}` : ''}`;
 
   const MENUS = [
     {

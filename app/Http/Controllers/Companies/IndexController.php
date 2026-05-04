@@ -17,6 +17,6 @@ class IndexController extends Controller
     if (!$company) {
       return redirect()->route('me.index');
     }
-    return redirect()->route('company.index', ['company' => $company->username]);
+    return redirect()->route('companies.dashboard.index', ['company' => $company->username]);
   }
 }
