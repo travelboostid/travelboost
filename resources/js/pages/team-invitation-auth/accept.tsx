@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { DEFAULT_PHOTO } from '@/config';
-import { store } from '@/routes/register';
+import { store } from '@/routes/companies/accept-team-invitation';
 import { Form, Head } from '@inertiajs/react';
 import { Eye, EyeOff, UserIcon } from 'lucide-react';
 import { useState } from 'react';
@@ -57,11 +57,7 @@ export default function AcceptTeamInvitationPage({
               </div>
             </Alert>
             <input type="hidden" name="intent" value="register-as-team" />
-            <input
-              type="hidden"
-              name="invite_token"
-              value={team.invite_token}
-            />
+            <input type="hidden" name="token" value={team.invite_token} />
             <div className="grid gap-6">
               <div className="grid gap-2">
                 <Label htmlFor="name">Name</Label>

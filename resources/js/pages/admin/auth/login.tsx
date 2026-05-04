@@ -5,30 +5,37 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
-import { store } from '@/routes/login';
+import { store as submitLogin } from '@/routes/admin/login';
+// import { request } from '@/routes/password';
 import { Form, Head } from '@inertiajs/react';
 import { Eye, EyeOff } from 'lucide-react';
 import { useState } from 'react';
 
-export default function Login() {
+type Props = {
+  status?: string;
+  // canResetPassword: boolean;
+  company: any;
+};
+
+export default function Login({ status }: Props) {
   const [showPassword, setShowPassword] = useState(false);
 
   return (
     <>
       <AuthLayout
-        title="Log in to your admin account"
+        title="Log in to your account"
         description="Enter your email and password below to log in"
       >
         <Head title="Log in" />
 
         <Form
-          {...store.form()}
+          {...submitLogin.form()}
           resetOnSuccess={['password']}
           className="flex flex-col gap-6"
         >
           {({ processing, errors }) => (
             <>
-              <input type="hidden" name="intent" value="login-as-admin" />
+              <input type="hidden" name="intent" value="login-as-customer" />
               <div className="grid gap-6">
                 <div className="grid gap-2">
                   <Label htmlFor="username_or_email">Username or Email</Label>
@@ -89,6 +96,12 @@ export default function Login() {
             </>
           )}
         </Form>
+
+        {status && (
+          <div className="mb-4 text-center text-sm font-medium text-green-600">
+            {status}
+          </div>
+        )}
       </AuthLayout>
     </>
   );

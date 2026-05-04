@@ -1,10 +1,8 @@
 // import AppLogoIcon from '@/components/app-logo-icon';
 import { Button } from '@/components/ui/button';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
-import {
-  login as loginAsAgent,
-  register as registerAsAgent,
-} from '@/routes/agent';
+import { show as loginAsAgent } from '@/routes/companies/login';
+import { show as registerAsAgent } from '@/routes/companies/register';
 import { Link } from '@inertiajs/react';
 import { MenuIcon, MoonIcon, SunIcon, XIcon } from 'lucide-react';
 import { useTheme } from 'next-themes';

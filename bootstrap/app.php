@@ -1,6 +1,5 @@
 <?php
 
-use App\Console\Commands\ProcessAiBilling;
 use App\Http\Middleware\CheckUserStatus;
 use App\Http\Middleware\DomainResolver;
 use App\Http\Middleware\EnsureAgentSubscriptionIsActive;
@@ -9,7 +8,6 @@ use App\Http\Middleware\EnsureHasCompanyAccess;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
 use Illuminate\Auth\Middleware\Authenticate;
-use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -45,9 +43,6 @@ return Application::configure(basePath: dirname(__DIR__))
       DomainResolver::class,
       Authenticate::class,
     ]);
-  })
-  ->withSchedule(function (Schedule $schedule) {
-    $schedule->command(ProcessAiBilling::class)->dailyAt('00:05');
   })
   ->withExceptions(function (Exceptions $exceptions): void {
     //
