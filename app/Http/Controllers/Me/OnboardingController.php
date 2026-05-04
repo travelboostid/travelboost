@@ -123,7 +123,6 @@ class OnboardingController extends Controller
 
   public function acceptInvitation(CompanyTeam $invitation)
   {
-
     /** @var \App\Models\User $user */
     $user = Auth::user();
 

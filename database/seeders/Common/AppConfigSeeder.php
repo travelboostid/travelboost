@@ -12,7 +12,6 @@ class AppConfigSeeder extends Seeder
     AppConfig::updateOrCreate(
       ['key' => 'chatbot'],
       [
-        'key' => 'chatbot',
         'description' => 'Chatbot configuration',
         'value' => [
           'chatbot_model_provider' => 'mistral',
@@ -30,7 +29,6 @@ class AppConfigSeeder extends Seeder
     AppConfig::updateOrCreate(
       ['key' => 'admin'],
       [
-        'key' => 'admin',
         'description' => 'Admin Parameter configuration',
         'value' => [
           'platform_fee' => '25000',

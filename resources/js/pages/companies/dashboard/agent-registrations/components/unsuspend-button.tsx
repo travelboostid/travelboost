@@ -44,7 +44,7 @@ export default function UnsuspendButton({
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
       <AlertDialogTrigger asChild>
-        <Button size="icon" className="text-primary" variant="destructive">
+        <Button size="icon" className="text-primary" variant="outline">
           <UserCheckIcon />
         </Button>
       </AlertDialogTrigger>

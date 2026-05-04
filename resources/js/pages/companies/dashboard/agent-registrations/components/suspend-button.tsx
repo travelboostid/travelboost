@@ -21,10 +21,10 @@ export default function SuspendButton({ registration }: { registration: any }) {
   const { company } = usePageSharedDataProps();
   const [open, setOpen] = useState(false);
   const form = useForm({
-    status: 'active',
+    status: 'suspended',
     note: '',
   });
-  const handleApprove = () => {
+  const handleSuspend = () => {
     form.put(
       update({
         company: company.username,
@@ -63,7 +63,7 @@ export default function SuspendButton({ registration }: { registration: any }) {
         />
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction onClick={handleApprove}>Suspend</AlertDialogAction>
+          <AlertDialogAction onClick={handleSuspend}>Suspend</AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
