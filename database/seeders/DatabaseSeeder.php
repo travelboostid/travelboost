@@ -16,7 +16,6 @@ class DatabaseSeeder extends Seeder
       \Laravolt\Indonesia\Seeds\CitiesSeeder::class,
       \Laravolt\Indonesia\Seeds\DistrictsSeeder::class,
       \Laravolt\Indonesia\Seeds\VillagesSeeder::class,
-      \Database\Seeders\Common\ParameterTravelboostSeeder::class,
     ]);
 
     switch (app()->environment()) {
