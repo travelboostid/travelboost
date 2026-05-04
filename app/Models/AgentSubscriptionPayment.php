@@ -33,7 +33,7 @@ class AgentSubscriptionPayment extends Model
       $subscription = AgentSubscription::with('package')->where('company_id', $company->id)->latest()->first();
       $now = Carbon::now();
 
-      $isPreviousFreeTrial = $subscription && $subscription->package && $subscription->package->price == 0;
+      $isPreviousFreeTrial = $subscription && $subscription->package && $subscription->package->price <= 0;
 
       if ($subscription && $subscription->ended_at && $subscription->ended_at > $now && !$isPreviousFreeTrial) {
         $subscription->update([
@@ -108,6 +108,7 @@ class AgentSubscriptionPayment extends Model
             $user = User::find($profile->user_id);
             if ($user) {
               $user->depositFloat($commissionAmount, ['description' => 'Agent Subscription Commission']);
+              $user->notify(new \App\Notifications\CommissionReceivedNotification($company->name, $commissionAmount, $tier));
             }
           }
 

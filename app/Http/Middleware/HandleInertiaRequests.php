@@ -3,44 +3,25 @@
 namespace App\Http\Middleware;
 
 use App\Models\AnonymousUser;
+use App\Models\Currency;
+use App\Models\AgentSubscription;
+use App\Enums\AgentSubscriptionStatus;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
-
-use App\Models\Currency;
 use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Str;
 
 class HandleInertiaRequests extends Middleware
 {
-  /**
-   * The root template that's loaded on the first page visit.
-   *
-   * @see https://inertiajs.com/server-side-setup#root-template
-   *
-   * @var string
-   */
   protected $rootView = 'app';
 
-  /**
-   * Determines the current asset version.
-   *
-   * @see https://inertiajs.com/asset-versioning
-   */
   public function version(Request $request): ?string
   {
     return parent::version($request);
   }
 
-  /**
-   * Define the props that are shared by default.
-   *
-   * @see https://inertiajs.com/shared-data
-   *
-   * @return array<string, mixed>
-   */
   public function share(Request $request): array
   {
-    // Only share if route has {company} parameter
     $company = $request->route('company');
     $anonymousUserToken = $request->cookie('anonymous_user_token');
     $anonymousUser = $anonymousUserToken ? AnonymousUser::where('token', $anonymousUserToken)->first() : null;
@@ -50,6 +31,30 @@ class HandleInertiaRequests extends Middleware
         'token' => Str::uuid()->toString(),
       ]);
       Cookie::queue('anonymous_user_token', $anonymousUser->token, 60 * 24 * 365);
+    }
+
+    $isMarketingDisabled = false;
+    $isSubscriptionExpired = false;
+
+    if ($company && isset($company->id)) {
+      $subscription = AgentSubscription::with('package')
+        ->where('company_id', $company->id)
+        ->latest()
+        ->first();
+
+      if (!$subscription) {
+        $isSubscriptionExpired = true;
+      } else {
+        $isFreeTrial = $subscription->package && $subscription->package->price <= 0;
+
+        if ($subscription->status !== AgentSubscriptionStatus::ACTIVE) {
+          $isSubscriptionExpired = true;
+        }
+
+        if ($isFreeTrial || $isSubscriptionExpired) {
+          $isMarketingDisabled = true;
+        }
+      }
     }
 
     return [
@@ -62,21 +67,19 @@ class HandleInertiaRequests extends Middleware
         'roles' => $request->user()?->roles->pluck('name')->toArray(),
         'teams' => $request->user()?->allTeams()->pluck('name')->toArray(),
       ],
-      // current company based on route parameter (don't interpret as user's current company!!!)
       'company' => $company,
-      // current tenant based on route parameter (don't interpret as user's tenant!!!)
       'tenant' => $request->attributes->get('tenant'),
       'anonymousUser' => $anonymousUser,
       'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
-
-      //13042026
-      // 'currencies' => fn() => Currency::select('code', 'name')->get(),
-
       'flash' => [
         'tab' => $request->session()->get('tab'),
         'account_inactive' => $request->session()->get('account_inactive'),
         'warning' => $request->session()->get('warning'),
         'success' => $request->session()->get('success'),
+      ],
+      'subscription_rules' => [
+        'isMarketingDisabled' => $isMarketingDisabled,
+        'isExpired' => $isSubscriptionExpired
       ],
     ];
   }

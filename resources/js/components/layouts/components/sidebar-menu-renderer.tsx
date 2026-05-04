@@ -29,14 +29,15 @@ import {
 } from '@/components/ui/sidebar';
 
 import { useIsMobile } from '@/hooks/use-mobile';
-import { useMemo, type HTMLAttributeAnchorTarget } from 'react';
+import React, { useMemo, type HTMLAttributeAnchorTarget } from 'react';
 
 export type MenuItemBase = {
   id: string;
-  title: string;
+  title: string | React.ReactNode;
   urlOrAction: string | (() => void);
   target?: HTMLAttributeAnchorTarget;
   icon?: LucideIcon;
+  disabled?: boolean;
 };
 
 export type MenuItem =
@@ -68,6 +69,20 @@ export function SidebarMenuRenderer({
   const renderLink = (item: MenuItem, isSub = false) => {
     const Button = isSub ? SidebarMenuSubButton : SidebarMenuButton;
 
+    if (item.disabled) {
+      return (
+        <Button
+          isActive={false}
+          tooltip={typeof item.title === 'string' ? item.title : undefined}
+        >
+          <div className="flex w-full items-center opacity-50 cursor-not-allowed pointer-events-none">
+            {item.icon && <item.icon />}
+            <span className="flex-1">{item.title}</span>
+          </div>
+        </Button>
+      );
+    }
+
     if (typeof item.urlOrAction === 'string') {
       return (
         <Button asChild isActive={activeState[item.id]}>
@@ -84,15 +99,14 @@ export function SidebarMenuRenderer({
     }
 
     return (
-      <Button
-        asChild
-        isActive={activeState[item.id]}
-        onClick={item.urlOrAction}
-      >
-        <span>
+      <Button asChild isActive={activeState[item.id]}>
+        <button
+          onClick={item.urlOrAction}
+          className="w-full flex items-center text-left"
+        >
           {item.icon && <item.icon />}
-          {item.title}
-        </span>
+          <span className="flex-1">{item.title}</span>
+        </button>
       </Button>
     );
   };
@@ -119,19 +133,20 @@ export function SidebarMenuRenderer({
               key={action.id}
               asChild
               onClick={
-                typeof action.urlOrAction === 'function'
+                typeof action.urlOrAction === 'function' && !action.disabled
                   ? action.urlOrAction
                   : undefined
               }
+              disabled={action.disabled}
             >
               <a
-                className="flex items-center gap-2 w-full"
+                className={`flex items-center gap-2 w-full ${action.disabled ? 'pointer-events-none opacity-50' : ''}`}
                 href={
-                  typeof action.urlOrAction === 'string'
+                  typeof action.urlOrAction === 'string' && !action.disabled
                     ? action.urlOrAction
                     : undefined
                 }
-                target={action.target}
+                target={action.disabled ? undefined : action.target}
               >
                 {action.icon && (
                   <action.icon className="text-muted-foreground" />
@@ -159,7 +174,9 @@ export function SidebarMenuRenderer({
               <SidebarMenuItem>
                 <CollapsibleTrigger asChild>
                   <SidebarMenuButton
-                    tooltip={item.title}
+                    tooltip={
+                      typeof item.title === 'string' ? item.title : undefined
+                    }
                     isActive={activeState[item.id]}
                   >
                     {item.icon && <item.icon />}

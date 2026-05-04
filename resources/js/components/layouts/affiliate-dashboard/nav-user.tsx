@@ -116,9 +116,9 @@ export function NavUser() {
           className="cursor-pointer py-2"
         >
           {resolvedTheme === 'light' ? (
-            <Moon className="mr-2 h-4 w-4" />
+            <Moon className="mr-0 h-4 w-4" />
           ) : (
-            <Sun className="mr-2 h-4 w-4" />
+            <Sun className="mr-0 h-4 w-4" />
           )}
           <span>Toggle Theme</span>
         </DropdownMenuItem>

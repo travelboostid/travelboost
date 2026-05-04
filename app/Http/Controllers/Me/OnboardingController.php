@@ -48,6 +48,7 @@ class OnboardingController extends Controller
 
   public function createCompany(Request $request)
   {
+
     /** @var \App\Models\User $user */
     $user = Auth::user();
 
@@ -108,6 +109,13 @@ class OnboardingController extends Controller
 
     $user->addRole("company:{$company->id}:superadmin", "company:{$company->id}");
 
+    if (isset($company->referred_by) && $company->referred_by != null) {
+      $uplineUser = \App\Models\User::find($company->referred_by);
+      if ($uplineUser) {
+        $uplineUser->notify(new \App\Notifications\NewReferralNotification($company->name));
+      }
+    }
+
     return redirect()->route('companies.dashboard.index', [
       'company' => $company->username,
     ]);
@@ -115,6 +123,7 @@ class OnboardingController extends Controller
 
   public function acceptInvitation(CompanyTeam $invitation)
   {
+
     /** @var \App\Models\User $user */
     $user = Auth::user();
 

@@ -12,6 +12,7 @@ import {
   WalletIcon,
 } from 'lucide-react';
 import type { HTMLAttributeAnchorTarget } from 'react';
+import React from 'react';
 import { FormattedMessage } from 'react-intl';
 
 type MenuItemBase = {
@@ -57,6 +58,22 @@ export function useCompanyDashboardNavMainMenu() {
 
   const companySubdomain = `${protocol}//${company.username}.${baseHost}${port}`;
   const isMarketingDisabled = !!subscription_rules?.isMarketingDisabled;
+
+  const renderTitle = (node: React.ReactNode, isLocked: boolean) => {
+    if (isLocked) {
+      return (
+        <span className="pointer-events-none block w-full cursor-not-allowed select-none opacity-50">
+          {node}
+        </span>
+      );
+    }
+    return node;
+  };
+
+  const handleLockedClick = (e: any) => {
+    e?.preventDefault();
+    e?.stopPropagation();
+  };
 
   const unfilteredMenus = [
     {
@@ -198,29 +215,43 @@ export function useCompanyDashboardNavMainMenu() {
       items: [
         {
           id: 'marketings.landing-page.edit',
-          title: <FormattedMessage defaultMessage="Edit Landing Page" />,
+          title: renderTitle(
+            <FormattedMessage defaultMessage="Edit Landing Page" />,
+            isMarketingDisabled,
+          ),
           urlOrAction: isMarketingDisabled
-            ? '#'
+            ? (handleLockedClick as any)
             : `/companies/${company.username}/dashboard/page/edit`,
           disabled: isMarketingDisabled,
         },
         {
           id: 'marketings.landing-page.view',
-          title: <FormattedMessage defaultMessage="My Landing Page" />,
-          urlOrAction: isMarketingDisabled ? '#' : companySubdomain,
+          title: renderTitle(
+            <FormattedMessage defaultMessage="My Landing Page" />,
+            isMarketingDisabled,
+          ),
+          urlOrAction: isMarketingDisabled
+            ? (handleLockedClick as any)
+            : companySubdomain,
           target: isMarketingDisabled ? undefined : '_blank',
           disabled: isMarketingDisabled,
         },
         {
           id: 'marketings.socmed-analytics',
-          title: <FormattedMessage defaultMessage="Social Media Analytics" />,
-          urlOrAction: `#`,
+          title: renderTitle(
+            <FormattedMessage defaultMessage="Social Media Analytics" />,
+            isMarketingDisabled,
+          ),
+          urlOrAction: isMarketingDisabled ? (handleLockedClick as any) : '#',
           disabled: isMarketingDisabled,
         },
         {
           id: 'marketings.budgeting',
-          title: <FormattedMessage defaultMessage="Promotion Budgetting" />,
-          urlOrAction: `#`,
+          title: renderTitle(
+            <FormattedMessage defaultMessage="Promotion Budgetting" />,
+            isMarketingDisabled,
+          ),
+          urlOrAction: isMarketingDisabled ? (handleLockedClick as any) : '#',
           disabled: isMarketingDisabled,
         },
       ],
@@ -235,12 +266,12 @@ export function useCompanyDashboardNavMainMenu() {
         {
           id: 'reports.room-listings',
           title: <FormattedMessage defaultMessage="Room Listings" />,
-          urlOrAction: `#`,
+          urlOrAction: '#',
         },
         {
           id: 'reports.inventories',
           title: <FormattedMessage defaultMessage="Inventory Status" />,
-          urlOrAction: `#`,
+          urlOrAction: '#',
         },
       ],
     },
