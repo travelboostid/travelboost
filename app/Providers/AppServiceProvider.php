@@ -48,9 +48,9 @@ class AppServiceProvider extends ServiceProvider
       $redirectPath = '/'; // Default redirect path
       $domain = Context::get('domain');
       if ($domain == null) {
-        $redirectPath = route('agent.login');
+        $redirectPath = route('companies.login.show');
       } else if ($domain->owner instanceof \App\Models\Company) {
-        $redirectPath = route('customer.login');
+        $redirectPath = route('customers.login.show');
       } else if ($domain->owner instanceof \App\Models\AffiliateProfile) {
         $redirectPath = '/affiliate/login';
       } else {

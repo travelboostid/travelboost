@@ -6,7 +6,6 @@ use App\Models\Permission;
 use App\Models\Role;
 use App\Models\Team;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Arr;
 
 class RolePermissionSeeder extends Seeder
 {
