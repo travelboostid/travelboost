@@ -7,7 +7,6 @@ import { DEFAULT_PHOTO } from '@/config';
 import { useDataTable } from '@/hooks/use-data-table';
 import type { ColumnDef } from '@tanstack/react-table';
 import dayjs from 'dayjs';
-import relativeTime from 'dayjs/plugin/relativeTime';
 import { TextIcon, UserIcon } from 'lucide-react';
 import { useMemo } from 'react';
 import ApproveRegistrationButton from './components/approve-registration-button';
@@ -16,7 +15,6 @@ import { EmptyRegistrations } from './components/empty-registrations';
 import RejectRegistrationButton from './components/reject-registration-button';
 import SuspendButton from './components/suspend-button';
 import UnsuspendButton from './components/unsuspend-button';
-dayjs.extend(relativeTime);
 
 type PageProps = {
   data: {
@@ -72,7 +70,6 @@ export default function Page({ data }: PageProps) {
         cell: ({ cell }) => (
           <div className="font-medium">{cell.getValue<string>()}</div>
         ),
-
         enableColumnFilter: true,
       },
       {
@@ -85,7 +82,7 @@ export default function Page({ data }: PageProps) {
           const appliedAt = cell.getValue<string>();
           return (
             <div className="text-sm text-muted-foreground">
-              {dayjs(appliedAt).fromNow()}
+              {appliedAt ? dayjs(appliedAt).format('DD MMMM YYYY') : '-'}
             </div>
           );
         },
@@ -100,7 +97,7 @@ export default function Page({ data }: PageProps) {
           const acceptedAt = cell.getValue<string>();
           return (
             <div className="text-sm text-muted-foreground">
-              {dayjs(acceptedAt).fromNow()}
+              {acceptedAt ? dayjs(acceptedAt).format('DD MMMM YYYY') : '-'}
             </div>
           );
         },

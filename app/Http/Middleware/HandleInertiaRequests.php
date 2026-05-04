@@ -3,9 +3,9 @@
 namespace App\Http\Middleware;
 
 use App\Models\AnonymousUser;
-use App\Models\Currency;
 use App\Models\AgentSubscription;
 use App\Enums\AgentSubscriptionStatus;
+use App\Enums\CompanyType;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 use Illuminate\Support\Facades\Cookie;
@@ -37,22 +37,32 @@ class HandleInertiaRequests extends Middleware
     $isSubscriptionExpired = false;
 
     if ($company && isset($company->id)) {
-      $subscription = AgentSubscription::with('package')
-        ->where('company_id', $company->id)
-        ->latest()
-        ->first();
+      $isAgent = false;
 
-      if (!$subscription) {
-        $isSubscriptionExpired = true;
+      if ($company->type instanceof CompanyType) {
+        $isAgent = $company->type === CompanyType::AGENT;
       } else {
-        $isFreeTrial = $subscription->package && $subscription->package->price <= 0;
+        $isAgent = $company->type === 'agent';
+      }
 
-        if ($subscription->status !== AgentSubscriptionStatus::ACTIVE) {
+      if ($isAgent) {
+        $subscription = AgentSubscription::with('package')
+          ->where('company_id', $company->id)
+          ->latest()
+          ->first();
+
+        if (!$subscription) {
           $isSubscriptionExpired = true;
-        }
+        } else {
+          $isFreeTrial = $subscription->package && $subscription->package->price <= 0;
 
-        if ($isFreeTrial || $isSubscriptionExpired) {
-          $isMarketingDisabled = true;
+          if ($subscription->status !== AgentSubscriptionStatus::ACTIVE) {
+            $isSubscriptionExpired = true;
+          }
+
+          if ($isFreeTrial || $isSubscriptionExpired) {
+            $isMarketingDisabled = true;
+          }
         }
       }
     }
