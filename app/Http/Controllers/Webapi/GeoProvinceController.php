@@ -9,13 +9,15 @@ use Laravolt\Indonesia\Models\Province;
 
 class GeoProvinceController extends Controller
 {
-  /**
-   * Display a listing of the resource.
-   * @operationId getGeoProvinces
-   */
-  public function index(): JsonResponse
-  {
-    $provinces = Province::orderBy('name', 'desc')->get();
-    return GeoProvinceResource::collection($provinces)->response();
-  }
+    /**
+     * Display a listing of the resource.
+     *
+     * @operationId getGeoProvinces
+     */
+    public function index(): JsonResponse
+    {
+        $provinces = Province::orderBy('name', 'desc')->get();
+
+        return GeoProvinceResource::collection($provinces)->response();
+    }
 }

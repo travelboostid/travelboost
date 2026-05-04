@@ -10,23 +10,23 @@ use Inertia\Response;
 
 class PasswordController extends Controller
 {
-  /**
-   * Show the user's password settings page.
-   */
-  public function edit(): Response
-  {
-    return Inertia::render('me/settings/password');
-  }
+    /**
+     * Show the user's password settings page.
+     */
+    public function edit(): Response
+    {
+        return Inertia::render('me/settings/password');
+    }
 
-  /**
-   * Update the user's password.
-   */
-  public function update(PasswordUpdateRequest $request): RedirectResponse
-  {
-    $request->user()->update([
-      'password' => $request->password,
-    ]);
+    /**
+     * Update the user's password.
+     */
+    public function update(PasswordUpdateRequest $request): RedirectResponse
+    {
+        $request->user()->update([
+            'password' => $request->password,
+        ]);
 
-    return back();
-  }
+        return back();
+    }
 }

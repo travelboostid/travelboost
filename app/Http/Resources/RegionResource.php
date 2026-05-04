@@ -7,12 +7,12 @@ use Illuminate\Http\Resources\Json\JsonResource;
 
 class RegionResource extends JsonResource
 {
-  public function toArray(Request $request): array
-  {
-    return [
-      'id' => $this->id,
-      'name' => $this->name,
-      'continent_id' => $this->continent_id,
-    ];
-  }
+    public function toArray(Request $request): array
+    {
+        return [
+            'id' => $this->id,
+            'name' => $this->name,
+            'continent_id' => $this->continent_id,
+        ];
+    }
 }

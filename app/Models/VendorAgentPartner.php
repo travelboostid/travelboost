@@ -8,31 +8,31 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class VendorAgentPartner extends Model
 {
-  protected $fillable = [
-    'vendor_id',
-    'agent_id',
-    'status',
-    'applied_at',
-    'accepted_at',
-    'note',
-  ];
-
-  protected function casts(): array
-  {
-    return [
-      'status' => VendorAgentPartnerStatus::class,
-      'applied_at' => 'datetime',
-      'accepted_at' => 'datetime',
+    protected $fillable = [
+        'vendor_id',
+        'agent_id',
+        'status',
+        'applied_at',
+        'accepted_at',
+        'note',
     ];
-  }
 
-  public function vendor(): BelongsTo
-  {
-    return $this->belongsTo(Company::class, 'vendor_id');
-  }
+    protected function casts(): array
+    {
+        return [
+            'status' => VendorAgentPartnerStatus::class,
+            'applied_at' => 'datetime',
+            'accepted_at' => 'datetime',
+        ];
+    }
 
-  public function agent(): BelongsTo
-  {
-    return $this->belongsTo(Company::class, 'agent_id');
-  }
+    public function vendor(): BelongsTo
+    {
+        return $this->belongsTo(Company::class, 'vendor_id');
+    }
+
+    public function agent(): BelongsTo
+    {
+        return $this->belongsTo(Company::class, 'agent_id');
+    }
 }

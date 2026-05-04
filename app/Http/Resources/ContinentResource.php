@@ -7,11 +7,11 @@ use Illuminate\Http\Resources\Json\JsonResource;
 
 class ContinentResource extends JsonResource
 {
-  public function toArray(Request $request): array
-  {
-    return [
-      'id' => $this->id,
-      'name' => $this->name,
-    ];
-  }
+    public function toArray(Request $request): array
+    {
+        return [
+            'id' => $this->id,
+            'name' => $this->name,
+        ];
+    }
 }

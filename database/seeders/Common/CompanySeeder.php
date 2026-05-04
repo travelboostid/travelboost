@@ -17,97 +17,98 @@ use Illuminate\Support\Facades\Hash;
 
 class CompanySeeder extends Seeder
 {
-  public function run(): void
-  {
-    // Define the target packages to create
-    $packages = [
-      [
-        'name' => 'Basic',
-        'duration_months' => 12,
-        'price' => 6000000,
-        'is_active' => true,
-      ],
-    ];
+    public function run(): void
+    {
+        // Define the target packages to create
+        $packages = [
+            [
+                'name' => 'Basic',
+                'duration_months' => 12,
+                'price' => 6000000,
+                'is_active' => true,
+            ],
+        ];
 
-    foreach ($packages as $package) {
-      AgentSubscriptionPackage::factory()->create($package);
-    }
+        foreach ($packages as $package) {
+            AgentSubscriptionPackage::factory()->create($package);
+        }
 
-    // Define the target companies to create
-    $companies = [
-      [
-        'username' => 'vendor',
-        'subdomain' => 'vendor',
-        'company_type' => CompanyType::VENDOR,
-      ],
-      [
-        'username' => 'john',
-        'subdomain' => 'john',
-        'company_type' => CompanyType::AGENT,
-      ],
-      [
-        'username' => 'greatchinatour',
-        'subdomain' => 'greatchinatour',
-        'company_type' => CompanyType::VENDOR,
-      ],
-    ];
+        // Define the target companies to create
+        $companies = [
+            [
+                'username' => 'vendor',
+                'subdomain' => 'vendor',
+                'company_type' => CompanyType::VENDOR,
+            ],
+            [
+                'username' => 'john',
+                'subdomain' => 'john',
+                'company_type' => CompanyType::AGENT,
+            ],
+            [
+                'username' => 'greatchinatour',
+                'subdomain' => 'greatchinatour',
+                'company_type' => CompanyType::VENDOR,
+            ],
+        ];
 
-    foreach ($companies as $seed) {
-      $user = User::where('username', $seed['username'])->first();
-      if (!$user) {
-        $this->command->error("User with username '{$seed['username']}' not found. Please run UserSeeder first.");
-        continue;
-      }
-      $company = Company::factory()->create([
-        'username' => $seed['username'],
-        'type' => $seed['company_type'],
-        'name' => ucfirst($seed['username']) . ' Company',
-        'email' => $user->email,
-        'address' => 'Jakarta',
-        'phone' => '0123456789',
-      ]);
-      $company->domain()->create([
-        'subdomain' => $seed['subdomain'],
-      ]);
-      $user->companies()->attach($company->id, [
-        'status' => CompanyTeamStatus::ACTIVE,
-        'is_owner' => true,
-      ]);
-      $team = Team::where('name', "company:{$company->id}")->firstOrCreate();
-      $superadmin = Role::where('name', "company:{$company->id}:superadmin")->firstOrCreate();
-      $user->addRole($superadmin, $team);
+        foreach ($companies as $seed) {
+            $user = User::where('username', $seed['username'])->first();
+            if (! $user) {
+                $this->command->error("User with username '{$seed['username']}' not found. Please run UserSeeder first.");
 
-      if ($company['type'] === CompanyType::AGENT) {
-        AgentSubscription::create([
-          'company_id' => $company->id,
-          'package_id' => 1,
-          'started_at' => now(),
-          'ended_at' => now()->addDays(999),
+                continue;
+            }
+            $company = Company::factory()->create([
+                'username' => $seed['username'],
+                'type' => $seed['company_type'],
+                'name' => ucfirst($seed['username']).' Company',
+                'email' => $user->email,
+                'address' => 'Jakarta',
+                'phone' => '0123456789',
+            ]);
+            $company->domain()->create([
+                'subdomain' => $seed['subdomain'],
+            ]);
+            $user->companies()->attach($company->id, [
+                'status' => CompanyTeamStatus::ACTIVE,
+                'is_owner' => true,
+            ]);
+            $team = Team::where('name', "company:{$company->id}")->firstOrCreate();
+            $superadmin = Role::where('name', "company:{$company->id}:superadmin")->firstOrCreate();
+            $user->addRole($superadmin, $team);
+
+            if ($company['type'] === CompanyType::AGENT) {
+                AgentSubscription::create([
+                    'company_id' => $company->id,
+                    'package_id' => 1,
+                    'started_at' => now(),
+                    'ended_at' => now()->addDays(999),
+                ]);
+            }
+        }
+
+        $vendorCompany = Company::where('username', 'vendor')->first();
+        $johnCompany = Company::where('username', 'john')->first();
+
+        if ($vendorCompany && $johnCompany) {
+            VendorAgentPartner::create([
+                'vendor_id' => $vendorCompany->id,
+                'agent_id' => $johnCompany->id,
+                'status' => VendorAgentPartnerStatus::ACTIVE,
+                'applied_at' => now(),
+                'accepted_at' => now(),
+            ]);
+        }
+
+        $jane = User::factory()->create([
+            'company_id' => $johnCompany ? $johnCompany->id : 2,
+            'name' => 'Jane',
+            'email' => 'jane@travelboost.co.id',
+            'username' => 'jane',
+            'address' => 'Jakarta',
+            'phone' => '0',
+            'password' => Hash::make('jane'),
         ]);
-      }
     }
-
-    $vendorCompany = Company::where('username', 'vendor')->first();
-    $johnCompany = Company::where('username', 'john')->first();
-
-    if ($vendorCompany && $johnCompany) {
-      VendorAgentPartner::create([
-        'vendor_id' => $vendorCompany->id,
-        'agent_id' => $johnCompany->id,
-        'status' => VendorAgentPartnerStatus::ACTIVE,
-        'applied_at' => now(),
-        'accepted_at' => now(),
-      ]);
-    }
-
-    $jane = User::factory()->create([
-      'company_id' => $johnCompany ? $johnCompany->id : 2,
-      'name' => 'Jane',
-      'email' => 'jane@travelboost.co.id',
-      'username' => 'jane',
-      'address' => 'Jakarta',
-      'phone' => '0',
-      'password' => Hash::make('jane'),
-    ]);
-  }
 }

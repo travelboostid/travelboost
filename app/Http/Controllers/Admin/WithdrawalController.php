@@ -7,8 +7,8 @@ use Inertia\Inertia;
 
 class WithdrawalController extends Controller
 {
-  public function approve()
-  {
-    return Inertia::render('admin/home/index');
-  }
+    public function approve()
+    {
+        return Inertia::render('admin/home/index');
+    }
 }

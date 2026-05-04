@@ -4,30 +4,31 @@ namespace App\Models;
 
 class ImageMediaData extends MediaData
 {
-  public string $provider = '';
-  /** @var ImageFileInfo[] */
-  public array $files = [];
+    public string $provider = '';
 
-  protected function getType(): string
-  {
-    return 'image';
-  }
+    /** @var ImageFileInfo[] */
+    public array $files = [];
 
-  protected function fill(array $data): void
-  {
-    $this->provider = $data['provider'] ?? '';
+    protected function getType(): string
+    {
+        return 'image';
+    }
 
-    $this->files = array_map(function ($fileData) {
-      return new ImageFileInfo($fileData);
-    }, $data['files'] ?? []);
-  }
+    protected function fill(array $data): void
+    {
+        $this->provider = $data['provider'] ?? '';
 
-  public function toArray(): array
-  {
-    return [
-      'type' => $this->getType(),
-      'provider' => $this->provider,
-      'files' => array_map(fn($file) => $file->toArray(), $this->files),
-    ];
-  }
+        $this->files = array_map(function ($fileData) {
+            return new ImageFileInfo($fileData);
+        }, $data['files'] ?? []);
+    }
+
+    public function toArray(): array
+    {
+        return [
+            'type' => $this->getType(),
+            'provider' => $this->provider,
+            'files' => array_map(fn ($file) => $file->toArray(), $this->files),
+        ];
+    }
 }

@@ -7,172 +7,175 @@ use App\Traits\HasBankAccounts;
 use Bavix\Wallet\Traits\CanPay;
 use Bavix\Wallet\Traits\HasWallet;
 use Bavix\Wallet\Traits\HasWallets;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Notifications\Notifiable;
-use Illuminate\Database\Eloquent\Casts\Attribute;
 
 class Company extends Model
 {
-  use HasFactory, Notifiable, CanPay, HasWallet, HasWallets, HasBankAccounts;
-  protected $fillable = [
-    'name',
-    'type',
-    'username',
-    'email',
-    'address',
-    'phone',
-    'customer_service_phone',
-    'photo_id',
-    'meta',
-    'note',
-    'province_id',
-    'city_id',
-    'district_id',
-    'village_id',
-    'village_id',
-    'postal_code',
-    'identity_number',
-    'identity_card_id',
-  ];
+    use CanPay, HasBankAccounts, HasFactory, HasWallet, HasWallets, Notifiable;
 
-  protected $hidden = [
-    'photo'
-  ];
+    protected $fillable = [
+        'name',
+        'type',
+        'username',
+        'email',
+        'address',
+        'phone',
+        'customer_service_phone',
+        'photo_id',
+        'meta',
+        'note',
+        'province_id',
+        'city_id',
+        'district_id',
+        'village_id',
+        'village_id',
+        'postal_code',
+        'identity_number',
+        'identity_card_id',
+    ];
 
-  protected $casts = [
-    'meta' => 'array',
-    'type' => CompanyType::class,
-  ];
+    protected $hidden = [
+        'photo',
+    ];
 
-  protected $appends = ['photo_url'];
+    protected $casts = [
+        'meta' => 'array',
+        'type' => CompanyType::class,
+    ];
 
-  protected static function booted()
-  {
-    static::created(function ($company) {
-      $company->wallet()->create([
-        'name' => 'Main Wallet',
-        'slug' => 'main',
-        'description' => 'Primary wallet for company transactions',
-      ]);
-      $company->settings()->create(config('travelboost.company_default_settings'));
+    protected $appends = ['photo_url'];
 
-      // AI
-      $company->aiCredit()->create([
-        'balance' => 10000, // Default AI free credit balance for new companies
-      ]);
+    protected static function booted()
+    {
+        static::created(function ($company) {
+            $company->wallet()->create([
+                'name' => 'Main Wallet',
+                'slug' => 'main',
+                'description' => 'Primary wallet for company transactions',
+            ]);
+            $company->settings()->create(config('travelboost.company_default_settings'));
 
-      Team::create([
-        'name' => "company:{$company->id}",
-        'display_name' => "Company {$company->id} Team",
-        'description' => "Default team for company {$company->id}",
-      ]);
+            // AI
+            $company->aiCredit()->create([
+                'balance' => 10000, // Default AI free credit balance for new companies
+            ]);
 
-      $roles = config('travelboost.company_default_roles', []);
-      foreach ($roles as $role) {
-        $newRole = Role::create([
-          'name' => "company:{$company->id}:{$role['name']}",
-          'display_name' => $role['display_name'],
-          'description' => $role['description'],
-        ]);
-        $newRole->givePermissions($role['permissions']);
-      }
-    });
-  }
+            Team::create([
+                'name' => "company:{$company->id}",
+                'display_name' => "Company {$company->id} Team",
+                'description' => "Default team for company {$company->id}",
+            ]);
 
-  public function teams()
-  {
-    return $this->hasMany(CompanyTeam::class);
-  }
+            $roles = config('travelboost.company_default_roles', []);
+            foreach ($roles as $role) {
+                $newRole = Role::create([
+                    'name' => "company:{$company->id}:{$role['name']}",
+                    'display_name' => $role['display_name'],
+                    'description' => $role['description'],
+                ]);
+                $newRole->givePermissions($role['permissions']);
+            }
+        });
+    }
 
-  public function tours()
-  {
-    return $this->hasMany(Tour::class);
-  }
+    public function teams()
+    {
+        return $this->hasMany(CompanyTeam::class);
+    }
 
-  public function agentTours()
-  {
-    //31032026
-    return $this->hasMany(AgentTour::class);
-  }
+    public function tours()
+    {
+        return $this->hasMany(Tour::class);
+    }
 
-  public function tourCategories()
-  {
-    return $this->hasMany(TourCategory::class);
-  }
+    public function agentTours()
+    {
+        // 31032026
+        return $this->hasMany(AgentTour::class);
+    }
 
-  public function settings()
-  {
-    return $this->hasOne(CompanySettings::class, 'company_id');
-  }
+    public function tourCategories()
+    {
+        return $this->hasMany(TourCategory::class);
+    }
 
-  public function photo()
-  {
-    return $this->belongsTo(Media::class, 'photo_id');
-  }
+    public function settings()
+    {
+        return $this->hasOne(CompanySettings::class, 'company_id');
+    }
 
-  public function medias()
-  {
-    return $this->morphMany(Media::class, 'owner');
-  }
+    public function photo()
+    {
+        return $this->belongsTo(Media::class, 'photo_id');
+    }
 
-  public function customers()
-  {
-    return $this->hasMany(User::class);
-  }
+    public function medias()
+    {
+        return $this->morphMany(Media::class, 'owner');
+    }
 
-  public function domain()
-  {
-    return $this->morphOne(Domain::class, 'owner');
-  }
+    public function customers()
+    {
+        return $this->hasMany(User::class);
+    }
 
-  public function agentPartners()
-  {
-    return $this->hasMany(VendorAgentPartner::class, 'vendor_id');
-  }
+    public function domain()
+    {
+        return $this->morphOne(Domain::class, 'owner');
+    }
 
-  public function vendorPartners()
-  {
-    return $this->hasMany(VendorAgentPartner::class, 'agent_id');
-  }
+    public function agentPartners()
+    {
+        return $this->hasMany(VendorAgentPartner::class, 'vendor_id');
+    }
 
-  public function aiCredit()
-  {
-    return $this->hasOne(AiCredit::class, 'company_id');
-  }
+    public function vendorPartners()
+    {
+        return $this->hasMany(VendorAgentPartner::class, 'agent_id');
+    }
 
-  public function aiUsageLogs()
-  {
-    return $this->hasMany(AiUsageLog::class, 'company_id');
-  }
+    public function aiCredit()
+    {
+        return $this->hasOne(AiCredit::class, 'company_id');
+    }
 
-  public function photoUrl(): Attribute
-  {
-    return Attribute::make(
-      get: function () {
-        $files = collect($this->photo?->data['files'] ?? []);
-        $file = $files->firstWhere('code', 'small');
-        return data_get($file, 'url');
-      }
-    );
-  }
-  public function referrer()
-  {
-    return $this->belongsTo(User::class, 'referred_by');
-  }
+    public function aiUsageLogs()
+    {
+        return $this->hasMany(AiUsageLog::class, 'company_id');
+    }
 
-  public function agentSubscription()
-  {
-    return $this->hasOne(AgentSubscription::class);
-  }
+    public function photoUrl(): Attribute
+    {
+        return Attribute::make(
+            get: function () {
+                $files = collect($this->photo?->data['files'] ?? []);
+                $file = $files->firstWhere('code', 'small');
 
-  public function payments()
-  {
-    return $this->morphMany(Payment::class, 'owner');
-  }
+                return data_get($file, 'url');
+            }
+        );
+    }
 
-  public function identityCard()
-  {
-    return $this->belongsTo(Media::class, 'identity_card_id');
-  }
+    public function referrer()
+    {
+        return $this->belongsTo(User::class, 'referred_by');
+    }
+
+    public function agentSubscription()
+    {
+        return $this->hasOne(AgentSubscription::class);
+    }
+
+    public function payments()
+    {
+        return $this->morphMany(Payment::class, 'owner');
+    }
+
+    public function identityCard()
+    {
+        return $this->belongsTo(Media::class, 'identity_card_id');
+    }
 }

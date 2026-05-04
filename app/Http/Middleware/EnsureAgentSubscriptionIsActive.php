@@ -10,18 +10,19 @@ use Symfony\Component\HttpFoundation\Response;
 
 class EnsureAgentSubscriptionIsActive
 {
-  /**
-   * Handle an incoming request.
-   *
-   * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
-   */
-  public function handle(Request $request, Closure $next): Response
-  {
-    $company = $request->route('company');
-    $subscription = AgentSubscription::where('company_id', $company->id)->latest()->first();
-    if (! $subscription || $subscription->status !== AgentSubscriptionStatus::ACTIVE) {
-      return redirect()->route('companies.agent-subscriptions.show', ['company' => $company->username]);
+    /**
+     * Handle an incoming request.
+     *
+     * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
+     */
+    public function handle(Request $request, Closure $next): Response
+    {
+        $company = $request->route('company');
+        $subscription = AgentSubscription::where('company_id', $company->id)->latest()->first();
+        if (! $subscription || $subscription->status !== AgentSubscriptionStatus::ACTIVE) {
+            return redirect()->route('companies.agent-subscriptions.show', ['company' => $company->username]);
+        }
+
+        return $next($request);
     }
-    return $next($request);
-  }
 }
