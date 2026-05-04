@@ -39,6 +39,7 @@ class AffiliateSeeder extends Seeder
         'owner_id' => $profile->id,
         'owner_type' => AffiliateProfile::class,
         'subdomain' => $username,
+        'domain_enabled' => true, // <-- Baris ini yang ditambahkan
       ]);
 
       $partners[$i] = $user->id;
@@ -71,6 +72,7 @@ class AffiliateSeeder extends Seeder
         'owner_id' => $profile->id,
         'owner_type' => AffiliateProfile::class,
         'subdomain' => $username,
+        'domain_enabled' => true,
       ]);
 
       $mas[$i] = $user->id;
@@ -103,6 +105,7 @@ class AffiliateSeeder extends Seeder
         'owner_id' => $profile->id,
         'owner_type' => AffiliateProfile::class,
         'subdomain' => $username,
+        'domain_enabled' => ($profileStatus === 'approved') ? true : false, // <-- Baris ini yang diubah
       ]);
     }
   }

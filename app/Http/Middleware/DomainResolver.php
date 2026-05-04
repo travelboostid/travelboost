@@ -34,7 +34,8 @@ class DomainResolver
     // Resolve tenant from subdomain or custom domain
     $domainObject = $this->resolveDomain();
 
-    if ($domainObject === null) {
+    // KEAMANAN TAMBAHAN: Blokir jika domain tidak ditemukan ATAU domain belum diaktifkan (domain_enabled == false)
+    if ($domainObject === null || !$domainObject->domain_enabled) {
       return Inertia::render('errors/invalid-tenant-domain')
         ->toResponse($request)
         ->setStatusCode(404);

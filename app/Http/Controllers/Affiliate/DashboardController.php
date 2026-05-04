@@ -13,7 +13,9 @@ class DashboardController extends Controller
 {
   public function index(Request $request)
   {
+    /** @var \App\Models\User $user */
     $user = Auth::user();
+
     $profile = $user->affiliateProfile;
     $tier = $profile ? $profile->tier : 'affiliate';
 
@@ -22,7 +24,11 @@ class DashboardController extends Controller
 
     $totalCommission = $wallet ? $wallet->transactions()->where('amount', '>', 0)->sum('amount') : 0;
 
+    $unreadNotificationsCount = $user->unreadNotifications()->count();
+    $recentNotifications = $user->notifications()->latest()->take(3)->get();
+
     $stats = [];
+    $allNetworkIds = [$user->id];
 
     if ($tier === 'partner') {
       $maIds = AffiliateProfile::where('upline_id', $user->id)
@@ -70,10 +76,49 @@ class DashboardController extends Controller
       ];
     }
 
+    $recentAgents = Company::where('type', 'agent')
+      ->whereIn('referred_by', $allNetworkIds)
+      ->with('agentSubscription.package')
+      ->latest()
+      ->take(5)
+      ->get()
+      ->map(function ($agent) {
+        $sub = $agent->agentSubscription;
+        $isPaid = $sub && $sub->ended_at > now();
+        return [
+          'id' => $agent->username ?? $agent->id,
+          'name' => $agent->name,
+          'package' => $sub && $sub->package ? $sub->package->name : 'Basic',
+          'status' => $isPaid ? 'Paid' : 'Pending',
+        ];
+      });
+
+    $networkPerformance = AffiliateProfile::where('upline_id', $user->id)
+      ->with(['user.wallet'])
+      ->get()
+      ->map(function ($profile) {
+        $wallet = $profile->user->wallet ?? null;
+        $revenue = $wallet ? $wallet->transactions()->where('amount', '>', 0)->sum('amount') : 0;
+        $tierName = in_array($profile->tier, ['master_affiliate', 'master-affiliate']) ? 'MA' : 'Affiliate';
+
+        return [
+          'name' => $profile->user->name . ' (' . $tierName . ')',
+          'revenue' => (float) $revenue,
+          'status' => ucfirst($profile->status),
+        ];
+      })
+      ->sortByDesc('revenue')
+      ->take(5)
+      ->values();
+
     return Inertia::render('affiliate/dashboard/index', [
       'wallet_balance' => (int) $walletBalance,
       'tier' => $tier,
       'stats' => $stats,
+      'unreadNotificationsCount' => $unreadNotificationsCount,
+      'recentNotifications' => $recentNotifications,
+      'recentAgents' => $recentAgents,
+      'networkPerformance' => $networkPerformance,
     ]);
   }
 }

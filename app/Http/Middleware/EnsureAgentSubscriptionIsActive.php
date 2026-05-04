@@ -6,22 +6,38 @@ use App\Enums\AgentSubscriptionStatus;
 use App\Models\AgentSubscription;
 use Closure;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
 use Symfony\Component\HttpFoundation\Response;
 
 class EnsureAgentSubscriptionIsActive
 {
-  /**
-   * Handle an incoming request.
-   *
-   * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
-   */
   public function handle(Request $request, Closure $next): Response
   {
     $company = $request->route('company');
     $subscription = AgentSubscription::where('company_id', $company->id)->latest()->first();
-    if (! $subscription || $subscription->status !== AgentSubscriptionStatus::ACTIVE) {
-      return redirect()->route('companies.agent-subscriptions.show', ['company' => $company->username]);
+
+    $isMarketingDisabled = false;
+    $isSubscriptionExpired = false;
+
+    if (!$subscription) {
+      $isSubscriptionExpired = true;
+    } else {
+      $isFreeTrial = $subscription->package && $subscription->package->price == 0;
+
+      if ($subscription->status !== AgentSubscriptionStatus::ACTIVE) {
+        $isSubscriptionExpired = true;
+      }
+
+      if ($isFreeTrial || $isSubscriptionExpired) {
+        $isMarketingDisabled = true;
+      }
     }
+
+    Inertia::share('subscription_rules', [
+      'isMarketingDisabled' => $isMarketingDisabled,
+      'isExpired' => $isSubscriptionExpired
+    ]);
+
     return $next($request);
   }
 }

@@ -8,6 +8,8 @@ use App\Enums\CompanyType;
 use App\Enums\UserStatus;
 use App\Http\Controllers\Controller;
 use App\Models\AffiliateProfile;
+use App\Models\AgentSubscription;
+use App\Models\AgentSubscriptionPackage;
 use App\Models\Company;
 use App\Models\CompanyTeam;
 use Illuminate\Http\Request;
@@ -20,7 +22,6 @@ class OnboardingController extends Controller
 {
   public function index()
   {
-    /** @var \App\Models\User $user */
     $user = Auth::user();
     $domain = Context::get('domain');
 
@@ -80,6 +81,7 @@ class OnboardingController extends Controller
 
     $company->domain()->create([
       'subdomain' => $validated['subdomain'],
+      'domain_enabled' => false,
     ]);
 
     CompanyTeam::create([
@@ -88,6 +90,17 @@ class OnboardingController extends Controller
       'role' => CompanyTeamRole::SUPERADMIN,
       'status' => CompanyTeamStatus::ACTIVE,
     ]);
+
+    $trialPackage = AgentSubscriptionPackage::where('name', 'Free Trial 1 Month')->first();
+
+    if ($trialPackage) {
+      AgentSubscription::create([
+        'company_id' => $company->id,
+        'package_id' => $trialPackage->id,
+        'started_at' => now(),
+        'ended_at' => now()->addMonth(),
+      ]);
+    }
 
     $user->update([
       'status' => UserStatus::ACTIVE,
@@ -135,7 +148,6 @@ class OnboardingController extends Controller
 
   public function declineInvitations()
   {
-    /** @var \App\Models\User $user */
     $user = Auth::user();
 
     CompanyTeam::where('invite_email', $user->email)

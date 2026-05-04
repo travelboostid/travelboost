@@ -22,6 +22,7 @@ type MenuItemBase = {
   icon?: LucideIcon;
   visibleToPermissions?: string[];
   visibleToCompanyTypes?: string[];
+  disabled?: boolean;
 };
 
 type MenuItem =
@@ -39,7 +40,7 @@ type MenuItem =
     });
 
 export function useCompanyDashboardNavMainMenu() {
-  const { company, auth } = usePageSharedDataProps();
+  const { company, auth, subscription_rules } = usePageSharedDataProps() as any;
 
   const { data } = useGetCompanies(
     { type: 'vendor' },
@@ -55,6 +56,7 @@ export function useCompanyDashboardNavMainMenu() {
   const port = window.location.port ? `:${window.location.port}` : '';
 
   const companySubdomain = `${protocol}//${company.username}.${baseHost}${port}`;
+  const isMarketingDisabled = !!subscription_rules?.isMarketingDisabled;
 
   const unfilteredMenus = [
     {
@@ -70,7 +72,7 @@ export function useCompanyDashboardNavMainMenu() {
       urlOrAction: '#',
       icon: FolderSearchIcon,
       items:
-        (data?.data || []).map((vendor) => ({
+        (data?.data || []).map((vendor: any) => ({
           id: `vendor-tours.${vendor.username}`,
           title: vendor.name,
           urlOrAction: `/companies/${company.username}/dashboard/vendors/${vendor.username}/tours`,
@@ -197,23 +199,29 @@ export function useCompanyDashboardNavMainMenu() {
         {
           id: 'marketings.landing-page.edit',
           title: <FormattedMessage defaultMessage="Edit Landing Page" />,
-          urlOrAction: `/companies/${company.username}/dashboard/page/edit`,
+          urlOrAction: isMarketingDisabled
+            ? '#'
+            : `/companies/${company.username}/dashboard/page/edit`,
+          disabled: isMarketingDisabled,
         },
         {
           id: 'marketings.landing-page.view',
           title: <FormattedMessage defaultMessage="My Landing Page" />,
-          urlOrAction: companySubdomain,
-          target: '_blank',
+          urlOrAction: isMarketingDisabled ? '#' : companySubdomain,
+          target: isMarketingDisabled ? undefined : '_blank',
+          disabled: isMarketingDisabled,
         },
         {
           id: 'marketings.socmed-analytics',
           title: <FormattedMessage defaultMessage="Social Media Analytics" />,
           urlOrAction: `#`,
+          disabled: isMarketingDisabled,
         },
         {
           id: 'marketings.budgeting',
           title: <FormattedMessage defaultMessage="Promotion Budgetting" />,
           urlOrAction: `#`,
+          disabled: isMarketingDisabled,
         },
       ],
       visibleToCompanyTypes: ['agent'],

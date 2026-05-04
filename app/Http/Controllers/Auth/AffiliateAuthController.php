@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Context;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class AffiliateAuthController extends Controller
@@ -100,29 +101,33 @@ class AffiliateAuthController extends Controller
 
     $ktpPath = $request->hasFile('ktp_file') ? $request->file('ktp_file')->store('ktp_uploads', 'public') : null;
 
-    $user = User::create([
-      'name' => $request->name,
-      'email' => $request->email,
-      'username' => $request->username,
-      'password' => Hash::make($request->password),
-      'status' => 'active',
-    ]);
+    // Menggunakan DB Transaction agar pembuatan akun, profil, dan domain aman
+    DB::transaction(function () use ($request, $uplineId, $ktpPath, &$user) {
+      $user = User::create([
+        'name' => $request->name,
+        'email' => $request->email,
+        'username' => $request->username,
+        'password' => Hash::make($request->password),
+        'status' => 'active', // Status User aktif
+      ]);
 
-    $affiliate = AffiliateProfile::create([
-      'user_id' => $user->id,
-      'upline_id' => $uplineId,
-      'referral_code' => $request->username,
-      'tier' => 'affiliate',
-      'status' => 'pending',
-      'identity_number' => $request->ktp_number,
-      'identity_photo_path' => $ktpPath,
-    ]);
+      $affiliate = AffiliateProfile::create([
+        'user_id' => $user->id,
+        'upline_id' => $uplineId,
+        'referral_code' => $request->username,
+        'tier' => 'affiliate',
+        'status' => 'pending', // Profil masih pending
+        'identity_number' => $request->ktp_number,
+        'identity_photo_path' => $ktpPath,
+      ]);
 
-    Domain::create([
-      'owner_id' => $affiliate->id,
-      'owner_type' => AffiliateProfile::class,
-      'subdomain' => $request->username,
-    ]);
+      Domain::create([
+        'owner_id' => $affiliate->id,
+        'owner_type' => AffiliateProfile::class,
+        'subdomain' => $request->username,
+        'domain_enabled' => false, // Memastikan domain terkunci secara eksplisit
+      ]);
+    });
 
     event(new Registered($user));
     Auth::login($user);
