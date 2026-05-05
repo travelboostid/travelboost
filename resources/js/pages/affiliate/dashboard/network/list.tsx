@@ -35,6 +35,13 @@ import {
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
+// HELPER: Mengamankan URL Gambar
+const getImageUrl = (path: string | null | undefined) => {
+  if (!path) return '';
+  if (path.startsWith('http') || path.startsWith('data:')) return path;
+  return `/storage/${path}`;
+};
+
 export default function NetworkList() {
   const { url, props } = usePage();
   const searchParams = new URLSearchParams(url.split('?')[1]);
@@ -136,19 +143,6 @@ export default function NetworkList() {
           </h1>
           <p className="text-slate-500 text-sm mt-1">{description}</p>
         </div>
-
-        {/* Chart section commented out for now 
-        <Card className="overflow-hidden">
-          <CardHeader className="bg-slate-50/50 dark:bg-slate-900/20 pb-4 border-b">
-            <CardTitle className="text-base flex items-center gap-2">
-              <BarChart3 className="size-4 text-blue-600" /> Network Comparison (Current Page)
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-6">
-            ...
-          </CardContent>
-        </Card>
-        */}
 
         <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
           <div className="relative w-full sm:w-80">
@@ -328,7 +322,6 @@ export default function NetworkList() {
                               <Eye className="size-4" />
                             </Button>
 
-                            {/* Sembunyikan tombol Deactivate jika Partner sedang melihat Affiliate */}
                             {(!isPartner || viewTier === 'ma') && (
                               <Button
                                 variant="ghost"
@@ -399,9 +392,9 @@ export default function NetworkList() {
           {selectedUser && (
             <div className="flex flex-col items-center justify-center space-y-4 pt-4 pb-2">
               <Avatar className="h-20 w-20 border-4 border-slate-100 dark:border-slate-800">
-                {selectedUser.profile_photo_path && (
+                {selectedUser.photo_url && (
                   <AvatarImage
-                    src={`/storage/${selectedUser.profile_photo_path}`}
+                    src={selectedUser.photo_url}
                     alt={selectedUser.name}
                     className="object-cover"
                   />
@@ -477,15 +470,13 @@ export default function NetworkList() {
                   <span className="text-xs text-slate-500 mb-2">
                     ID Photo Document
                   </span>
-                  {selectedUser.identity_photo_path ? (
+                  {selectedUser.identity_card_url ? (
                     <img
-                      src={`/storage/${selectedUser.identity_photo_path}`}
+                      src={selectedUser.identity_card_url}
                       alt="ID Document"
                       className="w-full max-w-sm rounded-lg border border-slate-200 cursor-pointer hover:opacity-90 transition-opacity"
                       onClick={() =>
-                        setPreviewImage(
-                          `/storage/${selectedUser.identity_photo_path}`,
-                        )
+                        setPreviewImage(selectedUser.identity_card_url)
                       }
                     />
                   ) : (

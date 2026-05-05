@@ -12,7 +12,9 @@ class ProfileController extends Controller
   public function edit(Request $request)
   {
     $user = $request->user()->load([
-      'affiliateProfile.upline'
+      'affiliateProfile.upline',
+      'affiliateProfile.photo',
+      'affiliateProfile.identityCard'
     ]);
 
     return Inertia::render('affiliate/dashboard/setup/profile', [
@@ -34,8 +36,8 @@ class ProfileController extends Controller
       'village' => 'nullable|string|max:100',
       'postal_code' => 'nullable|string|max:20',
       'identity_number' => 'required|string|max:50',
-      'identity_photo' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
-      'profile_photo' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+      'identity_card_id' => 'nullable|integer|exists:medias,id',
+      'photo_id' => 'nullable|integer|exists:medias,id',
     ]);
 
     $profileData = [
@@ -49,22 +51,22 @@ class ProfileController extends Controller
       'identity_number' => $validated['identity_number'],
     ];
 
-    if ($request->hasFile('identity_photo')) {
+    if (isset($validated['identity_card_id'])) {
+      $profileData['identity_card_id'] = $validated['identity_card_id'];
+      // Optionally clean up old physical files if you are migrating from the old approach
       if ($user->affiliateProfile && $user->affiliateProfile->identity_photo_path) {
         Storage::disk('public')->delete($user->affiliateProfile->identity_photo_path);
+        $profileData['identity_photo_path'] = null;
       }
-      $identityFile = $request->file('identity_photo');
-      $identityFileName = time() . '_identity_' . uniqid() . '.' . $identityFile->getClientOriginalExtension();
-      $profileData['identity_photo_path'] = $identityFile->storeAs('affiliate/identities', $identityFileName, 'public');
     }
 
-    if ($request->hasFile('profile_photo')) {
+    if (isset($validated['photo_id'])) {
+      $profileData['photo_id'] = $validated['photo_id'];
+      // Optionally clean up old physical files
       if ($user->affiliateProfile && $user->affiliateProfile->profile_photo_path) {
         Storage::disk('public')->delete($user->affiliateProfile->profile_photo_path);
+        $profileData['profile_photo_path'] = null;
       }
-      $profileFile = $request->file('profile_photo');
-      $profileFileName = time() . '_profile_' . uniqid() . '.' . $profileFile->getClientOriginalExtension();
-      $profileData['profile_photo_path'] = $profileFile->storeAs('affiliate/profiles', $profileFileName, 'public');
     }
 
     $user->affiliateProfile()->updateOrCreate(

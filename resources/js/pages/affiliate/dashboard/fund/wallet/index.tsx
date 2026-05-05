@@ -3,6 +3,7 @@ import { Head } from '@inertiajs/react';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import PendingWithdrawal from './components/pending-withdrawal';
+import RecentCommissions from './components/recent-commissions';
 import RecentTransactions from './components/recent-transactions';
 import WalletSummary from './components/wallet-summary';
 
@@ -14,6 +15,7 @@ export type WalletPageProps = {
   expenses: { this_month: number; last_month: number; growth_pct: number };
   net_change: { this_month: number; last_month: number; growth_pct: number };
   transactions: any[];
+  recent_commissions: any[];
   pending_withdrawal: any;
 };
 
@@ -31,7 +33,10 @@ export default function AffiliateWalletPage() {
       <div className="max-w-6xl mx-auto grid gap-4">
         <WalletSummary />
         <PendingWithdrawal />
-        <RecentTransactions />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <RecentCommissions />
+          <RecentTransactions />
+        </div>
       </div>
     </AffiliateDashboardLayout>
   );

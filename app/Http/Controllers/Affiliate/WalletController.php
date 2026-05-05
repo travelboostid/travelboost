@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use App\Models\Withdrawal;
+use Illuminate\Support\Facades\DB;
 
 class WalletController extends Controller
 {
@@ -43,6 +44,14 @@ class WalletController extends Controller
       ->whereIn('status', [Withdrawal::STATUS_REQUESTED, Withdrawal::STATUS_PROCESSING])
       ->first();
 
+    $recentCommissions = DB::table('affiliate_commission_histories')
+      ->join('companies', 'affiliate_commission_histories.company_id', '=', 'companies.id')
+      ->select('affiliate_commission_histories.*', 'companies.name as company_name')
+      ->where('recipient_id', $user->id)
+      ->orderBy('affiliate_commission_histories.created_at', 'desc')
+      ->take(5)
+      ->get();
+
     return Inertia::render('affiliate/dashboard/fund/wallet/index', [
       'balance' => (int) $balance,
       'income' => [
@@ -62,6 +71,7 @@ class WalletController extends Controller
       ],
       'transactions' => $transactions,
       'pending_withdrawal' => $pendingWithdrawal,
+      'recent_commissions' => $recentCommissions,
     ]);
   }
 

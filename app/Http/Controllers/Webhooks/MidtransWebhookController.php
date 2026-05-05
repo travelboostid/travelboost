@@ -8,9 +8,14 @@ use App\Http\Controllers\Controller;
 use App\Models\AgentSubscriptionPackage;
 use App\Models\Company;
 use App\Models\Payment;
+use App\Models\AppConfig;
+use App\Models\AffiliateProfile;
+use App\Models\User;
+use App\Notifications\NewReferralNotification;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use SnapBi\SnapBi;
 
@@ -113,9 +118,6 @@ class MidtransWebhookController extends Controller
   {
     Log::info('Processing agent subscription', ['payment_id' => $payment->id]);
 
-    /**
-     * @var Company
-     */
     $owner = $payment->owner;
     if (!$owner) {
       Log::error('Owner not found', ['payment_id' => $payment->id]);
@@ -133,6 +135,134 @@ class MidtransWebhookController extends Controller
       $this->createNewSubscription($owner, $package);
     } else {
       $this->renewSubscription($existingSubscription, $package);
+    }
+
+    $appConfig = AppConfig::where('key', 'admin')->first();
+    $adminConfig = $appConfig ? $appConfig->value : [];
+
+    $freeAiAfterSub = isset($adminConfig['free_AI_after_subscription']) ? (float) $adminConfig['free_AI_after_subscription'] : 0;
+
+    if ($freeAiAfterSub > 0) {
+      $aiCredit = $owner->aiCredit()->first();
+      if ($aiCredit) {
+        $aiCredit->increment('balance', $freeAiAfterSub);
+      } else {
+        $owner->aiCredit()->create([
+          'balance' => $freeAiAfterSub,
+        ]);
+      }
+    }
+
+    // Hitung Harga Dasar Komisi (Harga Paket dikurangi PPN 11%)
+    $ppnAmount = $package->price * 0.11;
+    $commissionBasePrice = $package->price - $ppnAmount;
+
+    if (isset($owner->referred_by) && $owner->referred_by != null) {
+      $affiliateUser = User::find($owner->referred_by);
+      if ($affiliateUser) {
+        $affiliateProfile = AffiliateProfile::where('user_id', $affiliateUser->id)->first();
+        if ($affiliateProfile) {
+
+          $affCommissionRate = isset($adminConfig['affiliate_commission']) ? (float) $adminConfig['affiliate_commission'] : 0;
+          // Gunakan Harga Dasar Komisi yang sudah dikurangi PPN
+          $affCommissionAmount = ($commissionBasePrice * $affCommissionRate) / 100;
+
+          if ($affCommissionAmount > 0) {
+            $affiliateUser->wallet->deposit($affCommissionAmount, [
+              'type' => 'commission',
+              'description' => 'Subscription commission from Agent ' . $owner->name,
+              'payment_id' => $payment->id,
+            ]);
+
+            DB::table('affiliate_commission_histories')->insert([
+              'company_id' => $owner->id,
+              'payment_id' => $payment->id,
+              'recipient_id' => $affiliateUser->id,
+              'tier' => 'affiliate',
+              'base_amount' => $commissionBasePrice,
+              'commission_rate' => $affCommissionRate,
+              'commission_amount' => $affCommissionAmount,
+              'status' => 'paid',
+              'created_at' => now(),
+              'updated_at' => now()
+            ]);
+
+            $title = "Langganan Berhasil: {$owner->name}";
+            $message = "Agen {$owner->name} telah berhasil membayar paket langganan. Komisi afiliasi telah ditambahkan ke dalam dompet Anda.";
+            $affiliateUser->notify(new NewReferralNotification($title, $message));
+          }
+
+          if ($affiliateProfile->upline_id) {
+            $maUser = User::find($affiliateProfile->upline_id);
+            if ($maUser) {
+              $maProfile = AffiliateProfile::where('user_id', $maUser->id)->first();
+
+              $maCommissionRate = isset($adminConfig['ma_commission']) ? (float) $adminConfig['ma_commission'] : 0;
+              // Gunakan Harga Dasar Komisi yang sudah dikurangi PPN
+              $maCommissionAmount = ($commissionBasePrice * $maCommissionRate) / 100;
+
+              if ($maCommissionAmount > 0) {
+                $maUser->wallet->deposit($maCommissionAmount, [
+                  'type' => 'commission',
+                  'description' => 'MA Subscription commission from Agent ' . $owner->name,
+                  'payment_id' => $payment->id,
+                ]);
+
+                DB::table('affiliate_commission_histories')->insert([
+                  'company_id' => $owner->id,
+                  'payment_id' => $payment->id,
+                  'recipient_id' => $maUser->id,
+                  'tier' => 'master_affiliate',
+                  'base_amount' => $commissionBasePrice,
+                  'commission_rate' => $maCommissionRate,
+                  'commission_amount' => $maCommissionAmount,
+                  'status' => 'paid',
+                  'created_at' => now(),
+                  'updated_at' => now()
+                ]);
+
+                $title = "Langganan Berhasil: {$owner->name}";
+                $message = "Agen {$owner->name} dari jaringan Anda telah membayar paket langganan. Komisi Master Affiliate telah ditambahkan ke dalam dompet Anda.";
+                $maUser->notify(new NewReferralNotification($title, $message));
+              }
+
+              if ($maProfile && $maProfile->upline_id) {
+                $partnerUser = User::find($maProfile->upline_id);
+                if ($partnerUser) {
+                  $partnerCommissionRate = isset($adminConfig['partner_commission']) ? (float) $adminConfig['partner_commission'] : 0;
+                  // Gunakan Harga Dasar Komisi yang sudah dikurangi PPN
+                  $partnerCommissionAmount = ($commissionBasePrice * $partnerCommissionRate) / 100;
+
+                  if ($partnerCommissionAmount > 0) {
+                    $partnerUser->wallet->deposit($partnerCommissionAmount, [
+                      'type' => 'commission',
+                      'description' => 'Partner Subscription commission from Agent ' . $owner->name,
+                      'payment_id' => $payment->id,
+                    ]);
+
+                    DB::table('affiliate_commission_histories')->insert([
+                      'company_id' => $owner->id,
+                      'payment_id' => $payment->id,
+                      'recipient_id' => $partnerUser->id,
+                      'tier' => 'partner',
+                      'base_amount' => $commissionBasePrice,
+                      'commission_rate' => $partnerCommissionRate,
+                      'commission_amount' => $partnerCommissionAmount,
+                      'status' => 'paid',
+                      'created_at' => now(),
+                      'updated_at' => now()
+                    ]);
+
+                    $title = "Langganan Berhasil: {$owner->name}";
+                    $message = "Agen {$owner->name} dari jaringan Anda telah membayar paket langganan. Komisi Partner telah ditambahkan ke dalam dompet Anda.";
+                    $partnerUser->notify(new NewReferralNotification($title, $message));
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   }
 

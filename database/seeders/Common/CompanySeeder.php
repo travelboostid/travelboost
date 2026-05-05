@@ -27,7 +27,7 @@ class CompanySeeder extends Seeder
         'is_active' => true,
       ],
       [
-        'name' => 'Basic',
+        'name' => 'Basic Subscription',
         'duration_months' => 12,
         'price' => 6000000,
         'is_active' => true,
@@ -75,6 +75,7 @@ class CompanySeeder extends Seeder
       $company->domain()->create([
         'subdomain' => $seed['subdomain'],
         'domain_enabled' => true,
+        'subdomain_enabled' => true,
       ]);
 
       $user->companies()->attach($company->id, [
@@ -109,7 +110,6 @@ class CompanySeeder extends Seeder
       ]);
     }
 
-    // sample customer user for testing
     $jane = User::factory()->create([
       'company_id' => $johnCompany ? $johnCompany->id : 2,
       'name' => 'Jane',

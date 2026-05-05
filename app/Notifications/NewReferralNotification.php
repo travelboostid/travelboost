@@ -9,11 +9,13 @@ class NewReferralNotification extends Notification
 {
   use Queueable;
 
-  public $agentName;
+  public $title;
+  public $message;
 
-  public function __construct($agentName)
+  public function __construct($title, $message)
   {
-    $this->agentName = $agentName;
+    $this->title = $title;
+    $this->message = $message;
   }
 
   public function via($notifiable)
@@ -24,9 +26,8 @@ class NewReferralNotification extends Notification
   public function toDatabase($notifiable)
   {
     return [
-      'title' => 'Agen Baru Bergabung',
-      'message' => "Agen {$this->agentName} baru saja mendaftar menggunakan kode referal Anda.",
-      'type' => 'referral',
+      'title' => $this->title,
+      'message' => $this->message,
     ];
   }
 }

@@ -275,7 +275,7 @@ export function useCompanyDashboardNavMainMenu() {
         },
         {
           id: 'reports.inventories',
-          title: <FormattedMessage defaultMessage="Inventory Status" />,
+          title: <FormattedMessage defaultMessage="Seat Availability" />,
           urlOrAction: '#',
         },
       ],

@@ -12,6 +12,8 @@ use App\Models\AgentSubscription;
 use App\Models\AgentSubscriptionPackage;
 use App\Models\Company;
 use App\Models\CompanyTeam;
+use App\Models\AppConfig;
+use App\Models\AiCredit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Auth;
@@ -48,8 +50,6 @@ class OnboardingController extends Controller
 
   public function createCompany(Request $request)
   {
-
-    /** @var \App\Models\User $user */
     $user = Auth::user();
 
     $validated = $request->validate([
@@ -82,7 +82,16 @@ class OnboardingController extends Controller
 
     $company->domain()->create([
       'subdomain' => $validated['subdomain'],
-      'domain_enabled' => false,
+      'domain_enabled' => true,
+      'subdomain_enabled' => true,
+    ]);
+
+    $appConfig = AppConfig::where('key', 'admin')->first();
+    $adminConfig = $appConfig ? $appConfig->value : [];
+    $freeAiCredit = isset($adminConfig['free_AI_credit']) ? (float) $adminConfig['free_AI_credit'] : 0;
+
+    $company->aiCredit()->update([
+      'balance' => $freeAiCredit,
     ]);
 
     CompanyTeam::create([
@@ -110,9 +119,28 @@ class OnboardingController extends Controller
     $user->addRole("company:{$company->id}:superadmin", "company:{$company->id}");
 
     if (isset($company->referred_by) && $company->referred_by != null) {
-      $uplineUser = \App\Models\User::find($company->referred_by);
-      if ($uplineUser) {
-        $uplineUser->notify(new \App\Notifications\NewReferralNotification($company->name));
+      $title = "Pendaftaran Agen: {$company->name}";
+      $message = "Agen {$company->name} telah berhasil bergabung ke dalam jaringan afiliasi Anda dan sedang memulai masa percobaan (Free Trial).";
+
+      $affiliateUser = \App\Models\User::find($company->referred_by);
+      if ($affiliateUser) {
+        $affiliateUser->notify(new \App\Notifications\NewReferralNotification($title, $message));
+
+        $affiliateProfile = AffiliateProfile::where('user_id', $affiliateUser->id)->first();
+        if ($affiliateProfile && $affiliateProfile->upline_id) {
+          $maUser = \App\Models\User::find($affiliateProfile->upline_id);
+          if ($maUser) {
+            $maUser->notify(new \App\Notifications\NewReferralNotification($title, $message));
+
+            $maProfile = AffiliateProfile::where('user_id', $maUser->id)->first();
+            if ($maProfile && $maProfile->upline_id) {
+              $partnerUser = \App\Models\User::find($maProfile->upline_id);
+              if ($partnerUser) {
+                $partnerUser->notify(new \App\Notifications\NewReferralNotification($title, $message));
+              }
+            }
+          }
+        }
       }
     }
 
@@ -123,7 +151,6 @@ class OnboardingController extends Controller
 
   public function acceptInvitation(CompanyTeam $invitation)
   {
-    /** @var \App\Models\User $user */
     $user = Auth::user();
 
     if ($invitation->invite_email !== $user->email) {

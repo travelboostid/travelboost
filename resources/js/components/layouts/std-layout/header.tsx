@@ -54,8 +54,14 @@ export function Header() {
           <Link href="/" className="flex items-center gap-2 flex-none">
             <img
               src="/images/logo/hori.png"
+              alt="Travelboost Affiliate Logo"
+              className="h-12 w-auto block dark:hidden drop-shadow-sm"
+            />
+
+            <img
+              src="/images/logo/hori-wt.png"
               alt="Travelboost Logo"
-              className="h-12 w-auto drop-shadow-sm"
+              className="h-12 w-auto hidden dark:block drop-shadow-sm"
             />
             {/* <span className="text-xl font-bold text-foreground">
               TravelBoost

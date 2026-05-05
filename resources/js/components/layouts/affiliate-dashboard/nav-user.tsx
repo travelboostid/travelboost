@@ -7,7 +7,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { DEFAULT_PHOTO } from '@/config';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { Link, router, usePage } from '@inertiajs/react';
 import { Bell, LogOut, Moon, Sun } from 'lucide-react';
@@ -23,9 +22,12 @@ export function NavUser() {
   const profile = user?.affiliate_profile || user?.affiliateProfile;
   const tier = profile?.tier?.replace(/[-_]/g, ' ') || 'Affiliator';
 
-  const avatarUrl = profile?.profile_photo_path
-    ? `/storage/${profile.profile_photo_path}`
-    : user?.photo_url || DEFAULT_PHOTO;
+  // const avatarUrl = profile?.profile_photo_path
+  //   ? `/storage/${profile.profile_photo_path}`
+  //   : user?.photo_url || DEFAULT_PHOTO;
+
+  // const profile = user?.affiliate_profile || user?.affiliateProfile;
+  const avatarUrl = profile?.photo_url || null;
 
   const hasUnread = unreadNotificationsCount > 0;
 
@@ -66,11 +68,13 @@ export function NavUser() {
         <DropdownMenuLabel className="p-0 font-normal">
           <div className="flex items-center gap-3 px-2 py-2 text-left text-sm">
             <Avatar className="h-8 w-8 rounded-lg">
-              <AvatarImage
-                src={avatarUrl}
-                alt={user?.name}
-                className="object-cover"
-              />
+              {avatarUrl && (
+                <AvatarImage
+                  src={avatarUrl}
+                  alt={user?.name}
+                  className="object-cover"
+                />
+              )}
               <AvatarFallback className="rounded-lg bg-emerald-100 text-emerald-700 font-bold">
                 {user?.name?.charAt(0)}
               </AvatarFallback>

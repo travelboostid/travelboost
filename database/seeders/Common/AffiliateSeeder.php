@@ -39,7 +39,8 @@ class AffiliateSeeder extends Seeder
         'owner_id' => $profile->id,
         'owner_type' => AffiliateProfile::class,
         'subdomain' => $username,
-        'domain_enabled' => true, // <-- Baris ini yang ditambahkan
+        'domain_enabled' => true,
+        'subdomain_enabled' => true,
       ]);
 
       $partners[$i] = $user->id;
@@ -73,6 +74,7 @@ class AffiliateSeeder extends Seeder
         'owner_type' => AffiliateProfile::class,
         'subdomain' => $username,
         'domain_enabled' => true,
+        'subdomain_enabled' => true,
       ]);
 
       $mas[$i] = $user->id;
@@ -82,6 +84,8 @@ class AffiliateSeeder extends Seeder
       $username = 'affiliate-' . $nums[$i];
       $userStatus = ($i % 4 === 0) ? 'inactive' : 'active';
       $profileStatus = ($i % 3 === 0) ? 'pending' : 'approved';
+
+      $subdomainEnabled = ($profileStatus === 'approved' && $userStatus !== 'inactive');
 
       $user = User::create([
         'name' => 'Affiliate ' . ucfirst($nums[$i]),
@@ -105,7 +109,8 @@ class AffiliateSeeder extends Seeder
         'owner_id' => $profile->id,
         'owner_type' => AffiliateProfile::class,
         'subdomain' => $username,
-        'domain_enabled' => ($profileStatus === 'approved') ? true : false, // <-- Baris ini yang diubah
+        'domain_enabled' => true,
+        'subdomain_enabled' => $subdomainEnabled,
       ]);
     }
   }
