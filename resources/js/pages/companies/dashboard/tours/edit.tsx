@@ -204,6 +204,13 @@ export default function Page({ tour }: Props) {
     priceCategories: PriceCategory[];
   }>().props;
 
+  const isDuplicateDeparture = (date: string, currentIndex: number) => {
+    return schedules.some((s, i) => {
+      if (i === currentIndex) return false;
+      return s.departure_date === date;
+    });
+  };
+
   const [schedules, setSchedules] = useState<Schedule[]>(
     (tour.schedules || []).map((s: any) => ({
       id: s.id,
@@ -320,6 +327,14 @@ export default function Page({ tour }: Props) {
     field: keyof Schedule,
     value: string,
   ) => {
+    // 🔥 VALIDASI DUPLIKAT DEPARTURE DATE
+    if (field === 'departure_date') {
+      if (isDuplicateDeparture(value, index)) {
+        toast.error('Departure date has been used');
+        return;
+      }
+    }
+
     setSchedules((prev) => {
       const updated = [...prev];
       const row = { ...updated[index], [field]: value };
@@ -498,6 +513,7 @@ export default function Page({ tour }: Props) {
         DP: Number(a.DP || 0),
         FP: Number(a.FP || 0),
         RS: Number(a.RS || 0),
+        BRS: Number(a.BRS || 0),
         CA: Number(a.CA || 0),
         RF: Number(a.RF || 0),
         EX: Number(a.EX || 0),
@@ -530,7 +546,8 @@ export default function Page({ tour }: Props) {
     const row = updated[index];
 
     // 🔥 hitung ulang dari row (bukan dari luar scope)
-    row.available = row.max_pax - row.DP - row.FP - row.RS + row.CA + row.RF;
+    row.available =
+      row.max_pax - row.DP - row.FP - row.RS - row.BRS + row.CA + row.RF;
 
     setAvailability(updated);
   };
@@ -545,6 +562,7 @@ export default function Page({ tour }: Props) {
       DP: row.DP,
       FP: row.FP,
       RS: row.RS,
+      BRS: row.BRS,
       CA: row.CA,
       RF: row.RF,
       EX: row.EX,
@@ -646,6 +664,21 @@ export default function Page({ tour }: Props) {
   ) => {
     setAddOns((prev) => {
       const rows = [...(prev[scheduleId] || [])];
+
+      if (field === 'description') {
+        const isDuplicate = rows.some(
+          (row, i) =>
+            i !== index &&
+            row.description?.toLowerCase().trim() ===
+              value.toLowerCase().trim(),
+        );
+
+        if (isDuplicate) {
+          toast.error('Description tidak boleh sama');
+          return prev;
+        }
+      }
+
       rows[index] = { ...rows[index], [field]: value };
 
       return {
@@ -727,6 +760,8 @@ export default function Page({ tour }: Props) {
   };
 
   const handleDelete = (scheduleId: number, index: number) => {
+    if (!confirm('Delete this add on?')) return;
+
     setAddOns((prev) => {
       const rows = [...(prev[scheduleId] || [])];
 
@@ -884,11 +919,9 @@ export default function Page({ tour }: Props) {
           setCopyOpen(false);
           setSelectedDates([]);
           toast.success('Schedule copied successfully');
-          console.log('SUCCESS');
         },
 
         onError: () => {
-          console.log('ERROR:', errors);
           if (Object.keys(errors).length === 0) {
             toast.error('Server response error (check redirect)');
           } else {
@@ -1489,18 +1522,26 @@ export default function Page({ tour }: Props) {
                                   />
 
                                   {/* PROMOTION */}
-                                  <div className="flex gap-2 w-full min-w-0">
+                                  <div className="space-y-1">
                                     {/* PERCENT */}
-                                    <div className="w-[90px] shrink-0 relative">
-                                      <MoneyInput
+                                    <div className="relative">
+                                      <input
+                                        type="text"
+                                        inputMode="decimal"
+                                        className="w-full pr-8 border rounded px-2 h-9 text-sm"
                                         value={
                                           room.promotion.type === 'percent'
                                             ? room.promotion.value
                                             : ''
                                         }
                                         placeholder="0"
-                                        className="w-full pr-8"
-                                        onChange={(val) => {
+                                        onChange={(e) => {
+                                          let raw = e.target.value
+                                            .replace(/[^0-9.,]/g, '')
+                                            .replace(',', '.');
+
+                                          if (Number(raw) > 100) raw = '100';
+
                                           updateRoomAdjustment(
                                             index,
                                             rIndex,
@@ -1513,59 +1554,62 @@ export default function Page({ tour }: Props) {
                                             rIndex,
                                             'promotion',
                                             'value',
-                                            val,
+                                            raw,
                                           );
                                         }}
                                       />
-
-                                      <span className="absolute right-2 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                                      <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs">
                                         %
                                       </span>
                                     </div>
 
                                     {/* VALUE */}
-                                    <div className="flex-1 min-w-0">
-                                      <MoneyInput
-                                        className="w-full"
-                                        value={
-                                          room.promotion.type === 'value'
-                                            ? room.promotion.value
-                                            : ''
-                                        }
-                                        placeholder="Value"
-                                        onChange={(val) => {
-                                          updateRoomAdjustment(
-                                            index,
-                                            rIndex,
-                                            'promotion',
-                                            'type',
-                                            'value',
-                                          );
-                                          updateRoomAdjustment(
-                                            index,
-                                            rIndex,
-                                            'promotion',
-                                            'value',
-                                            val,
-                                          );
-                                        }}
-                                      />
-                                    </div>
+                                    <MoneyInput
+                                      value={
+                                        room.promotion.type === 'value'
+                                          ? room.promotion.value
+                                          : ''
+                                      }
+                                      placeholder="Value"
+                                      className="w-full"
+                                      onChange={(val) => {
+                                        updateRoomAdjustment(
+                                          index,
+                                          rIndex,
+                                          'promotion',
+                                          'type',
+                                          'value',
+                                        );
+                                        updateRoomAdjustment(
+                                          index,
+                                          rIndex,
+                                          'promotion',
+                                          'value',
+                                          val,
+                                        );
+                                      }}
+                                    />
                                   </div>
 
                                   {/* COMMISSION */}
-                                  <div className="grid grid-cols-2 gap-2">
+                                  <div className="space-y-1">
                                     {/* PERCENT */}
                                     <div className="relative">
-                                      <MoneyInput
+                                      <input
+                                        type="text"
+                                        inputMode="decimal"
+                                        className="w-full pr-8 border rounded px-2 h-9 text-sm"
                                         value={
                                           room.commission.type === 'percent'
                                             ? room.commission.value
                                             : ''
                                         }
                                         placeholder="0"
-                                        className="pr-8"
-                                        onChange={(val) => {
+                                        onChange={(e) => {
+                                          const raw = e.target.value
+                                            .replace(/[^0-9.,]/g, '')
+                                            .replace(',', '.');
+
                                           updateRoomAdjustment(
                                             index,
                                             rIndex,
@@ -1578,12 +1622,11 @@ export default function Page({ tour }: Props) {
                                             rIndex,
                                             'commission',
                                             'value',
-                                            val,
+                                            raw,
                                           );
                                         }}
                                       />
-
-                                      <span className="absolute right-2 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                                      <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs">
                                         %
                                       </span>
                                     </div>
@@ -1596,6 +1639,7 @@ export default function Page({ tour }: Props) {
                                           : ''
                                       }
                                       placeholder="Value"
+                                      className="w-full"
                                       onChange={(val) => {
                                         updateRoomAdjustment(
                                           index,
@@ -2020,11 +2064,29 @@ export default function Page({ tour }: Props) {
                 </div>
 
                 <div className="hidden md:block rounded-lg border overflow-x-auto">
-                  <table className="w-full text-sm min-w-[1000px]">
+                  <table className="w-full table-fixed text-sm min-w-[1000px]">
+                    <colgroup>
+                      <col className="w-[120px]" /> {/* Departure */}
+                      <col className="w-[50px]" /> {/* Max Pax */}
+                      <col className="w-[50px]" />
+                      <col className="w-[50px]" />
+                      <col className="w-[50px]" />
+                      <col className="w-[50px]" />
+                      <col className="w-[50px]" />
+                      <col className="w-[50px]" />
+                      <col className="w-[50px]" />
+                      <col className="w-[50px]" />
+                      <col className="w-[50px]" />
+                      <col className="w-[50px]" />
+                      <col className="w-[50px]" /> {/* Action */}
+                    </colgroup>
                     <thead className="bg-muted">
                       <tr>
                         <th className="p-3 text-left">Departure → Return</th>
                         <th className="p-3 text-right">Max Pax</th>
+                        <th className="p-3 text-right">
+                          Manual <br /> Reserved <br /> (RS)
+                        </th>
                         <th className="p-3 text-right">
                           Waiting Payment <br /> (WP)
                         </th>
@@ -2035,7 +2097,7 @@ export default function Page({ tour }: Props) {
                           Full Payment <br /> (FP)
                         </th>
                         <th className="p-3 text-right">
-                          Reserved <br /> (RS)
+                          Booking <br /> Reserved <br /> (BRS)
                         </th>
                         <th className="p-3 text-right">
                           Cancel <br /> (CA)
@@ -2072,39 +2134,6 @@ export default function Page({ tour }: Props) {
                             />
                           </td>
 
-                          {/* WP */}
-                          <td className="p-3">
-                            <MoneyInput
-                              className="text-right"
-                              value={row.WP}
-                              onChange={(val) =>
-                                updateAvailability(i, 'WP', Number(val))
-                              }
-                            />
-                          </td>
-
-                          {/* DP */}
-                          <td className="p-3">
-                            <MoneyInput
-                              className="text-right"
-                              value={row.DP}
-                              onChange={(val) =>
-                                updateAvailability(i, 'DP', Number(val))
-                              }
-                            />
-                          </td>
-
-                          {/* FP */}
-                          <td className="p-3">
-                            <MoneyInput
-                              className="text-right"
-                              value={row.FP}
-                              onChange={(val) =>
-                                updateAvailability(i, 'FP', Number(val))
-                              }
-                            />
-                          </td>
-
                           {/* RS */}
                           <td className="p-3">
                             <MoneyInput
@@ -2116,6 +2145,54 @@ export default function Page({ tour }: Props) {
                             />
                           </td>
 
+                          {/* WP */}
+                          <td className="p-3">
+                            <MoneyInput
+                              className="text-right"
+                              value={row.WP}
+                              onChange={(val) =>
+                                updateAvailability(i, 'WP', Number(val))
+                              }
+                              disabled={true}
+                            />
+                          </td>
+
+                          {/* DP */}
+                          <td className="p-3">
+                            <MoneyInput
+                              className="text-right"
+                              value={row.DP}
+                              onChange={(val) =>
+                                updateAvailability(i, 'DP', Number(val))
+                              }
+                              disabled={true}
+                            />
+                          </td>
+
+                          {/* FP */}
+                          <td className="p-3">
+                            <MoneyInput
+                              className="text-right"
+                              value={row.FP}
+                              onChange={(val) =>
+                                updateAvailability(i, 'FP', Number(val))
+                              }
+                              disabled={true}
+                            />
+                          </td>
+
+                          {/* BRS */}
+                          <td className="p-3">
+                            <MoneyInput
+                              className="text-right"
+                              value={row.BRS}
+                              onChange={(val) =>
+                                updateAvailability(i, 'BRS', Number(val))
+                              }
+                              disabled={true}
+                            />
+                          </td>
+
                           {/* CA */}
                           <td className="p-3">
                             <MoneyInput
@@ -2124,6 +2201,7 @@ export default function Page({ tour }: Props) {
                               onChange={(val) =>
                                 updateAvailability(i, 'CA', Number(val))
                               }
+                              disabled={true}
                             />
                           </td>
 
@@ -2135,6 +2213,7 @@ export default function Page({ tour }: Props) {
                               onChange={(val) =>
                                 updateAvailability(i, 'RF', Number(val))
                               }
+                              disabled={true}
                             />
                           </td>
 
@@ -2146,6 +2225,7 @@ export default function Page({ tour }: Props) {
                               onChange={(val) =>
                                 updateAvailability(i, 'EX', Number(val))
                               }
+                              disabled={true}
                             />
                           </td>
 
@@ -2157,6 +2237,7 @@ export default function Page({ tour }: Props) {
                               onChange={(val) =>
                                 updateAvailability(i, 'WL', Number(val))
                               }
+                              disabled={true}
                             />
                           </td>
 
@@ -2245,10 +2326,11 @@ export default function Page({ tour }: Props) {
                       <div className="grid grid-cols-2 gap-2 text-sm">
                         {[
                           { key: 'max_pax', label: 'Max' },
+                          { key: 'RS', label: 'RS' },
                           { key: 'WP', label: 'WP' },
                           { key: 'DP', label: 'DP' },
                           { key: 'FP', label: 'FP' },
-                          { key: 'RS', label: 'RS' },
+                          { key: 'BRS', label: 'BRS' },
                           { key: 'CA', label: 'CA' },
                           { key: 'RF', label: 'RF' },
                           { key: 'EX', label: 'EX' },
@@ -2334,7 +2416,7 @@ export default function Page({ tour }: Props) {
                       <tr>
                         <th className="p-3 text-left">Departure → Return</th>
                         <th className="p-3 text-left">Descriptions</th>
-                        <th className="p-3 text-left">Prices</th>
+                        <th className="p-3 text-left">Prices / Pax</th>
                         <th className="p-3 text-left">Editable</th>
                         <th className="p-3 text-left">Action</th>
                       </tr>

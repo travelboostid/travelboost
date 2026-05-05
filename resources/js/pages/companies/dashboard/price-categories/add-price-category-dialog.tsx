@@ -30,8 +30,19 @@ export default function AddPriceCategoryDialog({
 
   const form = useForm({
     name: '',
+    room_type: '',
     description: '',
   });
+
+  const ROOM_TYPES = [
+    'Adult Single',
+    'Adult Double',
+    'Adult Twin',
+    'Adult Triple',
+    'Adult Quad',
+    'Adult Extra Bed',
+    'Child With Extra Bed',
+  ];
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -66,6 +77,27 @@ export default function AddPriceCategoryDialog({
               placeholder="Category name"
             />
             <InputError message={form.errors.name} />
+          </div>
+
+          <div className="grid gap-2">
+            <Label htmlFor="room_type">Room Type</Label>
+
+            <select
+              id="room_type"
+              className="border rounded px-2 h-10 text-sm w-full"
+              value={form.data.room_type}
+              onChange={(e) => form.setData('room_type', e.target.value)}
+            >
+              <option value="">Select Room Type</option>
+
+              {ROOM_TYPES.map((type) => (
+                <option key={type} value={type}>
+                  {type}
+                </option>
+              ))}
+            </select>
+
+            <InputError message={form.errors.room_type} />
           </div>
 
           {/* DESCRIPTION */}

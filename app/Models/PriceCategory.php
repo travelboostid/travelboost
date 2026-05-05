@@ -14,6 +14,7 @@ class PriceCategory extends Model
     protected $fillable = [
         'company_id',
         'name',
+        'room_type',
         'description',
     ];
 

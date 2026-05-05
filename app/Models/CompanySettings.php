@@ -23,6 +23,8 @@ class CompanySettings extends Model
     'manual_bank_transfer',
     'manual_bank_transfer_account_name',
     'manual_bank_transfer_account_number',
+    'email_payment_gateway',
+    'password_payment_gateway',
   ];
 
   protected $casts = [

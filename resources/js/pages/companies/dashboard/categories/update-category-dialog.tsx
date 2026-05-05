@@ -17,7 +17,7 @@ import { Spinner } from '@/components/ui/spinner';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { useForm } from '@inertiajs/react';
 import type { ReactNode } from 'react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 type UpdateCategoryDialogProps = {
   category: TourCategoryResource;
@@ -34,8 +34,18 @@ export default function UpdateCategoryDialog({
   const form = useForm({
     name: category.name,
     description: category.description,
-    position_no: category.position_no,
+    position_no: String(category.position_no ?? ''),
   });
+
+  useEffect(() => {
+    if (open) {
+      form.setData({
+        name: category.name,
+        description: category.description,
+        position_no: String(category.position_no ?? ''),
+      });
+    }
+  }, [category, open]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,7 +54,7 @@ export default function UpdateCategoryDialog({
       preserveScroll: true,
       onError: () => setOpen(true), // 🔥 keep modal open on validation error
       onSuccess: () => {
-        form.reset();
+        //form.reset();
         setOpen(false);
       },
     });

@@ -40,6 +40,7 @@ import UpdateCategoryDialog from './update-category-dialog';
 function RowAction({ category }: { category: TourCategoryResource }) {
   const { company } = usePageSharedDataProps();
   const handleDelete = () => {
+    if (!confirm('Delete this category?')) return;
     router.delete(
       destroy({ company: company.username, category: category.id }),
       {

@@ -50,7 +50,6 @@ import relativeTime from 'dayjs/plugin/relativeTime';
 import {
   ChevronDown,
   EditIcon,
-  EyeIcon,
   PlusIcon,
   Search,
   TrashIcon,
@@ -58,7 +57,6 @@ import {
 import * as React from 'react';
 import { toast } from 'sonner';
 import TourDeleteConfirmDialog from './components/tour-delete-confirm-dialog';
-import TourDetailDialog from './components/tour-detail-dialog';
 
 dayjs.extend(relativeTime);
 
@@ -66,16 +64,6 @@ function RowActions({ tour }: { tour: TourResource }) {
   const { company } = usePageSharedDataProps();
   return (
     <div className="flex gap-2">
-      <TourDetailDialog tour={tour}>
-        <Button
-          size="icon"
-          variant="secondary"
-          className="h-8 w-8 text-secondary-foreground hover:bg-secondary/80 shadow-sm"
-        >
-          <EyeIcon className="h-4 w-4" />
-        </Button>
-      </TourDetailDialog>
-
       <Link href={edit({ company: company.username, tour: tour.id })}>
         <Button
           size="icon"

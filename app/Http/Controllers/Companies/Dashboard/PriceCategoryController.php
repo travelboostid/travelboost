@@ -25,16 +25,18 @@ class PriceCategoryController extends Controller
     {
         $request->validate([
             'name' => 'required|string|max:255',
+            'room_type' => 'required|string|max:255',
             'description' => 'nullable|string',
         ]);
 
         PriceCategory::create([
             'company_id' => $company->id,
             'name' => $request->name,
+            'room_type' => $request->room_type,
             'description' => $request->description,
         ]);
 
-        return back();
+        return redirect()->back();
     }
 
     public function update(Request $request, Company $company, PriceCategory $price_category)
@@ -45,17 +47,18 @@ class PriceCategoryController extends Controller
 
         $request->validate([
             'name' => 'required|string|max:255',
+            'room_type' => 'required|string|max:255',
             'description' => 'nullable|string',
         ]);
 
-        $price_category->update($request->only('name', 'description'));
+        $price_category->update($request->only('name', 'room_type', 'description'));
 
-        return back();
+        return redirect()->back();
     }
 
     public function destroy(Company $company, PriceCategory $price_category)
     {
         $price_category->delete();
-        return back();
+        return redirect()->back();
     }
 }
