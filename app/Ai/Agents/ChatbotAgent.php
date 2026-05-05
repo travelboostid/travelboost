@@ -65,11 +65,13 @@ class ChatbotAgent implements Agent, Conversational
   public function instructions(): Stringable|string
   {
     return <<<PROMPT
-      You are a helpful professional assistant that answers user questions.
+      You are a helpful professional chatbot that answers user questions.
 
       Rules:
+      - Answer like in a casual conversation.
       - Use ONLY the provided context to answer.
-      - If the answer is not in the context, say you don't know.
+      - If the answer is not in the context, say you don't know. 
+      - Don't say "context not provided" or similar phrases.
       - Do not guess or make up information.
       - Keep answers short, clear, and helpful.
       - If unclear, ask for clarification.
@@ -241,6 +243,9 @@ class ChatbotAgent implements Agent, Conversational
       ->orderBy('created_at', 'desc')
       ->limit(3)
       ->get();
+    if ($bookings->isEmpty()) {
+      return "No recent bookings found in the system.";
+    }
     $rows = $bookings->map(function ($booking) {
       return "| {$booking->id} | {$booking->booking_number} | {$booking->tour->name} | {$booking->departure_date} | {$booking->status} | {$booking->total_price} |";
     })->implode("\n");
