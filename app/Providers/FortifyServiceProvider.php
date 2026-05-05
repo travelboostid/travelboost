@@ -135,7 +135,7 @@ class FortifyServiceProvider extends ServiceProvider
 
   private function processLoginAsAdmin(User $user, Request $request)
   {
-    if (!$user->hasRole('company:0:superadmin'))
+    if (!$user->hasRole('user:admin'))
       return null;
     return $user;
   }

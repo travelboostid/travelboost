@@ -13,8 +13,6 @@ class UserSeeder extends Seeder
 {
   public function run(): void
   {
-    $team = Team::where('name', 'company:0')->first();
-    $superadmin = Role::where('name', 'company:0:superadmin')->first();
     $root = User::create([
       'name' => 'Root',
       'email' => 'root@travelboost.co.id',
@@ -26,7 +24,7 @@ class UserSeeder extends Seeder
       'password' => Hash::make('root'),
     ]);
 
-    $root->syncRoles([$superadmin], $team);
+    $root->syncRoles(['user:admin', 'admin:superadmin']);
 
     $vendor = User::create([
       'name' => 'Vendor',
@@ -37,6 +35,7 @@ class UserSeeder extends Seeder
       'status' => UserStatus::ACTIVE,
       'password' => Hash::make('vendor'),
     ]);
+    $vendor->syncRoles(['user:vendor']);
 
     $greatChinaTourUser = User::create([
       'name' => 'Great China Tour',
@@ -47,6 +46,7 @@ class UserSeeder extends Seeder
       'status' => UserStatus::ACTIVE,
       'password' => Hash::make('greatchinatour'),
     ]);
+    $greatChinaTourUser->syncRoles(['user:customer']);
 
     $john = User::create([
       'name' => 'John',
@@ -57,5 +57,6 @@ class UserSeeder extends Seeder
       'status' => UserStatus::ACTIVE,
       'password' => Hash::make('john'),
     ]);
+    $john->syncRoles(['user:agent']);
   }
 }

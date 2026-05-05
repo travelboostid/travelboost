@@ -11,16 +11,9 @@ class RolePermissionSeeder extends Seeder
 {
   public function run(): void
   {
-    $team = Team::firstOrCreate([
-      'name' => 'company:0',
-      'display_name' => 'Travelboost',
-    ]);
+    $roles = config('travelboost.roles');
     $permissions = config('travelboost.permissions');
 
-    $superadmin = Role::firstOrCreate([
-      'name' => 'company:0:superadmin',
-      'display_name' => 'Superadmin',
-    ]);
     foreach ($permissions as $permission) {
       Permission::firstOrCreate([
         'name' => $permission['name'],
@@ -28,6 +21,13 @@ class RolePermissionSeeder extends Seeder
         'description' => $permission['description'],
       ]);
     }
-    $superadmin->syncPermissions(Permission::all());
+    foreach ($roles as $role) {
+      $r = Role::firstOrCreate([
+        'name' => $role['name'],
+        'display_name' => $role['display_name'],
+        'description' => $role['description'],
+      ]);
+      $r->syncPermissions($role['permissions']);
+    }
   }
 }

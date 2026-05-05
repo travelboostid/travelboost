@@ -109,6 +109,7 @@ class CompanySeeder extends Seeder
       ]);
     }
 
+    // sample customer user for testing
     $jane = User::factory()->create([
       'company_id' => $johnCompany ? $johnCompany->id : 2,
       'name' => 'Jane',
@@ -118,5 +119,6 @@ class CompanySeeder extends Seeder
       'phone' => '0',
       'password' => Hash::make('jane'),
     ]);
+    $jane->syncRoles(['user:customer']);
   }
 }

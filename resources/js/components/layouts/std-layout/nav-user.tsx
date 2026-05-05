@@ -9,10 +9,9 @@ import { useAvailableDashboards } from '../components/hooks';
 
 export function NavUser() {
   const { auth } = usePageSharedDataProps();
-  console.log('Auth data in NavUser:', auth);
   const dashboards = useAvailableDashboards();
   const defaultDashboard = useMemo(() => {
-    if (auth.roles.includes('company:0:superadmin')) {
+    if (auth.roles.includes('user:admin')) {
       return dashboards.find((d) => d.id === 'admin:default') || dashboards[0];
     } else {
       return (

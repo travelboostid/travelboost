@@ -46,6 +46,16 @@ export default function useAdminNavMainMenu() {
               title: 'Customers',
               urlOrAction: '/admin/database/customers',
             },
+            {
+              id: 'database.permissions',
+              title: 'Permissions',
+              urlOrAction: '/admin/database/permissions',
+            },
+            {
+              id: 'database.roles',
+              title: 'Roles',
+              urlOrAction: '/admin/database/roles',
+            },
           ],
         },
         {
