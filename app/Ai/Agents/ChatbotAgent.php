@@ -5,12 +5,14 @@ namespace App\Ai\Agents;
 use App\Models\AiCredit;
 use App\Models\AiUsageLog;
 use App\Models\AppConfig;
+use App\Models\Booking;
 use App\Models\ChatMessage;
 use App\Models\ChatRoomMember;
 use App\Models\Company;
 use App\Models\CompanySettings;
 use App\Models\Tour;
 use App\Models\TourDocumentKnowledgeBase;
+use App\Models\User;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -106,7 +108,7 @@ class ChatbotAgent implements Agent, Conversational
   private function retrieveChatContext()
   {
     if ($this->message->attachment_type == 'tour') {
-      $context = $this->retrieveDetailContext(['tour_id' => $this->message->attachment_data]);
+      $context = $this->retrieveTourDetailContext(['tour_id' => $this->message->attachment_data]);
       return [
         'intent' => 'detail',
         'args' => ['tour_id' => $this->message->attachment_data ?? null],
@@ -115,8 +117,10 @@ class ChatbotAgent implements Agent, Conversational
     }
     $prompt = <<<PROMPT
       Analyze the user messages and detect intent:
-      - detail(tour_id): looking for specific tour information.
-      - search(int tour_id): looking for tours based on criteria.
+      - tour_detail(tour_id): looking for specific tour information.
+      - tour_query(...args): looking for tours based on criteria.
+      - my_bookings(): looking for their own bookings.
+      - booking_detail(booking_id): looking for specific booking information.
       - general(): general travel questions.
       PROMPT;
 
@@ -132,7 +136,7 @@ class ChatbotAgent implements Agent, Conversational
       })->toArray(), // Take the last 5 messages for context
       schema: function (JsonSchema $schema) {
         return [
-          'intent' => $schema->string()->enum(['detail', 'search', 'general'])->required(),
+          'intent' => $schema->string()->enum(['tour_detail', 'tour_query', 'my_bookings', 'booking_detail', 'general'])->required(),
           'args' => $schema->object([
             'tour_id' => $schema->integer()->required(),
             'continents' => $schema->array()->items($schema->string()->required())->required(),
@@ -152,8 +156,10 @@ class ChatbotAgent implements Agent, Conversational
     );
     $this->trackTokenUsage($response);
     $context = match ($response['intent'] ?? 'general') {
-      'detail' => $this->retrieveDetailContext($response['args'] ?? []),
-      'search' => $this->retrieveSearchContext($response['args'] ?? []),
+      'tour_detail' => $this->retrieveTourDetailContext($response['args'] ?? []),
+      'tour_query' => $this->retrieveTourQueryContext($response['args'] ?? []),
+      'my_bookings' => $this->retrieveMyBookingsContext($response['args'] ?? []),
+      'booking_detail' => $this->retrieveBookingDetailContext($response['args'] ?? []),
       default => "No context available.",
     };
 
@@ -164,7 +170,7 @@ class ChatbotAgent implements Agent, Conversational
     ];
   }
 
-  private function retrieveSearchContext(array $args)
+  private function retrieveTourQueryContext(array $args)
   {
     $tours = Tour::query()
       ->where('company_id', $this->company->id)
@@ -188,7 +194,7 @@ class ChatbotAgent implements Agent, Conversational
       CONTEXT;
   }
 
-  private function retrieveDetailContext(array $args)
+  private function retrieveTourDetailContext(array $args)
   {
     $tourId = $args['tour_id'] ?? null;
     $tour = Tour::find($tourId);
@@ -224,6 +230,46 @@ class ChatbotAgent implements Agent, Conversational
       | {$tour->id} | {$tour->code} | {$tour->name} | {$tour->duration_days} | {$tour->destination} | {$tour->country_name} | {$tour->showprice} |
       
       {$relevantKnowledges}
+      CONTEXT;
+  }
+
+  private function retrieveMyBookingsContext(array $args)
+  {
+    $bookings = Booking::query()
+      ->where('user_id', $this->message->sender_id)
+      ->where('agent_id', $this->company->id)
+      ->orderBy('created_at', 'desc')
+      ->limit(3)
+      ->get();
+    $rows = $bookings->map(function ($booking) {
+      return "| {$booking->id} | {$booking->booking_number} | {$booking->tour->name} | {$booking->departure_date} | {$booking->status} | {$booking->total_price} |";
+    })->implode("\n");
+    return <<<CONTEXT
+      Here are your recent bookings:
+      | id | booking_number | tour_name | departure_date | status | total_price |
+      |----|----------------|-----------|----------------|--------|-------------|
+      {$rows}
+      CONTEXT;
+  }
+
+  private function retrieveBookingDetailContext(array $args)
+  {
+    if ($this->message->sender_type !== User::class) {
+      return "No booking information available.";
+    }
+    $bookingId = $args['booking_id'] ?? null;
+    $booking = Booking::with(['tour'])->find($bookingId);
+    if ($booking->user_id !== $this->message->sender_id || $booking->agent_id !== $this->company->id) {
+      return "No booking information available.";
+    }
+    if (!$booking) {
+      return "No booking information available.";
+    }
+    return <<<CONTEXT
+      Booking details retrieved from system:
+      | id | booking_number | tour_name | departure_date | status | total_price | pax_adult | pax_child | pax_infant | contact_name | contact_email |
+      |----|----------------|-----------|----------------|--------|-------------|-----------|-----------|-----------|--------------|----------------|
+      | {$booking->id} | {$booking->booking_number} | {$booking->tour->name} | {$booking->departure_date} | {$booking->status} | {$booking->total_price} | {$booking->pax_adult} | {$booking->pax_child} | {$booking->pax_infant} | {$booking->contact_name} | {$booking->contact_email} |
       CONTEXT;
   }
 
