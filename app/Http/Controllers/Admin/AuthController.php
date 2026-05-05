@@ -34,7 +34,7 @@ class AuthController extends Controller
       ])->onlyInput('username_or_email');
     }
 
-    if (!$user->hasRole('company:0:superadmin')) {
+    if (!$user->hasRole('user:admin')) {
       return back()->withErrors([
         'username_or_email' => 'The provided credentials are incorrect.',
       ]);

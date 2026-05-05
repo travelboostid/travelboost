@@ -13,7 +13,7 @@ class IndexController extends Controller
     if (!$user) {
       return redirect()->route('admin.login.show');
     }
-    if (!$user->hasRole('company:0:superadmin')) {
+    if (!$user->hasRole('user:admin')) {
       return redirect()->route('index');
     }
     return redirect()->route('admin.dashboard');

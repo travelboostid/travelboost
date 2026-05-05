@@ -20,8 +20,8 @@ class EnsureHasAdminAccess
     if (! $user) {
       return redirect()->route('admin.login');
     }
-    if (! $user->hasRole(['company:0:superadmin', 'company:0:admin'])) {
-      abort(403, 'Unauthorized: Required Internal Admin privileges (Scope: company:0).');
+    if (! $user->hasRole('user:admin')) {
+      abort(403, 'Unauthorized: required admin privileges to access this resource.');
     }
 
     return $next($request);

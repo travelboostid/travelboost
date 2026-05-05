@@ -22,7 +22,7 @@ class CustomLoginResponse implements LoginResponse
 
   private function processLoginAsAdmin(User $user, $request)
   {
-    if (! $user->hasRole('company:0:superadmin')) {
+    if (! $user->hasRole('user:admin')) {
       return null;
     }
 

@@ -10,6 +10,8 @@ use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\VendorCatalogController;
 use App\Http\Controllers\Admin\VendorController;
 use App\Http\Controllers\Admin\IndexController;
+use App\Http\Controllers\Admin\PermissionController;
+use App\Http\Controllers\Admin\RoleController;
 use App\Http\Middleware\EnsureHasAdminAccess;
 use Illuminate\Support\Facades\Route;
 
@@ -29,6 +31,8 @@ Route::prefix('admin')->middleware(['auth', EnsureHasAdminAccess::class])->name(
       return inertia('admin/database/affiliates/index');
     })->name('affiliates');
     Route::resource('users', UserController::class)->names('users');
+    Route::resource('permissions', PermissionController::class)->names('permissions');
+    Route::resource('roles', RoleController::class)->names('roles');
   });
 
   // 4. Tour
