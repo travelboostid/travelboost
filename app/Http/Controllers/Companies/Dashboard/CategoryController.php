@@ -29,18 +29,18 @@ class CategoryController extends Controller
   {
     $company->tourCategories()->create($request->validated());
 
-    return back();
+    return redirect()->back();
   }
 
   public function update(UpdateTourCategoryRequest $request, Company $company, TourCategory $category)
   {
     $category->update($request->validated());
-    return back();
+    return redirect()->back();
   }
 
   public function destroy(Company $company, TourCategory $category)
   {
     $category->delete();
-    return back();
+    return redirect()->back();
   }
 }

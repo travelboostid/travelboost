@@ -103,6 +103,9 @@ class TourController extends Controller
       'tour'           => $tour,
       'priceCategories' => $priceCategories,
       'addOnsFromDb'   => $addOns,
+      'currencies' => Currency::select('code', 'name')
+            ->orderBy('code')
+            ->get(),
     ]);
   }
 

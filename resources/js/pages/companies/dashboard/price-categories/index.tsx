@@ -39,6 +39,7 @@ import UpdatePriceCategoryDialog from './update-price-category-dialog';
 type PriceCategory = {
   id: number;
   name: string;
+  room_type: string;
   description: string;
 };
 
@@ -76,6 +77,11 @@ export const columns: ColumnDef<PriceCategory>[] = [
     accessorKey: 'name',
     header: 'Name',
     cell: ({ row }) => <div>{row.getValue('name')}</div>,
+  },
+  {
+    accessorKey: 'room_type',
+    header: 'Room Type',
+    cell: ({ row }) => <div>{row.getValue('room_type')}</div>,
   },
   {
     accessorKey: 'description',

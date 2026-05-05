@@ -241,6 +241,8 @@ return new class extends Migration
       $table->string('manual_bank_transfer')->nullable();
       $table->string('manual_bank_transfer_account_name')->nullable();
       $table->string('manual_bank_transfer_account_number')->nullable();
+      $table->string('email_payment_gateway')->nullable();
+      $table->string('password_payment_gateway')->nullable();
       $table->timestamps();
     });
 
@@ -482,6 +484,7 @@ return new class extends Migration
         ->cascadeOnDelete();
 
       $table->string('name');
+      $table->string('room_type');
       $table->text('description')->nullable();
 
       $table->timestamps();
@@ -551,10 +554,11 @@ return new class extends Migration
         ->cascadeOnDelete();
 
       $table->unsignedInteger('max_pax')->default(0);
+      $table->unsignedInteger('RS')->default(0);
       $table->unsignedInteger('WP')->default(0);
       $table->unsignedInteger('DP')->default(0);
       $table->unsignedInteger('FP')->default(0);
-      $table->unsignedInteger('RS')->default(0);
+      $table->unsignedInteger('BRS')->default(0);
       $table->unsignedInteger('CA')->default(0);
       $table->unsignedInteger('RF')->default(0);
       $table->unsignedInteger('EX')->default(0);

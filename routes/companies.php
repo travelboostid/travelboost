@@ -57,6 +57,9 @@ Route::prefix('companies/{company:username}/dashboard')->middleware(['auth', 'co
       [TourController::class, 'destroyPrice']
   )->name('tours.prices.destroy');
 
+  Route::post('/tours/{tour}/schedules', [TourScheduleController::class, 'store'])
+    ->name('tours.schedules.store');
+
   Route::post(
     'tour-availabilities',
     [TourAvailabilityController::class, 'store']

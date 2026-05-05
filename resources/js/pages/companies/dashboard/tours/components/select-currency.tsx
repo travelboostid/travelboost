@@ -6,14 +6,14 @@ import {
   SelectLabel,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select'
-import usePageSharedDataProps from '@/hooks/use-page-shared-data-props'
+} from '@/components/ui/select';
+import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 
 interface SelectCurrencyProps {
-  name?: string
-  value?: string | number
-  defaultValue?: string | number
-  onChange?: (value: string) => void
+  name?: string;
+  value?: string | number;
+  defaultValue?: string | number;
+  onChange?: (value: string) => void;
 }
 
 export default function SelectCurrency({
@@ -22,7 +22,7 @@ export default function SelectCurrency({
   defaultValue,
   onChange,
 }: SelectCurrencyProps) {
-  const { currencies } = usePageSharedDataProps()
+  const { currencies } = usePageSharedDataProps();
 
   return (
     <Select
@@ -30,16 +30,15 @@ export default function SelectCurrency({
       value={value?.toString()}
       defaultValue={defaultValue?.toString()}
       onValueChange={(val) => onChange && onChange(val)}
+      modal={false}
     >
       <SelectTrigger className="w-[120px]">
         <SelectValue
-          placeholder={
-            currencies?.length ? 'Select currency' : 'No currency'
-          }
+          placeholder={currencies?.length ? 'Select currency' : 'No currency'}
         />
       </SelectTrigger>
 
-      <SelectContent>
+      <SelectContent position="popper" className="z-[9999]">
         <SelectGroup>
           <SelectLabel>Currency</SelectLabel>
 
@@ -48,9 +47,8 @@ export default function SelectCurrency({
               {c.code} {c.name ? `- ${c.name}` : ''}
             </SelectItem>
           ))}
-
         </SelectGroup>
       </SelectContent>
     </Select>
-  )
+  );
 }

@@ -16,11 +16,12 @@ import { Spinner } from '@/components/ui/spinner';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { useForm } from '@inertiajs/react';
 import type { ReactNode } from 'react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 type PriceCategory = {
   id: number;
   name: string;
+  room_type: string;
   description?: string;
 };
 
@@ -37,9 +38,26 @@ export default function UpdatePriceCategoryDialog({
   const [open, setOpen] = useState(false);
 
   const form = useForm({
-    name: item.name,
-    description: item.description || '',
+    name: item?.name,
+    room_type: item?.room_type,
+    description: item?.description || '',
   });
+
+  useEffect(() => {
+    form.setData('name', item?.name);
+    form.setData('room_type', item?.room_type);
+    form.setData('description', item?.description || '');
+  }, [item]);
+
+  const ROOM_TYPES = [
+    'Adult Single',
+    'Adult Double',
+    'Adult Twin',
+    'Adult Triple',
+    'Adult Quad',
+    'Adult Extra Bed',
+    'Child With Extra Bed',
+  ];
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,6 +69,7 @@ export default function UpdatePriceCategoryDialog({
       }).url,
       {
         preserveScroll: true,
+        preserveState: false,
         onError: () => setOpen(true),
         onSuccess: () => {
           form.reset();
@@ -80,6 +99,28 @@ export default function UpdatePriceCategoryDialog({
               placeholder="Category name"
             />
             <InputError message={form.errors.name} />
+          </div>
+
+          {/* ROOM TYPE */}
+          <div className="grid gap-2">
+            <Label htmlFor="room_type">Room Type</Label>
+
+            <select
+              id="room_type"
+              value={form.data.room_type || ''}
+              onChange={(e) => form.setData('room_type', e.target.value)}
+              className="border rounded-md h-9 px-3 text-sm"
+            >
+              <option value="">Select Room Type</option>
+
+              {ROOM_TYPES.map((type) => (
+                <option key={type} value={type}>
+                  {type}
+                </option>
+              ))}
+            </select>
+
+            <InputError message={form.errors.room_type} />
           </div>
 
           {/* DESCRIPTION */}
