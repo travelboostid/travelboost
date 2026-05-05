@@ -34,8 +34,19 @@ class DomainResolver
     // Resolve tenant from subdomain or custom domain
     $domainObject = $this->resolveDomain();
 
-    // KEAMANAN TAMBAHAN: Blokir jika domain tidak ditemukan ATAU domain belum diaktifkan (domain_enabled == false)
-    if ($domainObject === null || !$domainObject->domain_enabled) {
+    if ($domainObject === null) {
+      return Inertia::render('errors/invalid-tenant-domain')
+        ->toResponse($request)
+        ->setStatusCode(404);
+    }
+
+    // Cek apakah akses melalui subdomain bawaan atau custom domain
+    $isSubdomainAccess = Str::endsWith($this->currentHost, '.' . $this->appHost);
+
+    // Tentukan izin akses berdasarkan jalur URL yang dipakai
+    $isAllowed = $isSubdomainAccess ? $domainObject->subdomain_enabled : $domainObject->domain_enabled;
+
+    if (!$isAllowed) {
       return Inertia::render('errors/invalid-tenant-domain')
         ->toResponse($request)
         ->setStatusCode(404);

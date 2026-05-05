@@ -346,7 +346,9 @@ export default function AffiliateDashboardIndex({
                                 'System Notification'}
                             </span>
                             <span className="text-[9px] text-slate-400 mt-0.5">
-                              {dayjs(notif.created_at).fromNow()}
+                              {dayjs(notif.created_at).format(
+                                'DD MMMM YYYY, HH:mm',
+                              )}
                             </span>
                           </div>
                         </div>

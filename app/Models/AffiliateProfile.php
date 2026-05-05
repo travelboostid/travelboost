@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 
 class AffiliateProfile extends Model
 {
@@ -22,25 +23,56 @@ class AffiliateProfile extends Model
     'village',
     'postal_code',
     'identity_number',
-    'identity_photo_path',
-    'profile_photo_path'
+    'photo_id',
+    'identity_card_id'
   ];
 
-  // Relasi ke User (Pemilik profil)
+  protected $appends = ['photo_url', 'identity_card_url'];
+
   public function user()
   {
     return $this->belongsTo(User::class);
   }
 
-  // Relasi ke Atasan (Partner/MA)
   public function upline()
   {
     return $this->belongsTo(User::class, 'upline_id');
   }
 
-  // Relasi ke bawahan (Jika dia MA, maka ini daftar Affiliate-nya)
   public function downlines()
   {
     return $this->hasMany(AffiliateProfile::class, 'upline_id', 'user_id');
+  }
+
+  public function photo()
+  {
+    return $this->belongsTo(Media::class, 'photo_id');
+  }
+
+  public function identityCard()
+  {
+    return $this->belongsTo(Media::class, 'identity_card_id');
+  }
+
+  public function photoUrl(): Attribute
+  {
+    return Attribute::make(
+      get: function () {
+        $files = collect($this->photo?->data['files'] ?? []);
+        $file = $files->firstWhere('code', 'small');
+        return data_get($file, 'url');
+      }
+    );
+  }
+
+  public function identityCardUrl(): Attribute
+  {
+    return Attribute::make(
+      get: function () {
+        $files = collect($this->identityCard?->data['files'] ?? []);
+        $file = $files->first(); // Mengambil resolusi gambar pertama
+        return data_get($file, 'url');
+      }
+    );
   }
 }

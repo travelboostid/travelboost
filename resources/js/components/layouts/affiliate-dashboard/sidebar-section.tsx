@@ -21,7 +21,13 @@ export function SidebarSection(props: AffiliateDashboardLayoutProps) {
                 <img
                   src="/images/logo/hori.png"
                   alt="Travelboost Logo"
-                  className="h-11 w-auto drop-shadow-sm"
+                  className="h-11 w-auto block dark:hidden drop-shadow-sm"
+                />
+
+                <img
+                  src="/images/logo/hori-wt.png"
+                  alt="Travelboost Logo"
+                  className="h-11 w-auto hidden dark:block drop-shadow-sm"
                 />
               </a>
             </SidebarMenuButton>

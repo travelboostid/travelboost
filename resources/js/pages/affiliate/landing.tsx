@@ -302,7 +302,13 @@ export default function Landing() {
               <img
                 src="/images/logo/hori.png"
                 alt="Travelboost Affiliate Logo"
-                className="h-10 w-auto drop-shadow-sm"
+                className="h-10 w-auto block dark:hidden drop-shadow-sm"
+              />
+
+              <img
+                src="/images/logo/hori-wt.png"
+                alt="Travelboost Affiliate Logo"
+                className="h-10 w-auto hidden dark:block drop-shadow-sm"
               />
             </a>
 

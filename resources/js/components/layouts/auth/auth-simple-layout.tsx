@@ -19,7 +19,12 @@ export default function AuthSimpleLayout({
                 <img
                   src="/images/logo/square/android-chrome-512x512.png"
                   alt="Travelboost Logo"
-                  className="size-32 object-contain drop-shadow-sm"
+                  className="size-32 object-contain block dark:hidden drop-shadow-sm"
+                />
+                <img
+                  src="/images/logo/wt-verti/android-chrome-512x512.png"
+                  alt="Travelboost Logo"
+                  className="size-32 object-contain hidden dark:block drop-shadow-sm"
                 />
               </div>
               <span className="sr-only">{title}</span>

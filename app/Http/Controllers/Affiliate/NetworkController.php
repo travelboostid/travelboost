@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Affiliate;
 use App\Http\Controllers\Controller;
 use App\Models\AffiliateProfile;
 use App\Models\Company;
-use App\Models\User;
 use App\Models\Domain;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -22,54 +21,36 @@ class NetworkController extends Controller
     $userProfile = AffiliateProfile::where('user_id', $user->id)->first();
     $isPartner = $userProfile && $userProfile->tier === 'partner';
 
-    $query = User::select(
-      'users.id',
-      'users.name',
-      'users.email',
-      'users.username',
-      'users.created_at',
-      'ap.id as profile_id',
-      'ap.phone',
-      'ap.tier',
-      'ap.approved_at',
-      'ap.identity_number',
-      'ap.identity_photo_path',
-      'ap.profile_photo_path',
-      'ap.address',
-      'ap.city',
-      'ap.province',
-      'upline.name as upline_name'
-    )
-      ->join('affiliate_profiles as ap', 'users.id', '=', 'ap.user_id')
-      ->leftJoin('users as upline', 'ap.upline_id', '=', 'upline.id')
-      ->where('ap.status', 'approved');
+    $query = AffiliateProfile::with(['user', 'upline', 'photo', 'identityCard'])
+      ->where('status', 'approved');
 
     if ($tier === 'ma') {
-      $query->where('ap.tier', 'master_affiliate')
-        ->where('ap.upline_id', $user->id);
+      $query->where('tier', 'master_affiliate')
+        ->where('upline_id', $user->id);
     } else {
-      $query->where('ap.tier', 'affiliate');
+      $query->where('tier', 'affiliate');
 
       if ($isPartner) {
         $maIds = AffiliateProfile::where('upline_id', $user->id)
           ->where('tier', 'master_affiliate')
           ->pluck('user_id');
-        $query->whereIn('ap.upline_id', $maIds);
+        $query->whereIn('upline_id', $maIds);
       } else {
-        $query->where('ap.upline_id', $user->id);
+        $query->where('upline_id', $user->id);
       }
     }
 
-    $networks = $query->get()->map(function ($network) {
-      $affiliatesQuery = AffiliateProfile
-        ::where('upline_id', $network->id)
+    $networks = $query->get()->map(function ($profile) {
+      $networkId = $profile->user_id;
+
+      $affiliatesQuery = AffiliateProfile::where('upline_id', $networkId)
         ->where('tier', 'affiliate')
         ->where('status', 'approved');
 
       $total_affiliators = $affiliatesQuery->count();
 
-      $referrerIds = [$network->id];
-      if ($network->tier === 'master_affiliate') {
+      $referrerIds = [$networkId];
+      if ($profile->tier === 'master_affiliate') {
         $downlineAffiliateIds = $affiliatesQuery->pluck('user_id')->toArray();
         $referrerIds = array_merge($referrerIds, $downlineAffiliateIds);
       }
@@ -81,26 +62,45 @@ class NetworkController extends Controller
       $subscribed_agents = Company::where('type', 'agent')
         ->whereIn('referred_by', $referrerIds)
         ->whereHas('agentSubscription', function ($q) {
-          $q->whereNotNull('package_id');
+          $q->whereNotNull('package_id')->where('package_id', '!=', 1);
         })
         ->count();
 
+      $photoUrl = null;
+      if ($profile->photo) {
+        $m = is_string($profile->photo->data) ? json_decode($profile->photo->data, true) : $profile->photo->data;
+        $photoUrl = data_get($m, 'files.0.url') ?? data_get($m, 'url');
+        if ($photoUrl) $photoUrl = str_replace('\\/', '/', $photoUrl);
+      }
+      if (!$photoUrl && !empty($profile->profile_photo_path)) {
+        $photoUrl = '/storage/' . ltrim($profile->profile_photo_path, '/');
+      }
+
+      $identityCardUrl = null;
+      if ($profile->identityCard) {
+        $m = is_string($profile->identityCard->data) ? json_decode($profile->identityCard->data, true) : $profile->identityCard->data;
+        $identityCardUrl = data_get($m, 'files.0.url') ?? data_get($m, 'url');
+        if ($identityCardUrl) $identityCardUrl = str_replace('\\/', '/', $identityCardUrl);
+      }
+      if (!$identityCardUrl && !empty($profile->identity_photo_path)) {
+        $identityCardUrl = '/storage/' . ltrim($profile->identity_photo_path, '/');
+      }
 
       return [
-        'id' => $network->id,
-        'profile_id' => $network->profile_id,
-        'name' => $network->name,
-        'username' => $network->username,
-        'email' => $network->email,
-        'phone' => $network->phone,
-        'address' => trim($network->address . ' ' . $network->city . ' ' . $network->province),
-        'identity_number' => $network->identity_number,
-        'identity_photo_path' => $network->identity_photo_path,
-        'profile_photo_path' => $network->profile_photo_path,
-        'upline_name' => $network->upline_name,
-        'tier' => $network->tier,
-        'created_at' => $network->created_at,
-        'approved_at' => $network->approved_at,
+        'id' => $profile->user_id,
+        'profile_id' => $profile->id,
+        'name' => $profile->user->name ?? '-',
+        'username' => $profile->user->username ?? '-',
+        'email' => $profile->user->email ?? '-',
+        'phone' => $profile->phone,
+        'address' => trim($profile->address . ' ' . $profile->city . ' ' . $profile->province),
+        'identity_number' => $profile->identity_number,
+        'photo_url' => $photoUrl,
+        'identity_card_url' => $identityCardUrl,
+        'upline_name' => $profile->upline->name ?? '-',
+        'tier' => $profile->tier,
+        'created_at' => $profile->user->created_at ?? null,
+        'approved_at' => $profile->approved_at,
         'total_affiliators' => $total_affiliators,
         'total_agents' => $total_agents,
         'subscribed_agents' => $subscribed_agents,
@@ -140,7 +140,7 @@ class NetworkController extends Controller
 
     $query = AffiliateProfile::where('upline_id', $user->id)
       ->whereIn('status', ['pending', 'rejected'])
-      ->with('user')
+      ->with(['user', 'photo', 'identityCard'])
       ->orderBy('created_at', 'desc');
 
     if ($tierFilter === 'ma') {
@@ -150,6 +150,26 @@ class NetworkController extends Controller
     }
 
     $pending = $query->get()->map(function ($profile) {
+      $photoUrl = null;
+      if ($profile->photo) {
+        $m = is_string($profile->photo->data) ? json_decode($profile->photo->data, true) : $profile->photo->data;
+        $photoUrl = data_get($m, 'files.0.url') ?? data_get($m, 'url');
+        if ($photoUrl) $photoUrl = str_replace('\\/', '/', $photoUrl);
+      }
+      if (!$photoUrl && !empty($profile->profile_photo_path)) {
+        $photoUrl = '/storage/' . ltrim($profile->profile_photo_path, '/');
+      }
+
+      $identityCardUrl = null;
+      if ($profile->identityCard) {
+        $m = is_string($profile->identityCard->data) ? json_decode($profile->identityCard->data, true) : $profile->identityCard->data;
+        $identityCardUrl = data_get($m, 'files.0.url') ?? data_get($m, 'url');
+        if ($identityCardUrl) $identityCardUrl = str_replace('\\/', '/', $identityCardUrl);
+      }
+      if (!$identityCardUrl && !empty($profile->identity_photo_path)) {
+        $identityCardUrl = '/storage/' . ltrim($profile->identity_photo_path, '/');
+      }
+
       return [
         'id' => $profile->id,
         'status' => $profile->status,
@@ -159,8 +179,8 @@ class NetworkController extends Controller
         'phone' => $profile->phone ?? '-',
         'address' => trim($profile->address . ' ' . $profile->city . ' ' . $profile->province),
         'identity_number' => $profile->identity_number ?? '-',
-        'identity_photo_path' => $profile->identity_photo_path ?? null,
-        'profile_photo_path' => $profile->profile_photo_path ?? null,
+        'photo_url' => $photoUrl,
+        'identity_card_url' => $identityCardUrl,
         'registered_at' => $profile->created_at ? $profile->created_at->format('d M Y') : '-',
       ];
     });
@@ -182,21 +202,21 @@ class NetworkController extends Controller
     if (!$isAuthorized) abort(403);
 
     DB::transaction(function () use ($profile) {
-      // 1. Update Profile (Approved)
       $profile->update([
         'status' => 'approved',
         'approved_at' => now(),
       ]);
 
-      // 2. Update User (Active)
       if ($profile->user) {
         $profile->user->update(['status' => 'active']);
       }
 
-      // 3. Update Domain (Enabled)
       $domain = Domain::where('owner_type', AffiliateProfile::class)->where('owner_id', $profile->id)->first();
       if ($domain) {
-        $domain->update(['domain_enabled' => true]);
+        $domain->update([
+          'domain_enabled' => true,
+          'subdomain_enabled' => true
+        ]);
       }
     });
 
@@ -213,20 +233,20 @@ class NetworkController extends Controller
     }
 
     DB::transaction(function () use ($profile) {
-      // 1. Update Profile (Rejected)
       $profile->update([
         'status' => 'rejected',
       ]);
 
-      // 2. Update User (Inactive)
       if ($profile->user) {
         $profile->user->update(['status' => 'inactive']);
       }
 
-      // 3. Update Domain (Disabled)
       $domain = Domain::where('owner_type', AffiliateProfile::class)->where('owner_id', $profile->id)->first();
       if ($domain) {
-        $domain->update(['domain_enabled' => false]);
+        $domain->update([
+          'domain_enabled' => false,
+          'subdomain_enabled' => false
+        ]);
       }
     });
 

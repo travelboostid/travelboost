@@ -1,4 +1,3 @@
-// list.tsx
 import AffiliateDashboardLayout from '@/components/layouts/affiliate-dashboard';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -24,6 +23,7 @@ import {
   ArrowDownAZ,
   ArrowUpZA,
   Building2,
+  CalendarDays,
   ChevronLeft,
   ChevronRight,
   Eye,
@@ -31,10 +31,18 @@ import {
   IdCard,
   Mail,
   MapPin,
+  Package,
   Phone,
   Search,
+  Sparkles,
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
+
+const formatNumber = (num: number) => {
+  return new Intl.NumberFormat('id-ID', { maximumFractionDigits: 0 }).format(
+    num,
+  );
+};
 
 export default function AgentList({ agents, userTier }: any) {
   const [selectedAgent, setSelectedAgent] = useState<any>(null);
@@ -59,7 +67,10 @@ export default function AgentList({ agents, userTier }: any) {
         item.affiliator_name
           ?.toLowerCase()
           .includes(searchTerm.toLowerCase()) ||
-        item.ma_name?.toLowerCase().includes(searchTerm.toLowerCase()),
+        item.ma_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.subscription_package
+          ?.toLowerCase()
+          .includes(searchTerm.toLowerCase()),
     );
   }, [agents, searchTerm]);
 
@@ -108,7 +119,7 @@ export default function AgentList({ agents, userTier }: any) {
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               type="text"
-              placeholder="Search agent, email, MA, or affiliator..."
+              placeholder="Search agent, email, package..."
               className="pl-9"
               value={searchTerm}
               onChange={handleSearchChange}
@@ -155,13 +166,15 @@ export default function AgentList({ agents, userTier }: any) {
                           ))}
                       </div>
                     </TableHead>
+
+                    {/* Kolom Subscription Baru */}
                     <TableHead
                       className="cursor-pointer hover:bg-muted"
-                      onClick={() => handleSort('phone')}
+                      onClick={() => handleSort('subscription_package')}
                     >
                       <div className="flex items-center gap-1">
-                        Phone{' '}
-                        {sortKey === 'phone' &&
+                        Subscription{' '}
+                        {sortKey === 'subscription_package' &&
                           (sortOrder === 'asc' ? (
                             <ArrowDownAZ className="size-3" />
                           ) : (
@@ -205,10 +218,10 @@ export default function AgentList({ agents, userTier }: any) {
                     )}
 
                     <TableHead
-                      className="cursor-pointer hover:bg-muted"
+                      className="cursor-pointer hover:bg-muted text-right"
                       onClick={() => handleSort('join_date')}
                     >
-                      <div className="flex items-center gap-1">
+                      <div className="flex justify-end items-center gap-1">
                         Join Date{' '}
                         {sortKey === 'join_date' &&
                           (sortOrder === 'asc' ? (
@@ -237,13 +250,40 @@ export default function AgentList({ agents, userTier }: any) {
                         <TableCell className="font-semibold text-foreground">
                           {item.name}
                         </TableCell>
-                        <TableCell>{item.email}</TableCell>
-                        <TableCell>{item.phone || '-'}</TableCell>
-                        {isPartner && <TableCell>{item.ma_name}</TableCell>}
-                        {(isPartner || isMaster) && (
-                          <TableCell>{item.affiliator_name}</TableCell>
+                        <TableCell className="text-sm">{item.email}</TableCell>
+
+                        {/* Menampilkan Badge Subscription */}
+                        <TableCell>
+                          <div className="flex flex-row items-start gap-1">
+                            <Badge
+                              variant="outline"
+                              className={`text-[10px] uppercase font-semibold ${item.subscription_status === 'active' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : item.subscription_status === 'expired' ? 'bg-rose-50 text-rose-700 border-rose-200' : 'bg-slate-50 text-slate-700 border-slate-200'}`}
+                            >
+                              {item.subscription_status === 'active'
+                                ? 'Active'
+                                : item.subscription_status === 'expired'
+                                  ? 'Expired'
+                                  : 'Inactive'}
+                            </Badge>
+                            <span className="text-xs font-medium text-muted-foreground">
+                              {item.subscription_package}
+                            </span>
+                          </div>
+                        </TableCell>
+
+                        {isPartner && (
+                          <TableCell className="text-sm">
+                            {item.ma_name}
+                          </TableCell>
                         )}
-                        <TableCell>{item.join_date}</TableCell>
+                        {(isPartner || isMaster) && (
+                          <TableCell className="text-sm">
+                            {item.affiliator_name}
+                          </TableCell>
+                        )}
+                        <TableCell className="text-right text-sm text-muted-foreground">
+                          {item.join_date}
+                        </TableCell>
                         <TableCell className="text-center">
                           <Button
                             variant="ghost"
@@ -297,14 +337,14 @@ export default function AgentList({ agents, userTier }: any) {
         open={!!selectedAgent}
         onOpenChange={(open) => !open && setSelectedAgent(null)}
       >
-        <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Agent Profile</DialogTitle>
           </DialogHeader>
 
           {selectedAgent && (
             <div className="flex flex-col items-center justify-center space-y-4 pt-4 pb-2">
-              <Avatar className="h-20 w-20 border-4 border-border">
+              <Avatar className="h-20 w-20 border-4 border-border shadow-sm">
                 {selectedAgent.photo_url && (
                   <AvatarImage
                     src={selectedAgent.photo_url}
@@ -312,23 +352,53 @@ export default function AgentList({ agents, userTier }: any) {
                     className="object-cover"
                   />
                 )}
-                <AvatarFallback className="bg-primary/20 text-primary text-2xl font-bold">
+                <AvatarFallback className="bg-primary/10 text-primary text-2xl font-bold">
                   {selectedAgent.name.charAt(0)}
                 </AvatarFallback>
               </Avatar>
               <div className="text-center space-y-1">
-                <h3 className="text-lg font-bold text-foreground">
+                <h3 className="text-xl font-bold text-foreground">
                   {selectedAgent.name}
                 </h3>
                 <Badge
-                  variant="outline"
-                  className="uppercase bg-muted text-muted-foreground tracking-wider text-[10px]"
+                  variant="secondary"
+                  className="uppercase tracking-wider text-[10px]"
                 >
                   Agent Partner
                 </Badge>
               </div>
 
-              <div className="w-full grid grid-cols-2 gap-4 mt-4 bg-muted/50 p-4 rounded-xl border border-border">
+              <div className="w-full grid grid-cols-2 gap-4 mt-2">
+                <div
+                  className={`p-4 rounded-xl border flex flex-col justify-center items-center text-center ${selectedAgent.subscription_status === 'active' ? 'bg-emerald-50/50 border-emerald-100' : 'bg-slate-50 border-slate-100'}`}
+                >
+                  <Package
+                    className={`size-5 mb-2 ${selectedAgent.subscription_status === 'active' ? 'text-emerald-600' : 'text-slate-400'}`}
+                  />
+                  <span className="text-xs text-muted-foreground uppercase font-semibold tracking-wider">
+                    Current Package
+                  </span>
+                  <span className="text-base font-bold text-foreground mt-0.5">
+                    {selectedAgent.subscription_package}
+                  </span>
+                  <div className="flex items-center gap-1 mt-1 text-[11px] text-muted-foreground">
+                    <CalendarDays className="size-3" /> Valid until:{' '}
+                    {selectedAgent.subscription_expired_at}
+                  </div>
+                </div>
+
+                <div className="bg-primary/5 border border-primary/10 p-4 rounded-xl flex flex-col justify-center items-center text-center">
+                  <Sparkles className="size-5 mb-2 text-primary" />
+                  <span className="text-xs text-primary/70 uppercase font-semibold tracking-wider">
+                    AI Credit Balance
+                  </span>
+                  <span className="text-xl font-black text-primary mt-0.5">
+                    {formatNumber(selectedAgent.ai_credit_balance)}
+                  </span>
+                </div>
+              </div>
+
+              <div className="w-full grid grid-cols-2 gap-4 mt-2 bg-muted/30 p-5 rounded-xl border border-border">
                 <div className="flex flex-col col-span-2 md:col-span-1">
                   <span className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
                     <Mail className="size-3" /> Email Address
@@ -354,8 +424,8 @@ export default function AgentList({ agents, userTier }: any) {
                   </span>
                 </div>
                 <div className="flex flex-col col-span-2 md:col-span-1">
-                  <span className="text-xs text-muted-foreground mb-1">
-                    Join Date
+                  <span className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
+                    <CalendarDays className="size-3" /> Join Date
                   </span>
                   <span className="font-mono text-sm font-semibold text-primary">
                     {selectedAgent.join_date}
@@ -405,19 +475,17 @@ export default function AgentList({ agents, userTier }: any) {
                   <span className="text-xs text-muted-foreground mb-2">
                     ID Photo Document
                   </span>
-                  {selectedAgent.identity_photo_path ? (
+                  {selectedAgent.identity_card_url ? (
                     <img
-                      src={`/storage/${selectedAgent.identity_photo_path}`}
+                      src={selectedAgent.identity_card_url}
                       alt="ID Document"
-                      className="w-full max-w-sm rounded-lg border border-border cursor-pointer hover:opacity-90 transition-opacity"
+                      className="w-full max-w-sm rounded-lg border border-slate-200 cursor-pointer hover:opacity-90 transition-opacity"
                       onClick={() =>
-                        setPreviewImage(
-                          `/storage/${selectedAgent.identity_photo_path}`,
-                        )
+                        setPreviewImage(selectedAgent.identity_card_url)
                       }
                     />
                   ) : (
-                    <span className="text-sm italic text-muted-foreground">
+                    <span className="text-sm italic text-slate-400">
                       No document uploaded
                     </span>
                   )}

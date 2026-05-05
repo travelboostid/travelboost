@@ -1,6 +1,7 @@
-// profile.tsx
 import InputError from '@/components/input-error';
 import AffiliateDashboardLayout from '@/components/layouts/affiliate-dashboard';
+import { IdentityCardPicker } from '@/components/media/identity-card-picker';
+import { PhotoPicker } from '@/components/media/photo-picker';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -14,31 +15,15 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Head, useForm, usePage } from '@inertiajs/react';
 import axios from 'axios';
-import {
-  Camera,
-  ImagePlus,
-  LinkIcon,
-  Save,
-  User as UserIcon,
-} from 'lucide-react';
-import React, { useEffect, useRef, useState } from 'react';
+import { LinkIcon, Save, ShieldCheck, User as UserIcon } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
 
 export default function AffiliateProfileEdit() {
   const { user } = usePage().props as any;
   const profile = user?.affiliate_profile || user?.affiliateProfile || {};
 
-  const idInputRef = useRef<HTMLInputElement>(null);
-  const avatarInputRef = useRef<HTMLInputElement>(null);
-
-  const [idPreview, setIdPreview] = useState<string | null>(
-    profile.identity_photo_path
-      ? `/storage/${profile.identity_photo_path}`
-      : null,
-  );
-  const [avatarPreview, setAvatarPreview] = useState<string | null>(
-    profile.profile_photo_path
-      ? `/storage/${profile.profile_photo_path}`
-      : null,
+  const [identityMedia, setIdentityMedia] = useState<any>(
+    profile.identity_card ? profile.identity_card : null,
   );
 
   const { data, setData, post, processing, errors, recentlySuccessful } =
@@ -52,8 +37,8 @@ export default function AffiliateProfileEdit() {
       village: profile.village || '',
       postal_code: profile.postal_code || '',
       identity_number: profile.identity_number || '',
-      identity_photo: null as File | null,
-      profile_photo: null as File | null,
+      identity_card_id: profile.identity_card_id || undefined,
+      photo_id: profile.photo_id || undefined,
       _method: 'POST',
     });
 
@@ -92,26 +77,6 @@ export default function AffiliateProfileEdit() {
         .then((res) => setVillages(res.data));
     else setVillages([]);
   }, [data.district, districts]);
-
-  const handleIdChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setData('identity_photo', file);
-      const reader = new FileReader();
-      reader.onload = (e) => setIdPreview(e.target?.result as string);
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setData('profile_photo', file);
-      const reader = new FileReader();
-      reader.onload = (e) => setAvatarPreview(e.target?.result as string);
-      reader.readAsDataURL(file);
-    }
-  };
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -156,38 +121,18 @@ export default function AffiliateProfileEdit() {
             </CardHeader>
             <CardContent>
               <div className="flex flex-col md:flex-row gap-8 items-start">
-                <div className="flex flex-col items-center gap-3 shrink-0 mx-auto md:mx-0">
-                  <div className="relative group">
-                    <div className="w-32 h-32 rounded-full border-4 border-border overflow-hidden bg-muted/50 flex items-center justify-center shadow-sm">
-                      {avatarPreview ? (
-                        <img
-                          src={avatarPreview}
-                          alt="Profile"
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <UserIcon className="w-12 h-12 text-muted-foreground" />
-                      )}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => avatarInputRef.current?.click()}
-                      className="absolute bottom-0 right-0 w-10 h-10 bg-primary text-primary-foreground rounded-full flex items-center justify-center shadow-md hover:bg-primary/90 transition-colors"
-                    >
-                      <Camera className="w-5 h-5" />
-                    </button>
-                  </div>
-                  <span className="text-xs text-muted-foreground font-medium">
-                    Update Photo
-                  </span>
-                  <Input
-                    type="file"
-                    ref={avatarInputRef}
-                    className="hidden"
-                    accept="image/jpeg, image/png, image/jpg"
-                    onChange={handleAvatarChange}
+                <div className="flex flex-col items-center gap-4 shrink-0 mx-auto md:mx-0">
+                  <PhotoPicker
+                    owner={{ type: 'user', id: user.id }}
+                    onChange={(media: any) => {
+                      setData('photo_id', media?.id);
+                    }}
+                    defaultValue={profile.photo_url}
                   />
-                  <InputError message={errors.profile_photo} />
+                  <Label className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest text-center">
+                    Update Photo
+                  </Label>
+                  <InputError message={errors.photo_id as string} />
                 </div>
 
                 <div className="flex-1 grid gap-4 md:grid-cols-2 w-full">
@@ -422,84 +367,81 @@ export default function AffiliateProfileEdit() {
             </CardContent>
           </Card>
 
-          <Card className="border-border shadow-sm">
-            <CardHeader>
-              <CardTitle>Identity Verification</CardTitle>
+          <Card className="border-border shadow-sm border-l-4 border-l-primary/20">
+            <CardHeader className="bg-primary/5 border-b">
+              <CardTitle className="text-lg flex items-center gap-2 text-primary">
+                <ShieldCheck className="w-5 h-5" />
+                Identity Verification
+              </CardTitle>
               <CardDescription>
                 Please provide valid identity information for verification and
                 commission payouts.
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-2 md:w-1/2">
-                <Label htmlFor="identity_number">
-                  ID Number (KTP/SIM/Passport) *
-                </Label>
-                <Input
-                  id="identity_number"
-                  type="text"
-                  maxLength={16}
-                  minLength={16}
-                  pattern="\d{16}"
-                  value={data.identity_number}
-                  onChange={(e) => {
-                    const val = e.target.value.replace(/\D/g, '');
-                    setData('identity_number', val);
-                  }}
-                  placeholder="16 digit ID number"
-                />
-                {data.identity_number.length > 0 &&
-                  data.identity_number.length < 16 && (
-                    <p className="text-[0.8rem] font-medium text-destructive">
-                      ID Number must be exactly 16 digits.
-                    </p>
-                  )}
-                <InputError message={errors.identity_number} />
-              </div>
-              <div className="space-y-2">
-                <Label>Upload ID Photo</Label>
-                <div className="flex flex-col sm:flex-row gap-4 items-start">
-                  <div
-                    onClick={() => idInputRef.current?.click()}
-                    className="w-full sm:w-64 h-40 border-2 border-dashed border-border rounded-xl flex flex-col items-center justify-center bg-muted/50 hover:bg-muted cursor-pointer overflow-hidden transition-colors"
-                  >
-                    {idPreview ? (
+            <CardContent className="pt-6">
+              <div className="grid gap-8 md:grid-cols-2 items-start">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="identity_number">
+                      ID Number (KTP/SIM/Passport) *
+                    </Label>
+                    <Input
+                      id="identity_number"
+                      type="text"
+                      maxLength={16}
+                      minLength={16}
+                      pattern="\d{16}"
+                      value={data.identity_number}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/\D/g, '');
+                        setData('identity_number', val);
+                      }}
+                      className="text-lg tracking-widest font-mono h-12"
+                      placeholder="16 digit ID number"
+                    />
+                    {data.identity_number.length > 0 &&
+                      data.identity_number.length < 16 && (
+                        <p className="text-[0.8rem] font-medium text-destructive">
+                          ID Number must be exactly 16 digits.
+                        </p>
+                      )}
+                    <InputError message={errors.identity_number} />
+                  </div>
+
+                  <div className="p-4 rounded-xl border-2 border-dashed bg-muted/10 flex flex-col gap-3">
+                    <Label className="font-bold text-sm">
+                      Upload Identity Photo *
+                    </Label>
+                    <IdentityCardPicker
+                      owner={{ type: 'user', id: user.id }}
+                      onChange={(media: any) => {
+                        setData('identity_card_id', media.id);
+                        setIdentityMedia(media);
+                      }}
+                    />
+                    <InputError message={errors.identity_card_id as string} />
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <Label className="font-bold text-sm text-muted-foreground uppercase tracking-wider">
+                    Identity Preview
+                  </Label>
+                  <div className="relative aspect-[3/2] w-full rounded-xl overflow-hidden bg-slate-200 border-2 border-slate-300 flex items-center justify-center shadow-inner group">
+                    {identityMedia?.data?.url ? (
                       <img
-                        src={idPreview}
+                        src={identityMedia.data.url}
+                        className="w-full h-full object-cover transition-transform group-hover:scale-105"
                         alt="ID Preview"
-                        className="w-full h-full object-cover"
                       />
                     ) : (
-                      <>
-                        <ImagePlus className="w-8 h-8 text-muted-foreground mb-2" />
-                        <span className="text-sm text-muted-foreground font-medium">
-                          Click to upload photo
-                        </span>
-                        <span className="text-xs text-muted-foreground mt-1">
-                          JPG, PNG (Max 2MB)
-                        </span>
-                      </>
+                      <div className="text-center p-6 text-muted-foreground italic">
+                        <ShieldCheck className="w-12 h-12 mx-auto mb-2 opacity-20" />
+                        No ID uploaded yet
+                      </div>
                     )}
                   </div>
-                  <Input
-                    type="file"
-                    ref={idInputRef}
-                    className="hidden"
-                    accept="image/jpeg, image/png, image/jpg"
-                    onChange={handleIdChange}
-                  />
-                  {idPreview && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => idInputRef.current?.click()}
-                    >
-                      Change Photo
-                    </Button>
-                  )}
                 </div>
-                <InputError message={errors.identity_photo} />
               </div>
             </CardContent>
           </Card>

@@ -101,14 +101,13 @@ class AffiliateAuthController extends Controller
 
     $ktpPath = $request->hasFile('ktp_file') ? $request->file('ktp_file')->store('ktp_uploads', 'public') : null;
 
-    // Menggunakan DB Transaction agar pembuatan akun, profil, dan domain aman
     DB::transaction(function () use ($request, $uplineId, $ktpPath, &$user) {
       $user = User::create([
         'name' => $request->name,
         'email' => $request->email,
         'username' => $request->username,
         'password' => Hash::make($request->password),
-        'status' => 'active', // Status User aktif
+        'status' => 'active',
       ]);
 
       $affiliate = AffiliateProfile::create([
@@ -116,7 +115,7 @@ class AffiliateAuthController extends Controller
         'upline_id' => $uplineId,
         'referral_code' => $request->username,
         'tier' => 'affiliate',
-        'status' => 'pending', // Profil masih pending
+        'status' => 'pending',
         'identity_number' => $request->ktp_number,
         'identity_photo_path' => $ktpPath,
       ]);
@@ -125,7 +124,8 @@ class AffiliateAuthController extends Controller
         'owner_id' => $affiliate->id,
         'owner_type' => AffiliateProfile::class,
         'subdomain' => $request->username,
-        'domain_enabled' => false, // Memastikan domain terkunci secara eksplisit
+        'domain_enabled' => false,
+        'subdomain_enabled' => false,
       ]);
     });
 
