@@ -2,14 +2,13 @@
 
 namespace App\Http\Controllers\Companies\Dashboard;
 
-use App\Http\Controllers\Controller;
 use App\Models\Company;
 use App\Models\TourSchedule;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
-class TourAvailabilityController extends Controller
+class TourAvailabilityController
 {
     public function store(Request $request, Company $company)
     {
@@ -37,15 +36,8 @@ class TourAvailabilityController extends Controller
         DB::beginTransaction();
 
         try {
-            foreach ($rows as $row) {
-
-                if (empty($row['schedule_id'])) {
-                    continue;
-                }
-
-                $schedule = TourSchedule::where('id', $row['schedule_id'])
-                    ->where('company_id', $company->id)
-                    ->first();
+            foreach ($rows as $index => $row) {
+                $schedule = $currentSchedules->get($index);
 
                 if (! $schedule) {
                     continue;
@@ -53,8 +45,8 @@ class TourAvailabilityController extends Controller
 
                 DB::table('tour_availabilities')->updateOrInsert(
                     [
-                        'company_id'  => $company->id,
-                        'tour_id'     => $schedule->tour_id,
+                        'company_id' => $company->id,
+                        'tour_id' => $tourId,
                         'schedule_id' => $schedule->id,
                     ],
                     [
@@ -63,7 +55,6 @@ class TourAvailabilityController extends Controller
                         'DP' => $row['DP'] ?? 0,
                         'FP' => $row['FP'] ?? 0,
                         'RS' => $row['RS'] ?? 0,
-                        'BRS' => $row['BRS'] ?? 0,
                         'CA' => $row['CA'] ?? 0,
                         'RF' => $row['RF'] ?? 0,
                         'EX' => $row['EX'] ?? 0,

@@ -289,22 +289,9 @@ export default function Page({ tour }: Props) {
   console.log('FROM SERVER:', tour.schedules)
 }, [])*/
 
-  const submitSchedule = (e: React.FormEvent) => {
-    e.preventDefault();
-
-    router.post(
-      `/companies/${company.username}/dashboard/tours/${tour.id}/schedules`,
-      {
-        schedules: schedules,
-      },
-      {
-        preserveScroll: true,
-        onSuccess: () => {
-          toast.success('Schedule saved');
-        },
-      },
-    );
-  };
+  useEffect(() => {
+    setData('schedules', schedules);
+  }, [schedules]);
 
   const addDays = (date: string, days: number) => {
     if (!date || !days) return '';
@@ -321,7 +308,6 @@ export default function Page({ tour }: Props) {
         id: null,
         departure_date: '',
         return_date: '',
-        availability: null,
         prices: [
           {
             room_type_id: null,
@@ -518,7 +504,7 @@ export default function Page({ tour }: Props) {
       const max_pax = Number(a.max_pax ?? 0);
 
       return {
-        schedule_id: s.id,
+        id: s.id,
         schedule: `${formatDate(s.departure_date)} → ${formatDate(s.return_date)}`,
 
         max_pax,
@@ -753,7 +739,7 @@ export default function Page({ tour }: Props) {
 
       router.post(
         `/companies/${company.username}/dashboard/tour-add-ons`,
-        { add_ons: payload, schedule_ids: Object.keys(addOns) },
+        { add_ons: payload },
         {
           preserveState: true,
           onSuccess: () => {
@@ -995,6 +981,7 @@ export default function Page({ tour }: Props) {
             ...data,
             showprice: Number(rawPrice),
             promote_price: Number(rawPrice1),
+            schedules: schedules, // ✅ ini yang benar
           };
 
           //console.log('SEND DATA:', payload)
@@ -1486,7 +1473,7 @@ export default function Page({ tour }: Props) {
                           {/* PRICES */}
                           <td colSpan={4} className="p-2">
                             <div className="space-y-3">
-                              {(item.prices || []).map((room, rIndex) => (
+                              {item.prices.map((room, rIndex) => (
                                 <div
                                   key={rIndex}
                                   className="grid grid-cols-4 gap-2 items-start p-2 border rounded-md"
@@ -1506,9 +1493,9 @@ export default function Page({ tour }: Props) {
                                   >
                                     <option value="">Select Category</option>
 
-                                    {(priceCategories || [])
+                                    {priceCategories
                                       .filter((cat) => {
-                                        const selectedIds = (item.prices || [])
+                                        const selectedIds = item.prices
                                           .map((p, i) =>
                                             i !== rIndex
                                               ? p.room_type_id
@@ -1695,9 +1682,7 @@ export default function Page({ tour }: Props) {
                                   variant="outline"
                                   onClick={() => addRoom(index)}
                                   disabled={
-                                    (item.prices || []).filter(
-                                      (p) => p.room_type_id,
-                                    ).length >= (priceCategories || []).length
+                                    item.prices.length >= priceCategories.length
                                   }
                                 >
                                   + Add Category
@@ -1718,10 +1703,9 @@ export default function Page({ tour }: Props) {
                             </Button>
 
                             <Button
-                              type="button"
+                              type="submit"
                               size="icon"
-                              onClick={submitSchedule}
-                              disabled={schedules.length === 0}
+                              disabled={processing || schedules.length === 0}
                             >
                               <Save className="h-4 w-4" />
                             </Button>
@@ -1766,10 +1750,9 @@ export default function Page({ tour }: Props) {
                           </Button>
 
                           <Button
-                            type="button"
+                            type="submit"
                             size="icon"
-                            onClick={submitSchedule}
-                            disabled={schedules.length === 0}
+                            disabled={processing || schedules.length === 0}
                           >
                             <Save className="h-4 w-4" />
                           </Button>
@@ -1827,7 +1810,7 @@ export default function Page({ tour }: Props) {
 
                       {/* ROOMS */}
                       <div className="space-y-3">
-                        {(item.prices || []).map((room, rIndex) => (
+                        {item.prices.map((room, rIndex) => (
                           <div
                             key={rIndex}
                             className="border rounded-md p-3 space-y-2"
@@ -1869,9 +1852,9 @@ export default function Page({ tour }: Props) {
                               >
                                 <option value="">Select Category</option>
 
-                                {(priceCategories || [])
+                                {priceCategories
                                   .filter((cat) => {
-                                    const selectedIds = (item.prices || [])
+                                    const selectedIds = item.prices
                                       .map((p, i) =>
                                         i !== rIndex ? p.room_type_id : null,
                                       )
@@ -2046,9 +2029,9 @@ export default function Page({ tour }: Props) {
                           variant="outline"
                           onClick={() => addRoom(index)}
                           disabled={
-                            (item.prices || []).filter((p) => p.room_type_id)
-                              .length >= (priceCategories || []).length
+                            item.prices.length >= priceCategories.length
                           }
+                          className="w-full"
                         >
                           + Add Category
                         </Button>

@@ -40,6 +40,7 @@ class AppConfigSeeder extends Seeder
           'affiliate_commission' => '15',
           'ma_commission' => '10',
           'partner_commission' => '5',
+          'wa_cs' => '+089662225982',
         ]
       ]
     );

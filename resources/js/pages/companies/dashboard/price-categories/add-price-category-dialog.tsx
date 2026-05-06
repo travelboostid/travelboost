@@ -42,6 +42,8 @@ export default function AddPriceCategoryDialog({
     'Adult Quad',
     'Adult Extra Bed',
     'Child With Extra Bed',
+    'Child No Bed',
+    'Infant',
   ];
 
   const handleSubmit = (e: React.FormEvent) => {

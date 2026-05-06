@@ -55,7 +55,7 @@ class PriceCategorySeeder extends Seeder
             ],
             [
                 'name' => 'Infant',
-                'room_type' => 'Child No Bed',
+                'room_type' => 'Infant',
                 'description' => 'Infant (no seat / bed)',
             ],
         ];

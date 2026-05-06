@@ -3,7 +3,12 @@
 namespace App\Http\Controllers\Companies\Dashboard;
 
 use App\Http\Controllers\Controller;
+use App\Models\Company;
+use App\Models\Tour;
+use App\Models\TourSchedule;
+use App\Models\TourPrice;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class TourScheduleController extends Controller
 {
@@ -28,15 +33,22 @@ class TourScheduleController extends Controller
                 ->toArray();
 
             // DELETE schedule
-            $deleteIds = array_diff($existingScheduleIds, $incomingScheduleIds);
-            if (!empty($deleteIds)) {
-                TourSchedule::whereIn('id', $deleteIds)->delete();
+            if (count($data['schedules']) > 0 && count($incomingScheduleIds) > 0) {
+              $deleteIds = array_diff($existingScheduleIds, $incomingScheduleIds);
+              if (!empty($deleteIds)) {
+                  TourSchedule::whereIn('id', $deleteIds)->delete();
+              }
             }
 
             foreach ($data['schedules'] as $schedule) {
 
+                $isNewSchedule = empty($schedule['id']);
+                
                 $scheduleModel = TourSchedule::updateOrCreate(
-                    ['id' => $schedule['id'] ?? null],
+                    [
+                      'id' => $schedule['id'] ?? null,
+                      'tour_id' => $tour->id,
+                    ],
                     [
                         'tour_id'        => $tour->id,
                         'company_id'     => $company->id,
@@ -54,9 +66,11 @@ class TourScheduleController extends Controller
                     ->filter()
                     ->toArray();
 
-                $deletePriceIds = array_diff($existingPriceIds, $incomingPriceIds);
-                if (!empty($deletePriceIds)) {
-                    TourPrice::whereIn('id', $deletePriceIds)->delete();
+                if (!$isNewSchedule && !empty($incomingPriceIds)) {
+                  $deletePriceIds = array_diff($existingPriceIds, $incomingPriceIds);
+                  if (!empty($deletePriceIds)) {
+                      TourPrice::whereIn('id', $deletePriceIds)->delete();
+                  }
                 }
 
                 foreach ($schedule['prices'] ?? [] as $price) {
@@ -82,7 +96,10 @@ class TourScheduleController extends Controller
                     }
 
                     TourPrice::updateOrCreate(
-                        ['id' => $price['id'] ?? null],
+                        [
+                          'id' => $price['id'] ?? null,
+                          'schedule_id' => $scheduleModel->id,
+                        ],
                         [
                             'schedule_id'       => $scheduleModel->id,
                             'company_id'        => $company->id,
@@ -106,7 +123,23 @@ class TourScheduleController extends Controller
         } catch (\Throwable $e) {
             DB::rollBack();
 
-            return back()->withErrors($e->getMessage());
+            return back()->withErrors([
+                'error' => $e->getMessage()
+            ]);
         }
+    }
+
+    public function destroy(Company $company, Tour $tour, TourSchedule $schedule)
+    {
+        // pastikan schedule milik tour ini
+        if ($schedule->tour_id !== $tour->id) {
+            abort(404);
+        }
+
+        $schedule->delete();
+
+        return back()->with([
+            'success' => true
+        ]);
     }
 }

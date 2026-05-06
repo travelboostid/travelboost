@@ -40,52 +40,38 @@ class TourAddOnController extends Controller
             ->all();
 
         DB::transaction(function () use ($companyId, $data) {
-          $scheduleIds = collect($data['schedule_ids'] ?? []);
 
-          if (empty($data['add_ons'])) {
-              TourAddOn::where('company_id', $companyId)
-                  ->whereIn('schedule_id', $scheduleIds)
-                  ->delete();
+            $incomingIds = collect($data['add_ons'])
+                ->pluck('id')
+                ->filter()
+                ->values();
 
-              return;
-          }
-          $grouped = collect($data['add_ons'])
-              ->groupBy('schedule_id');
+            $tourIds = collect($data['add_ons'])
+                ->pluck('tour_id')
+                ->unique();
 
-          foreach ($grouped as $scheduleId => $items) {
+            $query = TourAddOn::where('company_id', $companyId)
+                ->whereIn('tour_id', $tourIds);
 
-              $incomingIds = $items
-                  ->pluck('id')
-                  ->filter()
-                  ->values();
+            if ($incomingIds->isNotEmpty()) {
+                $query->whereNotIn('id', $incomingIds);
+            }
 
-              $isNewSchedule = $incomingIds->isEmpty();
+            $query->delete();
 
-              $query = TourAddOn::where('company_id', $companyId)
-                  ->where('tour_id', $items->first()['tour_id'])
-                  ->where('schedule_id', $scheduleId);
-
-              if ($incomingIds->isEmpty()) {
-                  $query->delete();
-              } else {
-                  $query->whereNotIn('id', $incomingIds)->delete();
-              }
-
-              foreach ($items as $item) {
-                  TourAddOn::updateOrCreate(
-                      [
+            foreach ($data['add_ons'] as $item) {
+                TourAddOn::updateOrCreate(
+                    ['id' => $item['id'] ?? null],
+                    [
                         'company_id'  => $companyId,
+                        'tour_id'     => $item['tour_id'],
                         'schedule_id' => $item['schedule_id'],
                         'description' => $item['description'],
-                        'tour_id'     => $item['tour_id'],
-                      ],
-                      [
-                          'price'       => $item['price'] ?? 0,
-                          'edit_status' => $item['edit_status'] ?? false,
-                      ]
-                  );
-              }
-          }
+                        'price'       => $item['price'] ?? 0,
+                        'edit_status' => $item['edit_status'] ?? false,
+                    ]
+                );
+            }
         });
 
         return back()->with('success', 'Add Ons saved');
