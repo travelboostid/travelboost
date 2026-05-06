@@ -231,3 +231,43 @@ xdebug.client_port=9003
 ```
 
 After updating the configuration, restart Apache, PHP services, Laragon, Herd, Docker containers, or any related PHP process depending on your environment.
+
+## Develop with Debugging
+
+Start the Laravel development environment:
+
+```bash
+pnpm dev:full
+```
+
+After the development server has started, open VSCode and start the Xdebug listener.
+
+In VSCode:
+
+1. Open the **Run and Debug** panel
+2. Select:
+   - `Listen for Xdebug (Web)`
+3. Click the run/play button
+
+This configuration is defined in:
+
+```text
+.vscode/launch.json
+```
+
+Example configuration:
+
+```json
+{
+  "configurations": [
+    {
+      "name": "Listen for Xdebug (Web)",
+      "type": "php",
+      "request": "launch",
+      "port": 9003
+    }
+  ]
+}
+```
+
+Once the listener is active, open the application in browser with the Xdebug Helper extension enabled. Any active breakpoints in VSCode should now pause execution automatically.
