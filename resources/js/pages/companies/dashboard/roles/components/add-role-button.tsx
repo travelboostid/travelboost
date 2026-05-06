@@ -61,8 +61,8 @@ export default function AddRoleButton({ permissions }: { permissions: any[] }) {
         </Tooltip>
       </DialogTrigger>
 
-      <DialogContent className="max-h-[90dvh] flex flex-col">
-        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+      <DialogContent className="flex flex-col overflow-y-auto max-h-screen">
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1">
           <DialogHeader>
             <DialogTitle>Add Role</DialogTitle>
             <DialogDescription>
@@ -72,7 +72,7 @@ export default function AddRoleButton({ permissions }: { permissions: any[] }) {
             </DialogDescription>
           </DialogHeader>
 
-          <FieldGroup className="flex flex-col flex-1 min-h-0">
+          <FieldGroup>
             <Field>
               <Label htmlFor="name">Code</Label>
               <Input
@@ -109,15 +109,13 @@ export default function AddRoleButton({ permissions }: { permissions: any[] }) {
               />
               <InputError message={form.errors.description} />
             </Field>
-            <Field className="flex flex-col flex-1 min-h-0">
+            <Field>
               <Label>Permissions</Label>
-              <div className="flex flex-col flex-1 min-h-75 overflow-y-auto">
-                <PermissionsSelector
-                  permissions={permissions}
-                  value={form.data.permissions}
-                  onChange={(value) => form.setData('permissions', value)}
-                ></PermissionsSelector>
-              </div>
+              <PermissionsSelector
+                permissions={permissions}
+                value={form.data.permissions}
+                onChange={(value) => form.setData('permissions', value)}
+              />
             </Field>
           </FieldGroup>
 
