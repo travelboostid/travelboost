@@ -16,19 +16,19 @@ class ChatbotAutoReply implements ShouldQueue
   /**
    * Create the event listener.
    */
-  public function __construct(
-    public ChatMessageCreated $event
-  ) {
-    // Dependency injection of ChatbotService
+  public function __construct()
+  {
+    //
   }
 
   /**
    * Handle the event.
    * Processes a new chat message and triggers chatbot reply if conditions are met.
    */
-  public function handle(): void
+  public function handle(ChatMessageCreated $event): void
   {
-    $agent = ChatbotAgent::make($this->event->message);
+    $agent = ChatbotAgent::make($event->message);
+
     $agent->reply();
   }
 
@@ -42,11 +42,11 @@ class ChatbotAutoReply implements ShouldQueue
     return [3, 5, 10];
   }
 
-  public function failed(?Throwable $exception): void
+  public function failed(ChatMessageCreated $event, ?Throwable $exception): void
   {
     Log::error('ChatbotAutoReply job failed', [
-      'message_id' => $this->event->message->id,
-      'error' => $exception ? $exception->getMessage() : 'Unknown error',
+      'message_id' => $event->message->id,
+      'error' => $exception?->getMessage() ?? 'Unknown error',
     ]);
   }
 }
