@@ -14,10 +14,10 @@ class AppConfigSeeder extends Seeder
       [
         'description' => 'Chatbot configuration',
         'value' => [
-          'chatbot_model_provider' => 'mistral',
-          'chatbot_model_name' => 'mistral-small-latest',
-          'embedding_model_provider' => 'openai',
-          'embedding_model_name' => 'text-embedding-3-small',
+          'chatbot_model_provider' => 'openrouter',
+          'chatbot_model_name' => 'mistralai/mistral-small-24b-instruct-2501',
+          'embedding_model_provider' => 'openrouter',
+          'embedding_model_name' => 'openai/text-embedding-3-small',
           'prompt_token_cost_per_million' => '1800',
           'completion_token_cost_per_million' => '5200',
           'embedding_token_cost_per_million' => '400',

@@ -5,19 +5,20 @@ namespace App\Listeners;
 use App\Ai\Agents\ChatbotAgent;
 use App\Events\ChatMessageCreated;
 use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Foundation\Queue\Queueable;
+use Throwable;
 
 class ChatbotAutoReply implements ShouldQueue
 {
-  use InteractsWithQueue;
+  use Queueable;
 
   /**
    * Create the event listener.
    */
   public function __construct()
   {
-    // Dependency injection of ChatbotService
+    //
   }
 
   /**
@@ -26,11 +27,26 @@ class ChatbotAutoReply implements ShouldQueue
    */
   public function handle(ChatMessageCreated $event): void
   {
-    try {
-      $agent = ChatbotAgent::make($event->message);
-      $agent->reply();
-    } catch (\Throwable $e) {
-      Log::error('ChatbotAutoReply Error: ' . $e->getMessage());
-    }
+    $agent = ChatbotAgent::make($event->message);
+
+    $agent->reply();
+  }
+
+  public function tries(): int
+  {
+    return 3;
+  }
+
+  public function backoff(): array
+  {
+    return [3, 5, 10];
+  }
+
+  public function failed(ChatMessageCreated $event, ?Throwable $exception): void
+  {
+    Log::error('ChatbotAutoReply job failed', [
+      'message_id' => $event->message->id,
+      'error' => $exception?->getMessage() ?? 'Unknown error',
+    ]);
   }
 }
