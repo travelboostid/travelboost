@@ -137,6 +137,22 @@ class MidtransWebhookController extends Controller
       $this->renewSubscription($existingSubscription, $package);
     }
 
+    // --- MENGAKTIFKAN SUBDOMAIN AGEN ---
+    $domain = \App\Models\Domain::where('owner_id', $owner->id)
+      ->where('owner_type', 'company')
+      ->first();
+
+    if ($domain) {
+      $domain->update([
+        'subdomain_enabled' => true,
+        'domain_enabled' => true
+      ]);
+      Log::info('Subdomain berhasil diaktifkan untuk agen', ['company_id' => $owner->id]);
+    } else {
+      Log::warning('Data domain tidak ditemukan untuk agen ini', ['company_id' => $owner->id]);
+    }
+
+
     $appConfig = AppConfig::where('key', 'admin')->first();
     $adminConfig = $appConfig ? $appConfig->value : [];
 
