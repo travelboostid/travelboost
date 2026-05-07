@@ -20,112 +20,123 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
 
 class User extends Authenticatable implements Customer, LaratrustUser, Wallet
 {
-  use CanPay, HasBankAccounts, HasFactory, HasRolesAndPermissions, HasWallet, HasWallets, Notifiable, TwoFactorAuthenticatable;
+    use CanPay, HasBankAccounts, HasFactory, HasRolesAndPermissions, HasWallet, HasWallets, Notifiable, TwoFactorAuthenticatable;
 
-  protected $fillable = [
-    'name',
-    'username',
-    'email',
-    'password',
-    'phone',
-    'address',
-    'photo_id',
-    'company_id',
-    'gender',
-    'status',
-    'meta',
-    'note',
-  ];
-
-  protected $hidden = [
-    'password',
-    'remember_token',
-    'two_factor_recovery_codes',
-    'two_factor_secret',
-    'photo',
-  ];
-
-  protected function casts(): array
-  {
-    return [
-      'email_verified_at' => 'datetime',
-      'password' => 'hashed',
-      'two_factor_confirmed_at' => 'datetime',
-      'status' => UserStatus::class,
-      'gender' => UserGender::class,
+    protected $fillable = [
+        'name',
+        'username',
+        'email',
+        'password',
+        'phone',
+        'address',
+        'photo_id',
+        'company_id',
+        'gender',
+        'status',
+        'meta',
+        'note',
     ];
-  }
 
-  protected $appends = ['photo_url'];
+    protected $hidden = [
+        'password',
+        'remember_token',
+        'two_factor_recovery_codes',
+        'two_factor_secret',
+        'photo',
+    ];
 
-  protected $with = ['affiliateProfile', 'roles'];
+    protected function casts(): array
+    {
+        return [
+            'email_verified_at' => 'datetime',
+            'password' => 'hashed',
+            'two_factor_confirmed_at' => 'datetime',
+            'status' => UserStatus::class,
+            'gender' => UserGender::class,
+        ];
+    }
 
-  protected static function booted()
-  {
-    static::created(function ($user) {
-      $user->wallet()->create([
-        'name' => 'Main Wallet',
-        'slug' => 'main',
-        'description' => 'Primary wallet for user transactions',
-      ]);
-    });
-  }
+    protected $appends = ['photo_url'];
 
-  public function photo()
-  {
-    return $this->belongsTo(Media::class, 'photo_id');
-  }
+    protected $with = ['affiliateProfile', 'roles'];
 
-  public function bankAccounts()
-  {
-    return $this->hasMany(BankAccount::class);
-  }
+    protected static function booted()
+    {
+        static::created(function ($user) {
+            $user->wallet()->create([
+                'name' => 'Main Wallet',
+                'slug' => 'main',
+                'description' => 'Primary wallet for user transactions',
+            ]);
+        });
+    }
 
-  public function affiliateProfile()
-  {
-    return $this->hasOne(AffiliateProfile::class);
-  }
+    public function photo()
+    {
+        return $this->belongsTo(Media::class, 'photo_id');
+    }
 
-  public function companies()
-  {
-    return $this->belongsToMany(Company::class, 'company_teams')
-      ->withTimestamps();
-  }
+    public function bankAccounts()
+    {
+        return $this->hasMany(BankAccount::class);
+    }
 
-  protected function photoUrl(): Attribute
-  {
-    return Attribute::make(
-      get: function () {
-        $files = collect($this->photo?->data['files'] ?? []);
-        $file = $files->firstWhere('code', 'small');
+    public function affiliateProfile()
+    {
+        return $this->hasOne(AffiliateProfile::class);
+    }
 
-        return data_get($file, 'url');
-      }
-    );
-  }
+    public function companies()
+    {
+        return $this->belongsToMany(Company::class, 'company_teams')
+            ->withTimestamps();
+    }
 
-  public function medias()
-  {
-    return $this->morphMany(Media::class, 'owner');
-  }
+    protected function photoUrl(): Attribute
+    {
+        return Attribute::make(
+            get: function () {
+                $files = collect($this->photo?->data['files'] ?? []);
+                $file = $files->firstWhere('code', 'small');
 
-  public function company()
-  {
-    return $this->belongsTo(Company::class, 'company_id');
-  }
+                return data_get($file, 'url');
+            }
+        );
+    }
 
-  public function bookings()
-  {
-    return $this->hasMany(Booking::class);
-  }
+    public function medias()
+    {
+        return $this->morphMany(Media::class, 'owner');
+    }
 
-  public function savedPassengers()
-  {
-    return $this->hasMany(SavedPassenger::class);
-  }
+    public function company()
+    {
+        return $this->belongsTo(Company::class, 'company_id');
+    }
 
-  public function affiliateCommissionRates()
-  {
-    return $this->hasMany(AffiliateCommissionRate::class);
-  }
+    public function bookings()
+    {
+        return $this->hasMany(Booking::class);
+    }
+
+    public function tourLikes()
+    {
+        return $this->hasMany(TourLike::class);
+    }
+
+    public function likedTours()
+    {
+        return $this->belongsToMany(Tour::class, 'tour_likes')
+            ->withTimestamps();
+    }
+
+    public function savedPassengers()
+    {
+        return $this->hasMany(SavedPassenger::class);
+    }
+
+    public function affiliateCommissionRates()
+    {
+        return $this->hasMany(AffiliateCommissionRate::class);
+    }
 }

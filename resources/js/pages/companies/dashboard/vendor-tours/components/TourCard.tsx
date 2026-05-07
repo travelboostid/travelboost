@@ -18,6 +18,7 @@ import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { extractImageSrc } from '@/lib/utils';
 import { router } from '@inertiajs/react';
 import { IconBrandFacebook, IconPdf } from '@tabler/icons-react';
+import axios from 'axios';
 import { HeartIcon, MessageSquareIcon, SaveIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
@@ -40,6 +41,18 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 
+type TourCardResource = TourResource & {
+  earlybird?: number | string | null;
+  earlybird_note?: string | null;
+  is_liked?: boolean;
+  promote_note?: string | null;
+  promote_price?: number | string | null;
+  promote_title?: string | null;
+  promoprice?: number | string | null;
+  showprice?: number | string | null;
+  user?: { phone?: string | null } | null;
+};
+
 //export default function TourCard({ tour }: { tour: TourResource }) {
 export default function TourCard({
   tour,
@@ -47,7 +60,7 @@ export default function TourCard({
   fromLogin = true,
   //test = true,
 }: {
-  tour: TourResource;
+  tour: TourCardResource;
   type?: string;
   fromLogin?: boolean;
   //test?: boolean
@@ -55,7 +68,7 @@ export default function TourCard({
   const { company, auth } = usePageSharedDataProps();
   const floatingChat = useFloatingChatWidgetContext();
   const [startingPrivateChat, setStartingPrivateChat] = useState(false);
-  const [liked, setLiked] = useState(false);
+  const [liked, setLiked] = useState(Boolean(tour.is_liked));
   const [showInfo, setShowInfo] = useState(false);
   const [pendingAction, setPendingAction] = useState<'like' | 'book' | null>(
     null,
@@ -76,7 +89,7 @@ export default function TourCard({
           ) {
             sessionStorage.removeItem('pendingTourAction');
             if (stored.action === 'like') {
-              setLiked(true);
+              toggleLike();
             } else if (stored.action === 'book') {
               setIsBookingModalOpen(true);
             }
@@ -87,6 +100,11 @@ export default function TourCard({
       }
     }
   }, [auth?.user, tour.id]);
+
+  const toggleLike = async () => {
+    const response = await axios.post(`/me/tours/${tour.id}/like`);
+    setLiked(Boolean(response.data.liked));
+  };
   const { src, srcSet } = extractImageSrc(tour.image as any);
   const handleCopy = () => {
     router.post(
@@ -185,37 +203,42 @@ export default function TourCard({
     window.open(waUrl, '_blank', 'noopener,noreferrer');
   };
 
+  const showPrice = Number(tour.showprice ?? 0);
+  const earlybirdPrice = Number(tour.earlybird ?? 0);
+  const promoPrice = Number(tour.promoprice ?? 0);
+  const promotePrice = Number(tour.promote_price ?? 0);
+
   const formattedPrice = new Intl.NumberFormat('id-ID', {
     style: 'currency',
     currency: 'IDR',
     maximumFractionDigits: 0,
-  }).format(tour.showprice ?? 0);
+  }).format(showPrice);
 
   const formattedEarlybird =
-    tour.earlybird && tour.earlybird > 0
+    earlybirdPrice > 0
       ? new Intl.NumberFormat('id-ID', {
           style: 'currency',
           currency: 'IDR',
           maximumFractionDigits: 0,
-        }).format(tour.earlybird)
+        }).format(earlybirdPrice)
       : null;
 
   const formattedpromoprice =
-    tour.promoprice && tour.promoprice > 0
+    promoPrice > 0
       ? new Intl.NumberFormat('id-ID', {
           style: 'currency',
           currency: 'IDR',
           maximumFractionDigits: 0,
-        }).format(tour.promoprice)
+        }).format(promoPrice)
       : null;
 
   const formattedpromoteprice =
-    tour.promote_price && tour.promote_price > 0
+    promotePrice > 0
       ? new Intl.NumberFormat('id-ID', {
           style: 'currency',
           currency: 'IDR',
           maximumFractionDigits: 0,
-        }).format(tour.promote_price)
+        }).format(promotePrice)
       : null;
 
   return (
@@ -235,7 +258,7 @@ export default function TourCard({
                 if (!auth?.user) {
                   setPendingAction('like');
                 } else {
-                  setLiked(!liked);
+                  toggleLike();
                 }
               }}
               className="absolute top-2 right-2 z-30 rounded-full bg-white/80 p-1.5 shadow transition hover:scale-110"
@@ -513,7 +536,7 @@ export default function TourCard({
                       window.location.pathname + window.location.search,
                   }),
                 );
-                router.visit('/customer/login');
+                router.visit('/customers/login');
               }}
             >
               Login
