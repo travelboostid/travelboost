@@ -11,12 +11,15 @@ import { NavUser } from './nav-user';
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-  const { auth, company } = usePageSharedDataProps();
+  const { auth, company, tenant } = usePageSharedDataProps();
   const { url } = usePage();
+  const tenantCompany = tenant ?? company;
 
-  let brandName = 'Tenant';
+  let brandName = tenantCompany?.name ?? 'Travel';
   try {
-    const rawData = JSON.parse(company?.settings?.landing_page_data || '{}');
+    const rawData = JSON.parse(
+      tenantCompany?.settings?.landing_page_data || '{}',
+    );
     if (rawData?.root?.props?.title) {
       brandName = rawData.root.props.title;
     }
@@ -50,9 +53,9 @@ export function Header() {
         <div className="flex items-center justify-between h-16">
           {/* LOGO */}
           <Link href="/" className="flex items-center gap-2">
-            {company?.photo_url ? (
+            {tenantCompany?.photo_url ? (
               <img
-                src={company.photo_url}
+                src={tenantCompany.photo_url}
                 alt={brandName}
                 className="w-9 h-9 rounded-full object-cover"
               />
@@ -85,6 +88,16 @@ export function Header() {
               }`}
             >
               Tours
+            </Link>
+            <Link
+              href="/mybookings"
+              className={`transition-colors font-medium ${
+                url.startsWith('/mybookings')
+                  ? 'text-primary'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              My Bookings
             </Link>
             <Link
               href="/#about-us"
@@ -151,6 +164,17 @@ export function Header() {
                 onClick={() => setIsMenuOpen(false)}
               >
                 Tours
+              </Link>
+              <Link
+                href="/mybookings"
+                className={`transition-colors font-bold ${
+                  url.startsWith('/mybookings')
+                    ? 'text-primary'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+                onClick={() => setIsMenuOpen(false)}
+              >
+                My Bookings
               </Link>
               <Link
                 href="/#about-us"

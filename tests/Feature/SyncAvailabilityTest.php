@@ -5,9 +5,11 @@ use App\Enums\BookingStatus;
 use App\Jobs\SyncTourAvailabilityJob;
 use App\Models\Booking;
 use App\Models\Company;
+use App\Models\Payment;
 use App\Models\Tour;
 use App\Models\TourAvailability;
 use App\Models\TourSchedule;
+use App\Models\User;
 use Database\Seeders\Common\RolePermissionSeeder;
 use Illuminate\Support\Facades\Queue;
 
@@ -29,7 +31,6 @@ beforeEach(function () {
         'company_id' => $this->company->id,
         'departure_date' => $this->departureDate,
         'return_date' => now()->addWeeks(2)->toDateString(),
-        'quota' => 30,
         'is_active' => true,
     ]);
 
@@ -42,6 +43,7 @@ beforeEach(function () {
         'DP' => 0,
         'FP' => 0,
         'RS' => 0,
+        'BRS' => 0,
         'CA' => 0,
         'RF' => 0,
         'EX' => 0,
@@ -110,7 +112,6 @@ test('key-shift on update dispatches for both old and new keys', function () {
         'company_id' => $otherCompany->id,
         'departure_date' => $this->departureDate,
         'return_date' => now()->addWeeks(2)->toDateString(),
-        'quota' => 20,
         'is_active' => true,
     ]);
 
@@ -154,7 +155,63 @@ test('SyncAvailabilityAction correctly computes snapshot columns and available',
             'departure_date' => $this->departureDate,
             'vendor_id' => $this->company->id,
             'status' => BookingStatus::AWAITING_PAYMENT,
+            'pax_adult' => 4,
+            'pax_child' => 0,
+        ]);
+
+        $paymentBackedAwaitingPayment = Booking::factory()->create([
+            'tour_id' => $this->tour->id,
+            'departure_date' => $this->departureDate,
+            'vendor_id' => $this->company->id,
+            'status' => BookingStatus::AWAITING_PAYMENT,
             'pax_adult' => 3,
+            'pax_child' => 0,
+        ]);
+
+        Payment::create([
+            'owner_type' => User::class,
+            'owner_id' => $paymentBackedAwaitingPayment->user_id,
+            'payable_type' => Booking::class,
+            'payable_id' => $paymentBackedAwaitingPayment->id,
+            'provider' => 'manual',
+            'payment_method' => 'bank_transfer',
+            'amount' => 100_000,
+            'status' => 'pending',
+        ]);
+
+        Booking::factory()->create([
+            'tour_id' => $this->tour->id,
+            'departure_date' => $this->departureDate,
+            'vendor_id' => $this->company->id,
+            'status' => 'booking reserved',
+            'pax_adult' => 1,
+            'pax_child' => 1,
+        ]);
+
+        Booking::factory()->create([
+            'tour_id' => $this->tour->id,
+            'departure_date' => $this->departureDate,
+            'vendor_id' => $this->company->id,
+            'status' => 'manual reserved',
+            'pax_adult' => 1,
+            'pax_child' => 0,
+        ]);
+
+        Booking::factory()->create([
+            'tour_id' => $this->tour->id,
+            'departure_date' => $this->departureDate,
+            'vendor_id' => $this->company->id,
+            'status' => BookingStatus::DOWN_PAYMENT,
+            'pax_adult' => 2,
+            'pax_child' => 0,
+        ]);
+
+        Booking::factory()->create([
+            'tour_id' => $this->tour->id,
+            'departure_date' => $this->departureDate,
+            'vendor_id' => $this->company->id,
+            'status' => BookingStatus::FULL_PAYMENT,
+            'pax_adult' => 1,
             'pax_child' => 0,
         ]);
 
@@ -173,12 +230,13 @@ test('SyncAvailabilityAction correctly computes snapshot columns and available',
 
     $this->availability->refresh();
 
-    expect((int) $this->availability->RS)->toBe(3)
+    expect((int) $this->availability->BRS)->toBe(5)
+        ->and((int) $this->availability->RS)->toBe(1)
         ->and((int) $this->availability->WP)->toBe(3)
         ->and((int) $this->availability->CA)->toBe(1)
-        ->and((int) $this->availability->DP)->toBe(0)
-        ->and((int) $this->availability->FP)->toBe(0)
-        ->and((float) $this->availability->available)->toBe(27.0);
+        ->and((int) $this->availability->DP)->toBe(2)
+        ->and((int) $this->availability->FP)->toBe(1)
+        ->and((float) $this->availability->available)->toBe(18.0);
 });
 
 test('SyncAvailabilityAction floors available to zero on oversell', function () {
@@ -200,7 +258,7 @@ test('SyncAvailabilityAction floors available to zero on oversell', function () 
 
     $this->availability->refresh();
 
-    expect((int) $this->availability->RS)->toBe(5)
+    expect((int) $this->availability->BRS)->toBe(5)
         ->and((float) $this->availability->available)->toBe(0.0);
 });
 

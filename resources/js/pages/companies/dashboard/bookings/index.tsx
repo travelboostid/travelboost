@@ -26,6 +26,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { formatIDR } from '@/constants/booking';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { cn } from '@/lib/utils';
 import { Head, Link, router } from '@inertiajs/react';
@@ -65,6 +66,8 @@ type BookingResource = {
   pax_infant: number;
   total_price: string;
   grand_total: string;
+  paid_amount: number;
+  remaining_balance: number;
   commission_amount: string | null;
   payment_mode: string | null;
   departure_date: string | null;
@@ -86,8 +89,12 @@ type PageProps = {
 };
 
 const STATUS_TABS = [
-  { label: 'All', value: '' },
-  { label: 'Reserved', value: 'reserved', style: 'bg-blue-100 text-blue-800' },
+  { label: 'All', value: '', style: undefined },
+  {
+    label: 'Booking Reserved',
+    value: 'reserved',
+    style: 'bg-teal-100 text-teal-800',
+  },
   {
     label: 'Awaiting Payment',
     value: 'awaiting payment',
@@ -108,6 +115,11 @@ const STATUS_TABS = [
     value: 'waiting list',
     style: 'bg-purple-100 text-purple-800',
   },
+  {
+    label: 'Manual Reserved',
+    value: 'manual reserved',
+    style: 'bg-violet-100 text-violet-800',
+  },
   { label: 'Cancelled', value: 'cancelled', style: 'bg-red-100 text-red-800' },
   {
     label: 'Refunded',
@@ -122,7 +134,7 @@ const STATUS_TABS = [
 // ---------------------------------------------------------------------------
 
 const statusStyles: Record<string, string> = {
-  reserved: 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300',
+  reserved: 'bg-teal-100 text-teal-800 dark:bg-teal-900/40 dark:text-teal-300',
   'awaiting payment':
     'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300',
   'down payment':
@@ -134,27 +146,21 @@ const statusStyles: Record<string, string> = {
     'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300',
   'waiting list':
     'bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300',
+  'manual reserved':
+    'bg-violet-100 text-violet-800 dark:bg-violet-900/40 dark:text-violet-300',
+  'booking reserved':
+    'bg-teal-100 text-teal-800 dark:bg-teal-900/40 dark:text-teal-300',
   cancelled: 'bg-red-100 text-red-800 dark:bg-red-100/80 dark:text-red-300',
   refunded:
     'bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300',
   expired: 'bg-gray-100 text-gray-800 dark:bg-gray-900/40 dark:text-gray-300',
 };
 
-const paymentModeLabels: Record<string, string> = {
-  manual: 'Manual',
-  online: 'Online',
+const statusLabels: Record<string, string> = {
+  reserved: 'Booking Reserved',
+  'booking reserved': 'Booking Reserved',
+  'manual reserved': 'Manual Reserved',
 };
-
-function formatIDR(value: number | string | null | undefined): string {
-  if (value === null || value === undefined) return '—';
-  const num = typeof value === 'string' ? parseFloat(value) : value;
-  if (isNaN(num)) return '—';
-  return new Intl.NumberFormat('id-ID', {
-    style: 'currency',
-    currency: 'IDR',
-    minimumFractionDigits: 0,
-  }).format(num);
-}
 
 function formatCommission(value: number | string | null | undefined): string {
   if (value === null || value === undefined) return '—';
@@ -336,7 +342,7 @@ function buildColumns(
               statusStyles[status] ?? statusStyles['expired'],
             )}
           >
-            {status}
+            {statusLabels[status] ?? status}
           </Badge>
         );
       },
@@ -394,18 +400,39 @@ function buildColumns(
       ),
     },
     {
+      id: 'remaining_balance',
+      accessorKey: 'remaining_balance',
+      header: 'Remaining',
+      cell: ({ row }) => {
+        const remaining = row.original.remaining_balance;
+        const isSettled = remaining <= 0;
+
+        return (
+          <div
+            className={cn(
+              'tabular-nums whitespace-nowrap font-medium text-sm',
+              isSettled ? 'text-emerald-600' : 'text-rose-600',
+            )}
+          >
+            {isSettled ? '—' : formatIDR(remaining)}
+          </div>
+        );
+      },
+    },
+    {
       id: 'payment_mode',
       accessorKey: 'payment_mode',
       header: 'Payment Mode',
       cell: ({ cell, row }) => {
         const status = row.original.status;
-        const showPaymentMode = !['reserved', 'awaiting payment'].includes(
-          status,
-        );
+        const mode = cell.getValue<string | null>();
+        const showPaymentMode =
+          !!mode || !['reserved', 'awaiting payment'].includes(status);
 
         if (!showPaymentMode) return <span className="text-slate-400">—</span>;
 
-        const mode = cell.getValue<string>();
+        if (!mode) return <span className="text-slate-400">—</span>;
+
         const label = mode === 'manual' ? 'Manual Payment' : 'Online Payment';
 
         return (
@@ -461,15 +488,37 @@ export default function Page({ data }: PageProps) {
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
     [],
   );
+  const [globalFilter, setGlobalFilter] = React.useState('');
   const [columnVisibility, setColumnVisibility] =
     React.useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = React.useState({});
 
+  const fuzzyFilter = React.useCallback(
+    (row: any, _columnId: string, value: string) => {
+      const searchVal = String(value).toLowerCase();
+      return row.getAllCells().some((cell: any) => {
+        const val = cell.getValue();
+        if (val == null) return false;
+
+        let strVal = String(val);
+        if (cell.column.id === 'created_at' || cell.column.id === 'departure_date') {
+          strVal = dayjs(val).format('DD MMM YYYY');
+        }
+
+        return strVal.toLowerCase().includes(searchVal);
+      });
+    },
+    [],
+  );
+
   const table = useReactTable({
     data: data?.data ?? [],
     columns,
+    filterFns: { fuzzy: fuzzyFilter },
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
+    onGlobalFilterChange: setGlobalFilter,
+    globalFilterFn: 'fuzzy' as any,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
@@ -479,6 +528,7 @@ export default function Page({ data }: PageProps) {
     state: {
       sorting,
       columnFilters,
+      globalFilter,
       columnVisibility,
       rowSelection,
     },
@@ -492,7 +542,7 @@ export default function Page({ data }: PageProps) {
     >
       <Head title="Bookings" />
 
-      <div className="w-full space-y-6 p-4 md:p-6 max-w-screen-2xl mx-auto pb-20">
+      <div className="w-full space-y-6 p-4 md:p-6 max-w-screen-2xl mx-auto pb-20 min-w-0 overflow-hidden">
         {/* ── Page header ─────────────────────────────────────── */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
@@ -553,17 +603,9 @@ export default function Page({ data }: PageProps) {
           <div className="relative w-full sm:max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search booking number, tour, or guest..."
-              value={
-                (table
-                  .getColumn('booking_number')
-                  ?.getFilterValue() as string) ?? ''
-              }
-              onChange={(event) =>
-                table
-                  .getColumn('booking_number')
-                  ?.setFilterValue(event.target.value)
-              }
+              placeholder="Search booking number, tour, guest..."
+              value={globalFilter}
+              onChange={(event) => setGlobalFilter(event.target.value)}
               className="pl-9 w-full focus-visible:ring-primary border-slate-200"
             />
           </div>
@@ -600,18 +642,18 @@ export default function Page({ data }: PageProps) {
 
         {/* ── Table card ──────────────────────────────────────── */}
         <div className="rounded-xl border border-border bg-card shadow-sm w-full overflow-hidden">
-          <div className="w-full max-h-[65vh] overflow-auto">
-            <Table className="w-full text-sm relative">
-              <TableHeader className="bg-slate-50 sticky top-0 z-10 shadow-[0_1px_0_0_theme(colors.border)]">
+          <div className="w-full max-h-[65vh] overflow-auto relative">
+            <Table unwrapped className="w-full text-sm">
+              <TableHeader className="sticky top-0 z-10 bg-slate-50 dark:bg-slate-900/90 shadow-[0_1px_0_0_theme(colors.border)]">
                 {table.getHeaderGroups().map((headerGroup) => (
                   <TableRow
                     key={headerGroup.id}
-                    className="border-none hover:bg-slate-50"
+                    className="border-none hover:bg-transparent"
                   >
                     {headerGroup.headers.map((header) => (
                       <TableHead
                         key={header.id}
-                        className="text-primary font-bold h-12 px-3 whitespace-nowrap"
+                        className="bg-slate-50 dark:bg-slate-900/90 text-primary font-bold h-12 px-3 whitespace-nowrap"
                       >
                         {header.isPlaceholder
                           ? null

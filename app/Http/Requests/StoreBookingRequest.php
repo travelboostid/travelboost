@@ -39,6 +39,9 @@ class StoreBookingRequest extends FormRequest
             'contact_email' => ['required', 'email', 'max:255'],
             'contact_phone' => ['required', 'string', 'max:50'],
             'contact_notes' => ['nullable', 'string', 'max:1000'],
+            'payment_type' => ['required', 'string', Rule::in(['down_payment', 'full_payment'])],
+            'payment_method' => ['required', 'string', Rule::in(['manual_transfer', 'bank_transfer', 'midtrans', 'online'])],
+            'payment_mode' => ['nullable', 'string', Rule::in(['manual', 'online'])],
             // Passengers
             'passengers' => ['required', 'array', 'min:1'],
             'passengers.*.title' => ['nullable', 'string', 'max:20'],

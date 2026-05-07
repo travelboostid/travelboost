@@ -1,4 +1,3 @@
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   Popover,
@@ -11,11 +10,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import {
-  formatCurrency,
-  PPN_RATE,
-  PRICE_CATEGORY_LABELS,
-} from '@/constants/booking';
+import { formatCurrency, PRICE_CATEGORY_LABELS } from '@/constants/booking';
 import { cn } from '@/lib/utils';
 import type {
   BookingContact,
@@ -33,6 +28,10 @@ import {
   ReceiptIcon,
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  ManualPaymentDialog,
+  type ManualPaymentData,
+} from './ManualPaymentDialog';
 import type { RoomConfig } from './Step2RoomConfiguration';
 
 // ─── Types ───────────────────────────────────────────────────────────────────────
@@ -61,40 +60,55 @@ type Step4Props = {
     paymentMethod: PaymentMethod,
     addOns: AddOnItem[],
     finalAmount: number,
+    manualData?: ManualPaymentData,
   ) => void;
   isSubmitting?: boolean;
   initialAddOns?: AddOnItem[];
+  onAddOnsChange?: (addOns: AddOnItem[]) => void;
+  minimumDownPaymentPct?: number;
+  minimumVatPct?: number;
+  vendorBankInfo?: {
+    bankName: string;
+    accountName: string;
+    accountNumber: string;
+  };
 };
 
 // ─── Constants ───────────────────────────────────────────────────────────────────
-
-const DP_RATE = 0.5;
 
 // ─── Component ───────────────────────────────────────────────────────────────────
 
 export default function Step4BookingSummary({
   contact,
   guests,
-  rooms,
   pricing,
-  vendor,
-  agentName,
   onPayNow,
   isSubmitting = false,
   initialAddOns,
+  onAddOnsChange,
+  minimumDownPaymentPct,
+  minimumVatPct,
+  vendorBankInfo,
 }: Step4Props) {
   // ─── Add-ons state ──────────────────────────────────────────────────
   const [addOns, setAddOns] = useState<AddOnItem[]>(initialAddOns ?? []);
 
+  const displayAddOns = useMemo(
+    () =>
+      addOns.map((addon) =>
+        addon.hasQty === false ? { ...addon, qty: guests.length } : addon,
+      ),
+    [addOns, guests.length],
+  );
+
   useEffect(() => {
-    setAddOns((prev) =>
-      prev.map((a) => (a.hasQty === false ? { ...a, qty: guests.length } : a)),
-    );
-  }, [guests.length]);
+    onAddOnsChange?.(displayAddOns);
+  }, [displayAddOns, onAddOnsChange]);
 
   // ─── Payment state ─────────────────────────────────────────────────
   const [paymentType, setPaymentType] = useState<PaymentType>('full_payment');
   const [paymentPopoverOpen, setPaymentPopoverOpen] = useState(false);
+  const [manualDialogOpen, setManualDialogOpen] = useState(false);
 
   // ─── Derived calculations ──────────────────────────────────────────
 
@@ -120,17 +134,21 @@ export default function Step4BookingSummary({
   }, [guests]);
 
   const addOnsTotal = useMemo(
-    () => addOns.reduce((sum, a) => sum + a.unitPrice * a.qty, 0),
-    [addOns],
+    () => displayAddOns.reduce((sum, a) => sum + a.unitPrice * a.qty, 0),
+    [displayAddOns],
   );
 
   const subtotalBeforeTax =
     pricing.subtotalGuests + pricing.platformFee + addOnsTotal;
-  const ppn = Math.round(pricing.subtotalGuests * PPN_RATE);
+  const vatPct = minimumVatPct ?? 11;
+  const ppn = Math.round(pricing.subtotalGuests * (vatPct / 100));
   const grandTotal = subtotalBeforeTax + ppn + pricing.agentCommission;
+  const dpPct = minimumDownPaymentPct ?? 50;
+  const dpRate = dpPct / 100;
+  const dpLabel = `Down Payment (${dpPct}%)`;
   const payAmount =
     paymentType === 'down_payment'
-      ? Math.round(grandTotal * DP_RATE)
+      ? Math.round(grandTotal * dpRate)
       : grandTotal;
 
   // ─── Add-on qty handler ────────────────────────────────────────────
@@ -152,7 +170,16 @@ export default function Step4BookingSummary({
 
   const handlePaymentMethodSelect = (method: PaymentMethod) => {
     setPaymentPopoverOpen(false);
-    onPayNow(paymentType, method, addOns, payAmount);
+    if (method === 'manual_transfer') {
+      setManualDialogOpen(true);
+      return;
+    }
+
+    onPayNow(paymentType, method, displayAddOns, payAmount);
+  };
+
+  const handleManualSubmit = (data: ManualPaymentData) => {
+    onPayNow(paymentType, 'manual_transfer', displayAddOns, payAmount, data);
   };
 
   return (
@@ -231,7 +258,7 @@ export default function Step4BookingSummary({
                       </span>
                     </div>
                     <div className="flex justify-between text-muted-foreground">
-                      <span>PPN (11%)</span>
+                      <span>PPN ({vatPct}%)</span>
                       <span className="font-medium text-foreground">
                         {formatCurrency(ppn)}
                       </span>
@@ -275,7 +302,7 @@ export default function Step4BookingSummary({
             </p>
 
             <div className="space-y-2 text-sm">
-              {addOns.map((addon) => (
+              {displayAddOns.map((addon) => (
                 <motion.div
                   key={addon.key}
                   layout
@@ -364,7 +391,7 @@ export default function Step4BookingSummary({
                   )}
                   onClick={() => setPaymentType('down_payment')}
                 >
-                  Down Payment (50%)
+                  {dpLabel}
                 </button>
                 <button
                   type="button"
@@ -413,11 +440,11 @@ export default function Step4BookingSummary({
                 </motion.p>
                 {paymentType === 'down_payment' && (
                   <p className="mt-0.5 text-xs text-muted-foreground">
-                    You pay now:{' '}
+                    Pay now:{' '}
                     <span className="font-bold text-primary">
                       {formatCurrency(payAmount)}
                     </span>{' '}
-                    (50%)
+                    ({dpPct}%)
                   </p>
                 )}
               </div>
@@ -475,6 +502,20 @@ export default function Step4BookingSummary({
             </div>
           </div>
         </div>
+        <ManualPaymentDialog
+          open={manualDialogOpen}
+          onClose={() => setManualDialogOpen(false)}
+          onSubmit={handleManualSubmit}
+          isSubmitting={isSubmitting}
+          vendorBank={
+            vendorBankInfo ?? {
+              bankName: '',
+              accountName: '',
+              accountNumber: '',
+            }
+          }
+          amount={payAmount}
+        />
       </motion.div>
     </TooltipProvider>
   );

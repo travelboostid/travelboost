@@ -16,11 +16,15 @@ const iconMap = {
   Receipt: ReceiptIcon,
 };
 
+type WizardStepIndicatorProps = {
+  currentStep: WizardStepId;
+  onStepClick?: (step: WizardStepId) => void;
+};
+
 export default function WizardStepIndicator({
   currentStep,
-}: {
-  currentStep: WizardStepId;
-}) {
+  onStepClick,
+}: WizardStepIndicatorProps) {
   return (
     <nav aria-label="Booking progress">
       {/* Mobile */}
@@ -35,6 +39,37 @@ export default function WizardStepIndicator({
           const Icon = iconMap[step.icon];
           const isCompleted = currentStep > step.id;
           const isActive = currentStep === step.id;
+          const stepContent = (
+            <>
+              <div
+                className={cn(
+                  'flex size-10 shrink-0 items-center justify-center rounded-full border-2 transition-all duration-300',
+                  isCompleted
+                    ? 'border-primary bg-primary text-white'
+                    : isActive
+                      ? 'border-primary bg-primary/10 text-primary'
+                      : 'border-muted-foreground/30 bg-muted text-muted-foreground',
+                  onStepClick && 'group-hover:border-primary/70',
+                )}
+              >
+                {isCompleted ? (
+                  <CheckIcon className="size-3.5" />
+                ) : (
+                  <Icon className="size-3.5" />
+                )}
+              </div>
+              <span
+                className={cn(
+                  'hidden text-xs font-semibold lg:block',
+                  currentStep >= step.id
+                    ? 'text-foreground'
+                    : 'text-muted-foreground',
+                )}
+              >
+                {step.label}
+              </span>
+            </>
+          );
 
           return (
             <li
@@ -42,34 +77,18 @@ export default function WizardStepIndicator({
               className="flex flex-1 items-center"
               aria-current={isActive ? 'step' : undefined}
             >
-              <div className="flex items-center gap-2">
-                <div
-                  className={cn(
-                    'flex size-10 shrink-0 items-center justify-center rounded-full border-2 transition-all duration-300',
-                    isCompleted
-                      ? 'border-primary bg-primary text-white'
-                      : isActive
-                        ? 'border-primary bg-primary/10 text-primary'
-                        : 'border-muted-foreground/30 bg-muted text-muted-foreground',
-                  )}
+              {onStepClick ? (
+                <button
+                  type="button"
+                  onClick={() => onStepClick(step.id)}
+                  className="group flex cursor-pointer items-center gap-2"
+                  aria-label={`Go to step ${step.id}: ${step.label}`}
                 >
-                  {isCompleted ? (
-                    <CheckIcon className="size-3.5" />
-                  ) : (
-                    <Icon className="size-3.5" />
-                  )}
-                </div>
-                <span
-                  className={cn(
-                    'hidden text-xs font-semibold lg:block',
-                    currentStep >= step.id
-                      ? 'text-foreground'
-                      : 'text-muted-foreground',
-                  )}
-                >
-                  {step.label}
-                </span>
-              </div>
+                  {stepContent}
+                </button>
+              ) : (
+                <div className="flex items-center gap-2">{stepContent}</div>
+              )}
 
               {idx < WIZARD_STEPS.length - 1 && (
                 <div className="relative mx-3 h-0.5 flex-1 bg-border overflow-hidden">

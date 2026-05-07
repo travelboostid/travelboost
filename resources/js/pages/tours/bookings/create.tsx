@@ -1,5 +1,6 @@
 import type { TourResource } from '@/api/model';
 import BookingInfoCard from '@/components/booking/BookingInfoCard';
+import type { ManualPaymentData } from '@/components/booking/ManualPaymentDialog';
 import Step1GuestInformation, {
   calculateAgeAtDeparture,
 } from '@/components/booking/Step1GuestInformation';
@@ -36,6 +37,7 @@ import type {
 } from '@/types/booking';
 import { calculateBookingPricing } from '@/utils/booking-calculations';
 import { router, usePage } from '@inertiajs/react';
+import axios from 'axios';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ArrowLeftIcon, ArrowRightIcon, FileTextIcon } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -48,6 +50,13 @@ type PageProps = {
   bookingNumber: string;
 };
 
+const DEFAULT_TNC = `1. The price shown is valid only for the selected departure date.
+2. Full payment is required to secure your booking.
+3. Seats are subject to availability and confirmed upon successful payment.
+4. All bookings are non-refundable unless stated otherwise.
+5. Changes to guest details or departure dates are subject to administrative fees.
+6. In the event of tour cancellation by the organizer, a full refund will be provided.`;
+
 export default function Page() {
   const {
     tour,
@@ -58,6 +67,14 @@ export default function Page() {
     bookingNumber,
     availability,
     addOns,
+    existingBooking,
+    bookingDeadlineDays,
+    bookingTimeLimitMinutes,
+    minimumDownPaymentPct,
+    minimumVatPct,
+    vendorBankInfo,
+    termConditions,
+    isResumingExistingBooking,
   } = usePage<any>().props as any;
   const user = auth?.user;
 
@@ -67,27 +84,84 @@ export default function Page() {
   );
   const preselectedDate = urlParams.get('date') ?? '';
 
+  // ─── Determine if we're resuming an existing booking ──────────────
+  const isResuming = !!existingBooking && !!isResumingExistingBooking;
+  const resumedStatus = existingBooking?.status ?? null;
+
   // ─── Wizard state ───────────────────────────────────────────────────
   const [currentStep, setCurrentStep] = useState<WizardStepId>(1);
   const [direction, setDirection] = useState(1); // 1=forward, -1=back
-  const [hasAgreedToTnc, setHasAgreedToTnc] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(10 * 60);
-  const [timerStarted, setTimerStarted] = useState(false);
+  const [hasAgreedToTnc, setHasAgreedToTnc] = useState(isResuming);
+  const [timeLeft, setTimeLeft] = useState(
+    (bookingTimeLimitMinutes ?? 30) * 60,
+  );
+  const [timerStarted, setTimerStarted] = useState(
+    resumedStatus === 'reserved',
+  );
   const [showStep2ConfirmModal, setShowStep2ConfirmModal] = useState(false);
 
   // ─── Contact ────────────────────────────────────────────────────────
   const [contact, setContact] = useState<BookingContact>({
-    name: user?.name || '',
-    email: user?.email || '',
-    phone: user?.phone || '',
-    notes: '',
+    name: existingBooking?.contact_name || user?.name || '',
+    email: existingBooking?.contact_email || user?.email || '',
+    phone: existingBooking?.contact_phone || user?.phone || '',
+    notes: existingBooking?.contact_notes || '',
   });
 
   // ─── Guests ─────────────────────────────────────────────────────────
-  const [adults, setAdults] = useState(1);
-  const [children, setChildren] = useState(0);
-  const [infants, setInfants] = useState(0);
-  const [guests, setGuests] = useState<GuestEntry[]>([]);
+  const [adults, setAdults] = useState(existingBooking?.pax_adult ?? 1);
+  const [children, setChildren] = useState(existingBooking?.pax_child ?? 0);
+  const [infants, setInfants] = useState(existingBooking?.pax_infant ?? 0);
+  const [guests, setGuests] = useState<GuestEntry[]>(() => {
+    if (!existingBooking?.passengers?.length) return [];
+    // Hydrate guests from existing passengers
+    const passengers = existingBooking.passengers as any[];
+    const restored: GuestEntry[] = [];
+    let adultIdx = 0,
+      childIdx = 0,
+      infantIdx = 0;
+
+    for (const p of passengers) {
+      const cat = p.price_category ?? '';
+      const isInfant = cat.toLowerCase().includes('infant');
+      const isChild = cat.toLowerCase().includes('child');
+      let type: 'adult' | 'child' | 'infant';
+      let id: string;
+
+      if (isInfant) {
+        type = 'infant';
+        id = `infant-${infantIdx++}`;
+      } else if (isChild) {
+        type = 'child';
+        id = `child-${childIdx++}`;
+      } else {
+        type = 'adult';
+        id = `adult-${adultIdx++}`;
+      }
+
+      const matchedPrice = tourPrices?.find(
+        (tp: any) => tp.categoryName === p.price_category,
+      );
+
+      restored.push({
+        id,
+        type,
+        title: p.title ?? '',
+        firstName: p.first_name ?? '',
+        lastName: p.last_name ?? '',
+        dateOfBirth: p.dob ? p.dob.split('T')[0] : '',
+        placeOfBirth: p.pob ?? '',
+        priceCategory: p.price_category ?? null,
+        tourPriceId: matchedPrice ? matchedPrice.tourPriceId : 0,
+        price:
+          parseFloat(p.price_amount) || (matchedPrice ? matchedPrice.price : 0),
+        roomTypeDescription:
+          p.room_type ?? (matchedPrice ? matchedPrice.description : ''),
+        note: p.note ?? '',
+      });
+    }
+    return restored;
+  });
 
   // ─── Rooms ──────────────────────────────────────────────────────────
   const [rooms, setRooms] = useState<RoomConfig[]>([]);
@@ -122,6 +196,7 @@ export default function Page() {
       tourPriceId: 0,
       price: 0,
       roomTypeDescription: '',
+      note: '',
     });
 
     for (let i = 0; i < adults; i++) {
@@ -143,8 +218,7 @@ export default function Page() {
       );
     }
 
-    const docsGuests = newGuests.filter((g) => g.type !== 'infant');
-    const newDocs: TravelDocumentEntry[] = docsGuests.map((g) => {
+    const newDocs: TravelDocumentEntry[] = newGuests.map((g) => {
       const existing = travelDocuments.find((d) => d.guestId === g.id);
       return (
         existing ?? {
@@ -167,8 +241,13 @@ export default function Page() {
 
   // ─── Pricing (single source of truth) ───────────────────────────────
   const pricing = useMemo(
-    () => calculateBookingPricing(guests, vendor?.commission ?? 0),
-    [guests, vendor],
+    () =>
+      calculateBookingPricing(
+        guests,
+        vendor?.commission ?? 0,
+        minimumVatPct ?? 11,
+      ),
+    [guests, vendor, minimumVatPct],
   );
 
   // ─── Timer (starts when entering Step 2) ────────────────────────────
@@ -215,43 +294,46 @@ export default function Page() {
       roomsGuestFingerprint.current = currentFingerprint;
     }
 
+    // Always send the reserve POST to update the booking status and data
+    router.post(
+      `/bookings/${tour.id}/reserve`,
+      {
+        tour_id: tour.id,
+        departure_date: preselectedDate,
+        pax_adult: adults,
+        pax_child: children,
+        pax_infant: infants,
+        booking_number: bookingNumber,
+        vendor_id: vendor?.id ?? (tour.company as any)?.id,
+        agent_id: (tenant as any)?.id ?? null,
+        contact_name: contact.name,
+        contact_email: contact.email,
+        contact_phone: contact.phone,
+        contact_notes: contact.notes,
+        total_price: pricing.subtotalGuests,
+        tax_amount: pricing.ppn,
+        platform_fee: pricing.platformFee,
+        commission_amount: pricing.agentCommission,
+        grand_total: pricing.totalPrice,
+        passengers: guests.map((g) => ({
+          title: g.title || null,
+          first_name: g.firstName,
+          last_name: g.lastName || '',
+          gender: null,
+          dob: g.dateOfBirth || null,
+          pob: g.placeOfBirth || null,
+          price_category: g.priceCategory,
+          price_amount: g.price,
+          room_type: g.roomTypeDescription || null,
+          room_number: null,
+          note: g.note || null,
+        })),
+      } as any,
+      { preserveScroll: true, preserveState: true },
+    );
+
     if (!timerStarted) {
       setTimerStarted(true);
-      router.post(
-        `/bookings/${tour.id}/reserve`,
-        {
-          tour_id: tour.id,
-          departure_date: preselectedDate,
-          pax_adult: adults,
-          pax_child: children,
-          pax_infant: infants,
-          booking_number: bookingNumber,
-          vendor_id: vendor?.id ?? (tour.company as any)?.id,
-          agent_id: (tenant as any)?.id ?? null,
-          contact_name: contact.name,
-          contact_email: contact.email,
-          contact_phone: contact.phone,
-          contact_notes: contact.notes,
-          total_price: pricing.subtotalGuests,
-          tax_amount: pricing.ppn,
-          platform_fee: pricing.platformFee,
-          commission_amount: pricing.agentCommission,
-          grand_total: pricing.totalPrice,
-          passengers: guests.map((g) => ({
-            title: g.title || null,
-            first_name: g.firstName,
-            last_name: g.lastName || '',
-            gender: null,
-            dob: g.dateOfBirth || null,
-            pob: g.placeOfBirth || null,
-            price_category: g.priceCategory,
-            price_amount: g.price,
-            room_type: g.roomTypeDescription || null,
-            room_number: null,
-          })),
-        } as any,
-        { preserveScroll: true, preserveState: true },
-      );
     }
 
     setDirection(1);
@@ -261,7 +343,7 @@ export default function Page() {
   const goBack = () => {
     if (currentStep === 1 && hasAgreedToTnc) {
       setHasAgreedToTnc(false);
-      setTimeLeft(10 * 60);
+      setTimeLeft((bookingTimeLimitMinutes ?? 30) * 60);
       return;
     }
     if (currentStep === 1) {
@@ -301,6 +383,25 @@ export default function Page() {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   const phoneRegex = /^\+?\d+$/;
 
+  const paxTakingSeats = adults + children;
+  const isAvailabilityExceeded =
+    availability !== null && paxTakingSeats > availability;
+
+  const extraBedGuests = guests.filter((g) =>
+    g.priceCategory?.toLowerCase().includes('extra bed'),
+  );
+  const hasValidBaseRoom = guests.some((g) => {
+    const priceCategory = g.priceCategory?.toLowerCase() ?? '';
+    const roomTypeDescription = g.roomTypeDescription?.toLowerCase() ?? '';
+
+    return (
+      !priceCategory.includes('extra bed') &&
+      (roomTypeDescription.includes('twin') ||
+        roomTypeDescription.includes('double'))
+    );
+  });
+  const extraBedValid = extraBedGuests.length === 0 || hasValidBaseRoom;
+
   const canProceedStep1 =
     contact.name.trim() !== '' &&
     contact.email.trim() !== '' &&
@@ -308,6 +409,9 @@ export default function Page() {
     contact.phone.trim() !== '' &&
     phoneRegex.test(contact.phone.trim()) &&
     guests.length > 0 &&
+    adults > 0 &&
+    !isAvailabilityExceeded &&
+    extraBedValid &&
     guests.every((g) => {
       if (
         g.title.trim() === '' ||
@@ -344,75 +448,150 @@ export default function Page() {
     paymentMethod: PaymentMethod,
     addOns: AddOnItem[],
     finalAmount: number,
+    manualData?: ManualPaymentData,
   ) => {
     setIsSubmitting(true);
 
-    router.post(
-      `/bookings/${tour.id}`,
-      {
-        tour_id: tour.id,
-        departure_date: preselectedDate,
-        pax_adult: adults,
-        pax_child: children,
-        pax_infant: infants,
-        vendor_id: vendor?.id ?? (tour.company as any)?.id,
-        agent_id: (tenant as any)?.id ?? null,
-        agent_code: (tenant as any)?.username ?? 'AGT',
-        booking_number: bookingNumber,
-        contact_name: contact.name,
-        contact_email: contact.email,
-        contact_phone: contact.phone,
-        contact_notes: contact.notes,
-        payment_type: paymentType,
-        payment_method: paymentMethod,
-        passengers: guests.map((g) => {
-          const doc = travelDocuments.find((d) => d.guestId === g.id);
-          return {
-            title: g.title || null,
-            first_name: g.firstName,
-            last_name: g.lastName || '',
-            gender: null,
-            dob: g.dateOfBirth || null,
-            pob: g.placeOfBirth || null,
-            price_category: g.priceCategory,
-            price_amount: g.price,
-            passport_number: doc?.passportNumber || null,
-            passport_issue_date: doc?.passportIssueDate || null,
-            passport_expiry_date: doc?.passportExpiryDate || null,
-            visa_number: doc?.visaNumber || null,
-            room_type: g.roomTypeDescription || null,
-            room_number: null,
-          };
-        }),
-        rooms: rooms.map((r) => ({
-          room_type: r.type,
-          room_label: r.label,
-          bed_layout: r.guestIds.map((gid, idx) => ({
-            bedType: r.type,
-            guestId: gid,
-            position: { x: idx, y: 0 },
-          })),
+    const addOnRows = addOns
+      .filter((a) => a.qty > 0)
+      .map((a) => ({
+        name: a.label,
+        price: a.unitPrice * a.qty,
+      }));
+    const addOnsTotal = addOnRows.reduce((sum, item) => sum + item.price, 0);
+    const grandTotal = pricing.totalPrice + addOnsTotal;
+    const payload = {
+      tour_id: tour.id,
+      departure_date: preselectedDate,
+      pax_adult: adults,
+      pax_child: children,
+      pax_infant: infants,
+      vendor_id: vendor?.id ?? (tour.company as any)?.id,
+      agent_id: (tenant as any)?.id ?? null,
+      agent_code: (tenant as any)?.username ?? 'AGT',
+      booking_number: bookingNumber,
+      contact_name: contact.name,
+      contact_email: contact.email,
+      contact_phone: contact.phone,
+      contact_notes: contact.notes,
+      payment_type: paymentType,
+      payment_method: paymentMethod,
+      passengers: guests.map((g) => {
+        const doc = travelDocuments.find((d) => d.guestId === g.id);
+        return {
+          title: g.title || null,
+          first_name: g.firstName,
+          last_name: g.lastName || '',
+          gender: null,
+          dob: g.dateOfBirth || null,
+          pob: g.placeOfBirth || null,
+          price_category: g.priceCategory,
+          price_amount: g.price,
+          passport_number: doc?.passportNumber || null,
+          passport_issue_date: doc?.passportIssueDate || null,
+          passport_expiry_date: doc?.passportExpiryDate || null,
+          visa_number: doc?.visaNumber || null,
+          room_type: g.roomTypeDescription || null,
+          room_number: null,
+          note: g.note || null,
+        };
+      }),
+      rooms: rooms.map((r) => ({
+        room_type: r.type,
+        room_label: r.label,
+        bed_layout: r.guestIds.map((gid, idx) => ({
+          bedType: r.type,
+          guestId: gid,
+          position: { x: idx, y: 0 },
         })),
-        add_ons: addOns
-          .filter((a) => a.qty > 0)
-          .map((a) => ({
-            key: a.key,
-            label: a.label,
-            unit_price: a.unitPrice,
-            qty: a.qty,
-            total: a.unitPrice * a.qty,
-          })),
-        total_price: pricing.subtotalGuests,
-        tax_amount: pricing.ppn,
-        platform_fee: pricing.platformFee,
-        commission_amount: pricing.agentCommission,
-        grand_total: finalAmount,
-      } as any,
-      {
-        preserveScroll: true,
-        onFinish: () => setIsSubmitting(false),
+      })),
+      addons: addOnRows,
+      total_price: pricing.subtotalGuests,
+      tax_amount: pricing.ppn,
+      platform_fee: pricing.platformFee,
+      commission_amount: pricing.agentCommission,
+      grand_total: grandTotal,
+    };
+
+    router.post(`/bookings/${tour.id}`, payload as any, {
+      preserveScroll: true,
+      onSuccess: () => {
+        if (paymentMethod === 'midtrans') {
+          const bookingId = existingBooking?.id;
+          if (!bookingId) {
+            setIsSubmitting(false);
+            return;
+          }
+
+          axios
+            .post(
+              `/bookings/${bookingId}/online-payment`,
+              {
+                payment_type: paymentType,
+                amount: finalAmount,
+              },
+              {
+                withCredentials: true,
+                withXSRFToken: true,
+              },
+            )
+            .then((response) => {
+              const snapToken = response.data?.payment?.payload
+                ?.snap_token as string | undefined;
+
+              if (!snapToken) {
+                setIsSubmitting(false);
+                return;
+              }
+
+              (window as any).snap.pay(snapToken, {
+                onSuccess: () => window.location.reload(),
+                onError: () => window.location.reload(),
+                onClose: () => window.location.reload(),
+              });
+            })
+            .catch(() => setIsSubmitting(false));
+
+          return;
+        }
+
+        if (!manualData || paymentMethod !== 'manual_transfer') {
+          return;
+        }
+
+        const bookingId = existingBooking?.id;
+        if (!bookingId || !manualData.proofFile) {
+          setIsSubmitting(false);
+          return;
+        }
+
+        const formData = new FormData();
+        formData.append('sender_bank_name', manualData.senderBankName);
+        formData.append(
+          'sender_account_number',
+          manualData.senderAccountNumber,
+        );
+        formData.append(
+          'transfer_amount',
+          String(manualData.transferAmount || finalAmount),
+        );
+        formData.append('proof', manualData.proofFile);
+
+        router.post(`/bookings/${bookingId}/manual-payment`, formData, {
+          forceFormData: true,
+          preserveScroll: true,
+          onFinish: () => setIsSubmitting(false),
+        });
       },
-    );
+      onError: () => {
+        setIsSubmitting(false);
+      },
+      onFinish: () => {
+        if (!manualData && paymentMethod !== 'midtrans') {
+          setIsSubmitting(false);
+        }
+      },
+    });
   };
 
   // ─── Helper ─────────────────────────────────────────────────────────
@@ -438,42 +617,16 @@ export default function Page() {
               <FileTextIcon className="size-6 text-primary" />
               <h2 className="text-xl font-bold">Terms & Conditions</h2>
             </div>
-            <div className="prose prose-sm mt-6 max-w-none text-muted-foreground">
-              <h3 className="font-semibold text-foreground">
-                Booking & Payment Policy
-              </h3>
-              <ul className="ml-4 list-disc space-y-1">
-                <li>
-                  The price shown is valid only for the selected departure date.
-                </li>
-                <li>Full payment is required to secure your booking.</li>
-                <li>
-                  Seats are subject to availability and will only be confirmed
-                  upon successful payment.
-                </li>
-              </ul>
-              <h3 className="mt-6 font-semibold text-foreground">
-                Cancellation Policy
-              </h3>
-              <ul className="ml-4 list-disc space-y-1">
-                <li>
-                  All bookings are non-refundable unless stated otherwise.
-                </li>
-                <li>
-                  Any changes to guest details or departure dates are subject to
-                  administrative fees.
-                </li>
-                <li>
-                  In the event of tour cancellation by the organizer, a full
-                  refund will be provided.
-                </li>
-              </ul>
-              <p className="mt-6 rounded-lg bg-muted/50 p-4 text-sm font-medium leading-relaxed text-foreground">
-                By clicking &quot;I Agree & Continue&quot;, you agree to the
-                Terms & Conditions. A 10-minute timer will start on the room
-                arrangement step to complete your booking.
+            <div className="mt-6 max-h-80 overflow-y-auto rounded-lg border bg-muted/30 p-4">
+              <p className="whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">
+                {termConditions || DEFAULT_TNC}
               </p>
             </div>
+            <p className="mt-6 rounded-lg bg-muted/50 p-4 text-sm font-medium leading-relaxed text-foreground">
+              By clicking &quot;I Agree &amp; Continue&quot;, you agree to the
+              Terms &amp; Conditions. A {bookingTimeLimitMinutes}-minute timer
+              will start on the room arrangement step to complete your booking.
+            </p>
             <div className="mt-8 flex items-center justify-end gap-3 border-t pt-6">
               <Button
                 type="button"
@@ -606,6 +759,9 @@ export default function Page() {
                       onPayNow={handlePayNow}
                       isSubmitting={isSubmitting}
                       initialAddOns={addOns}
+                      minimumDownPaymentPct={minimumDownPaymentPct}
+                      minimumVatPct={minimumVatPct}
+                      vendorBankInfo={vendorBankInfo}
                     />
                   )}
                 </motion.div>
@@ -627,18 +783,31 @@ export default function Page() {
                 ) : (
                   <div />
                 )}
-                <Button
-                  type="button"
-                  disabled={
-                    (currentStep === 1 && !canProceedStep1) ||
-                    (currentStep === 2 && !canProceedStep2)
-                  }
-                  onClick={goNext}
-                  className="gap-2"
-                >
-                  {currentStep === 3 ? 'Skip' : 'Next'}
-                  <ArrowRightIcon className="size-4" />
-                </Button>
+                <div className="flex flex-col items-end gap-2">
+                  {currentStep === 1 && isAvailabilityExceeded && (
+                    <span className="text-sm font-semibold text-destructive">
+                      Not enough availability. Only {availability} seats left.
+                    </span>
+                  )}
+                  {currentStep === 1 && !extraBedValid && (
+                    <span className="text-sm font-semibold text-destructive">
+                      "Extra Bed" can only be added with an Adult Twin or Adult
+                      Double room.
+                    </span>
+                  )}
+                  <Button
+                    type="button"
+                    disabled={
+                      (currentStep === 1 && !canProceedStep1) ||
+                      (currentStep === 2 && !canProceedStep2)
+                    }
+                    onClick={goNext}
+                    className="gap-2"
+                  >
+                    {currentStep === 3 ? 'Skip' : 'Next'}
+                    <ArrowRightIcon className="size-4" />
+                  </Button>
+                </div>
               </div>
             )}
             {currentStep === 4 && (
@@ -669,8 +838,8 @@ export default function Page() {
           <AlertDialogHeader>
             <AlertDialogTitle>Before you continue</AlertDialogTitle>
             <AlertDialogDescription>
-              On the next screen, please complete your transaction within 10
-              minutes to avoid cancellation.
+              On the next screen, please complete your transaction within{' '}
+              {bookingTimeLimitMinutes}-minutes to avoid cancellation.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

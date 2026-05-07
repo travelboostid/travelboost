@@ -36,6 +36,7 @@ class Booking extends Model
         'platform_fee',
         'commission_amount',
         'grand_total',
+        'payment_mode',
         'contact_name',
         'contact_email',
         'contact_phone',

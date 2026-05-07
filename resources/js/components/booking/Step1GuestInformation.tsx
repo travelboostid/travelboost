@@ -401,6 +401,19 @@ function GuestDetailForm({
           />
         </div>
       </div>
+
+      {/* Row 4: Notes */}
+      <div className="mt-3 grid gap-1">
+        <Label className="text-[11px] text-muted-foreground">
+          Notes (optional)
+        </Label>
+        <Input
+          placeholder="Special requests, dietary needs, etc."
+          value={guest.note || ''}
+          onChange={(e) => onChange({ ...guest, note: e.target.value })}
+          className="h-9 text-sm"
+        />
+      </div>
     </motion.div>
   );
 }

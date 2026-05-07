@@ -30,6 +30,7 @@ class BookingPassenger extends Model
         'visa_file_path',
         'price_category',
         'price_amount',
+        'note',
     ];
 
     protected function casts(): array
