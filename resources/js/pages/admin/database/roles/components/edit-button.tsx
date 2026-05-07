@@ -12,16 +12,36 @@ import { Input } from '@/components/ui/input';
 import { update } from '@/routes/admin/database/roles';
 import { useForm } from '@inertiajs/react';
 import { AlertCircleIcon, PencilIcon } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
+import PermissionsSelector from './permissions-selector';
 
-export default function EditButton({ role }: { role: any }) {
+export default function EditButton({
+  role,
+  permissions,
+}: {
+  role: any;
+  permissions: any[];
+}) {
   const [open, setOpen] = useState(false);
+
+  const initialPermissionValue = useMemo(() => {
+    return permissions.reduce(
+      (acc, permission) => {
+        acc[permission.name] = role.permissions.some(
+          (rolePerm: any) => rolePerm.id === permission.id,
+        );
+        return acc;
+      },
+      {} as Record<string, boolean>,
+    );
+  }, [permissions, role.permissions]);
 
   const form = useForm({
     name: role.name,
     display_name: role.display_name,
     description: role.description,
+    permissions: initialPermissionValue,
   });
 
   const handleSubmit = () => {
@@ -38,6 +58,7 @@ export default function EditButton({ role }: { role: any }) {
       name: role.name,
       display_name: role.display_name,
       description: role.description,
+      permissions: initialPermissionValue,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
@@ -49,7 +70,7 @@ export default function EditButton({ role }: { role: any }) {
           <PencilIcon />
         </Button>
       </AlertDialogTrigger>
-      <AlertDialogContent>
+      <AlertDialogContent className="flex flex-col overflow-y-auto max-h-screen">
         <form className="space-y-8">
           <Field>
             <FieldLabel htmlFor="name">Name</FieldLabel>
@@ -80,6 +101,14 @@ export default function EditButton({ role }: { role: any }) {
               onChange={(e) => form.setData('description', e.target.value)}
             />
             <FieldError>{form.errors.description}</FieldError>
+          </Field>
+          <Field>
+            <FieldLabel>Permissions</FieldLabel>
+            <PermissionsSelector
+              permissions={permissions}
+              value={form.data.permissions}
+              onChange={(value) => form.setData('permissions', value)}
+            />
           </Field>
         </form>
         {form.data.name !== role.name && (

@@ -25,8 +25,8 @@ class UpdateRoleRequest extends FormRequest
       'name' => 'sometimes|nullable|string|max:255',
       'display_name' => 'sometimes|nullable|string|max:255',
       'description' => 'sometimes|nullable|string|max:255',
-      'permissions' => 'array',
-      'permissions.*' => 'boolean',
+      'permissions' => 'sometimes|array',
+      'permissions.*' => 'sometimes|boolean',
     ];
   }
 }

@@ -25,6 +25,8 @@ class UpdateRoleRequest extends FormRequest
       'name' => ['sometimes', 'string', 'max:255'],
       'display_name' => ['sometimes', 'string', 'max:255'],
       'description' => ['sometimes', 'string', 'max:255'],
+      'permissions' => ['sometimes', 'array'],
+      'permissions.*' => ['sometimes', 'boolean'],
     ];
   }
 }
