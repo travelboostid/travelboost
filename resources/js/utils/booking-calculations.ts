@@ -13,15 +13,20 @@ export function calculateBookingPricing(
     (sum, g) => sum + (g.price ?? 0),
     0,
   );
+  const promotionDiscount = guests.reduce(
+    (sum, g) => sum + ((g.originalPrice ?? g.price ?? 0) - (g.price ?? 0)),
+    0,
+  );
   const paxCount = guests.length;
   const platformFee = paxCount * PLATFORM_FEE_PER_PAX;
   const ppn = Math.round(subtotalGuests * (vatPct / 100));
   const agentFee = agentCommission;
   const totalPrice = subtotalGuests + platformFee + ppn + agentFee;
-  const totalPayment = totalPrice; // update here when discounts are introduced
+  const totalPayment = totalPrice;
 
   return {
     subtotalGuests,
+    promotionDiscount,
     platformFee,
     ppn,
     agentCommission: agentFee,

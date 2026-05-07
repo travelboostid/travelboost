@@ -20,7 +20,11 @@ export interface TourPrice {
   tourPriceId: number;
   categoryName: string; // price_categories.name (e.g. "Single", "Double")
   description: string; // price_categories.description (e.g. "Single room (1 person)")
-  price: number; // tour_prices.price
+  price: number; // tour_prices.price (base price)
+  promotionRate: number; // percentage discount (e.g. 10 = 10%)
+  promotion: number; // fixed discount amount
+  commissionRate: number; // percentage commission
+  commission: number; // fixed commission amount
 }
 
 export interface RoomType {
@@ -41,7 +45,8 @@ export interface GuestEntry {
   placeOfBirth: string;
   priceCategory: string | null; // price_categories.name value
   tourPriceId: number; // FK to tour_prices.id
-  price: number; // tour_prices.price of selected row
+  price: number; // discounted price (after promotion)
+  originalPrice: number; // base price before promotion discount
   roomTypeDescription: string; // price_categories.description (auto-derived)
   note: string;
 }
@@ -83,6 +88,7 @@ export interface UploadedDocument {
 
 export interface BookingPricing {
   subtotalGuests: number;
+  promotionDiscount: number; // total discount from promotions
   platformFee: number;
   ppn: number;
   agentCommission: number;
