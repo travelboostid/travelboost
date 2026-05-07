@@ -80,8 +80,8 @@ export default function EditRoleButton({
         </Tooltip>
       </DialogTrigger>
 
-      <DialogContent className="max-h-[90dvh] flex flex-col">
-        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+      <DialogContent className="flex flex-col overflow-y-auto max-h-screen">
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1">
           <DialogHeader>
             <DialogTitle>Edit Role</DialogTitle>
             <DialogDescription>
@@ -90,7 +90,7 @@ export default function EditRoleButton({
             </DialogDescription>
           </DialogHeader>
 
-          <FieldGroup className="flex flex-col flex-1 min-h-0">
+          <FieldGroup>
             <Field>
               <Label htmlFor="name">Code</Label>
               <Input
@@ -128,16 +128,14 @@ export default function EditRoleButton({
               />
               <InputError message={form.errors.description} />
             </Field>
-            <Field className="flex flex-col flex-1 min-h-0">
+            <Field>
               <Label>Permissions</Label>
-              <div className="flex flex-col flex-1 min-h-75 overflow-y-auto">
-                <PermissionsSelector
-                  disabled={shouldDisabled}
-                  permissions={permissions}
-                  value={form.data.permissions}
-                  onChange={(value) => form.setData('permissions', value)}
-                />
-              </div>
+              <PermissionsSelector
+                disabled={shouldDisabled}
+                permissions={permissions}
+                value={form.data.permissions}
+                onChange={(value) => form.setData('permissions', value)}
+              />
             </Field>
           </FieldGroup>
 

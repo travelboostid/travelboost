@@ -10,6 +10,7 @@ This repository contains the core application along with tools to support develo
 - [Standard Operating Procedures (SOP)](./docs/sop.md)
 - [Development Environment Setup](./docs/development-environment-setup.md)
 - [Deployment Guidelines](./docs/deployments.md)
+- [XDebug Setup](./docs/debugging.md)
 - [Architecture Overview](./docs/architecture.md)
 - [Translations](./docs/technical/translations.md)
 

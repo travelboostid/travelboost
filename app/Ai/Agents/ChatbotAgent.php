@@ -295,9 +295,7 @@ class ChatbotAgent implements Agent, Conversational
     $usageCost = $this->getUsageCost();
     $userCost = $this->userCostPerInteraction;
     DB::transaction(function () use ($userCost, $usageCost) {
-      $credit = $this->credit->lockForUpdate()->first();
-
-      $credit->decrement('balance', $userCost);
+      AiCredit::where('id', $this->credit->id)->decrement('balance', $userCost);
 
       AiUsageLog::create([
         'company_id' => $this->company->id,

@@ -30,6 +30,7 @@ function assert(condition, message) {
 
 function ssh(cmd) {
   const { sshUser, sshHost } = CONFIG;
+
   return `ssh ${sshUser}@${sshHost} "${cmd}"`;
 }
 
@@ -37,46 +38,55 @@ function ssh(cmd) {
 try {
   console.log('🚀 Deploying...');
 
-  const { branch, remotePath, buildPath } = CONFIG;
+  const { branch, remotePath, buildPath, sshUser, sshHost } = CONFIG;
 
   // --- 0. Pre-checks ---
   const env = fs.readFileSync('.env', 'utf-8');
-  assert(env.includes('APP_ENV=development\n'), 'APP_ENV must be development');
+
+  assert(env.includes('APP_ENV=development'), 'APP_ENV must be development');
+
   // --- 1. Git safety checks ---
   const currentBranch = getOutput('git rev-parse --abbrev-ref HEAD');
+
   assert(
     currentBranch === branch,
     `Current branch is "${currentBranch}", must be "${branch}"`,
   );
 
   const status = getOutput('git status --porcelain');
+
   assert(status === '', 'You have uncommitted changes');
 
   run('git fetch origin');
 
   const local = getOutput('git rev-parse HEAD');
   const remote = getOutput(`git rev-parse origin/${branch}`);
+
   assert(
     local === remote,
     `Local branch is not up-to-date with origin/${branch}`,
   );
 
-  // --- 2. Update VPS backend ---
+  // --- 2. Upload .env ---
+  run(`scp .env ${sshUser}@${sshHost}:${remotePath}/.env`);
+
+  // --- 3. Update VPS backend ---
   run(
     ssh(
       `cd ${remotePath} && ` +
         `git pull origin ${branch} && ` +
         `composer install --no-dev --optimize-autoloader && ` +
+        `php artisan optimize:clear && ` +
         `php artisan migrate --force`,
     ),
   );
 
-  // --- 3. Build frontend ---
+  // --- 4. Build frontend ---
   run('pnpm install --frozen-lockfile');
   run('pnpm build');
 
-  // --- 4. Upload assets ---
-  const remoteBuildPath = `${CONFIG.sshUser}@${CONFIG.sshHost}:${remotePath}/${buildPath}`;
+  // --- 5. Upload assets ---
+  const remoteBuildPath = `${sshUser}@${sshHost}:${remotePath}/${buildPath}`;
 
   try {
     run(`rsync -avz --delete ${buildPath}/ ${remoteBuildPath}/`);
