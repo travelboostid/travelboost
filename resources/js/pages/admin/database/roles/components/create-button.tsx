@@ -13,14 +13,16 @@ import { useForm } from '@inertiajs/react';
 import { PlusIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
+import PermissionsSelector from './permissions-selector';
 
-export default function CreateButton() {
+export default function CreateButton({ permissions }: { permissions: any[] }) {
   const [open, setOpen] = useState(false);
 
   const form = useForm({
     name: '',
     display_name: '',
     description: '',
+    permissions: {},
   });
 
   const handleSubmit = () => {
@@ -45,7 +47,7 @@ export default function CreateButton() {
           <PlusIcon /> Create Role
         </Button>
       </AlertDialogTrigger>
-      <AlertDialogContent>
+      <AlertDialogContent className="flex flex-col overflow-y-auto max-h-screen">
         <form className="space-y-8">
           <Field>
             <FieldLabel htmlFor="name">Name</FieldLabel>
@@ -76,6 +78,14 @@ export default function CreateButton() {
               onChange={(e) => form.setData('description', e.target.value)}
             />
             <FieldError>{form.errors.description}</FieldError>
+          </Field>
+          <Field>
+            <FieldLabel>Permissions</FieldLabel>
+            <PermissionsSelector
+              permissions={permissions}
+              value={form.data.permissions}
+              onChange={(value) => form.setData('permissions', value)}
+            />
           </Field>
         </form>
         <AlertDialogFooter>

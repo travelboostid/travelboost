@@ -3,7 +3,13 @@ import { DataTable } from '@/components/data-table/data-table';
 import { DataTableColumnHeader } from '@/components/data-table/data-table-column-header';
 import { DataTableToolbar } from '@/components/data-table/data-table-toolbar';
 import AdminDashboardLayout from '@/components/layouts/admin-dashboard';
+import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { useDataTable } from '@/hooks/use-data-table';
 import type { Column, ColumnDef } from '@tanstack/react-table';
 import dayjs from 'dayjs';
@@ -16,14 +22,41 @@ import EditButton from './components/edit-button';
 import { EmptyRoles } from './components/empty-roles';
 dayjs.extend(relativeTime);
 
+function RolePermissions({ role }: { role: any }) {
+  const permissionsToDisplay = role.permissions.slice(0, 3);
+  const remainingPermissionsCount =
+    role.permissions.length - permissionsToDisplay.length;
+
+  return (
+    <div>
+      {permissionsToDisplay.map((perm: any) => (
+        <Tooltip key={perm.id}>
+          <TooltipTrigger>
+            <Badge key={perm.id} className="mr-1 mb-1">
+              {perm.name}
+            </Badge>
+          </TooltipTrigger>
+          <TooltipContent>
+            {perm.description || 'No description provided.'}
+          </TooltipContent>
+        </Tooltip>
+      ))}
+      {remainingPermissionsCount > 0 && (
+        <Badge className="mr-1 mb-1">+{remainingPermissionsCount} more</Badge>
+      )}
+    </div>
+  );
+}
+
 type PageProps = {
   data: {
     data: Company[];
     total: number;
   };
+  permissions: any[];
 };
 
-export default function Page({ data }: PageProps) {
+export default function Page({ data, permissions }: PageProps) {
   const columns = useMemo<ColumnDef<Company>[]>(
     () => [
       {
@@ -83,11 +116,18 @@ export default function Page({ data }: PageProps) {
         cell: ({ cell }) => <div>{cell.getValue<any>()}</div>,
       },
       {
+        id: 'permissions',
+        header: ({ column }: { column: Column<Company, unknown> }) => (
+          <DataTableColumnHeader column={column} label="Permissions" />
+        ),
+        cell: ({ cell }) => <RolePermissions role={cell.row.original} />,
+      },
+      {
         id: 'actions',
         cell: ({ cell }) => {
           return (
             <div className="flex gap-1">
-              <EditButton role={cell.row.original} />
+              <EditButton role={cell.row.original} permissions={permissions} />
               <DeleteButton role={cell.row.original} />
             </div>
           );
@@ -95,7 +135,7 @@ export default function Page({ data }: PageProps) {
         size: 32,
       },
     ],
-    [],
+    [permissions],
   );
 
   const { table } = useDataTable({
@@ -119,11 +159,13 @@ export default function Page({ data }: PageProps) {
     <AdminDashboardLayout
       containerClassName="p-4"
       breadcrumb={[{ title: 'Database' }, { title: 'Roles' }]}
-      applet={<CreateButton />}
+      applet={<CreateButton permissions={permissions} />}
     >
-      <DataTable table={table} renderEmptyState={<EmptyRoles />}>
-        <DataTableToolbar table={table} />
-      </DataTable>
+      <div className="p-4">
+        <DataTable table={table} renderEmptyState={<EmptyRoles />}>
+          <DataTableToolbar table={table} />
+        </DataTable>
+      </div>
     </AdminDashboardLayout>
   );
 }

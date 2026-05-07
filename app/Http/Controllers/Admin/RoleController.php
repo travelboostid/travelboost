@@ -11,6 +11,7 @@ use App\Models\Company;
 use App\Models\Permission;
 use App\Models\Role;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Inertia\Inertia;
 
 class RoleController extends Controller
@@ -21,7 +22,9 @@ class RoleController extends Controller
   public function index(IndexAgentRequest $request)
   {
     $validated = $request->validated();
+    $permissions = Permission::all();
     $data = Role::query()
+      ->with(['permissions']) // Eager load permissions
       ->when($validated['name'] ?? null, function ($query, $name) {
         $query->where('name', 'like', "%$name%");
       })
@@ -29,6 +32,7 @@ class RoleController extends Controller
 
     return Inertia::render('admin/database/roles/index', [
       'data' => $data,
+      'permissions' => $permissions,
     ]);
   }
 
@@ -46,7 +50,9 @@ class RoleController extends Controller
   public function store(StoreRoleRequest $request)
   {
     $validated = $request->validated();
-    Role::create($validated);
+    $permissions = Arr::where($validated['permissions'] ?? [], fn($v) => $v);
+    $role = Role::create($validated);
+    $role->syncPermissions(array_keys($permissions));
     return redirect()->back()->with('success', 'Role created successfully');
   }
 
@@ -72,7 +78,14 @@ class RoleController extends Controller
   public function update(UpdateRoleRequest $request, Role $role)
   {
     $validated = $request->validated();
+
+    // Filter out empty permissions
+    $permissions = Arr::where($validated['permissions'] ?? [], fn($v) => $v);
+
     $role->update($validated);
+    if (isset($validated['permissions'])) {
+      $role->syncPermissions(array_keys($permissions));
+    }
     return redirect()->back()->with('success', 'Role updated successfully');
   }
 
