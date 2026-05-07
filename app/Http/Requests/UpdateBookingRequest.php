@@ -35,9 +35,17 @@ class UpdateBookingRequest extends FormRequest
             'contact_email' => ['required', 'email', 'max:255'],
             'contact_phone' => ['required', 'string', 'max:50'],
             'contact_notes' => ['nullable', 'string', 'max:1000'],
+            'pax_adult' => ['required', 'integer', 'min:1'],
+            'pax_child' => ['required', 'integer', 'min:0'],
+            'pax_infant' => ['required', 'integer', 'min:0'],
+            'total_price' => ['required', 'numeric', 'min:0'],
+            'tax_amount' => ['required', 'numeric', 'min:0'],
+            'platform_fee' => ['required', 'numeric', 'min:0'],
+            'commission_amount' => ['required', 'numeric', 'min:0'],
+            'grand_total' => ['required', 'numeric', 'min:0'],
 
             'passengers' => ['required', 'array', 'min:1'],
-            'passengers.*.id' => ['required', 'integer', 'exists:booking_passengers,id'],
+            'passengers.*.id' => ['nullable', 'integer', 'exists:booking_passengers,id'],
             'passengers.*.title' => ['nullable', 'string', 'max:20'],
             'passengers.*.first_name' => ['required', 'string', 'max:255'],
             'passengers.*.last_name' => ['nullable', 'string', 'max:255'],
@@ -51,6 +59,21 @@ class UpdateBookingRequest extends FormRequest
             'passengers.*.visa_number' => ['nullable', 'string', 'max:255'],
             'passengers.*.price_category' => ['nullable', 'string', 'max:255'],
             'passengers.*.price_amount' => ['nullable', 'numeric'],
+            'passengers.*.room_type' => ['nullable', 'string', 'max:255'],
+            'passengers.*.room_number' => ['nullable', 'string', 'max:50'],
+            'passengers.*.note' => ['nullable', 'string', 'max:1000'],
+
+            'rooms' => ['nullable', 'array'],
+            'rooms.*.room_type' => ['required_with:rooms', 'string', 'max:255'],
+            'rooms.*.room_label' => ['nullable', 'string', 'max:255'],
+            'rooms.*.bed_layout' => ['nullable', 'array'],
+            'rooms.*.bed_layout.*.bedType' => ['nullable', 'string', 'max:255'],
+            'rooms.*.bed_layout.*.guestId' => ['nullable', 'string', 'max:255'],
+            'rooms.*.bed_layout.*.position' => ['nullable', 'array'],
+
+            'addons' => ['nullable', 'array'],
+            'addons.*.name' => ['required_with:addons', 'string', 'max:255'],
+            'addons.*.price' => ['required_with:addons', 'numeric', 'min:0'],
         ];
     }
 
