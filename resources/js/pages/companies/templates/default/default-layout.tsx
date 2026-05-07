@@ -67,24 +67,30 @@ export default function DefaultLayout({
 
             {/* DESKTOP MENU */}
             <nav className="hidden md:flex items-center gap-8 absolute left-1/2 -translate-x-1/2">
-              <a
+              <Link
                 href="/"
                 className="text-muted-foreground hover:text-foreground transition-colors font-medium"
               >
                 Home
-              </a>
-              <a
+              </Link>
+              <Link
                 href="/tours"
                 className="text-muted-foreground hover:text-foreground transition-colors font-medium"
               >
                 Tours
-              </a>
-              <a
-                href="#about-us"
+              </Link>
+              <Link
+                href="/mybookings"
+                className="text-muted-foreground hover:text-foreground transition-colors font-medium"
+              >
+                My Bookings
+              </Link>
+              <Link
+                href="/#about-us"
                 className="text-muted-foreground hover:text-foreground transition-colors font-medium"
               >
                 About Us
-              </a>
+              </Link>
             </nav>
 
             {/* DESKTOP BUTTON */}
@@ -132,27 +138,34 @@ export default function DefaultLayout({
           {isMenuOpen && (
             <div className="md:hidden py-4 border-t border-border animate-in slide-in-from-top-2">
               <nav className="flex flex-col gap-4">
-                <a
+                <Link
                   href="/"
                   className="font-bold text-muted-foreground hover:text-foreground transition-colors"
                   onClick={() => setIsMenuOpen(false)}
                 >
                   Home
-                </a>
-                <a
+                </Link>
+                <Link
                   href="/tours"
                   className="font-bold text-muted-foreground hover:text-foreground transition-colors"
                   onClick={() => setIsMenuOpen(false)}
                 >
                   Tours
-                </a>
-                <a
+                </Link>
+                <Link
+                  href="/mybookings"
+                  className="font-bold text-muted-foreground hover:text-foreground transition-colors"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  My Bookings
+                </Link>
+                <Link
                   href="#about-us"
                   className="font-bold text-muted-foreground hover:text-foreground transition-colors"
                   onClick={() => setIsMenuOpen(false)}
                 >
                   About Us
-                </a>
+                </Link>
 
                 <div className="flex flex-col gap-2 pt-4 border-t border-border mt-2">
                   {editMode ? (

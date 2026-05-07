@@ -7,6 +7,7 @@ use App\Events\TourCreated;
 use App\Events\TourUpdated;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Tour extends Model
 {
@@ -77,10 +78,10 @@ class Tour extends Model
   }
 
   /*
-      |--------------------------------------------------------------------------
-      | Relationships
-      |--------------------------------------------------------------------------
-      */
+        |--------------------------------------------------------------------------
+        | Relationships
+        |--------------------------------------------------------------------------
+        */
 
   public function category()
   {
@@ -126,15 +127,27 @@ class Tour extends Model
   {
     return $this->belongsTo(Country::class, 'country_id');
   }
+
   public function schedules()
   {
     return $this->hasMany(TourSchedule::class, 'tour_id');
+  }
+
+  public function addOns()
+  {
+    return $this->hasMany(TourAddOn::class);
+  }
+
+  public function bookings()
+  {
+    return $this->hasMany(Booking::class, 'tour_id');
   }
 
   public function availabilities()
   {
     return $this->hasMany(TourAvailability::class, 'tour_id');
   }
+
   public function agents()
   {
     return $this->belongsToMany(
@@ -145,16 +158,8 @@ class Tour extends Model
     );
   }
 
-  public function addOns()
+  public function likes()
   {
-    return $this->hasMany(TourAddOn::class);
-  }
-
-  /**
-   * Get all bookings associated with the tour.
-   */
-  public function bookings()
-  {
-    return $this->hasMany(Booking::class, 'tour_id');
+    return $this->hasMany(TourLike::class);
   }
 }

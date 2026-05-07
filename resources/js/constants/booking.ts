@@ -27,7 +27,7 @@ export const TITLE_OPTIONS: Record<string, string[]> = {
 // ─── Category Filter (maps guest type → allowed price_categories.name values) ──
 
 export const CATEGORY_FILTER: Record<string, string[]> = {
-  adult: ['Single', 'Double', 'Triple'],
+  adult: ['Single', 'Double', 'Triple', 'Adult Single', 'Adult Double', 'Adult Twin', 'Adult Triple', 'Adult Extra Bed'],
   child: ['Child With Bed', 'Child No Bed'],
   infant: ['Infant', 'infant'],
 };
@@ -38,6 +38,11 @@ export const PRICE_CATEGORY_LABELS: Record<string, string> = {
   Single: 'Single',
   Double: 'Double',
   Triple: 'Triple',
+  'Adult Single': 'Adult Single',
+  'Adult Double': 'Adult Double',
+  'Adult Twin': 'Adult Twin',
+  'Adult Triple': 'Adult Triple',
+  'Adult Extra Bed': 'Adult Extra Bed',
   'Child With Bed': 'Child With Bed',
   'Child No Bed': 'Child No Bed',
   Infant: 'Infant',
@@ -128,6 +133,20 @@ export const formatCurrency = (value: number): string =>
     currency: 'IDR',
     maximumFractionDigits: 0,
   }).format(value);
+
+export const formatIDR = (
+  value: number | string | null | undefined,
+): string => {
+  if (value === null || value === undefined) return '—';
+  const num = typeof value === 'string' ? parseFloat(value) : value;
+  if (Number.isNaN(num)) return '—';
+
+  return new Intl.NumberFormat('id-ID', {
+    style: 'currency',
+    currency: 'IDR',
+    minimumFractionDigits: 0,
+  }).format(num);
+};
 
 export const formatDate = (dateStr: string): string => {
   const date = new Date(dateStr);

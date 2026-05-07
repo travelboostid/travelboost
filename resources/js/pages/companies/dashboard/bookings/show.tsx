@@ -23,7 +23,7 @@ import type {
 import { calculateBookingPricing } from '@/utils/booking-calculations';
 import { Head } from '@inertiajs/react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ArrowLeftIcon, ArrowRightIcon, InfoIcon } from 'lucide-react';
+import { ArrowLeftIcon, InfoIcon } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 // ---------------------------------------------------------------------------
@@ -46,6 +46,7 @@ type Passenger = {
   passport_expiry_date: string | null;
   visa_number: string | null;
   room_type: string | null;
+  note: string | null;
 };
 
 type BookingData = {
@@ -78,6 +79,8 @@ type PageProps = {
   booking: BookingData;
   tourPrices: TourPrice[];
   addOns: AddOnItem[];
+  minimumDownPaymentPct: number;
+  minimumVatPct: number;
 };
 
 // ---------------------------------------------------------------------------
@@ -107,6 +110,7 @@ function passengersToGuests(passengers: Passenger[]): GuestEntry[] {
       tourPriceId: 0,
       price: p.price_amount ?? 0,
       roomTypeDescription: p.room_type ?? '',
+      note: p.note ?? '',
     };
   });
 }
@@ -139,21 +143,33 @@ function passengersToTravelDocs(
 }
 
 function buildRoomsConfig(rooms: any[]): RoomConfig[] {
-  return rooms.map((r, idx) => ({
-    id: `room-${idx}`,
-    type: r.room_type,
-    label: r.room_label,
-    capacity: r.capacity || 2,
-    guestIds: Array.isArray(r.guest_ids) ? r.guest_ids : [],
-    sharingGuestIds: Array.isArray(r.sharing_guest_ids) ? r.sharing_guest_ids : [],
-  }));
+  return rooms.map((r, idx) => {
+    const bedLayout: { guestId?: string }[] = Array.isArray(r.bed_layout)
+      ? r.bed_layout
+      : [];
+
+    return {
+      id: `room-${idx}`,
+      type: r.room_type,
+      label: r.room_label,
+      capacity: r.capacity || 2,
+      guestIds: bedLayout.map((b) => b.guestId).filter(Boolean) as string[],
+      sharingGuestIds: [],
+    };
+  });
 }
 
 // ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
 
-export default function Page({ booking, tourPrices, addOns }: PageProps) {
+export default function Page({
+  booking,
+  tourPrices,
+  addOns,
+  minimumDownPaymentPct,
+  minimumVatPct,
+}: PageProps) {
   const { company } = usePageSharedDataProps();
   const isAgent = company.type === 'agent';
 
@@ -162,6 +178,8 @@ export default function Page({ booking, tourPrices, addOns }: PageProps) {
       booking={booking}
       tourPrices={tourPrices}
       addOns={addOns}
+      minimumDownPaymentPct={minimumDownPaymentPct}
+      minimumVatPct={minimumVatPct}
       company={company}
       isAgent={isAgent}
     />
@@ -176,12 +194,16 @@ function ReadOnlyWizard({
   booking,
   tourPrices,
   addOns: initialAddOns,
+  minimumDownPaymentPct,
+  minimumVatPct,
   company,
   isAgent,
 }: {
   booking: BookingData;
   tourPrices: TourPrice[];
   addOns: AddOnItem[];
+  minimumDownPaymentPct: number;
+  minimumVatPct: number;
   company: any;
   isAgent: boolean;
 }) {
@@ -225,14 +247,14 @@ function ReadOnlyWizard({
     commission: 0,
   };
   const pricing = useMemo(
-    () => calculateBookingPricing(guests, vendor.commission ?? 0),
-    [guests, vendor],
+    () => calculateBookingPricing(guests, vendor.commission ?? 0, minimumVatPct),
+    [guests, vendor, minimumVatPct],
   );
 
   // ── Navigation ─────────────────────────────────────────────────────
-  const goNext = () => {
-    setDirection(1);
-    setCurrentStep((s) => Math.min(4, s + 1) as WizardStepId);
+  const goToStep = (step: WizardStepId) => {
+    setDirection(step > currentStep ? 1 : -1);
+    setCurrentStep(step);
   };
 
   const goBack = () => {
@@ -306,7 +328,10 @@ function ReadOnlyWizard({
 
                 {/* Step Indicator */}
                 <div className="pb-4">
-                  <WizardStepIndicator currentStep={currentStep} />
+                  <WizardStepIndicator
+                    currentStep={currentStep}
+                    onStepClick={goToStep}
+                  />
                 </div>
 
                 {/* Booking Info Card */}
@@ -383,6 +408,8 @@ function ReadOnlyWizard({
                         onPayNow={() => {}}
                         isSubmitting={false}
                         initialAddOns={initialAddOns}
+                        minimumDownPaymentPct={minimumDownPaymentPct}
+                        minimumVatPct={minimumVatPct}
                       />
                     )}
                   </motion.div>
@@ -390,7 +417,7 @@ function ReadOnlyWizard({
               </div>
 
               {/* Navigation (Pointer events re-enabled for buttons) */}
-              <div className="flex items-center justify-between pb-12 pt-4 pointer-events-auto">
+              <div className="flex items-center pb-12 pt-4 pointer-events-auto">
                 <Button
                   type="button"
                   variant="outline"
@@ -399,13 +426,6 @@ function ReadOnlyWizard({
                 >
                   <ArrowLeftIcon className="size-4" /> Back
                 </Button>
-
-                {currentStep < 4 && (
-                  <Button type="button" onClick={goNext} className="gap-2">
-                    Next
-                    <ArrowRightIcon className="size-4" />
-                  </Button>
-                )}
               </div>
             </div>
 

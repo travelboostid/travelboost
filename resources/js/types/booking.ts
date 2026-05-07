@@ -43,6 +43,7 @@ export interface GuestEntry {
   tourPriceId: number; // FK to tour_prices.id
   price: number; // tour_prices.price of selected row
   roomTypeDescription: string; // price_categories.description (auto-derived)
+  note: string;
 }
 
 export interface TravelDocumentEntry {

@@ -45,7 +45,7 @@ function TravelDocumentCard({
   doc: TravelDocumentEntry;
   guestIndex: number;
   guestName: string;
-  guestType: 'adult' | 'child';
+  guestType: 'adult' | 'child' | 'infant';
   onChange: (updated: TravelDocumentEntry) => void;
   departureDate: string;
 }) {
@@ -90,7 +90,9 @@ function TravelDocumentCard({
             'flex size-7 items-center justify-center rounded-full text-xs font-bold',
             isAdult
               ? 'bg-primary/10 text-primary'
-              : 'bg-amber-500/10 text-amber-600',
+              : guestType === 'child'
+                ? 'bg-amber-500/10 text-amber-600'
+                : 'bg-purple-500/10 text-purple-600',
           )}
         >
           {guestIndex + 1}
@@ -104,7 +106,9 @@ function TravelDocumentCard({
             'px-2 py-0 text-[10px] font-bold uppercase',
             isAdult
               ? 'bg-primary/10 text-primary'
-              : 'bg-amber-500/10 text-amber-600',
+              : guestType === 'child'
+                ? 'bg-amber-500/10 text-amber-600'
+                : 'bg-purple-500/10 text-purple-600',
           )}
         >
           {guestType}
