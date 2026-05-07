@@ -138,6 +138,10 @@ class BookingController extends Controller
                         'categoryName' => $price->priceCategory?->name ?? 'Single',
                         'description' => $price->priceCategory?->description ?? '',
                         'price' => (float) $price->price,
+                        'promotionRate' => (float) $price->promotion_rate,
+                        'promotion' => (float) $price->promotion,
+                        'commissionRate' => (float) $price->commission_rate,
+                        'commission' => (float) $price->commission,
                     ];
                 })
                 ->values(),
