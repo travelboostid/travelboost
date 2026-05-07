@@ -8,6 +8,9 @@ return [
     ['name' => 'company.query', 'display_name' => 'Query Company', 'description' => 'Allow viewing companies'],
     ['name' => 'company.mutation', 'display_name' => 'Mutate Company', 'description' => 'Allow creating, editing, or deleting companies'],
 
+    ['name' => 'company-settings.query', 'display_name' => 'Query Company Settings', 'description' => 'Allow viewing company settings'],
+    ['name' => 'company-settings.mutation', 'display_name' => 'Mutate Company Settings', 'description' => 'Allow creating, editing, or deleting company settings'],
+
     ['name' => 'company-team.query', 'display_name' => 'Query Company Team', 'description' => 'Allow viewing company teams'],
     ['name' => 'company-team.mutation', 'display_name' => 'Mutate Company Team', 'description' => 'Allow creating, editing, or deleting company teams'],
 
@@ -94,6 +97,9 @@ return [
         'withdrawal.query',
         'withdrawal.mutation',
 
+        'payment.query',
+        'payment.mutation',
+
         'bank-account.query',
         'bank-account.mutation',
 
@@ -105,6 +111,9 @@ return [
 
         'role.query',
         'role.mutation',
+
+        'app-configuration.query',
+        'app-configuration.mutation',
       ],
     ],
     [
@@ -130,11 +139,26 @@ return [
         'company.query',
         'company.mutation',
 
+        'company-settings.query',
+        'company-settings.mutation',
+
         'company-team.query',
         'company-team.mutation',
 
         'wallet.query',
         'wallet.mutation',
+
+        'wallet-transaction.query',
+        'wallet-transaction.mutation',
+
+        'withdrawal.query',
+        'withdrawal.mutation',
+
+        'payment.query',
+        'payment.mutation',
+
+        'bank-account.query',
+        'bank-account.mutation',
 
         'tour.query',
         'tour.mutation',
@@ -158,6 +182,9 @@ return [
 
         'tour.query',
         'tour.mutation',
+
+        'tour-category.query',
+        'tour-category.mutation',
       ],
     ],
   ],
