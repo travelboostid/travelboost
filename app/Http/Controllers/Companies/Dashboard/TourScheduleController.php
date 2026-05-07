@@ -40,6 +40,8 @@ class TourScheduleController extends Controller
               }
             }
 
+            $newlyCreatedSchedules = [];
+
             foreach ($data['schedules'] as $schedule) {
 
                 $isNewSchedule = empty($schedule['id']);
@@ -58,6 +60,10 @@ class TourScheduleController extends Controller
                     ]
                 );
 
+                if ($isNewSchedule) {
+                    $newlyCreatedSchedules[] = $scheduleModel;
+                }
+
                 // ================= PRICE =================
                 $existingPriceIds = $scheduleModel->prices()->pluck('id')->toArray();
 
@@ -66,12 +72,14 @@ class TourScheduleController extends Controller
                     ->filter()
                     ->toArray();
 
-                if (!$isNewSchedule && !empty($incomingPriceIds)) {
-                  $deletePriceIds = array_diff($existingPriceIds, $incomingPriceIds);
-                  if (!empty($deletePriceIds)) {
-                      TourPrice::whereIn('id', $deletePriceIds)->delete();
-                  }
-                }
+                $incomingCategoryIds = collect($schedule['prices'] ?? [])
+                    ->pluck('room_type_id')
+                    ->filter()
+                    ->toArray();
+
+                $scheduleModel->prices()
+                    ->whereNotIn('price_category_id', $incomingCategoryIds)
+                    ->delete();
 
                 foreach ($schedule['prices'] ?? [] as $price) {
 
@@ -97,14 +105,12 @@ class TourScheduleController extends Controller
 
                     TourPrice::updateOrCreate(
                         [
-                          'id' => $price['id'] ?? null,
                           'schedule_id' => $scheduleModel->id,
+                          'price_category_id' => $price['room_type_id'],
                         ],
                         [
-                            'schedule_id'       => $scheduleModel->id,
                             'company_id'        => $company->id,
                             'tour_code'         => $tour->code,
-                            'price_category_id' => $price['room_type_id'],
                             'price'             => (int) ($price['price'] ?? 0),
                             'currency'          => $tour->currency,
                             'promotion_rate'    => $promotionRate,
@@ -114,12 +120,59 @@ class TourScheduleController extends Controller
                         ]
                     );
                 }
+
+                // ADD ONS
+                if (isset($schedule['add_ons'])) {
+
+                    $incomingDescriptions = collect($schedule['add_ons'])
+                        ->pluck('description')
+                        ->filter()
+                        ->toArray();
+
+                    // delete yg sudah tidak ada
+                    $scheduleModel->addOns()
+                        ->whereNotIn('description', $incomingDescriptions)
+                        ->delete();
+
+                    foreach ($schedule['add_ons'] as $addon) {
+
+                        if (empty($addon['description'])) {
+                            continue;
+                        }
+
+                        $scheduleModel->addOns()->updateOrCreate(
+                            [
+                                'company_id'  => $company->id,
+                                'tour_id'     => $tour->id,
+                                'schedule_id' => $scheduleModel->id,
+                                'description' => $addon['description'],
+                            ],
+                            [
+                                'price'       => $addon['price'] ?? 0,
+                                'edit_status' => $addon['edit_status'] ?? false,
+                            ]
+                        );
+                    }
+                }
+
+                // AVAILABILITY
+                if (isset($schedule['availability'])) {
+                    $scheduleModel->availability()->updateOrCreate(
+                        ['schedule_id' => $scheduleModel->id],
+                        [
+                            'max_pax' => $schedule['availability']['max_pax'] ?? 0,
+                            'available' => $schedule['availability']['available'] ?? 0,
+                        ]
+                    );
+                }
             }
 
             DB::commit();
 
-            return back()->with('success', 'Schedules saved');
-
+            return response()->json([
+                'success' => true,
+                'schedules' => $newlyCreatedSchedules,
+            ]);
         } catch (\Throwable $e) {
             DB::rollBack();
 

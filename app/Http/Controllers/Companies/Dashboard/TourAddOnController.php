@@ -23,69 +23,56 @@ class TourAddOnController extends Controller
 
         $companyId = $company->id;
 
-        $items = collect($data['add_ons'])
-            ->map(function ($item) use ($companyId) {
-                return [
-                    'company_id'  => $companyId,
-                    'tour_id'     => $item['tour_id'],
-                    'schedule_id' => $item['schedule_id'],
-                    'description' => $item['description'],
-                    'price'       => $item['price'] ?? 0,
-                    'edit_status' => $item['edit_status'] ?? false,
-                    'created_at'  => now(),
-                    'updated_at'  => now(),
-                ];
-            })
-            ->values()
-            ->all();
-
         DB::transaction(function () use ($companyId, $data) {
-          $scheduleIds = collect($data['schedule_ids'] ?? []);
 
-          if (empty($data['add_ons'])) {
-              TourAddOn::where('company_id', $companyId)
-                  ->whereIn('schedule_id', $scheduleIds)
-                  ->delete();
+            $incoming = collect($data['add_ons']);
 
-              return;
-          }
-          $grouped = collect($data['add_ons'])
-              ->groupBy('schedule_id');
+            /*
+            |--------------------------------------------------------------------------
+            | DELETE MISSING ROWS
+            |--------------------------------------------------------------------------
+            */
 
-          foreach ($grouped as $scheduleId => $items) {
+            $scheduleIds = $incoming->pluck('schedule_id')->unique();
 
-              $incomingIds = $items
-                  ->pluck('id')
-                  ->filter()
-                  ->values();
+            foreach ($scheduleIds as $scheduleId) {
 
-              $isNewSchedule = $incomingIds->isEmpty();
+                $descriptions = $incoming
+                    ->where('schedule_id', $scheduleId)
+                    ->pluck('description')
+                    ->toArray();
 
-              $query = TourAddOn::where('company_id', $companyId)
-                  ->where('tour_id', $items->first()['tour_id'])
-                  ->where('schedule_id', $scheduleId);
+                TourAddOn::where('company_id', $companyId)
+                    ->where('schedule_id', $scheduleId)
+                    ->whereNotIn('description', $descriptions)
+                    ->delete();
+            }
 
-              if ($incomingIds->isEmpty()) {
-                  $query->delete();
-              } else {
-                  $query->whereNotIn('id', $incomingIds)->delete();
-              }
+            /*
+            |--------------------------------------------------------------------------
+            | UPSERT
+            |--------------------------------------------------------------------------
+            */
 
-              foreach ($items as $item) {
-                  TourAddOn::updateOrCreate(
-                      [
+            foreach ($incoming as $item) {
+
+                if (empty($item['description'])) {
+                    continue;
+                }
+
+                TourAddOn::updateOrCreate(
+                    [
                         'company_id'  => $companyId,
+                        'tour_id'     => $item['tour_id'],
                         'schedule_id' => $item['schedule_id'],
                         'description' => $item['description'],
-                        'tour_id'     => $item['tour_id'],
-                      ],
-                      [
-                          'price'       => $item['price'] ?? 0,
-                          'edit_status' => $item['edit_status'] ?? false,
-                      ]
-                  );
-              }
-          }
+                    ],
+                    [
+                        'price'       => $item['price'] ?? 0,
+                        'edit_status' => $item['edit_status'] ?? false,
+                    ]
+                );
+            }
         });
 
         return back()->with('success', 'Add Ons saved');

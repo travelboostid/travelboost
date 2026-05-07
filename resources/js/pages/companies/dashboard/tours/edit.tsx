@@ -45,6 +45,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import axios from 'axios';
 import { format } from 'date-fns';
 
 ///////////tab 2
@@ -289,23 +290,38 @@ export default function Page({ tour }: Props) {
   console.log('FROM SERVER:', tour.schedules)
 }, [])*/
 
-  const submitSchedule = (e: React.FormEvent) => {
+  const submitSchedule = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    router.post(
-      `/companies/${company.username}/dashboard/tours/${tour.id}/schedules`,
-      {
-        schedules: schedules,
-      },
-      {
-        preserveScroll: true,
-        onSuccess: () => {
-          toast.success('Schedule saved');
+    try {
+      const res = await axios.post(
+        `/companies/${company.username}/dashboard/tours/${tour.id}/schedules`,
+        {
+          schedules,
         },
-      },
-    );
-  };
+      );
 
+      // update schedules dengan id asli database
+      if (res.data?.schedules) {
+        setSchedules((prev) => {
+          const existing = prev.filter((s) => s.id !== null);
+
+          const merged = res.data.schedules.map((dbSchedule, index) => ({
+            ...dbSchedule,
+            prices: schedules[index]?.prices || [],
+            availability: schedules[index]?.availability || null,
+            add_ons: schedules[index]?.add_ons || [],
+          }));
+
+          return [...existing, ...merged];
+        });
+      }
+
+      toast.success('Schedule saved');
+    } catch (err) {
+      toast.error('Failed save schedule');
+    }
+  };
   const addDays = (date: string, days: number) => {
     if (!date || !days) return '';
 
@@ -757,11 +773,11 @@ export default function Page({ tour }: Props) {
         {
           preserveState: true,
           onSuccess: () => {
-            toast.success('Success delete Add Ons');
+            toast.success('Success Process Add Ons');
           },
           onError: (err) => {
             console.error(err);
-            toast.error('Failed to delete Add Ons');
+            toast.error('Failed to Process Add Ons');
           },
           onFinish: () => {
             setSavingAddOns(false);
@@ -849,7 +865,7 @@ export default function Page({ tour }: Props) {
     setCopyDates((prev) => prev.filter((_, i) => i !== idx));
   };
 
-  const submitCopySchedules = () => {
+  const submitCopySchedules = async () => {
     if (copySourceIndex === null) return;
 
     const source = schedules[copySourceIndex];
@@ -919,31 +935,104 @@ export default function Page({ tour }: Props) {
 
     setSchedules(newSchedules);
 
-    router.put(
-      `/companies/${company.username}/dashboard/tours/${tour.id}`,
-      {
-        ...data,
-        schedules: newSchedules,
-      },
-      {
-        preserveScroll: true,
-        preserveState: true,
+    try {
+      // SAVE SCHEDULES
+      const scheduleRes = await axios.post(
+        `/companies/${company.username}/dashboard/tours/${tour.id}/schedules`,
+        {
+          schedules: newRows.map((s) => ({
+            //id: s.id,
+            id: null,
+            departure_date: s.departure_date,
+            return_date: s.return_date,
 
-        onSuccess: () => {
-          setCopyOpen(false);
-          setSelectedDates([]);
-          toast.success('Schedule copied successfully');
+            prices: (s.prices || []).map((p) => ({
+              //id: p.id,
+              id: null,
+              room_type_id: p.room_type_id,
+              price: p.price,
+              promotion: p.promotion,
+              commission: p.commission,
+            })),
+          })),
         },
+      );
 
-        onError: () => {
-          if (Object.keys(errors).length === 0) {
-            toast.error('Server response error (check redirect)');
-          } else {
-            toast.error('Failed copy schedule');
-          }
+      const createdSchedules = scheduleRes.data.schedules.map(
+        (dbSchedule, index) => ({
+          ...dbSchedule,
+
+          // KEEP prices
+          prices: newRows[index]?.prices || [],
+
+          // KEEP availability
+          availability: newRows[index]?.availability || null,
+
+          // KEEP add ons
+          add_ons: newRows[index]?.add_ons || [],
+        }),
+      );
+
+      const updatedSchedules = [
+        ...schedules.filter((s) => s.id !== null),
+        ...createdSchedules,
+      ];
+
+      setSchedules(updatedSchedules);
+
+      // AVAILABILITY
+      await axios.post(
+        `/companies/${company.username}/dashboard/tour-availabilities`,
+        {
+          availabilities: createdSchedules.map((s) => ({
+            schedule_id: s.id,
+            tour_id: tour.id,
+            max_pax: source.availability?.max_pax || 0,
+            available: source.availability?.available || 0,
+          })),
         },
-      },
-    );
+      );
+
+      // ADD ONS
+      await axios.post(
+        `/companies/${company.username}/dashboard/tour-add-ons`,
+        {
+          add_ons: createdSchedules.flatMap((s) =>
+            sourceAddons.map((a) => ({
+              schedule_id: s.id,
+              tour_id: tour.id,
+              description: a.description,
+              price: a.price ?? 0,
+              edit_status: a.edit_status ?? false,
+            })),
+          ),
+        },
+      );
+
+      // UPDATE LOCAL STATE
+      const copiedAddOns = {};
+
+      createdSchedules.forEach((s) => {
+        copiedAddOns[s.id] = sourceAddons.map((a) => ({
+          id: null,
+          schedule_id: s.id,
+          description: a.description,
+          price: a.price ?? 0,
+          edit_status: a.edit_status ?? false,
+        }));
+      });
+
+      setAddOns((prev) => ({
+        ...prev,
+        ...copiedAddOns,
+      }));
+
+      setCopyOpen(false);
+      setSelectedDates([]);
+      toast.success('Schedule copied successfully');
+    } catch (err) {
+      toast.error('Failed copy schedule');
+    }
   };
 
   return (
