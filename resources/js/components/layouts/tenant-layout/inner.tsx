@@ -12,8 +12,20 @@ import { Footer } from './footer';
 import { Header } from './header';
 
 export default function Inner({ children }: TenantLayoutProps) {
-  const { auth } = usePageSharedDataProps();
+  const { auth, company, tenant } = usePageSharedDataProps();
   const anonymousUser = useAnonymousUserContext();
+  const tenantCompany = tenant ?? company;
+  const theme = useMemo(() => {
+    try {
+      const rawData = JSON.parse(
+        tenantCompany?.settings?.landing_page_data || '{}',
+      );
+
+      return rawData?.root?.props?.theme ?? '';
+    } catch {
+      return '';
+    }
+  }, [tenantCompany]);
   const actor = useMemo<ChatActor>(() => {
     if (auth?.user) {
       return { type: 'user', id: auth.user.id };
@@ -24,7 +36,9 @@ export default function Inner({ children }: TenantLayoutProps) {
   return (
     <ChatContextProvider actor={actor}>
       <FloatingChatWidgetContextProvider>
-        <div className="bg-background text-foreground transition-colors duration-300">
+        <div
+          className={`${theme} bg-background text-foreground transition-colors duration-300`}
+        >
           <div className="min-h-screen ">
             <Header />
             <main>{children}</main>
