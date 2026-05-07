@@ -15,6 +15,7 @@ class VendorAgentPartner extends Model
     'applied_at',
     'accepted_at',
     'note',
+    'show_vendor_name',
   ];
 
   protected function casts(): array
@@ -23,6 +24,7 @@ class VendorAgentPartner extends Model
       'status' => VendorAgentPartnerStatus::class,
       'applied_at' => 'datetime',
       'accepted_at' => 'datetime',
+      'show_vendor_name' => 'boolean',
     ];
   }
 

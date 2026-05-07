@@ -14,17 +14,44 @@ use App\Models\TourAddOn;
 use App\Models\TourAvailability;
 use App\Models\TourPrice;
 use App\Models\TourSchedule;
+use App\Notifications\TourStatusChangedNotification;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class TourController extends Controller
 {
-  public function index(Company $company)
+  public function index(Company $company, Request $request)
   {
-    $tours = $company->tours()->orderBy('id', 'desc')->get();
+    $status = $request->input('status', 'all');
+
+    $tours = $company->tours()
+      ->with(['company', 'category', 'image', 'document', 'availabilities'])
+      ->when($status !== 'all', function ($query) use ($status) {
+        return $query->where('status', $status);
+      })
+      ->when($request->input('search'), function ($query, $search) {
+        return $query->where(function ($q) use ($search) {
+          $q->where('name', 'ilike', "%{$search}%")
+            ->orWhereHas('company', function ($sq) use ($search) {
+              $sq->where('name', 'ilike', "%{$search}%");
+            })
+            ->orWhereHas('category', function ($sq) use ($search) {
+              $sq->where('name', 'ilike', "%{$search}%");
+            });
+        });
+      })
+      ->when($request->input('sort_by'), function ($query, $sortBy) use ($request) {
+        $direction = $request->input('sort_dir', 'desc');
+        return $query->orderBy($sortBy, $direction);
+      }, function ($query) {
+        return $query->orderBy('id', 'desc');
+      })
+      ->get();
 
     return Inertia::render('companies/dashboard/tours/index', [
       'data' => $tours,
+      'filters' => $request->only(['status', 'search', 'sort_by', 'sort_dir']),
     ]);
   }
 
@@ -104,8 +131,8 @@ class TourController extends Controller
       'priceCategories' => $priceCategories,
       'addOnsFromDb'   => $addOns,
       'currencies' => Currency::select('code', 'name')
-            ->orderBy('code')
-            ->get(),
+        ->orderBy('code')
+        ->get(),
     ]);
   }
 
@@ -116,6 +143,16 @@ class TourController extends Controller
 
       if (array_key_exists('status', $payload)) {
         $tour->status = $payload['status'];
+
+        if ($payload['status'] === 'inactive') {
+          DB::table('agent_tours')
+            ->where('tour_id', $tour->id)
+            ->update(['status' => 'inactive']);
+        }
+
+        foreach ($tour->agents as $agent) {
+          $agent->notify(new TourStatusChangedNotification($tour, $payload['status']));
+        }
       }
 
       if (array_key_exists('category_id', $payload)) {
@@ -138,6 +175,19 @@ class TourController extends Controller
 
     try {
       $tour->update($data);
+
+      if (isset($data['status'])) {
+        if ($data['status'] === 'inactive') {
+          DB::table('agent_tours')
+            ->where('tour_id', $tour->id)
+            ->update(['status' => 'inactive']);
+        }
+
+        foreach ($tour->agents as $agent) {
+          $agent->notify(new TourStatusChangedNotification($tour, $data['status']));
+        }
+      }
+
       TourUpdated::dispatch($tour);
 
       $existingScheduleIds = $tour->schedules()->pluck('id')->toArray();
@@ -212,105 +262,70 @@ class TourController extends Controller
           );
         }
 
-        /*
-        |--------------------------------------------------------------------------
-        | AVAILABILITY
-        |--------------------------------------------------------------------------
-        */
         if (!empty($schedule['availability'])) {
-
-            TourAvailability::updateOrCreate(
-                ['schedule_id' => $scheduleModel->id],
-                [
-                    'tour_id' => $tour->id,
-                    'company_id' => $company->id,
-                    'max_pax' => (int) ($schedule['availability']['max_pax'] ?? 0),
-                    'available' => (int) ($schedule['availability']['available'] ?? 0),
-                ]
-            );
+          TourAvailability::updateOrCreate(
+            ['schedule_id' => $scheduleModel->id],
+            [
+              'tour_id' => $tour->id,
+              'company_id' => $company->id,
+              'max_pax' => (int) ($schedule['availability']['max_pax'] ?? 0),
+              'available' => (int) ($schedule['availability']['available'] ?? 0),
+            ]
+          );
         }
-
-        /*
-        |--------------------------------------------------------------------------
-        | ADD ONS
-        |--------------------------------------------------------------------------
-        */
 
         $isNewSchedule = !TourSchedule::where(
-            'id',
-            $schedule['id'] ?? 0
+          'id',
+          $schedule['id'] ?? 0
         )->where(
-            'tour_id',
-            $tour->id
+          'tour_id',
+          $tour->id
         )->exists();
 
-        /*
-        |--------------------------------------------------------------------------
-        | JIKA SCHEDULE BARU (HASIL COPY)
-        |--------------------------------------------------------------------------
-        */
         if ($isNewSchedule) {
-
-            foreach ($schedule['add_ons'] ?? [] as $addon) {
-
-                TourAddOn::create([
-                    'tour_id' => $tour->id,
-                    'schedule_id' => $scheduleModel->id,
-                    'company_id' => $company->id,
-                    'description' => $addon['description'] ?? '',
-                    'price' => (float) ($addon['price'] ?? 0),
-                    'edit_status' => (bool) ($addon['edit_status'] ?? false),
-                ]);
-            }
-
+          foreach ($schedule['add_ons'] ?? [] as $addon) {
+            TourAddOn::create([
+              'tour_id' => $tour->id,
+              'schedule_id' => $scheduleModel->id,
+              'company_id' => $company->id,
+              'description' => $addon['description'] ?? '',
+              'price' => (float) ($addon['price'] ?? 0),
+              'edit_status' => (bool) ($addon['edit_status'] ?? false),
+            ]);
+          }
         } else {
+          $existingIds = TourAddOn::where('schedule_id', $scheduleModel->id)
+            ->pluck('id')
+            ->toArray();
 
-            /*
-            |--------------------------------------------------------------------------
-            | SCHEDULE LAMA (EDIT NORMAL)
-            |--------------------------------------------------------------------------
-            */
+          $incomingIds = collect($schedule['add_ons'] ?? [])
+            ->pluck('id')
+            ->filter()
+            ->toArray();
 
-            $existingIds = TourAddOn::where('schedule_id', $scheduleModel->id)
-                ->pluck('id')
-                ->toArray();
-
-            $incomingIds = collect($schedule['add_ons'] ?? [])
-                ->pluck('id')
-                ->filter()
-                ->toArray();
-
-            /*
-            | HANYA delete jika request memang mengirim addon existing id
-            | kalau kosong = hasil copy / frontend clone
-            */
-            if (count($incomingIds) > 0) {
-
-                $deleteIds = array_diff($existingIds, $incomingIds);
-
-                if (!empty($deleteIds)) {
-                    TourAddOn::whereIn('id', $deleteIds)->delete();
-                }
+          if (count($incomingIds) > 0) {
+            $deleteIds = array_diff($existingIds, $incomingIds);
+            if (!empty($deleteIds)) {
+              TourAddOn::whereIn('id', $deleteIds)->delete();
             }
+          }
 
-            foreach ($schedule['add_ons'] ?? [] as $addon) {
-
-                TourAddOn::updateOrCreate(
-                    [
-                        'id' => $addon['id'] ?? null,
-                    ],
-                    [
-                        'tour_id' => $tour->id,
-                        'schedule_id' => $scheduleModel->id,
-                        'company_id' => $company->id,
-                        'description' => $addon['description'] ?? '',
-                        'price' => (float) ($addon['price'] ?? 0),
-                        'edit_status' => (bool) ($addon['edit_status'] ?? false),
-                    ]
-                );
-            }
+          foreach ($schedule['add_ons'] ?? [] as $addon) {
+            TourAddOn::updateOrCreate(
+              [
+                'id' => $addon['id'] ?? null,
+              ],
+              [
+                'tour_id' => $tour->id,
+                'schedule_id' => $scheduleModel->id,
+                'company_id' => $company->id,
+                'description' => $addon['description'] ?? '',
+                'price' => (float) ($addon['price'] ?? 0),
+                'edit_status' => (bool) ($addon['edit_status'] ?? false),
+              ]
+            );
+          }
         }
-
       }
 
       DB::commit();
@@ -331,52 +346,33 @@ class TourController extends Controller
     }
   }
 
-  public function destroySchedule(
-    Company $company,
-    Tour $tour,
-    TourSchedule $schedule
-  ) {
-      if ($schedule->tour_id !== $tour->id) {
-          abort(404);
-      }
-
-      $schedule->delete();
-
-      return back()->with([
-          'success' => true
-      ]);
+  public function destroySchedule(Company $company, Tour $tour, TourSchedule $schedule)
+  {
+    if ($schedule->tour_id !== $tour->id) abort(404);
+    $schedule->delete();
+    return back()->with(['success' => true]);
   }
 
-  public function destroyPrice(
-    Company $company,
-    Tour $tour,
-    TourPrice $price
-  ) {
-      // pastikan price milik company ini
-      if ($price->company_id !== $company->id) {
-          abort(404);
-      }
-
-      // pastikan price milik salah satu schedule tour ini
-      $belongsToTour = TourSchedule::where('id', $price->schedule_id)
-          ->where('tour_id', $tour->id)
-          ->exists();
-
-      if (!$belongsToTour) {
-          abort(404);
-      }
-
-      $price->delete();
-
-      return back()->with([
-          'success' => true,
-      ]);
+  public function destroyPrice(Company $company, Tour $tour, TourPrice $price)
+  {
+    if ($price->company_id !== $company->id) abort(404);
+    $belongsToTour = TourSchedule::where('id', $price->schedule_id)->where('tour_id', $tour->id)->exists();
+    if (!$belongsToTour) abort(404);
+    $price->delete();
+    return back()->with(['success' => true]);
   }
 
   public function destroy(Company $company, Tour $tour)
   {
-    $tour->delete();
+    $hasBookings = DB::table('bookings')->where('tour_id', $tour->id)->exists();
 
+    if ($hasBookings) {
+      return back()->withErrors([
+        'delete_error' => 'Cannot delete this tour because it has existing bookings. Please cancel or complete bookings first.'
+      ]);
+    }
+
+    $tour->delete();
     return back();
   }
 }

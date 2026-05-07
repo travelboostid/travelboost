@@ -149,4 +149,12 @@ class Tour extends Model
   {
     return $this->hasMany(TourAddOn::class);
   }
+
+  /**
+   * Get all bookings associated with the tour.
+   */
+  public function bookings()
+  {
+    return $this->hasMany(Booking::class, 'tour_id');
+  }
 }
