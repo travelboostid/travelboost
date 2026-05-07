@@ -143,6 +143,17 @@ export default function Page() {
         (tp: any) => tp.categoryName === p.price_category,
       );
 
+      let restoredPrice = parseFloat(p.price_amount) || (matchedPrice ? matchedPrice.price : 0);
+      let restoredOriginalPrice = matchedPrice ? matchedPrice.price : restoredPrice;
+
+      if (matchedPrice) {
+        if (matchedPrice.promotionRate > 0) {
+          restoredPrice = Math.max(0, Math.round(matchedPrice.price - (matchedPrice.price * matchedPrice.promotionRate / 100)));
+        } else if (matchedPrice.promotion > 0) {
+          restoredPrice = Math.max(0, Math.round(matchedPrice.price - matchedPrice.promotion));
+        }
+      }
+
       restored.push({
         id,
         type,
@@ -153,8 +164,8 @@ export default function Page() {
         placeOfBirth: p.pob ?? '',
         priceCategory: p.price_category ?? null,
         tourPriceId: matchedPrice ? matchedPrice.tourPriceId : 0,
-        price:
-          parseFloat(p.price_amount) || (matchedPrice ? matchedPrice.price : 0),
+        price: restoredPrice,
+        originalPrice: restoredOriginalPrice,
         roomTypeDescription:
           p.room_type ?? (matchedPrice ? matchedPrice.description : ''),
         note: p.note ?? '',
@@ -195,6 +206,7 @@ export default function Page() {
       priceCategory: null,
       tourPriceId: 0,
       price: 0,
+      originalPrice: 0,
       roomTypeDescription: '',
       note: '',
     });
