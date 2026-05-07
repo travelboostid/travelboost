@@ -7,7 +7,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { ScrollArea } from '@/components/ui/scroll-area';
+
+import { extractImageSrc } from '@/lib/utils';
 import { router } from '@inertiajs/react';
 import {
   addDays,
@@ -34,6 +35,7 @@ export type TourSchedule = {
   cutoff_date: string;
   is_active: boolean;
   note: string | null;
+  booking_deadline_days?: number;
   availability?: {
     available: number | string;
     max_pax: number | string;
@@ -68,10 +70,12 @@ export default function TourBookingModal({
   onRequireLogin,
 }: TourBookingModalProps) {
   const schedules = tour.schedules ?? [];
+  const tourImage = extractImageSrc(tour.image as any);
   const activeSchedules = schedules.filter((s) => {
     if (!s.is_active) return false;
     const departDate = parseISO(s.departure_date);
-    return !isBefore(departDate, startOfToday());
+    const deadlineDate = addDays(startOfToday(), s.booking_deadline_days ?? 0);
+    return !isBefore(departDate, deadlineDate);
   });
 
   let dateRangeText = 'Schedules TBA';
@@ -105,13 +109,26 @@ export default function TourBookingModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-2xl gap-0 overflow-hidden p-0 md:max-w-3xl">
+      <DialogContent className="flex max-h-[85vh] max-w-2xl flex-col gap-0 overflow-hidden p-0 md:max-w-3xl">
         {/* Header Section (Centered) */}
-        <div className="relative border-b bg-card px-6 pb-6 pt-8">
+        <div className="relative shrink-0 border-b bg-card px-4 pb-4 pt-6 sm:px-6 sm:pb-6 sm:pt-8">
           <DialogHeader className="flex flex-col items-center justify-center text-center">
-            <DialogTitle className="flex flex-col items-center justify-center text-center text-2xl font-bold tracking-tight text-foreground md:text-3xl">
+            <div className="mb-3 aspect-[16/9] w-full max-w-[200px] overflow-hidden rounded-lg border bg-muted sm:mb-4 sm:max-w-md">
+              <img
+                src={tourImage.src}
+                srcSet={tourImage.srcSet || undefined}
+                alt={tour.name}
+                className="h-full w-full object-cover"
+              />
+            </div>
+            <DialogTitle className="flex flex-col items-center justify-center text-center text-xl font-bold tracking-tight text-foreground sm:text-2xl md:text-3xl">
               {tour.name}
             </DialogTitle>
+            {tour.code && (
+              <DialogDescription className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                {tour.code}
+              </DialogDescription>
+            )}
             {tour.destination && (
               <DialogDescription className="text-sm font-bold uppercase tracking-widest text-black">
                 {tour.destination}
@@ -124,8 +141,7 @@ export default function TourBookingModal({
         </div>
 
         {/* Schedule List Section */}
-        <div className="bg-muted/5 p-0">
-          <ScrollArea className="max-h-[550px] w-full px-6 py-4">
+        <div className="min-h-0 flex-1 overflow-y-auto bg-muted/5 px-4 py-3 sm:px-6 sm:py-4">
             <div className="mb-4 text-center">
               <span className="text-sm font-medium tracking-wide text-foreground/70">
                 Select Departure Date
@@ -214,7 +230,6 @@ export default function TourBookingModal({
                 </div>
               )}
             </AnimatePresence>
-          </ScrollArea>
         </div>
       </DialogContent>
     </Dialog>
