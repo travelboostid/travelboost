@@ -13,5 +13,7 @@ Route::domain('{username}.'.$appHost)->group(function () {
         Route::get('/bookings/{tour}/create', [BookingController::class, 'create'])->name('bookings.create');
         Route::post('/bookings/{tour}/reserve', [BookingController::class, 'reserve'])->name('bookings.reserve');
         Route::post('/bookings/{tour}', [BookingController::class, 'store'])->name('bookings.store');
+        Route::post('/bookings/{booking}/manual-payment', [BookingController::class, 'storeManualPayment']);
+        Route::post('/bookings/{booking}/online-payment', [BookingController::class, 'storeOnlinePayment']);
     });
 });

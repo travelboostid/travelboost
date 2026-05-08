@@ -292,7 +292,8 @@ export function useCompanyDashboardNavMainMenu() {
         {
           id: 'reports.room-listings',
           title: <FormattedMessage defaultMessage="Room Listings" />,
-          urlOrAction: '#',
+          urlOrAction: `/companies/${company.username}/dashboard/reports/room-listings`,
+          visibleToCompanyTypes: ['vendor'],
         },
         {
           id: 'reports.inventories',

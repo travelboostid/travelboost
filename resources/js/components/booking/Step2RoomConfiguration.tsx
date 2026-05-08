@@ -33,7 +33,14 @@ import { toast } from 'sonner';
 
 // ─── Types ──────────────────────────────────────────────────────────────────────
 
-export type BedType = 'single' | 'double' | 'twin' | 'extra_bed' | 'triple' | 'double_extra_bed' | 'twin_extra_bed';
+export type BedType =
+  | 'single'
+  | 'double'
+  | 'twin'
+  | 'extra_bed'
+  | 'triple'
+  | 'double_extra_bed'
+  | 'twin_extra_bed';
 
 export type RoomConfig = {
   id: string;
@@ -159,24 +166,53 @@ export function autoRecommendRooms(guests: GuestEntry[]): RoomConfig[] {
   };
 
   // Bed-occupying guests grouped by category
-  const singles = guests.filter((g) => g.priceCategory === 'Single');
-  const doubles = guests.filter((g) => g.priceCategory === 'Double');
-  const twins = guests.filter((g) => g.priceCategory === 'Twin');
-  const triples = guests.filter((g) => g.priceCategory === 'Triple');
-  const childWithBed = guests.filter((g) => g.priceCategory === 'Child With Bed');
+  let singles = guests.filter(
+    (g) => g.priceCategory === 'Adult Single' || g.priceCategory === 'Single',
+  );
+  const doubles = guests.filter(
+    (g) => g.priceCategory === 'Adult Double' || g.priceCategory === 'Double',
+  );
+  const twins = guests.filter(
+    (g) => g.priceCategory === 'Adult Twin' || g.priceCategory === 'Twin',
+  );
+  const triples = guests.filter(
+    (g) => g.priceCategory === 'Adult Triple' || g.priceCategory === 'Triple',
+  );
+
+  let childWithBed = guests.filter((g) => g.priceCategory === 'Child With Bed');
+  const adultExtraBed = guests.filter(
+    (g) => g.priceCategory === 'Adult Extra Bed',
+  );
+
+  // Pair Adult Single with Child With Bed if possible
+  while (singles.length > 0 && childWithBed.length > 0) {
+    const single = singles.shift()!;
+    const cwb = childWithBed.shift()!;
+    // Put them in a double room
+    rooms.push(makeRoom('double', [single.id, cwb.id]));
+  }
+
+  const extraBedOccupants = [...childWithBed, ...adultExtraBed];
 
   // Non-bed guests
-  const noBedGuests = guests.filter((g) => NO_BED_CATEGORIES.includes(g.priceCategory ?? ''));
+  const noBedGuests = guests.filter((g) =>
+    NO_BED_CATEGORIES.includes(g.priceCategory ?? ''),
+  );
 
   // Single rooms
   for (const g of singles) rooms.push(makeRoom('single', [g.id]));
 
   // Triple rooms (groups of 3)
   for (let i = 0; i < triples.length; i += 3) {
-    rooms.push(makeRoom('triple', triples.slice(i, i + 3).map((g) => g.id)));
+    rooms.push(
+      makeRoom(
+        'triple',
+        triples.slice(i, i + 3).map((g) => g.id),
+      ),
+    );
   }
 
-  const sharedGuests = [...doubles, ...twins, ...childWithBed];
+  const sharedGuests = [...doubles, ...twins, ...extraBedOccupants];
   if (sharedGuests.length > 0) {
     const R = Math.max(1, Math.floor(sharedGuests.length / 2));
     const sharedRooms: RoomConfig[] = Array.from({ length: R }, () =>
@@ -189,29 +225,32 @@ export function autoRecommendRooms(guests: GuestEntry[]): RoomConfig[] {
       targetRoom.guestIds.push(g.id);
 
       if (targetRoom.guestIds.length === 1) {
-        if (g.priceCategory === 'Twin') targetRoom.type = 'twin';
+        if (g.priceCategory === 'Adult Twin' || g.priceCategory === 'Twin')
+          targetRoom.type = 'twin';
         else targetRoom.type = 'double';
         targetRoom.capacity = BED_TYPES[targetRoom.type].capacity;
       }
     });
 
     sharedRooms.forEach((r) => {
-      const hasChildWithBed = r.guestIds.some(
-        (id) => guests.find((g) => g.id === id)?.priceCategory === 'Child With Bed',
-      );
+      const hasExtraBedOccupant = r.guestIds.some((id) => {
+        const cat = guests.find((g) => g.id === id)?.priceCategory;
+        return cat === 'Child With Bed' || cat === 'Adult Extra Bed';
+      });
 
-      if (hasChildWithBed) {
+      if (hasExtraBedOccupant) {
         r.type = r.type === 'twin' ? 'twin_extra_bed' : 'double_extra_bed';
         r.capacity = 3;
 
         // If there are only 2 guests (e.g., 1 Adult + 1 Child With Bed),
-        // we must shift the child with bed to the 3rd slot (Extra Bed slot).
+        // we must shift the extra bed occupant to the 3rd slot (Extra Bed slot).
         if (r.guestIds.length === 2) {
-          const childId = r.guestIds.find(
-            (id) => guests.find((g) => g.id === id)?.priceCategory === 'Child With Bed',
-          );
-          const otherId = r.guestIds.find((id) => id !== childId);
-          r.guestIds = [otherId || '', '', childId || ''];
+          const extraBedGuestId = r.guestIds.find((id) => {
+            const cat = guests.find((g) => g.id === id)?.priceCategory;
+            return cat === 'Child With Bed' || cat === 'Adult Extra Bed';
+          });
+          const otherId = r.guestIds.find((id) => id !== extraBedGuestId);
+          r.guestIds = [otherId || '', '', extraBedGuestId || ''];
         } else if (r.guestIds.length === 1) {
           r.guestIds = ['', '', r.guestIds[0]];
         }
@@ -276,7 +315,9 @@ function BedArrangementModal({
         const mainBedOccupied = !!r.guestIds[0] || !!r.guestIds[1];
         const extraBedOccupied = !!r.guestIds[2];
         if (!mainBedOccupied && extraBedOccupied) {
-          toast.error(`Room ${r.label}: Extra bed cannot be occupied if the main bed is empty.`);
+          toast.error(
+            `Room ${r.label}: Extra bed cannot be occupied if the main bed is empty.`,
+          );
           return false;
         }
       }
@@ -288,27 +329,74 @@ function BedArrangementModal({
         if (!g || !g.priceCategory) continue;
 
         const cat = g.priceCategory;
-        const name = [g.firstName, g.lastName].filter(Boolean).join(' ') || 'Guest';
+        const name =
+          [g.firstName, g.lastName].filter(Boolean).join(' ') || 'Guest';
 
-        if (cat === 'Single' && r.type !== 'single') {
-          toast.error(`${name} purchased a Single room but is placed in a ${r.label}.`);
+        if (
+          (cat === 'Adult Single' || cat === 'Single') &&
+          r.type !== 'single'
+        ) {
+          const otherOccupants = r.guestIds.filter((id) => id !== gid && !!id);
+          const isSharingWithCwb =
+            otherOccupants.length === 1 &&
+            guests.find((gu) => gu.id === otherOccupants[0])?.priceCategory ===
+              'Child With Bed';
+
+          if (!isSharingWithCwb) {
+            toast.error(
+              `${name} purchased a Single room but is sharing with invalid guests in ${r.label}.`,
+            );
+            return false;
+          }
+        }
+        if (
+          (cat === 'Adult Double' || cat === 'Double') &&
+          r.type !== 'double'
+        ) {
+          if (!['double_extra_bed', 'extra_bed'].includes(r.type)) {
+            toast.error(
+              `${name} purchased a Double room but is placed in a ${r.label}.`,
+            );
+            return false;
+          }
+        }
+        if ((cat === 'Adult Twin' || cat === 'Twin') && r.type !== 'twin') {
+          if (!['twin_extra_bed'].includes(r.type)) {
+            toast.error(
+              `${name} purchased a Twin room but is placed in a ${r.label}.`,
+            );
+            return false;
+          }
+        }
+        if (
+          (cat === 'Adult Triple' || cat === 'Triple') &&
+          r.type !== 'triple'
+        ) {
+          toast.error(
+            `${name} purchased a Triple room but is placed in a ${r.label}.`,
+          );
           return false;
         }
-        if (cat === 'Double' && r.type !== 'double') {
-          toast.error(`${name} purchased a Double room but is placed in a ${r.label}.`);
-          return false;
-        }
-        if (cat === 'Twin' && r.type !== 'twin') {
-          toast.error(`${name} purchased a Twin room but is placed in a ${r.label}.`);
-          return false;
-        }
-        if (cat === 'Triple' && r.type !== 'triple') {
-          toast.error(`${name} purchased a Triple room but is placed in a ${r.label}.`);
-          return false;
-        }
-        if (cat === 'Child With Bed' && !['double_extra_bed', 'twin_extra_bed'].includes(r.type)) {
-          toast.error(`${name} (Child With Bed) must be placed in a room with an extra bed.`);
-          return false;
+        if (cat === 'Child With Bed' || cat === 'Adult Extra Bed') {
+          const occupantsCount = r.guestIds.filter((id) => !!id).length;
+
+          if (['double', 'twin'].includes(r.type)) {
+            if (cat === 'Adult Extra Bed' || occupantsCount > 2) {
+              toast.error(
+                `${name} (${cat}) must be placed in a room with an extra bed.`,
+              );
+              return false;
+            }
+          } else if (
+            !['double_extra_bed', 'twin_extra_bed', 'extra_bed'].includes(
+              r.type,
+            )
+          ) {
+            toast.error(
+              `${name} (${cat}) must be placed in a room with an extra bed.`,
+            );
+            return false;
+          }
         }
       }
     }
@@ -787,8 +875,6 @@ export default function Step2RoomConfiguration({
   onRoomsChange,
 }: Step2Props) {
   const [bedModalOpen, setBedModalOpen] = useState(false);
-
-
 
   const assignedGuestIds = [
     ...rooms.flatMap((r) => r.guestIds),

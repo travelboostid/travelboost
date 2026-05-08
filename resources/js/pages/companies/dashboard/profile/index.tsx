@@ -22,7 +22,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { update } from '@/routes/companies/dashboard/settings/profile';
 import { Head, useForm } from '@inertiajs/react';
 import { Building, CreditCard, MapPin, Save, ShieldCheck } from 'lucide-react';
-import React from 'react';
+import React, { useState } from 'react';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { toast } from 'sonner';
 
@@ -33,6 +33,10 @@ export type ProfilePageProps = {
 
 export default function Profile({ profile, account_status }: ProfilePageProps) {
   const intl = useIntl();
+
+  const [identityPreviewUrl, setIdentityPreviewUrl] = useState<string | null>(
+    null,
+  );
 
   const form = useForm({
     name: profile.name || '',
@@ -106,6 +110,12 @@ export default function Profile({ profile, account_status }: ProfilePageProps) {
 
   const isStatusActive = account_status === 'active';
 
+  const currentIdentityPreview =
+    identityPreviewUrl ||
+    profile.identity_card?.data?.url ||
+    profile.identity_card?.url ||
+    profile.identity_card?.original_url;
+
   return (
     <CompanyDashboardLayout
       breadcrumb={[
@@ -117,13 +127,14 @@ export default function Profile({ profile, account_status }: ProfilePageProps) {
     >
       <Head title={intl.formatMessage({ defaultMessage: 'Profile' })} />
 
-      <div className="max-w-5xl mx-auto space-y-6 pb-20">
-        <div className="flex items-center justify-between">
+      {/* PERBAIKAN RESPONSIVE: Tambahkan px-4 sm:px-6 lg:px-8 agar rapi di layar kecil */}
+      <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6 pb-20">
+        <div className="flex items-center justify-between mt-4 md:mt-0">
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-foreground">
               <FormattedMessage defaultMessage="Profile Settings" />
             </h1>
-            <p className="text-muted-foreground">
+            <p className="text-muted-foreground text-sm md:text-base">
               <FormattedMessage defaultMessage="Manage your agency identity and verification documents." />
             </p>
           </div>
@@ -131,7 +142,7 @@ export default function Profile({ profile, account_status }: ProfilePageProps) {
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Agency Identity Card */}
-          <Card className="shadow-sm border-border">
+          <Card className="shadow-sm border-border overflow-hidden">
             <CardHeader className="bg-muted/30 flex flex-row items-center justify-between py-4 border-b">
               <CardTitle className="text-lg flex items-center gap-2">
                 <Building className="w-5 h-5 text-primary" />
@@ -147,8 +158,8 @@ export default function Profile({ profile, account_status }: ProfilePageProps) {
               </div>
             </CardHeader>
             <CardContent className="pt-6">
-              <div className="flex flex-col md:flex-row gap-8">
-                <div className="flex flex-col items-center gap-4">
+              <div className="flex flex-col lg:flex-row gap-8">
+                <div className="flex flex-col items-center gap-4 shrink-0">
                   <PhotoPicker
                     owner={{ type: 'company', id: profile.id }}
                     onChange={(media) =>
@@ -262,7 +273,7 @@ export default function Profile({ profile, account_status }: ProfilePageProps) {
           </Card>
 
           {/* Location & Contact Card */}
-          <Card className="shadow-sm border-border">
+          <Card className="shadow-sm border-border overflow-hidden">
             <CardHeader className="bg-muted/30 border-b py-4">
               <CardTitle className="text-lg flex items-center gap-2">
                 <MapPin className="w-5 h-5 text-secondary" />
@@ -284,7 +295,7 @@ export default function Profile({ profile, account_status }: ProfilePageProps) {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="cs_phone">
-                  <FormattedMessage defaultMessage="Customer Service Phone" />{' '}
+                  <FormattedMessage defaultMessage="[WhatsApp] Customer Service" />{' '}
                   <span className="text-destructive">*</span>
                 </Label>
                 <Input
@@ -418,7 +429,7 @@ export default function Profile({ profile, account_status }: ProfilePageProps) {
           </Card>
 
           {/* Verification Card with Preview KTP */}
-          <Card className="shadow-sm border-primary/20 border-l-4">
+          <Card className="shadow-sm border-primary/20 border-l-4 overflow-hidden">
             <CardHeader className="bg-primary/5 py-4 border-b">
               <CardTitle className="text-lg flex items-center gap-2 text-primary font-bold">
                 <ShieldCheck className="w-5 h-5" />
@@ -426,8 +437,10 @@ export default function Profile({ profile, account_status }: ProfilePageProps) {
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-6">
-              <div className="grid gap-8 md:grid-cols-2 items-start">
-                <div className="space-y-4">
+              {/* PERBAIKAN GRID & TINGGI: items-stretch agar kiri & kanan sejajar tingginya */}
+              <div className="grid gap-6 md:gap-8 lg:grid-cols-2 items-stretch">
+                {/* KOLOM KIRI: Input NIK dan Unggah Gambar */}
+                <div className="flex flex-col space-y-4 justify-start">
                   <div className="space-y-2">
                     <Label
                       htmlFor="identity_number"
@@ -453,32 +466,40 @@ export default function Profile({ profile, account_status }: ProfilePageProps) {
                     <InputError message={form.errors.identity_number} />
                   </div>
 
-                  <div className="p-4 rounded-xl border-2 border-dashed bg-muted/10 flex flex-col gap-3">
+                  <div className="flex-1 p-4 rounded-xl border-2 border-dashed bg-muted/10 flex flex-col gap-3">
                     <Label className="font-bold text-sm">
                       <FormattedMessage defaultMessage="Change Identity Photo" />{' '}
                       <span className="text-destructive">*</span>
                     </Label>
                     <IdentityCardPicker
                       owner={{ type: 'company', id: profile.id }}
-                      onChange={(media: any) =>
-                        form.setData('identity_card_id', media.id)
-                      }
+                      onChange={(media: any) => {
+                        form.setData('identity_card_id', media?.id);
+                        // PERBAIKAN: Set preview URL agar langsung tampil!
+                        setIdentityPreviewUrl(
+                          media?.url ||
+                            media?.original_url ||
+                            media?.data?.url ||
+                            null,
+                        );
+                      }}
                       defaultValue={profile.identity_card}
                     />
                     <InputError message={form.errors.identity_card_id} />
                   </div>
                 </div>
 
-                {/* Identity Preview Section */}
-                <div className="space-y-3">
+                {/* KOLOM KANAN: Preview KTP */}
+                <div className="flex flex-col space-y-3">
                   <Label className="font-bold text-sm text-muted-foreground uppercase tracking-wider">
                     <FormattedMessage defaultMessage="Current Identity Preview" />
                   </Label>
-                  <div className="relative aspect-[3/2] w-full rounded-xl overflow-hidden bg-slate-200 border-2 border-slate-300 flex items-center justify-center shadow-inner group">
-                    {profile.identity_card?.data?.url ? (
+                  {/* PERBAIKAN TINGGI PREVIEW: flex-1 dan min-h-[200px] dengan object-contain */}
+                  <div className="relative flex-1 w-full min-h-[200px] rounded-xl overflow-hidden bg-slate-100 border-2 border-slate-200 flex items-center justify-center shadow-inner group">
+                    {currentIdentityPreview ? (
                       <img
-                        src={profile.identity_card.data.url}
-                        className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                        src={currentIdentityPreview}
+                        className="w-full h-full object-contain p-2 transition-transform group-hover:scale-105"
                         alt="KTP Preview"
                       />
                     ) : (
@@ -498,7 +519,7 @@ export default function Profile({ profile, account_status }: ProfilePageProps) {
               type="submit"
               disabled={form.processing}
               size="lg"
-              className="bg-primary text-primary-foreground hover:bg-primary/90 px-12 h-12 font-bold shadow-xl shadow-primary/20"
+              className="bg-primary text-primary-foreground hover:bg-primary/90 px-12 h-12 font-bold shadow-xl shadow-primary/20 w-full sm:w-auto"
             >
               {form.processing ? <Spinner className="mr-2" /> : null}
               <Save className="w-5 h-5 mr-2" />

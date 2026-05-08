@@ -56,6 +56,7 @@ type Passenger = {
   passport_expiry_date: string | null;
   visa_number: string | null;
   room_type: string | null;
+  note: string | null;
 };
 
 type BookingData = {
@@ -88,13 +89,19 @@ type PageProps = {
   booking: BookingData;
   tourPrices: TourPrice[];
   addOns: AddOnItem[];
+  minimumDownPaymentPct: number;
+  minimumVatPct: number;
+};
+
+type EditableGuestEntry = GuestEntry & {
+  passengerId?: number;
 };
 
 // ---------------------------------------------------------------------------
 // Helpers — convert DB passengers → wizard GuestEntry[]
 // ---------------------------------------------------------------------------
 
-function passengersToGuests(passengers: Passenger[]): GuestEntry[] {
+function passengersToGuests(passengers: Passenger[]): EditableGuestEntry[] {
   const counters = { adult: 0, child: 0, infant: 0 };
 
   return passengers.map((p) => {
@@ -117,6 +124,25 @@ function passengersToGuests(passengers: Passenger[]): GuestEntry[] {
       tourPriceId: 0,
       price: p.price_amount ?? 0,
       roomTypeDescription: p.room_type ?? '',
+      note: p.note ?? '',
+      passengerId: p.id,
+    };
+  });
+}
+
+function bookingRoomsToConfig(rooms: any[]): RoomConfig[] {
+  return rooms.map((r, idx) => {
+    const bedLayout: { guestId?: string }[] = Array.isArray(r.bed_layout)
+      ? r.bed_layout
+      : [];
+
+    return {
+      id: `room-${idx}`,
+      type: r.room_type,
+      label: r.room_label,
+      capacity: r.capacity || 2,
+      guestIds: bedLayout.map((b) => b.guestId).filter(Boolean) as string[],
+      sharingGuestIds: [],
     };
   });
 }
@@ -152,7 +178,13 @@ function passengersToTravelDocs(
 // Page
 // ---------------------------------------------------------------------------
 
-export default function Page({ booking, tourPrices, addOns }: PageProps) {
+export default function Page({
+  booking,
+  tourPrices,
+  addOns,
+  minimumDownPaymentPct,
+  minimumVatPct,
+}: PageProps) {
   const { company } = usePageSharedDataProps();
   const isAgent = company.type === 'agent';
   const canEdit =
@@ -207,6 +239,8 @@ export default function Page({ booking, tourPrices, addOns }: PageProps) {
       booking={booking}
       tourPrices={tourPrices}
       addOns={addOns}
+      minimumDownPaymentPct={minimumDownPaymentPct}
+      minimumVatPct={minimumVatPct}
       company={company}
       isAgent={isAgent}
     />
@@ -221,12 +255,16 @@ function EditableWizard({
   booking,
   tourPrices,
   addOns: initialAddOns,
+  minimumDownPaymentPct,
+  minimumVatPct,
   company,
   isAgent,
 }: {
   booking: BookingData;
   tourPrices: TourPrice[];
   addOns: AddOnItem[];
+  minimumDownPaymentPct: number;
+  minimumVatPct: number;
   company: any;
   isAgent: boolean;
 }) {
@@ -256,15 +294,19 @@ function EditableWizard({
 
   // ── Rooms ──────────────────────────────────────────────────────────
   const [rooms, setRooms] = useState<RoomConfig[]>(() =>
-    autoRecommendRooms(initialGuests),
+    booking.rooms?.length
+      ? bookingRoomsToConfig(booking.rooms)
+      : autoRecommendRooms(initialGuests),
   );
+  const [selectedAddOns, setSelectedAddOns] =
+    useState<AddOnItem[]>(initialAddOns);
   const roomsGuestFingerprint = useRef<string>('');
   const skipGuestSyncRef = useRef(false);
 
   // ── Travel Documents ───────────────────────────────────────────────
-  const [travelDocuments, setTravelDocuments] = useState<
-    TravelDocumentEntry[]
-  >(() => passengersToTravelDocs(booking.passengers, initialGuests));
+  const [travelDocuments, setTravelDocuments] = useState<TravelDocumentEntry[]>(
+    () => passengersToTravelDocs(booking.passengers, initialGuests),
+  );
 
   // ── Sync guest array when pax counts change ────────────────────────
   useEffect(() => {
@@ -273,11 +315,11 @@ function EditableWizard({
       return;
     }
 
-    const newGuests: GuestEntry[] = [];
+    const newGuests: EditableGuestEntry[] = [];
     const makeDefault = (
       id: string,
       type: 'adult' | 'child' | 'infant',
-    ): GuestEntry => ({
+    ): EditableGuestEntry => ({
       id,
       type,
       title: '',
@@ -289,6 +331,7 @@ function EditableWizard({
       tourPriceId: 0,
       price: 0,
       roomTypeDescription: '',
+      note: '',
     });
 
     for (let i = 0; i < adults; i++) {
@@ -340,8 +383,9 @@ function EditableWizard({
     commission: 0,
   };
   const pricing = useMemo(
-    () => calculateBookingPricing(guests, vendor.commission ?? 0),
-    [guests, vendor],
+    () =>
+      calculateBookingPricing(guests, vendor.commission ?? 0, minimumVatPct),
+    [guests, vendor, minimumVatPct],
   );
 
   // ── Navigation ─────────────────────────────────────────────────────
@@ -363,6 +407,25 @@ function EditableWizard({
     setCurrentStep((s) => Math.min(4, s + 1) as WizardStepId);
   };
 
+  const goToStep = (step: WizardStepId) => {
+    setDirection(step > currentStep ? 1 : -1);
+
+    if (step === 2) {
+      const currentFingerprint = JSON.stringify(
+        guests.map((g) => `${g.id}-${g.priceCategory}`),
+      );
+      if (
+        rooms.length === 0 ||
+        roomsGuestFingerprint.current !== currentFingerprint
+      ) {
+        setRooms(autoRecommendRooms(guests));
+        roomsGuestFingerprint.current = currentFingerprint;
+      }
+    }
+
+    setCurrentStep(step);
+  };
+
   const goBack = () => {
     if (currentStep === 1) {
       window.history.back();
@@ -373,7 +436,13 @@ function EditableWizard({
   };
 
   const handleGuestUpdate = useCallback((updated: GuestEntry) => {
-    setGuests((prev) => prev.map((g) => (g.id === updated.id ? updated : g)));
+    setGuests((prev) =>
+      prev.map((g) =>
+        g.id === updated.id
+          ? { ...updated, passengerId: (g as EditableGuestEntry).passengerId }
+          : g,
+      ),
+    );
   }, []);
 
   const handleGuestRemove = useCallback(
@@ -432,8 +501,26 @@ function EditableWizard({
   // ── Save (replaces Pay Now) ────────────────────────────────────────
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSave = () => {
+  const handleSave = (addOnsForSave = selectedAddOns) => {
     setIsSubmitting(true);
+
+    const addOnRows = addOnsForSave
+      .filter((addon) => addon.qty > 0)
+      .map((addon) => ({
+        name: addon.label,
+        price: addon.unitPrice * addon.qty,
+      }));
+    const addOnsTotal = addOnRows.reduce((sum, item) => sum + item.price, 0);
+    const taxAmount = Math.round(
+      pricing.subtotalGuests * ((minimumVatPct ?? 11) / 100),
+    );
+    const grandTotal =
+      pricing.subtotalGuests +
+      pricing.platformFee +
+      addOnsTotal +
+      taxAmount +
+      pricing.agentCommission;
+
     router.put(
       `/companies/${company.username}/dashboard/bookings/${booking.id}`,
       {
@@ -441,26 +528,46 @@ function EditableWizard({
         contact_email: contact.email,
         contact_phone: contact.phone,
         contact_notes: contact.notes,
-        passengers: booking.passengers.map((p, idx) => {
-          const guest = guests[idx];
-          const doc = travelDocuments.find((d) => d.guestId === guest?.id);
+        pax_adult: adults,
+        pax_child: children,
+        pax_infant: infants,
+        total_price: pricing.subtotalGuests,
+        tax_amount: taxAmount,
+        platform_fee: pricing.platformFee,
+        commission_amount: pricing.agentCommission,
+        grand_total: grandTotal,
+        passengers: guests.map((guest) => {
+          const doc = travelDocuments.find((d) => d.guestId === guest.id);
           return {
-            id: p.id,
-            title: guest?.title || p.title || null,
-            first_name: guest?.firstName || p.first_name,
-            last_name: guest?.lastName || p.last_name || null,
-            gender: p.gender || null,
-            dob: guest?.dateOfBirth || p.dob || null,
-            pob: guest?.placeOfBirth || p.pob || null,
+            id: (guest as EditableGuestEntry).passengerId,
+            title: guest.title || null,
+            first_name: guest.firstName,
+            last_name: guest.lastName || null,
+            gender: null,
+            dob: guest.dateOfBirth || null,
+            pob: guest.placeOfBirth || null,
             nationality: null,
-            passport_number: doc?.passportNumber || p.passport_number || null,
-            passport_issue_date:
-              doc?.passportIssueDate || p.passport_issue_date || null,
-            passport_expiry_date:
-              doc?.passportExpiryDate || p.passport_expiry_date || null,
-            visa_number: doc?.visaNumber || p.visa_number || null,
+            passport_number: doc?.passportNumber || null,
+            passport_issue_date: doc?.passportIssueDate || null,
+            passport_expiry_date: doc?.passportExpiryDate || null,
+            visa_number: doc?.visaNumber || null,
+            price_category: guest.priceCategory,
+            price_amount: guest.price,
+            room_type: guest.roomTypeDescription || null,
+            room_number: null,
+            note: guest.note || null,
           };
         }),
+        rooms: rooms.map((room) => ({
+          room_type: room.type,
+          room_label: room.label,
+          bed_layout: room.guestIds.map((guestId, idx) => ({
+            bedType: room.type,
+            guestId,
+            position: { x: idx, y: 0 },
+          })),
+        })),
+        addons: addOnRows,
       } as any,
       {
         preserveScroll: true,
@@ -469,13 +576,6 @@ function EditableWizard({
         onFinish: () => setIsSubmitting(false),
       },
     );
-  };
-
-  const getGuestDisplayName = (guest: GuestEntry) => {
-    const parts = [guest.title, guest.firstName, guest.lastName].filter(
-      Boolean,
-    );
-    return parts.length > 0 ? parts.join(' ') : '(unnamed)';
   };
 
   return (
@@ -528,7 +628,10 @@ function EditableWizard({
 
                 {/* Step Indicator */}
                 <div className="pb-4">
-                  <WizardStepIndicator currentStep={currentStep} />
+                  <WizardStepIndicator
+                    currentStep={currentStep}
+                    onStepClick={goToStep}
+                  />
                 </div>
 
                 {/* Booking Info Card — no timer for dashboard edit */}
@@ -602,9 +705,14 @@ function EditableWizard({
                         pricing={pricing}
                         vendor={vendor}
                         agentName={booking.agent?.name ?? '-'}
-                        onPayNow={() => handleSave()}
+                        onPayNow={(_paymentType, _paymentMethod, addOns) =>
+                          handleSave(addOns)
+                        }
                         isSubmitting={isSubmitting}
                         initialAddOns={initialAddOns}
+                        onAddOnsChange={setSelectedAddOns}
+                        minimumDownPaymentPct={minimumDownPaymentPct}
+                        minimumVatPct={minimumVatPct}
                       />
                     )}
                   </motion.div>
@@ -652,7 +760,7 @@ function EditableWizard({
                   </Button>
                   <Button
                     type="button"
-                    onClick={handleSave}
+                    onClick={() => handleSave()}
                     disabled={isSubmitting}
                     className="gap-2"
                   >
