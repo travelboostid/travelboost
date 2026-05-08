@@ -126,6 +126,43 @@ return [
       ],
     ],
   ],
+  'company_usable_permissions' => [
+    'user.query',
+    'user.mutation',
+
+    'company.query',
+    'company.mutation',
+
+    'company-settings.query',
+    'company-settings.mutation',
+
+    'company-team.query',
+    'company-team.mutation',
+
+    'wallet.query',
+    'wallet.mutation',
+
+    'wallet-transaction.query',
+    'wallet-transaction.mutation',
+
+    'withdrawal.query',
+    'withdrawal.mutation',
+
+    'payment.query',
+    'payment.mutation',
+
+    'bank-account.query',
+    'bank-account.mutation',
+
+    'tour.query',
+    'tour.mutation',
+
+    'tour-category.query',
+    'tour-category.mutation',
+
+    'role.query',
+    'role.mutation',
+  ],
   'company_default_roles' => [
     // these roles will be created as company:<id>:<role_name> for each company and can be assigned to users
     [

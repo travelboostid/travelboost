@@ -19,7 +19,9 @@ class RoleController extends Controller
   public function index(Company $company)
   {
     // Retrieve all permissions
-    $permissions = Permission::all();
+    $companyUsablePermissions = config('travelboost.company_usable_permissions');
+    $permissions = Permission::all()
+      ->whereIn('name', $companyUsablePermissions);
 
     // Get roles associated with the company
     $roles = Role::where('name', 'like', "company:{$company->id}:%")
