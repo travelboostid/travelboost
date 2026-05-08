@@ -21,8 +21,7 @@ type MenuItemBase = {
   urlOrAction: string | (() => void);
   target?: HTMLAttributeAnchorTarget;
   icon?: LucideIcon;
-  visibleToPermissions?: string[];
-  visibleToCompanyTypes?: string[];
+  shouldDisplay?: (roles: string[], permissions: string[]) => boolean;
   disabled?: boolean;
 };
 
@@ -81,7 +80,8 @@ export function useCompanyDashboardNavMainMenu() {
       title: <FormattedMessage defaultMessage="Dashboard" />,
       urlOrAction: `/companies/${company.username}/dashboard`,
       icon: HomeIcon,
-      visibleToCompanyTypes: ['vendor', 'agent'],
+      shouldDisplay: (roles, _permissions) =>
+        roles.includes('user:vendor') || roles.includes('user:agent'),
     },
     {
       id: 'vendor-tours',
@@ -94,15 +94,17 @@ export function useCompanyDashboardNavMainMenu() {
           title: vendor.name,
           urlOrAction: `/companies/${company.username}/dashboard/vendors/${vendor.username}/tours`,
         })) || [],
-      visibleToCompanyTypes: ['agent'],
-      visibleToPermissions: ['tour.query'],
+      shouldDisplay: (roles, permissions) =>
+        roles.includes('user:agent') &&
+        permissions.includes('tour.query') &&
+        (data?.data || []).length > 0,
     },
     {
       id: 'agent-registrations',
       title: <FormattedMessage defaultMessage="Agents" />,
       urlOrAction: `/companies/${company.username}/dashboard/agent-registrations`,
       icon: UsersRoundIcon,
-      visibleToCompanyTypes: ['vendor'],
+      shouldDisplay: (roles, _permissions) => roles.includes('user:vendor'),
     },
     {
       id: 'tours',
@@ -114,11 +116,15 @@ export function useCompanyDashboardNavMainMenu() {
           id: 'tours.index',
           title: <FormattedMessage defaultMessage="Products" />,
           urlOrAction: `/companies/${company.username}/dashboard/tours`,
+          shouldDisplay: (_roles, permissions) =>
+            permissions.includes('tour.query'),
         },
         {
           id: 'tours.preview',
           title: <FormattedMessage defaultMessage="My Catalogs" />,
           urlOrAction: `/companies/${company.username}/dashboard/vendors/${company.username}/tours`,
+          shouldDisplay: (_roles, permissions) =>
+            permissions.includes('tour.query'),
         },
         {
           id: 'tours.orders',
@@ -136,8 +142,8 @@ export function useCompanyDashboardNavMainMenu() {
           urlOrAction: `/companies/${company.username}/dashboard/price-categories`,
         },
       ],
-      visibleToCompanyTypes: ['vendor'],
-      visibleToPermissions: ['tour.query'],
+      shouldDisplay: (roles, permissions) =>
+        roles.includes('user:vendor') && permissions.includes('tour.query'),
     },
     {
       id: 'tours',
@@ -149,11 +155,15 @@ export function useCompanyDashboardNavMainMenu() {
           id: 'agent-tours.index',
           title: <FormattedMessage defaultMessage="Products" />,
           urlOrAction: `/companies/${company.username}/dashboard/agent-tours`,
+          shouldDisplay: (_roles, permissions) =>
+            permissions.includes('tour.query'),
         },
         {
           id: 'tours.cats',
           title: <FormattedMessage defaultMessage="My Catalogs" />,
           urlOrAction: `/companies/${company.username}/dashboard/vendors/${company.username}/tours`,
+          shouldDisplay: (_roles, permissions) =>
+            permissions.includes('tour-category.query'),
         },
         {
           id: 'tours.bookings',
@@ -166,16 +176,16 @@ export function useCompanyDashboardNavMainMenu() {
           urlOrAction: `/companies/${company.username}/dashboard/categories`,
         },
       ],
-      visibleToCompanyTypes: ['agent'],
-      visibleToPermissions: ['tour.query'],
+      shouldDisplay: (roles, permissions) =>
+        roles.includes('user:agent') && permissions.includes('tour.query'),
     },
     {
       id: 'customers',
       title: <FormattedMessage defaultMessage="Customers" />,
       urlOrAction: `/companies/${company.username}/dashboard/customers`,
       icon: BookUserIcon,
-      visibleToCompanyTypes: ['agent'],
-      visibleToPermissions: ['user.query'],
+      shouldDisplay: (roles, permissions) =>
+        roles.includes('user:agent') && permissions.includes('user.query'),
     },
     {
       id: 'funds',
@@ -187,30 +197,41 @@ export function useCompanyDashboardNavMainMenu() {
           id: 'funds.wallets',
           title: <FormattedMessage defaultMessage="Wallet" />,
           urlOrAction: `/companies/${company.username}/dashboard/wallets`,
+          shouldDisplay: (_roles, permissions) =>
+            permissions.includes('wallet.query'),
         },
         {
           id: 'funds.wallet-transactions',
           title: <FormattedMessage defaultMessage="Wallet Transactions" />,
           urlOrAction: `/companies/${company.username}/dashboard/wallet-transactions`,
+          shouldDisplay: (_roles, permissions) =>
+            permissions.includes('wallet-transaction.query'),
         },
         {
           id: 'funds.bank-accounts',
           title: <FormattedMessage defaultMessage="Bank Accounts" />,
           urlOrAction: `/companies/${company.username}/dashboard/bank-accounts`,
+          shouldDisplay: (_roles, permissions) =>
+            permissions.includes('bank-account.query'),
         },
         {
           id: 'funds.withdrawals',
           title: <FormattedMessage defaultMessage="Withdrawals" />,
           urlOrAction: `/companies/${company.username}/dashboard/withdrawals`,
+          shouldDisplay: (_roles, permissions) =>
+            permissions.includes('withdrawal.query'),
         },
         {
           id: 'funds.payments',
           title: <FormattedMessage defaultMessage="Payment History" />,
           urlOrAction: `/companies/${company.username}/dashboard/payments`,
+          shouldDisplay: (_roles, permissions) =>
+            permissions.includes('payment.query'),
         },
       ],
-      visibleToCompanyTypes: ['agent', 'vendor'],
-      visibleToPermissions: ['fund.query'],
+      shouldDisplay: (roles, permissions) =>
+        (roles.includes('user:agent') || roles.includes('user:vendor')) &&
+        permissions.includes('wallet.query'),
     },
     {
       id: 'marketings',
@@ -260,7 +281,7 @@ export function useCompanyDashboardNavMainMenu() {
           disabled: isMarketingDisabled,
         },
       ],
-      visibleToCompanyTypes: ['agent'],
+      shouldDisplay: (roles, _permissions) => roles.includes('user:agent'),
     },
     {
       id: 'reports',
@@ -291,59 +312,63 @@ export function useCompanyDashboardNavMainMenu() {
           id: 'settings.profile',
           title: <FormattedMessage defaultMessage="Profile" />,
           urlOrAction: `/companies/${company.username}/dashboard/profile`,
+          shouldDisplay: (roles, permissions) =>
+            permissions.includes('company-settings.query'),
         },
         {
           id: 'settings.parameter-vendor',
           title: <FormattedMessage defaultMessage="Parameters" />,
           urlOrAction: `/companies/${company.username}/dashboard/parameter-vendor`,
-          visibleToCompanyTypes: ['vendor'],
+          shouldDisplay: (roles, permissions) =>
+            roles.includes('user:vendor') &&
+            permissions.includes('company-settings.query'),
         },
         {
           id: 'settings.teams',
           title: <FormattedMessage defaultMessage="User Management" />,
           urlOrAction: `/companies/${company.username}/dashboard/teams`,
+          shouldDisplay: (_roles, permissions) =>
+            permissions.includes('company-team.query'),
         },
         {
           id: 'settings.roles',
           title: <FormattedMessage defaultMessage="Access Roles" />,
           urlOrAction: `/companies/${company.username}/dashboard/roles`,
+          shouldDisplay: (_roles, permissions) =>
+            permissions.includes('role.query'),
         },
         {
           id: 'settings.chatbot',
           title: <FormattedMessage defaultMessage="Chat AI" />,
           urlOrAction: `/companies/${company.username}/dashboard/chatbot`,
+          shouldDisplay: (roles, permissions) =>
+            permissions.includes('company-settings.query'),
         },
         {
           id: 'settings.vendor-registrations',
           title: <FormattedMessage defaultMessage="Registration to Vendor" />,
           urlOrAction: `/companies/${company.username}/dashboard/vendor-registrations`,
-          visibleToCompanyTypes: ['agent'],
+          shouldDisplay: (roles, permissions) =>
+            roles.includes('user:agent') &&
+            permissions.includes('company-settings.query'),
         },
         {
           id: 'settings.agent-subscriptions',
           title: 'Agent Subscriptions',
           urlOrAction: `/companies/${company.username}/dashboard/agent-subscriptions`,
-          visibleToCompanyTypes: ['agent'],
+          shouldDisplay: (roles, permissions) =>
+            roles.includes('user:agent') &&
+            permissions.includes('company-settings.query'),
         },
       ],
-      visibleToCompanyTypes: ['agent', 'vendor'],
-      visibleToPermissions: ['company.query'],
+      shouldDisplay: (roles, _permissions) =>
+        roles.includes('user:agent') || roles.includes('user:vendor'),
     },
   ] as MenuItem[];
 
   const isMenuVisible = (menu: MenuItem): boolean => {
-    if (menu.visibleToCompanyTypes) {
-      if (!menu.visibleToCompanyTypes.includes(company.type)) {
-        return false;
-      }
-    }
-    if (menu.visibleToPermissions) {
-      const hasPermission = menu.visibleToPermissions.some((permission) =>
-        auth.permissions.includes(permission),
-      );
-      if (!hasPermission) {
-        return false;
-      }
+    if (menu.shouldDisplay) {
+      return menu.shouldDisplay(auth.roles, auth.permissions);
     }
     return true;
   };
