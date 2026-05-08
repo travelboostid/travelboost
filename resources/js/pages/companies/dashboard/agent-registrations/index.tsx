@@ -7,8 +7,9 @@ import { DEFAULT_PHOTO } from '@/config';
 import { useDataTable } from '@/hooks/use-data-table';
 import type { ColumnDef } from '@tanstack/react-table';
 import dayjs from 'dayjs';
-import { TextIcon, UserIcon } from 'lucide-react';
+import { UserIcon } from 'lucide-react';
 import { useMemo } from 'react';
+import AgentProfileModal from './components/AgentProfileModal';
 import ApproveRegistrationButton from './components/approve-registration-button';
 import EditNoteButton from './components/edit-note-button';
 import { EmptyRegistrations } from './components/empty-registrations';
@@ -34,32 +35,27 @@ export default function Page({ data }: PageProps) {
         cell: ({ row }) => {
           const agent = row.original.agent;
           return (
-            <div className="flex gap-2 items-center">
-              <Avatar className="h-8 w-8 rounded-lg">
+            <div className="flex items-center gap-3">
+              <Avatar className="h-9 w-9 border">
                 <AvatarImage
-                  src={agent.photo_url || DEFAULT_PHOTO}
-                  alt={agent.name}
+                  src={agent?.photo_url || DEFAULT_PHOTO}
+                  alt={agent?.name}
                 />
                 <AvatarFallback>
-                  <UserIcon />
+                  <UserIcon className="h-5 w-5 text-muted-foreground" />
                 </AvatarFallback>
               </Avatar>
-              <div>
-                <div className="font-medium">{agent.name}</div>
-                <div className="text-sm text-muted-foreground">
-                  {agent.username}
-                </div>
+              <div className="flex flex-col">
+                <span className="font-medium text-foreground">
+                  {agent?.name || 'Unknown Agent'}
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  @{agent?.username}
+                </span>
               </div>
             </div>
           );
         },
-        meta: {
-          label: 'Name',
-          placeholder: 'Search names...',
-          variant: 'text',
-          icon: TextIcon,
-        },
-        enableColumnFilter: true,
       },
       {
         id: 'status',
@@ -67,10 +63,23 @@ export default function Page({ data }: PageProps) {
         header: ({ column }) => (
           <DataTableColumnHeader column={column} label="Status" />
         ),
-        cell: ({ cell }) => (
-          <div className="font-medium">{cell.getValue<string>()}</div>
-        ),
-        enableColumnFilter: true,
+        cell: ({ row }) => {
+          const status = row.original.status;
+          return (
+            <div className="flex items-center">
+              <div
+                className={`h-2 w-2 rounded-full mr-2 ${
+                  status === 'active'
+                    ? 'bg-green-500'
+                    : status === 'pending'
+                      ? 'bg-yellow-500'
+                      : 'bg-red-500'
+                }`}
+              />
+              <span className="capitalize text-sm font-medium">{status}</span>
+            </div>
+          );
+        },
       },
       {
         id: 'applied_at',
@@ -78,12 +87,12 @@ export default function Page({ data }: PageProps) {
         header: ({ column }) => (
           <DataTableColumnHeader column={column} label="Applied At" />
         ),
-        cell: ({ cell }) => {
-          const appliedAt = cell.getValue<string>();
+        cell: ({ row }) => {
+          const date = row.original.applied_at;
           return (
-            <div className="text-sm text-muted-foreground">
-              {appliedAt ? dayjs(appliedAt).format('DD MMMM YYYY') : '-'}
-            </div>
+            <span className="text-sm text-muted-foreground">
+              {date ? dayjs(date).format('DD MMM YYYY, HH:mm') : '-'}
+            </span>
           );
         },
       },
@@ -93,20 +102,23 @@ export default function Page({ data }: PageProps) {
         header: ({ column }) => (
           <DataTableColumnHeader column={column} label="Accepted At" />
         ),
-        cell: ({ cell }) => {
-          const acceptedAt = cell.getValue<string>();
+        cell: ({ row }) => {
+          const date = row.original.accepted_at;
           return (
-            <div className="text-sm text-muted-foreground">
-              {acceptedAt ? dayjs(acceptedAt).format('DD MMMM YYYY') : '-'}
-            </div>
+            <span className="text-sm text-muted-foreground">
+              {date ? dayjs(date).format('DD MMM YYYY, HH:mm') : '-'}
+            </span>
           );
         },
       },
       {
         id: 'actions',
+        header: '',
         cell: ({ row }) => {
           return (
-            <div className="flex gap-2">
+            <div className="flex items-center justify-end gap-2">
+              <AgentProfileModal agent={row.original.agent} />
+
               {row.original.status === 'pending' && (
                 <>
                   <ApproveRegistrationButton registration={row.original} />

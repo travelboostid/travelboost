@@ -4,6 +4,7 @@ import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { cn } from '@/lib/utils';
 import { IconBrandWhatsapp, IconUsersGroup } from '@tabler/icons-react';
 import { ChevronLeftIcon, MessageSquareIcon, UserIcon } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Avatar,
   AvatarFallback,
@@ -123,6 +124,27 @@ export default function FloatingChatWidget() {
   const { open, setOpen, roomId } = useFloatingChatWidgetContext();
   const { company } = usePageSharedDataProps();
 
+  const [isExpanded, setIsExpanded] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(event.target as Node)
+      ) {
+        setIsExpanded(false);
+      }
+    };
+
+    if (isExpanded) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isExpanded]);
+
   const phone = company?.customer_service_phone || company?.phone;
   let whatsappUrl = '';
   if (phone) {
@@ -134,43 +156,88 @@ export default function FloatingChatWidget() {
 
   return (
     <>
+      <style>{`
+        @keyframes custom-pulse {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50% { opacity: 0.85; transform: scale(1.05); }
+        }
+        .custom-pulse {
+          animation: custom-pulse 1.8s infinite;
+        }
+      `}</style>
+
       <div
+        ref={containerRef}
         className={cn(
-          'fixed right-4 lg:right-6 bottom-4 lg:bottom-6 flex flex-col gap-3 z-50',
+          'fixed right-0 bottom-4 z-50 flex flex-col items-end gap-3', // PERUBAHAN: right-0 dan items-end
           open && 'hidden',
         )}
       >
-        {whatsappUrl && (
+        <div
+          className={cn(
+            'flex flex-col gap-2.5 transition-all duration-300 ease-out origin-bottom-right', // PERUBAHAN: origin-bottom-right
+            isExpanded
+              ? 'scale-100 opacity-100 translate-y-0'
+              : 'scale-75 opacity-0 translate-y-8 pointer-events-none',
+          )}
+        >
+          {whatsappUrl && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  asChild
+                  className="h-14 w-14 rounded-full bg-[#25D366] hover:bg-[#1ebe5d] text-white shadow-[0_4px_20px_rgba(37,211,102,0.4)] hover:scale-110 transition-transform mr-1"
+                >
+                  <a
+                    href={whatsappUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <IconBrandWhatsapp size={28} />
+                  </a>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="left">
+                <p>WhatsApp</p>
+              </TooltipContent>
+            </Tooltip>
+          )}
+
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
-                asChild
-                className="h-12 w-12 lg:h-16 lg:w-16 rounded-full bg-[#25D366] hover:bg-[#1ebe5d] text-white shadow-lg"
+                onClick={() => {
+                  setOpen(true);
+                  setIsExpanded(false);
+                }}
+                className="h-14 w-14 rounded-full shadow-[0_4px_20px_rgba(0,0,0,0.15)] hover:scale-110 transition-transform bg-primary mr-1"
               >
-                <a href={whatsappUrl} target="_blank" rel="noopener noreferrer">
-                  <IconBrandWhatsapp size={32} />
-                </a>
+                <MessageSquareIcon size={24} />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>
-              <p>WhatsApp</p>
+            <TooltipContent side="left">
+              <p>Live Chat</p>
             </TooltipContent>
           </Tooltip>
-        )}
+        </div>
 
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              onClick={() => setOpen(true)}
-              className="h-12 w-12 lg:h-16 lg:w-16 rounded-full shadow-lg"
-            >
-              <MessageSquareIcon />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Chat</p>
-          </TooltipContent>
-        </Tooltip>
+        <button
+          onClick={() => setIsExpanded(!isExpanded)}
+          className={cn(
+            'group h-16 w-14 rounded-l-xl flex items-center justify-center transition-all duration-300 z-50 shadow-[0_0_25px_rgba(225,29,72,0.4)]', // PERUBAHAN: rounded-l-xl
+            isExpanded
+              ? 'bg-slate-800 text-white shadow-none'
+              : 'bg-gradient-to-l from-primary to-rose-500 text-white hover:w-16 custom-pulse', // PERUBAHAN: bg-gradient-to-l
+          )}
+        >
+          <MessageSquareIcon
+            className={cn(
+              'transition-transform duration-300',
+              isExpanded ? '-rotate-12 scale-110' : 'group-hover:scale-110',
+            )}
+            size={24}
+          />
+        </button>
       </div>
 
       <Sheet open={open} onOpenChange={setOpen}>

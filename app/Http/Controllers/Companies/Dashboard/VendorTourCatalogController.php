@@ -17,11 +17,10 @@ class VendorTourCatalogController extends Controller
 
     $agentTourIds = $vendor->agentTours()->pluck('tour_id');
 
-    $toursQuery = Tour::where('status', 'active')
-      ->where(function ($query) use ($vendor, $agentTourIds) {
-        $query->where('company_id', $vendor->id)
-          ->orWhereIn('id', $agentTourIds);
-      });
+    $toursQuery = Tour::where(function ($query) use ($vendor, $agentTourIds) {
+      $query->where('company_id', $vendor->id)
+        ->orWhereIn('id', $agentTourIds);
+    });
 
     $categories = TourCategory::where('company_id', $vendor->id)
       ->orderBy('position_no')
@@ -47,7 +46,7 @@ class VendorTourCatalogController extends Controller
       ->get();
     $agentTours = \App\Models\AgentTour::where('company_id', $vendor->id)
       ->when(request('category'), function ($q, $categoryId) {
-          $q->where('category_id', $categoryId);
+        $q->where('category_id', $categoryId);
       })
       ->whereHas('tour', function ($q) {
         $q->where('status', 'active');
@@ -67,8 +66,14 @@ class VendorTourCatalogController extends Controller
       ->unique('id')
       ->sortByDesc('created_at')
       ->values()
-      ->map(function ($tour) use ($copiedTourIds) {
+      ->map(function ($tour) use ($copiedTourIds, $company) {
         $tour->has_copied = $copiedTourIds->contains($tour->id);
+
+        $tour->agent_status = \Illuminate\Support\Facades\DB::table('agent_tours')
+          ->where('tour_id', $tour->id)
+          ->where('company_id', $company->id)
+          ->value('status');
+
         return $tour;
       });
 
@@ -90,9 +95,10 @@ class VendorTourCatalogController extends Controller
   {
     $vendor = Company::where('username', $vendor)->firstOrFail();
 
-    $company->agentTours()->firstOrCreate([
-      'tour_id' => $tour->id,
-    ]);
+    $company->agentTours()->firstOrCreate(
+      ['tour_id' => $tour->id],
+      ['status' => 'active']
+    );
 
     return back();
   }
