@@ -1,4 +1,4 @@
-import { PLATFORM_FEE_PER_PAX, PPN_RATE } from '@/constants/booking';
+import { PLATFORM_FEE_PER_PAX } from '@/constants/booking';
 import type { BookingPricing, GuestEntry } from '@/types/booking';
 
 /**
@@ -7,6 +7,7 @@ import type { BookingPricing, GuestEntry } from '@/types/booking';
 export function calculateBookingPricing(
   guests: GuestEntry[],
   agentCommission: number,
+  vatPct: number = 11,
 ): BookingPricing {
   const subtotalGuests = guests.reduce(
     (sum, g) => sum + (g.price ?? 0),
@@ -14,7 +15,7 @@ export function calculateBookingPricing(
   );
   const paxCount = guests.length;
   const platformFee = paxCount * PLATFORM_FEE_PER_PAX;
-  const ppn = Math.round(subtotalGuests * PPN_RATE);
+  const ppn = Math.round(subtotalGuests * (vatPct / 100));
   const agentFee = agentCommission;
   const totalPrice = subtotalGuests + platformFee + ppn + agentFee;
   const totalPayment = totalPrice; // update here when discounts are introduced

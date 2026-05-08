@@ -8,6 +8,8 @@ enum BookingStatus: string
     case DOWN_PAYMENT = 'down payment';
     case FULL_PAYMENT = 'full payment';
     case RESERVED = 'reserved';
+    case MANUAL_RESERVED = 'manual reserved';
+    case BOOKING_RESERVED = 'booking reserved';
     case CANCELLED = 'cancelled';
     case REFUNDED = 'refunded';
     case EXPIRED = 'expired';
@@ -23,6 +25,8 @@ enum BookingStatus: string
             self::DOWN_PAYMENT => 'DP',
             self::FULL_PAYMENT => 'FP',
             self::RESERVED => 'RS',
+            self::MANUAL_RESERVED => 'RS',
+            self::BOOKING_RESERVED => 'BRS',
             self::CANCELLED => 'CA',
             self::REFUNDED => 'RF',
             self::EXPIRED => 'EX',
@@ -38,7 +42,9 @@ enum BookingStatus: string
         return match ($this) {
             self::DOWN_PAYMENT,
             self::FULL_PAYMENT,
-            self::RESERVED => true,
+            self::RESERVED,
+            self::MANUAL_RESERVED,
+            self::BOOKING_RESERVED => true,
             default => false,
         };
     }

@@ -87,37 +87,6 @@ Because of this, do not rely only on tray-menu editors or control panel shortcut
 
 Instead, always verify the active configuration manually.
 
-### Find Active CLI `php.ini`
-
-Run:
-
-```bash
-php --ini
-```
-
-Look for:
-
-```text
-Loaded Configuration File
-```
-
-Example:
-
-```text
-Loaded Configuration File: C:\wamp64\bin\php\php8.4.15\php.ini
-```
-
-This is the configuration used by:
-
-- artisan commands
-- queues
-- scheduler
-- tests
-- composer
-- local Laravel server
-
-If debugging does not work for queues or artisan commands, this is usually the first configuration file to check.
-
 ### Find CLI `php.ini`
 
 Run:
@@ -148,6 +117,8 @@ This is the configuration used by:
 ---
 
 ### Find Apache `php.ini`
+
+This is optional. In our project, we only need to adjust `php.ini` that used by CLI.
 
 Create a temporary Laravel route or PHP file:
 

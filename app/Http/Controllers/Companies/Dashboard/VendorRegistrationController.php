@@ -7,6 +7,7 @@ use App\Http\Requests\Companies\StoreVendorRegistrationRequest;
 use App\Http\Requests\Companies\VendorRegistrationIndexRequest;
 use App\Models\Company;
 use App\Models\VendorAgentPartner;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 class VendorRegistrationController extends Controller
@@ -15,7 +16,6 @@ class VendorRegistrationController extends Controller
   {
     $validated = $request->validated();
 
-    // Fetch vendor partners with optional filtering and sorting
     $data = $company->vendorPartners()
       ->with(['vendor'])
       ->when($validated['vendor.name'] ?? null, function ($query, $name) {
@@ -26,7 +26,6 @@ class VendorRegistrationController extends Controller
       ->when(request('sort'), function ($query) {
         $sorts = explode(',', request('sort'));
         foreach ($sorts as $sort) {
-          // Handle ascending and descending sort directions
           if (str_starts_with($sort, '-')) {
             $query->orderBy(substr($sort, 1), 'desc');
           } else {
@@ -41,6 +40,11 @@ class VendorRegistrationController extends Controller
       'data' => $data,
     ]);
   }
+  public function update(Request $request, Company $company, VendorAgentPartner $vendor_registration)
+  {
+    $vendor_registration->update($request->only(['show_vendor_name']));
+    return back();
+  }
 
   public function destroy(Company $company, VendorAgentPartner $vendor_registration)
   {
@@ -53,8 +57,13 @@ class VendorRegistrationController extends Controller
     $validated = $request->validated();
     $vendor = Company::where('id', $validated['vendor_id'])->first();
 
-    // Create partner relationship between agent and vendor
-    VendorAgentPartner::create(['agent_id' => $company->id, 'vendor_id' => $vendor->id]);
+    VendorAgentPartner::create([
+      'agent_id' => $company->id,
+      'vendor_id' => $vendor->id,
+      'status' => 'pending',
+      'applied_at' => now(),
+    ]);
+
     return back();
   }
 }

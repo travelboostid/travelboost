@@ -55,7 +55,7 @@ export default function CompanyDashboardLayout(
             </header>
 
             <div
-              className={`${containerClassName || ''} ${isExpired ? 'blur-md pointer-events-none select-none' : ''}`}
+              className={`min-w-0 overflow-x-hidden ${containerClassName || ''} ${isExpired ? 'blur-md pointer-events-none select-none' : ''}`}
             >
               {children}
             </div>

@@ -6,30 +6,26 @@ import AdminDashboardLayout from '@/components/layouts/admin-dashboard';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { useDataTable } from '@/hooks/use-data-table';
+import { edit } from '@/routes/admin/database/users';
+import { Link } from '@inertiajs/react';
 import type { Column, ColumnDef } from '@tanstack/react-table';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
-import { MoreHorizontal, Text } from 'lucide-react';
+import { PencilIcon, Text } from 'lucide-react';
 import { useMemo } from 'react';
 import { EmptyUsers } from './components/empty-users';
 dayjs.extend(relativeTime);
 
 type UsersPageProps = {
   data: {
-    data: UserResource[];
+    data: any[];
     total: number;
   };
 };
 
 export default function UsersPage({ data }: UsersPageProps) {
-  const columns = useMemo<ColumnDef<UserResource>[]>(
+  const columns = useMemo<ColumnDef<any>[]>(
     () => [
       {
         id: 'select',
@@ -108,6 +104,22 @@ export default function UsersPage({ data }: UsersPageProps) {
         ),
       },
       {
+        id: 'company',
+        accessorKey: 'company.name',
+        header: ({ column }: { column: Column<UserResource, unknown> }) => (
+          <DataTableColumnHeader column={column} label="Company" />
+        ),
+        cell: ({ row }) => (
+          <div className="flex flex-wrap gap-1">
+            {row.original.companies.map((company: any) => (
+              <Badge key={company.id} variant="outline">
+                {company.name}
+              </Badge>
+            ))}
+          </div>
+        ),
+      },
+      {
         id: 'created_at',
         accessorKey: 'created_at',
         header: ({ column }: { column: Column<UserResource, unknown> }) => (
@@ -125,22 +137,13 @@ export default function UsersPage({ data }: UsersPageProps) {
       },
       {
         id: 'actions',
-        cell: function Cell() {
+        cell: ({ row }) => {
           return (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon">
-                  <MoreHorizontal className="h-4 w-4" />
-                  <span className="sr-only">Open menu</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem>Edit</DropdownMenuItem>
-                <DropdownMenuItem variant="destructive">
-                  Delete
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <Link href={edit({ user: row.original.id }).url}>
+              <Button variant="ghost" size="icon" className="rounded-full">
+                <PencilIcon className="size-4" />
+              </Button>
+            </Link>
           );
         },
         size: 32,

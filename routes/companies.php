@@ -16,6 +16,7 @@ use App\Http\Controllers\Companies\Dashboard\PaymentController;
 use App\Http\Controllers\Companies\Dashboard\PriceCategoryController;
 use App\Http\Controllers\Companies\Dashboard\ProfileController;
 use App\Http\Controllers\Companies\Dashboard\RoleController;
+use App\Http\Controllers\Companies\Dashboard\RoomListingController;
 use App\Http\Controllers\Companies\Dashboard\TeamController;
 use App\Http\Controllers\Companies\Dashboard\TourAddOnController;
 use App\Http\Controllers\Companies\Dashboard\TourAvailabilityController;
@@ -38,6 +39,7 @@ Route::prefix('companies/{company:username}/dashboard')->middleware(['auth'])->n
 
 Route::prefix('companies/{company:username}/dashboard')->middleware(['auth', 'company.access'])->name('companies.dashboard.')->group(function () {
   Route::get('/', [HomeController::class, 'index'])->name('index');
+  Route::get('reports/room-listings', [RoomListingController::class, 'index'])->name('reports.room-listings.index');
   Route::group(['prefix' => 'vendors/{vendor}', 'as' => 'vendor.'], function () {
     Route::get('/tours', [VendorTourCatalogController::class, 'index'])->name('tours.index');
     Route::middleware(['agent.subscription.active'])->post('/tours/{tour}/copy', [VendorTourCatalogController::class, 'copy'])->name('tour.copy');
@@ -48,12 +50,13 @@ Route::prefix('companies/{company:username}/dashboard')->middleware(['auth', 'co
   Route::middleware(['agent.subscription.active'])->post('vendor-registrations/register', [VendorRegistrationController::class, 'register'])->name('vendor-registrations.register');
   Route::resource('tours', TourController::class);
 
+
   Route::delete('/tours/{tour}/schedules/{schedule}', [TourScheduleController::class, 'destroy'])
     ->name('tours.schedules.destroy');
 
   Route::delete(
     'tours/{tour}/prices/{price}',
-      [TourController::class, 'destroyPrice']
+    [TourController::class, 'destroyPrice']
   )->name('tours.prices.destroy');
 
   Route::post('/tours/{tour}/schedules', [TourScheduleController::class, 'store'])
@@ -81,8 +84,8 @@ Route::prefix('companies/{company:username}/dashboard')->middleware(['auth', 'co
   Route::get('profile', [ProfileController::class, 'show'])->name('settings.profile.show');
 
   Route::get(
-      'parameter-vendor',
-      [ParameterVendorController::class, 'index']
+    'parameter-vendor',
+    [ParameterVendorController::class, 'index']
   )->name('parameter-vendor.index');
 
   Route::put(
@@ -103,6 +106,7 @@ Route::prefix('companies/{company:username}/dashboard')->middleware(['auth', 'co
   Route::singleton('chatbot', ChatbotController::class);
   Route::singleton('page', PageController::class);
   Route::singleton('agent-subscriptions', AgentSubscriptionController::class);
+
 
   Route::singleton('ai-credits', ChatbotController::class);
 
