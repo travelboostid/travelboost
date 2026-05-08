@@ -38,6 +38,8 @@ import SelectRegion from './components/select-region';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
+import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
+
 ///////////tab 2
 type RoomPrice = {
   room_type_id: number;
@@ -527,16 +529,34 @@ export default function Page() {
                         <Item variant="outline" className="space-y-2">
                           <ItemContent className="space-y-2">
                             {url ? (
-                              <iframe
-                                src={window.location.origin + url}
-                                className="w-full h-56 rounded border"
-                                title="PDF Preview"
-                              />
+                              <div className="rounded border p-4 bg-muted/20">
+                                <p className="text-sm font-medium">
+                                  {(media as any)?.name || 'Document uploaded'}
+                                </p>
+
+                                <Dialog>
+                                  <DialogTrigger asChild>
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      size="sm"
+                                    >
+                                      View PDF
+                                    </Button>
+                                  </DialogTrigger>
+
+                                  <DialogContent className="max-w-5xl h-[90vh]">
+                                    <iframe
+                                      src={url}
+                                      className="h-full w-full rounded-md border"
+                                      title="PDF Preview"
+                                    />
+                                  </DialogContent>
+                                </Dialog>
+                              </div>
                             ) : (
                               <ItemTitle>No document selected</ItemTitle>
                             )}
-
-                            <ItemTitle>{(media as any)?.name || ''}</ItemTitle>
                           </ItemContent>
 
                           <ItemActions>

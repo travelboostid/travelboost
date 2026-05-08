@@ -35,7 +35,7 @@ import { Fragment } from 'react';
 import { TourDocumentPicker } from '@/components/media/tour-document-picker';
 import MoneyInput from '@/components/ui/money-input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Copy, MoreVertical, Save, Trash2 } from 'lucide-react';
+import { Copy, Save, Trash2 } from 'lucide-react';
 
 import { Calendar } from '@/components/ui/calendar';
 import {
@@ -45,13 +45,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import axios from 'axios';
 import { format } from 'date-fns';
 
@@ -1055,44 +1048,6 @@ export default function Page({ tour }: Props) {
     }
   };
 
-  //paging availability
-  const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 10;
-
-  const totalPages = Math.ceil(availability.length / pageSize);
-
-  const paginatedAvailability = availability.slice(
-    (currentPage - 1) * pageSize,
-    currentPage * pageSize,
-  );
-  //
-
-  //paging add ons
-  const addOnsPerPage = 10;
-
-  const [currentAddOnsPage, setCurrentAddOnsPage] = useState(1);
-
-  const totalAddOnsPages = Math.ceil(schedules.length / addOnsPerPage);
-
-  const paginatedSchedules = schedules.slice(
-    (currentAddOnsPage - 1) * addOnsPerPage,
-    currentAddOnsPage * addOnsPerPage,
-  );
-  //
-
-  //paging schedule
-  const schedulePerPage = 10;
-
-  const [currentSchedulePage, setCurrentSchedulePage] = useState(1);
-
-  const totalSchedulePages = Math.ceil(schedules.length / schedulePerPage);
-
-  const paginatedSchedulesTab = schedules.slice(
-    (currentSchedulePage - 1) * schedulePerPage,
-    currentSchedulePage * schedulePerPage,
-  );
-  //
-
   return (
     <CompanyDashboardLayout
       openMenuIds={['tours']}
@@ -1599,432 +1554,14 @@ export default function Page({ tour }: Props) {
 
                     {/* ================= BODY ================= */}
                     <tbody>
-                      {paginatedSchedulesTab.map((item, pageIndex) => {
-                        const index =
-                          (currentSchedulePage - 1) * schedulePerPage +
-                          pageIndex;
-
-                        return (
-                          <tr key={index} className="align-top border-t">
-                            {/* DATE */}
-                            <td className="p-2">
-                              <Input
-                                type="date"
-                                value={item.departure_date}
-                                min={new Date().toISOString().split('T')[0]}
-                                onChange={(e) =>
-                                  updateSchedule(
-                                    index,
-                                    'departure_date',
-                                    e.target.value,
-                                  )
-                                }
-                              />
-                            </td>
-
-                            <td className="p-2">
-                              <Input
-                                type="date"
-                                value={item.return_date}
-                                min={item.departure_date}
-                                readOnly
-                                className="bg-muted cursor-not-allowed"
-                                onChange={(e) =>
-                                  updateSchedule(
-                                    index,
-                                    'return_date',
-                                    e.target.value,
-                                  )
-                                }
-                              />
-                            </td>
-
-                            {/* PRICES */}
-                            <td colSpan={4} className="p-2">
-                              <div className="space-y-3">
-                                {(item.prices || []).map((room, rIndex) => (
-                                  <div
-                                    key={rIndex}
-                                    className="grid grid-cols-4 gap-2 items-start p-2 border rounded-md"
-                                  >
-                                    {/* ROOM */}
-                                    <select
-                                      className="border rounded px-2 h-9 text-sm w-full"
-                                      value={room.room_type_id ?? ''}
-                                      onChange={(e) =>
-                                        updateRoom(
-                                          index,
-                                          rIndex,
-                                          'room_type_id',
-                                          Number(e.target.value),
-                                        )
-                                      }
-                                    >
-                                      <option value="">Select Category</option>
-
-                                      {(priceCategories || [])
-                                        .filter((cat) => {
-                                          const selectedIds = (
-                                            item.prices || []
-                                          )
-                                            .map((p, i) =>
-                                              i !== rIndex
-                                                ? p.room_type_id
-                                                : null,
-                                            )
-                                            .filter(Boolean);
-
-                                          return !selectedIds.includes(cat.id);
-                                        })
-                                        .map((cat) => (
-                                          <option key={cat.id} value={cat.id}>
-                                            {cat.name}
-                                          </option>
-                                        ))}
-                                    </select>
-
-                                    {/* PRICE */}
-                                    <MoneyInput
-                                      value={room.price}
-                                      placeholder="Price"
-                                      onChange={(val) =>
-                                        updateRoom(index, rIndex, 'price', val)
-                                      }
-                                    />
-
-                                    {/* PROMOTION */}
-                                    <div className="space-y-1">
-                                      {/* PERCENT */}
-                                      <div className="relative">
-                                        <input
-                                          type="text"
-                                          inputMode="decimal"
-                                          className="w-full pr-8 border rounded px-2 h-9 text-sm"
-                                          value={
-                                            room.promotion.type === 'percent'
-                                              ? room.promotion.value
-                                              : ''
-                                          }
-                                          placeholder="0"
-                                          onChange={(e) => {
-                                            let raw = e.target.value
-                                              .replace(/[^0-9.,]/g, '')
-                                              .replace(',', '.');
-
-                                            if (Number(raw) > 100) raw = '100';
-
-                                            updateRoomAdjustment(
-                                              index,
-                                              rIndex,
-                                              'promotion',
-                                              'type',
-                                              'percent',
-                                            );
-                                            updateRoomAdjustment(
-                                              index,
-                                              rIndex,
-                                              'promotion',
-                                              'value',
-                                              raw,
-                                            );
-                                          }}
-                                        />
-                                        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs">
-                                          %
-                                        </span>
-                                      </div>
-
-                                      {/* VALUE */}
-                                      <MoneyInput
-                                        value={
-                                          room.promotion.type === 'value'
-                                            ? room.promotion.value
-                                            : ''
-                                        }
-                                        placeholder="Value"
-                                        className="w-full"
-                                        onChange={(val) => {
-                                          updateRoomAdjustment(
-                                            index,
-                                            rIndex,
-                                            'promotion',
-                                            'type',
-                                            'value',
-                                          );
-                                          updateRoomAdjustment(
-                                            index,
-                                            rIndex,
-                                            'promotion',
-                                            'value',
-                                            val,
-                                          );
-                                        }}
-                                      />
-                                    </div>
-
-                                    {/* COMMISSION */}
-                                    <div className="space-y-1">
-                                      {/* PERCENT */}
-                                      <div className="relative">
-                                        <input
-                                          type="text"
-                                          inputMode="decimal"
-                                          className="w-full pr-8 border rounded px-2 h-9 text-sm"
-                                          value={
-                                            room.commission.type === 'percent'
-                                              ? room.commission.value
-                                              : ''
-                                          }
-                                          placeholder="0"
-                                          onChange={(e) => {
-                                            const raw = e.target.value
-                                              .replace(/[^0-9.,]/g, '')
-                                              .replace(',', '.');
-
-                                            updateRoomAdjustment(
-                                              index,
-                                              rIndex,
-                                              'commission',
-                                              'type',
-                                              'percent',
-                                            );
-                                            updateRoomAdjustment(
-                                              index,
-                                              rIndex,
-                                              'commission',
-                                              'value',
-                                              raw,
-                                            );
-                                          }}
-                                        />
-                                        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs">
-                                          %
-                                        </span>
-                                      </div>
-
-                                      {/* VALUE */}
-                                      <MoneyInput
-                                        value={
-                                          room.commission.type === 'value'
-                                            ? room.commission.value
-                                            : ''
-                                        }
-                                        placeholder="Value"
-                                        className="w-full"
-                                        onChange={(val) => {
-                                          updateRoomAdjustment(
-                                            index,
-                                            rIndex,
-                                            'commission',
-                                            'type',
-                                            'value',
-                                          );
-                                          updateRoomAdjustment(
-                                            index,
-                                            rIndex,
-                                            'commission',
-                                            'value',
-                                            val,
-                                          );
-                                        }}
-                                      />
-                                    </div>
-
-                                    {/* REMOVE ROOM */}
-                                    <div className="col-span-4 flex justify-end">
-                                      <Button
-                                        type="button"
-                                        size="sm"
-                                        variant="ghost"
-                                        className="text-red-500"
-                                        onClick={() =>
-                                          removeRoom(index, rIndex)
-                                        }
-                                      >
-                                        x Delete Category
-                                      </Button>
-                                    </div>
-                                  </div>
-                                ))}
-
-                                {/* ADD ROOM */}
-                                <div>
-                                  <Button
-                                    type="button"
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => addRoom(index)}
-                                    disabled={
-                                      (item.prices || []).filter(
-                                        (p) => p.room_type_id,
-                                      ).length >= (priceCategories || []).length
-                                    }
-                                  >
-                                    + Add Category
-                                  </Button>
-                                </div>
-                              </div>
-                            </td>
-
-                            {/* ACTION */}
-                            <td className="p-2">
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8"
-                                  >
-                                    <MoreVertical className="h-4 w-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-
-                                <DropdownMenuContent
-                                  align="end"
-                                  className="w-48 rounded-xl shadow-lg"
-                                >
-                                  {/* SAVE */}
-                                  <DropdownMenuItem
-                                    className="cursor-pointer"
-                                    onClick={submitSchedule}
-                                    disabled={schedules.length === 0}
-                                  >
-                                    <Save className="mr-2 h-4 w-4" />
-                                    Save Schedule
-                                  </DropdownMenuItem>
-
-                                  {/* COPY */}
-                                  <DropdownMenuItem
-                                    className="cursor-pointer"
-                                    onClick={() => openCopyModal(index)}
-                                  >
-                                    <Copy className="mr-2 h-4 w-4" />
-                                    Copy Schedule
-                                  </DropdownMenuItem>
-
-                                  <DropdownMenuSeparator />
-
-                                  {/* DELETE */}
-                                  <DropdownMenuItem
-                                    className="cursor-pointer text-red-600 focus:bg-red-50 focus:text-red-600"
-                                    onClick={() => removeSchedule(index)}
-                                  >
-                                    <Trash2 className="mr-2 h-4 w-4" />
-                                    Delete Schedule
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                  <div className="flex items-center justify-between border-t px-4 py-3">
-                    <div className="text-sm text-muted-foreground">
-                      Page {currentSchedulePage} of {totalSchedulePages}
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        disabled={currentSchedulePage === 1}
-                        onClick={() => setCurrentSchedulePage((p) => p - 1)}
-                      >
-                        Previous
-                      </Button>
-
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        disabled={currentSchedulePage === totalSchedulePages}
-                        onClick={() => setCurrentSchedulePage((p) => p + 1)}
-                      >
-                        Next
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* MOBILE VERSION */}
-                <div className="md:hidden space-y-4">
-                  {paginatedSchedules.map((item, pageIndex) => {
-                    const index =
-                      (currentSchedulePage - 1) * schedulePerPage + pageIndex;
-
-                    return (
-                      <div
-                        key={index}
-                        className="border rounded-lg p-3 space-y-3"
-                      >
-                        {/* HEADER */}
-                        <div className="flex justify-between items-start">
-                          <p className="font-medium text-sm">
-                            Schedule #{index + 1}
-                          </p>
-
+                      {schedules.map((item, index) => (
+                        <tr key={index} className="align-top border-t">
+                          {/* DATE */}
                           <td className="p-2">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8"
-                                >
-                                  <MoreVertical className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-
-                              <DropdownMenuContent
-                                align="end"
-                                className="w-48 rounded-xl shadow-lg"
-                              >
-                                {/* SAVE */}
-                                <DropdownMenuItem
-                                  className="cursor-pointer"
-                                  onClick={submitSchedule}
-                                  disabled={schedules.length === 0}
-                                >
-                                  <Save className="mr-2 h-4 w-4" />
-                                  Save Schedule
-                                </DropdownMenuItem>
-
-                                {/* COPY */}
-                                <DropdownMenuItem
-                                  className="cursor-pointer"
-                                  onClick={() => openCopyModal(index)}
-                                >
-                                  <Copy className="mr-2 h-4 w-4" />
-                                  Copy Schedule
-                                </DropdownMenuItem>
-
-                                <DropdownMenuSeparator />
-
-                                {/* DELETE */}
-                                <DropdownMenuItem
-                                  className="cursor-pointer text-red-600 focus:bg-red-50 focus:text-red-600"
-                                  onClick={() => removeSchedule(index)}
-                                >
-                                  <Trash2 className="mr-2 h-4 w-4" />
-                                  Delete Schedule
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </td>
-                        </div>
-
-                        {/* DATES */}
-                        <div className="grid grid-cols-2 gap-2">
-                          <div>
-                            <p className="text-xs text-muted-foreground">
-                              Departure
-                            </p>
                             <Input
                               type="date"
                               value={item.departure_date}
+                              min={new Date().toISOString().split('T')[0]}
                               onChange={(e) =>
                                 updateSchedule(
                                   index,
@@ -2033,12 +1570,9 @@ export default function Page({ tour }: Props) {
                                 )
                               }
                             />
-                          </div>
+                          </td>
 
-                          <div>
-                            <p className="text-xs text-muted-foreground">
-                              Return
-                            </p>
+                          <td className="p-2">
                             <Input
                               type="date"
                               value={item.return_date}
@@ -2053,109 +1587,117 @@ export default function Page({ tour }: Props) {
                                 )
                               }
                             />
-                          </div>
-                        </div>
+                          </td>
 
-                        {/* ROOMS */}
-                        <div className="space-y-3">
-                          {(item.prices || []).map((room, rIndex) => (
-                            <div
-                              key={rIndex}
-                              className="border rounded-md p-3 space-y-2"
-                            >
-                              {/* ROOM HEADER */}
-                              <div className="flex justify-between items-center">
-                                <p className="text-xs font-medium text-muted-foreground">
-                                  Room #{rIndex + 1}
-                                </p>
-
-                                <Button
-                                  type="button"
-                                  size="sm"
-                                  variant="ghost"
-                                  className="text-red-500"
-                                  onClick={() => removeRoom(index, rIndex)}
+                          {/* PRICES */}
+                          <td colSpan={4} className="p-2">
+                            <div className="space-y-3">
+                              {(item.prices || []).map((room, rIndex) => (
+                                <div
+                                  key={rIndex}
+                                  className="grid grid-cols-4 gap-2 items-start p-2 border rounded-md"
                                 >
-                                  x Delete Category
-                                </Button>
-                              </div>
+                                  {/* ROOM */}
+                                  <select
+                                    className="border rounded px-2 h-9 text-sm w-full"
+                                    value={room.room_type_id ?? ''}
+                                    onChange={(e) =>
+                                      updateRoom(
+                                        index,
+                                        rIndex,
+                                        'room_type_id',
+                                        Number(e.target.value),
+                                      )
+                                    }
+                                  >
+                                    <option value="">Select Category</option>
 
-                              {/* ROOM TYPE */}
-                              <div className="space-y-1">
-                                <p className="text-xs text-muted-foreground">
-                                  Category
-                                </p>
+                                    {(priceCategories || [])
+                                      .filter((cat) => {
+                                        const selectedIds = (item.prices || [])
+                                          .map((p, i) =>
+                                            i !== rIndex
+                                              ? p.room_type_id
+                                              : null,
+                                          )
+                                          .filter(Boolean);
 
-                                <select
-                                  className="w-full border rounded-md px-3 h-10 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary"
-                                  value={room.room_type_id ?? ''}
-                                  onChange={(e) =>
-                                    updateRoom(
-                                      index,
-                                      rIndex,
-                                      'room_type_id',
-                                      Number(e.target.value),
-                                    )
-                                  }
-                                >
-                                  <option value="">Select Category</option>
+                                        return !selectedIds.includes(cat.id);
+                                      })
+                                      .map((cat) => (
+                                        <option key={cat.id} value={cat.id}>
+                                          {cat.name}
+                                        </option>
+                                      ))}
+                                  </select>
 
-                                  {(priceCategories || [])
-                                    .filter((cat) => {
-                                      const selectedIds = (item.prices || [])
-                                        .map((p, i) =>
-                                          i !== rIndex ? p.room_type_id : null,
-                                        )
-                                        .filter(Boolean);
+                                  {/* PRICE */}
+                                  <MoneyInput
+                                    value={room.price}
+                                    placeholder="Price"
+                                    onChange={(val) =>
+                                      updateRoom(index, rIndex, 'price', val)
+                                    }
+                                  />
 
-                                      return !selectedIds.includes(cat.id);
-                                    })
-                                    .map((cat) => (
-                                      <option key={cat.id} value={cat.id}>
-                                        {cat.name}
-                                      </option>
-                                    ))}
-                                </select>
-                              </div>
+                                  {/* PROMOTION */}
+                                  <div className="space-y-1">
+                                    {/* PERCENT */}
+                                    <div className="relative">
+                                      <input
+                                        type="text"
+                                        inputMode="decimal"
+                                        className="w-full pr-8 border rounded px-2 h-9 text-sm"
+                                        value={
+                                          room.promotion.type === 'percent'
+                                            ? room.promotion.value
+                                            : ''
+                                        }
+                                        placeholder="0"
+                                        onChange={(e) => {
+                                          let raw = e.target.value
+                                            .replace(/[^0-9.,]/g, '')
+                                            .replace(',', '.');
 
-                              {/* PRICE */}
-                              <div>
-                                <p className="text-xs text-muted-foreground">
-                                  Price
-                                </p>
-                                <MoneyInput
-                                  value={room.price}
-                                  placeholder="Price"
-                                  onChange={(val) =>
-                                    updateRoom(index, rIndex, 'price', val)
-                                  }
-                                />
-                              </div>
+                                          if (Number(raw) > 100) raw = '100';
 
-                              {/* PROMOTION */}
-                              <div className="space-y-1">
-                                <p className="text-xs text-muted-foreground">
-                                  Promotion
-                                </p>
+                                          updateRoomAdjustment(
+                                            index,
+                                            rIndex,
+                                            'promotion',
+                                            'type',
+                                            'percent',
+                                          );
+                                          updateRoomAdjustment(
+                                            index,
+                                            rIndex,
+                                            'promotion',
+                                            'value',
+                                            raw,
+                                          );
+                                        }}
+                                      />
+                                      <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs">
+                                        %
+                                      </span>
+                                    </div>
 
-                                <div className="grid grid-cols-2 gap-2">
-                                  {/* % */}
-                                  <div className="relative">
+                                    {/* VALUE */}
                                     <MoneyInput
                                       value={
-                                        room.promotion.type === 'percent'
+                                        room.promotion.type === 'value'
                                           ? room.promotion.value
                                           : ''
                                       }
-                                      placeholder="0"
-                                      className="pr-8"
+                                      placeholder="Value"
+                                      className="w-full"
                                       onChange={(val) => {
                                         updateRoomAdjustment(
                                           index,
                                           rIndex,
                                           'promotion',
                                           'type',
-                                          'percent',
+                                          'value',
                                         );
                                         updateRoomAdjustment(
                                           index,
@@ -2166,64 +1708,64 @@ export default function Page({ tour }: Props) {
                                         );
                                       }}
                                     />
-
-                                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-                                      %
-                                    </span>
                                   </div>
 
-                                  {/* VALUE */}
-                                  <MoneyInput
-                                    value={
-                                      room.promotion.type === 'value'
-                                        ? room.promotion.value
-                                        : ''
-                                    }
-                                    placeholder="Value"
-                                    onChange={(val) => {
-                                      updateRoomAdjustment(
-                                        index,
-                                        rIndex,
-                                        'promotion',
-                                        'type',
-                                        'value',
-                                      );
-                                      updateRoomAdjustment(
-                                        index,
-                                        rIndex,
-                                        'promotion',
-                                        'value',
-                                        val,
-                                      );
-                                    }}
-                                  />
-                                </div>
-                              </div>
+                                  {/* COMMISSION */}
+                                  <div className="space-y-1">
+                                    {/* PERCENT */}
+                                    <div className="relative">
+                                      <input
+                                        type="text"
+                                        inputMode="decimal"
+                                        className="w-full pr-8 border rounded px-2 h-9 text-sm"
+                                        value={
+                                          room.commission.type === 'percent'
+                                            ? room.commission.value
+                                            : ''
+                                        }
+                                        placeholder="0"
+                                        onChange={(e) => {
+                                          const raw = e.target.value
+                                            .replace(/[^0-9.,]/g, '')
+                                            .replace(',', '.');
 
-                              {/* COMMISSION */}
-                              <div className="space-y-1">
-                                <p className="text-xs text-muted-foreground">
-                                  Commission
-                                </p>
+                                          updateRoomAdjustment(
+                                            index,
+                                            rIndex,
+                                            'commission',
+                                            'type',
+                                            'percent',
+                                          );
+                                          updateRoomAdjustment(
+                                            index,
+                                            rIndex,
+                                            'commission',
+                                            'value',
+                                            raw,
+                                          );
+                                        }}
+                                      />
+                                      <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs">
+                                        %
+                                      </span>
+                                    </div>
 
-                                <div className="grid grid-cols-2 gap-2">
-                                  {/* % */}
-                                  <div className="relative">
+                                    {/* VALUE */}
                                     <MoneyInput
                                       value={
-                                        room.commission.type === 'percent'
+                                        room.commission.type === 'value'
                                           ? room.commission.value
                                           : ''
                                       }
-                                      placeholder="0"
-                                      className="pr-8"
+                                      placeholder="Value"
+                                      className="w-full"
                                       onChange={(val) => {
                                         updateRoomAdjustment(
                                           index,
                                           rIndex,
                                           'commission',
                                           'type',
-                                          'percent',
+                                          'value',
                                         );
                                         updateRoomAdjustment(
                                           index,
@@ -2234,27 +1776,329 @@ export default function Page({ tour }: Props) {
                                         );
                                       }}
                                     />
-
-                                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-                                      %
-                                    </span>
                                   </div>
 
-                                  {/* VALUE */}
+                                  {/* REMOVE ROOM */}
+                                  <div className="col-span-4 flex justify-end">
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      variant="ghost"
+                                      className="text-red-500"
+                                      onClick={() => removeRoom(index, rIndex)}
+                                    >
+                                      x Delete Category
+                                    </Button>
+                                  </div>
+                                </div>
+                              ))}
+
+                              {/* ADD ROOM */}
+                              <div>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => addRoom(index)}
+                                  disabled={
+                                    (item.prices || []).filter(
+                                      (p) => p.room_type_id,
+                                    ).length >= (priceCategories || []).length
+                                  }
+                                >
+                                  + Add Category
+                                </Button>
+                              </div>
+                            </div>
+                          </td>
+
+                          {/* ACTION */}
+                          <td className="p-2 flex flex-col gap-2 items-start">
+                            <Button
+                              type="button"
+                              variant="destructive"
+                              size="icon"
+                              onClick={() => removeSchedule(index)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+
+                            <Button
+                              type="button"
+                              size="icon"
+                              onClick={submitSchedule}
+                              disabled={schedules.length === 0}
+                            >
+                              <Save className="h-4 w-4" />
+                            </Button>
+
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className="bg-blue-600 text-white hover:bg-blue-700 border-blue-600"
+                              size="icon"
+                              onClick={() => openCopyModal(index)}
+                            >
+                              <Copy className="h-4 w-4" />
+                            </Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* MOBILE VERSION */}
+                <div className="md:hidden space-y-4">
+                  {schedules.map((item, index) => (
+                    <div
+                      key={index}
+                      className="border rounded-lg p-3 space-y-3"
+                    >
+                      {/* HEADER */}
+                      <div className="flex justify-between items-start">
+                        <p className="font-medium text-sm">
+                          Schedule #{index + 1}
+                        </p>
+
+                        <div className="flex flex-col items-end gap-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => removeSchedule(index)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+
+                          <Button
+                            type="button"
+                            size="icon"
+                            onClick={submitSchedule}
+                            disabled={schedules.length === 0}
+                          >
+                            <Save className="h-4 w-4" />
+                          </Button>
+
+                          <Button
+                            type="button"
+                            size="sm"
+                            className="bg-blue-600 text-white hover:bg-blue-700"
+                            onClick={() => openCopyModal(index)}
+                          >
+                            <Copy className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+
+                      {/* DATES */}
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <p className="text-xs text-muted-foreground">
+                            Departure
+                          </p>
+                          <Input
+                            type="date"
+                            value={item.departure_date}
+                            onChange={(e) =>
+                              updateSchedule(
+                                index,
+                                'departure_date',
+                                e.target.value,
+                              )
+                            }
+                          />
+                        </div>
+
+                        <div>
+                          <p className="text-xs text-muted-foreground">
+                            Return
+                          </p>
+                          <Input
+                            type="date"
+                            value={item.return_date}
+                            min={item.departure_date}
+                            readOnly
+                            className="bg-muted cursor-not-allowed"
+                            onChange={(e) =>
+                              updateSchedule(
+                                index,
+                                'return_date',
+                                e.target.value,
+                              )
+                            }
+                          />
+                        </div>
+                      </div>
+
+                      {/* ROOMS */}
+                      <div className="space-y-3">
+                        {(item.prices || []).map((room, rIndex) => (
+                          <div
+                            key={rIndex}
+                            className="border rounded-md p-3 space-y-2"
+                          >
+                            {/* ROOM HEADER */}
+                            <div className="flex justify-between items-center">
+                              <p className="text-xs font-medium text-muted-foreground">
+                                Room #{rIndex + 1}
+                              </p>
+
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="ghost"
+                                className="text-red-500"
+                                onClick={() => removeRoom(index, rIndex)}
+                              >
+                                x Delete Category
+                              </Button>
+                            </div>
+
+                            {/* ROOM TYPE */}
+                            <div className="space-y-1">
+                              <p className="text-xs text-muted-foreground">
+                                Category
+                              </p>
+
+                              <select
+                                className="w-full border rounded-md px-3 h-10 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+                                value={room.room_type_id ?? ''}
+                                onChange={(e) =>
+                                  updateRoom(
+                                    index,
+                                    rIndex,
+                                    'room_type_id',
+                                    Number(e.target.value),
+                                  )
+                                }
+                              >
+                                <option value="">Select Category</option>
+
+                                {(priceCategories || [])
+                                  .filter((cat) => {
+                                    const selectedIds = (item.prices || [])
+                                      .map((p, i) =>
+                                        i !== rIndex ? p.room_type_id : null,
+                                      )
+                                      .filter(Boolean);
+
+                                    return !selectedIds.includes(cat.id);
+                                  })
+                                  .map((cat) => (
+                                    <option key={cat.id} value={cat.id}>
+                                      {cat.name}
+                                    </option>
+                                  ))}
+                              </select>
+                            </div>
+
+                            {/* PRICE */}
+                            <div>
+                              <p className="text-xs text-muted-foreground">
+                                Price
+                              </p>
+                              <MoneyInput
+                                value={room.price}
+                                placeholder="Price"
+                                onChange={(val) =>
+                                  updateRoom(index, rIndex, 'price', val)
+                                }
+                              />
+                            </div>
+
+                            {/* PROMOTION */}
+                            <div className="space-y-1">
+                              <p className="text-xs text-muted-foreground">
+                                Promotion
+                              </p>
+
+                              <div className="grid grid-cols-2 gap-2">
+                                {/* % */}
+                                <div className="relative">
                                   <MoneyInput
                                     value={
-                                      room.commission.type === 'value'
+                                      room.promotion.type === 'percent'
+                                        ? room.promotion.value
+                                        : ''
+                                    }
+                                    placeholder="0"
+                                    className="pr-8"
+                                    onChange={(val) => {
+                                      updateRoomAdjustment(
+                                        index,
+                                        rIndex,
+                                        'promotion',
+                                        'type',
+                                        'percent',
+                                      );
+                                      updateRoomAdjustment(
+                                        index,
+                                        rIndex,
+                                        'promotion',
+                                        'value',
+                                        val,
+                                      );
+                                    }}
+                                  />
+
+                                  <span className="absolute right-2 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                                    %
+                                  </span>
+                                </div>
+
+                                {/* VALUE */}
+                                <MoneyInput
+                                  value={
+                                    room.promotion.type === 'value'
+                                      ? room.promotion.value
+                                      : ''
+                                  }
+                                  placeholder="Value"
+                                  onChange={(val) => {
+                                    updateRoomAdjustment(
+                                      index,
+                                      rIndex,
+                                      'promotion',
+                                      'type',
+                                      'value',
+                                    );
+                                    updateRoomAdjustment(
+                                      index,
+                                      rIndex,
+                                      'promotion',
+                                      'value',
+                                      val,
+                                    );
+                                  }}
+                                />
+                              </div>
+                            </div>
+
+                            {/* COMMISSION */}
+                            <div className="space-y-1">
+                              <p className="text-xs text-muted-foreground">
+                                Commission
+                              </p>
+
+                              <div className="grid grid-cols-2 gap-2">
+                                {/* % */}
+                                <div className="relative">
+                                  <MoneyInput
+                                    value={
+                                      room.commission.type === 'percent'
                                         ? room.commission.value
                                         : ''
                                     }
-                                    placeholder="Value"
+                                    placeholder="0"
+                                    className="pr-8"
                                     onChange={(val) => {
                                       updateRoomAdjustment(
                                         index,
                                         rIndex,
                                         'commission',
                                         'type',
-                                        'value',
+                                        'percent',
                                       );
                                       updateRoomAdjustment(
                                         index,
@@ -2265,55 +2109,58 @@ export default function Page({ tour }: Props) {
                                       );
                                     }}
                                   />
+
+                                  <span className="absolute right-2 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                                    %
+                                  </span>
                                 </div>
+
+                                {/* VALUE */}
+                                <MoneyInput
+                                  value={
+                                    room.commission.type === 'value'
+                                      ? room.commission.value
+                                      : ''
+                                  }
+                                  placeholder="Value"
+                                  onChange={(val) => {
+                                    updateRoomAdjustment(
+                                      index,
+                                      rIndex,
+                                      'commission',
+                                      'type',
+                                      'value',
+                                    );
+                                    updateRoomAdjustment(
+                                      index,
+                                      rIndex,
+                                      'commission',
+                                      'value',
+                                      val,
+                                    );
+                                  }}
+                                />
                               </div>
                             </div>
-                          ))}
+                          </div>
+                        ))}
 
-                          {/* ADD ROOM */}
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            onClick={() => addRoom(index)}
-                            disabled={
-                              (item.prices || []).filter((p) => p.room_type_id)
-                                .length >= (priceCategories || []).length
-                            }
-                          >
-                            + Add Category
-                          </Button>
-                        </div>
+                        {/* ADD ROOM */}
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() => addRoom(index)}
+                          disabled={
+                            (item.prices || []).filter((p) => p.room_type_id)
+                              .length >= (priceCategories || []).length
+                          }
+                        >
+                          + Add Category
+                        </Button>
                       </div>
-                    );
-                  })}
-                  <div className="mt-6 flex items-center justify-between border-t px-4 pt-4">
-                    <div className="text-sm text-muted-foreground">
-                      Page {currentSchedulePage} of {totalSchedulePages}
                     </div>
-
-                    <div className="flex items-center gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        disabled={currentSchedulePage === 1}
-                        onClick={() => setCurrentSchedulePage((p) => p - 1)}
-                      >
-                        Previous
-                      </Button>
-
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        disabled={currentSchedulePage === totalSchedulePages}
-                        onClick={() => setCurrentSchedulePage((p) => p + 1)}
-                      >
-                        Next
-                      </Button>
-                    </div>
-                  </div>
+                  ))}
                 </div>
               </div>
             </TabsContent>
@@ -2342,7 +2189,7 @@ export default function Page({ tour }: Props) {
                 <div className="hidden md:block rounded-lg border overflow-x-auto">
                   <table className="w-full table-fixed text-sm min-w-[1000px]">
                     <colgroup>
-                      <col className="w-[100px]" /> {/* Departure */}
+                      <col className="w-[120px]" /> {/* Departure */}
                       <col className="w-[50px]" /> {/* Max Pax */}
                       <col className="w-[50px]" />
                       <col className="w-[50px]" />
@@ -2399,456 +2246,287 @@ export default function Page({ tour }: Props) {
                     </thead>
 
                     <tbody>
-                      {paginatedAvailability.map((row, i) => {
-                        const realIndex = (currentPage - 1) * pageSize + i;
+                      {availability.map((row, i) => (
+                        <tr key={row.id} className="border-t">
+                          <td className="p-3">{row.schedule}</td>
 
-                        return (
-                          <tr key={row.id} className="border-t">
-                            <td className="p-3">{row.schedule}</td>
+                          {/* max pax */}
+                          <td className="p-3">
+                            <MoneyInput
+                              className="text-right"
+                              value={row.max_pax}
+                              onChange={(val) =>
+                                updateAvailability(i, 'max_pax', Number(val))
+                              }
+                            />
+                          </td>
 
-                            {/* max pax */}
-                            <td className="p-3">
-                              <MoneyInput
-                                className="text-right"
-                                value={row.max_pax}
-                                onChange={(val) =>
-                                  updateAvailability(
-                                    realIndex,
-                                    'max_pax',
-                                    Number(val),
-                                  )
+                          {/* RS */}
+                          <td className="p-3">
+                            <MoneyInput
+                              className="text-right"
+                              value={row.RS}
+                              onChange={(val) =>
+                                updateAvailability(i, 'RS', Number(val))
+                              }
+                            />
+                          </td>
+
+                          {/* WP */}
+                          <td className="p-3">
+                            <MoneyInput
+                              className="text-right"
+                              value={row.WP}
+                              onChange={(val) =>
+                                updateAvailability(i, 'WP', Number(val))
+                              }
+                              disabled={true}
+                            />
+                          </td>
+
+                          {/* DP */}
+                          <td className="p-3">
+                            <MoneyInput
+                              className="text-right"
+                              value={row.DP}
+                              onChange={(val) =>
+                                updateAvailability(i, 'DP', Number(val))
+                              }
+                              disabled={true}
+                            />
+                          </td>
+
+                          {/* FP */}
+                          <td className="p-3">
+                            <MoneyInput
+                              className="text-right"
+                              value={row.FP}
+                              onChange={(val) =>
+                                updateAvailability(i, 'FP', Number(val))
+                              }
+                              disabled={true}
+                            />
+                          </td>
+
+                          {/* WA */}
+                          <td className="p-3">
+                            <MoneyInput
+                              className="text-right"
+                              value={row.WA}
+                              onChange={(val) =>
+                                updateAvailability(i, 'WA', Number(val))
+                              }
+                              disabled={true}
+                            />
+                          </td>
+
+                          {/* BRS */}
+                          <td className="p-3">
+                            <MoneyInput
+                              className="text-right"
+                              value={row.BRS}
+                              onChange={(val) =>
+                                updateAvailability(i, 'BRS', Number(val))
+                              }
+                              disabled={true}
+                            />
+                          </td>
+
+                          {/* CA */}
+                          <td className="p-3">
+                            <MoneyInput
+                              className="text-right"
+                              value={row.CA}
+                              onChange={(val) =>
+                                updateAvailability(i, 'CA', Number(val))
+                              }
+                              disabled={true}
+                            />
+                          </td>
+
+                          {/* RF */}
+                          <td className="p-3">
+                            <MoneyInput
+                              className="text-right"
+                              value={row.RF}
+                              onChange={(val) =>
+                                updateAvailability(i, 'RF', Number(val))
+                              }
+                              disabled={true}
+                            />
+                          </td>
+
+                          {/* EX */}
+                          <td className="p-3">
+                            <MoneyInput
+                              className="text-right"
+                              value={row.EX}
+                              onChange={(val) =>
+                                updateAvailability(i, 'EX', Number(val))
+                              }
+                              disabled={true}
+                            />
+                          </td>
+
+                          {/* WL */}
+                          <td className="p-3">
+                            <MoneyInput
+                              className="text-right"
+                              value={row.WL}
+                              onChange={(val) =>
+                                updateAvailability(i, 'WL', Number(val))
+                              }
+                              disabled={true}
+                            />
+                          </td>
+
+                          {/* available */}
+                          <td
+                            className={`p-3 text-right font-semibold ${
+                              row.available <= 0
+                                ? 'text-red-500'
+                                : 'text-green-600'
+                            }`}
+                          >
+                            {row.available}
+                          </td>
+                          <td className={`p-3 text-right font-semibold`}>
+                            <Button
+                              type="button"
+                              disabled={savingAvailability}
+                              onClick={async () => {
+                                setSavingAvailability(true);
+
+                                try {
+                                  const payload = buildAvailabilityPayload();
+
+                                  console.log('SEND AVAILABILITY:', payload);
+
+                                  //`/companies/${company.username}/dashboard/tour-availabilities`
+
+                                  router.post(
+                                    `/companies/${company.username}/dashboard/tour-availabilities`,
+                                    {
+                                      availabilities: payload,
+                                    },
+                                    {
+                                      onSuccess: () => {
+                                        toast.success('Availability saved');
+                                      },
+                                      onError: () => {
+                                        toast.error(
+                                          'Failed to save availability',
+                                        );
+                                      },
+                                      onFinish: () => {
+                                        setSavingAvailability(false);
+                                      },
+                                    },
+                                  );
+                                } catch (err) {
+                                  setSavingAvailability(false);
                                 }
-                              />
-                            </td>
-
-                            {/* RS */}
-                            <td className="p-3">
-                              <MoneyInput
-                                className="text-right"
-                                value={row.RS}
-                                onChange={(val) =>
-                                  updateAvailability(
-                                    realIndex,
-                                    'RS',
-                                    Number(val),
-                                  )
-                                }
-                              />
-                            </td>
-
-                            {/* WP */}
-                            <td className="p-3">
-                              <MoneyInput
-                                className="text-right"
-                                value={row.WP}
-                                onChange={(val) =>
-                                  updateAvailability(
-                                    realIndex,
-                                    'WP',
-                                    Number(val),
-                                  )
-                                }
-                                disabled={true}
-                              />
-                            </td>
-
-                            {/* DP */}
-                            <td className="p-3">
-                              <MoneyInput
-                                className="text-right"
-                                value={row.DP}
-                                onChange={(val) =>
-                                  updateAvailability(
-                                    realIndex,
-                                    'DP',
-                                    Number(val),
-                                  )
-                                }
-                                disabled={true}
-                              />
-                            </td>
-
-                            {/* FP */}
-                            <td className="p-3">
-                              <MoneyInput
-                                className="text-right"
-                                value={row.FP}
-                                onChange={(val) =>
-                                  updateAvailability(
-                                    realIndex,
-                                    'FP',
-                                    Number(val),
-                                  )
-                                }
-                                disabled={true}
-                              />
-                            </td>
-
-                            {/* WA */}
-                            <td className="p-3">
-                              <MoneyInput
-                                className="text-right"
-                                value={row.WA}
-                                onChange={(val) =>
-                                  updateAvailability(
-                                    realIndex,
-                                    'WA',
-                                    Number(val),
-                                  )
-                                }
-                                disabled={true}
-                              />
-                            </td>
-
-                            {/* BRS */}
-                            <td className="p-3">
-                              <MoneyInput
-                                className="text-right"
-                                value={row.BRS}
-                                onChange={(val) =>
-                                  updateAvailability(
-                                    realIndex,
-                                    'BRS',
-                                    Number(val),
-                                  )
-                                }
-                                disabled={true}
-                              />
-                            </td>
-
-                            {/* CA */}
-                            <td className="p-3">
-                              <MoneyInput
-                                className="text-right"
-                                value={row.CA}
-                                onChange={(val) =>
-                                  updateAvailability(
-                                    realIndex,
-                                    'CA',
-                                    Number(val),
-                                  )
-                                }
-                                disabled={true}
-                              />
-                            </td>
-
-                            {/* RF */}
-                            <td className="p-3">
-                              <MoneyInput
-                                className="text-right"
-                                value={row.RF}
-                                onChange={(val) =>
-                                  updateAvailability(
-                                    realIndex,
-                                    'RF',
-                                    Number(val),
-                                  )
-                                }
-                                disabled={true}
-                              />
-                            </td>
-
-                            {/* EX */}
-                            <td className="p-3">
-                              <MoneyInput
-                                className="text-right"
-                                value={row.EX}
-                                onChange={(val) =>
-                                  updateAvailability(
-                                    realIndex,
-                                    'EX',
-                                    Number(val),
-                                  )
-                                }
-                                disabled={true}
-                              />
-                            </td>
-
-                            {/* WL */}
-                            <td className="p-3">
-                              <MoneyInput
-                                className="text-right"
-                                value={row.WL}
-                                onChange={(val) =>
-                                  updateAvailability(
-                                    realIndex,
-                                    'WL',
-                                    Number(val),
-                                  )
-                                }
-                                disabled={true}
-                              />
-                            </td>
-
-                            {/* available */}
-                            <td
-                              className={`p-3 text-right font-semibold ${
-                                row.available <= 0
-                                  ? 'text-red-500'
-                                  : 'text-green-600'
-                              }`}
+                              }}
                             >
-                              {row.available}
-                            </td>
-                            <td className="sticky right-0 bg-background p-3">
-                              <div className="relative z-50 flex justify-end">
-                                <DropdownMenu modal={false}>
-                                  <DropdownMenuTrigger asChild>
-                                    <Button
-                                      type="button"
-                                      variant="ghost"
-                                      size="icon"
-                                      className="h-8 w-8"
-                                    >
-                                      <MoreVertical className="h-4 w-4" />
-                                    </Button>
-                                  </DropdownMenuTrigger>
-
-                                  <DropdownMenuContent
-                                    align="end"
-                                    sideOffset={5}
-                                    className="w-52 rounded-xl shadow-lg"
-                                  >
-                                    <DropdownMenuItem
-                                      className="cursor-pointer"
-                                      disabled={savingAvailability}
-                                      onClick={async () => {
-                                        setSavingAvailability(true);
-
-                                        try {
-                                          const payload =
-                                            buildAvailabilityPayload();
-
-                                          router.post(
-                                            `/companies/${company.username}/dashboard/tour-availabilities`,
-                                            {
-                                              availabilities: payload,
-                                            },
-                                            {
-                                              onSuccess: () => {
-                                                toast.success(
-                                                  'Availability saved',
-                                                );
-                                              },
-                                              onError: () => {
-                                                toast.error(
-                                                  'Failed to save availability',
-                                                );
-                                              },
-                                              onFinish: () => {
-                                                setSavingAvailability(false);
-                                              },
-                                            },
-                                          );
-                                        } catch (err) {
-                                          setSavingAvailability(false);
-                                        }
-                                      }}
-                                    >
-                                      {savingAvailability ? (
-                                        <Spinner className="mr-2 h-4 w-4" />
-                                      ) : (
-                                        <Save className="mr-2 h-4 w-4" />
-                                      )}
-                                      Save Availability
-                                    </DropdownMenuItem>
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })}
+                              {savingAvailability && <Spinner />}
+                              <Save className="h-4 w-4" />
+                            </Button>
+                          </td>
+                        </tr>
+                      ))}
                     </tbody>
                   </table>
-
-                  <div className="flex items-center justify-between border-t px-4 py-3">
-                    <div className="text-sm text-muted-foreground">
-                      Page {currentPage} of {totalPages}
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        disabled={currentPage === 1}
-                        onClick={() => setCurrentPage((p) => p - 1)}
-                      >
-                        Previous
-                      </Button>
-
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        disabled={currentPage === totalPages}
-                        onClick={() => setCurrentPage((p) => p + 1)}
-                      >
-                        Next
-                      </Button>
-                    </div>
-                  </div>
                 </div>
                 {/* MOBILE */}
                 <div className="md:hidden space-y-4">
-                  {paginatedAvailability.map((row, i) => {
-                    const actualIndex = (currentPage - 1) * pageSize + i;
-
-                    return (
-                      <div
-                        key={row.id}
-                        className="border rounded-xl p-4 space-y-3 shadow-sm"
-                      >
-                        {/* Header */}
-                        <div className="flex items-start justify-between">
-                          <div>
-                            <div className="font-semibold text-sm">
-                              {row.schedule}
-                            </div>
-
-                            <div
-                              className={`text-sm font-semibold ${
-                                row.available <= 0
-                                  ? 'text-red-500'
-                                  : 'text-green-600'
-                              }`}
-                            >
-                              {row.available} pax
-                            </div>
-                          </div>
-
-                          {/* Action */}
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8"
-                              >
-                                <MoreVertical className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-
-                            <DropdownMenuContent
-                              align="end"
-                              className="w-52 rounded-xl shadow-lg"
-                            >
-                              <DropdownMenuItem
-                                className="cursor-pointer"
-                                disabled={savingAvailability}
-                                onClick={async () => {
-                                  setSavingAvailability(true);
-
-                                  try {
-                                    const payload = buildAvailabilityPayload();
-
-                                    console.log('SEND AVAILABILITY:', payload);
-
-                                    router.post(
-                                      `/companies/${company.username}/dashboard/tour-availabilities`,
-                                      {
-                                        availabilities: payload,
-                                      },
-                                      {
-                                        onSuccess: () => {
-                                          toast.success('Availability saved');
-                                        },
-                                        onError: () => {
-                                          toast.error(
-                                            'Failed to save availability',
-                                          );
-                                        },
-                                        onFinish: () => {
-                                          setSavingAvailability(false);
-                                        },
-                                      },
-                                    );
-                                  } catch (err) {
-                                    setSavingAvailability(false);
-                                  }
-                                }}
-                              >
-                                {savingAvailability ? (
-                                  <Spinner className="mr-2 h-4 w-4" />
-                                ) : (
-                                  <Save className="mr-2 h-4 w-4" />
-                                )}
-                                Save Availability
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                  {availability.map((row, i) => (
+                    <div
+                      key={row.id}
+                      className="border rounded-xl p-4 space-y-3 shadow-sm"
+                    >
+                      {/* Header */}
+                      <div className="flex justify-between items-start">
+                        <div className="font-semibold text-sm">
+                          {row.schedule}
                         </div>
 
-                        {/* Input grid */}
-                        <div className="grid grid-cols-2 gap-2 text-sm">
-                          {[
-                            { key: 'max_pax', label: 'Max' },
-                            { key: 'RS', label: 'RS' },
-                            { key: 'WP', label: 'WP' },
-                            { key: 'DP', label: 'DP' },
-                            { key: 'FP', label: 'FP' },
-                            { key: 'CA', label: 'CA' },
-                            { key: 'BRS', label: 'BRS' },
-                            { key: 'CA', label: 'CA' },
-                            { key: 'RF', label: 'RF' },
-                            { key: 'EX', label: 'EX' },
-                            { key: 'WL', label: 'WL' },
-                          ].map((field) => (
-                            <>
-                              <div className="text-muted-foreground">
-                                {field.label}
-                              </div>
-
-                              <MoneyInput
-                                className="text-right"
-                                value={row[field.key]}
-                                onChange={(val) =>
-                                  updateAvailability(
-                                    actualIndex,
-                                    field.key,
-                                    Number(val),
-                                  )
-                                }
-                              />
-                            </>
-                          ))}
+                        <div
+                          className={`text-sm font-semibold ${
+                            row.available <= 0
+                              ? 'text-red-500'
+                              : 'text-green-600'
+                          }`}
+                        >
+                          {row.available} pax
                         </div>
                       </div>
-                    );
-                  })}
-                  <div className="mt-6 flex items-center justify-between border-t px-2 pt-4">
-                    <div className="text-sm text-muted-foreground">
-                      Page {currentPage} of {totalPages}
-                    </div>
 
-                    <div className="flex items-center gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        disabled={currentPage === 1}
-                        onClick={() => setCurrentPage((p) => p - 1)}
-                      >
-                        Previous
-                      </Button>
+                      {/* Input grid */}
+                      <div className="grid grid-cols-2 gap-2 text-sm">
+                        {[
+                          { key: 'max_pax', label: 'Max' },
+                          { key: 'RS', label: 'RS' },
+                          { key: 'WP', label: 'WP' },
+                          { key: 'DP', label: 'DP' },
+                          { key: 'FP', label: 'FP' },
+                          { key: 'BRS', label: 'BRS' },
+                          { key: 'CA', label: 'CA' },
+                          { key: 'RF', label: 'RF' },
+                          { key: 'EX', label: 'EX' },
+                          { key: 'WL', label: 'WL' },
+                        ].map((field) => (
+                          <>
+                            <div className="text-muted-foreground">
+                              {field.label}
+                            </div>
 
+                            <MoneyInput
+                              className="text-right"
+                              value={row[field.key]}
+                              onChange={(val) =>
+                                updateAvailability(i, field.key, Number(val))
+                              }
+                            />
+                          </>
+                        ))}
+                      </div>
+
+                      {/* Action */}
                       <Button
+                        className="w-full"
                         type="button"
-                        variant="outline"
-                        size="sm"
-                        disabled={currentPage === totalPages}
-                        onClick={() => setCurrentPage((p) => p + 1)}
+                        disabled={savingAvailability}
+                        onClick={async () => {
+                          setSavingAvailability(true);
+
+                          try {
+                            const payload = buildAvailabilityPayload();
+
+                            router.post(
+                              `/companies/${company.username}/dashboard/tour-availabilities`,
+                              { availabilities: payload },
+                              {
+                                onSuccess: () =>
+                                  toast.success('Availability saved'),
+                                onError: () =>
+                                  toast.error('Failed to save availability'),
+                                onFinish: () => setSavingAvailability(false),
+                              },
+                            );
+                          } catch {
+                            setSavingAvailability(false);
+                          }
+                        }}
                       >
-                        Next
+                        {savingAvailability && <Spinner />}
+                        Save
                       </Button>
                     </div>
-                  </div>
+                  ))}
                 </div>
               </div>
 
-              <div className="flex justify-start pt-6"></div>
-              <div className="mt-20 flex items-center justify-between px-4 py-3"></div>
+              <div className="flex justify-start pt-6 border-t"></div>
             </TabsContent>
 
             {/* ================= TAB 4 — ADD ONS ================= */}
@@ -2884,7 +2562,7 @@ export default function Page({ tour }: Props) {
                     </thead>
 
                     <tbody>
-                      {paginatedSchedules.map((schedule) => {
+                      {schedules.map((schedule) => {
                         const rows = addOns[schedule.id] || [];
                         const rowCount = rows.length;
 
@@ -2956,52 +2634,26 @@ export default function Page({ tour }: Props) {
 
                                   {/* DELETE and SAVE */}
                                   <td className="p-3 text-left">
-                                    <div className="flex items-center justify-center">
-                                      <DropdownMenu modal={false}>
-                                        <DropdownMenuTrigger asChild>
-                                          <Button
-                                            type="button"
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-8 w-8"
-                                          >
-                                            <MoreVertical className="h-4 w-4" />
-                                          </Button>
-                                        </DropdownMenuTrigger>
+                                    <div className="flex items-center justify-center gap-2">
+                                      <Button
+                                        type="button"
+                                        variant="destructive"
+                                        size="icon"
+                                        onClick={() =>
+                                          handleDelete(schedule.id, index)
+                                        }
+                                      >
+                                        <Trash2 className="h-4 w-4" />
+                                      </Button>
 
-                                        <DropdownMenuContent
-                                          align="end"
-                                          sideOffset={5}
-                                          className="w-52 rounded-xl shadow-lg"
-                                        >
-                                          {/* SAVE */}
-                                          <DropdownMenuItem
-                                            className="cursor-pointer"
-                                            disabled={savingAddOns}
-                                            onClick={() => syncAddOns(addOns)}
-                                          >
-                                            {savingAddOns ? (
-                                              <Spinner className="mr-2 h-4 w-4" />
-                                            ) : (
-                                              <Save className="mr-2 h-4 w-4" />
-                                            )}
-                                            Save Add Ons
-                                          </DropdownMenuItem>
-
-                                          <DropdownMenuSeparator />
-
-                                          {/* DELETE */}
-                                          <DropdownMenuItem
-                                            className="cursor-pointer text-red-600 focus:bg-red-50 focus:text-red-600"
-                                            onClick={() =>
-                                              handleDelete(schedule.id, index)
-                                            }
-                                          >
-                                            <Trash2 className="mr-2 h-4 w-4" />
-                                            Delete
-                                          </DropdownMenuItem>
-                                        </DropdownMenuContent>
-                                      </DropdownMenu>
+                                      <Button
+                                        type="button"
+                                        disabled={savingAddOns}
+                                        onClick={() => syncAddOns(addOns)}
+                                      >
+                                        {savingAddOns && <Spinner />}
+                                        <Save className="h-4 w-4" />
+                                      </Button>
                                     </div>
                                   </td>
                                 </tr>
@@ -3035,33 +2687,6 @@ export default function Page({ tour }: Props) {
                       })}
                     </tbody>
                   </table>
-                </div>
-                <div className="mt-6 flex items-center justify-between border-t px-4 py-3">
-                  <div className="text-sm text-muted-foreground">
-                    Page {currentAddOnsPage} of {totalAddOnsPages}
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      disabled={currentAddOnsPage === 1}
-                      onClick={() => setCurrentAddOnsPage((p) => p - 1)}
-                    >
-                      Previous
-                    </Button>
-
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      disabled={currentAddOnsPage === totalAddOnsPages}
-                      onClick={() => setCurrentAddOnsPage((p) => p + 1)}
-                    >
-                      Next
-                    </Button>
-                  </div>
                 </div>
               </div>
 

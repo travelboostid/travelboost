@@ -558,6 +558,7 @@ return new class extends Migration
       $table->unsignedInteger('WP')->default(0);
       $table->unsignedInteger('DP')->default(0);
       $table->unsignedInteger('FP')->default(0);
+      $table->unsignedInteger('WA')->default(0);
       $table->unsignedInteger('BRS')->default(0);
       $table->unsignedInteger('CA')->default(0);
       $table->unsignedInteger('RF')->default(0);
