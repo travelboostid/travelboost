@@ -110,6 +110,8 @@ class AffiliateAuthController extends Controller
         'status' => 'active',
       ]);
 
+      $user->addRole('user:affiliate');
+
       $affiliate = AffiliateProfile::create([
         'user_id' => $user->id,
         'upline_id' => $uplineId,

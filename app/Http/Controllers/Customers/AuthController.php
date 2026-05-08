@@ -4,45 +4,34 @@ namespace App\Http\Controllers\Customers;
 
 use App\Enums\UserStatus;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Customers\LoginRequest;
+use App\Http\Requests\Customers\RegisterRequest;
 use App\Models\User;
-use App\Support\Rules\UserRules;
 use Illuminate\Auth\Events\Registered;
 use Inertia\Inertia;
 use Inertia\Response;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Context;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
 class AuthController extends Controller
 {
-  public function showLogin(Request $request): Response
+  public function showLogin(): Response
   {
     return Inertia::render('customers/auth/login');
   }
 
-  public function showRegister(Request $request): Response
+  public function showRegister(): Response
   {
     return Inertia::render('customers/auth/register');
   }
 
-  public function login(Request $request)
+  public function login(LoginRequest $request)
   {
-    $companyId = $this->getCompanyIdFromDomain();
-
-    if (!$companyId) {
-      return back()->withErrors([
-        'username_or_email' => 'The provided credentials are incorrect.',
-      ])->onlyInput('username_or_email');
-    }
-
-    $validated = $request->validate([
-      'username_or_email' => 'required|string',
-      'password' => 'required|string',
-    ]);
+    $validated = $request->validated();
 
     $loginType = filter_var($validated['username_or_email'], FILTER_VALIDATE_EMAIL) ? 'email' : 'username';
-    $user = User::where($loginType, $validated['username_or_email'])->where('company_id', $companyId)->first();
+    $user = User::where($loginType, $validated['username_or_email'])->where('company_id', $validated['company_id'])->first();
 
     if (!$user || !Hash::check($validated['password'], $user->password)) {
       return back()->withErrors([
@@ -60,40 +49,24 @@ class AuthController extends Controller
     return redirect()->route('me.index');
   }
 
-  public function register(Request $request)
+  public function register(RegisterRequest $request)
   {
-    $companyId = $this->getCompanyIdFromDomain();
-    if (!$companyId) {
-      return back()->withErrors([
-        'email' => 'Registration is not allowed.',
-      ])->onlyInput('email');
-    }
-    $validated = $request->validate([
-      'name' => UserRules::name(),
-      'username' => UserRules::username($companyId),
-      'email' => UserRules::email($companyId),
-      'password' => UserRules::password(),
-    ]);
-    $validated['company_id'] = $companyId;
+    $validated = $request->validated();
 
-    $user = User::create(array_merge($validated, [
-      'password' => Hash::make($validated['password']),
-      'status' => UserStatus::ACTIVE,
-    ]));
+    $user = DB::transaction(function () use ($validated) {
+      $user = User::create(array_merge($validated, [
+        'password' => Hash::make($validated['password']),
+        'status' => UserStatus::ACTIVE,
+      ]));
+
+      $user->addRole('user:customer');
+      return $user;
+    });
 
     event(new Registered($user));
     Auth::login($user);
     $request->session()->regenerate();
 
     return redirect()->route('me.index');
-  }
-
-  private function getCompanyIdFromDomain()
-  {
-    $domain = Context::get('domain');
-    if ($domain && $domain->owner instanceof \App\Models\Company) {
-      return $domain->owner_id;
-    }
-    return null;
   }
 }
