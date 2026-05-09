@@ -8,11 +8,6 @@ import type {
   ExtendedColumnSort,
 } from '@/types/data-table';
 
-const sortingItemSchema = z.object({
-  id: z.string(),
-  desc: z.boolean(),
-});
-
 export const getSortingStateParser = <TData>(
   columnIds?: string[] | Set<string>,
 ) => {
@@ -25,16 +20,18 @@ export const getSortingStateParser = <TData>(
   return createParser({
     parse: (value) => {
       try {
-        const parsed = JSON.parse(value);
-        const result = z.array(sortingItemSchema).safeParse(parsed);
+        const sorts = value.split(',').map((item) => item.trim());
+        const result = sorts.map((sort) => {
+          const dir = sort.startsWith('-') ? 'desc' : 'asc';
+          const field = sort.replace(/^-/, '');
+          return { id: field, desc: dir === 'desc' };
+        });
 
-        if (!result.success) return null;
-
-        if (validKeys && result.data.some((item) => !validKeys.has(item.id))) {
+        if (validKeys && result.some((item) => !validKeys.has(item.id))) {
           return null;
         }
 
-        return result.data as ExtendedColumnSort<TData>[];
+        return result as ExtendedColumnSort<TData>[];
       } catch {
         return null;
       }
