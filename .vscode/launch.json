@@ -5,13 +5,13 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Debug Backend",
+      "name": "Debug (Backend)",
       "type": "php",
       "request": "launch",
       "port": 9003
     },
     {
-      "name": "Debug Frontend",
+      "name": "Debug (Frontend)",
       "type": "chrome",
       "request": "launch",
       "url": "http://localhost:5173",
@@ -20,8 +20,8 @@
   ],
   "compounds": [
     {
-      "name": "Fullstack Debug",
-      "configurations": ["Debug Backend", "Debug Frontend"]
+      "name": "Debug (Fullstack)",
+      "configurations": ["Debug (Backend)", "Debug (Frontend)"]
     }
   ]
 }
