@@ -5,22 +5,23 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Listen for Xdebug (Web)",
+      "name": "Debug Backend",
       "type": "php",
       "request": "launch",
       "port": 9003
     },
     {
-      "name": "Debug Artisan Command",
-      "type": "php",
+      "name": "Debug Frontend",
+      "type": "chrome",
       "request": "launch",
-      "program": "${workspaceFolder}/artisan",
-      "args": ["queue:work"],
-      "cwd": "${workspaceFolder}",
-      "port": 9003,
-      "env": {
-        "XDEBUG_MODE": "debug"
-      }
+      "url": "http://localhost:5173",
+      "webRoot": "${workspaceFolder}"
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Fullstack Debug",
+      "configurations": ["Debug Backend", "Debug Frontend"]
     }
   ]
 }
