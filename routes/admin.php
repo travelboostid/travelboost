@@ -2,7 +2,6 @@
 
 use App\Http\Controllers\Admin\AgentController;
 use App\Http\Controllers\Admin\AppConfigController;
-use App\Http\Controllers\Admin\CustomerController;
 use App\Http\Controllers\Admin\HomeController;
 use App\Http\Controllers\Admin\ProfileController;
 use App\Http\Controllers\Admin\TourProductController;
@@ -26,7 +25,6 @@ Route::prefix('admin')->middleware(['auth', EnsureHasAdminAccess::class])->name(
   Route::prefix('database')->name('database.')->group(function () {
     Route::resource('vendors', VendorController::class)->names('vendors');
     Route::resource('agents', AgentController::class)->names('agents');
-    Route::get('customers', [CustomerController::class, 'index'])->name('customers');
     Route::get('affiliates', function () {
       return inertia('admin/database/affiliates/index');
     })->name('affiliates');
