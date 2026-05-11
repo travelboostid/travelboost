@@ -261,12 +261,14 @@ export default function TourCard({
                   toggleLike();
                 }
               }}
-              className="absolute top-2 right-2 z-30 rounded-full bg-white/80 p-1.5 shadow transition hover:scale-110"
+              className="absolute top-2 right-2 z-30 rounded-full bg-background/80 p-1.5 shadow transition hover:scale-110"
             >
               <HeartIcon
                 size={18}
                 className={
-                  liked ? 'fill-red-500 text-red-500' : 'text-gray-400'
+                  liked
+                    ? 'fill-destructive text-destructive'
+                    : 'text-muted-foreground'
                 }
               />
             </button>
@@ -283,7 +285,7 @@ export default function TourCard({
             <button
               type="button"
               onClick={() => setShowInfo(true)}
-              className="-mt-0.5 w-fit text-[11px] text-blue-500 hover:underline text-left"
+              className="-mt-0.5 w-fit text-left text-[11px] text-primary hover:underline"
             >
               more info...
             </button>
@@ -299,10 +301,10 @@ export default function TourCard({
               </span>
 
               {/* Harga earlybird */}
-              <span className="text-xs bg-blue-600 text-white px-2 py-1 rounded w-fit">
+              <span className="w-fit rounded bg-primary px-2 py-1 text-xs text-primary-foreground">
                 EARLY BIRD
               </span>
-              <span className="text-xl font-bold text-blue-600">
+              <span className="text-xl font-bold text-primary">
                 {formattedEarlybird}
               </span>
               {/* ✅ Earlybird Note */}
@@ -320,10 +322,10 @@ export default function TourCard({
               </span>
 
               {/* Harga earlybird */}
-              <span className="text-xs bg-red-600 text-white px-2 py-1 rounded w-fit">
+              <span className="w-fit rounded bg-destructive px-2 py-1 text-xs text-destructive-foreground">
                 PROMO
               </span>
-              <span className="text-xl font-bold text-red-600">
+              <span className="text-xl font-bold text-destructive">
                 {formattedpromoprice}
               </span>
             </div>
@@ -337,11 +339,11 @@ export default function TourCard({
               {/* Harga earlybird */}
               {/* ✅ Earlybird Note */}
               {tour.promote_title && (
-                <span className="text-xs bg-blue-600 text-white px-2 py-1 rounded w-fit">
+                <span className="w-fit rounded bg-primary px-2 py-1 text-xs text-primary-foreground">
                   {tour.promote_title}
                 </span>
               )}
-              <span className="text-xl font-bold text-blue-600">
+              <span className="text-xl font-bold text-primary">
                 {formattedpromoteprice}
               </span>
               {/* ✅ Earlybird Note */}
@@ -385,7 +387,7 @@ export default function TourCard({
               </Button>
               <Button
                 size="sm"
-                className="flex-1 bg-[#1ebe5d] hover:bg-[#19a34f] text-white text-xs px-0"
+                className="flex-1 px-0 text-xs"
                 onClick={() => setIsBookingModalOpen(true)}
               >
                 VIEW SCHEDULE
