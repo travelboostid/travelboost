@@ -1,0 +1,123 @@
+import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/spinner';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import {
+  IconBrandFacebook,
+  IconCalendarEvent,
+  IconPdf,
+} from '@tabler/icons-react';
+import { MessageSquareIcon } from 'lucide-react';
+import BaseTourCard from './BaseTourCard';
+
+export default function AgentMyTourCard({
+  tour,
+  isVendorNameVisible,
+  isVendorInactive,
+  onViewBrochure,
+  onChat,
+  onShareFB,
+  startingChat,
+}: any) {
+  return (
+    <BaseTourCard
+      tour={tour}
+      isVendorNameVisible={isVendorNameVisible}
+      isVendorInactive={isVendorInactive}
+      statusSection={
+        <div className="px-4 py-2 border-t border-slate-50 dark:border-slate-800/60 space-y-1">
+          <div className="flex items-center justify-between">
+            <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase">
+              Vendor Status
+            </span>
+            <span
+              className={`text-[9px] font-black uppercase ${tour.status === 'active' ? 'text-emerald-500' : 'text-red-500'}`}
+            >
+              {tour.status}
+            </span>
+          </div>
+          <div className="flex items-center justify-between border-t border-slate-50 dark:border-slate-800/60 pt-1">
+            <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase">
+              My Catalog Status
+            </span>
+            <span
+              className={`text-[9px] font-black uppercase ${tour.agent_status === 'active' ? 'text-blue-500' : 'text-red-500'}`}
+            >
+              {tour.agent_status}
+            </span>
+          </div>
+        </div>
+      }
+      footerSection={
+        <>
+          <Tooltip delayDuration={200}>
+            <TooltipTrigger asChild>
+              <Button
+                variant="default"
+                size="sm"
+                className="flex-1 rounded-xl h-9 shadow-sm bg-primary text-primary-foreground hover:scale-105 active:scale-95"
+                onClick={() => {}}
+              >
+                <IconCalendarEvent size={18} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Book Tour</p>
+            </TooltipContent>
+          </Tooltip>
+          <Tooltip delayDuration={200}>
+            <TooltipTrigger asChild>
+              <Button
+                variant="secondary"
+                size="sm"
+                className="flex-1 rounded-xl bg-slate-100 dark:bg-slate-800 h-9 border-none text-slate-700 dark:text-slate-300"
+                disabled={!tour.document}
+                onClick={onViewBrochure}
+              >
+                <IconPdf size={18} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>View Brochure</p>
+            </TooltipContent>
+          </Tooltip>
+          <Tooltip delayDuration={200}>
+            <TooltipTrigger asChild>
+              <Button
+                variant="secondary"
+                size="sm"
+                className="flex-1 rounded-xl bg-slate-100 dark:bg-slate-800 h-9 border-none text-slate-700 dark:text-slate-300"
+                disabled={startingChat}
+                onClick={onChat}
+              >
+                {startingChat ? <Spinner /> : <MessageSquareIcon size={18} />}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Send Message to Vendor</p>
+            </TooltipContent>
+          </Tooltip>
+          <Tooltip delayDuration={200}>
+            <TooltipTrigger asChild>
+              <Button
+                variant="secondary"
+                size="sm"
+                className="flex-1 rounded-xl bg-slate-100 dark:bg-slate-800 h-9 border-none text-slate-700 dark:text-slate-300"
+                disabled={!tour.document}
+                onClick={onShareFB}
+              >
+                <IconBrandFacebook size={18} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Share to Facebook</p>
+            </TooltipContent>
+          </Tooltip>
+        </>
+      }
+    />
+  );
+}
