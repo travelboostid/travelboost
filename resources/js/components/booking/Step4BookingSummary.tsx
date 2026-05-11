@@ -115,7 +115,12 @@ export default function Step4BookingSummary({
   const categoryBreakdown = useMemo(() => {
     const map = new Map<
       string,
-      { name: string; qty: number; unitPrice: number; originalUnitPrice: number }
+      {
+        name: string;
+        qty: number;
+        unitPrice: number;
+        originalUnitPrice: number;
+      }
     >();
     for (const g of guests) {
       const cat = g.priceCategory ?? 'Uncategorized';
@@ -395,7 +400,7 @@ export default function Step4BookingSummary({
                   className={cn(
                     'rounded-md px-3 py-1.5 text-xs font-medium transition-all',
                     paymentType === 'down_payment'
-                      ? 'bg-[#1ebe5d] text-white shadow-sm'
+                      ? 'bg-primary text-primary-foreground shadow-sm'
                       : 'text-muted-foreground hover:text-foreground',
                   )}
                   onClick={() => setPaymentType('down_payment')}
@@ -407,7 +412,7 @@ export default function Step4BookingSummary({
                   className={cn(
                     'rounded-md px-3 py-1.5 text-xs font-medium transition-all',
                     paymentType === 'full_payment'
-                      ? 'bg-[#1ebe5d] text-white shadow-sm'
+                      ? 'bg-primary text-primary-foreground shadow-sm'
                       : 'text-muted-foreground opacity-50 hover:text-foreground',
                   )}
                   onClick={() => setPaymentType('full_payment')}

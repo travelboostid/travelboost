@@ -203,8 +203,12 @@ export default function Page({
 }: PageProps) {
   const { company } = usePageSharedDataProps();
   const isAgent = company.type === 'agent';
-  const canEdit =
-    booking.status === 'reserved' || booking.status === 'awaiting payment';
+  const canEdit = [
+    'reserved',
+    'booking reserved',
+    'awaiting payment',
+    'waiting payment approval',
+  ].includes(booking.status);
 
   // ── Non-editable guard ───────────────────────────────────────────
   if (!canEdit) {

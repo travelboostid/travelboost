@@ -2,9 +2,12 @@
 
 export type BookingStatusCode =
   | 'waiting_payment'
+  | 'waiting_payment_approval'
   | 'down_payment'
   | 'full_payment'
   | 'reserved'
+  | 'booking_reserved'
+  | 'manual_reserved'
   | 'cancel'
   | 'refund'
   | 'expired'

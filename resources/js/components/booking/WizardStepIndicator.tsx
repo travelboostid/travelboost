@@ -45,7 +45,7 @@ export default function WizardStepIndicator({
                 className={cn(
                   'flex size-10 shrink-0 items-center justify-center rounded-full border-2 transition-all duration-300',
                   isCompleted
-                    ? 'border-primary bg-primary text-white'
+                    ? 'border-primary bg-primary text-primary-foreground'
                     : isActive
                       ? 'border-primary bg-primary/10 text-primary'
                       : 'border-muted-foreground/30 bg-muted text-muted-foreground',

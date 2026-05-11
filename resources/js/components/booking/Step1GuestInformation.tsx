@@ -148,7 +148,9 @@ function GuestDetailForm({
     allowedCategories.includes(p.categoryName),
   );
 
-  const computeDiscountedPrice = (tp: TourPrice): { discounted: number; original: number } => {
+  const computeDiscountedPrice = (
+    tp: TourPrice,
+  ): { discounted: number; original: number } => {
     const base = tp.price;
     let discounted = base;
     if (tp.promotionRate > 0) {
@@ -190,8 +192,6 @@ function GuestDetailForm({
       });
     }
   };
-
-  const hasPromotion = (tp: TourPrice) => tp.promotionRate > 0 || tp.promotion > 0;
 
   const age = calculateAgeAtDeparture(guest.dateOfBirth, departureDate);
   let ageError = '';
