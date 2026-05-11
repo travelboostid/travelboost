@@ -21,6 +21,7 @@ use App\Http\Controllers\Companies\Dashboard\TeamController;
 use App\Http\Controllers\Companies\Dashboard\TourAddOnController;
 use App\Http\Controllers\Companies\Dashboard\TourAvailabilityController;
 use App\Http\Controllers\Companies\Dashboard\TourController;
+use App\Http\Controllers\Companies\Dashboard\TourScheduleController;
 use App\Http\Controllers\Companies\Dashboard\VendorRegistrationController;
 use App\Http\Controllers\Companies\Dashboard\VendorTourCatalogController;
 use App\Http\Controllers\Companies\Dashboard\WalletController;
@@ -50,10 +51,8 @@ Route::prefix('companies/{company:username}/dashboard')->middleware(['auth', 'co
   Route::resource('tours', TourController::class);
 
 
-  Route::delete(
-    'tours/{tour}/schedules/{schedule}',
-    [TourController::class, 'destroySchedule']
-  )->name('tours.schedule.destroy');
+  Route::delete('/tours/{tour}/schedules/{schedule}', [TourScheduleController::class, 'destroy'])
+    ->name('tours.schedules.destroy');
 
   Route::delete(
     'tours/{tour}/prices/{price}',

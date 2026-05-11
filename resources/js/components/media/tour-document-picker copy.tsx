@@ -8,7 +8,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { UploadCloudIcon } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Item, ItemActions, ItemContent, ItemTitle } from '../ui/item';
 import { MediaSelector } from './media-selector';
 import { RawMediaUploader } from './raw-media-uploader';
@@ -29,13 +29,7 @@ export function TourDocumentPicker({
   const [internalValue, setInternalValue] = useState<
     MediaResource | Media | string | null | undefined
   >(value || defaultValue);
-
   const [open, setOpen] = useState(false);
-
-  // 🔥 sync external value
-  useEffect(() => {
-    setInternalValue(value || defaultValue);
-  }, [value, defaultValue]);
 
   const handleChange = (value?: MediaResource | string) => {
     setInternalValue(value);
@@ -56,30 +50,14 @@ export function TourDocumentPicker({
     <Item variant="outline" className="space-y-2">
       <ItemContent className="space-y-2">
         {internalValue ? (
-          <div className="rounded border bg-muted/20 p-4 space-y-3">
-            <p className="text-sm font-medium break-all">
-              {(internalValue as any)?.name || 'Document uploaded'}
-            </p>
-
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button type="button" variant="outline" size="sm">
-                  View PDF
-                </Button>
-              </DialogTrigger>
-
-              <DialogContent className="h-[90vh] max-w-5xl">
-                <iframe
-                  src={
-                    window.location.origin +
-                    ((internalValue as any)?.data?.url || '')
-                  }
-                  className="h-full w-full rounded-md border"
-                  title="PDF Preview"
-                />
-              </DialogContent>
-            </Dialog>
-          </div>
+          <>
+            <iframe
+              src={(internalValue as any)?.data?.url}
+              className="h-56 w-full rounded border"
+              title="PDF Preview"
+            />
+            <ItemTitle>{(internalValue as any)?.name || '-'}</ItemTitle>
+          </>
         ) : (
           <ItemTitle>No document selected</ItemTitle>
         )}
@@ -87,12 +65,11 @@ export function TourDocumentPicker({
 
       <ItemActions>
         <Dialog onOpenChange={setOpen} open={open}>
-          <DialogTrigger asChild>
+          <DialogTrigger>
             <Button variant="outline" size="sm" type="button">
               Change
             </Button>
           </DialogTrigger>
-
           <DialogContent className="w-full max-w-200">
             <RawMediaUploader
               afterUpload={handleAfterUpload}
@@ -105,7 +82,6 @@ export function TourDocumentPicker({
               }}
               trigger={({ open }) => (
                 <button
-                  type="button"
                   className="cursor-pointer rounded-md border-2 border-dashed p-4 text-center"
                   onClick={open}
                 >
@@ -113,16 +89,14 @@ export function TourDocumentPicker({
                     size={48}
                     className="mx-auto text-muted-foreground"
                   />
-
                   <h1 className="mb-2 font-medium">Click Here to Upload</h1>
-
                   <p className="mb-4 text-sm text-muted-foreground">
-                    Choose a PDF document from your device.
+                    Choose an image file from your device to upload as your new
+                    avatar.
                   </p>
                 </button>
               )}
             />
-
             <MediaSelector
               display="list"
               params={{
@@ -133,9 +107,8 @@ export function TourDocumentPicker({
               }}
               onChange={handleSelectedMedia}
             />
-
             <DialogFooter>
-              <DialogClose asChild>
+              <DialogClose>
                 <Button type="button">Cancel</Button>
               </DialogClose>
             </DialogFooter>

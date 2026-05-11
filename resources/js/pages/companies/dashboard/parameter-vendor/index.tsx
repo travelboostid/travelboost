@@ -54,7 +54,7 @@ export default function ParameterVendorPage() {
   };
 
   const inputClass =
-    'w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary';
+    'w-full rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-primary sm:px-4 sm:py-2.5';
   const labelClass = 'mb-2 block text-sm font-medium text-foreground';
 
   return (
@@ -80,15 +80,15 @@ export default function ParameterVendorPage() {
         })}
       />
 
-      <div className="mx-auto max-w-5xl space-y-6 pb-20">
+      <div className="mx-auto w-full max-w-5xl space-y-4 px-3 pb-20 sm:space-y-6 sm:px-4">
         {/* Header */}
 
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">
+            <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">
               <FormattedMessage defaultMessage="Parameters Settings" />
             </h1>
-            <p className="text-muted-foreground">
+            <p className="mt-1 text-sm text-muted-foreground sm:text-base">
               <FormattedMessage defaultMessage="Manage booking rules, tax, payment instructions and terms for your company." />
             </p>
           </div>
@@ -102,12 +102,12 @@ export default function ParameterVendorPage() {
 
         <form onSubmit={submit} className="space-y-6">
           {/* Booking Rules */}
-          <div className="rounded-2xl border bg-card p-6 shadow-sm">
+          <div className="rounded-2xl border bg-card p-4 shadow-sm sm:p-6">
             <h2 className="mb-5 text-lg font-semibold">
               <FormattedMessage defaultMessage="Booking Entry Rules" />
             </h2>
 
-            <div className="grid gap-5 md:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
               <div>
                 <label className={labelClass}>
                   <FormattedMessage defaultMessage="Entry Deadline Before Departure Date (days)" />
@@ -145,12 +145,12 @@ export default function ParameterVendorPage() {
           </div>
 
           {/* Financial */}
-          <div className="rounded-2xl border bg-card p-6 shadow-sm">
+          <div className="rounded-2xl border bg-card p-4 shadow-sm sm:p-6">
             <h2 className="mb-5 text-lg font-semibold">
               <FormattedMessage defaultMessage="Booking Payment Rules" />
             </h2>
 
-            <div className="grid gap-5 md:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
               <div>
                 <label className={labelClass}>
                   <FormattedMessage defaultMessage="Minimum Down Payment (%)" />
@@ -202,12 +202,12 @@ export default function ParameterVendorPage() {
           </div>
 
           {/* Bank Transfer */}
-          <div className="rounded-2xl border bg-card p-6 shadow-sm">
+          <div className="rounded-2xl border bg-card p-4 shadow-sm sm:p-6">
             <h2 className="mb-5 text-lg font-semibold">
               <FormattedMessage defaultMessage="Manual Bank Transfer" />
             </h2>
 
-            <div className="grid gap-5 md:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
               <div>
                 <label className={labelClass}>
                   <FormattedMessage defaultMessage="Bank Name" />
@@ -256,14 +256,14 @@ export default function ParameterVendorPage() {
           </div>
 
           {/* Terms */}
-          <div className="rounded-2xl border bg-card p-6 shadow-sm">
+          <div className="rounded-2xl border bg-card p-4 shadow-sm sm:p-6">
             <h2 className="mb-5 text-lg font-semibold">
               <FormattedMessage defaultMessage="Booking Terms & Conditions" />
             </h2>
 
             <textarea
               rows={6}
-              className={inputClass}
+              className={`${inputClass} min-h-[140px] resize-y`}
               value={data.term_conditions}
               onChange={(e) => setData('term_conditions', e.target.value)}
             />
@@ -276,11 +276,11 @@ export default function ParameterVendorPage() {
           </div>
 
           {/* Save */}
-          <div className="flex justify-end">
+          <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
             <button
               type="submit"
               disabled={processing}
-              className="rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground shadow-sm transition hover:opacity-90 disabled:opacity-50"
+              className="w-full rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground shadow-sm transition hover:opacity-90 disabled:opacity-50 sm:w-auto"
             >
               {processing ? (
                 <FormattedMessage defaultMessage="Saving..." />

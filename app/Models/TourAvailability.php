@@ -19,6 +19,7 @@ class TourAvailability extends Model
         'FP',
         'RS',
         'BRS',
+        'WA',
         'CA',
         'RF',
         'EX',

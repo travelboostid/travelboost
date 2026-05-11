@@ -3,7 +3,12 @@
 namespace App\Http\Controllers\Companies\Dashboard;
 
 use App\Http\Controllers\Controller;
+use App\Models\Company;
+use App\Models\Tour;
+use App\Models\TourSchedule;
+use App\Models\TourPrice;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class TourScheduleController extends Controller
 {
@@ -28,15 +33,24 @@ class TourScheduleController extends Controller
                 ->toArray();
 
             // DELETE schedule
-            $deleteIds = array_diff($existingScheduleIds, $incomingScheduleIds);
-            if (!empty($deleteIds)) {
-                TourSchedule::whereIn('id', $deleteIds)->delete();
+            if (count($data['schedules']) > 0 && count($incomingScheduleIds) > 0) {
+              $deleteIds = array_diff($existingScheduleIds, $incomingScheduleIds);
+              if (!empty($deleteIds)) {
+                  TourSchedule::whereIn('id', $deleteIds)->delete();
+              }
             }
+
+            $newlyCreatedSchedules = [];
 
             foreach ($data['schedules'] as $schedule) {
 
+                $isNewSchedule = empty($schedule['id']);
+                
                 $scheduleModel = TourSchedule::updateOrCreate(
-                    ['id' => $schedule['id'] ?? null],
+                    [
+                      'id' => $schedule['id'] ?? null,
+                      'tour_id' => $tour->id,
+                    ],
                     [
                         'tour_id'        => $tour->id,
                         'company_id'     => $company->id,
@@ -46,6 +60,10 @@ class TourScheduleController extends Controller
                     ]
                 );
 
+                if ($isNewSchedule) {
+                    $newlyCreatedSchedules[] = $scheduleModel;
+                }
+
                 // ================= PRICE =================
                 $existingPriceIds = $scheduleModel->prices()->pluck('id')->toArray();
 
@@ -54,10 +72,14 @@ class TourScheduleController extends Controller
                     ->filter()
                     ->toArray();
 
-                $deletePriceIds = array_diff($existingPriceIds, $incomingPriceIds);
-                if (!empty($deletePriceIds)) {
-                    TourPrice::whereIn('id', $deletePriceIds)->delete();
-                }
+                $incomingCategoryIds = collect($schedule['prices'] ?? [])
+                    ->pluck('room_type_id')
+                    ->filter()
+                    ->toArray();
+
+                $scheduleModel->prices()
+                    ->whereNotIn('price_category_id', $incomingCategoryIds)
+                    ->delete();
 
                 foreach ($schedule['prices'] ?? [] as $price) {
 
@@ -82,12 +104,13 @@ class TourScheduleController extends Controller
                     }
 
                     TourPrice::updateOrCreate(
-                        ['id' => $price['id'] ?? null],
                         [
-                            'schedule_id'       => $scheduleModel->id,
+                          'schedule_id' => $scheduleModel->id,
+                          'price_category_id' => $price['room_type_id'],
+                        ],
+                        [
                             'company_id'        => $company->id,
                             'tour_code'         => $tour->code,
-                            'price_category_id' => $price['room_type_id'],
                             'price'             => (int) ($price['price'] ?? 0),
                             'currency'          => $tour->currency,
                             'promotion_rate'    => $promotionRate,
@@ -97,16 +120,79 @@ class TourScheduleController extends Controller
                         ]
                     );
                 }
+
+                // ADD ONS
+                if (isset($schedule['add_ons'])) {
+
+                    $incomingDescriptions = collect($schedule['add_ons'])
+                        ->pluck('description')
+                        ->filter()
+                        ->toArray();
+
+                    // delete yg sudah tidak ada
+                    $scheduleModel->addOns()
+                        ->whereNotIn('description', $incomingDescriptions)
+                        ->delete();
+
+                    foreach ($schedule['add_ons'] as $addon) {
+
+                        if (empty($addon['description'])) {
+                            continue;
+                        }
+
+                        $scheduleModel->addOns()->updateOrCreate(
+                            [
+                                'company_id'  => $company->id,
+                                'tour_id'     => $tour->id,
+                                'schedule_id' => $scheduleModel->id,
+                                'description' => $addon['description'],
+                            ],
+                            [
+                                'price'       => $addon['price'] ?? 0,
+                                'edit_status' => $addon['edit_status'] ?? false,
+                            ]
+                        );
+                    }
+                }
+
+                // AVAILABILITY
+                if (isset($schedule['availability'])) {
+                    $scheduleModel->availability()->updateOrCreate(
+                        ['schedule_id' => $scheduleModel->id],
+                        [
+                            'max_pax' => $schedule['availability']['max_pax'] ?? 0,
+                            'available' => $schedule['availability']['available'] ?? 0,
+                        ]
+                    );
+                }
             }
 
             DB::commit();
 
-            return back()->with('success', 'Schedules saved');
-
+            return response()->json([
+                'success' => true,
+                'schedules' => $newlyCreatedSchedules,
+            ]);
         } catch (\Throwable $e) {
             DB::rollBack();
 
-            return back()->withErrors($e->getMessage());
+            return back()->withErrors([
+                'error' => $e->getMessage()
+            ]);
         }
+    }
+
+    public function destroy(Company $company, Tour $tour, TourSchedule $schedule)
+    {
+        // pastikan schedule milik tour ini
+        if ($schedule->tour_id !== $tour->id) {
+            abort(404);
+        }
+
+        $schedule->delete();
+
+        return back()->with([
+            'success' => true
+        ]);
     }
 }
