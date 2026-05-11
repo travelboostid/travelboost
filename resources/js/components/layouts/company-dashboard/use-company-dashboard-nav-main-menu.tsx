@@ -296,9 +296,10 @@ export function useCompanyDashboardNavMainMenu() {
           visibleToCompanyTypes: ['vendor'],
         },
         {
-          id: 'reports.inventories',
+          id: 'reports.seat-availability',
           title: <FormattedMessage defaultMessage="Seat Availability" />,
-          urlOrAction: '#',
+          urlOrAction: `/companies/${company.username}/dashboard/reports/seat-availabilities`,
+          visibleToCompanyTypes: ['vendor'],
         },
       ],
     },

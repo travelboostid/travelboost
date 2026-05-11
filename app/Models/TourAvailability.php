@@ -26,8 +26,18 @@ class TourAvailability extends Model
         'available',
     ];
 
+    public function tour()
+    {
+        return $this->belongsTo(Tour::class);
+    }
+
     public function schedule()
     {
         return $this->belongsTo(TourSchedule::class, 'schedule_id');
+    }
+
+    public function company()
+    {
+        return $this->belongsTo(Company::class);
     }
 }
