@@ -27,7 +27,16 @@ export const TITLE_OPTIONS: Record<string, string[]> = {
 // ─── Category Filter (maps guest type → allowed price_categories.name values) ──
 
 export const CATEGORY_FILTER: Record<string, string[]> = {
-  adult: ['Single', 'Double', 'Triple', 'Adult Single', 'Adult Double', 'Adult Twin', 'Adult Triple', 'Adult Extra Bed'],
+  adult: [
+    'Single',
+    'Double',
+    'Triple',
+    'Adult Single',
+    'Adult Double',
+    'Adult Twin',
+    'Adult Triple',
+    'Adult Extra Bed',
+  ],
   child: ['Child With Bed', 'Child No Bed'],
   infant: ['Infant', 'infant'],
 };
@@ -74,6 +83,13 @@ export const BOOKING_STATUS_CONFIG: Record<
     bgClass: 'bg-amber-500/10 border-amber-500/20',
     textClass: 'text-amber-600',
   },
+  waiting_payment_approval: {
+    label: 'Waiting Payment Approval',
+    code: 'WPA',
+    color: 'sky',
+    bgClass: 'bg-sky-500/10 border-sky-500/20',
+    textClass: 'text-sky-600',
+  },
   down_payment: {
     label: 'Down Payment',
     code: 'DP',
@@ -89,11 +105,25 @@ export const BOOKING_STATUS_CONFIG: Record<
     textClass: 'text-green-600',
   },
   reserved: {
-    label: 'Reserved',
-    code: 'RS',
+    label: 'Booking Reserved',
+    code: 'BRS',
     color: 'teal',
     bgClass: 'bg-teal-500/10 border-teal-500/20',
     textClass: 'text-teal-600',
+  },
+  booking_reserved: {
+    label: 'Booking Reserved',
+    code: 'BRS',
+    color: 'teal',
+    bgClass: 'bg-teal-500/10 border-teal-500/20',
+    textClass: 'text-teal-600',
+  },
+  manual_reserved: {
+    label: 'Manual Reserved',
+    code: 'RS',
+    color: 'violet',
+    bgClass: 'bg-violet-500/10 border-violet-500/20',
+    textClass: 'text-violet-600',
   },
   cancel: {
     label: 'Cancel',

@@ -2,16 +2,23 @@
 
 namespace App\Http\Controllers\Companies\Dashboard;
 
+use App\Actions\Booking\ExpireBookingReservationsAction;
+use App\Actions\Booking\FinalizeBookingPaymentAction;
+use App\Actions\Booking\SyncAvailabilityAction;
+use App\Enums\BookingStatus;
+use App\Enums\PaymentStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\UpdateBookingRequest;
 use App\Models\Booking;
 use App\Models\BookingPassenger;
 use App\Models\Company;
+use App\Models\Payment;
 use App\Models\TourPrice;
 use App\Models\TourSchedule;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -19,6 +26,8 @@ class BookingIndexController extends Controller
 {
     public function index(Company $company, Request $request): Response
     {
+        app(ExpireBookingReservationsAction::class)->execute($company);
+
         $bookings = Booking::query()
             ->when(($company->type->value ?? $company->type) === 'vendor', function ($query) use ($company) {
                 $query->where('vendor_id', $company->id);
@@ -59,6 +68,7 @@ class BookingIndexController extends Controller
                 'agent:id,name',
                 'user:id,name',
                 'passengers:id,booking_id,price_category',
+                'payments',
             ])
             ->withSum(['payments as paid_amount' => function ($query): void {
                 $query->where('status', 'paid');
@@ -71,6 +81,7 @@ class BookingIndexController extends Controller
             $paidAmount = (float) ($booking->paid_amount ?? 0);
             $booking->paid_amount = $paidAmount;
             $booking->remaining_balance = max(0, (float) $booking->grand_total - $paidAmount);
+            $booking->manual_payment = $this->resolvePendingManualPayment($booking);
 
             return $booking;
         });
@@ -82,11 +93,15 @@ class BookingIndexController extends Controller
 
     public function show(Company $company, Booking $booking): Response
     {
+        $booking = app(ExpireBookingReservationsAction::class)->expireIfDue($booking);
+
         return $this->renderBookingPage($company, $booking, 'companies/dashboard/bookings/show');
     }
 
     public function edit(Company $company, Booking $booking): Response
     {
+        $booking = app(ExpireBookingReservationsAction::class)->expireIfDue($booking);
+
         return $this->renderBookingPage($company, $booking, 'companies/dashboard/bookings/edit');
     }
 
@@ -170,6 +185,49 @@ class BookingIndexController extends Controller
         return back()->with('success', 'Booking updated successfully.');
     }
 
+    public function acceptManualPayment(Company $company, Booking $booking, Payment $payment): RedirectResponse
+    {
+        $this->assertPaymentReviewable($company, $booking, $payment);
+
+        DB::transaction(function () use ($booking, $payment): void {
+            $payment->update([
+                'status' => PaymentStatus::PAID,
+                'paid_at' => now(),
+            ]);
+
+            $booking->update([
+                'payment_mode' => 'manual',
+            ]);
+
+            app(FinalizeBookingPaymentAction::class)->execute($booking->fresh());
+        });
+
+        return back()->with('success', 'Manual payment accepted.');
+    }
+
+    public function declineManualPayment(Company $company, Booking $booking, Payment $payment): RedirectResponse
+    {
+        $this->assertPaymentReviewable($company, $booking, $payment);
+
+        DB::transaction(function () use ($booking, $payment): void {
+            $payment->update([
+                'status' => PaymentStatus::FAILED,
+                'payload' => array_merge($payment->payload ?? [], [
+                    'declined_at' => now()->toISOString(),
+                ]),
+            ]);
+
+            $booking->update([
+                'status' => BookingStatus::CANCELLED,
+                'reserved_expires_at' => null,
+            ]);
+        });
+
+        app(SyncAvailabilityAction::class)->executeForBooking($booking->fresh());
+
+        return back()->with('success', 'Manual payment declined and booking cancelled.');
+    }
+
     /**
      * Shared method to load booking data with all required relationships
      * and supplemental data (tourPrices, addOns) for the wizard view.
@@ -210,6 +268,10 @@ class BookingIndexController extends Controller
                         'categoryName' => $price->priceCategory?->name ?? 'Single',
                         'description' => $price->priceCategory?->description ?? '',
                         'price' => (float) $price->price,
+                        'promotionRate' => (float) $price->promotion_rate,
+                        'promotion' => (float) $price->promotion,
+                        'commissionRate' => (float) $price->commission_rate,
+                        'commission' => (float) $price->commission,
                     ];
                 })
                 ->values();
@@ -266,6 +328,50 @@ class BookingIndexController extends Controller
             'minimumDownPaymentPct' => (float) ($tour?->company?->companySetting?->minimum_down_payment ?? 50),
             'minimumVatPct' => (float) ($tour?->company?->companySetting?->minimum_vat ?? 11),
         ]);
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function resolvePendingManualPayment(Booking $booking): ?array
+    {
+        $manualPayment = $booking->payments
+            ->first(function (Payment $payment): bool {
+                return $payment->provider === 'manual'
+                    && $payment->payment_method === 'bank_transfer'
+                    && $payment->status === PaymentStatus::PENDING;
+            });
+
+        if (! $manualPayment) {
+            return null;
+        }
+
+        $proofPath = data_get($manualPayment->payload, 'proof_path');
+
+        return [
+            'id' => $manualPayment->id,
+            'sender_bank_name' => data_get($manualPayment->payload, 'sender_bank'),
+            'sender_account_number' => data_get($manualPayment->payload, 'sender_account'),
+            'transfer_amount' => (float) $manualPayment->amount,
+            'proof_path' => $proofPath,
+            'proof_url' => $proofPath ? Storage::disk('public')->url($proofPath) : null,
+            'payment_type' => data_get($manualPayment->payload, 'payment_type'),
+        ];
+    }
+
+    private function assertPaymentReviewable(Company $company, Booking $booking, Payment $payment): void
+    {
+        $companyType = $company->type->value ?? $company->type;
+        $belongsToCompany = $companyType === 'vendor'
+            ? (int) $booking->vendor_id === (int) $company->id
+            : (int) $booking->agent_id === (int) $company->id;
+
+        abort_unless($belongsToCompany, 404);
+        abort_unless($payment->payable_type === Booking::class, 404);
+        abort_unless((int) $payment->payable_id === (int) $booking->id, 404);
+        abort_unless($payment->provider === 'manual', 422);
+        abort_unless($payment->payment_method === 'bank_transfer', 422);
+        abort_unless($payment->status === PaymentStatus::PENDING, 422);
     }
 
     private function resolveCommissionAmount(Booking $booking): float

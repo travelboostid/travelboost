@@ -15,5 +15,6 @@ Route::domain('{username}.'.$appHost)->group(function () {
         Route::post('/bookings/{tour}', [BookingController::class, 'store'])->name('bookings.store');
         Route::post('/bookings/{booking}/manual-payment', [BookingController::class, 'storeManualPayment']);
         Route::post('/bookings/{booking}/online-payment', [BookingController::class, 'storeOnlinePayment']);
+        Route::post('/bookings/{booking}/online-payment/{payment}/confirm', [BookingController::class, 'confirmTenantOnlinePayment']);
     });
 });

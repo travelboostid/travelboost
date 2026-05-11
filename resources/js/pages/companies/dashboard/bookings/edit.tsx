@@ -101,7 +101,7 @@ type EditableGuestEntry = GuestEntry & {
 // Helpers — convert DB passengers → wizard GuestEntry[]
 // ---------------------------------------------------------------------------
 
-function passengersToGuests(passengers: Passenger[]): EditableGuestEntry[] {
+function passengersToGuests(passengers: Passenger[], tourPrices: TourPrice[]): EditableGuestEntry[] {
   const counters = { adult: 0, child: 0, infant: 0 };
 
   return passengers.map((p) => {
@@ -112,6 +112,21 @@ function passengersToGuests(passengers: Passenger[]): EditableGuestEntry[] {
 
     const idx = counters[type]++;
 
+    const matchedPrice = tourPrices.find(
+      (tp) => tp.categoryName === p.price_category,
+    );
+
+    let restoredPrice = p.price_amount ?? (matchedPrice ? matchedPrice.price : 0);
+    let restoredOriginalPrice = matchedPrice ? matchedPrice.price : restoredPrice;
+
+    if (matchedPrice) {
+      if (matchedPrice.promotionRate > 0) {
+        restoredPrice = Math.max(0, Math.round(matchedPrice.price - (matchedPrice.price * matchedPrice.promotionRate / 100)));
+      } else if (matchedPrice.promotion > 0) {
+        restoredPrice = Math.max(0, Math.round(matchedPrice.price - matchedPrice.promotion));
+      }
+    }
+
     return {
       id: `${type}-${idx}`,
       type,
@@ -121,8 +136,9 @@ function passengersToGuests(passengers: Passenger[]): EditableGuestEntry[] {
       dateOfBirth: p.dob ? p.dob.split('T')[0] : '',
       placeOfBirth: p.pob ?? '',
       priceCategory: p.price_category ?? null,
-      tourPriceId: 0,
-      price: p.price_amount ?? 0,
+      tourPriceId: matchedPrice ? matchedPrice.tourPriceId : 0,
+      price: restoredPrice,
+      originalPrice: restoredOriginalPrice,
       roomTypeDescription: p.room_type ?? '',
       note: p.note ?? '',
       passengerId: p.id,
@@ -187,8 +203,12 @@ export default function Page({
 }: PageProps) {
   const { company } = usePageSharedDataProps();
   const isAgent = company.type === 'agent';
-  const canEdit =
-    booking.status === 'reserved' || booking.status === 'awaiting payment';
+  const canEdit = [
+    'reserved',
+    'booking reserved',
+    'awaiting payment',
+    'waiting payment approval',
+  ].includes(booking.status);
 
   // ── Non-editable guard ───────────────────────────────────────────
   if (!canEdit) {
@@ -284,8 +304,8 @@ function EditableWizard({
 
   // ── Guests ─────────────────────────────────────────────────────────
   const initialGuests = useMemo(
-    () => passengersToGuests(booking.passengers),
-    [booking.passengers],
+    () => passengersToGuests(booking.passengers, tourPrices),
+    [booking.passengers, tourPrices],
   );
   const [adults, setAdults] = useState(booking.pax_adult);
   const [children, setChildren] = useState(booking.pax_child);
@@ -330,6 +350,7 @@ function EditableWizard({
       priceCategory: null,
       tourPriceId: 0,
       price: 0,
+      originalPrice: 0,
       roomTypeDescription: '',
       note: '',
     });

@@ -12,19 +12,33 @@ import { Link } from '@inertiajs/react';
 import type { Column, ColumnDef } from '@tanstack/react-table';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
-import { PencilIcon, Text } from 'lucide-react';
+import { CalendarIcon, CircleDashedIcon, PencilIcon, Text } from 'lucide-react';
 import { useMemo } from 'react';
 import { EmptyUsers } from './components/empty-users';
 dayjs.extend(relativeTime);
+
+const STATUS_OPTIONS = [
+  { label: 'Active', value: 'active' },
+  { label: 'Inactive', value: 'inactive' },
+  { label: 'Suspended', value: 'suspended' },
+];
 
 type UsersPageProps = {
   data: {
     data: any[];
     total: number;
+    per_page: number;
+    current_page: number;
+    last_page: number;
   };
+  userRoles: string[];
 };
 
-export default function UsersPage({ data }: UsersPageProps) {
+export default function UsersPage({ data, userRoles }: UsersPageProps) {
+  const USER_ROLE_OPTIONS = userRoles.map((role) => ({
+    label: role.replace('user:', ''),
+    value: role,
+  }));
   const columns = useMemo<ColumnDef<any>[]>(
     () => [
       {
@@ -102,22 +116,39 @@ export default function UsersPage({ data }: UsersPageProps) {
             )) ?? '-'}
           </div>
         ),
+        meta: {
+          label: 'Roles',
+          variant: 'multiSelect',
+          options: USER_ROLE_OPTIONS,
+          icon: CircleDashedIcon,
+        },
+        enableColumnFilter: true,
+        enableSorting: false,
       },
       {
         id: 'company',
         accessorKey: 'company.name',
         header: ({ column }: { column: Column<UserResource, unknown> }) => (
-          <DataTableColumnHeader column={column} label="Company" />
+          <DataTableColumnHeader column={column} label="Company Holder" />
         ),
-        cell: ({ row }) => (
-          <div className="flex flex-wrap gap-1">
-            {row.original.companies.map((company: any) => (
-              <Badge key={company.id} variant="outline">
-                {company.name}
-              </Badge>
-            ))}
-          </div>
+        cell: ({ row }) => <div>{row.original.company?.name ?? '-'}</div>,
+        enableSorting: false,
+      },
+      {
+        id: 'status',
+        accessorKey: 'status',
+        header: ({ column }: { column: Column<UserResource, unknown> }) => (
+          <DataTableColumnHeader column={column} label="Status" />
         ),
+        cell: ({ cell }) => <div>{cell.getValue<any>()}</div>,
+        meta: {
+          label: 'Status',
+          placeholder: 'Search status...',
+          variant: 'multiSelect',
+          options: STATUS_OPTIONS,
+          icon: CircleDashedIcon,
+        },
+        enableColumnFilter: true,
       },
       {
         id: 'created_at',
@@ -134,6 +165,13 @@ export default function UsersPage({ data }: UsersPageProps) {
             </div>
           );
         },
+        meta: {
+          label: 'Join Date',
+          placeholder: 'Search join date...',
+          variant: 'dateRange',
+          icon: CalendarIcon,
+        },
+        enableColumnFilter: true,
       },
       {
         id: 'actions',
@@ -149,7 +187,7 @@ export default function UsersPage({ data }: UsersPageProps) {
         size: 32,
       },
     ],
-    [],
+    [USER_ROLE_OPTIONS],
   );
 
   const { table } = useDataTable({
@@ -159,7 +197,7 @@ export default function UsersPage({ data }: UsersPageProps) {
     },
     data: data.data,
     columns,
-    pageCount: 1,
+    pageCount: data.last_page,
     rowCount: data.total,
     shallow: false,
     initialState: {

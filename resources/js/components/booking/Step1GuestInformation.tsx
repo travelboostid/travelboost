@@ -148,14 +148,29 @@ function GuestDetailForm({
     allowedCategories.includes(p.categoryName),
   );
 
+  const computeDiscountedPrice = (
+    tp: TourPrice,
+  ): { discounted: number; original: number } => {
+    const base = tp.price;
+    let discounted = base;
+    if (tp.promotionRate > 0) {
+      discounted = base - (base * tp.promotionRate) / 100;
+    } else if (tp.promotion > 0) {
+      discounted = base - tp.promotion;
+    }
+    return { discounted: Math.max(0, Math.round(discounted)), original: base };
+  };
+
   useEffect(() => {
     if (availablePrices.length === 1 && !guest.tourPriceId) {
       const selected = availablePrices[0];
+      const { discounted, original } = computeDiscountedPrice(selected);
       onChange({
         ...guest,
         priceCategory: selected.categoryName,
         tourPriceId: selected.tourPriceId,
-        price: selected.price,
+        price: discounted,
+        originalPrice: original,
         roomTypeDescription: selected.description,
       });
     }
@@ -166,11 +181,13 @@ function GuestDetailForm({
       (p) => p.tourPriceId === Number(tourPriceId),
     );
     if (selected) {
+      const { discounted, original } = computeDiscountedPrice(selected);
       onChange({
         ...guest,
         priceCategory: selected.categoryName,
         tourPriceId: selected.tourPriceId,
-        price: selected.price,
+        price: discounted,
+        originalPrice: original,
         roomTypeDescription: selected.description,
       });
     }
@@ -378,7 +395,7 @@ function GuestDetailForm({
             <SelectContent>
               {availablePrices.map((p) => (
                 <SelectItem key={p.tourPriceId} value={String(p.tourPriceId)}>
-                  {p.categoryName} - {formatCurrency(p.price)}
+                  {p.categoryName}
                 </SelectItem>
               ))}
             </SelectContent>

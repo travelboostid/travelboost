@@ -5,6 +5,7 @@ namespace App\Enums;
 enum BookingStatus: string
 {
     case AWAITING_PAYMENT = 'awaiting payment';
+    case WAITING_PAYMENT_APPROVAL = 'waiting payment approval';
     case DOWN_PAYMENT = 'down payment';
     case FULL_PAYMENT = 'full payment';
     case RESERVED = 'reserved';
@@ -22,9 +23,10 @@ enum BookingStatus: string
     {
         return match ($this) {
             self::AWAITING_PAYMENT => 'WP',
+            self::WAITING_PAYMENT_APPROVAL => 'WPA',
             self::DOWN_PAYMENT => 'DP',
             self::FULL_PAYMENT => 'FP',
-            self::RESERVED => 'RS',
+            self::RESERVED => 'BRS',
             self::MANUAL_RESERVED => 'RS',
             self::BOOKING_RESERVED => 'BRS',
             self::CANCELLED => 'CA',
@@ -44,7 +46,8 @@ enum BookingStatus: string
             self::FULL_PAYMENT,
             self::RESERVED,
             self::MANUAL_RESERVED,
-            self::BOOKING_RESERVED => true,
+            self::BOOKING_RESERVED,
+            self::WAITING_PAYMENT_APPROVAL => true,
             default => false,
         };
     }

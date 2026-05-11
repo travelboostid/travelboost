@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers\Webhooks;
 
+use App\Actions\Booking\FinalizeBookingPaymentAction;
 use App\Enums\AgentSubscriptionStatus;
-use App\Enums\BookingStatus;
 use App\Enums\PaymentStatus;
 use App\Http\Controllers\Controller;
 use App\Models\AffiliateProfile;
@@ -48,15 +48,17 @@ class MidtransWebhookController extends Controller
 
         $newStatus = $this->mapMidtransStatus($payload['transaction_status'] ?? 'pending');
 
-        if ($newStatus === PaymentStatus::PAID) {
-            $this->processPayment($payment);
-        }
+        DB::transaction(function () use ($payment, $payload, $newStatus): void {
+            $payment->update([
+                'status' => $newStatus,
+                'payload' => array_merge($payment->payload ?? [], $payload),
+                'paid_at' => $newStatus === PaymentStatus::PAID ? now() : null,
+            ]);
 
-        $payment->update([
-            'status' => $newStatus,
-            'payload' => array_merge($payment->payload ?? [], $payload),
-            'paid_at' => $newStatus === PaymentStatus::PAID ? now() : null,
-        ]);
+            if ($newStatus === PaymentStatus::PAID) {
+                $this->processPayment($payment->fresh());
+            }
+        });
 
         return response()->json(['message' => 'Webhook processed']);
     }
@@ -129,14 +131,11 @@ class MidtransWebhookController extends Controller
             return;
         }
 
-        $paymentType = $payment->payload['payment_type'] ?? 'full_payment';
-
         $booking->update([
-            'status' => $paymentType === 'down_payment'
-              ? BookingStatus::DOWN_PAYMENT
-              : BookingStatus::FULL_PAYMENT,
             'payment_mode' => 'online',
         ]);
+
+        app(FinalizeBookingPaymentAction::class)->execute($booking->fresh());
     }
 
     private function processAgentSubscription(Payment $payment): void

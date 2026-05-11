@@ -556,7 +556,7 @@ function BedArrangementModal({
                                     isSelected
                                       ? 'border-primary bg-primary/10 ring-1 ring-primary/30'
                                       : hasGuest
-                                        ? 'border-emerald-500/40 bg-emerald-50/50 dark:bg-emerald-950/20'
+                                        ? 'border-primary/30 bg-primary/5'
                                         : 'border-dashed border-border hover:border-primary/30 hover:bg-muted/50',
                                   )}
                                 >
@@ -564,9 +564,9 @@ function BedArrangementModal({
                                     className={cn(
                                       'flex size-5 shrink-0 items-center justify-center rounded-full text-[9px] font-bold',
                                       isSelected
-                                        ? 'bg-primary text-white'
+                                        ? 'bg-primary text-primary-foreground'
                                         : hasGuest
-                                          ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300'
+                                          ? 'bg-primary/10 text-primary'
                                           : 'bg-muted text-muted-foreground',
                                     )}
                                   >
@@ -578,7 +578,7 @@ function BedArrangementModal({
                                       isSelected
                                         ? 'text-primary'
                                         : hasGuest
-                                          ? 'text-emerald-700 dark:text-emerald-400'
+                                          ? 'text-primary'
                                           : 'text-muted-foreground',
                                     )}
                                   >
@@ -629,8 +629,8 @@ function BedArrangementModal({
 
         {/* Sharing guests (no bed) */}
         {rooms.some((r) => (r.sharingGuestIds ?? []).length > 0) && (
-          <div className="rounded-xl border border-dashed border-purple-300/50 bg-purple-50/30 p-4 dark:border-purple-700/30 dark:bg-purple-950/10">
-            <p className="mb-3 text-center text-[10px] font-bold uppercase tracking-widest text-purple-600 dark:text-purple-400">
+          <div className="rounded-xl border border-dashed border-primary/20 bg-primary/5 p-4">
+            <p className="mb-3 text-center text-[10px] font-bold uppercase tracking-widest text-primary">
               Sharing Guests (No Bed)
             </p>
             <div className="space-y-2">
@@ -641,9 +641,9 @@ function BedArrangementModal({
                   return (
                     <div
                       key={guestId}
-                      className="flex items-center gap-3 rounded-lg bg-white/80 px-3 py-2 dark:bg-background/50"
+                      className="flex items-center gap-3 rounded-lg bg-background/80 px-3 py-2"
                     >
-                      <Baby className="size-4 shrink-0 text-purple-500" />
+                      <Baby className="size-4 shrink-0 text-primary" />
                       <span className="min-w-0 flex-1 truncate text-xs font-medium">
                         {[guest.firstName, guest.lastName]
                           .filter(Boolean)
@@ -651,7 +651,7 @@ function BedArrangementModal({
                       </span>
                       <Badge
                         variant="secondary"
-                        className="shrink-0 px-1.5 py-0 text-[9px] uppercase text-purple-600"
+                        className="shrink-0 px-1.5 py-0 text-[9px] uppercase text-primary"
                       >
                         {guest.priceCategory ?? 'No Bed'}
                       </Badge>
@@ -838,17 +838,17 @@ function RoomCard({
             {sharingGuests.map((guest) => (
               <div
                 key={guest!.id}
-                className="flex items-center gap-2 rounded-lg bg-purple-50/50 px-3 py-1.5 dark:bg-purple-950/20"
+                className="flex items-center gap-2 rounded-lg bg-primary/5 px-3 py-1.5"
               >
-                <Baby className="size-3.5 text-purple-500" />
-                <span className="text-xs font-medium text-purple-700 dark:text-purple-400">
+                <Baby className="size-3.5 text-primary" />
+                <span className="text-xs font-medium text-primary">
                   {[guest!.firstName, guest!.lastName]
                     .filter(Boolean)
                     .join(' ') || 'Unnamed guest'}
                 </span>
                 <Badge
                   variant="secondary"
-                  className="ml-auto px-1.5 py-0 text-[9px] font-bold uppercase text-purple-600 dark:text-purple-400"
+                  className="ml-auto px-1.5 py-0 text-[9px] font-bold uppercase text-primary"
                 >
                   {guest!.priceCategory ?? 'No Bed'}
                 </Badge>

@@ -58,7 +58,7 @@ export default function Page({ data, categories }: ArticlePageProps) {
           className={`px-4 py-2 rounded-full text-sm font-medium transition
           ${
             category === ''
-              ? 'bg-primary text-white'
+              ? 'bg-primary text-primary-foreground'
               : 'bg-muted hover:bg-muted/70'
           }`}
         >
@@ -73,7 +73,7 @@ export default function Page({ data, categories }: ArticlePageProps) {
             active:scale-95
             ${
               category === cat.id
-                ? 'bg-primary text-white hover:bg-primary/90'
+                ? 'bg-primary text-primary-foreground hover:bg-primary/90'
                 : 'bg-muted hover:bg-muted/70'
             }`}
           >
