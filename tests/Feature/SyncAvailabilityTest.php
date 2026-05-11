@@ -1,15 +1,14 @@
 <?php
 
+use App\Actions\Booking\ExpireBookingReservationsAction;
 use App\Actions\Booking\SyncAvailabilityAction;
 use App\Enums\BookingStatus;
 use App\Jobs\SyncTourAvailabilityJob;
 use App\Models\Booking;
 use App\Models\Company;
-use App\Models\Payment;
 use App\Models\Tour;
 use App\Models\TourAvailability;
 use App\Models\TourSchedule;
-use App\Models\User;
 use Database\Seeders\Common\RolePermissionSeeder;
 use Illuminate\Support\Facades\Queue;
 
@@ -40,6 +39,7 @@ beforeEach(function () {
         'schedule_id' => $this->schedule->id,
         'max_pax' => 30,
         'WP' => 0,
+        'WPA' => 0,
         'DP' => 0,
         'FP' => 0,
         'RS' => 0,
@@ -140,6 +140,8 @@ test('key-shift on update dispatches for both old and new keys', function () {
 });
 
 test('SyncAvailabilityAction correctly computes snapshot columns and available', function () {
+    $this->availability->update(['RS' => 1]);
+
     Booking::withoutEvents(function () {
         Booking::factory()->create([
             'tour_id' => $this->tour->id,
@@ -159,24 +161,13 @@ test('SyncAvailabilityAction correctly computes snapshot columns and available',
             'pax_child' => 0,
         ]);
 
-        $paymentBackedAwaitingPayment = Booking::factory()->create([
+        Booking::factory()->create([
             'tour_id' => $this->tour->id,
             'departure_date' => $this->departureDate,
             'vendor_id' => $this->company->id,
-            'status' => BookingStatus::AWAITING_PAYMENT,
+            'status' => 'waiting payment approval',
             'pax_adult' => 3,
             'pax_child' => 0,
-        ]);
-
-        Payment::create([
-            'owner_type' => User::class,
-            'owner_id' => $paymentBackedAwaitingPayment->user_id,
-            'payable_type' => Booking::class,
-            'payable_id' => $paymentBackedAwaitingPayment->id,
-            'provider' => 'manual',
-            'payment_method' => 'bank_transfer',
-            'amount' => 100_000,
-            'status' => 'pending',
         ]);
 
         Booking::factory()->create([
@@ -193,7 +184,7 @@ test('SyncAvailabilityAction correctly computes snapshot columns and available',
             'departure_date' => $this->departureDate,
             'vendor_id' => $this->company->id,
             'status' => 'manual reserved',
-            'pax_adult' => 1,
+            'pax_adult' => 4,
             'pax_child' => 0,
         ]);
 
@@ -223,6 +214,33 @@ test('SyncAvailabilityAction correctly computes snapshot columns and available',
             'pax_adult' => 1,
             'pax_child' => 0,
         ]);
+
+        Booking::factory()->create([
+            'tour_id' => $this->tour->id,
+            'departure_date' => $this->departureDate,
+            'vendor_id' => $this->company->id,
+            'status' => BookingStatus::REFUNDED,
+            'pax_adult' => 2,
+            'pax_child' => 0,
+        ]);
+
+        Booking::factory()->create([
+            'tour_id' => $this->tour->id,
+            'departure_date' => $this->departureDate,
+            'vendor_id' => $this->company->id,
+            'status' => BookingStatus::EXPIRED,
+            'pax_adult' => 1,
+            'pax_child' => 0,
+        ]);
+
+        Booking::factory()->create([
+            'tour_id' => $this->tour->id,
+            'departure_date' => $this->departureDate,
+            'vendor_id' => $this->company->id,
+            'status' => BookingStatus::WAITING_LIST,
+            'pax_adult' => 1,
+            'pax_child' => 1,
+        ]);
     });
 
     $action = app(SyncAvailabilityAction::class);
@@ -232,11 +250,89 @@ test('SyncAvailabilityAction correctly computes snapshot columns and available',
 
     expect((int) $this->availability->BRS)->toBe(5)
         ->and((int) $this->availability->RS)->toBe(1)
-        ->and((int) $this->availability->WP)->toBe(3)
+        ->and((int) $this->availability->WP)->toBe(4)
+        ->and((int) $this->availability->WPA)->toBe(3)
         ->and((int) $this->availability->CA)->toBe(1)
+        ->and((int) $this->availability->RF)->toBe(2)
+        ->and((int) $this->availability->EX)->toBe(1)
+        ->and((int) $this->availability->WL)->toBe(2)
         ->and((int) $this->availability->DP)->toBe(2)
         ->and((int) $this->availability->FP)->toBe(1)
         ->and((float) $this->availability->available)->toBe(18.0);
+});
+
+test('booking reserved expires without changing manual reserved holds', function () {
+    $this->availability->update([
+        'RS' => 1,
+        'available' => 29,
+    ]);
+
+    $booking = Booking::withoutEvents(function () {
+        return Booking::factory()->create([
+            'tour_id' => $this->tour->id,
+            'departure_date' => $this->departureDate,
+            'vendor_id' => $this->company->id,
+            'status' => BookingStatus::BOOKING_RESERVED,
+            'reserved_type' => 'system',
+            'reserved_expires_at' => now()->subSecond(),
+            'pax_adult' => 2,
+            'pax_child' => 1,
+        ]);
+    });
+
+    app(ExpireBookingReservationsAction::class)->execute();
+
+    $this->availability->refresh();
+
+    expect($booking->fresh()->status)->toBe(BookingStatus::EXPIRED)
+        ->and((int) $this->availability->RS)->toBe(1)
+        ->and((int) $this->availability->BRS)->toBe(0)
+        ->and((int) $this->availability->EX)->toBe(3)
+        ->and((float) $this->availability->available)->toBe(29.0);
+});
+
+test('booking reserved does not expire before server hold deadline', function () {
+    $booking = Booking::withoutEvents(function () {
+        return Booking::factory()->create([
+            'tour_id' => $this->tour->id,
+            'departure_date' => $this->departureDate,
+            'vendor_id' => $this->company->id,
+            'status' => BookingStatus::BOOKING_RESERVED,
+            'reserved_type' => 'system',
+            'reserved_expires_at' => now()->addMinute(),
+            'pax_adult' => 2,
+            'pax_child' => 1,
+        ]);
+    });
+
+    app(ExpireBookingReservationsAction::class)->execute();
+
+    expect($booking->fresh()->status)->toBe(BookingStatus::BOOKING_RESERVED);
+});
+
+test('booking reserved holds reduce availability without changing manual reserved holds', function () {
+    $this->availability->update(['RS' => 1]);
+
+    Booking::withoutEvents(function () {
+        Booking::factory()->create([
+            'tour_id' => $this->tour->id,
+            'departure_date' => $this->departureDate,
+            'vendor_id' => $this->company->id,
+            'status' => BookingStatus::BOOKING_RESERVED,
+            'reserved_type' => 'system',
+            'reserved_expires_at' => now()->addMinutes(10),
+            'pax_adult' => 2,
+            'pax_child' => 1,
+        ]);
+    });
+
+    app(SyncAvailabilityAction::class)->execute($this->tour->id, $this->departureDate, $this->company->id);
+
+    $this->availability->refresh();
+
+    expect((int) $this->availability->RS)->toBe(1)
+        ->and((int) $this->availability->BRS)->toBe(3)
+        ->and((float) $this->availability->available)->toBe(26.0);
 });
 
 test('SyncAvailabilityAction floors available to zero on oversell', function () {
