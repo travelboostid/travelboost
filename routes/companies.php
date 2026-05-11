@@ -22,6 +22,7 @@ use App\Http\Controllers\Companies\Dashboard\TourAddOnController;
 use App\Http\Controllers\Companies\Dashboard\TourAvailabilityController;
 use App\Http\Controllers\Companies\Dashboard\TourController;
 use App\Http\Controllers\Companies\Dashboard\TourScheduleController;
+use App\Http\Controllers\Companies\Dashboard\SeatAvailabilityController;
 use App\Http\Controllers\Companies\Dashboard\VendorRegistrationController;
 use App\Http\Controllers\Companies\Dashboard\VendorTourCatalogController;
 use App\Http\Controllers\Companies\Dashboard\WalletController;
@@ -40,6 +41,7 @@ Route::prefix('companies/{company:username}/dashboard')->middleware(['auth'])->n
 Route::prefix('companies/{company:username}/dashboard')->middleware(['auth', 'company.access'])->name('companies.dashboard.')->group(function () {
   Route::get('/', [HomeController::class, 'index'])->name('index');
   Route::get('reports/room-listings', [RoomListingController::class, 'index'])->name('reports.room-listings.index');
+  Route::get('reports/seat-availabilities', [SeatAvailabilityController::class, 'index'])->name('reports.seat-availabilities.index');
   Route::group(['prefix' => 'vendors/{vendor}', 'as' => 'vendor.'], function () {
     Route::get('/tours', [VendorTourCatalogController::class, 'index'])->name('tours.index');
     Route::middleware(['agent.subscription.active'])->post('/tours/{tour}/copy', [VendorTourCatalogController::class, 'copy'])->name('tour.copy');

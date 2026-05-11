@@ -1,0 +1,86 @@
+<?php
+
+namespace App\Http\Controllers\Companies\Dashboard;
+
+use App\Http\Controllers\Controller;
+use App\Models\Company;
+use App\Models\Tour;
+use Illuminate\Http\Request;
+use Inertia\Inertia;
+
+class SeatAvailabilityController extends Controller
+{
+    public function index(Request $request, Company $company)
+    {
+        $tours = Tour::query()
+            ->with([
+                'availabilities.schedule:id,tour_id,departure_date,return_date',
+            ])
+
+            ->where('company_id', $company->id)
+
+            ->where('status', 'active')
+
+            ->whereHas('availabilities')
+
+            ->when($request->search, function ($q) use ($request) {
+                $q->where(
+                    'name',
+                    'ilike',
+                    '%' . $request->search . '%'
+                );
+            })
+
+            ->orderBy('name')
+
+            ->paginate(10)
+
+            ->withQueryString();
+
+        $availabilities = $tours->through(function ($tour) {
+            return [
+                'tour' => [
+                    'id' => $tour->id,
+                    'name' => $tour->name,
+                ],
+
+                'schedules' => $tour->availabilities->map(function ($item) {
+                    return [
+                        'id' => $item->id,
+
+                        'schedule_id' => $item->schedule_id,
+
+                        'departure_date' => $item->schedule?->departure_date,
+                        'return_date' => $item->schedule?->return_date,
+
+                        'max_pax' => $item->max_pax,
+
+                        'RS' => $item->RS,
+                        'WP' => $item->WP,
+                        'DP' => $item->DP,
+                        'FP' => $item->FP,
+                        'WA' => $item->WA,
+                        'BRS' => $item->BRS,
+                        'CA' => $item->CA,
+                        'RF' => $item->RF,
+                        'EX' => $item->EX,
+                        'WL' => $item->WL,
+
+                        'available' => $item->available,
+                    ];
+                })->values(),
+            ];
+        });
+
+        return Inertia::render(
+            'companies/dashboard/reports/seat-availabilities/index',
+            [
+                'availabilities' => $availabilities,
+
+                'filters' => [
+                    'search' => $request->search,
+                ],
+            ]
+        );
+    }
+}
