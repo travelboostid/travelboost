@@ -9,11 +9,15 @@ use App\Models\CompanyTeam;
 use App\Models\User;
 use App\Enums\CompanyType;
 use App\Enums\UserStatus;
+use App\Http\Requests\Companies\AcceptTeamInvitationRequest;
+use App\Http\Requests\Companies\LoginRequest;
+use App\Http\Requests\Companies\RegisterRequest;
 use App\Support\Rules\UserRules;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Context;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -25,12 +29,9 @@ class AuthController extends Controller
     return Inertia::render('companies/auth/login');
   }
 
-  public function login(Request $request)
+  public function login(LoginRequest $request)
   {
-    $validated = $request->validate([
-      'username_or_email' => 'required|string',
-      'password' => 'required|string',
-    ]);
+    $validated = $request->validated();
 
     $loginType = filter_var($validated['username_or_email'], FILTER_VALIDATE_EMAIL) ? 'email' : 'username';
     $user = User::where($loginType, $validated['username_or_email'])->first();
@@ -81,19 +82,20 @@ class AuthController extends Controller
     ]);
   }
 
-  public function register(Request $request)
+  public function register(RegisterRequest $request)
   {
-    $validated = $request->validate([
-      'name' => UserRules::name(),
-      'username' => UserRules::username(),
-      'email' => UserRules::email(),
-      'password' => UserRules::password(),
-    ]);
+    $validated = $request->validated();
 
-    $user = User::create(array_merge($validated, [
-      'password' => Hash::make($validated['password']),
-      'status' => UserStatus::INACTIVE,
-    ]));
+    $user = DB::transaction(function () use ($validated) {
+      $user = User::create([
+        ...$validated,
+        'password' => Hash::make($validated['password']),
+        'status' => UserStatus::INACTIVE,
+      ]);
+
+      $user->addRole('user:agent');
+      return $user;
+    });
 
     event(new Registered($user));
     Auth::login($user);
@@ -113,38 +115,39 @@ class AuthController extends Controller
     ]);
   }
 
-  public function acceptTeamInvitation(Request $request)
+  public function acceptTeamInvitation(AcceptTeamInvitationRequest $request)
   {
-
-    $validated = $request->validate([
-      'name' => UserRules::name(),
-      'username' => UserRules::username(),
-      'email' => UserRules::email(),
-      'password' => UserRules::password(),
-      'token' => ['required', 'string', 'exists:company_teams,invite_token'],
-    ]);
+    $validated = $request->validated();
 
     $validated['company_id'] = null;
     $validated['status'] = UserStatus::ACTIVE;
 
-    $team = CompanyTeam::where('invite_token', $validated['token'])->first();
+    $team = CompanyTeam::with(['company'])->where('invite_token', $validated['token'])->first();
     if (!$team) {
-      return null;
+      return redirect()->back()->withErrors([
+        'email' => 'Invalid invitation token.',
+      ]);
     }
 
     $validated['email'] = $team->invite_email;
 
-    $user = User::create($validated);
-    $team->update([
-      'user_id' => $user->id,
-      'status' => CompanyTeamStatus::ACTIVE,
-    ]);
-    $user->addRole($team->invite_role, "company:{$team->company_id}");
+    $user = DB::transaction(function () use ($validated, $team) {
+      $user = User::create($validated);
+      $team->update([
+        'user_id' => $user->id,
+        'status' => CompanyTeamStatus::ACTIVE,
+      ]);
+      $userRole = $team->company->type === CompanyType::AGENT ? 'user:agent' : 'user:vendor';
+      $teamRole = $team->invite_role;
+      $user->addRoles([$userRole, $teamRole]);
 
-    CompanyTeam::where('invite_email', $user->email)
-      ->where('status', CompanyTeamStatus::PENDING)
-      ->where('id', '!=', $team->id)
-      ->update(['status' => CompanyTeamStatus::REJECTED]);
+      // Reject other invitations with the same email
+      CompanyTeam::where('invite_email', $user->email)
+        ->where('status', CompanyTeamStatus::PENDING)
+        ->where('id', '!=', $team->id)
+        ->update(['status' => CompanyTeamStatus::REJECTED]);
+      return $user;
+    });
 
     Auth::login($user);
     $request->session()->regenerate();

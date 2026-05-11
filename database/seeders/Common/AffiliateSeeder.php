@@ -25,6 +25,7 @@ class AffiliateSeeder extends Seeder
         'email_verified_at' => now(),
         'status' => 'active'
       ]);
+      $user->addRole('user:affiliate');
 
       $profile = AffiliateProfile::create([
         'user_id' => $user->id,
@@ -59,6 +60,7 @@ class AffiliateSeeder extends Seeder
         'email_verified_at' => now(),
         'status' => 'active'
       ]);
+      $user->addRole('user:affiliate');
 
       $profile = AffiliateProfile::create([
         'user_id' => $user->id,
@@ -95,6 +97,7 @@ class AffiliateSeeder extends Seeder
         'email_verified_at' => ($userStatus === 'active') ? now() : null,
         'status' => $userStatus
       ]);
+      $user->addRole('user:affiliate');
 
       $profile = AffiliateProfile::create([
         'user_id' => $user->id,

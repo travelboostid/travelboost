@@ -6,30 +6,40 @@ import AdminDashboardLayout from '@/components/layouts/admin-dashboard';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { useDataTable } from '@/hooks/use-data-table';
+import { edit } from '@/routes/admin/database/users';
+import { Link } from '@inertiajs/react';
 import type { Column, ColumnDef } from '@tanstack/react-table';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
-import { MoreHorizontal, Text } from 'lucide-react';
+import { CalendarIcon, CircleDashedIcon, PencilIcon, Text } from 'lucide-react';
 import { useMemo } from 'react';
 import { EmptyUsers } from './components/empty-users';
 dayjs.extend(relativeTime);
 
+const STATUS_OPTIONS = [
+  { label: 'Active', value: 'active' },
+  { label: 'Inactive', value: 'inactive' },
+  { label: 'Suspended', value: 'suspended' },
+];
+
 type UsersPageProps = {
   data: {
-    data: UserResource[];
+    data: any[];
     total: number;
+    per_page: number;
+    current_page: number;
+    last_page: number;
   };
+  userRoles: string[];
 };
 
-export default function UsersPage({ data }: UsersPageProps) {
-  const columns = useMemo<ColumnDef<UserResource>[]>(
+export default function UsersPage({ data, userRoles }: UsersPageProps) {
+  const USER_ROLE_OPTIONS = userRoles.map((role) => ({
+    label: role.replace('user:', ''),
+    value: role,
+  }));
+  const columns = useMemo<ColumnDef<any>[]>(
     () => [
       {
         id: 'select',
@@ -106,6 +116,39 @@ export default function UsersPage({ data }: UsersPageProps) {
             )) ?? '-'}
           </div>
         ),
+        meta: {
+          label: 'Roles',
+          variant: 'multiSelect',
+          options: USER_ROLE_OPTIONS,
+          icon: CircleDashedIcon,
+        },
+        enableColumnFilter: true,
+        enableSorting: false,
+      },
+      {
+        id: 'company',
+        accessorKey: 'company.name',
+        header: ({ column }: { column: Column<UserResource, unknown> }) => (
+          <DataTableColumnHeader column={column} label="Company Holder" />
+        ),
+        cell: ({ row }) => <div>{row.original.company?.name ?? '-'}</div>,
+        enableSorting: false,
+      },
+      {
+        id: 'status',
+        accessorKey: 'status',
+        header: ({ column }: { column: Column<UserResource, unknown> }) => (
+          <DataTableColumnHeader column={column} label="Status" />
+        ),
+        cell: ({ cell }) => <div>{cell.getValue<any>()}</div>,
+        meta: {
+          label: 'Status',
+          placeholder: 'Search status...',
+          variant: 'multiSelect',
+          options: STATUS_OPTIONS,
+          icon: CircleDashedIcon,
+        },
+        enableColumnFilter: true,
       },
       {
         id: 'created_at',
@@ -122,31 +165,29 @@ export default function UsersPage({ data }: UsersPageProps) {
             </div>
           );
         },
+        meta: {
+          label: 'Join Date',
+          placeholder: 'Search join date...',
+          variant: 'dateRange',
+          icon: CalendarIcon,
+        },
+        enableColumnFilter: true,
       },
       {
         id: 'actions',
-        cell: function Cell() {
+        cell: ({ row }) => {
           return (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon">
-                  <MoreHorizontal className="h-4 w-4" />
-                  <span className="sr-only">Open menu</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem>Edit</DropdownMenuItem>
-                <DropdownMenuItem variant="destructive">
-                  Delete
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <Link href={edit({ user: row.original.id }).url}>
+              <Button variant="ghost" size="icon" className="rounded-full">
+                <PencilIcon className="size-4" />
+              </Button>
+            </Link>
           );
         },
         size: 32,
       },
     ],
-    [],
+    [USER_ROLE_OPTIONS],
   );
 
   const { table } = useDataTable({
@@ -156,7 +197,7 @@ export default function UsersPage({ data }: UsersPageProps) {
     },
     data: data.data,
     columns,
-    pageCount: 1,
+    pageCount: data.last_page,
     rowCount: data.total,
     shallow: false,
     initialState: {

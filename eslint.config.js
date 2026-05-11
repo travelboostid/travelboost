@@ -69,6 +69,14 @@ export default [
           fixStyle: 'separate-type-imports',
         },
       ],
+      '@typescript-eslint/no-unused-vars': [
+        'warn',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^_',
+        },
+      ],
       // handle ordering by prettier
       'import/order': 'off',
       // loose linting

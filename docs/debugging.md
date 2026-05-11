@@ -1,4 +1,4 @@
-# Laravel Xdebug Debugging Setup Guide
+# Debugging Setup Guide
 
 This document explains how to configure PHP Xdebug for local debugging in our project using VSCode, Xdebug v3, Google Chrome, and the Xdebug Helper by JetBrains extension.
 
@@ -217,7 +217,7 @@ In VSCode:
 
 1. Open the **Run and Debug** panel
 2. Select:
-   - `Listen for Xdebug (Web)`
+   - `Debug (Backend)`
 3. Click the run/play button
 
 This configuration is defined in:
@@ -232,7 +232,7 @@ Example configuration:
 {
   "configurations": [
     {
-      "name": "Listen for Xdebug (Web)",
+      "name": "Debug (Backend)",
       "type": "php",
       "request": "launch",
       "port": 9003
@@ -242,3 +242,7 @@ Example configuration:
 ```
 
 Once the listener is active, open the application in browser with the Xdebug Helper extension enabled. Any active breakpoints in VSCode should now pause execution automatically.
+
+## Frontend Debugging
+
+After the dev server is running, open the **Run and Debug** panel and run the **Debug (Frontend)** configuration. Additionally, you can run the backend and frontend simultaneously using the **Debug (Fullstack)** configuration.
