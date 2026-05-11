@@ -29,7 +29,7 @@ class BookingService
 
         $paymentMode = $this->resolvePaymentMode(data_get($data, 'payment_method'));
 
-        return DB::transaction(function () use ($data, $user, $paymentMode) {
+        return DB::transaction(function () use ($data, $user, $paymentMode, $tour) {
             $booking = Booking::updateOrCreate(
                 [
                     'booking_number' => data_get($data, 'booking_number'),
@@ -53,9 +53,15 @@ class BookingService
                     'contact_email' => data_get($data, 'contact_email'),
                     'contact_phone' => data_get($data, 'contact_phone'),
                     'contact_notes' => data_get($data, 'contact_notes'),
-                    'status' => BookingStatus::AWAITING_PAYMENT,
+                    'status' => BookingStatus::BOOKING_RESERVED,
                 ]
             );
+
+            if (! $booking->reserved_expires_at) {
+                $booking->update([
+                    'reserved_expires_at' => now()->addMinutes($this->resolveBookingTimeLimitMinutes($tour)),
+                ]);
+            }
 
             $booking->passengers()->delete();
             $booking->addons()->delete();
@@ -88,7 +94,7 @@ class BookingService
             Booking::where('user_id', $user->id)
                 ->where('tour_id', data_get($data, 'tour_id'))
                 ->whereDate('departure_date', data_get($data, 'departure_date'))
-                ->where('status', BookingStatus::RESERVED)
+                ->whereIn('status', [BookingStatus::RESERVED, BookingStatus::BOOKING_RESERVED])
                 ->where('id', '!=', $booking->id)
                 ->delete();
 
@@ -103,5 +109,14 @@ class BookingService
             'midtrans', 'online' => 'online',
             default => null,
         };
+    }
+
+    private function resolveBookingTimeLimitMinutes(Tour $tour): int
+    {
+        $tour->loadMissing('company.companySetting');
+
+        $minutes = (int) ($tour->company?->companySetting?->booking_entry_time_limit ?? 0);
+
+        return $minutes > 0 ? $minutes : 10;
     }
 }
