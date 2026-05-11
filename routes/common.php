@@ -50,6 +50,8 @@ Route::middleware(['auth'])->group(function () {
         ->name('customer.bookings.manual-payment');
     Route::post('/bookings/{booking}/online-payment', [BookingController::class, 'storeOnlinePayment'])
         ->name('customer.bookings.online-payment');
+    Route::post('/bookings/{booking}/online-payment/{payment}/confirm', [BookingController::class, 'confirmOnlinePayment'])
+        ->name('customer.bookings.online-payment.confirm');
 });
 
 Route::middleware(['guest'])->group(function () {

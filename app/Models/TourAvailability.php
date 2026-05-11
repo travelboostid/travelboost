@@ -14,6 +14,7 @@ class TourAvailability extends Model
         'schedule_id',
         'max_pax',
         'WP',
+        'WPA',
         'DP',
         'FP',
         'RS',

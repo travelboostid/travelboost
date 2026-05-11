@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Companies\Dashboard;
 
 use App\Http\Controllers\Controller;
+use App\Actions\Booking\ExpireBookingReservationsAction;
+use App\Actions\Booking\SyncAvailabilityAction;
 use App\Models\Company;
 use App\Models\TourSchedule;
 use Illuminate\Http\Request;
@@ -34,7 +36,10 @@ class TourAvailabilityController extends Controller
             return back()->withErrors('No schedules found for this tour.');
         }
 
+        app(ExpireBookingReservationsAction::class)->execute($company, (int) $tourId);
+
         DB::beginTransaction();
+        $availabilitySyncDates = [];
 
         try {
             foreach ($rows as $row) {
@@ -59,9 +64,6 @@ class TourAvailabilityController extends Controller
                     ],
                     [
                         'max_pax' => $row['max_pax'] ?? 0,
-                        'WP' => $row['WP'] ?? 0,
-                        'DP' => $row['DP'] ?? 0,
-                        'FP' => $row['FP'] ?? 0,
                         'RS' => $row['RS'] ?? 0,
                         'BRS' => $row['BRS'] ?? 0,
                         'CA' => $row['CA'] ?? 0,
@@ -73,11 +75,11 @@ class TourAvailabilityController extends Controller
                         'created_at' => now(),
                     ]
                 );
+
+                $availabilitySyncDates[] = (string) $schedule->departure_date;
             }
 
             DB::commit();
-
-            return back()->with('success', 'Availability saved');
         } catch (\Throwable $e) {
             DB::rollBack();
             Log::error('TourAvailability save failed', [
@@ -88,5 +90,11 @@ class TourAvailabilityController extends Controller
 
             return back()->withErrors('Failed to save availability: '.$e->getMessage());
         }
+
+        foreach (array_unique($availabilitySyncDates) as $departureDate) {
+            app(SyncAvailabilityAction::class)->execute((int) $tourId, $departureDate, $company->id);
+        }
+
+        return back()->with('success', 'Availability saved');
     }
 }

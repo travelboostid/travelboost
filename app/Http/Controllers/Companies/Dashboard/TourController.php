@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Companies\Dashboard;
 
+use App\Actions\Booking\ExpireBookingReservationsAction;
+use App\Actions\Booking\SyncAvailabilityAction;
 use App\Events\TourUpdated;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreTourRequest;
@@ -21,37 +23,12 @@ use Inertia\Inertia;
 
 class TourController extends Controller
 {
-  public function index(Company $company, Request $request)
+  public function index(Company $company)
   {
-    $status = $request->input('status', 'all');
-
-    $tours = $company->tours()
-      ->with(['company', 'category', 'image', 'document', 'availabilities'])
-      ->when($status !== 'all', function ($query) use ($status) {
-        return $query->where('status', $status);
-      })
-      ->when($request->input('search'), function ($query, $search) {
-        return $query->where(function ($q) use ($search) {
-          $q->where('name', 'ilike', "%{$search}%")
-            ->orWhereHas('company', function ($sq) use ($search) {
-              $sq->where('name', 'ilike', "%{$search}%");
-            })
-            ->orWhereHas('category', function ($sq) use ($search) {
-              $sq->where('name', 'ilike', "%{$search}%");
-            });
-        });
-      })
-      ->when($request->input('sort_by'), function ($query, $sortBy) use ($request) {
-        $direction = $request->input('sort_dir', 'desc');
-        return $query->orderBy($sortBy, $direction);
-      }, function ($query) {
-        return $query->orderBy('id', 'desc');
-      })
-      ->get();
+    $tours = $company->tours()->orderBy('id', 'desc')->get();
 
     return Inertia::render('companies/dashboard/tours/index', [
       'data' => $tours,
-      'filters' => $request->only(['status', 'search', 'sort_by', 'sort_dir']),
     ]);
   }
 
@@ -78,7 +55,7 @@ class TourController extends Controller
       return redirect()
         ->route('companies.dashboard.tours.edit', [
           'company' => $company->username,
-          'tour'    => $tour->id,
+          'tour' => $tour->id,
         ])
         ->with('tab', 'schedule');
     } catch (\Throwable $e) {
@@ -92,6 +69,8 @@ class TourController extends Controller
 
   public function edit(Company $company, Tour $tour)
   {
+    app(ExpireBookingReservationsAction::class)->execute($company, $tour->id);
+
     $tour->load([
         'schedules.prices',
         'schedules.availability',
@@ -122,47 +101,26 @@ class TourController extends Controller
 
       if (array_key_exists('status', $payload)) {
         $tour->status = $payload['status'];
-
-        if ($payload['status'] === 'inactive') {
-          DB::table('agent_tours')
-            ->where('tour_id', $tour->id)
-            ->update(['status' => 'inactive']);
-        }
-
-        foreach ($tour->agents as $agent) {
-          $agent->notify(new TourStatusChangedNotification($tour, $payload['status']));
-        }
       }
 
       $tour->save();
+
       return back();
     }
 
     $data = $request->validated();
 
-    $data['showprice']    = (int) ($data['showprice'] ?? 0);
+    $data['showprice'] = (int) ($data['showprice'] ?? 0);
     $data['promote_price'] = (int) ($data['promote_price'] ?? 0);
-    $data['category_id']  = $data['category_id'] ?: null;
-    $data['image_id']     = $data['image_id'] ?: null;
-    $data['document_id']  = $data['document_id'] ?: null;
+    $data['category_id'] = $data['category_id'] ?: null;
+    $data['image_id'] = $data['image_id'] ?: null;
+    $data['document_id'] = $data['document_id'] ?: null;
 
     DB::beginTransaction();
+    $availabilitySyncDates = [];
 
     try {
       $tour->update($data);
-
-      if (isset($data['status'])) {
-        if ($data['status'] === 'inactive') {
-          DB::table('agent_tours')
-            ->where('tour_id', $tour->id)
-            ->update(['status' => 'inactive']);
-        }
-
-        foreach ($tour->agents as $agent) {
-          $agent->notify(new TourStatusChangedNotification($tour, $data['status']));
-        }
-      }
-
       TourUpdated::dispatch($tour);
 
       DB::commit();
@@ -181,19 +139,24 @@ class TourController extends Controller
         'error' => $e->getMessage(),
       ]);
     }
+
+    foreach (array_unique($availabilitySyncDates) as $departureDate) {
+      app(SyncAvailabilityAction::class)->execute($tour->id, $departureDate, $company->id);
+    }
+
+    return redirect()->route('companies.dashboard.tours.edit', [
+      'company' => $company->username,
+      'tour' => $tour->id,
+    ])->with([
+      'success' => true,
+      'tab' => request('tab', 'schedule'),
+    ]);
   }
 
   public function destroy(Company $company, Tour $tour)
   {
-    $hasBookings = DB::table('bookings')->where('tour_id', $tour->id)->exists();
-
-    if ($hasBookings) {
-      return back()->withErrors([
-        'delete_error' => 'Cannot delete this tour because it has existing bookings. Please cancel or complete bookings first.'
-      ]);
-    }
-
     $tour->delete();
+
     return back();
   }
 }

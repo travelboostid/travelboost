@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\StoreAppConfigRequest;
+use App\Http\Requests\Admin\UpdateAppConfigRequest;
 use App\Models\AppConfig;
 use Inertia\Inertia;
 
@@ -16,27 +18,20 @@ class AppConfigController extends Controller
     ]);
   }
 
-  public function store()
+  public function store(StoreAppConfigRequest $request)
   {
-    $data = request()->validate([
-      'key' => 'required|string|unique:app_configs,key',
-      'description' => 'nullable|string',
-      'value' => 'nullable|json',
-    ]);
+    $data = $request->validated();
 
     AppConfig::create($data);
 
     return redirect()->back()->with('success', 'App Config created successfully.');
   }
 
-  public function update(AppConfig $appConfig)
+  public function update(UpdateAppConfigRequest $request, AppConfig $appConfig)
   {
-    $data = request()->validate([
-      'description' => 'nullable|string',
-      'value' => 'nullable|array',
-    ]);
+    $validated = $request->validated();
 
-    $appConfig->update($data);
+    $appConfig->update($validated);
 
     return redirect()->back()->with('success', 'App Config updated successfully.');
   }
