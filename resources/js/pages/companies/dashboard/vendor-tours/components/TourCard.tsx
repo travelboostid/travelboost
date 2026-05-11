@@ -220,12 +220,14 @@ export default function TourCard({
                   toggleLike();
                 }
               }}
-              className="absolute top-2 right-2 z-30 rounded-full bg-white/80 p-1.5 shadow transition hover:scale-110"
+              className="absolute top-2 right-2 z-30 rounded-full bg-background/80 p-1.5 shadow transition hover:scale-110"
             >
               <HeartIcon
                 size={18}
                 className={
-                  liked ? 'fill-red-500 text-red-500' : 'text-gray-400'
+                  liked
+                    ? 'fill-destructive text-destructive'
+                    : 'text-muted-foreground'
                 }
               />
             </button>
@@ -249,14 +251,39 @@ export default function TourCard({
           >
             {tour.name}
           </CardTitle>
+          <CardDescription className="line-clamp-1 text-xs">
+            {tour.destination}
+          </CardDescription>
+          {!fromLogin && (
+            <button
+              type="button"
+              onClick={() => setShowInfo(true)}
+              className="-mt-0.5 w-fit text-left text-[11px] text-primary hover:underline"
+            >
+              more info...
+            </button>
+          )}
         </CardHeader>
+        {/* ✅ HARGA */}
+        <div className="px-6 pb-2">
+          {formattedEarlybird ? (
+            <div className="flex flex-col">
+              {/* Harga normal dicoret */}
+              <span className="text-sm text-muted-foreground">
+                {formattedPrice}
+              </span>
 
-        <CardContent className="px-4 py-2 flex-1">
-          <div className="flex flex-col">
-            {discountPrice ? (
-              <>
-                <span className="text-[10px] text-muted-foreground line-through decoration-red-400/60 font-medium">
-                  {mainPrice}
+              {/* Harga earlybird */}
+              <span className="w-fit rounded bg-primary px-2 py-1 text-xs text-primary-foreground">
+                EARLY BIRD
+              </span>
+              <span className="text-xl font-bold text-primary">
+                {formattedEarlybird}
+              </span>
+              {/* ✅ Earlybird Note */}
+              {tour.earlybird_note && (
+                <span className="text-sm text-muted-foreground">
+                  {tour.earlybird_note}
                 </span>
                 <div className="flex items-center gap-2">
                   <span className="text-base font-black text-primary tracking-tight">
@@ -271,30 +298,31 @@ export default function TourCard({
               <span className="text-base font-black text-primary tracking-tight">
                 {mainPrice}
               </span>
-            )}
-          </div>
-        </CardContent>
 
-        <div className="px-4 py-2 border-t border-slate-50 space-y-1">
-          <div className="flex items-center justify-between">
-            <span className="text-[9px] font-bold text-slate-400 uppercase">
-              Vendor Status
-            </span>
-            <span
-              className={`text-[9px] font-black uppercase ${tour.status === 'active' ? 'text-emerald-500' : 'text-red-500'}`}
-            >
-              {tour.status}
-            </span>
-          </div>
-          {hasBeenCopied && (
-            <div className="flex items-center justify-between border-t border-slate-50 pt-1">
-              <span className="text-[9px] font-bold text-slate-400 uppercase">
-                My Catalog Status
+              {/* Harga earlybird */}
+              <span className="w-fit rounded bg-destructive px-2 py-1 text-xs text-destructive-foreground">
+                PROMO
               </span>
-              <span
-                className={`text-[9px] font-black uppercase ${(tour as any).agent_status === 'active' ? 'text-blue-600' : 'text-red-600'}`}
-              >
-                {(tour as any).agent_status}
+              <span className="text-xl font-bold text-destructive">
+                {formattedpromoprice}
+              </span>
+            </div>
+          ) : formattedpromoteprice ? (
+            <div className="flex flex-col">
+              {/* Harga normal dicoret */}
+              <span className="text-sm text-muted-foreground line-through">
+                {formattedPrice}
+              </span>
+
+              {/* Harga earlybird */}
+              {/* ✅ Earlybird Note */}
+              {tour.promote_title && (
+                <span className="w-fit rounded bg-primary px-2 py-1 text-xs text-primary-foreground">
+                  {tour.promote_title}
+                </span>
+              )}
+              <span className="text-xl font-bold text-primary">
+                {formattedpromoteprice}
               </span>
             </div>
           )}
@@ -312,58 +340,73 @@ export default function TourCard({
               >
                 <IconPdf size={18} />
               </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>View Brochure</p>
-            </TooltipContent>
-          </Tooltip>
+              <Button
+                variant="secondary"
+                size="sm"
+                className="w-12 px-0 shrink-0"
+                onClick={handleMessage}
+                disabled={startingPrivateChat}
+              >
+                {startingPrivateChat ? (
+                  <Spinner />
+                ) : (
+                  <MessageSquareIcon size={18} />
+                )}
+              </Button>
+              <Button
+                size="sm"
+                className="flex-1 px-0 text-xs"
+                onClick={() => setIsBookingModalOpen(true)}
+              >
+                VIEW SCHEDULE
+              </Button>
+            </div>
+            <div className="flex w-full items-center justify-between mt-1">
+              <div className="flex h-5 items-center justify-center rounded bg-muted px-2">
+                <span className="text-[10px] font-bold text-muted-foreground tracking-wider">
+                  LOGO
+                </span>
+              </div>
+            </div>
+          </CardFooter>
+        ) : (
+          <>
+            <CardFooter className="grid grid-cols-2 lg:grid-cols-4 gap-2 mt-auto">
+              <Button
+                variant="secondary"
+                disabled={!hasDocument}
+                onClick={handleViewBrochure}
+              >
+                <IconPdf />
+              </Button>
 
-          {!isOwnCatalog && (
-            <>
-              <AlertDialog>
-                <Tooltip delayDuration={200}>
-                  <TooltipTrigger asChild>
-                    <div className="flex-1 flex">
-                      <AlertDialogTrigger asChild>
-                        <Button
-                          variant="default"
-                          size="sm"
-                          className={`w-full rounded-xl h-9 shadow-sm transition-all ${hasBeenCopied || isVendorInactive ? 'opacity-40 grayscale' : 'hover:scale-105 active:scale-95'}`}
-                          disabled={
-                            hasBeenCopied || isVendorInactive || !canCopy
-                          }
-                        >
-                          <SaveIcon size={18} />
-                        </Button>
-                      </AlertDialogTrigger>
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Add to Catalog</p>
-                  </TooltipContent>
-                </Tooltip>
-                <AlertDialogContent className="rounded-3xl border-none">
-                  <AlertDialogHeader>
-                    <AlertDialogTitle className="text-xl font-bold">
-                      Add to Catalog
-                    </AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Copy this product to your personal catalog?
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel className="rounded-xl font-bold">
-                      Cancel
-                    </AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={handleCopy}
-                      className="rounded-xl font-bold px-6"
-                    >
-                      Yes, Copy Now
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
+              {type === 'agent' && fromLogin && (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button disabled={(tour as any).has_copied}>
+                      <SaveIcon />
+                    </Button>
+                  </AlertDialogTrigger>
+
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Copy to Catalog</AlertDialogTitle>
+
+                      <AlertDialogDescription>
+                        Do you want copy to your Catalog?
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>No</AlertDialogCancel>
+
+                      <AlertDialogAction onClick={handleCopy}>
+                        Yes
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              )}
 
               <Tooltip delayDuration={200}>
                 <TooltipTrigger asChild>

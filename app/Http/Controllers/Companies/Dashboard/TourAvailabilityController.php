@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Companies\Dashboard;
 
+use App\Actions\Booking\ExpireBookingReservationsAction;
+use App\Actions\Booking\SyncAvailabilityAction;
 use App\Models\Company;
 use App\Models\TourSchedule;
 use Illuminate\Http\Request;
@@ -33,7 +35,10 @@ class TourAvailabilityController
             return back()->withErrors('No schedules found for this tour.');
         }
 
+        app(ExpireBookingReservationsAction::class)->execute($company, (int) $tourId);
+
         DB::beginTransaction();
+        $availabilitySyncDates = [];
 
         try {
             foreach ($rows as $index => $row) {
@@ -51,24 +56,16 @@ class TourAvailabilityController
                     ],
                     [
                         'max_pax' => $row['max_pax'] ?? 0,
-                        'WP' => $row['WP'] ?? 0,
-                        'DP' => $row['DP'] ?? 0,
-                        'FP' => $row['FP'] ?? 0,
                         'RS' => $row['RS'] ?? 0,
-                        'CA' => $row['CA'] ?? 0,
-                        'RF' => $row['RF'] ?? 0,
-                        'EX' => $row['EX'] ?? 0,
-                        'WL' => $row['WL'] ?? 0,
-                        'available' => $row['available'] ?? 0,
                         'updated_at' => now(),
                         'created_at' => now(),
                     ]
                 );
+
+                $availabilitySyncDates[] = (string) $schedule->departure_date;
             }
 
             DB::commit();
-
-            return back()->with('success', 'Availability saved');
         } catch (\Throwable $e) {
             DB::rollBack();
             Log::error('TourAvailability save failed', [
@@ -79,5 +76,11 @@ class TourAvailabilityController
 
             return back()->withErrors('Failed to save availability: '.$e->getMessage());
         }
+
+        foreach (array_unique($availabilitySyncDates) as $departureDate) {
+            app(SyncAvailabilityAction::class)->execute((int) $tourId, $departureDate, $company->id);
+        }
+
+        return back()->with('success', 'Availability saved');
     }
 }

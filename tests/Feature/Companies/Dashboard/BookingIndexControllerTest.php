@@ -11,6 +11,7 @@ use App\Models\CompanyTeam;
 use App\Models\Payment;
 use App\Models\PriceCategory;
 use App\Models\Tour;
+use App\Models\TourAvailability;
 use App\Models\TourPrice;
 use App\Models\TourSchedule;
 use App\Models\User;
@@ -253,6 +254,128 @@ test('booking index derives commission amount and includes payment mode', functi
     $response->assertInertia(fn ($page) => $page
         ->where('data.data.0.commission_amount', '300000.00')
         ->where('data.data.0.payment_mode', 'manual'));
+});
+
+test('booking index filters waiting payment approval and exposes manual payment proof details', function () {
+    $vendor = Company::factory()->create(['type' => 'vendor']);
+
+    CompanyTeam::create([
+        'company_id' => $vendor->id,
+        'user_id' => $this->user->id,
+        'status' => CompanyTeamStatus::ACTIVE,
+        'is_owner' => true,
+        'accepted_at' => now(),
+    ]);
+
+    $tour = Tour::factory()->create(['company_id' => $vendor->id]);
+    $booking = Booking::factory()->create([
+        'vendor_id' => $vendor->id,
+        'tour_id' => $tour->id,
+        'status' => 'waiting payment approval',
+        'payment_mode' => 'manual',
+    ]);
+
+    $payment = Payment::create([
+        'owner_type' => User::class,
+        'owner_id' => $this->user->id,
+        'payable_type' => Booking::class,
+        'payable_id' => $booking->id,
+        'provider' => 'manual',
+        'payment_method' => 'bank_transfer',
+        'amount' => 500_000,
+        'status' => 'pending',
+        'payload' => [
+            'payment_type' => 'down_payment',
+            'sender_bank' => 'BCA',
+            'sender_account' => '1234567890',
+            'proof_path' => 'payment-proofs/proof.jpg',
+        ],
+    ]);
+
+    Booking::factory()->create([
+        'vendor_id' => $vendor->id,
+        'tour_id' => $tour->id,
+        'status' => 'booking reserved',
+    ]);
+
+    $response = $this->actingAs($this->user)
+        ->get("/companies/{$vendor->username}/dashboard/bookings?status=waiting%20payment%20approval");
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->has('data.data', 1)
+        ->where('data.data.0.status', 'waiting payment approval')
+        ->where('data.data.0.manual_payment.id', $payment->id)
+        ->where('data.data.0.manual_payment.sender_bank_name', 'BCA')
+        ->where('data.data.0.manual_payment.sender_account_number', '1234567890')
+        ->where('data.data.0.manual_payment.transfer_amount', 500_000)
+        ->where('data.data.0.manual_payment.proof_path', 'payment-proofs/proof.jpg'));
+});
+
+test('availability save preserves manual reserved and recomputes booking reserved from bookings', function () {
+    $vendor = Company::factory()->create(['type' => 'vendor']);
+
+    CompanyTeam::create([
+        'company_id' => $vendor->id,
+        'user_id' => $this->user->id,
+        'status' => CompanyTeamStatus::ACTIVE,
+        'is_owner' => true,
+        'accepted_at' => now(),
+    ]);
+
+    $tour = Tour::factory()->create(['company_id' => $vendor->id]);
+    $departureDate = now()->addMonth()->toDateString();
+    $schedule = TourSchedule::create([
+        'tour_id' => $tour->id,
+        'tour_code' => $tour->code,
+        'company_id' => $vendor->id,
+        'departure_date' => $departureDate,
+        'return_date' => now()->addMonth()->addDays(5)->toDateString(),
+        'is_active' => true,
+    ]);
+    $availability = TourAvailability::create([
+        'company_id' => $vendor->id,
+        'tour_id' => $tour->id,
+        'schedule_id' => $schedule->id,
+        'max_pax' => 10,
+        'RS' => 1,
+        'available' => 9,
+    ]);
+
+    Booking::factory()->create([
+        'vendor_id' => $vendor->id,
+        'tour_id' => $tour->id,
+        'departure_date' => $departureDate,
+        'status' => BookingStatus::BOOKING_RESERVED,
+        'reserved_type' => 'system',
+        'reserved_expires_at' => now()->addMinutes(10),
+        'pax_adult' => 2,
+        'pax_child' => 1,
+    ]);
+
+    $response = $this->actingAs($this->user)
+        ->post("/companies/{$vendor->username}/dashboard/tour-availabilities", [
+            'availabilities' => [
+                [
+                    'tour_id' => $tour->id,
+                    'schedule_id' => $schedule->id,
+                    'max_pax' => 10,
+                    'RS' => 2,
+                    'BRS' => 99,
+                    'DP' => 99,
+                    'available' => 99,
+                ],
+            ],
+        ]);
+
+    $response->assertRedirect();
+
+    $availability->refresh();
+
+    expect((int) $availability->RS)->toBe(2)
+        ->and((int) $availability->BRS)->toBe(3)
+        ->and((int) $availability->DP)->toBe(0)
+        ->and((float) $availability->available)->toBe(5.0);
 });
 
 test('booking show includes room bed layout data', function () {

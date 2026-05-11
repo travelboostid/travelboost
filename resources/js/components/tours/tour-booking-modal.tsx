@@ -13,13 +13,13 @@ import { router } from '@inertiajs/react';
 import {
   addDays,
   format,
+  isBefore,
   isSameMonth,
   isSameYear,
-  isBefore,
-  startOfToday,
   max,
   min,
   parseISO,
+  startOfToday,
 } from 'date-fns';
 import { AnimatePresence, motion } from 'framer-motion';
 import { CalendarIcon } from 'lucide-react';
@@ -94,7 +94,9 @@ export default function TourBookingModal({
   }
 
   const handleSelectDate = (schedule: TourSchedule) => {
-    const availableCount = schedule.availability ? Number(schedule.availability.available) : schedule.quota;
+    const availableCount = schedule.availability
+      ? Number(schedule.availability.available)
+      : schedule.quota;
     if (availableCount <= 0) return;
 
     if (onRequireLogin) {
@@ -109,11 +111,11 @@ export default function TourBookingModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="flex max-h-[85vh] max-w-2xl flex-col gap-0 overflow-hidden p-0 md:max-w-3xl">
+      <DialogContent className="flex h-[90vh] max-h-[44rem] max-w-2xl flex-col gap-0 overflow-hidden p-0 sm:max-w-2xl md:max-w-3xl">
         {/* Header Section (Centered) */}
-        <div className="relative shrink-0 border-b bg-card px-4 pb-4 pt-6 sm:px-6 sm:pb-6 sm:pt-8">
+        <div className="relative shrink-0 border-b bg-card px-4 pb-4 pt-6 sm:px-6 sm:pb-5 sm:pt-7">
           <DialogHeader className="flex flex-col items-center justify-center text-center">
-            <div className="mb-3 aspect-[16/9] w-full max-w-[200px] overflow-hidden rounded-lg border bg-muted sm:mb-4 sm:max-w-md">
+            <div className="mb-3 aspect-[16/9] w-full max-w-[160px] overflow-hidden rounded-lg border bg-muted sm:mb-4 sm:max-w-xs md:max-w-sm">
               <img
                 src={tourImage.src}
                 srcSet={tourImage.srcSet || undefined}
@@ -130,7 +132,7 @@ export default function TourBookingModal({
               </DialogDescription>
             )}
             {tour.destination && (
-              <DialogDescription className="text-sm font-bold uppercase tracking-widest text-black">
+              <DialogDescription className="text-sm font-bold uppercase tracking-widest text-foreground">
                 {tour.destination}
               </DialogDescription>
             )}
@@ -142,94 +144,87 @@ export default function TourBookingModal({
 
         {/* Schedule List Section */}
         <div className="min-h-0 flex-1 overflow-y-auto bg-muted/5 px-4 py-3 sm:px-6 sm:py-4">
-            <div className="mb-4 text-center">
-              <span className="text-sm font-medium tracking-wide text-foreground/70">
-                Select Departure Date
-              </span>
-            </div>
+          <div className="mb-4 text-center">
+            <span className="text-sm font-medium tracking-wide text-foreground/70">
+              Select Departure Date
+            </span>
+          </div>
 
-            <AnimatePresence mode="wait">
-              {activeSchedules.length === 0 ? (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="flex flex-col items-center justify-center py-16 text-center"
-                >
-                  <div className="mb-4 flex size-16 items-center justify-center rounded-full bg-muted/50 ring-1 ring-border">
-                    <CalendarIcon className="size-7 text-muted-foreground" />
-                  </div>
-                  <p className="text-base font-semibold text-foreground">
-                    Departure schedule not available
-                  </p>
-                </motion.div>
-              ) : (
-                <div className="flex flex-col gap-3 pb-6">
-                  {activeSchedules.map((schedule, index) => {
-                    const departDate = parseISO(schedule.departure_date);
-                    const returnDate = schedule.return_date
-                      ? parseISO(schedule.return_date)
-                      : addDays(
-                          departDate,
-                          Math.max(0, tour.duration_days - 1),
-                        );
-
-                    const dateRangeDisplay = `${format(departDate, 'dd MMM yyyy')} - ${format(returnDate, 'dd MMM yyyy')}`;
-                    const availableCount = schedule.availability ? Number(schedule.availability.available) : schedule.quota;
-                    const availability = getAvailabilityInfo(availableCount);
-                    const isSoldOut = availableCount <= 0;
-
-                    return (
-                      <motion.button
-                        key={schedule.id}
-                        initial={{ opacity: 0, y: 15 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{
-                          duration: 0.35,
-                          delay: index * 0.05,
-                          ease: [0.25, 0.46, 0.45, 0.94],
-                        }}
-                        type="button"
-                        disabled={isSoldOut}
-                        onClick={() => handleSelectDate(schedule)}
-                        className={`group relative flex w-full flex-col gap-3 overflow-hidden rounded-xl border px-5 py-4 text-left transition-all duration-300 md:flex-row md:items-center md:justify-between ${
-                          isSoldOut
-                            ? 'cursor-not-allowed border-muted bg-muted/40 opacity-50 grayscale'
-                            : 'cursor-pointer border-border bg-card hover:border-primary/40 hover:shadow-md hover:shadow-primary/5 active:scale-[0.99] hover:bg-primary/[0.02]'
-                        }`}
-                      >
-                        {/* 1. Date Range (Left) */}
-                        <div className="flex flex-1 items-center font-semibold tracking-tight text-foreground md:justify-start">
-                          <span className="text-[15px] md:text-base">
-                            {dateRangeDisplay}
-                          </span>
-                        </div>
-
-                        {/* 2. Price (Center) */}
-                        <div className="flex flex-1 items-center font-bold text-primary md:justify-center">
-                          <span className="text-[15px] md:text-lg">
-                            {formatCurrency(schedule.price)}
-                          </span>
-                        </div>
-
-                        {/* 3. Availability (Right) */}
-                        <div className="flex flex-1 items-center md:justify-end">
-                          <Badge
-                            variant={availability.variant}
-                            className={`px-3 py-1 text-xs font-semibold uppercase tracking-wider ${
-                              isSoldOut
-                                ? 'bg-muted-foreground/20 text-muted-foreground hover:bg-muted-foreground/20'
-                                : ''
-                            }`}
-                          >
-                            {availability.label}
-                          </Badge>
-                        </div>
-                      </motion.button>
-                    );
-                  })}
+          <AnimatePresence mode="wait">
+            {activeSchedules.length === 0 ? (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="flex flex-col items-center justify-center py-16 text-center"
+              >
+                <div className="mb-4 flex size-16 items-center justify-center rounded-full bg-muted/50 ring-1 ring-border">
+                  <CalendarIcon className="size-7 text-muted-foreground" />
                 </div>
-              )}
-            </AnimatePresence>
+                <p className="text-base font-semibold text-foreground">
+                  Departure schedule not available
+                </p>
+              </motion.div>
+            ) : (
+              <div className="flex flex-col gap-3 pb-6">
+                {activeSchedules.map((schedule, index) => {
+                  const departDate = parseISO(schedule.departure_date);
+                  const returnDate = schedule.return_date
+                    ? parseISO(schedule.return_date)
+                    : addDays(departDate, Math.max(0, tour.duration_days - 1));
+
+                  const dateRangeDisplay = `${format(departDate, 'dd MMM yyyy')} - ${format(returnDate, 'dd MMM yyyy')}`;
+                  const availableCount = schedule.availability
+                    ? Number(schedule.availability.available)
+                    : schedule.quota;
+                  const availability = getAvailabilityInfo(availableCount);
+                  const isSoldOut = availableCount <= 0;
+
+                  return (
+                    <motion.button
+                      key={schedule.id}
+                      initial={{ opacity: 0, y: 15 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{
+                        duration: 0.35,
+                        delay: index * 0.05,
+                        ease: [0.25, 0.46, 0.45, 0.94],
+                      }}
+                      type="button"
+                      disabled={isSoldOut}
+                      onClick={() => handleSelectDate(schedule)}
+                      className={`group relative grid min-h-[4.25rem] w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-3 overflow-hidden rounded-xl border px-4 py-3 text-left transition-all duration-300 sm:min-h-[4.75rem] sm:px-5 sm:py-4 ${
+                        isSoldOut
+                          ? 'cursor-not-allowed border-muted bg-muted/40 opacity-50 grayscale'
+                          : 'cursor-pointer border-border bg-card hover:border-primary/40 hover:bg-primary/[0.02] hover:shadow-md hover:shadow-primary/5 active:scale-[0.99]'
+                      }`}
+                    >
+                      <div className="min-w-0 pr-2 font-semibold leading-snug tracking-tight text-foreground">
+                        <span className="block text-[15px] sm:text-base">
+                          {dateRangeDisplay}
+                        </span>
+                      </div>
+
+                      <div className="flex shrink-0 flex-col items-end justify-center gap-2 sm:min-w-[15rem] sm:flex-row sm:items-center sm:justify-end sm:gap-3">
+                        <span className="whitespace-nowrap text-sm font-bold text-primary sm:text-base md:text-lg">
+                          {formatCurrency(schedule.price)}
+                        </span>
+                        <Badge
+                          variant={availability.variant}
+                          className={`shrink-0 whitespace-nowrap px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider sm:px-3 sm:text-xs ${
+                            isSoldOut
+                              ? 'bg-muted-foreground/20 text-muted-foreground hover:bg-muted-foreground/20'
+                              : ''
+                          }`}
+                        >
+                          {availability.label}
+                        </Badge>
+                      </div>
+                    </motion.button>
+                  );
+                })}
+              </div>
+            )}
+          </AnimatePresence>
         </div>
       </DialogContent>
     </Dialog>

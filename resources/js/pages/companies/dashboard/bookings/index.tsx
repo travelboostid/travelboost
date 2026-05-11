@@ -3,6 +3,14 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
@@ -47,6 +55,7 @@ import {
   ChevronDown,
   EditIcon,
   EyeIcon,
+  FileTextIcon,
   MoreHorizontal,
   Search,
 } from 'lucide-react';
@@ -76,6 +85,15 @@ type BookingResource = {
   vendor: { id: number; name: string } | null;
   agent: { id: number; name: string } | null;
   user: { id: number; name: string } | null;
+  manual_payment: {
+    id: number;
+    sender_bank_name: string | null;
+    sender_account_number: string | null;
+    transfer_amount: number;
+    proof_path: string | null;
+    proof_url: string | null;
+    payment_type: string | null;
+  } | null;
 };
 
 type PageProps = {
@@ -99,6 +117,11 @@ const STATUS_TABS = [
     label: 'Awaiting Payment',
     value: 'awaiting payment',
     style: 'bg-amber-100 text-amber-800',
+  },
+  {
+    label: 'Waiting Payment Approval',
+    value: 'waiting payment approval',
+    style: 'bg-sky-100 text-sky-800',
   },
   {
     label: 'Down Payment',
@@ -137,6 +160,8 @@ const statusStyles: Record<string, string> = {
   reserved: 'bg-teal-100 text-teal-800 dark:bg-teal-900/40 dark:text-teal-300',
   'awaiting payment':
     'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300',
+  'waiting payment approval':
+    'bg-sky-100 text-sky-800 dark:bg-sky-900/40 dark:text-sky-300',
   'down payment':
     'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/40 dark:text-cyan-300',
   'full payment':
@@ -160,6 +185,7 @@ const statusLabels: Record<string, string> = {
   reserved: 'Booking Reserved',
   'booking reserved': 'Booking Reserved',
   'manual reserved': 'Manual Reserved',
+  'waiting payment approval': 'Waiting Payment Approval',
 };
 
 function formatCommission(value: number | string | null | undefined): string {
@@ -208,38 +234,155 @@ function RowActions({
   booking: BookingResource;
   companyUsername: string;
 }) {
+  const [reviewOpen, setReviewOpen] = React.useState(false);
+  const [processingAction, setProcessingAction] = React.useState<
+    'accept' | 'decline' | null
+  >(null);
+  const canReviewManualPayment =
+    booking.status === 'waiting payment approval' &&
+    Boolean(booking.manual_payment);
+
+  const submitManualPaymentDecision = (decision: 'accept' | 'decline') => {
+    if (!booking.manual_payment) return;
+
+    setProcessingAction(decision);
+    router.post(
+      `/companies/${companyUsername}/dashboard/bookings/${booking.id}/manual-payments/${booking.manual_payment.id}/${decision}`,
+      {},
+      {
+        preserveScroll: true,
+        onSuccess: () => setReviewOpen(false),
+        onFinish: () => setProcessingAction(null),
+      },
+    );
+  };
+
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button
-          variant="secondary"
-          size="icon"
-          className="h-8 w-8 text-secondary-foreground hover:bg-secondary/80 shadow-sm"
-        >
-          <MoreHorizontal className="h-4 w-4" />
-          <span className="sr-only">Open menu</span>
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuItem asChild>
-          <Link
-            href={`/companies/${companyUsername}/dashboard/bookings/${booking.id}`}
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="secondary"
+            size="icon"
+            className="h-8 w-8 text-secondary-foreground hover:bg-secondary/80 shadow-sm"
           >
-            <EyeIcon className="mr-2 h-4 w-4" />
-            View Detail
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem asChild>
-          <Link
-            href={`/companies/${companyUsername}/dashboard/bookings/${booking.id}/edit`}
-          >
-            <EditIcon className="mr-2 h-4 w-4" />
-            Edit
-          </Link>
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+            <MoreHorizontal className="h-4 w-4" />
+            <span className="sr-only">Open menu</span>
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          {canReviewManualPayment && (
+            <>
+              <DropdownMenuItem
+                onSelect={(event) => {
+                  event.preventDefault();
+                  setReviewOpen(true);
+                }}
+              >
+                <FileTextIcon className="mr-2 h-4 w-4" />
+                Review Payment
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+            </>
+          )}
+          <DropdownMenuItem asChild>
+            <Link
+              href={`/companies/${companyUsername}/dashboard/bookings/${booking.id}`}
+            >
+              <EyeIcon className="mr-2 h-4 w-4" />
+              View Detail
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem asChild>
+            <Link
+              href={`/companies/${companyUsername}/dashboard/bookings/${booking.id}/edit`}
+            >
+              <EditIcon className="mr-2 h-4 w-4" />
+              Edit
+            </Link>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <Dialog open={reviewOpen} onOpenChange={setReviewOpen}>
+        <DialogContent className="w-full max-w-md">
+          <DialogHeader>
+            <DialogTitle>Review Manual Payment</DialogTitle>
+            <DialogDescription>
+              Verify the transfer proof before approving or declining this
+              booking payment.
+            </DialogDescription>
+          </DialogHeader>
+
+          {booking.manual_payment && (
+            <div className="space-y-3 rounded-lg border bg-muted/30 p-4 text-sm">
+              <div className="flex justify-between gap-4">
+                <span className="text-muted-foreground">Sender Bank</span>
+                <span className="text-right font-semibold">
+                  {booking.manual_payment.sender_bank_name ?? '—'}
+                </span>
+              </div>
+              <div className="flex justify-between gap-4">
+                <span className="text-muted-foreground">Account Number</span>
+                <span className="text-right font-mono font-semibold">
+                  {booking.manual_payment.sender_account_number ?? '—'}
+                </span>
+              </div>
+              <div className="flex justify-between gap-4">
+                <span className="text-muted-foreground">Transfer Amount</span>
+                <span className="text-right font-semibold">
+                  {formatIDR(booking.manual_payment.transfer_amount)}
+                </span>
+              </div>
+              <div className="flex justify-between gap-4">
+                <span className="text-muted-foreground">Payment Type</span>
+                <span className="text-right font-semibold capitalize">
+                  {(booking.manual_payment.payment_type ?? 'full_payment')
+                    .replace(/_/g, ' ')
+                    .toLowerCase()}
+                </span>
+              </div>
+              <div className="flex justify-between gap-4 border-t pt-3">
+                <span className="text-muted-foreground">Proof</span>
+                {booking.manual_payment.proof_url ? (
+                  <a
+                    href={booking.manual_payment.proof_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="font-semibold text-primary hover:underline"
+                  >
+                    View proof
+                  </a>
+                ) : (
+                  <span className="text-right text-muted-foreground">
+                    {booking.manual_payment.proof_path ?? '—'}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={processingAction !== null}
+              onClick={() => submitManualPaymentDecision('decline')}
+            >
+              {processingAction === 'decline' ? 'Declining...' : 'Decline'}
+            </Button>
+            <Button
+              type="button"
+              disabled={processingAction !== null}
+              onClick={() => submitManualPaymentDecision('accept')}
+            >
+              {processingAction === 'accept' ? 'Accepting...' : 'Accept'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 

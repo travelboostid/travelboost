@@ -15,6 +15,7 @@ import Step4BookingSummary, {
   type PaymentType,
 } from '@/components/booking/Step4BookingSummary';
 import WizardStepIndicator from '@/components/booking/WizardStepIndicator';
+import TenantLayout from '@/components/layouts/tenant-layout';
 import type { TourSchedule } from '@/components/tours/tour-booking-modal';
 import {
   AlertDialog,
@@ -75,6 +76,8 @@ export default function Page() {
     vendorBankInfo,
     termConditions,
     isResumingExistingBooking,
+    reservedExpiresAt,
+    remainingHoldSeconds,
   } = usePage<any>().props as any;
   const user = auth?.user;
 
@@ -92,11 +95,17 @@ export default function Page() {
   const [currentStep, setCurrentStep] = useState<WizardStepId>(1);
   const [direction, setDirection] = useState(1); // 1=forward, -1=back
   const [hasAgreedToTnc, setHasAgreedToTnc] = useState(isResuming);
+  const initialHoldSeconds =
+    typeof remainingHoldSeconds === 'number'
+      ? remainingHoldSeconds
+      : reservedExpiresAt
+        ? Math.ceil((new Date(reservedExpiresAt).getTime() - Date.now()) / 1000)
+      : (bookingTimeLimitMinutes ?? 10) * 60;
   const [timeLeft, setTimeLeft] = useState(
-    (bookingTimeLimitMinutes ?? 30) * 60,
+    Math.max(0, initialHoldSeconds),
   );
   const [timerStarted, setTimerStarted] = useState(
-    resumedStatus === 'reserved',
+    resumedStatus === 'reserved' || resumedStatus === 'booking reserved',
   );
   const [showStep2ConfirmModal, setShowStep2ConfirmModal] = useState(false);
 
@@ -143,6 +152,29 @@ export default function Page() {
         (tp: any) => tp.categoryName === p.price_category,
       );
 
+      let restoredPrice =
+        parseFloat(p.price_amount) || (matchedPrice ? matchedPrice.price : 0);
+      let restoredOriginalPrice = matchedPrice
+        ? matchedPrice.price
+        : restoredPrice;
+
+      if (matchedPrice) {
+        if (matchedPrice.promotionRate > 0) {
+          restoredPrice = Math.max(
+            0,
+            Math.round(
+              matchedPrice.price -
+                (matchedPrice.price * matchedPrice.promotionRate) / 100,
+            ),
+          );
+        } else if (matchedPrice.promotion > 0) {
+          restoredPrice = Math.max(
+            0,
+            Math.round(matchedPrice.price - matchedPrice.promotion),
+          );
+        }
+      }
+
       restored.push({
         id,
         type,
@@ -153,8 +185,8 @@ export default function Page() {
         placeOfBirth: p.pob ?? '',
         priceCategory: p.price_category ?? null,
         tourPriceId: matchedPrice ? matchedPrice.tourPriceId : 0,
-        price:
-          parseFloat(p.price_amount) || (matchedPrice ? matchedPrice.price : 0),
+        price: restoredPrice,
+        originalPrice: restoredOriginalPrice,
         roomTypeDescription:
           p.room_type ?? (matchedPrice ? matchedPrice.description : ''),
         note: p.note ?? '',
@@ -195,6 +227,7 @@ export default function Page() {
       priceCategory: null,
       tourPriceId: 0,
       price: 0,
+      originalPrice: 0,
       roomTypeDescription: '',
       note: '',
     });
@@ -343,7 +376,7 @@ export default function Page() {
   const goBack = () => {
     if (currentStep === 1 && hasAgreedToTnc) {
       setHasAgreedToTnc(false);
-      setTimeLeft((bookingTimeLimitMinutes ?? 30) * 60);
+      setTimeLeft((bookingTimeLimitMinutes ?? 10) * 60);
       return;
     }
     if (currentStep === 1) {
@@ -536,8 +569,13 @@ export default function Page() {
               },
             )
             .then((response) => {
-              const snapToken = response.data?.payment?.payload
-                ?.snap_token as string | undefined;
+              const snapToken = response.data?.payment?.payload?.snap_token as
+                | string
+                | undefined;
+              const paymentId = response.data?.payment?.id as
+                | number
+                | string
+                | undefined;
 
               if (!snapToken) {
                 setIsSubmitting(false);
@@ -545,7 +583,23 @@ export default function Page() {
               }
 
               (window as any).snap.pay(snapToken, {
-                onSuccess: () => window.location.reload(),
+                onSuccess: () => {
+                  if (!bookingId || !paymentId) {
+                    window.location.reload();
+                    return;
+                  }
+
+                  axios
+                    .post(
+                      `/bookings/${bookingId}/online-payment/${paymentId}/confirm`,
+                      {},
+                      {
+                        withCredentials: true,
+                        withXSRFToken: true,
+                      },
+                    )
+                    .finally(() => window.location.reload());
+                },
                 onError: () => window.location.reload(),
                 onClose: () => window.location.reload(),
               });
@@ -575,6 +629,7 @@ export default function Page() {
           'transfer_amount',
           String(manualData.transferAmount || finalAmount),
         );
+        formData.append('payment_type', paymentType);
         formData.append('proof', manualData.proofFile);
 
         router.post(`/bookings/${bookingId}/manual-payment`, formData, {
@@ -605,173 +660,221 @@ export default function Page() {
   // ─── Render ─────────────────────────────────────────────────────────
   if (!hasAgreedToTnc) {
     return (
-      <div className="min-h-screen bg-linear-to-b from-background via-background to-muted/30">
-        <motion.div
-          key="tnc"
-          initial={{ opacity: 0, y: 15 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mx-auto max-w-3xl px-4 py-8"
-        >
-          <div className="rounded-xl border bg-card p-6 shadow-sm md:p-8">
-            <div className="flex items-center gap-3 border-b pb-4">
-              <FileTextIcon className="size-6 text-primary" />
-              <h2 className="text-xl font-bold">Terms & Conditions</h2>
-            </div>
-            <div className="mt-6 max-h-80 overflow-y-auto rounded-lg border bg-muted/30 p-4">
-              <p className="whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">
-                {termConditions || DEFAULT_TNC}
+      <TenantLayout>
+        <div className="min-h-screen bg-linear-to-b from-background via-background to-muted/30">
+          <motion.div
+            key="tnc"
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mx-auto max-w-3xl px-4 py-8"
+          >
+            <div className="rounded-xl border bg-card p-6 shadow-sm md:p-8">
+              <div className="flex items-center gap-3 border-b pb-4">
+                <FileTextIcon className="size-6 text-primary" />
+                <h2 className="text-xl font-bold">Terms & Conditions</h2>
+              </div>
+              <div className="mt-6 max-h-80 overflow-y-auto rounded-lg border bg-muted/30 p-4">
+                <p className="whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">
+                  {termConditions || DEFAULT_TNC}
+                </p>
+              </div>
+              <p className="mt-6 rounded-lg bg-muted/50 p-4 text-sm font-medium leading-relaxed text-foreground">
+                By clicking &quot;I Agree &amp; Continue&quot;, you agree to the
+                Terms &amp; Conditions. A {bookingTimeLimitMinutes}-minute timer
+                will start on the room arrangement step to complete your
+                booking.
               </p>
+              <div className="mt-8 flex items-center justify-end gap-3 border-t pt-6">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => window.history.back()}
+                >
+                  Back
+                </Button>
+                <Button
+                  type="button"
+                  onClick={() => setHasAgreedToTnc(true)}
+                  className="gap-2"
+                >
+                  I Agree & Continue
+                  <ArrowRightIcon className="size-4" />
+                </Button>
+              </div>
             </div>
-            <p className="mt-6 rounded-lg bg-muted/50 p-4 text-sm font-medium leading-relaxed text-foreground">
-              By clicking &quot;I Agree &amp; Continue&quot;, you agree to the
-              Terms &amp; Conditions. A {bookingTimeLimitMinutes}-minute timer
-              will start on the room arrangement step to complete your booking.
-            </p>
-            <div className="mt-8 flex items-center justify-end gap-3 border-t pt-6">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => window.history.back()}
-              >
-                Back
-              </Button>
-              <Button
-                type="button"
-                onClick={() => setHasAgreedToTnc(true)}
-                className="gap-2"
-              >
-                I Agree & Continue
-                <ArrowRightIcon className="size-4" />
-              </Button>
-            </div>
-          </div>
-        </motion.div>
-      </div>
+          </motion.div>
+        </div>
+      </TenantLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-linear-to-b from-background via-background to-muted/30">
-      <div className="mx-auto w-full max-w-5xl px-4 pt-4">
-        <div className="flex flex-col md:flex-row md:items-start md:gap-4 lg:gap-6">
-          {/* Back button */}
-          <div className="hidden w-12 shrink-0 justify-end pt-17 md:flex">
-            <button
-              type="button"
-              onClick={goBack}
-              className="flex size-10 items-center justify-center rounded-full border bg-background text-muted-foreground shadow-sm transition-all hover:bg-muted hover:text-foreground"
-            >
-              <ArrowLeftIcon className="size-5" />
-            </button>
-          </div>
-
-          {/* Center Column */}
-          <div className="mx-auto w-full min-w-0 max-w-3xl flex-1">
-            <div className="pb-4 pt-2">
-              {/* Mobile back */}
-              <div className="mb-3 md:hidden">
-                <button
-                  type="button"
-                  onClick={goBack}
-                  className="flex items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-                >
-                  <ArrowLeftIcon className="size-4" />
-                  Back
-                </button>
-              </div>
-
-              {/* Step Indicator */}
-              <div className="pb-4">
-                <WizardStepIndicator currentStep={currentStep} />
-              </div>
-
-              {/* Booking Info Card */}
-              <BookingInfoCard
-                tour={tour}
-                status="waiting_payment"
-                bookingNumber={bookingNumber ?? null}
-                invoiceNumber={null}
-                departureDate={preselectedDate}
-                vendor={vendor}
-                agentName={tenant?.name || '-'}
-                contactName={contact.name}
-                contactEmail={contact.email}
-                contactPhone={contact.phone}
-                pricing={pricing}
-                timeLeftSeconds={timeLeft}
-                currentStep={currentStep}
-                timerStarted={timerStarted}
-              />
+    <TenantLayout>
+      <div className="min-h-screen bg-linear-to-b from-background via-background to-muted/30">
+        <div className="mx-auto w-full max-w-5xl px-4 pt-4">
+          <div className="flex flex-col md:flex-row md:items-start md:gap-4 lg:gap-6">
+            {/* Back button */}
+            <div className="hidden w-12 shrink-0 justify-end pt-17 md:flex">
+              <button
+                type="button"
+                onClick={goBack}
+                className="flex size-10 items-center justify-center rounded-full border bg-background text-muted-foreground shadow-sm transition-all hover:bg-muted hover:text-foreground"
+              >
+                <ArrowLeftIcon className="size-5" />
+              </button>
             </div>
 
-            {/* Steps */}
-            <div className="py-2">
-              <AnimatePresence mode="wait" custom={direction}>
-                <motion.div
-                  key={`step-${currentStep}`}
-                  custom={direction}
-                  initial={{ opacity: 0, x: direction * 40 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: direction * -40 }}
-                  transition={{ duration: 0.25 }}
-                >
-                  {currentStep === 1 && (
-                    <Step1GuestInformation
-                      contact={contact}
-                      onContactChange={setContact}
-                      adults={adults}
-                      children={children}
-                      infants={infants}
-                      onAdultsChange={setAdults}
-                      onChildrenChange={setChildren}
-                      onInfantsChange={setInfants}
-                      guests={guests}
-                      onGuestUpdate={handleGuestUpdate}
-                      onGuestRemove={handleGuestRemove}
-                      tourPrices={tourPrices}
-                      maxGuests={availability ?? 99}
-                      departureDate={preselectedDate}
-                    />
-                  )}
-                  {currentStep === 2 && (
-                    <Step2RoomConfiguration
-                      guests={guests}
-                      rooms={rooms}
-                      onRoomsChange={setRooms}
-                    />
-                  )}
-                  {currentStep === 3 && (
-                    <Step3TravelDocuments
-                      guests={guests}
-                      travelDocuments={travelDocuments}
-                      onTravelDocumentsChange={setTravelDocuments}
-                      departureDate={preselectedDate}
-                    />
-                  )}
-                  {currentStep === 4 && (
-                    <Step4BookingSummary
-                      contact={contact}
-                      guests={guests}
-                      rooms={rooms}
-                      pricing={pricing}
-                      vendor={vendor}
-                      agentName={tenant?.name || '-'}
-                      onPayNow={handlePayNow}
-                      isSubmitting={isSubmitting}
-                      initialAddOns={addOns}
-                      minimumDownPaymentPct={minimumDownPaymentPct}
-                      minimumVatPct={minimumVatPct}
-                      vendorBankInfo={vendorBankInfo}
-                    />
-                  )}
-                </motion.div>
-              </AnimatePresence>
-            </div>
+            {/* Center Column */}
+            <div className="mx-auto w-full min-w-0 max-w-3xl flex-1">
+              <div className="pb-4 pt-2">
+                {/* Mobile back */}
+                <div className="mb-3 md:hidden">
+                  <button
+                    type="button"
+                    onClick={goBack}
+                    className="flex items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+                  >
+                    <ArrowLeftIcon className="size-4" />
+                    Back
+                  </button>
+                </div>
 
-            {/* Navigation */}
-            {currentStep < 4 && (
-              <div className="flex items-center justify-between pb-12 pt-4">
-                {currentStep > 1 ? (
+                {/* Step Indicator */}
+                <div className="pb-4">
+                  <WizardStepIndicator currentStep={currentStep} />
+                </div>
+
+                {/* Booking Info Card */}
+                <BookingInfoCard
+                  tour={tour}
+                  status={
+                    currentStep >= 2 || timerStarted
+                      ? 'booking_reserved'
+                      : 'waiting_payment'
+                  }
+                  bookingNumber={bookingNumber ?? null}
+                  invoiceNumber={null}
+                  departureDate={preselectedDate}
+                  vendor={vendor}
+                  agentName={tenant?.name || '-'}
+                  contactName={contact.name}
+                  contactEmail={contact.email}
+                  contactPhone={contact.phone}
+                  pricing={pricing}
+                  timeLeftSeconds={timeLeft}
+                  currentStep={currentStep}
+                  timerStarted={timerStarted}
+                />
+              </div>
+
+              {/* Steps */}
+              <div className="py-2">
+                <AnimatePresence mode="wait" custom={direction}>
+                  <motion.div
+                    key={`step-${currentStep}`}
+                    custom={direction}
+                    initial={{ opacity: 0, x: direction * 40 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: direction * -40 }}
+                    transition={{ duration: 0.25 }}
+                  >
+                    {currentStep === 1 && (
+                      <Step1GuestInformation
+                        contact={contact}
+                        onContactChange={setContact}
+                        adults={adults}
+                        children={children}
+                        infants={infants}
+                        onAdultsChange={setAdults}
+                        onChildrenChange={setChildren}
+                        onInfantsChange={setInfants}
+                        guests={guests}
+                        onGuestUpdate={handleGuestUpdate}
+                        onGuestRemove={handleGuestRemove}
+                        tourPrices={tourPrices}
+                        maxGuests={availability ?? 99}
+                        departureDate={preselectedDate}
+                      />
+                    )}
+                    {currentStep === 2 && (
+                      <Step2RoomConfiguration
+                        guests={guests}
+                        rooms={rooms}
+                        onRoomsChange={setRooms}
+                      />
+                    )}
+                    {currentStep === 3 && (
+                      <Step3TravelDocuments
+                        guests={guests}
+                        travelDocuments={travelDocuments}
+                        onTravelDocumentsChange={setTravelDocuments}
+                        departureDate={preselectedDate}
+                      />
+                    )}
+                    {currentStep === 4 && (
+                      <Step4BookingSummary
+                        contact={contact}
+                        guests={guests}
+                        rooms={rooms}
+                        pricing={pricing}
+                        vendor={vendor}
+                        agentName={tenant?.name || '-'}
+                        onPayNow={handlePayNow}
+                        isSubmitting={isSubmitting}
+                        initialAddOns={addOns}
+                        minimumDownPaymentPct={minimumDownPaymentPct}
+                        minimumVatPct={minimumVatPct}
+                        vendorBankInfo={vendorBankInfo}
+                      />
+                    )}
+                  </motion.div>
+                </AnimatePresence>
+              </div>
+
+              {/* Navigation */}
+              {currentStep < 4 && (
+                <div className="flex items-center justify-between pb-12 pt-4">
+                  {currentStep > 1 ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={goBack}
+                      className="gap-2"
+                    >
+                      <ArrowLeftIcon className="size-4" /> Back
+                    </Button>
+                  ) : (
+                    <div />
+                  )}
+                  <div className="flex flex-col items-end gap-2">
+                    {currentStep === 1 && isAvailabilityExceeded && (
+                      <span className="text-sm font-semibold text-destructive">
+                        Not enough availability. Only {availability} seats left.
+                      </span>
+                    )}
+                    {currentStep === 1 && !extraBedValid && (
+                      <span className="text-sm font-semibold text-destructive">
+                        "Extra Bed" can only be added with an Adult Twin or
+                        Adult Double room.
+                      </span>
+                    )}
+                    <Button
+                      type="button"
+                      disabled={
+                        (currentStep === 1 && !canProceedStep1) ||
+                        (currentStep === 2 && !canProceedStep2)
+                      }
+                      onClick={goNext}
+                      className="gap-2"
+                    >
+                      {currentStep === 3 ? 'Skip' : 'Next'}
+                      <ArrowRightIcon className="size-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+              {currentStep === 4 && (
+                <div className="flex items-center pb-12 pt-4">
                   <Button
                     type="button"
                     variant="outline"
@@ -780,76 +883,37 @@ export default function Page() {
                   >
                     <ArrowLeftIcon className="size-4" /> Back
                   </Button>
-                ) : (
-                  <div />
-                )}
-                <div className="flex flex-col items-end gap-2">
-                  {currentStep === 1 && isAvailabilityExceeded && (
-                    <span className="text-sm font-semibold text-destructive">
-                      Not enough availability. Only {availability} seats left.
-                    </span>
-                  )}
-                  {currentStep === 1 && !extraBedValid && (
-                    <span className="text-sm font-semibold text-destructive">
-                      "Extra Bed" can only be added with an Adult Twin or Adult
-                      Double room.
-                    </span>
-                  )}
-                  <Button
-                    type="button"
-                    disabled={
-                      (currentStep === 1 && !canProceedStep1) ||
-                      (currentStep === 2 && !canProceedStep2)
-                    }
-                    onClick={goNext}
-                    className="gap-2"
-                  >
-                    {currentStep === 3 ? 'Skip' : 'Next'}
-                    <ArrowRightIcon className="size-4" />
-                  </Button>
                 </div>
-              </div>
-            )}
-            {currentStep === 4 && (
-              <div className="flex items-center pb-12 pt-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={goBack}
-                  className="gap-2"
-                >
-                  <ArrowLeftIcon className="size-4" /> Back
-                </Button>
-              </div>
-            )}
+              )}
+            </div>
+
+            {/* Right spacer */}
+            <div className="hidden w-12 shrink-0 md:block" />
           </div>
-
-          {/* Right spacer */}
-          <div className="hidden w-12 shrink-0 md:block" />
         </div>
-      </div>
 
-      {/* ─── Step 1 → Step 2 Confirmation Modal ────────────────────────── */}
-      <AlertDialog
-        open={showStep2ConfirmModal}
-        onOpenChange={setShowStep2ConfirmModal}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Before you continue</AlertDialogTitle>
-            <AlertDialogDescription>
-              On the next screen, please complete your transaction within{' '}
-              {bookingTimeLimitMinutes}-minutes to avoid cancellation.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmGoToStep2}>
-              I understand, continue
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </div>
+        {/* ─── Step 1 → Step 2 Confirmation Modal ────────────────────────── */}
+        <AlertDialog
+          open={showStep2ConfirmModal}
+          onOpenChange={setShowStep2ConfirmModal}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Before you continue</AlertDialogTitle>
+              <AlertDialogDescription>
+                On the next screen, please complete your transaction within{' '}
+                {bookingTimeLimitMinutes}-minutes to avoid cancellation.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmGoToStep2}>
+                I understand, continue
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
+    </TenantLayout>
   );
 }

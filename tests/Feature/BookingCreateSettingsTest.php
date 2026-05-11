@@ -1,5 +1,7 @@
 <?php
 
+use App\Enums\BookingStatus;
+use App\Models\Booking;
 use App\Models\Company;
 use App\Models\Domain;
 use App\Models\Tour;
@@ -131,6 +133,135 @@ test('reserve rejects extra bed passengers without a twin or double base room', 
         ]);
 
     $response->assertSessionHasErrors('passengers');
+});
+
+test('reserve stores server hold expiry using ten minute fallback when setting is empty', function () {
+    $this->travelTo(now()->startOfSecond());
+
+    $user = User::factory()->create();
+    $company = Company::factory()->create([
+        'username' => 'timerfallbackvendor',
+        'type' => 'vendor',
+    ]);
+    $company->companySetting()->update([
+        'booking_entry_time_limit' => 0,
+    ]);
+    $tour = Tour::factory()->create([
+        'company_id' => $company->id,
+        'status' => 'active',
+    ]);
+    $departureDate = now()->addDays(20)->toDateString();
+    $schedule = TourSchedule::create([
+        'tour_id' => $tour->id,
+        'tour_code' => $tour->code,
+        'company_id' => $company->id,
+        'departure_date' => $departureDate,
+        'return_date' => now()->addDays(25)->toDateString(),
+        'is_active' => true,
+    ]);
+    TourAvailability::create([
+        'company_id' => $company->id,
+        'tour_id' => $tour->id,
+        'schedule_id' => $schedule->id,
+        'max_pax' => 10,
+        'available' => 10,
+    ]);
+
+    Domain::create([
+        'subdomain' => 'timerfallbackvendor',
+        'owner_type' => Company::class,
+        'owner_id' => $company->id,
+        'domain_enabled' => true,
+    ]);
+
+    $this->actingAs($user)
+        ->post(route('bookings.reserve', [
+            'username' => 'timerfallbackvendor',
+            'tour' => $tour,
+        ]), [
+            'tour_id' => $tour->id,
+            'departure_date' => $departureDate,
+            'pax_adult' => 1,
+            'pax_child' => 0,
+            'pax_infant' => 0,
+            'booking_number' => 'BKG-TIMER-FALLBACK',
+            'vendor_id' => $company->id,
+            'passengers' => [
+                [
+                    'first_name' => 'Timer',
+                    'last_name' => 'Fallback',
+                    'price_category' => 'Adult Twin',
+                    'room_type' => 'Twin',
+                    'price_amount' => 1000000,
+                ],
+            ],
+        ])
+        ->assertRedirect();
+
+    $booking = Booking::where('booking_number', 'BKG-TIMER-FALLBACK')->firstOrFail();
+
+    expect($booking->status)->toBe(BookingStatus::BOOKING_RESERVED)
+        ->and($booking->reserved_expires_at->equalTo(now()->addMinutes(10)))->toBeTrue();
+});
+
+test('booking create returns server remaining hold seconds when resuming reserved booking', function () {
+    $this->travelTo(now()->startOfSecond());
+
+    $user = User::factory()->create();
+    $company = Company::factory()->create([
+        'username' => 'remainingholdvendor',
+        'type' => 'vendor',
+    ]);
+
+    Domain::create([
+        'subdomain' => 'remainingholdvendor',
+        'owner_type' => Company::class,
+        'owner_id' => $company->id,
+        'domain_enabled' => true,
+    ]);
+
+    $tour = Tour::factory()->create([
+        'company_id' => $company->id,
+        'status' => 'active',
+    ]);
+    $schedule = TourSchedule::create([
+        'tour_id' => $tour->id,
+        'tour_code' => $tour->code,
+        'company_id' => $company->id,
+        'departure_date' => now()->addDays(20)->toDateString(),
+        'return_date' => now()->addDays(25)->toDateString(),
+        'is_active' => true,
+    ]);
+    TourAvailability::create([
+        'company_id' => $company->id,
+        'tour_id' => $tour->id,
+        'schedule_id' => $schedule->id,
+        'max_pax' => 10,
+        'available' => 10,
+    ]);
+    Booking::factory()->create([
+        'booking_number' => 'BKG-REMAINING-HOLD',
+        'user_id' => $user->id,
+        'vendor_id' => $company->id,
+        'tour_id' => $tour->id,
+        'departure_date' => $schedule->departure_date,
+        'status' => BookingStatus::BOOKING_RESERVED,
+        'reserved_type' => 'system',
+        'reserved_expires_at' => now()->addMinutes(7),
+    ]);
+
+    $response = $this->actingAs($user)->get(
+        route('bookings.create', [
+            'username' => 'remainingholdvendor',
+            'tour' => $tour,
+            'date' => $schedule->departure_date,
+        ])
+    );
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->where('reservedExpiresAt', now()->addMinutes(7)->toIso8601String())
+        ->where('remainingHoldSeconds', 420));
 });
 
 test('store maps payment method to booking payment mode', function () {

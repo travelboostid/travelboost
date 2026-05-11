@@ -49,6 +49,8 @@ import { format } from 'date-fns';
 
 ///////////tab 2
 type RoomPrice = {
+  id?: number | null;
+  schedule_id?: number | null;
   room_type_id: number | null;
   price: string;
   promotion: Adjustment;
@@ -61,10 +63,14 @@ type Adjustment = {
 };
 
 type Schedule = {
-  id?: number;
+  id?: number | null;
   departure_date: string;
   return_date: string;
   prices: RoomPrice[];
+  availability?: Partial<Record<AvailabilityField, number | string | null>> | null;
+  add_ons?: any;
+  promotion?: Adjustment;
+  commission?: Adjustment;
   //promotion: Adjustment
   //commission: Adjustment
 };
@@ -88,6 +94,42 @@ type AddOn = {
 type AddOnsState = {
   [scheduleId: number]: AddOn[];
 };
+
+type AvailabilityField =
+  | 'max_pax'
+  | 'WP'
+  | 'WPA'
+  | 'DP'
+  | 'FP'
+  | 'RS'
+  | 'BRS'
+  | 'CA'
+  | 'RF'
+  | 'EX'
+  | 'WL'
+  | 'available';
+
+type AvailabilityRow = Record<AvailabilityField, number> & {
+  id?: number | null;
+  schedule: string;
+};
+
+const EDITABLE_AVAILABILITY_FIELDS: AvailabilityField[] = ['max_pax', 'RS'];
+
+const AVAILABILITY_MOBILE_FIELDS: { key: AvailabilityField; label: string }[] =
+  [
+    { key: 'max_pax', label: 'Max' },
+    { key: 'RS', label: 'RS' },
+    { key: 'WP', label: 'WP' },
+    { key: 'WPA', label: 'WPA' },
+    { key: 'DP', label: 'DP' },
+    { key: 'FP', label: 'FP' },
+    { key: 'BRS', label: 'BRS' },
+    { key: 'CA', label: 'CA' },
+    { key: 'RF', label: 'RF' },
+    { key: 'EX', label: 'EX' },
+    { key: 'WL', label: 'WL' },
+  ];
 
 export default function Page({ tour }: Props) {
   const { props } = usePage() as any; // ✅ di sini
@@ -497,7 +539,7 @@ export default function Page({ tour }: Props) {
     });
   };
 
-  const availabilityData = useMemo(() => {
+  const availabilityData = useMemo<AvailabilityRow[]>(() => {
     return schedules.map((s) => {
       const a = s.availability || {};
 
@@ -510,6 +552,7 @@ export default function Page({ tour }: Props) {
         max_pax,
 
         WP: Number(a.WP || 0),
+        WPA: Number(a.WPA || 0),
         DP: Number(a.DP || 0),
         FP: Number(a.FP || 0),
         RS: Number(a.RS || 0),
@@ -523,7 +566,7 @@ export default function Page({ tour }: Props) {
     });
   }, [schedules]);
 
-  const [availability, setAvailability] = useState([]);
+  const [availability, setAvailability] = useState<AvailabilityRow[]>([]);
 
   useEffect(() => {
     setAvailability(availabilityData);
@@ -535,7 +578,11 @@ export default function Page({ tour }: Props) {
     setAvailability(availabilityData)
   }, [schedules])*/
 
-  const updateAvailability = (index: number, field: string, value: number) => {
+  const updateAvailability = (
+    index: number,
+    field: AvailabilityField,
+    value: number,
+  ) => {
     const updated = [...availability];
 
     updated[index] = {
@@ -546,8 +593,10 @@ export default function Page({ tour }: Props) {
     const row = updated[index];
 
     // 🔥 hitung ulang dari row (bukan dari luar scope)
-    row.available =
-      row.max_pax - row.DP - row.FP - row.RS - row.BRS + row.CA + row.RF;
+    row.available = Math.max(
+      0,
+      row.max_pax - row.RS - row.WPA - row.DP - row.FP - row.BRS,
+    );
 
     setAvailability(updated);
   };
@@ -559,6 +608,7 @@ export default function Page({ tour }: Props) {
       schedule_id: schedules[i]?.id ?? null, // pastikan schedule punya id dari DB
       max_pax: row.max_pax,
       WP: row.WP,
+      WPA: row.WPA,
       DP: row.DP,
       FP: row.FP,
       RS: row.RS,
@@ -2064,10 +2114,11 @@ export default function Page({ tour }: Props) {
                 </div>
 
                 <div className="hidden md:block rounded-lg border overflow-x-auto">
-                  <table className="w-full table-fixed text-sm min-w-[1000px]">
+                    <table className="w-full table-fixed text-sm min-w-[1080px]">
                     <colgroup>
                       <col className="w-[120px]" /> {/* Departure */}
                       <col className="w-[50px]" /> {/* Max Pax */}
+                      <col className="w-[50px]" />
                       <col className="w-[50px]" />
                       <col className="w-[50px]" />
                       <col className="w-[50px]" />
@@ -2091,6 +2142,9 @@ export default function Page({ tour }: Props) {
                           Waiting Payment <br /> (WP)
                         </th>
                         <th className="p-3 text-right">
+                          Waiting Approval <br /> (WPA)
+                        </th>
+                        <th className="p-3 text-right">
                           Down Payment <br /> (DP)
                         </th>
                         <th className="p-3 text-right">
@@ -2112,7 +2166,7 @@ export default function Page({ tour }: Props) {
                           Waiting List <br /> (WL)
                         </th>
                         <th className="p-3 text-right">
-                          Available <br /> (WL)
+                          Available
                         </th>
                         <th className="p-3 text-right">Action</th>
                       </tr>
@@ -2152,6 +2206,18 @@ export default function Page({ tour }: Props) {
                               value={row.WP}
                               onChange={(val) =>
                                 updateAvailability(i, 'WP', Number(val))
+                              }
+                              disabled={true}
+                            />
+                          </td>
+
+                          {/* DP */}
+                          <td className="p-3">
+                            <MoneyInput
+                              className="text-right"
+                              value={row.WPA}
+                              onChange={(val) =>
+                                updateAvailability(i, 'WPA', Number(val))
                               }
                               disabled={true}
                             />
@@ -2324,18 +2390,7 @@ export default function Page({ tour }: Props) {
 
                       {/* Input grid */}
                       <div className="grid grid-cols-2 gap-2 text-sm">
-                        {[
-                          { key: 'max_pax', label: 'Max' },
-                          { key: 'RS', label: 'RS' },
-                          { key: 'WP', label: 'WP' },
-                          { key: 'DP', label: 'DP' },
-                          { key: 'FP', label: 'FP' },
-                          { key: 'BRS', label: 'BRS' },
-                          { key: 'CA', label: 'CA' },
-                          { key: 'RF', label: 'RF' },
-                          { key: 'EX', label: 'EX' },
-                          { key: 'WL', label: 'WL' },
-                        ].map((field) => (
+                        {AVAILABILITY_MOBILE_FIELDS.map((field) => (
                           <>
                             <div className="text-muted-foreground">
                               {field.label}
@@ -2346,6 +2401,11 @@ export default function Page({ tour }: Props) {
                               value={row[field.key]}
                               onChange={(val) =>
                                 updateAvailability(i, field.key, Number(val))
+                              }
+                              disabled={
+                                !EDITABLE_AVAILABILITY_FIELDS.includes(
+                                  field.key,
+                                )
                               }
                             />
                           </>
