@@ -320,6 +320,21 @@ function EditableWizard({
   );
   const [selectedAddOns, setSelectedAddOns] =
     useState<AddOnItem[]>(initialAddOns);
+  const selectedAddOnsForPricing = useMemo(
+    () =>
+      selectedAddOns.map((addon) =>
+        addon.hasQty === false ? { ...addon, qty: guests.length } : addon,
+      ),
+    [selectedAddOns, guests.length],
+  );
+  const selectedAddOnsTotal = useMemo(
+    () =>
+      selectedAddOnsForPricing.reduce(
+        (sum, addon) => sum + addon.unitPrice * addon.qty,
+        0,
+      ),
+    [selectedAddOnsForPricing],
+  );
   const roomsGuestFingerprint = useRef<string>('');
   const skipGuestSyncRef = useRef(false);
 
@@ -532,15 +547,7 @@ function EditableWizard({
         price: addon.unitPrice * addon.qty,
       }));
     const addOnsTotal = addOnRows.reduce((sum, item) => sum + item.price, 0);
-    const taxAmount = Math.round(
-      pricing.subtotalGuests * ((minimumVatPct ?? 11) / 100),
-    );
-    const grandTotal =
-      pricing.subtotalGuests +
-      pricing.platformFee +
-      addOnsTotal +
-      taxAmount +
-      pricing.agentCommission;
+    const grandTotal = pricing.totalPrice + addOnsTotal;
 
     router.put(
       `/companies/${company.username}/dashboard/bookings/${booking.id}`,
@@ -553,7 +560,7 @@ function EditableWizard({
         pax_child: children,
         pax_infant: infants,
         total_price: pricing.subtotalGuests,
-        tax_amount: taxAmount,
+        tax_amount: pricing.ppn,
         platform_fee: pricing.platformFee,
         commission_amount: pricing.agentCommission,
         grand_total: grandTotal,
@@ -668,6 +675,11 @@ function EditableWizard({
                   contactEmail={contact.email}
                   contactPhone={contact.phone}
                   pricing={pricing}
+                  displayTotalPrice={
+                    currentStep === 4
+                      ? pricing.totalPrice + selectedAddOnsTotal
+                      : undefined
+                  }
                   timeLeftSeconds={0}
                   currentStep={currentStep}
                   timerStarted={false}
@@ -730,7 +742,7 @@ function EditableWizard({
                           handleSave(addOns)
                         }
                         isSubmitting={isSubmitting}
-                        initialAddOns={initialAddOns}
+                        initialAddOns={selectedAddOns}
                         onAddOnsChange={setSelectedAddOns}
                         minimumDownPaymentPct={minimumDownPaymentPct}
                         minimumVatPct={minimumVatPct}
@@ -764,7 +776,7 @@ function EditableWizard({
                     onClick={goNext}
                     className="gap-2"
                   >
-                    {currentStep === 3 ? 'Skip' : 'Next'}
+                    Next
                     <ArrowRightIcon className="size-4" />
                   </Button>
                 </div>
