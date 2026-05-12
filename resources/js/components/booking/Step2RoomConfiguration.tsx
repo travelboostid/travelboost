@@ -35,10 +35,12 @@ import { toast } from 'sonner';
 
 export type BedType =
   | 'single'
+  | 'single_extra_bed'
   | 'double'
   | 'twin'
   | 'extra_bed'
   | 'triple'
+  | 'quad'
   | 'double_extra_bed'
   | 'twin_extra_bed';
 
@@ -77,6 +79,16 @@ const BED_TYPES: Record<BedType, BedTypeInfo> = {
     icon: BedSingleIcon,
     description: '1 single bed',
     physicalBeds: [{ label: 'Single Bed', icon: BedSingleIcon, slots: 1 }],
+  },
+  single_extra_bed: {
+    label: 'Single Room',
+    capacity: 2,
+    icon: BedSingleIcon,
+    description: 'Single + extra bed',
+    physicalBeds: [
+      { label: 'Single Bed', icon: BedSingleIcon, slots: 1 },
+      { label: 'Extra Bed', icon: BedSingleIcon, slots: 1 },
+    ],
   },
   double: {
     label: 'Double Room',
@@ -137,6 +149,18 @@ const BED_TYPES: Record<BedType, BedTypeInfo> = {
       { label: 'Single Bed 3', icon: BedSingleIcon, slots: 1 },
     ],
   },
+  quad: {
+    label: 'Quad Room',
+    capacity: 4,
+    icon: BedSingleIcon,
+    description: '4 single beds',
+    physicalBeds: [
+      { label: 'Single Bed 1', icon: BedSingleIcon, slots: 1 },
+      { label: 'Single Bed 2', icon: BedSingleIcon, slots: 1 },
+      { label: 'Single Bed 3', icon: BedSingleIcon, slots: 1 },
+      { label: 'Single Bed 4', icon: BedSingleIcon, slots: 1 },
+    ],
+  },
 };
 
 const itemVariants = {
@@ -148,6 +172,130 @@ const itemVariants = {
 
 /** Categories that do NOT occupy a bed slot */
 const NO_BED_CATEGORIES = ['Child No Bed', 'Infant', 'infant'];
+const SINGLE_BED_CATEGORIES = ['Adult Single', 'Single'];
+const DOUBLE_BED_CATEGORIES = ['Adult Double', 'Double'];
+const TWIN_BED_CATEGORIES = ['Adult Twin', 'Twin'];
+const TRIPLE_BED_CATEGORIES = ['Adult Triple', 'Triple'];
+const QUAD_BED_CATEGORIES = ['Adult Quad', 'Quad'];
+const EXTRA_BED_CATEGORIES = ['Child With Bed', 'Adult Extra Bed'];
+
+const isCategoryMatch = (
+  priceCategory: string | null | undefined,
+  categories: string[],
+) => categories.includes(priceCategory ?? '');
+
+const isExtraBedCategory = (priceCategory: string | null | undefined) =>
+  EXTRA_BED_CATEGORIES.includes(priceCategory ?? '');
+
+const getRoomTypeForOccupants = (guests: GuestEntry[]): BedType => {
+  const categories = guests
+    .map((g) => g.priceCategory)
+    .filter(Boolean) as string[];
+
+  if (categories.some((cat) => QUAD_BED_CATEGORIES.includes(cat))) {
+    return 'quad';
+  }
+
+  if (categories.some((cat) => TWIN_BED_CATEGORIES.includes(cat))) {
+    return categories.some((cat) => isExtraBedCategory(cat))
+      ? 'twin_extra_bed'
+      : 'twin';
+  }
+
+  if (categories.some((cat) => DOUBLE_BED_CATEGORIES.includes(cat))) {
+    return categories.some((cat) => isExtraBedCategory(cat))
+      ? 'double_extra_bed'
+      : 'double';
+  }
+
+  if (categories.some((cat) => TRIPLE_BED_CATEGORIES.includes(cat))) {
+    return 'triple';
+  }
+
+  if (categories.some((cat) => SINGLE_BED_CATEGORIES.includes(cat))) {
+    return categories.some((cat) => isExtraBedCategory(cat))
+      ? 'single_extra_bed'
+      : 'single';
+  }
+
+  return 'single';
+};
+
+const normalizeRoom = (
+  room: RoomConfig,
+  guests: GuestEntry[],
+): RoomConfig => {
+  const roomGuests = room.guestIds
+    .filter(Boolean)
+    .map((id) => guests.find((guest) => guest.id === id))
+    .filter(Boolean) as GuestEntry[];
+
+  const roomType = getRoomTypeForOccupants(roomGuests);
+  const orderedGuestIds = [...roomGuests.map((guest) => guest.id)];
+
+  if (roomType === 'quad') {
+    return {
+      ...room,
+      type: roomType,
+      capacity: BED_TYPES[roomType].capacity,
+      guestIds: orderedGuestIds.slice(0, 4),
+    };
+  }
+
+  if (roomType === 'single_extra_bed') {
+    const baseGuest = roomGuests.find(
+      (guest) => !isExtraBedCategory(guest.priceCategory),
+    );
+    const extraGuest = roomGuests.find((guest) =>
+      isExtraBedCategory(guest.priceCategory),
+    );
+
+    return {
+      ...room,
+      type: roomType,
+      capacity: BED_TYPES[roomType].capacity,
+      guestIds: [baseGuest?.id ?? '', extraGuest?.id ?? ''],
+    };
+  }
+
+  if (roomType === 'double_extra_bed' || roomType === 'twin_extra_bed') {
+    const baseGuests = roomGuests.filter(
+      (guest) => !isExtraBedCategory(guest.priceCategory),
+    );
+    const extraGuest = roomGuests.find((guest) =>
+      isExtraBedCategory(guest.priceCategory),
+    );
+
+    return {
+      ...room,
+      type: roomType,
+      capacity: BED_TYPES[roomType].capacity,
+      guestIds:
+        baseGuests.length > 0
+          ? baseGuests.length === 1
+            ? [baseGuests[0].id, '', extraGuest?.id ?? '']
+            : [
+                ...baseGuests.slice(0, 2).map((guest) => guest.id),
+                extraGuest?.id ?? '',
+              ]
+          : extraGuest
+            ? ['', '', extraGuest.id]
+            : [],
+    };
+  }
+
+  return {
+    ...room,
+    type: roomType,
+    capacity: BED_TYPES[roomType].capacity,
+    guestIds: orderedGuestIds.slice(0, BED_TYPES[roomType].capacity),
+  };
+};
+
+const normalizeRooms = (
+  rooms: RoomConfig[],
+  guests: GuestEntry[],
+): RoomConfig[] => rooms.map((room) => normalizeRoom(room, guests));
 
 export function autoRecommendRooms(guests: GuestEntry[]): RoomConfig[] {
   const rooms: RoomConfig[] = [];
@@ -166,30 +314,34 @@ export function autoRecommendRooms(guests: GuestEntry[]): RoomConfig[] {
   };
 
   // Bed-occupying guests grouped by category
-  let singles = guests.filter(
-    (g) => g.priceCategory === 'Adult Single' || g.priceCategory === 'Single',
+  let singles = guests.filter((g) =>
+    isCategoryMatch(g.priceCategory, SINGLE_BED_CATEGORIES),
   );
-  const doubles = guests.filter(
-    (g) => g.priceCategory === 'Adult Double' || g.priceCategory === 'Double',
+  const doubles = guests.filter((g) =>
+    isCategoryMatch(g.priceCategory, DOUBLE_BED_CATEGORIES),
   );
-  const twins = guests.filter(
-    (g) => g.priceCategory === 'Adult Twin' || g.priceCategory === 'Twin',
+  const twins = guests.filter((g) =>
+    isCategoryMatch(g.priceCategory, TWIN_BED_CATEGORIES),
   );
-  const triples = guests.filter(
-    (g) => g.priceCategory === 'Adult Triple' || g.priceCategory === 'Triple',
+  const triples = guests.filter((g) =>
+    isCategoryMatch(g.priceCategory, TRIPLE_BED_CATEGORIES),
+  );
+  const quads = guests.filter((g) =>
+    isCategoryMatch(g.priceCategory, QUAD_BED_CATEGORIES),
   );
 
-  let childWithBed = guests.filter((g) => g.priceCategory === 'Child With Bed');
-  const adultExtraBed = guests.filter(
-    (g) => g.priceCategory === 'Adult Extra Bed',
+  let childWithBed = guests.filter((g) =>
+    isCategoryMatch(g.priceCategory, ['Child With Bed']),
+  );
+  const adultExtraBed = guests.filter((g) =>
+    isCategoryMatch(g.priceCategory, ['Adult Extra Bed']),
   );
 
   // Pair Adult Single with Child With Bed if possible
   while (singles.length > 0 && childWithBed.length > 0) {
     const single = singles.shift()!;
     const cwb = childWithBed.shift()!;
-    // Put them in a double room
-    rooms.push(makeRoom('double', [single.id, cwb.id]));
+    rooms.push(makeRoom('single_extra_bed', [single.id, cwb.id]));
   }
 
   const extraBedOccupants = [...childWithBed, ...adultExtraBed];
@@ -212,6 +364,16 @@ export function autoRecommendRooms(guests: GuestEntry[]): RoomConfig[] {
     );
   }
 
+  // Quad rooms (groups of 4, with empty slots allowed)
+  for (let i = 0; i < quads.length; i += 4) {
+    rooms.push(
+      makeRoom(
+        'quad',
+        quads.slice(i, i + 4).map((g) => g.id),
+      ),
+    );
+  }
+
   const sharedGuests = [...doubles, ...twins, ...extraBedOccupants];
   if (sharedGuests.length > 0) {
     const R = Math.max(1, Math.floor(sharedGuests.length / 2));
@@ -225,9 +387,11 @@ export function autoRecommendRooms(guests: GuestEntry[]): RoomConfig[] {
       targetRoom.guestIds.push(g.id);
 
       if (targetRoom.guestIds.length === 1) {
-        if (g.priceCategory === 'Adult Twin' || g.priceCategory === 'Twin')
+        if (isCategoryMatch(g.priceCategory, TWIN_BED_CATEGORIES)) {
           targetRoom.type = 'twin';
-        else targetRoom.type = 'double';
+        } else {
+          targetRoom.type = 'double';
+        }
         targetRoom.capacity = BED_TYPES[targetRoom.type].capacity;
       }
     });
@@ -235,7 +399,7 @@ export function autoRecommendRooms(guests: GuestEntry[]): RoomConfig[] {
     sharedRooms.forEach((r) => {
       const hasExtraBedOccupant = r.guestIds.some((id) => {
         const cat = guests.find((g) => g.id === id)?.priceCategory;
-        return cat === 'Child With Bed' || cat === 'Adult Extra Bed';
+        return isExtraBedCategory(cat);
       });
 
       if (hasExtraBedOccupant) {
@@ -247,7 +411,7 @@ export function autoRecommendRooms(guests: GuestEntry[]): RoomConfig[] {
         if (r.guestIds.length === 2) {
           const extraBedGuestId = r.guestIds.find((id) => {
             const cat = guests.find((g) => g.id === id)?.priceCategory;
-            return cat === 'Child With Bed' || cat === 'Adult Extra Bed';
+            return isExtraBedCategory(cat);
           });
           const otherId = r.guestIds.find((id) => id !== extraBedGuestId);
           r.guestIds = [otherId || '', '', extraBedGuestId || ''];
@@ -311,6 +475,25 @@ function BedArrangementModal({
 
   const isArrangementValid = (proposedRooms: RoomConfig[]) => {
     for (const r of proposedRooms) {
+      const occupiedGuestCount = r.guestIds.filter((id) => !!id).length;
+      if (occupiedGuestCount > BED_TYPES[r.type].capacity) {
+        toast.error(
+          `Room ${r.label}: Too many guests for a ${BED_TYPES[r.type].label}.`,
+        );
+        return false;
+      }
+
+      if (r.type === 'single_extra_bed') {
+        const mainBedOccupied = !!r.guestIds[0];
+        const extraBedOccupied = !!r.guestIds[1];
+        if (!mainBedOccupied && extraBedOccupied) {
+          toast.error(
+            `Room ${r.label}: Extra bed cannot be occupied if the main bed is empty.`,
+          );
+          return false;
+        }
+      }
+
       if (r.type === 'double_extra_bed' || r.type === 'twin_extra_bed') {
         const mainBedOccupied = !!r.guestIds[0] || !!r.guestIds[1];
         const extraBedOccupied = !!r.guestIds[2];
@@ -333,24 +516,16 @@ function BedArrangementModal({
           [g.firstName, g.lastName].filter(Boolean).join(' ') || 'Guest';
 
         if (
-          (cat === 'Adult Single' || cat === 'Single') &&
-          r.type !== 'single'
+          isCategoryMatch(cat, SINGLE_BED_CATEGORIES) &&
+          !['single', 'single_extra_bed'].includes(r.type)
         ) {
-          const otherOccupants = r.guestIds.filter((id) => id !== gid && !!id);
-          const isSharingWithCwb =
-            otherOccupants.length === 1 &&
-            guests.find((gu) => gu.id === otherOccupants[0])?.priceCategory ===
-              'Child With Bed';
-
-          if (!isSharingWithCwb) {
-            toast.error(
-              `${name} purchased a Single room but is sharing with invalid guests in ${r.label}.`,
-            );
-            return false;
-          }
+          toast.error(
+            `${name} purchased a Single room but is sharing with invalid guests in ${r.label}.`,
+          );
+          return false;
         }
         if (
-          (cat === 'Adult Double' || cat === 'Double') &&
+          isCategoryMatch(cat, DOUBLE_BED_CATEGORIES) &&
           r.type !== 'double'
         ) {
           if (!['double_extra_bed', 'extra_bed'].includes(r.type)) {
@@ -360,7 +535,7 @@ function BedArrangementModal({
             return false;
           }
         }
-        if ((cat === 'Adult Twin' || cat === 'Twin') && r.type !== 'twin') {
+        if (isCategoryMatch(cat, TWIN_BED_CATEGORIES) && r.type !== 'twin') {
           if (!['twin_extra_bed'].includes(r.type)) {
             toast.error(
               `${name} purchased a Twin room but is placed in a ${r.label}.`,
@@ -369,7 +544,7 @@ function BedArrangementModal({
           }
         }
         if (
-          (cat === 'Adult Triple' || cat === 'Triple') &&
+          isCategoryMatch(cat, TRIPLE_BED_CATEGORIES) &&
           r.type !== 'triple'
         ) {
           toast.error(
@@ -377,20 +552,20 @@ function BedArrangementModal({
           );
           return false;
         }
-        if (cat === 'Child With Bed' || cat === 'Adult Extra Bed') {
-          const occupantsCount = r.guestIds.filter((id) => !!id).length;
-
-          if (['double', 'twin'].includes(r.type)) {
-            if (cat === 'Adult Extra Bed' || occupantsCount > 2) {
-              toast.error(
-                `${name} (${cat}) must be placed in a room with an extra bed.`,
-              );
-              return false;
-            }
-          } else if (
-            !['double_extra_bed', 'twin_extra_bed', 'extra_bed'].includes(
-              r.type,
-            )
+        if (isCategoryMatch(cat, QUAD_BED_CATEGORIES) && r.type !== 'quad') {
+          toast.error(
+            `${name} purchased a Quad room but is placed in a ${r.label}.`,
+          );
+          return false;
+        }
+        if (isExtraBedCategory(cat)) {
+          if (
+            ![
+              'single_extra_bed',
+              'double_extra_bed',
+              'twin_extra_bed',
+              'extra_bed',
+            ].includes(r.type)
           ) {
             toast.error(
               `${name} (${cat}) must be placed in a room with an extra bed.`,
@@ -424,8 +599,10 @@ function BedArrangementModal({
         dstRoom.guestIds[slotIdx] = srcGuestId ?? '';
       }
 
-      if (isArrangementValid(newRooms)) {
-        onRoomsChange(newRooms);
+      const normalizedRooms = normalizeRooms(newRooms, guests);
+
+      if (isArrangementValid(normalizedRooms)) {
+        onRoomsChange(normalizedRooms);
       }
       setSwapSource(null);
     }
@@ -452,8 +629,10 @@ function BedArrangementModal({
     }
     targetRoom.guestIds[slotIdx] = guestId ?? '';
 
-    if (isArrangementValid(newRooms)) {
-      onRoomsChange(newRooms);
+    const normalizedRooms = normalizeRooms(newRooms, guests);
+
+    if (isArrangementValid(normalizedRooms)) {
+      onRoomsChange(normalizedRooms);
     }
   };
 
@@ -511,7 +690,9 @@ function BedArrangementModal({
                       ? 'max-w-[260px] grid-cols-1'
                       : config.physicalBeds.length === 2
                         ? 'max-w-[440px] grid-cols-2'
-                        : 'max-w-[540px] grid-cols-3',
+                        : config.physicalBeds.length === 4
+                          ? 'max-w-[680px] grid-cols-2 sm:grid-cols-4'
+                          : 'max-w-[540px] grid-cols-3',
                   )}
                 >
                   {bedSlotMapping.map(({ bed, slotIndices }, bedIdx) => {
@@ -764,7 +945,9 @@ function RoomCard({
             ? 'grid-cols-1'
             : info.physicalBeds.length === 2
               ? 'grid-cols-2'
-              : 'grid-cols-3',
+              : info.physicalBeds.length === 4
+                ? 'grid-cols-2 sm:grid-cols-4'
+                : 'grid-cols-3',
         )}
       >
         {(() => {

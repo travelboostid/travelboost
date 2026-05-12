@@ -9,6 +9,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -33,6 +34,7 @@ import {
   MinusIcon,
   PhoneIcon,
   PlusIcon,
+  UserPlusIcon,
   UserIcon,
   UserMinusIcon,
   XIcon,
@@ -452,6 +454,7 @@ type Step1Props = {
   tourPrices: TourPrice[];
   maxGuests?: number;
   departureDate: string;
+  showAddAsGuest?: boolean;
 };
 
 export default function Step1GuestInformation({
@@ -469,6 +472,7 @@ export default function Step1GuestInformation({
   tourPrices,
   maxGuests = 99,
   departureDate,
+  showAddAsGuest = true,
 }: Step1Props) {
   const filledCount = guests.filter(
     (g) =>
@@ -478,6 +482,36 @@ export default function Step1GuestInformation({
       g.dateOfBirth.trim() !== '' &&
       g.priceCategory !== null,
   ).length;
+
+  const handleAddContactAsGuest = () => {
+    const firstGuest = guests[0];
+    const contactName = contact.name.trim();
+    if (!firstGuest || contactName === '') {
+      return;
+    }
+
+    const nameParts = contactName.split(/\s+/).filter(Boolean);
+    if (nameParts.length === 0) {
+      return;
+    }
+
+    const firstName = nameParts[0] ?? '';
+    const lastName = nameParts.slice(1).join(' ');
+
+    onGuestUpdate({
+      ...firstGuest,
+      firstName:
+        firstGuest.firstName.trim() === '' ? firstName : firstGuest.firstName,
+      lastName:
+        firstGuest.lastName.trim() === '' ? lastName : firstGuest.lastName,
+    });
+  };
+
+  const canAddContactAsGuest =
+    showAddAsGuest &&
+    guests.length > 0 &&
+    contact.name.trim() !== '' &&
+    (guests[0].firstName.trim() === '' || guests[0].lastName.trim() === '');
 
   return (
     <motion.div
@@ -496,9 +530,24 @@ export default function Step1GuestInformation({
         variants={itemVariants}
         className="rounded-xl border bg-card p-4 shadow-sm"
       >
-        <div className="mb-3 flex items-center gap-2">
-          <PhoneIcon className="size-4 text-primary" />
-          <h3 className="text-sm font-semibold">Booking Contact</h3>
+        <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-2">
+            <PhoneIcon className="size-4 text-primary" />
+            <h3 className="text-sm font-semibold">Booking Contact</h3>
+          </div>
+          {showAddAsGuest && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleAddContactAsGuest}
+              disabled={!canAddContactAsGuest}
+              className="h-8 gap-2 self-start"
+            >
+              <UserPlusIcon className="size-4" />
+              Add as guest
+            </Button>
+          )}
         </div>
         <div className="grid gap-3 sm:grid-cols-3">
           <div className="grid gap-1.5">

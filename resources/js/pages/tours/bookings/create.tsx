@@ -282,6 +282,24 @@ export default function Page() {
       ),
     [guests, vendor, minimumVatPct],
   );
+  const [selectedAddOns, setSelectedAddOns] = useState<AddOnItem[]>(
+    () => addOns ?? [],
+  );
+  const selectedAddOnsForPricing = useMemo(
+    () =>
+      selectedAddOns.map((addon) =>
+        addon.hasQty === false ? { ...addon, qty: guests.length } : addon,
+      ),
+    [selectedAddOns, guests.length],
+  );
+  const selectedAddOnsTotal = useMemo(
+    () =>
+      selectedAddOnsForPricing.reduce(
+        (sum, addon) => sum + addon.unitPrice * addon.qty,
+        0,
+      ),
+    [selectedAddOnsForPricing],
+  );
 
   // ─── Timer (starts when entering Step 2) ────────────────────────────
   useEffect(() => {
@@ -305,6 +323,11 @@ export default function Page() {
   // ─── Navigation ─────────────────────────────────────────────────────
   const goNext = () => {
     if (currentStep === 1) {
+      if (timerStarted) {
+        confirmGoToStep2();
+        return;
+      }
+
       // Show confirmation modal before going to Step 2
       setShowStep2ConfirmModal(true);
       return;
@@ -761,6 +784,11 @@ export default function Page() {
                   contactEmail={contact.email}
                   contactPhone={contact.phone}
                   pricing={pricing}
+                  displayTotalPrice={
+                    currentStep === 4
+                      ? pricing.totalPrice + selectedAddOnsTotal
+                      : undefined
+                  }
                   timeLeftSeconds={timeLeft}
                   currentStep={currentStep}
                   timerStarted={timerStarted}
@@ -821,7 +849,8 @@ export default function Page() {
                         agentName={tenant?.name || '-'}
                         onPayNow={handlePayNow}
                         isSubmitting={isSubmitting}
-                        initialAddOns={addOns}
+                        initialAddOns={selectedAddOns}
+                        onAddOnsChange={setSelectedAddOns}
                         minimumDownPaymentPct={minimumDownPaymentPct}
                         minimumVatPct={minimumVatPct}
                         vendorBankInfo={vendorBankInfo}
@@ -867,7 +896,7 @@ export default function Page() {
                       onClick={goNext}
                       className="gap-2"
                     >
-                      {currentStep === 3 ? 'Skip' : 'Next'}
+                      Next
                       <ArrowRightIcon className="size-4" />
                     </Button>
                   </div>

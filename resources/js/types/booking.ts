@@ -91,6 +91,7 @@ export interface UploadedDocument {
 
 export interface BookingPricing {
   subtotalGuests: number;
+  discountedSubtotal: number;
   promotionDiscount: number; // total discount from promotions
   platformFee: number;
   ppn: number;
