@@ -6,6 +6,8 @@ use App\Enums\BookingStatus;
 use App\Models\Booking;
 use App\Models\Tour;
 use App\Models\User;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 
 class BookingService
@@ -65,9 +67,12 @@ class BookingService
 
             $booking->passengers()->delete();
             $booking->addons()->delete();
+            if (array_key_exists('rooms', $data)) {
+                $booking->rooms()->delete();
+            }
 
             if (! empty($data['passengers'])) {
-                $booking->passengers()->createMany($data['passengers']);
+                $booking->passengers()->createMany($this->preparePassengerRows($data['passengers']));
 
                 foreach ($data['passengers'] as $passenger) {
                     if (! empty($passenger['save_to_address_book']) && $passenger['save_to_address_book'] == true) {
@@ -77,7 +82,7 @@ class BookingService
                                 'last_name' => data_get($passenger, 'last_name'),
                             ],
                             [
-                                'gender' => $passenger['gender'],
+                                'gender' => data_get($passenger, 'gender'),
                                 'dob' => data_get($passenger, 'dob'),
                                 'pob' => data_get($passenger, 'pob'),
                                 'passport_number' => data_get($passenger, 'passport_number'),
@@ -85,6 +90,10 @@ class BookingService
                         );
                     }
                 }
+            }
+
+            if (array_key_exists('rooms', $data) && ! empty($data['rooms'])) {
+                $booking->rooms()->createMany($data['rooms']);
             }
 
             if (! empty($data['addons'])) {
@@ -100,6 +109,46 @@ class BookingService
 
             return $booking;
         });
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $passengers
+     * @return array<int, array<string, mixed>>
+     */
+    private function preparePassengerRows(array $passengers): array
+    {
+        return collect($passengers)
+            ->map(function (array $passenger): array {
+                if (($passportFile = data_get($passenger, 'passport_file')) instanceof UploadedFile) {
+                    $passenger['passport_file_path'] = $passportFile->store('travel-documents/passports', 'public');
+                }
+
+                if (($visaFile = data_get($passenger, 'visa_file')) instanceof UploadedFile) {
+                    $passenger['visa_file_path'] = $visaFile->store('travel-documents/visas', 'public');
+                }
+
+                return Arr::only($passenger, [
+                    'title',
+                    'first_name',
+                    'last_name',
+                    'gender',
+                    'dob',
+                    'pob',
+                    'nationality',
+                    'room_type',
+                    'room_number',
+                    'passport_number',
+                    'passport_issue_date',
+                    'passport_expiry_date',
+                    'visa_number',
+                    'passport_file_path',
+                    'visa_file_path',
+                    'price_category',
+                    'price_amount',
+                    'note',
+                ]);
+            })
+            ->all();
     }
 
     private function resolvePaymentMode(?string $paymentMethod): ?string

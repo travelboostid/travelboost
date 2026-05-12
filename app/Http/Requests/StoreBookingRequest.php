@@ -55,10 +55,24 @@ class StoreBookingRequest extends FormRequest
             // Support for saving address book entries
             'passengers.*.save_to_address_book' => ['nullable', 'boolean'],
             'passengers.*.passport_number' => ['nullable', 'string', 'max:255'],
+            'passengers.*.passport_issue_date' => ['nullable', 'date'],
+            'passengers.*.passport_expiry_date' => ['nullable', 'date'],
+            'passengers.*.passport_file' => ['nullable', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:5120'],
             'passengers.*.passport_file_path' => ['nullable', 'string'],
+            'passengers.*.visa_number' => ['nullable', 'string', 'max:255'],
+            'passengers.*.visa_file' => ['nullable', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:5120'],
             'passengers.*.visa_file_path' => ['nullable', 'string'],
             'passengers.*.price_category' => ['nullable', 'string', 'max:255'],
             'passengers.*.price_amount' => ['nullable', 'numeric'],
+
+            // Rooms
+            'rooms' => ['nullable', 'array'],
+            'rooms.*.room_type' => ['required_with:rooms', 'string', 'max:255'],
+            'rooms.*.room_label' => ['nullable', 'string', 'max:255'],
+            'rooms.*.bed_layout' => ['nullable', 'array'],
+            'rooms.*.bed_layout.*.bedType' => ['nullable', 'string', 'max:255'],
+            'rooms.*.bed_layout.*.guestId' => ['nullable', 'string', 'max:255'],
+            'rooms.*.bed_layout.*.position' => ['nullable', 'array'],
 
             // Addons
             'addons' => ['nullable', 'array'],
