@@ -58,6 +58,39 @@ export type BedAssignment = {
   guestId: string | null;
 };
 
+export function getRoomNumberByGuestId(
+  rooms: RoomConfig[],
+): Map<string, string> {
+  const roomNumberByGuestId = new Map<string, string>();
+
+  rooms.forEach((room, index) => {
+    const roomNumber = String(index + 1);
+    [...room.guestIds, ...(room.sharingGuestIds ?? [])]
+      .filter(Boolean)
+      .forEach((guestId) => {
+        if (!roomNumberByGuestId.has(guestId)) {
+          roomNumberByGuestId.set(guestId, roomNumber);
+        }
+      });
+  });
+
+  return roomNumberByGuestId;
+}
+
+export function serializeRoomsForBooking(rooms: RoomConfig[]) {
+  return rooms.map((room) => ({
+    room_type: room.type,
+    room_label: room.label,
+    bed_layout: room.guestIds
+      .map((guestId, index) => ({
+        bedType: room.type,
+        guestId,
+        position: { x: index, y: 0 },
+      }))
+      .filter((bed) => Boolean(bed.guestId)),
+  }));
+}
+
 type PhysicalBed = {
   label: string;
   icon: typeof BedSingleIcon;
@@ -314,7 +347,7 @@ export function autoRecommendRooms(guests: GuestEntry[]): RoomConfig[] {
   };
 
   // Bed-occupying guests grouped by category
-  let singles = guests.filter((g) =>
+  const singles = guests.filter((g) =>
     isCategoryMatch(g.priceCategory, SINGLE_BED_CATEGORIES),
   );
   const doubles = guests.filter((g) =>
@@ -330,7 +363,7 @@ export function autoRecommendRooms(guests: GuestEntry[]): RoomConfig[] {
     isCategoryMatch(g.priceCategory, QUAD_BED_CATEGORIES),
   );
 
-  let childWithBed = guests.filter((g) =>
+  const childWithBed = guests.filter((g) =>
     isCategoryMatch(g.priceCategory, ['Child With Bed']),
   );
   const adultExtraBed = guests.filter((g) =>

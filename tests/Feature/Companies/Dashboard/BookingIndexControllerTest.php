@@ -494,6 +494,7 @@ test('vendor can update booking wizard data dynamically', function () {
                     'price_category' => 'Adult Twin',
                     'price_amount' => 1_000_000,
                     'room_type' => 'Twin',
+                    'room_number' => '1',
                     'note' => 'Window side',
                 ],
                 [
@@ -506,6 +507,7 @@ test('vendor can update booking wizard data dynamically', function () {
                     'price_category' => 'Adult Twin',
                     'price_amount' => 1_000_000,
                     'room_type' => 'Twin',
+                    'room_number' => '1',
                 ],
             ],
             'rooms' => [
@@ -538,6 +540,7 @@ test('vendor can update booking wizard data dynamically', function () {
             ['bedType' => 'twin', 'guestId' => 'adult-0'],
             ['bedType' => 'twin', 'guestId' => 'adult-1'],
         ])
+        ->and($booking->passengers()->where('first_name', 'Updated')->first()->room_number)->toBe('1')
         ->and($booking->addons()->first()->name)->toBe('VISA')
         ->and((float) $booking->addons()->first()->price)->toBe(500_000.0);
 });

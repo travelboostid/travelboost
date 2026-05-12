@@ -5,6 +5,8 @@ import Step1GuestInformation, {
 } from '@/components/booking/Step1GuestInformation';
 import Step2RoomConfiguration, {
   autoRecommendRooms,
+  getRoomNumberByGuestId,
+  serializeRoomsForBooking,
   type RoomConfig,
 } from '@/components/booking/Step2RoomConfiguration';
 import Step3TravelDocuments from '@/components/booking/Step3TravelDocuments';
@@ -117,7 +119,7 @@ function passengersToGuests(passengers: Passenger[], tourPrices: TourPrice[]): E
     );
 
     let restoredPrice = p.price_amount ?? (matchedPrice ? matchedPrice.price : 0);
-    let restoredOriginalPrice = matchedPrice ? matchedPrice.price : restoredPrice;
+    const restoredOriginalPrice = matchedPrice ? matchedPrice.price : restoredPrice;
 
     if (matchedPrice) {
       if (matchedPrice.promotionRate > 0) {
@@ -350,7 +352,6 @@ function EditableWizard({
       return;
     }
 
-    const newGuests: EditableGuestEntry[] = [];
     const makeDefault = (
       id: string,
       type: 'adult' | 'child' | 'infant',
@@ -370,54 +371,70 @@ function EditableWizard({
       note: '',
     });
 
-    for (let i = 0; i < adults; i++) {
-      newGuests.push(
-        guests.find((g) => g.id === `adult-${i}`) ??
-          makeDefault(`adult-${i}`, 'adult'),
-      );
-    }
-    for (let i = 0; i < children; i++) {
-      newGuests.push(
-        guests.find((g) => g.id === `child-${i}`) ??
-          makeDefault(`child-${i}`, 'child'),
-      );
-    }
-    for (let i = 0; i < infants; i++) {
-      newGuests.push(
-        guests.find((g) => g.id === `infant-${i}`) ??
-          makeDefault(`infant-${i}`, 'infant'),
-      );
-    }
+    setGuests((previousGuests) => {
+      const newGuests: EditableGuestEntry[] = [];
 
-    const docsGuests = newGuests.filter((g) => g.type !== 'infant');
-    const newDocs: TravelDocumentEntry[] = docsGuests.map((g) => {
-      const existing = travelDocuments.find((d) => d.guestId === g.id);
-      return (
-        existing ?? {
-          guestId: g.id,
-          passportNumber: '',
-          passportIssueDate: '',
-          passportExpiryDate: '',
-          visaNumber: '',
-          passportFile: null,
-          passportFileName: '',
-          visaFile: null,
-          visaFileName: '',
-        }
-      );
+      for (let i = 0; i < adults; i++) {
+        newGuests.push(
+          (previousGuests.find((g) => g.id === `adult-${i}`) as
+            | EditableGuestEntry
+            | undefined) ?? makeDefault(`adult-${i}`, 'adult'),
+        );
+      }
+      for (let i = 0; i < children; i++) {
+        newGuests.push(
+          (previousGuests.find((g) => g.id === `child-${i}`) as
+            | EditableGuestEntry
+            | undefined) ?? makeDefault(`child-${i}`, 'child'),
+        );
+      }
+      for (let i = 0; i < infants; i++) {
+        newGuests.push(
+          (previousGuests.find((g) => g.id === `infant-${i}`) as
+            | EditableGuestEntry
+            | undefined) ?? makeDefault(`infant-${i}`, 'infant'),
+        );
+      }
+
+      return newGuests;
     });
-
-    setGuests(newGuests);
-    setTravelDocuments(newDocs);
   }, [adults, children, infants]);
 
+  useEffect(() => {
+    const docsGuests = guests.filter((g) => g.type !== 'infant');
+
+    setTravelDocuments((previousDocs) =>
+      docsGuests.map((g) => {
+        const existing = previousDocs.find((d) => d.guestId === g.id);
+
+        return (
+          existing ?? {
+            guestId: g.id,
+            passportNumber: '',
+            passportIssueDate: '',
+            passportExpiryDate: '',
+            visaNumber: '',
+            passportFile: null,
+            passportFileName: '',
+            visaFile: null,
+            visaFileName: '',
+          }
+        );
+      }),
+    );
+  }, [guests]);
+
   // ── Pricing ────────────────────────────────────────────────────────
-  const vendor: VendorInfo = booking.vendor ?? {
-    id: 0,
-    name: 'Unknown',
-    payment_mode: 'vendor',
-    commission: 0,
-  };
+  const vendor = useMemo<VendorInfo>(
+    () =>
+      booking.vendor ?? {
+        id: 0,
+        name: 'Unknown',
+        payment_mode: 'vendor',
+        commission: 0,
+      },
+    [booking.vendor],
+  );
   const pricing = useMemo(
     () =>
       calculateBookingPricing(guests, vendor.commission ?? 0, minimumVatPct),
@@ -548,6 +565,7 @@ function EditableWizard({
       }));
     const addOnsTotal = addOnRows.reduce((sum, item) => sum + item.price, 0);
     const grandTotal = pricing.totalPrice + addOnsTotal;
+    const roomNumberByGuestId = getRoomNumberByGuestId(rooms);
 
     router.put(
       `/companies/${company.username}/dashboard/bookings/${booking.id}`,
@@ -582,19 +600,11 @@ function EditableWizard({
             price_category: guest.priceCategory,
             price_amount: guest.price,
             room_type: guest.roomTypeDescription || null,
-            room_number: null,
+            room_number: roomNumberByGuestId.get(guest.id) ?? null,
             note: guest.note || null,
           };
         }),
-        rooms: rooms.map((room) => ({
-          room_type: room.type,
-          room_label: room.label,
-          bed_layout: room.guestIds.map((guestId, idx) => ({
-            bedType: room.type,
-            guestId,
-            position: { x: idx, y: 0 },
-          })),
-        })),
+        rooms: serializeRoomsForBooking(rooms),
         addons: addOnRows,
       } as any,
       {
