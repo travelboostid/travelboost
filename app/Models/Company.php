@@ -180,6 +180,11 @@ class Company extends Model
 
   public function companySetting(): HasOne
   {
-      return $this->hasOne(CompanySettings::class, 'company_id');
+    return $this->hasOne(CompanySettings::class, 'company_id');
+  }
+
+  public function withdrawals()
+  {
+    return $this->morphMany(Withdrawal::class, 'owner');
   }
 }

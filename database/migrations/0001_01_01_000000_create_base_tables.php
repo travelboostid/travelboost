@@ -466,7 +466,7 @@ return new class extends Migration
       // Dates
       $table->date('departure_date');
       $table->date('return_date')->nullable();
-      
+
       // Booking control
       $table->date('cutoff_date')->nullable();
       // Status
@@ -670,7 +670,7 @@ return new class extends Migration
       $table->foreignId('bank_account_id')->constrained('bank_accounts')->restrictOnDelete();
       $table->integer('wallet_id')->nullable();
       $table->decimal('amount', 18, 2);
-      $table->enum('status', WithdrawalStatus::cases())->default(WithdrawalStatus::REQUESTED);
+      $table->enum('status', ['pending', 'processing', 'rejected', 'cancelled', 'paid'])->default('pending');
       $table->text('note')->nullable();
       $table->timestamp('approved_at')->nullable();
       $table->timestamp('processed_at')->nullable();

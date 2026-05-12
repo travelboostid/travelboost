@@ -43,6 +43,7 @@ class CompanySeeder extends Seeder
         'username' => 'vendor',
         'subdomain' => 'vendor',
         'company_type' => CompanyType::VENDOR,
+        'deposit' => 100000000,
       ],
       [
         'username' => 'john',
@@ -71,6 +72,9 @@ class CompanySeeder extends Seeder
         'address' => 'Jakarta',
         'phone' => '0123456789',
       ]);
+      if (isset($seed['deposit']) && $seed['deposit'] > 0) {
+        $company->wallet->deposit($seed['deposit']);
+      }
 
       $company->domain()->create([
         'subdomain' => $seed['subdomain'],

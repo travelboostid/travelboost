@@ -12,52 +12,74 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import usePageProps from '@/hooks/use-page-props';
+import { index } from '@/routes/companies/dashboard/withdrawals';
+import { router } from '@inertiajs/react';
 import { format } from 'date-fns';
-import { ArrowDown, ArrowUp, CalendarIcon } from 'lucide-react';
+import dayjs from 'dayjs';
+import { CalendarIcon } from 'lucide-react';
+import { useMemo, useState } from 'react';
 import type { DateRange } from 'react-day-picker';
+import type { WithdrawalsPageProps } from '..';
 
-export default function FilterBar({
-  dateRange,
-  onDateRangeChange,
-  statusFilter,
-  onStatusFilterChange,
-  sortOrder,
-  onSortOrderChange,
-}: {
-  dateRange?: DateRange;
-  onDateRangeChange: (range?: DateRange) => void;
-  statusFilter: string;
-  onStatusFilterChange: (value: string) => void;
-  sortOrder: 'newest' | 'oldest';
-  onSortOrderChange: (value: 'newest' | 'oldest') => void;
-}) {
-  const getDateRangeDisplayText = (range: DateRange | undefined): string => {
-    if (!range?.from) return 'Select date range';
-    if (range.to)
-      return `${format(range.from, 'MMM dd, yyyy')} - ${format(range.to, 'MMM dd, yyyy')}`;
-    return format(range.from, 'MMM dd, yyyy');
-  };
+export default function FilterBar() {
+  const { filters, company } = usePageProps<WithdrawalsPageProps>();
+  const [range, setRange] = useState<DateRange | undefined>(() => {
+    if (filters?.from) {
+      return {
+        from: dayjs(filters.from).toDate(),
+        to: filters?.to ? dayjs(filters.to).toDate() : undefined,
+      };
+    }
+    return undefined;
+  });
+  console.log('Current filters:', filters);
+  const rangeDisplayText = useMemo(() => {
+    if (!filters?.from) return 'Select date range';
+    if (filters.to)
+      return `${format(filters.from, 'MMM dd, yyyy')} - ${format(filters.to, 'MMM dd, yyyy')}`;
+    return format(filters.from, 'MMM dd, yyyy');
+  }, [filters]);
 
-  const handleDateRangeSelect = (range: DateRange | undefined) => {
-    onDateRangeChange(range);
+  const handleChangeFilters = (partialFilters: any) => {
+    const newFilters: any = Object.fromEntries(
+      Object.entries({
+        ...filters,
+        ...partialFilters,
+      }).filter(([_, value]) => value !== undefined),
+    );
+
+    router.get(index({ company: company.username }), newFilters, {
+      preserveState: true,
+      preserveScroll: true,
+      replace: true,
+    });
   };
 
   return (
-    <div className="flex flex-wrap items-center gap-3 bg-card p-4 rounded-lg border shadow-sm">
-      {/* Date Range Picker - EXACT same as payments */}
+    <div className="flex flex-wrap items-center gap-2">
       <Popover>
         <PopoverTrigger asChild>
           <Button variant="outline" size="sm" className="gap-2 h-9">
             <CalendarIcon className="w-4 h-4" />
-            {getDateRangeDisplayText(dateRange)}
+            {rangeDisplayText}
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-0" align="start">
           <Calendar
             mode="range"
-            defaultMonth={dateRange?.from}
-            selected={dateRange}
-            onSelect={handleDateRangeSelect}
+            selected={range}
+            onSelect={(range) => {
+              handleChangeFilters({
+                from: range?.from
+                  ? dayjs(range.from).format('YYYY-MM-DD')
+                  : undefined,
+                to: range?.to
+                  ? dayjs(range.to).format('YYYY-MM-DD')
+                  : undefined,
+              });
+              setRange(range);
+            }}
             numberOfMonths={2}
             className="rounded-md border"
           />
@@ -65,41 +87,40 @@ export default function FilterBar({
       </Popover>
 
       {/* Status Filter */}
-      <Select value={statusFilter} onValueChange={onStatusFilterChange}>
-        <SelectTrigger className="w-[160px] h-9">
-          <SelectValue placeholder="All Status" />
+      <Select
+        value={filters.status || 'all'}
+        onValueChange={(status) =>
+          handleChangeFilters({ status: status === 'all' ? undefined : status })
+        }
+      >
+        <SelectTrigger className="w-40 h-9">
+          <SelectValue placeholder="Any Status" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="all">All Status</SelectItem>
-          <SelectItem value="requested">Requested</SelectItem>
-          <SelectItem value="approved">Approved</SelectItem>
+          <SelectItem value="all">Any Status</SelectItem>
+          <SelectItem value="pending">Pending</SelectItem>
           <SelectItem value="processing">Processing</SelectItem>
-          <SelectItem value="paid">Paid</SelectItem>
+          <SelectItem value="cancelled">Cancelled</SelectItem>
           <SelectItem value="rejected">Rejected</SelectItem>
-          <SelectItem value="failed">Failed</SelectItem>
+          <SelectItem value="paid">Paid</SelectItem>
         </SelectContent>
       </Select>
 
       <div className="flex-1" />
 
       {/* Sort Button - EXACT same as payments */}
-      <Button
-        variant="ghost"
-        size="sm"
-        className="gap-2"
-        onClick={() =>
-          onSortOrderChange(sortOrder === 'newest' ? 'oldest' : 'newest')
-        }
+      <Select
+        value={filters.sort || '-created_at'}
+        onValueChange={(sort) => handleChangeFilters({ sort })}
       >
-        {sortOrder === 'newest' ? (
-          <ArrowDown className="w-4 h-4" />
-        ) : (
-          <ArrowUp className="w-4 h-4" />
-        )}
-        <span className="hidden sm:inline">
-          {sortOrder === 'newest' ? 'Newest first' : 'Oldest first'}
-        </span>
-      </Button>
+        <SelectTrigger className="w-40 h-9">
+          <SelectValue placeholder="Sort..." />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="-created_at">Newest first</SelectItem>
+          <SelectItem value="created_at">Older first</SelectItem>
+        </SelectContent>
+      </Select>
     </div>
   );
 }

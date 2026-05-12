@@ -11,6 +11,7 @@ use App\Http\Controllers\Admin\VendorController;
 use App\Http\Controllers\Admin\IndexController;
 use App\Http\Controllers\Admin\PermissionController;
 use App\Http\Controllers\Admin\RoleController;
+use App\Http\Controllers\Admin\WithdrawalController;
 use App\Http\Middleware\EnsureHasAdminAccess;
 use Illuminate\Support\Facades\Route;
 
@@ -31,6 +32,9 @@ Route::prefix('admin')->middleware(['auth', EnsureHasAdminAccess::class])->name(
     Route::resource('users', UserController::class)->names('users');
     Route::resource('permissions', PermissionController::class)->names('permissions');
     Route::resource('roles', RoleController::class)->names('roles');
+  });
+  Route::prefix('funds')->name('funds.')->group(function () {
+    Route::resource('withdrawals', WithdrawalController::class)->names('withdrawals');
   });
 
   // 4. Tour
@@ -53,9 +57,7 @@ Route::prefix('admin')->middleware(['auth', EnsureHasAdminAccess::class])->name(
     Route::get('wallet-transactions', function () {
       return inertia('admin/funds/wallet-transactions/index');
     })->name('wallet-transactions');
-    Route::get('withdrawals', function () {
-      return inertia('admin/funds/withdrawals/index');
-    })->name('withdrawals');
+
     Route::get('payment-history', function () {
       return inertia('admin/funds/payment-history/index');
     })->name('payment-history');

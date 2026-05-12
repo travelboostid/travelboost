@@ -4,11 +4,9 @@ namespace App\Enums;
 
 enum WithdrawalStatus: string
 {
-  case REQUESTED  = 'requested';   // user submits
-  case APPROVED   = 'approved';    // admin approves
-  case PROCESSING = 'processing';  // wallet debited
-  case PAID       = 'paid';        // payout success
+  case PENDING  = 'pending';   // user submits
+  case PROCESSING = 'processing';  // processing by admin
   case REJECTED   = 'rejected';    // admin rejects
-  case FAILED     = 'failed';      // payout failed (refund needed)
   case CANCELLED  = 'cancelled'; // user cancel
+  case PAID       = 'paid';        // paid and completed
 }
