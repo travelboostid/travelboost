@@ -82,7 +82,7 @@ Route::prefix('companies/{company:username}/dashboard')->middleware(['auth', 'co
   Route::post('payments/{payment}/cancel', [PaymentController::class, 'cancel'])->name('payments.cancel');
   Route::resource('bank-accounts', BankAccountController::class);
   Route::get('wallet-transactions', [WalletTransactionsController::class, 'index'])->name('wallet-transaction.index');
-  Route::get('withdrawals', [WithdrawalController::class, 'index'])->name('withdrawal.index');
+  Route::resource('withdrawals', WithdrawalController::class);
   Route::get('profile', [ProfileController::class, 'show'])->name('settings.profile.show');
 
   Route::get(

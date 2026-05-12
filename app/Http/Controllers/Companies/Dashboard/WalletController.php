@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Companies\Dashboard;
 use App\Http\Controllers\Controller;
 use App\Models\Company;
 use Bavix\Wallet\Models\Transaction;
-use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 class WalletController extends Controller
@@ -86,6 +85,7 @@ class WalletController extends Controller
         'growth_pct' => $this->growthPercentage($thisNet, $lastNet),
       ],
       'transactions' => $transactions,
+      'wallet' => $wallet,
     ]);
   }
 

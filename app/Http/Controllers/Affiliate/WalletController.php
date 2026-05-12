@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Affiliate;
 
+use App\Enums\WithdrawalStatus;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -41,7 +42,7 @@ class WalletController extends Controller
 
     $pendingWithdrawal = Withdrawal::where('owner_type', get_class($user))
       ->where('owner_id', $user->id)
-      ->whereIn('status', [Withdrawal::STATUS_REQUESTED, Withdrawal::STATUS_PROCESSING])
+      ->whereIn('status', [WithdrawalStatus::PENDING, WithdrawalStatus::PROCESSING])
       ->first();
 
     $recentCommissions = DB::table('affiliate_commission_histories')
