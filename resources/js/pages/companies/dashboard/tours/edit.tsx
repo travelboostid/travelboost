@@ -122,6 +122,10 @@ type AvailabilityField =
 
 type AvailabilityRow = Record<AvailabilityField, number> & {
   id?: number | null;
+
+  departure_date: string;
+  return_date: string;
+
   schedule: string;
 };
 
@@ -592,6 +596,10 @@ export default function Page({ tour }: Props) {
 
       return {
         schedule_id: s.id,
+
+        departure_date: s.departure_date,
+        return_date: s.return_date,
+
         schedule: `${formatDate(s.departure_date)} → ${formatDate(s.return_date)}`,
 
         max_pax,
@@ -647,7 +655,9 @@ export default function Page({ tour }: Props) {
       row.BRS +
       row.CA +
       row.RF +
-      row.WA;
+      row.WPA +
+      row.WA +
+      row.WPA;
 
     setAvailability(updated);
   };
@@ -1106,16 +1116,48 @@ export default function Page({ tour }: Props) {
     }
   };
 
+  //search availability
+  const [searchDeparture, setSearchDeparture] = useState('');
+  const [statusFilter, setStatusFilter] = useState<
+    'all' | 'active' | 'inactive'
+  >('active');
+
+  // FILTER
+  const filteredData = useMemo(() => {
+    const today = new Date().toISOString().split('T')[0];
+
+    return availability.filter((row) => {
+      // departure filter
+      const matchDeparture = searchDeparture
+        ? row.departure_date === searchDeparture
+        : true;
+
+      // status filter
+      let matchStatus = true;
+
+      if (statusFilter === 'active') {
+        matchStatus = row.departure_date > today;
+      }
+
+      if (statusFilter === 'inactive') {
+        matchStatus = row.departure_date <= today;
+      }
+
+      return matchDeparture && matchStatus;
+    });
+  }, [availability, searchDeparture, statusFilter]);
+
   //paging availability
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 10;
 
-  const totalPages = Math.ceil(availability.length / pageSize);
+  const totalPages = Math.ceil(filteredData.length / pageSize);
 
-  const paginatedAvailability = availability.slice(
+  const paginatedAvailability = filteredData.slice(
     (currentPage - 1) * pageSize,
     currentPage * pageSize,
   );
+
   //
 
   //paging add ons
@@ -2382,12 +2424,51 @@ export default function Page({ tour }: Props) {
                   <span className="text-sm text-muted-foreground"></span>
                 </div>
 
-                <div className="flex items-center justify-between px-4 py-2">
+                <div className="px-4 py-2">
                   <h3 className="text-lg font-semibold">
                     <span className="text-foreground font-semibold">
                       Quantity: pax
                     </span>
                   </h3>
+
+                  <div className="mt-3 flex flex-wrap items-center gap-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-muted-foreground text-sm">
+                        Search by departure date
+                      </span>
+
+                      <input
+                        type="date"
+                        value={searchDeparture}
+                        onChange={(e) => {
+                          setSearchDeparture(e.target.value);
+                          setCurrentPage(1);
+                        }}
+                        className="rounded-lg border px-3 py-2 text-sm"
+                      />
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <span className="text-muted-foreground text-sm">
+                        Status
+                      </span>
+
+                      <select
+                        value={statusFilter}
+                        onChange={(e) => {
+                          setStatusFilter(
+                            e.target.value as 'all' | 'active' | 'inactive',
+                          );
+                          setCurrentPage(1);
+                        }}
+                        className="rounded-lg border px-3 py-2 text-sm"
+                      >
+                        <option value="all">All</option>
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                      </select>
+                    </div>
+                  </div>
                 </div>
 
                 <div className="hidden md:block rounded-lg border overflow-x-auto">

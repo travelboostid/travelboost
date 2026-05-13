@@ -51,6 +51,7 @@ interface Props {
   filters: {
     search?: string;
     departure_date?: string;
+    status?: 'all' | 'active' | 'inactive';
   };
 }
 
@@ -62,6 +63,10 @@ export default function SeatAvailabilityIndex({
 
   const [departureDate, setDepartureDate] = useState(
     filters.departure_date || '',
+  );
+
+  const [status, setStatus] = useState<'all' | 'active' | 'inactive'>(
+    (filters.status as 'all' | 'active' | 'inactive') || 'active',
   );
 
   const [openTours, setOpenTours] = useState<number[]>([]);
@@ -77,6 +82,7 @@ export default function SeatAvailabilityIndex({
       {
         search: value,
         departure_date: departureDate,
+        status,
       },
       {
         preserveState: true,
@@ -93,6 +99,24 @@ export default function SeatAvailabilityIndex({
       {
         search,
         departure_date: value,
+        status,
+      },
+      {
+        preserveState: true,
+        replace: true,
+      },
+    );
+  };
+
+  const handleStatus = (value: 'all' | 'active' | 'inactive') => {
+    setStatus(value);
+
+    router.get(
+      window.location.pathname,
+      {
+        search,
+        departure_date: departureDate,
+        status: value,
       },
       {
         preserveState: true,
@@ -171,7 +195,7 @@ export default function SeatAvailabilityIndex({
         </div>
 
         {/* SEARCH */}
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-4 md:grid-cols-3">
           <div>
             <label className="mb-1 block text-xs font-medium text-muted-foreground">
               Search Tour
@@ -198,6 +222,24 @@ export default function SeatAvailabilityIndex({
               className="w-full rounded-xl border px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
+        </div>
+
+        <div>
+          <label className="mb-1 block text-xs font-medium text-muted-foreground">
+            Status
+          </label>
+
+          <select
+            value={status}
+            onChange={(e) =>
+              handleStatus(e.target.value as 'all' | 'active' | 'inactive')
+            }
+            className="w-full rounded-xl border px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-primary"
+          >
+            <option value="all">All</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </select>
         </div>
 
         {/* TOUR LIST */}

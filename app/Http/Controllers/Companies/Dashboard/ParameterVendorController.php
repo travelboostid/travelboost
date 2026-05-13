@@ -37,6 +37,10 @@ class ParameterVendorController extends Controller
             'manual_bank_transfer' => ['nullable', 'string', 'max:255'],
             'manual_bank_transfer_account_name' => ['nullable', 'string', 'max:255'],
             'manual_bank_transfer_account_number' => ['nullable', 'string', 'max:255'],
+            'email_payment_gateway' => ['nullable', 'string', 'max:255'],
+            'password_payment_gateway' => ['nullable', 'string', 'max:255'],
+            'full_payment_deadline' => ['required', 'numeric', 'min:0'],
+            'document_completed_deadline' => ['required', 'numeric', 'min:0'],
         ]);
 
         $company->companySetting()->updateOrCreate(

@@ -25,6 +25,8 @@ class CompanySettings extends Model
     'manual_bank_transfer_account_number',
     'email_payment_gateway',
     'password_payment_gateway',
+    'full_payment_deadline',
+    'document_completed_deadline',
   ];
 
   protected $casts = [
