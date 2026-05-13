@@ -39,6 +39,7 @@ class AppServiceProvider extends ServiceProvider
       'user' => \App\Models\User::class,
       'anonymous-user' => \App\Models\AnonymousUser::class,
       'affiliate' => \App\Models\AffiliateProfile::class,
+      'media' => \App\Models\Media::class,
     ]);
     Authenticate::redirectUsing(function ($request) {
       if ($request->expectsJson()) {

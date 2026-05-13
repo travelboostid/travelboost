@@ -197,7 +197,7 @@ return new class extends Migration
       $table->id();
       $table->string('name', 255);
       $table->string('description', 1000)->nullable();
-      $table->enum('type', MediaType::cases()); // Enum will be stored as string
+      $table->enum('type', ['image', 'document', 'raw']); // Enum will be stored as string
       $table->string('subtype', 50)->default('other');
       $table->json('data')->nullable();
       $table->morphs('owner'); // creates owner_id + owner_type
@@ -444,11 +444,9 @@ return new class extends Migration
       $table->timestamps();
     });
 
-    Schema::create('tour_document_knowledge_bases', function (Blueprint $table) {
+    Schema::create('knowledge_bases', function (Blueprint $table) {
       $table->id();
-      $table->foreignId('tour_id')
-        ->constrained('tours')
-        ->cascadeOnDelete();
+      $table->nullableMorphs('owner'); // owner_type, owner_id (optional)
       $table->text('content');
       $table->vector('embedding', dimensions: 1536);
       $table->timestamps();
@@ -839,7 +837,7 @@ return new class extends Migration
     Schema::dropIfExists('tour_prices');
     Schema::dropIfExists('price_categories');
     Schema::dropIfExists('tour_schedules');
-    Schema::dropIfExists('tour_document_knowledge_bases');
+    Schema::dropIfExists('knowledge_bases');
     Schema::dropIfExists('agent_tours');
     Schema::dropIfExists('tours');
     Schema::dropIfExists('tour_categories');
