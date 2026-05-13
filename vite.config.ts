@@ -12,9 +12,7 @@ export default defineConfig({
       ssr: 'resources/js/ssr.tsx',
       refresh: true,
     }),
-    react({
-      babel: {},
-    }),
+    react(),
     formatjs({
       idInterpolationPattern: '[sha512:contenthash:base64:6]',
       ast: false,
