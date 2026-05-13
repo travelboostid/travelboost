@@ -60,6 +60,8 @@
     "@dnd-kit/utilities": "^3.2.2",
     "@headlessui/react": "^2.2.0",
     "@hookform/resolvers": "^5.2.2",
+    "@iconify-json/lucide": "^1.2.107",
+    "@iconify/react": "^6.0.2",
     "@inertiajs/react": "^2.3.7",
     "@puckeditor/core": "^0.21.1",
     "@radix-ui/react-avatar": "^1.1.3",

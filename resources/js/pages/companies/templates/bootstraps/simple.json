@@ -67,17 +67,17 @@
         "description": "Semua yang Anda butuhkan untuk perjalanan sempurna",
         "features": [
           {
-            "icon": "MapPin",
+            "icon": "map-pin",
             "title": "Destinasi Eksotis",
             "description": "Rasakan pengalaman luar biasa ke berbagai belahan dunia dengan destinasi pilihan terbaik."
           },
           {
-            "icon": "Clock",
+            "icon": "clock",
             "title": "Paket Fleksibel",
             "description": "Pilihan tour lengkap dan dapat disesuaikan dengan kebutuhan serta jadwal Anda."
           },
           {
-            "icon": "Users",
+            "icon": "users",
             "title": "Pemandu Profesional",
             "description": "Didampingi pemandu berpengalaman untuk perjalanan yang aman dan menyenangkan."
           }
