@@ -91,6 +91,7 @@ class SeatAvailabilityController extends Controller
                         'DP' => $item->DP,
                         'FP' => $item->FP,
                         'WA' => $item->WA,
+                        'WPA' => $item->WPA,
                         'BRS' => $item->BRS,
                         'CA' => $item->CA,
                         'RF' => $item->RF,

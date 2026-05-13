@@ -75,7 +75,9 @@ type Schedule = {
   departure_date: string;
   return_date: string;
   prices: RoomPrice[];
-  availability?: Partial<Record<AvailabilityField, number | string | null>> | null;
+  availability?: Partial<
+    Record<AvailabilityField, number | string | null>
+  > | null;
   add_ons?: any;
   promotion?: Adjustment;
   commission?: Adjustment;
@@ -106,6 +108,7 @@ type AddOnsState = {
 type AvailabilityField =
   | 'max_pax'
   | 'WP'
+  | 'WA'
   | 'WPA'
   | 'DP'
   | 'FP'
@@ -2388,11 +2391,10 @@ export default function Page({ tour }: Props) {
                 </div>
 
                 <div className="hidden md:block rounded-lg border overflow-x-auto">
-                    <table className="w-full table-fixed text-sm min-w-[1080px]">
+                  <table className="w-full table-fixed text-sm min-w-[1080px]">
                     <colgroup>
                       <col className="w-[100px]" /> {/* Departure */}
                       <col className="w-[50px]" /> {/* Max Pax */}
-                      <col className="w-[50px]" />
                       <col className="w-[50px]" />
                       <col className="w-[50px]" />
                       <col className="w-[50px]" />
@@ -2417,16 +2419,13 @@ export default function Page({ tour }: Props) {
                           Waiting Payment <br /> (WP)
                         </th>
                         <th className="p-3 text-right">
-                          Waiting Approval <br /> (WPA)
+                          Waiting Payment Approval <br /> (WA)
                         </th>
                         <th className="p-3 text-right">
                           Down Payment <br /> (DP)
                         </th>
                         <th className="p-3 text-right">
                           Full Payment <br /> (FP)
-                        </th>
-                        <th className="p-3 text-right">
-                          Waiting Payment Availability <br /> (WA)
                         </th>
                         <th className="p-3 text-right">
                           Booking <br /> Reserved <br /> (BR)
@@ -2443,9 +2442,7 @@ export default function Page({ tour }: Props) {
                         <th className="p-3 text-right">
                           Waiting List <br /> (WL)
                         </th>
-                        <th className="p-3 text-right">
-                          Available
-                        </th>
+                        <th className="p-3 text-right">Available</th>
                         <th className="p-3 text-right">Action</th>
                       </tr>
                     </thead>
@@ -2540,11 +2537,11 @@ export default function Page({ tour }: Props) {
                             <td className="p-3">
                               <MoneyInput
                                 className="text-right"
-                                value={row.WA}
+                                value={row.WPA}
                                 onChange={(val) =>
                                   updateAvailability(
                                     realIndex,
-                                    'WA',
+                                    'WPA',
                                     Number(val),
                                   )
                                 }
@@ -2840,7 +2837,7 @@ export default function Page({ tour }: Props) {
                             { key: 'WP', label: 'WP' },
                             { key: 'DP', label: 'DP' },
                             { key: 'FP', label: 'FP' },
-                            { key: 'CA', label: 'CA' },
+                            { key: 'WPA', label: 'WA' },
                             { key: 'BRS', label: 'BRS' },
                             { key: 'CA', label: 'CA' },
                             { key: 'RF', label: 'RF' },
