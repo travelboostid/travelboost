@@ -2,43 +2,45 @@
 
 namespace App\Listeners;
 
-use App\Events\TourCreated;
-use App\Events\TourUpdated;
+use App\Enums\MediaType;
+use App\Events\MediaCreated;
 use App\Models\AppConfig;
-use App\Models\TourDocumentKnowledgeBase;
+use App\Models\KnowledgeBase;
+use App\Models\Media;
 use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Contracts\Queue\ShouldQueueAfterCommit;
+use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Ai\Embeddings;
 
-class UpdateTourVectorStore
+class CreateTourMediaKnowledgeBase implements ShouldQueue
 {
+  use InteractsWithQueue;
+
   /**
    * Create the event listener.
    */
   public function __construct()
   {
-    // Dependency injection of ChatbotService for vector store operations
+    //
   }
 
   /**
-   * Handle the TourCreated and TourUpdated events.
-   * Rebuilds the vector store when a tour is created or updated.
-   * This ensures chatbot knowledge base stays current with tour changes.
-   *
-   * @param  TourCreated|TourUpdated  $event  Contains the tour instance
+   * Handle the event.
    */
-  public function handle(TourCreated|TourUpdated $event): void
+  public function handle(MediaCreated $event): void
   {
-    $config = AppConfig::where('key', 'chatbot')->first()?->value;
+    $media = $event->media;
+    if ($media->type !== MediaType::DOCUMENT && $media->subtype !== 'tour_document')
+      return;
+
+    $config = AppConfig::whereKey('chatbot')->first()?->value;
     if ($config == null) return;
 
-    $tour = $event->tour->fresh()->load('document');
-    if (! $tour?->document?->data['url']) {
+    if (! $media?->data['url']) {
       return;
     }
 
-    $url = $tour->document->data['url'];
+    $url = $media->data['url'];
     $relativePath = str_starts_with($url, '/storage/') ? substr($url, 9) : $url;
     $absolutePath = Storage::disk('public')->path($relativePath);
 
@@ -74,12 +76,10 @@ class UpdateTourVectorStore
 
         sleep(1);
       });
-
-    TourDocumentKnowledgeBase::where('tour_id', $tour->id)->delete();
-
     foreach ($chunks->values() as $index => $chunk) {
-      TourDocumentKnowledgeBase::create([
-        'tour_id' => $tour->id,
+      KnowledgeBase::create([
+        'owner_type' => Media::class,
+        'owner_id' => $media->id,
         'content' => $chunk,
         'embedding' => $allEmbeddings[$index] ?? null,
       ]);
