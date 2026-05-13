@@ -251,6 +251,21 @@ function ReadOnlyWizard({
     () => calculateBookingPricing(guests, vendor.commission ?? 0, minimumVatPct),
     [guests, vendor, minimumVatPct],
   );
+  const displayAddOns = useMemo(
+    () =>
+      initialAddOns.map((addon) =>
+        addon.hasQty === false ? { ...addon, qty: guests.length } : addon,
+      ),
+    [initialAddOns, guests.length],
+  );
+  const addOnsTotal = useMemo(
+    () =>
+      displayAddOns.reduce(
+        (sum, addon) => sum + addon.unitPrice * addon.qty,
+        0,
+      ),
+    [displayAddOns],
+  );
 
   // ── Navigation ─────────────────────────────────────────────────────
   const goToStep = (step: WizardStepId) => {
@@ -348,6 +363,11 @@ function ReadOnlyWizard({
                   contactEmail={contact.email}
                   contactPhone={contact.phone}
                   pricing={pricing}
+                  displayTotalPrice={
+                    currentStep === 4
+                      ? pricing.totalPrice + addOnsTotal
+                      : undefined
+                  }
                   timeLeftSeconds={0}
                   currentStep={currentStep}
                   timerStarted={false}
@@ -381,6 +401,7 @@ function ReadOnlyWizard({
                         tourPrices={tourPrices}
                         maxGuests={99}
                         departureDate={departureDate}
+                        showAddAsGuest={false}
                       />
                     )}
                     {currentStep === 2 && (

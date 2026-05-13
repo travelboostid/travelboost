@@ -555,13 +555,15 @@ export default function Page({ data }: PageProps) {
       <div className="w-full space-y-6 p-4 md:p-8 max-w-[1600px] mx-auto pb-20">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-6">
           <div>
-            <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">
-              Tour Products
-            </h1>
-            <p className="text-base text-slate-500 mt-2">
-              Manage your created tours, availability, and synchronize status
-              with agents.
-            </p>
+            <div className="relative w-full sm:w-[700px] border border-slate-200 rounded-xl shadow-sm">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <Input
+                placeholder="Search tour, vendor, or category..."
+                value={globalFilter ?? ''}
+                onChange={(e) => setGlobalFilter(e.target.value)}
+                className="pl-11 h-11 w-full bg-slate-50 border-transparent focus-visible:bg-white focus-visible:ring-2 focus-visible:ring-primary/20 rounded-xl transition-all shadow-inner"
+              />
+            </div>
           </div>
           <Link href={`/companies/${company.username}/dashboard/tours/create`}>
             <Button
@@ -602,15 +604,6 @@ export default function Page({ data }: PageProps) {
           </Tabs>
 
           <div className="flex flex-col sm:flex-row w-full lg:w-auto gap-3">
-            <div className="relative w-full sm:w-[300px]">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-              <Input
-                placeholder="Search tour, vendor, or category..."
-                value={globalFilter ?? ''}
-                onChange={(e) => setGlobalFilter(e.target.value)}
-                className="pl-11 h-11 w-full bg-slate-50 border-transparent focus-visible:bg-white focus-visible:ring-2 focus-visible:ring-primary/20 rounded-xl transition-all shadow-inner"
-              />
-            </div>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button

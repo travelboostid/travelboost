@@ -293,7 +293,7 @@ export function useCompanyDashboardNavMainMenu() {
           id: 'reports.room-listings',
           title: <FormattedMessage defaultMessage="Room Listings" />,
           urlOrAction: `/companies/${company.username}/dashboard/reports/room-listings`,
-          visibleToCompanyTypes: ['vendor'],
+          shouldDisplay: (roles, _permissions) => roles.includes('user:vendor'),
         },
         {
           id: 'reports.seat-availability',

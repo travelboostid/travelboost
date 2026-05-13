@@ -11,7 +11,7 @@ export const WIZARD_STEPS = [
   { id: 1 as const, label: 'Guest Information', icon: 'User' },
   { id: 2 as const, label: 'Room Arrangement', icon: 'BedDouble' },
   { id: 3 as const, label: 'Travel Documents', icon: 'FileText' },
-  { id: 4 as const, label: 'Booking Summary', icon: 'Receipt' },
+  { id: 4 as const, label: 'Price Summary', icon: 'Receipt' },
 ] as const;
 
 export type WizardStepId = (typeof WIZARD_STEPS)[number]['id'];
@@ -35,6 +35,7 @@ export const CATEGORY_FILTER: Record<string, string[]> = {
     'Adult Double',
     'Adult Twin',
     'Adult Triple',
+    'Adult Quad',
     'Adult Extra Bed',
   ],
   child: ['Child With Bed', 'Child No Bed'],
@@ -51,6 +52,7 @@ export const PRICE_CATEGORY_LABELS: Record<string, string> = {
   'Adult Double': 'Adult Double',
   'Adult Twin': 'Adult Twin',
   'Adult Triple': 'Adult Triple',
+  'Adult Quad': 'Adult Quad',
   'Adult Extra Bed': 'Adult Extra Bed',
   'Child With Bed': 'Child With Bed',
   'Child No Bed': 'Child No Bed',

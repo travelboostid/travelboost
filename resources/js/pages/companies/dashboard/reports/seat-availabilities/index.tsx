@@ -18,6 +18,7 @@ type Schedule = {
   DP: number;
   FP: number;
   WA: number;
+  WPA: number;
   BRS: number;
   CA: number;
   RF: number;
@@ -49,6 +50,7 @@ interface Props {
 
   filters: {
     search?: string;
+    departure_date?: string;
   };
 }
 
@@ -56,7 +58,12 @@ export default function SeatAvailabilityIndex({
   availabilities,
   filters,
 }: Props) {
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState(filters.search || '');
+
+  const [departureDate, setDepartureDate] = useState(
+    filters.departure_date || '',
+  );
+
   const [openTours, setOpenTours] = useState<number[]>([]);
   const [visibleSchedules, setVisibleSchedules] = useState<
     Record<number, number>
@@ -69,6 +76,23 @@ export default function SeatAvailabilityIndex({
       window.location.pathname,
       {
         search: value,
+        departure_date: departureDate,
+      },
+      {
+        preserveState: true,
+        replace: true,
+      },
+    );
+  };
+
+  const handleDepartureDate = (value: string) => {
+    setDepartureDate(value);
+
+    router.get(
+      window.location.pathname,
+      {
+        search,
+        departure_date: value,
       },
       {
         preserveState: true,
@@ -147,14 +171,33 @@ export default function SeatAvailabilityIndex({
         </div>
 
         {/* SEARCH */}
-        <div className="rounded-2xl border bg-white p-4 shadow-sm">
-          <input
-            type="text"
-            placeholder="Search tour..."
-            value={search}
-            onChange={(e) => handleSearch(e.target.value)}
-            className="w-full rounded-xl border px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-primary"
-          />
+        <div className="grid gap-4 md:grid-cols-2">
+          <div>
+            <label className="mb-1 block text-xs font-medium text-muted-foreground">
+              Search Tour
+            </label>
+
+            <input
+              type="text"
+              placeholder="Search by tour name..."
+              value={search}
+              onChange={(e) => handleSearch(e.target.value)}
+              className="w-full rounded-xl border px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-primary"
+            />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs font-medium text-muted-foreground">
+              Departure Date
+            </label>
+
+            <input
+              type="date"
+              value={departureDate}
+              onChange={(e) => handleDepartureDate(e.target.value)}
+              className="w-full rounded-xl border px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-primary"
+            />
+          </div>
         </div>
 
         {/* TOUR LIST */}
@@ -234,7 +277,12 @@ export default function SeatAvailabilityIndex({
                       </thead>
 
                       <tbody>
-                        {item.schedules
+                        {[...item.schedules]
+                          .sort(
+                            (a, b) =>
+                              new Date(a.departure_date).getTime() -
+                              new Date(b.departure_date).getTime(),
+                          )
                           .slice(0, getVisibleCount(item.tour.id))
                           .map((schedule) => {
                             const used =
@@ -242,7 +290,7 @@ export default function SeatAvailabilityIndex({
                               schedule.WP +
                               schedule.DP +
                               schedule.FP +
-                              schedule.WA +
+                              schedule.WPA +
                               schedule.BRS +
                               schedule.CA +
                               schedule.RF +
@@ -289,7 +337,7 @@ export default function SeatAvailabilityIndex({
                                 </td>
 
                                 <td className="border px-3 py-3 text-center">
-                                  {schedule.WA}
+                                  {schedule.WPA}
                                 </td>
 
                                 <td className="border px-3 py-3 text-center">
@@ -393,6 +441,7 @@ export default function SeatAvailabilityIndex({
                 if (link.url) {
                   router.visit(link.url, {
                     preserveState: true,
+                    preserveScroll: true,
                   });
                 }
               }}

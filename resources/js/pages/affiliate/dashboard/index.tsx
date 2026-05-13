@@ -446,9 +446,9 @@ export default function AffiliateDashboardIndex({
                     <TableHead className="text-[11px] font-semibold text-slate-400 uppercase h-10 px-6">
                       Affiliate Name
                     </TableHead>
-                    <TableHead className="text-[11px] font-semibold text-slate-400 uppercase h-10">
+                    {/* <TableHead className="text-[11px] font-semibold text-slate-400 uppercase h-10">
                       Revenue
-                    </TableHead>
+                    </TableHead> */}
                     <TableHead className="text-[11px] font-semibold text-slate-400 uppercase h-10 text-right px-6">
                       Status
                     </TableHead>
@@ -464,9 +464,9 @@ export default function AffiliateDashboardIndex({
                         <TableCell className="font-medium text-xs text-slate-700 px-6 py-3">
                           {net.name}
                         </TableCell>
-                        <TableCell className="text-xs font-semibold text-primary py-3">
+                        {/* <TableCell className="text-xs font-semibold text-primary py-3">
                           {formatIDR(net.revenue)}
-                        </TableCell>
+                        </TableCell> */}
                         <TableCell className="text-right px-6 py-3">
                           <Badge
                             variant="outline"

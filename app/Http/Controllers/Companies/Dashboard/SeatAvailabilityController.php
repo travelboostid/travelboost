@@ -12,16 +12,45 @@ class SeatAvailabilityController extends Controller
 {
     public function index(Request $request, Company $company)
     {
+        $departureDate = $request->departure_date;
+
         $tours = Tour::query()
             ->with([
-                'availabilities.schedule:id,tour_id,departure_date,return_date',
+                'availabilities' => function ($q) use ($departureDate) {
+
+                    $q->with([
+                        'schedule:id,tour_id,departure_date,return_date',
+                    ]);
+
+                    if ($departureDate) {
+                        $q->whereHas('schedule', function ($sq) use ($departureDate) {
+                            $sq->whereDate('departure_date', $departureDate);
+                        });
+                    }
+
+                    $q->with([
+                        'schedule:id,tour_id,departure_date,return_date',
+                    ]);
+
+                    if ($departureDate) {
+                        $q->whereHas('schedule', function ($sq) use ($departureDate) {
+                            $sq->whereDate('departure_date', $departureDate);
+                        });
+                    }
+                },
             ])
 
             ->where('company_id', $company->id)
 
             ->where('status', 'active')
 
-            ->whereHas('availabilities')
+            ->whereHas('availabilities.schedule')
+
+            ->when($departureDate, function ($q) use ($departureDate) {
+                $q->whereHas('availabilities.schedule', function ($sq) use ($departureDate) {
+                    $sq->whereDate('departure_date', $departureDate);
+                });
+            })
 
             ->when($request->search, function ($q) use ($request) {
                 $q->where(
@@ -44,7 +73,9 @@ class SeatAvailabilityController extends Controller
                     'name' => $tour->name,
                 ],
 
-                'schedules' => $tour->availabilities->map(function ($item) {
+                'schedules' => $tour->availabilities
+                  ->filter(fn ($item) => $item->schedule)
+                  ->map(function ($item) {
                     return [
                         'id' => $item->id,
 
@@ -60,6 +91,7 @@ class SeatAvailabilityController extends Controller
                         'DP' => $item->DP,
                         'FP' => $item->FP,
                         'WA' => $item->WA,
+                        'WPA' => $item->WPA,
                         'BRS' => $item->BRS,
                         'CA' => $item->CA,
                         'RF' => $item->RF,
@@ -79,6 +111,7 @@ class SeatAvailabilityController extends Controller
 
                 'filters' => [
                     'search' => $request->search,
+                    'departure_date' => $request->departure_date,
                 ],
             ]
         );

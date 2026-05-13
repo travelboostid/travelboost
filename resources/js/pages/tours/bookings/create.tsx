@@ -1,4 +1,3 @@
-import type { TourResource } from '@/api/model';
 import BookingInfoCard from '@/components/booking/BookingInfoCard';
 import type { ManualPaymentData } from '@/components/booking/ManualPaymentDialog';
 import Step1GuestInformation, {
@@ -6,6 +5,8 @@ import Step1GuestInformation, {
 } from '@/components/booking/Step1GuestInformation';
 import Step2RoomConfiguration, {
   autoRecommendRooms,
+  getRoomNumberByGuestId,
+  serializeRoomsForBooking,
   type RoomConfig,
 } from '@/components/booking/Step2RoomConfiguration';
 import Step3TravelDocuments from '@/components/booking/Step3TravelDocuments';
@@ -16,7 +17,6 @@ import Step4BookingSummary, {
 } from '@/components/booking/Step4BookingSummary';
 import WizardStepIndicator from '@/components/booking/WizardStepIndicator';
 import TenantLayout from '@/components/layouts/tenant-layout';
-import type { TourSchedule } from '@/components/tours/tour-booking-modal';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,10 +31,9 @@ import { Button } from '@/components/ui/button';
 import type { WizardStepId } from '@/constants/booking';
 import type {
   BookingContact,
+  BookingStatusCode,
   GuestEntry,
-  TourPrice,
   TravelDocumentEntry,
-  VendorInfo,
 } from '@/types/booking';
 import { calculateBookingPricing } from '@/utils/booking-calculations';
 import { router, usePage } from '@inertiajs/react';
@@ -43,20 +42,33 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { ArrowLeftIcon, ArrowRightIcon, FileTextIcon } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-type PageProps = {
-  tour: TourResource & { schedules?: TourSchedule[] };
-  tourPrices: TourPrice[];
-  roomTypes: any[];
-  vendor: VendorInfo;
-  bookingNumber: string;
-};
-
 const DEFAULT_TNC = `1. The price shown is valid only for the selected departure date.
 2. Full payment is required to secure your booking.
 3. Seats are subject to availability and confirmed upon successful payment.
 4. All bookings are non-refundable unless stated otherwise.
 5. Changes to guest details or departure dates are subject to administrative fees.
 6. In the event of tour cancellation by the organizer, a full refund will be provided.`;
+
+function makeDefaultGuest(
+  id: string,
+  type: 'adult' | 'child' | 'infant',
+): GuestEntry {
+  return {
+    id,
+    type,
+    title: '',
+    firstName: '',
+    lastName: '',
+    dateOfBirth: '',
+    placeOfBirth: '',
+    priceCategory: null,
+    tourPriceId: 0,
+    price: 0,
+    originalPrice: 0,
+    roomTypeDescription: '',
+    note: '',
+  };
+}
 
 export default function Page() {
   const {
@@ -69,7 +81,6 @@ export default function Page() {
     availability,
     addOns,
     existingBooking,
-    bookingDeadlineDays,
     bookingTimeLimitMinutes,
     minimumDownPaymentPct,
     minimumVatPct,
@@ -78,6 +89,8 @@ export default function Page() {
     isResumingExistingBooking,
     reservedExpiresAt,
     remainingHoldSeconds,
+    paidAmount,
+    remainingBalance,
   } = usePage<any>().props as any;
   const user = auth?.user;
 
@@ -92,7 +105,9 @@ export default function Page() {
   const resumedStatus = existingBooking?.status ?? null;
 
   // ─── Wizard state ───────────────────────────────────────────────────
-  const [currentStep, setCurrentStep] = useState<WizardStepId>(1);
+  const [currentStep, setCurrentStep] = useState<WizardStepId>(
+    resumedStatus === 'down payment' ? 4 : 1,
+  );
   const [direction, setDirection] = useState(1); // 1=forward, -1=back
   const [hasAgreedToTnc, setHasAgreedToTnc] = useState(isResuming);
   const initialHoldSeconds =
@@ -108,6 +123,17 @@ export default function Page() {
     resumedStatus === 'reserved' || resumedStatus === 'booking reserved',
   );
   const [showStep2ConfirmModal, setShowStep2ConfirmModal] = useState(false);
+  const isBalancePayment = resumedStatus === 'down payment';
+  const paidAmountValue = Number(paidAmount ?? 0);
+  const remainingBalanceValue = Math.max(0, Number(remainingBalance ?? 0));
+  const bookingInfoStatus: BookingStatusCode =
+    isBalancePayment
+      ? 'down_payment'
+      : resumedStatus === 'full payment'
+        ? 'full_payment'
+        : currentStep >= 2 || timerStarted
+          ? 'booking_reserved'
+          : 'waiting_payment';
 
   // ─── Contact ────────────────────────────────────────────────────────
   const [contact, setContact] = useState<BookingContact>({
@@ -116,11 +142,18 @@ export default function Page() {
     phone: existingBooking?.contact_phone || user?.phone || '',
     notes: existingBooking?.contact_notes || '',
   });
+  const [contactGuestId, setContactGuestId] = useState<string | null>(null);
 
   // ─── Guests ─────────────────────────────────────────────────────────
-  const [adults, setAdults] = useState(existingBooking?.pax_adult ?? 1);
-  const [children, setChildren] = useState(existingBooking?.pax_child ?? 0);
-  const [infants, setInfants] = useState(existingBooking?.pax_infant ?? 0);
+  const [adults, setAdults] = useState<number>(
+    Number(existingBooking?.pax_adult ?? 1),
+  );
+  const [children, setChildren] = useState<number>(
+    Number(existingBooking?.pax_child ?? 0),
+  );
+  const [infants, setInfants] = useState<number>(
+    Number(existingBooking?.pax_infant ?? 0),
+  );
   const [guests, setGuests] = useState<GuestEntry[]>(() => {
     if (!existingBooking?.passengers?.length) return [];
     // Hydrate guests from existing passengers
@@ -154,7 +187,7 @@ export default function Page() {
 
       let restoredPrice =
         parseFloat(p.price_amount) || (matchedPrice ? matchedPrice.price : 0);
-      let restoredOriginalPrice = matchedPrice
+      const restoredOriginalPrice = matchedPrice
         ? matchedPrice.price
         : restoredPrice;
 
@@ -212,65 +245,62 @@ export default function Page() {
       return;
     }
 
-    const newGuests: GuestEntry[] = [];
-    const makeDefault = (
-      id: string,
-      type: 'adult' | 'child' | 'infant',
-    ): GuestEntry => ({
-      id,
-      type,
-      title: '',
-      firstName: '',
-      lastName: '',
-      dateOfBirth: '',
-      placeOfBirth: '',
-      priceCategory: null,
-      tourPriceId: 0,
-      price: 0,
-      originalPrice: 0,
-      roomTypeDescription: '',
-      note: '',
+    setGuests((previousGuests) => {
+      const newGuests: GuestEntry[] = [];
+      const contactGuest =
+        contactGuestId !== null
+          ? (previousGuests.find((guest) => guest.id === contactGuestId) ??
+            makeDefaultGuest(contactGuestId, 'adult'))
+          : null;
+      const adultSlots = contactGuest ? Math.max(0, adults - 1) : adults;
+
+      for (let i = 0; i < adultSlots; i++) {
+        newGuests.push(
+          previousGuests.find((g) => g.id === `adult-${i}`) ??
+            makeDefaultGuest(`adult-${i}`, 'adult'),
+        );
+      }
+      if (contactGuest) {
+        newGuests.push(contactGuest);
+      }
+      for (let i = 0; i < children; i++) {
+        newGuests.push(
+          previousGuests.find((g) => g.id === `child-${i}`) ??
+            makeDefaultGuest(`child-${i}`, 'child'),
+        );
+      }
+      for (let i = 0; i < infants; i++) {
+        newGuests.push(
+          previousGuests.find((g) => g.id === `infant-${i}`) ??
+            makeDefaultGuest(`infant-${i}`, 'infant'),
+        );
+      }
+
+      return newGuests;
     });
+  }, [adults, children, contactGuestId, infants]);
 
-    for (let i = 0; i < adults; i++) {
-      newGuests.push(
-        guests.find((g) => g.id === `adult-${i}`) ??
-          makeDefault(`adult-${i}`, 'adult'),
-      );
-    }
-    for (let i = 0; i < children; i++) {
-      newGuests.push(
-        guests.find((g) => g.id === `child-${i}`) ??
-          makeDefault(`child-${i}`, 'child'),
-      );
-    }
-    for (let i = 0; i < infants; i++) {
-      newGuests.push(
-        guests.find((g) => g.id === `infant-${i}`) ??
-          makeDefault(`infant-${i}`, 'infant'),
-      );
-    }
+  useEffect(() => {
+    setTravelDocuments((previousDocs) =>
+      guests.map((g) => {
+        const existing = previousDocs.find((d) => d.guestId === g.id);
 
-    const newDocs: TravelDocumentEntry[] = newGuests.map((g) => {
-      const existing = travelDocuments.find((d) => d.guestId === g.id);
-      return (
-        existing ?? {
-          guestId: g.id,
-          passportNumber: '',
-          passportIssueDate: '',
-          passportExpiryDate: '',
-          visaNumber: '',
-          passportFile: null,
-          passportFileName: '',
-          visaFile: null,
-          visaFileName: '',
-        }
-      );
-    });
-
-    setGuests(newGuests);
-    setTravelDocuments(newDocs);
-  }, [adults, children, infants]);
+        return (
+          existing ?? {
+            guestId: g.id,
+            passportNumber: '',
+            passportIssueDate: '',
+            passportExpiryDate: '',
+            visaNumber: '',
+            passportFile: null,
+            passportFileName: '',
+            visaFile: null,
+            visaFileName: '',
+          }
+        );
+      }),
+    );
+  }, [guests]);
 
   // ─── Pricing (single source of truth) ───────────────────────────────
   const pricing = useMemo(
@@ -281,6 +311,24 @@ export default function Page() {
         minimumVatPct ?? 11,
       ),
     [guests, vendor, minimumVatPct],
+  );
+  const [selectedAddOns, setSelectedAddOns] = useState<AddOnItem[]>(
+    () => addOns ?? [],
+  );
+  const selectedAddOnsForPricing = useMemo(
+    () =>
+      selectedAddOns.map((addon) =>
+        addon.hasQty === false ? { ...addon, qty: guests.length } : addon,
+      ),
+    [selectedAddOns, guests.length],
+  );
+  const selectedAddOnsTotal = useMemo(
+    () =>
+      selectedAddOnsForPricing.reduce(
+        (sum, addon) => sum + addon.unitPrice * addon.qty,
+        0,
+      ),
+    [selectedAddOnsForPricing],
   );
 
   // ─── Timer (starts when entering Step 2) ────────────────────────────
@@ -305,6 +353,11 @@ export default function Page() {
   // ─── Navigation ─────────────────────────────────────────────────────
   const goNext = () => {
     if (currentStep === 1) {
+      if (timerStarted) {
+        confirmGoToStep2();
+        return;
+      }
+
       // Show confirmation modal before going to Step 2
       setShowStep2ConfirmModal(true);
       return;
@@ -393,6 +446,10 @@ export default function Page() {
 
   const handleGuestRemove = useCallback(
     (guestId: string) => {
+      if (guestId === contactGuestId) {
+        setContactGuestId(null);
+      }
+
       const newGuests = guests.filter((g) => g.id !== guestId);
       if (newGuests.length === guests.length) {
         return;
@@ -409,7 +466,58 @@ export default function Page() {
       setChildren(newChildren);
       setInfants(newInfants);
     },
-    [guests],
+    [contactGuestId, guests],
+  );
+
+  const handleContactGuestToggle = useCallback(
+    (enabled: boolean) => {
+      if (enabled) {
+        const contactName = contact.name.trim();
+        if (!contactName || adults + children >= (availability ?? 99)) {
+          return;
+        }
+
+        const nameParts = contactName.split(/\s+/).filter(Boolean);
+        if (nameParts.length === 0) {
+          return;
+        }
+
+        const firstName = nameParts[0] ?? '';
+        const lastName = nameParts.slice(1).join(' ');
+        const guestId = 'contact-guest';
+
+        if (guests.some((guest) => guest.id === guestId)) {
+          setContactGuestId(guestId);
+          return;
+        }
+
+        skipGuestSyncRef.current = true;
+        setGuests((prev) => [
+          ...prev,
+          {
+            ...makeDefaultGuest(guestId, 'adult'),
+            firstName,
+            lastName,
+          },
+        ]);
+        setAdults((prev) => prev + 1);
+        setContactGuestId(guestId);
+        return;
+      }
+
+      if (contactGuestId) {
+        handleGuestRemove(contactGuestId);
+      }
+    },
+    [
+      adults,
+      availability,
+      children,
+      contact.name,
+      contactGuestId,
+      guests,
+      handleGuestRemove,
+    ],
   );
 
   // ─── Validation ─────────────────────────────────────────────────────
@@ -476,6 +584,90 @@ export default function Page() {
   // ─── Submit ─────────────────────────────────────────────────────────
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const startOnlinePayment = (
+    bookingId: number | string,
+    paymentType: PaymentType,
+    finalAmount: number,
+  ) => {
+    axios
+      .post(
+        `/bookings/${bookingId}/online-payment`,
+        {
+          payment_type: paymentType,
+          amount: finalAmount,
+        },
+        {
+          withCredentials: true,
+          withXSRFToken: true,
+        },
+      )
+      .then((response) => {
+        const snapToken = response.data?.payment?.payload?.snap_token as
+          | string
+          | undefined;
+        const paymentId = response.data?.payment?.id as
+          | number
+          | string
+          | undefined;
+
+        if (!snapToken) {
+          setIsSubmitting(false);
+          return;
+        }
+
+        (window as any).snap.pay(snapToken, {
+          onSuccess: () => {
+            if (!bookingId || !paymentId) {
+              window.location.reload();
+              return;
+            }
+
+            axios
+              .post(
+                `/bookings/${bookingId}/online-payment/${paymentId}/confirm`,
+                {},
+                {
+                  withCredentials: true,
+                  withXSRFToken: true,
+                },
+              )
+              .finally(() => window.location.reload());
+          },
+          onError: () => window.location.reload(),
+          onClose: () => window.location.reload(),
+        });
+      })
+      .catch(() => setIsSubmitting(false));
+  };
+
+  const submitManualPayment = (
+    bookingId: number | string,
+    paymentType: PaymentType,
+    finalAmount: number,
+    manualData?: ManualPaymentData,
+  ) => {
+    if (!manualData?.proofFile) {
+      setIsSubmitting(false);
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('sender_bank_name', manualData.senderBankName);
+    formData.append('sender_account_number', manualData.senderAccountNumber);
+    formData.append(
+      'transfer_amount',
+      String(manualData.transferAmount || finalAmount),
+    );
+    formData.append('payment_type', paymentType);
+    formData.append('proof', manualData.proofFile);
+
+    router.post(`/bookings/${bookingId}/manual-payment`, formData, {
+      forceFormData: true,
+      preserveScroll: true,
+      onFinish: () => setIsSubmitting(false),
+    });
+  };
+
   const handlePayNow = (
     paymentType: PaymentType,
     paymentMethod: PaymentMethod,
@@ -485,6 +677,21 @@ export default function Page() {
   ) => {
     setIsSubmitting(true);
 
+    if (isBalancePayment && existingBooking?.id) {
+      if (paymentMethod === 'midtrans') {
+        startOnlinePayment(existingBooking.id, paymentType, finalAmount);
+        return;
+      }
+
+      submitManualPayment(
+        existingBooking.id,
+        paymentType,
+        finalAmount,
+        manualData,
+      );
+      return;
+    }
+
     const addOnRows = addOns
       .filter((a) => a.qty > 0)
       .map((a) => ({
@@ -493,7 +700,8 @@ export default function Page() {
       }));
     const addOnsTotal = addOnRows.reduce((sum, item) => sum + item.price, 0);
     const grandTotal = pricing.totalPrice + addOnsTotal;
-    const payload = {
+    const roomNumberByGuestId = getRoomNumberByGuestId(rooms);
+    const payload: Record<string, unknown> = {
       tour_id: tour.id,
       departure_date: preselectedDate,
       pax_adult: adults,
@@ -523,21 +731,14 @@ export default function Page() {
           passport_number: doc?.passportNumber || null,
           passport_issue_date: doc?.passportIssueDate || null,
           passport_expiry_date: doc?.passportExpiryDate || null,
+          passport_file: doc?.passportFile ?? null,
           visa_number: doc?.visaNumber || null,
+          visa_file: doc?.visaFile ?? null,
           room_type: g.roomTypeDescription || null,
-          room_number: null,
+          room_number: roomNumberByGuestId.get(g.id) ?? null,
           note: g.note || null,
         };
       }),
-      rooms: rooms.map((r) => ({
-        room_type: r.type,
-        room_label: r.label,
-        bed_layout: r.guestIds.map((gid, idx) => ({
-          bedType: r.type,
-          guestId: gid,
-          position: { x: idx, y: 0 },
-        })),
-      })),
       addons: addOnRows,
       total_price: pricing.subtotalGuests,
       tax_amount: pricing.ppn,
@@ -546,7 +747,12 @@ export default function Page() {
       grand_total: grandTotal,
     };
 
+    if (rooms.length > 0) {
+      payload.rooms = serializeRoomsForBooking(rooms);
+    }
+
     router.post(`/bookings/${tour.id}`, payload as any, {
+      forceFormData: true,
       preserveScroll: true,
       onSuccess: () => {
         if (paymentMethod === 'midtrans') {
@@ -556,56 +762,7 @@ export default function Page() {
             return;
           }
 
-          axios
-            .post(
-              `/bookings/${bookingId}/online-payment`,
-              {
-                payment_type: paymentType,
-                amount: finalAmount,
-              },
-              {
-                withCredentials: true,
-                withXSRFToken: true,
-              },
-            )
-            .then((response) => {
-              const snapToken = response.data?.payment?.payload?.snap_token as
-                | string
-                | undefined;
-              const paymentId = response.data?.payment?.id as
-                | number
-                | string
-                | undefined;
-
-              if (!snapToken) {
-                setIsSubmitting(false);
-                return;
-              }
-
-              (window as any).snap.pay(snapToken, {
-                onSuccess: () => {
-                  if (!bookingId || !paymentId) {
-                    window.location.reload();
-                    return;
-                  }
-
-                  axios
-                    .post(
-                      `/bookings/${bookingId}/online-payment/${paymentId}/confirm`,
-                      {},
-                      {
-                        withCredentials: true,
-                        withXSRFToken: true,
-                      },
-                    )
-                    .finally(() => window.location.reload());
-                },
-                onError: () => window.location.reload(),
-                onClose: () => window.location.reload(),
-              });
-            })
-            .catch(() => setIsSubmitting(false));
-
+          startOnlinePayment(bookingId, paymentType, finalAmount);
           return;
         }
 
@@ -619,24 +776,7 @@ export default function Page() {
           return;
         }
 
-        const formData = new FormData();
-        formData.append('sender_bank_name', manualData.senderBankName);
-        formData.append(
-          'sender_account_number',
-          manualData.senderAccountNumber,
-        );
-        formData.append(
-          'transfer_amount',
-          String(manualData.transferAmount || finalAmount),
-        );
-        formData.append('payment_type', paymentType);
-        formData.append('proof', manualData.proofFile);
-
-        router.post(`/bookings/${bookingId}/manual-payment`, formData, {
-          forceFormData: true,
-          preserveScroll: true,
-          onFinish: () => setIsSubmitting(false),
-        });
+        submitManualPayment(bookingId, paymentType, finalAmount, manualData);
       },
       onError: () => {
         setIsSubmitting(false);
@@ -650,13 +790,6 @@ export default function Page() {
   };
 
   // ─── Helper ─────────────────────────────────────────────────────────
-  const getGuestDisplayName = (guest: GuestEntry) => {
-    const parts = [guest.title, guest.firstName, guest.lastName].filter(
-      Boolean,
-    );
-    return parts.length > 0 ? parts.join(' ') : '(unnamed)';
-  };
-
   // ─── Render ─────────────────────────────────────────────────────────
   if (!hasAgreedToTnc) {
     return (
@@ -747,11 +880,7 @@ export default function Page() {
                 {/* Booking Info Card */}
                 <BookingInfoCard
                   tour={tour}
-                  status={
-                    currentStep >= 2 || timerStarted
-                      ? 'booking_reserved'
-                      : 'waiting_payment'
-                  }
+                  status={bookingInfoStatus}
                   bookingNumber={bookingNumber ?? null}
                   invoiceNumber={null}
                   departureDate={preselectedDate}
@@ -761,6 +890,12 @@ export default function Page() {
                   contactEmail={contact.email}
                   contactPhone={contact.phone}
                   pricing={pricing}
+                  totalPaid={paidAmountValue}
+                  displayTotalPrice={
+                    currentStep === 4
+                      ? pricing.totalPrice + selectedAddOnsTotal
+                      : undefined
+                  }
                   timeLeftSeconds={timeLeft}
                   currentStep={currentStep}
                   timerStarted={timerStarted}
@@ -794,6 +929,9 @@ export default function Page() {
                         tourPrices={tourPrices}
                         maxGuests={availability ?? 99}
                         departureDate={preselectedDate}
+                        contactGuestId={contactGuestId}
+                        onContactGuestToggle={handleContactGuestToggle}
+                        contactAsGuestAdded={contactGuestId !== null}
                       />
                     )}
                     {currentStep === 2 && (
@@ -821,9 +959,13 @@ export default function Page() {
                         agentName={tenant?.name || '-'}
                         onPayNow={handlePayNow}
                         isSubmitting={isSubmitting}
-                        initialAddOns={addOns}
+                        initialAddOns={selectedAddOns}
+                        onAddOnsChange={setSelectedAddOns}
                         minimumDownPaymentPct={minimumDownPaymentPct}
                         minimumVatPct={minimumVatPct}
+                        paidAmount={paidAmountValue}
+                        remainingBalance={remainingBalanceValue}
+                        forceBalancePayment={isBalancePayment}
                         vendorBankInfo={vendorBankInfo}
                       />
                     )}
@@ -867,7 +1009,7 @@ export default function Page() {
                       onClick={goNext}
                       className="gap-2"
                     >
-                      {currentStep === 3 ? 'Skip' : 'Next'}
+                      Next
                       <ArrowRightIcon className="size-4" />
                     </Button>
                   </div>

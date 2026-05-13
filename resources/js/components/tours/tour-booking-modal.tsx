@@ -71,12 +71,21 @@ export default function TourBookingModal({
 }: TourBookingModalProps) {
   const schedules = tour.schedules ?? [];
   const tourImage = extractImageSrc(tour.image as any);
-  const activeSchedules = schedules.filter((s) => {
-    if (!s.is_active) return false;
-    const departDate = parseISO(s.departure_date);
-    const deadlineDate = addDays(startOfToday(), s.booking_deadline_days ?? 0);
-    return !isBefore(departDate, deadlineDate);
-  });
+  const activeSchedules = schedules
+    .filter((s) => {
+      if (!s.is_active) return false;
+      const departDate = parseISO(s.departure_date);
+      const deadlineDate = addDays(
+        startOfToday(),
+        s.booking_deadline_days ?? 0,
+      );
+      return !isBefore(departDate, deadlineDate);
+    })
+    .sort(
+      (a, b) =>
+        parseISO(a.departure_date).getTime() -
+        parseISO(b.departure_date).getTime(),
+    );
 
   let dateRangeText = 'Schedules TBA';
   if (activeSchedules.length > 0) {
@@ -113,9 +122,9 @@ export default function TourBookingModal({
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="flex h-[90vh] max-h-[44rem] max-w-2xl flex-col gap-0 overflow-hidden p-0 sm:max-w-2xl md:max-w-3xl">
         {/* Header Section (Centered) */}
-        <div className="relative shrink-0 border-b bg-card px-4 pb-4 pt-6 sm:px-6 sm:pb-5 sm:pt-7">
+        <div className="relative shrink-0 border-b bg-card px-4 pb-3 pt-4 sm:px-6 sm:pb-4 sm:pt-5">
           <DialogHeader className="flex flex-col items-center justify-center text-center">
-            <div className="mb-3 aspect-[16/9] w-full max-w-[160px] overflow-hidden rounded-lg border bg-muted sm:mb-4 sm:max-w-xs md:max-w-sm">
+            <div className="mb-2 aspect-[16/9] w-full max-w-[140px] overflow-hidden rounded-lg border bg-muted sm:max-w-[200px] md:max-w-[240px]">
               <img
                 src={tourImage.src}
                 srcSet={tourImage.srcSet || undefined}
@@ -123,7 +132,7 @@ export default function TourBookingModal({
                 className="h-full w-full object-cover"
               />
             </div>
-            <DialogTitle className="flex flex-col items-center justify-center text-center text-xl font-bold tracking-tight text-foreground sm:text-2xl md:text-3xl">
+            <DialogTitle className="flex flex-col items-center justify-center text-center text-lg font-bold tracking-tight text-foreground sm:text-xl md:text-2xl">
               {tour.name}
             </DialogTitle>
             {tour.code && (
@@ -143,8 +152,8 @@ export default function TourBookingModal({
         </div>
 
         {/* Schedule List Section */}
-        <div className="min-h-0 flex-1 overflow-y-auto bg-muted/5 px-4 py-3 sm:px-6 sm:py-4">
-          <div className="mb-4 text-center">
+        <div className="min-h-0 flex-1 overflow-y-auto bg-muted/5 px-4 py-3 sm:px-6">
+          <div className="mb-3 text-center">
             <span className="text-sm font-medium tracking-wide text-foreground/70">
               Select Departure Date
             </span>
@@ -165,7 +174,7 @@ export default function TourBookingModal({
                 </p>
               </motion.div>
             ) : (
-              <div className="flex flex-col gap-3 pb-6">
+              <div className="flex flex-col gap-2.5 pb-6">
                 {activeSchedules.map((schedule, index) => {
                   const departDate = parseISO(schedule.departure_date);
                   const returnDate = schedule.return_date
@@ -192,7 +201,7 @@ export default function TourBookingModal({
                       type="button"
                       disabled={isSoldOut}
                       onClick={() => handleSelectDate(schedule)}
-                      className={`group relative grid min-h-[4.25rem] w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-3 overflow-hidden rounded-xl border px-4 py-3 text-left transition-all duration-300 sm:min-h-[4.75rem] sm:px-5 sm:py-4 ${
+                      className={`group relative grid min-h-[4rem] w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-3 overflow-hidden rounded-xl border px-3.5 py-2.5 text-left transition-all duration-300 sm:min-h-[4.25rem] sm:px-4 sm:py-3 ${
                         isSoldOut
                           ? 'cursor-not-allowed border-muted bg-muted/40 opacity-50 grayscale'
                           : 'cursor-pointer border-border bg-card hover:border-primary/40 hover:bg-primary/[0.02] hover:shadow-md hover:shadow-primary/5 active:scale-[0.99]'

@@ -67,6 +67,9 @@ type Step4Props = {
   onAddOnsChange?: (addOns: AddOnItem[]) => void;
   minimumDownPaymentPct?: number;
   minimumVatPct?: number;
+  paidAmount?: number;
+  remainingBalance?: number;
+  forceBalancePayment?: boolean;
   vendorBankInfo?: {
     bankName: string;
     accountName: string;
@@ -88,6 +91,9 @@ export default function Step4BookingSummary({
   onAddOnsChange,
   minimumDownPaymentPct,
   minimumVatPct,
+  paidAmount = 0,
+  remainingBalance = 0,
+  forceBalancePayment = false,
   vendorBankInfo,
 }: Step4Props) {
   // ─── Add-ons state ──────────────────────────────────────────────────
@@ -119,7 +125,6 @@ export default function Step4BookingSummary({
         name: string;
         qty: number;
         unitPrice: number;
-        originalUnitPrice: number;
       }
     >();
     for (const g of guests) {
@@ -131,8 +136,7 @@ export default function Step4BookingSummary({
         map.set(cat, {
           name: PRICE_CATEGORY_LABELS[cat] ?? cat,
           qty: 1,
-          unitPrice: g.price,
-          originalUnitPrice: g.originalPrice ?? g.price,
+          unitPrice: g.originalPrice ?? g.price,
         });
       }
     }
@@ -144,16 +148,18 @@ export default function Step4BookingSummary({
     [displayAddOns],
   );
 
-  const subtotalBeforeTax =
-    pricing.subtotalGuests + pricing.platformFee + addOnsTotal;
   const vatPct = minimumVatPct ?? 11;
-  const ppn = Math.round(pricing.subtotalGuests * (vatPct / 100));
-  const grandTotal = subtotalBeforeTax + ppn + pricing.agentCommission;
+  const grandTotal = pricing.totalPrice + addOnsTotal;
   const dpPct = minimumDownPaymentPct ?? 50;
   const dpRate = dpPct / 100;
   const dpLabel = `Down Payment (${dpPct}%)`;
+  const effectivePaymentType: PaymentType = forceBalancePayment
+    ? 'full_payment'
+    : paymentType;
   const payAmount =
-    paymentType === 'down_payment'
+    forceBalancePayment
+      ? remainingBalance
+      : paymentType === 'down_payment'
       ? Math.round(grandTotal * dpRate)
       : grandTotal;
 
@@ -181,11 +187,17 @@ export default function Step4BookingSummary({
       return;
     }
 
-    onPayNow(paymentType, method, displayAddOns, payAmount);
+    onPayNow(effectivePaymentType, method, displayAddOns, payAmount);
   };
 
   const handleManualSubmit = (data: ManualPaymentData) => {
-    onPayNow(paymentType, 'manual_transfer', displayAddOns, payAmount, data);
+    onPayNow(
+      effectivePaymentType,
+      'manual_transfer',
+      displayAddOns,
+      payAmount,
+      data,
+    );
   };
 
   return (
@@ -197,7 +209,7 @@ export default function Step4BookingSummary({
       >
         <div className="flex items-center gap-2">
           <ReceiptIcon className="size-5 text-primary" />
-          <h2 className="text-lg font-semibold">Booking Summary</h2>
+          <h2 className="text-lg font-semibold">Price Summary</h2>
         </div>
 
         <div className="divide-y rounded-xl border bg-card shadow-sm">
@@ -242,7 +254,10 @@ export default function Step4BookingSummary({
                   className="flex items-center justify-between"
                 >
                   <span className="text-muted-foreground">{cat.name}</span>
-                  <div className="flex items-center gap-3">
+                  <div className="flex flex-wrap items-center justify-end gap-2 text-right">
+                    <span className="text-xs font-medium text-muted-foreground">
+                      {formatCurrency(cat.unitPrice)}
+                    </span>
                     <span className="text-xs font-medium text-muted-foreground">
                       x{cat.qty}
                     </span>
@@ -274,7 +289,7 @@ export default function Step4BookingSummary({
                     <div className="flex justify-between text-muted-foreground">
                       <span>PPN ({vatPct}%)</span>
                       <span className="font-medium text-foreground">
-                        {formatCurrency(ppn)}
+                        {formatCurrency(pricing.ppn)}
                       </span>
                     </div>
                     {pricing.agentCommission > 0 && (
@@ -394,36 +409,44 @@ export default function Step4BookingSummary({
 
             {/* Two-button toggle */}
             <div className="flex items-center justify-between rounded-lg border bg-muted/20 p-2">
-              <div className="flex items-center gap-1 rounded-md bg-muted/40 p-0.5">
-                <button
-                  type="button"
-                  className={cn(
-                    'rounded-md px-3 py-1.5 text-xs font-medium transition-all',
-                    paymentType === 'down_payment'
-                      ? 'bg-primary text-primary-foreground shadow-sm'
-                      : 'text-muted-foreground hover:text-foreground',
-                  )}
-                  onClick={() => setPaymentType('down_payment')}
-                >
-                  {dpLabel}
-                </button>
-                <button
-                  type="button"
-                  className={cn(
-                    'rounded-md px-3 py-1.5 text-xs font-medium transition-all',
-                    paymentType === 'full_payment'
-                      ? 'bg-primary text-primary-foreground shadow-sm'
-                      : 'text-muted-foreground opacity-50 hover:text-foreground',
-                  )}
-                  onClick={() => setPaymentType('full_payment')}
-                >
-                  Full Payment
-                </button>
-              </div>
+              {forceBalancePayment ? (
+                <div className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground shadow-sm">
+                  Balance Payment
+                </div>
+              ) : (
+                <div className="flex items-center gap-1 rounded-md bg-muted/40 p-0.5">
+                  <button
+                    type="button"
+                    className={cn(
+                      'rounded-md px-3 py-1.5 text-xs font-medium transition-all',
+                      paymentType === 'down_payment'
+                        ? 'bg-primary text-primary-foreground shadow-sm'
+                        : 'text-muted-foreground hover:text-foreground',
+                    )}
+                    onClick={() => setPaymentType('down_payment')}
+                  >
+                    {dpLabel}
+                  </button>
+                  <button
+                    type="button"
+                    className={cn(
+                      'rounded-md px-3 py-1.5 text-xs font-medium transition-all',
+                      paymentType === 'full_payment'
+                        ? 'bg-primary text-primary-foreground shadow-sm'
+                        : 'text-muted-foreground opacity-50 hover:text-foreground',
+                    )}
+                    onClick={() => setPaymentType('full_payment')}
+                  >
+                    Full Payment
+                  </button>
+                </div>
+              )}
 
               <div className="text-right">
                 <p className="text-[10px] text-muted-foreground">
-                  {paymentType === 'down_payment'
+                  {forceBalancePayment
+                    ? 'Remaining Balance'
+                    : paymentType === 'down_payment'
                     ? 'DP Amount'
                     : 'Full Payment Amount'}
                 </p>
@@ -437,6 +460,22 @@ export default function Step4BookingSummary({
                 </motion.p>
               </div>
             </div>
+            {forceBalancePayment && (
+              <div className="mt-3 grid gap-2 text-xs text-muted-foreground sm:grid-cols-2">
+                <div className="rounded-lg bg-muted/40 px-3 py-2">
+                  Paid amount:{' '}
+                  <span className="font-semibold text-foreground">
+                    {formatCurrency(paidAmount)}
+                  </span>
+                </div>
+                <div className="rounded-lg bg-muted/40 px-3 py-2">
+                  Remaining:{' '}
+                  <span className="font-semibold text-primary">
+                    {formatCurrency(remainingBalance)}
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* ─── Grand Total + Pay Now ──────────────────────────────────── */}
@@ -452,7 +491,14 @@ export default function Step4BookingSummary({
                 >
                   {formatCurrency(grandTotal)}
                 </motion.p>
-                {paymentType === 'down_payment' && (
+                {forceBalancePayment ? (
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    Pay remaining balance:{' '}
+                    <span className="font-bold text-primary">
+                      {formatCurrency(payAmount)}
+                    </span>
+                  </p>
+                ) : paymentType === 'down_payment' && (
                   <p className="mt-0.5 text-xs text-muted-foreground">
                     Pay now:{' '}
                     <span className="font-bold text-primary">

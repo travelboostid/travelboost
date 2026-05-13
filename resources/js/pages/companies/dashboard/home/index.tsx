@@ -1,31 +1,18 @@
 import CompanyDashboardLayout from '@/components/layouts/company-dashboard';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import usePageProps from '@/hooks/use-page-props';
+import { formatIDR } from '@/lib/utils';
 import { Head, Link } from '@inertiajs/react';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
-import { Bell } from 'lucide-react';
-import { useState } from 'react';
+import { Bell, LayoutDashboard, Sparkles } from 'lucide-react';
 import { ChartAreaInteractive } from './components/chart-area-interactive';
 import { SectionCards } from './components/section-cards';
 import SubscriptionAlert from './components/subscription-alert';
-import { TopLists } from './components/top-lists';
 
 dayjs.extend(relativeTime);
 
-export type HomePageProps = {
-  agentSubscription: any | null;
-  stats: any;
-  chartData: any[];
-  topDestinations: any[];
-  topAgents: any[];
-  recentNotifications: any[];
-  unreadNotificationsCount: number;
-};
-
 export default function Home() {
-  const [isNotifExpanded, setIsNotifExpanded] = useState(false);
-
   const {
     company,
     stats,
@@ -34,125 +21,124 @@ export default function Home() {
     topAgents,
     recentNotifications = [],
     unreadNotificationsCount = 0,
-  } = usePageProps<HomePageProps>();
-
-  const displayedNotifications = isNotifExpanded
-    ? recentNotifications
-    : recentNotifications.slice(0, 2);
+  } = usePageProps<any>();
 
   return (
     <CompanyDashboardLayout
       activeMenuIds={[`home`]}
-      breadcrumb={[{ title: 'Dashboard', url: '/dashboard' }]}
+      breadcrumb={[{ title: 'Dashboard' }]}
+      containerClassName="bg-slate-50/30 dark:bg-slate-950 min-h-screen"
     >
-      <Head title="Performance Dashboard" />
-      <div className="grid grid-cols-1 gap-6 p-6 bg-slate-50/50 min-h-screen">
-        <div className="flex flex-col lg:flex-row justify-between items-start gap-6">
-          <div className="flex flex-col gap-6 w-full">
-            {company.type === 'agent' && <SubscriptionAlert />}
-            <div className="flex flex-col gap-2">
-              <h1 className="text-2xl font-bold tracking-tight">
-                Welcome back, {company.name}!
+      <Head title="Executive Overview" />
+      <div className="p-4 lg:p-8">
+        <div className="max-w-7xl mx-auto space-y-8">
+          <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-extrabold tracking-tight text-slate-4000 dark:text-slate-100">
+                Dashboard
               </h1>
-              <p className="text-muted-foreground">
-                Monitor performance and accelerate your growth today.
+              <p className="text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-2">
+                <LayoutDashboard size={14} /> Global performance analytics for{' '}
+                {company.name}
               </p>
             </div>
-          </div>
-
-          <Card className="w-full lg:w-[350px] shrink-0 border-none shadow-sm bg-white">
-            <CardHeader className="py-2 px-3 flex flex-row items-center justify-between border-b border-slate-100">
-              <div className="flex items-center gap-2">
-                <div className="relative flex items-center justify-center">
-                  <Bell className="h-4 w-4 text-slate-600" />
-                  {unreadNotificationsCount > 0 && (
-                    <span className="absolute -top-0.5 -right-0.5 flex h-2 w-2">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
-                    </span>
-                  )}
-                </div>
-                <CardTitle className="text-sm font-bold text-slate-800">
-                  Notification
-                </CardTitle>
-              </div>
-              {unreadNotificationsCount > 0 && (
-                <span className="text-[9px] font-bold bg-red-100 text-red-600 px-1.5 py-0.5 rounded-full">
-                  {unreadNotificationsCount} Unread
+            <div className="flex items-center gap-3">
+              <div className="hidden lg:flex flex-col items-end mr-4">
+                <span className="text-xs text-slate-400 dark:text-slate-500 uppercase font-bold tracking-widest">
+                  Wallet Balance
                 </span>
-              )}
-            </CardHeader>
-            <CardContent className="p-0 flex flex-col">
-              {recentNotifications.length > 0 ? (
-                <>
-                  <div className="divide-y divide-slate-50">
-                    {displayedNotifications.map((notif: any) => (
-                      <div
-                        key={notif.id}
-                        className="p-3 flex items-start gap-3 hover:bg-slate-50 transition-colors"
-                      >
-                        <div className="mt-1 shrink-0">
-                          {!notif.read_at ? (
-                            <div className="h-1.5 w-1.5 rounded-full bg-red-500" />
-                          ) : (
-                            <div className="h-1.5 w-1.5 rounded-full bg-slate-200" />
-                          )}
-                        </div>
-                        <div className="flex flex-col overflow-hidden">
-                          <span className="text-xs font-medium text-slate-700 truncate">
-                            {notif.data?.title ||
-                              notif.data?.message ||
-                              'New Notification'}
-                          </span>
-                          <span className="text-[9px] text-slate-400 mt-0.5">
-                            {dayjs(notif.created_at).fromNow()}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="px-3 py-2 border-t border-slate-50 flex items-center justify-between bg-slate-50/50">
-                    {recentNotifications.length > 2 ? (
-                      <button
-                        onClick={() => setIsNotifExpanded(!isNotifExpanded)}
-                        className="text-[10px] font-semibold text-slate-500 hover:text-slate-700 transition-colors"
-                      >
-                        {isNotifExpanded
-                          ? 'Show Less'
-                          : `View ${recentNotifications.length - 2} More`}
-                      </button>
-                    ) : (
-                      <div />
-                    )}
-                    <Link
-                      href={`/companies/${company.username}/dashboard/notifications`}
-                      className="text-[10px] font-semibold text-primary hover:underline"
-                    >
-                      See All
-                    </Link>
-                  </div>
-                </>
-              ) : (
-                <div className="p-4 text-center text-xs text-muted-foreground">
-                  You have no new notifications.
+                <span className="text-xl font-black text-slate-900 dark:text-slate-100">
+                  {formatIDR(stats.wallet?.balance || 0)}
+                </span>
+              </div>
+              <Link
+                href={`/companies/${company.username}/dashboard/notifications`}
+                className="relative p-2.5 bg-white dark:bg-slate-900 rounded-full ring-1 ring-slate-200 dark:ring-slate-800 shadow-sm transition-all hover:ring-2 hover:ring-primary/20"
+              >
+                <Bell
+                  size={20}
+                  className="text-slate-600 dark:text-slate-400"
+                />
+                {unreadNotificationsCount > 0 && (
+                  <span className="absolute top-0 right-0 h-4 w-4 bg-red-500 rounded-full border-2 border-white dark:border-slate-900 text-[10px] font-bold text-white flex items-center justify-center">
+                    {unreadNotificationsCount}
+                  </span>
+                )}
+              </Link>
+            </div>
+          </header>
+
+          {company.type === 'agent' && <SubscriptionAlert />}
+
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            <div className="lg:col-span-3 space-y-6">
+              <SectionCards stats={stats} company={company} />
+              <div className="bg-white dark:bg-slate-900 rounded-3xl p-2 shadow-sm ring-1 ring-slate-200 dark:ring-slate-800">
+                <ChartAreaInteractive data={chartData} />
+              </div>
+            </div>
+
+            <div className="space-y-6">
+              <Card className="rounded-3xl border-none bg-primary text-primary-foreground shadow-sm overflow-hidden relative">
+                <div className="absolute -right-4 -bottom-4 opacity-20">
+                  <Sparkles size={120} />
                 </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+                <CardContent className="p-6">
+                  <span className="text-primary-foreground/80 text-[10px] font-black uppercase tracking-[0.2em]">
+                    AI Capabilities
+                  </span>
+                  <h3 className="text-2xl font-bold mt-2">
+                    {formatIDR(stats.ai_credit || 0)}
+                  </h3>
+                  <p className="text-xs text-primary-foreground/80 mt-1">
+                    Available Credits
+                  </p>
+                  <Link
+                    href={`/companies/${company.username}/dashboard/${company.type === 'agent' ? 'chatbot' : 'ai-credits'}`}
+                  >
+                    <button className="mt-6 w-full py-2.5 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-xl text-xs font-bold transition-all border border-white/20">
+                      Recharge Now
+                    </button>
+                  </Link>
+                </CardContent>
+              </Card>
 
-        <SectionCards stats={stats} company={company} />
+              {/* <TopLists
+                destinations={topDestinations}
+                agents={topAgents}
+                type={company.type}
+              /> */}
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2">
-            <ChartAreaInteractive data={chartData} />
-          </div>
-          <div className="lg:col-span-1">
-            <TopLists
-              destinations={topDestinations}
-              agents={topAgents}
-              type={company.type}
-            />
+              <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 ring-1 ring-slate-200 dark:ring-slate-800 shadow-sm">
+                <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center justify-between">
+                  Activity Feed
+                  <Link
+                    href={`/companies/${company.username}/dashboard/notifications`}
+                    className="text-xs text-primary hover:underline"
+                  >
+                    View All
+                  </Link>
+                </h4>
+                <div className="mt-6 space-y-5">
+                  {recentNotifications.slice(0, 3).map((notif: any) => (
+                    <div
+                      key={notif.id}
+                      className="flex gap-4 group cursor-default"
+                    >
+                      <div className="w-1 h-8 rounded-full bg-slate-100 dark:bg-slate-800 group-hover:bg-primary transition-colors" />
+                      <div>
+                        <p className="text-xs font-bold text-slate-800 dark:text-slate-200 line-clamp-1">
+                          {notif.data?.title || notif.data?.message}
+                        </p>
+                        <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5 uppercase tracking-tighter font-medium">
+                          {dayjs(notif.created_at).fromNow()}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
