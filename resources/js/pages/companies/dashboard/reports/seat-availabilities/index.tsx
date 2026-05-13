@@ -18,6 +18,7 @@ type Schedule = {
   DP: number;
   FP: number;
   WA: number;
+  WPA: number;
   BRS: number;
   CA: number;
   RF: number;
@@ -289,7 +290,7 @@ export default function SeatAvailabilityIndex({
                               schedule.WP +
                               schedule.DP +
                               schedule.FP +
-                              schedule.WA +
+                              schedule.WPA +
                               schedule.BRS +
                               schedule.CA +
                               schedule.RF +
@@ -336,7 +337,7 @@ export default function SeatAvailabilityIndex({
                                 </td>
 
                                 <td className="border px-3 py-3 text-center">
-                                  {schedule.WA}
+                                  {schedule.WPA}
                                 </td>
 
                                 <td className="border px-3 py-3 text-center">
