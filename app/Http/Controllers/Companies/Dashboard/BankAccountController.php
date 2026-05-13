@@ -7,8 +7,6 @@ use App\Http\Requests\CreateBankAccountRequest;
 use App\Http\Requests\UpdateBankAccountRequest;
 use App\Models\BankAccount;
 use App\Models\Company;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 
 class BankAccountController extends Controller
@@ -30,12 +28,12 @@ class BankAccountController extends Controller
   // Store a new bank account for the specified company
   public function store(CreateBankAccountRequest $request, Company $company)
   {
-    $company->bankAccounts()->create($request->validated());
+    $account = $company->bankAccounts()->create($request->validated());
 
     // If this account is marked as default, unset previous defaults
     if ($request->validated()['is_default'] ?? false) {
-      BankAccount::where('user_id', Auth::id())
-        ->where('is_default', true)
+      $company->bankAccounts()
+        ->where('id', '!=', $account->id)
         ->update(['is_default' => false]);
     }
 
@@ -46,6 +44,11 @@ class BankAccountController extends Controller
   public function update(UpdateBankAccountRequest $request, Company $company, BankAccount $bankAccount)
   {
     $bankAccount->update($request->validated());
+    if ($request->validated()['is_default'] ?? false) {
+      $company->bankAccounts()
+        ->where('id', '!=', $bankAccount->id)
+        ->update(['is_default' => false]);
+    }
     return back(); // Redirect back after updating
   }
 

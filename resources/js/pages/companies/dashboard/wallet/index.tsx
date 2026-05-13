@@ -21,6 +21,7 @@ export type WalletPageProps = {
     growth_pct: number;
   };
   transactions: any[];
+  wallet: any;
 };
 
 export default function WalletPage() {

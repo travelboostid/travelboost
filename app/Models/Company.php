@@ -188,4 +188,9 @@ class Company extends Model
   {
     return $this->hasOne(CompanySettings::class, 'company_id');
   }
+
+  public function withdrawals()
+  {
+    return $this->morphMany(Withdrawal::class, 'owner');
+  }
 }
