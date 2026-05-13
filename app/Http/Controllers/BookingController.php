@@ -87,20 +87,53 @@ class BookingController extends Controller
         $user = request()->user();
         $existingBooking = null;
         $isResumingExistingBooking = false;
+        $requestedBookingNumber = request()->string('booking_number')->toString();
 
         if ($user && $schedule) {
-            $existingBooking = Booking::with('passengers')
-                ->where('user_id', $user->id)
-                ->where('tour_id', $tour->id)
-                ->whereIn('status', [
-                    BookingStatus::AWAITING_PAYMENT,
-                    BookingStatus::BOOKING_RESERVED,
-                    BookingStatus::WAITING_PAYMENT_APPROVAL,
-                    BookingStatus::RESERVED,
-                ])
-                ->whereDate('departure_date', request()->query('date'))
-                ->latest()
-                ->first();
+            $resumableStatuses = [
+                BookingStatus::AWAITING_PAYMENT,
+                BookingStatus::BOOKING_RESERVED,
+                BookingStatus::WAITING_PAYMENT_APPROVAL,
+                BookingStatus::DOWN_PAYMENT,
+                BookingStatus::RESERVED,
+                BookingStatus::EXPIRED,
+            ];
+
+            if ($requestedBookingNumber !== '') {
+                $existingBooking = Booking::with(['passengers', 'rooms'])
+                    ->where('booking_number', $requestedBookingNumber)
+                    ->where('user_id', $user->id)
+                    ->where('tour_id', $tour->id)
+                    ->whereIn('status', $resumableStatuses)
+                    ->whereDate('departure_date', request()->query('date'))
+                    ->whereDate('departure_date', '>=', now()->toDateString())
+                    ->latest()
+                    ->first();
+            }
+
+            if (! $existingBooking) {
+                $existingBooking = Booking::with(['passengers', 'rooms'])
+                    ->where('user_id', $user->id)
+                    ->where('tour_id', $tour->id)
+                    ->whereIn('status', array_filter(
+                        $resumableStatuses,
+                        fn (BookingStatus $status): bool => $status !== BookingStatus::EXPIRED
+                    ))
+                    ->whereDate('departure_date', request()->query('date'))
+                    ->latest()
+                    ->first();
+            }
+
+            if (! $existingBooking) {
+                $existingBooking = Booking::with(['passengers', 'rooms'])
+                    ->where('user_id', $user->id)
+                    ->where('tour_id', $tour->id)
+                    ->where('status', BookingStatus::EXPIRED)
+                    ->whereDate('departure_date', request()->query('date'))
+                    ->whereDate('departure_date', '>=', now()->toDateString())
+                    ->latest()
+                    ->first();
+            }
 
             if ($existingBooking) {
                 $bookingNumber = $existingBooking->booking_number;
@@ -128,6 +161,15 @@ class BookingController extends Controller
                 ]);
             }
         }
+
+        $paidAmount = $existingBooking
+            ? (float) $existingBooking->payments()
+                ->where('status', PaymentStatus::PAID->value)
+                ->sum('amount')
+            : 0.0;
+        $remainingBalance = $existingBooking
+            ? max(0.0, (float) $existingBooking->grand_total - $paidAmount)
+            : 0.0;
 
         $tour->setRelation(
             'schedules',
@@ -177,6 +219,8 @@ class BookingController extends Controller
             'isResumingExistingBooking' => $isResumingExistingBooking,
             'reservedExpiresAt' => $existingBooking?->reserved_expires_at?->toIso8601String(),
             'remainingHoldSeconds' => $this->remainingHoldSeconds($existingBooking),
+            'paidAmount' => $paidAmount,
+            'remainingBalance' => $remainingBalance,
         ]);
     }
 
@@ -300,6 +344,37 @@ class BookingController extends Controller
         app(SyncAvailabilityAction::class)->executeForBooking($booking->fresh());
 
         return back();
+    }
+
+    public function reorder(Request $request, Booking $booking): RedirectResponse
+    {
+        abort_unless($request->user()?->id === $booking->user_id, 403);
+
+        $booking = app(ExpireBookingReservationsAction::class)->expireIfDue($booking);
+        $booking->loadMissing(['agent', 'vendor', 'tour']);
+
+        abort_unless($booking->status === BookingStatus::EXPIRED, 422);
+        abort_unless($booking->departure_date?->isToday() || $booking->departure_date?->isFuture(), 422);
+
+        DB::transaction(function () use ($booking): void {
+            $booking->update([
+                'status' => BookingStatus::AWAITING_PAYMENT,
+                'reserved_type' => 'system',
+                'reserved_expires_at' => null,
+            ]);
+        });
+
+        app(SyncAvailabilityAction::class)->executeForBooking($booking->fresh());
+
+        $tenantUsername = $booking->agent?->username ?? $booking->vendor?->username;
+        abort_unless($tenantUsername && $booking->tour, 422);
+
+        return redirect()->route('bookings.create', [
+            'username' => $tenantUsername,
+            'tour' => $booking->tour,
+            'date' => $booking->departure_date->toDateString(),
+            'booking_number' => $booking->booking_number,
+        ]);
     }
 
     public function storeManualPayment(Request $request, string|Booking $usernameOrBooking, ?Booking $booking = null): RedirectResponse

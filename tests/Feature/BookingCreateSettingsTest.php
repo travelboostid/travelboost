@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\BookingStatus;
+use App\Enums\PaymentStatus;
 use App\Models\Booking;
 use App\Models\Company;
 use App\Models\Domain;
@@ -43,6 +44,7 @@ test('booking create passes vendor settings to the frontend and applies schedule
         'owner_type' => Company::class,
         'owner_id' => $company->id,
         'domain_enabled' => true,
+        'subdomain_enabled' => true,
     ]);
 
     $tour = Tour::factory()->create([
@@ -105,6 +107,7 @@ test('reserve rejects extra bed passengers without a twin or double base room', 
         'owner_type' => Company::class,
         'owner_id' => $company->id,
         'domain_enabled' => true,
+        'subdomain_enabled' => true,
     ]);
 
     $response = $this->actingAs($user)
@@ -174,6 +177,7 @@ test('reserve stores server hold expiry using ten minute fallback when setting i
         'owner_type' => Company::class,
         'owner_id' => $company->id,
         'domain_enabled' => true,
+        'subdomain_enabled' => true,
     ]);
 
     $this->actingAs($user)
@@ -220,6 +224,7 @@ test('booking create returns server remaining hold seconds when resuming reserve
         'owner_type' => Company::class,
         'owner_id' => $company->id,
         'domain_enabled' => true,
+        'subdomain_enabled' => true,
     ]);
 
     $tour = Tour::factory()->create([
@@ -283,6 +288,7 @@ test('store maps payment method to booking payment mode', function () {
         'owner_type' => Company::class,
         'owner_id' => $company->id,
         'domain_enabled' => true,
+        'subdomain_enabled' => true,
     ]);
     $departureDate = now()->addDays(20)->toDateString();
     $this->actingAs($user)
@@ -343,6 +349,7 @@ test('store persists room arrangement and travel document data', function () {
         'owner_type' => Company::class,
         'owner_id' => $company->id,
         'domain_enabled' => true,
+        'subdomain_enabled' => true,
     ]);
 
     $response = $this->actingAs($user)
@@ -442,6 +449,7 @@ test('auto created booking for a selected schedule does not skip terms gate as a
         'owner_type' => Company::class,
         'owner_id' => $company->id,
         'domain_enabled' => true,
+        'subdomain_enabled' => true,
     ]);
 
     $tour = Tour::factory()->create([
@@ -478,5 +486,371 @@ test('auto created booking for a selected schedule does not skip terms gate as a
     $response->assertInertia(fn ($page) => $page
         ->component('tours/bookings/create')
         ->has('existingBooking')
+        ->where('isResumingExistingBooking', false));
+});
+
+test('booking create exposes paid and remaining balances for down payment bookings', function () {
+    $user = User::factory()->create();
+    $company = Company::factory()->create([
+        'username' => 'balancevendor',
+        'type' => 'vendor',
+    ]);
+
+    Domain::create([
+        'subdomain' => 'balancevendor',
+        'owner_type' => Company::class,
+        'owner_id' => $company->id,
+        'domain_enabled' => true,
+        'subdomain_enabled' => true,
+    ]);
+
+    $tour = Tour::factory()->create([
+        'company_id' => $company->id,
+        'status' => 'active',
+    ]);
+
+    $schedule = TourSchedule::create([
+        'tour_id' => $tour->id,
+        'tour_code' => $tour->code,
+        'company_id' => $company->id,
+        'departure_date' => now()->addDays(20)->toDateString(),
+        'return_date' => now()->addDays(25)->toDateString(),
+        'is_active' => true,
+    ]);
+
+    TourAvailability::create([
+        'company_id' => $company->id,
+        'tour_id' => $tour->id,
+        'schedule_id' => $schedule->id,
+        'max_pax' => 10,
+        'available' => 8,
+    ]);
+
+    $booking = Booking::factory()->create([
+        'user_id' => $user->id,
+        'vendor_id' => $company->id,
+        'tour_id' => $tour->id,
+        'departure_date' => $schedule->departure_date,
+        'status' => BookingStatus::DOWN_PAYMENT,
+        'grand_total' => 1_000_000,
+    ]);
+
+    $booking->payments()->create([
+        'owner_type' => User::class,
+        'owner_id' => $user->id,
+        'provider' => 'manual',
+        'payment_method' => 'bank_transfer',
+        'amount' => 250_000,
+        'status' => PaymentStatus::PAID,
+    ]);
+
+    $response = $this->actingAs($user)->get(
+        route('bookings.create', [
+            'username' => 'balancevendor',
+            'tour' => $tour,
+            'date' => $schedule->departure_date,
+        ])
+    );
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->component('tours/bookings/create')
+        ->where('isResumingExistingBooking', true)
+        ->where('paidAmount', 250000)
+        ->where('remainingBalance', 750000));
+});
+
+test('expired future booking can be reordered with the same booking number', function () {
+    $user = User::factory()->create();
+    $company = Company::factory()->create([
+        'username' => 'reordervendor',
+        'type' => 'vendor',
+    ]);
+
+    Domain::create([
+        'subdomain' => 'reordervendor',
+        'owner_type' => Company::class,
+        'owner_id' => $company->id,
+        'domain_enabled' => true,
+        'subdomain_enabled' => true,
+    ]);
+
+    $tour = Tour::factory()->create([
+        'company_id' => $company->id,
+        'status' => 'active',
+    ]);
+    $schedule = TourSchedule::create([
+        'tour_id' => $tour->id,
+        'tour_code' => $tour->code,
+        'company_id' => $company->id,
+        'departure_date' => now()->addDays(20)->toDateString(),
+        'return_date' => now()->addDays(25)->toDateString(),
+        'is_active' => true,
+    ]);
+    TourAvailability::create([
+        'company_id' => $company->id,
+        'tour_id' => $tour->id,
+        'schedule_id' => $schedule->id,
+        'max_pax' => 10,
+        'available' => 10,
+    ]);
+
+    Booking::factory()->create([
+        'booking_number' => 'BKG-REORDER-EXPIRED',
+        'user_id' => $user->id,
+        'vendor_id' => $company->id,
+        'tour_id' => $tour->id,
+        'departure_date' => $schedule->departure_date,
+        'status' => BookingStatus::EXPIRED,
+        'reserved_type' => 'system',
+        'reserved_expires_at' => null,
+    ]);
+
+    $response = $this->actingAs($user)->get(
+        route('bookings.create', [
+            'username' => 'reordervendor',
+            'tour' => $tour,
+            'date' => $schedule->departure_date,
+            'booking_number' => 'BKG-REORDER-EXPIRED',
+        ])
+    );
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->component('tours/bookings/create')
+        ->where('bookingNumber', 'BKG-REORDER-EXPIRED')
+        ->where('existingBooking.booking_number', 'BKG-REORDER-EXPIRED')
+        ->where('isResumingExistingBooking', true)
+        ->where('reservedExpiresAt', null)
+        ->where('remainingHoldSeconds', null));
+});
+
+test('expired future booking can be reset through reorder endpoint with the same booking number', function () {
+    $user = User::factory()->create();
+    $company = Company::factory()->create([
+        'username' => 'endpointreordervendor',
+        'type' => 'vendor',
+    ]);
+
+    Domain::create([
+        'subdomain' => 'endpointreordervendor',
+        'owner_type' => Company::class,
+        'owner_id' => $company->id,
+        'domain_enabled' => true,
+        'subdomain_enabled' => true,
+    ]);
+
+    $tour = Tour::factory()->create([
+        'company_id' => $company->id,
+        'status' => 'active',
+    ]);
+    $schedule = TourSchedule::create([
+        'tour_id' => $tour->id,
+        'tour_code' => $tour->code,
+        'company_id' => $company->id,
+        'departure_date' => now()->addDays(20)->toDateString(),
+        'return_date' => now()->addDays(25)->toDateString(),
+        'is_active' => true,
+    ]);
+    TourAvailability::create([
+        'company_id' => $company->id,
+        'tour_id' => $tour->id,
+        'schedule_id' => $schedule->id,
+        'max_pax' => 10,
+        'available' => 10,
+    ]);
+
+    $booking = Booking::factory()->create([
+        'booking_number' => 'BKG-REORDER-ENDPOINT',
+        'user_id' => $user->id,
+        'vendor_id' => $company->id,
+        'tour_id' => $tour->id,
+        'departure_date' => $schedule->departure_date,
+        'status' => BookingStatus::EXPIRED,
+        'reserved_type' => 'system',
+        'reserved_expires_at' => null,
+    ]);
+    $booking->passengers()->create([
+        'first_name' => 'Reuse',
+        'last_name' => 'Guest',
+        'price_category' => 'Adult Twin',
+        'price_amount' => 1_000_000,
+        'room_number' => '1',
+    ]);
+    $booking->rooms()->create([
+        'room_type' => 'twin',
+        'room_label' => 'Room 1',
+        'bed_layout' => [
+            ['bedType' => 'twin', 'guestId' => 'adult-0', 'position' => ['x' => 0, 'y' => 0]],
+        ],
+    ]);
+    Booking::factory()->create([
+        'booking_number' => 'BKG-COMPETING-HOLD',
+        'user_id' => $user->id,
+        'vendor_id' => $company->id,
+        'tour_id' => $tour->id,
+        'departure_date' => $schedule->departure_date,
+        'status' => BookingStatus::BOOKING_RESERVED,
+        'reserved_type' => 'system',
+        'reserved_expires_at' => now()->addMinutes(10),
+    ]);
+
+    $response = $this->actingAs($user)->post("/bookings/{$booking->id}/reorder");
+
+    $response->assertRedirect(route('bookings.create', [
+        'username' => 'endpointreordervendor',
+        'tour' => $tour,
+        'date' => $schedule->departure_date,
+        'booking_number' => 'BKG-REORDER-ENDPOINT',
+    ]));
+    $this->assertDatabaseHas('bookings', [
+        'id' => $booking->id,
+        'booking_number' => 'BKG-REORDER-ENDPOINT',
+        'status' => BookingStatus::AWAITING_PAYMENT->value,
+        'reserved_expires_at' => null,
+    ]);
+    expect($booking->fresh()->passengers)->toHaveCount(1)
+        ->and($booking->fresh()->rooms)->toHaveCount(1);
+
+    $createResponse = $this->actingAs($user)->get(route('bookings.create', [
+        'username' => 'endpointreordervendor',
+        'tour' => $tour,
+        'date' => $schedule->departure_date,
+        'booking_number' => 'BKG-REORDER-ENDPOINT',
+    ]));
+
+    $createResponse->assertOk();
+    $createResponse->assertInertia(fn ($page) => $page
+        ->component('tours/bookings/create')
+        ->where('bookingNumber', 'BKG-REORDER-ENDPOINT')
+        ->where('existingBooking.booking_number', 'BKG-REORDER-ENDPOINT'));
+});
+
+test('selecting the same schedule reuses a future expired booking number without query parameter', function () {
+    $user = User::factory()->create();
+    $company = Company::factory()->create([
+        'username' => 'sameexpiredvendor',
+        'type' => 'vendor',
+    ]);
+
+    Domain::create([
+        'subdomain' => 'sameexpiredvendor',
+        'owner_type' => Company::class,
+        'owner_id' => $company->id,
+        'domain_enabled' => true,
+        'subdomain_enabled' => true,
+    ]);
+
+    $tour = Tour::factory()->create([
+        'company_id' => $company->id,
+        'status' => 'active',
+    ]);
+    $schedule = TourSchedule::create([
+        'tour_id' => $tour->id,
+        'tour_code' => $tour->code,
+        'company_id' => $company->id,
+        'departure_date' => now()->addDays(20)->toDateString(),
+        'return_date' => now()->addDays(25)->toDateString(),
+        'is_active' => true,
+    ]);
+    TourAvailability::create([
+        'company_id' => $company->id,
+        'tour_id' => $tour->id,
+        'schedule_id' => $schedule->id,
+        'max_pax' => 10,
+        'available' => 10,
+    ]);
+
+    Booking::factory()->create([
+        'booking_number' => 'BKG-SAME-SCHEDULE',
+        'user_id' => $user->id,
+        'vendor_id' => $company->id,
+        'tour_id' => $tour->id,
+        'departure_date' => $schedule->departure_date,
+        'status' => BookingStatus::EXPIRED,
+        'reserved_type' => 'system',
+        'reserved_expires_at' => null,
+    ]);
+
+    $response = $this->actingAs($user)->get(
+        route('bookings.create', [
+            'username' => 'sameexpiredvendor',
+            'tour' => $tour,
+            'date' => $schedule->departure_date,
+        ])
+    );
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->component('tours/bookings/create')
+        ->where('bookingNumber', 'BKG-SAME-SCHEDULE')
+        ->where('existingBooking.booking_number', 'BKG-SAME-SCHEDULE')
+        ->where('isResumingExistingBooking', true));
+    expect(Booking::where('user_id', $user->id)
+        ->where('tour_id', $tour->id)
+        ->whereDate('departure_date', $schedule->departure_date)
+        ->count())->toBe(1);
+});
+
+test('expired past booking number is not reused for reorder', function () {
+    $user = User::factory()->create();
+    $company = Company::factory()->create([
+        'username' => 'pastreordervendor',
+        'type' => 'vendor',
+    ]);
+
+    Domain::create([
+        'subdomain' => 'pastreordervendor',
+        'owner_type' => Company::class,
+        'owner_id' => $company->id,
+        'domain_enabled' => true,
+        'subdomain_enabled' => true,
+    ]);
+
+    $tour = Tour::factory()->create([
+        'company_id' => $company->id,
+        'status' => 'active',
+    ]);
+    $schedule = TourSchedule::create([
+        'tour_id' => $tour->id,
+        'tour_code' => $tour->code,
+        'company_id' => $company->id,
+        'departure_date' => now()->subDay()->toDateString(),
+        'return_date' => now()->addDays(4)->toDateString(),
+        'is_active' => true,
+    ]);
+    TourAvailability::create([
+        'company_id' => $company->id,
+        'tour_id' => $tour->id,
+        'schedule_id' => $schedule->id,
+        'max_pax' => 10,
+        'available' => 10,
+    ]);
+
+    Booking::factory()->create([
+        'booking_number' => 'BKG-REORDER-PAST',
+        'user_id' => $user->id,
+        'vendor_id' => $company->id,
+        'tour_id' => $tour->id,
+        'departure_date' => $schedule->departure_date,
+        'status' => BookingStatus::EXPIRED,
+        'reserved_type' => 'system',
+        'reserved_expires_at' => null,
+    ]);
+
+    $response = $this->actingAs($user)->get(
+        route('bookings.create', [
+            'username' => 'pastreordervendor',
+            'tour' => $tour,
+            'date' => $schedule->departure_date,
+            'booking_number' => 'BKG-REORDER-PAST',
+        ])
+    );
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->component('tours/bookings/create')
+        ->whereNot('bookingNumber', 'BKG-REORDER-PAST')
+        ->where('existingBooking', null)
         ->where('isResumingExistingBooking', false));
 });

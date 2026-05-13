@@ -99,6 +99,27 @@ type EditableGuestEntry = GuestEntry & {
   passengerId?: number;
 };
 
+function makeEditableDefaultGuest(
+  id: string,
+  type: 'adult' | 'child' | 'infant',
+): EditableGuestEntry {
+  return {
+    id,
+    type,
+    title: '',
+    firstName: '',
+    lastName: '',
+    dateOfBirth: '',
+    placeOfBirth: '',
+    priceCategory: null,
+    tourPriceId: 0,
+    price: 0,
+    originalPrice: 0,
+    roomTypeDescription: '',
+    note: '',
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Helpers — convert DB passengers → wizard GuestEntry[]
 // ---------------------------------------------------------------------------
@@ -303,6 +324,7 @@ function EditableWizard({
     phone: booking.contact_phone ?? '',
     notes: booking.contact_notes ?? '',
   });
+  const [contactGuestId, setContactGuestId] = useState<string | null>(null);
 
   // ── Guests ─────────────────────────────────────────────────────────
   const initialGuests = useMemo(
@@ -352,53 +374,44 @@ function EditableWizard({
       return;
     }
 
-    const makeDefault = (
-      id: string,
-      type: 'adult' | 'child' | 'infant',
-    ): EditableGuestEntry => ({
-      id,
-      type,
-      title: '',
-      firstName: '',
-      lastName: '',
-      dateOfBirth: '',
-      placeOfBirth: '',
-      priceCategory: null,
-      tourPriceId: 0,
-      price: 0,
-      originalPrice: 0,
-      roomTypeDescription: '',
-      note: '',
-    });
-
     setGuests((previousGuests) => {
       const newGuests: EditableGuestEntry[] = [];
+      const contactGuest =
+        contactGuestId !== null
+          ? ((previousGuests.find((guest) => guest.id === contactGuestId) as
+              | EditableGuestEntry
+              | undefined) ?? makeEditableDefaultGuest(contactGuestId, 'adult'))
+          : null;
+      const adultSlots = contactGuest ? Math.max(0, adults - 1) : adults;
 
-      for (let i = 0; i < adults; i++) {
+      for (let i = 0; i < adultSlots; i++) {
         newGuests.push(
           (previousGuests.find((g) => g.id === `adult-${i}`) as
             | EditableGuestEntry
-            | undefined) ?? makeDefault(`adult-${i}`, 'adult'),
+            | undefined) ?? makeEditableDefaultGuest(`adult-${i}`, 'adult'),
         );
+      }
+      if (contactGuest) {
+        newGuests.push(contactGuest);
       }
       for (let i = 0; i < children; i++) {
         newGuests.push(
           (previousGuests.find((g) => g.id === `child-${i}`) as
             | EditableGuestEntry
-            | undefined) ?? makeDefault(`child-${i}`, 'child'),
+            | undefined) ?? makeEditableDefaultGuest(`child-${i}`, 'child'),
         );
       }
       for (let i = 0; i < infants; i++) {
         newGuests.push(
           (previousGuests.find((g) => g.id === `infant-${i}`) as
             | EditableGuestEntry
-            | undefined) ?? makeDefault(`infant-${i}`, 'infant'),
+            | undefined) ?? makeEditableDefaultGuest(`infant-${i}`, 'infant'),
         );
       }
 
       return newGuests;
     });
-  }, [adults, children, infants]);
+  }, [adults, children, contactGuestId, infants]);
 
   useEffect(() => {
     const docsGuests = guests.filter((g) => g.type !== 'infant');
@@ -500,6 +513,10 @@ function EditableWizard({
 
   const handleGuestRemove = useCallback(
     (guestId: string) => {
+      if (guestId === contactGuestId) {
+        setContactGuestId(null);
+      }
+
       const newGuests = guests.filter((g) => g.id !== guestId);
       if (newGuests.length === guests.length) return;
 
@@ -509,7 +526,47 @@ function EditableWizard({
       setChildren(newGuests.filter((g) => g.type === 'child').length);
       setInfants(newGuests.filter((g) => g.type === 'infant').length);
     },
-    [guests],
+    [contactGuestId, guests],
+  );
+
+  const handleContactGuestToggle = useCallback(
+    (enabled: boolean) => {
+      if (enabled) {
+        const contactName = contact.name.trim();
+        if (!contactName || adults + children >= 99) {
+          return;
+        }
+
+        const nameParts = contactName.split(/\s+/).filter(Boolean);
+        if (nameParts.length === 0) {
+          return;
+        }
+
+        const guestId = 'contact-guest';
+        if (guests.some((guest) => guest.id === guestId)) {
+          setContactGuestId(guestId);
+          return;
+        }
+
+        skipGuestSyncRef.current = true;
+        setGuests((prev) => [
+          ...prev,
+          {
+            ...makeEditableDefaultGuest(guestId, 'adult'),
+            firstName: nameParts[0] ?? '',
+            lastName: nameParts.slice(1).join(' '),
+          },
+        ]);
+        setAdults((prev) => prev + 1);
+        setContactGuestId(guestId);
+        return;
+      }
+
+      if (contactGuestId) {
+        handleGuestRemove(contactGuestId);
+      }
+    },
+    [adults, children, contact.name, contactGuestId, guests, handleGuestRemove],
   );
 
   // ── Validation ─────────────────────────────────────────────────────
@@ -723,6 +780,9 @@ function EditableWizard({
                         tourPrices={tourPrices}
                         maxGuests={99}
                         departureDate={departureDate}
+                        contactGuestId={contactGuestId}
+                        onContactGuestToggle={handleContactGuestToggle}
+                        contactAsGuestAdded={contactGuestId !== null}
                       />
                     )}
                     {currentStep === 2 && (

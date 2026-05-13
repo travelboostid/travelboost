@@ -9,7 +9,6 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -31,12 +30,13 @@ import { AnimatePresence, motion } from 'framer-motion';
 import {
   AlertCircleIcon,
   Baby,
+  CheckIcon,
   MinusIcon,
   PhoneIcon,
   PlusIcon,
-  UserPlusIcon,
   UserIcon,
   UserMinusIcon,
+  UserPlusIcon,
   XIcon,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -455,6 +455,10 @@ type Step1Props = {
   maxGuests?: number;
   departureDate: string;
   showAddAsGuest?: boolean;
+  contactGuestId?: string | null;
+  onContactGuestToggle?: (enabled: boolean) => void;
+  contactAsGuestAdded?: boolean;
+  onContactAsGuestAddedChange?: (value: boolean) => void;
 };
 
 export default function Step1GuestInformation({
@@ -473,7 +477,19 @@ export default function Step1GuestInformation({
   maxGuests = 99,
   departureDate,
   showAddAsGuest = true,
+  contactGuestId,
+  onContactGuestToggle,
+  contactAsGuestAdded: controlledContactAsGuestAdded,
+  onContactAsGuestAddedChange,
 }: Step1Props) {
+  const [uncontrolledContactAsGuestAdded, setUncontrolledContactAsGuestAdded] =
+    useState(false);
+  const contactAsGuestAdded =
+    contactGuestId !== undefined
+      ? contactGuestId !== null
+      : (controlledContactAsGuestAdded ?? uncontrolledContactAsGuestAdded);
+  const setContactAsGuestAdded =
+    onContactAsGuestAddedChange ?? setUncontrolledContactAsGuestAdded;
   const filledCount = guests.filter(
     (g) =>
       g.title.trim() !== '' &&
@@ -483,10 +499,15 @@ export default function Step1GuestInformation({
       g.priceCategory !== null,
   ).length;
 
-  const handleAddContactAsGuest = () => {
+  const handleContactGuestToggle = () => {
+    if (onContactGuestToggle) {
+      onContactGuestToggle(!contactAsGuestAdded);
+      return;
+    }
+
     const firstGuest = guests[0];
     const contactName = contact.name.trim();
-    if (!firstGuest || contactName === '') {
+    if (contactAsGuestAdded || !firstGuest || contactName === '') {
       return;
     }
 
@@ -505,13 +526,30 @@ export default function Step1GuestInformation({
       lastName:
         firstGuest.lastName.trim() === '' ? lastName : firstGuest.lastName,
     });
+    setContactAsGuestAdded(true);
   };
 
+  const guestOneHasBlankName =
+    guests.length > 0 &&
+    (guests[0].firstName.trim() === '' || guests[0].lastName.trim() === '');
+  const hasSeatForContactGuest = adults + children < maxGuests;
   const canAddContactAsGuest =
     showAddAsGuest &&
-    guests.length > 0 &&
     contact.name.trim() !== '' &&
-    (guests[0].firstName.trim() === '' || guests[0].lastName.trim() === '');
+    (onContactGuestToggle
+      ? hasSeatForContactGuest
+      : guests.length > 0 && guestOneHasBlankName);
+  const contactAsGuestHint = onContactGuestToggle
+    ? contactAsGuestAdded
+      ? 'Turn off to remove the booking contact guest from the list.'
+      : hasSeatForContactGuest
+        ? `Add booking contact as Guest ${guests.length + 1}.`
+        : 'No remaining seat is available for another adult guest.'
+    : contactAsGuestAdded
+      ? 'Booking contact has already been copied once.'
+      : guestOneHasBlankName
+        ? 'Fill empty name fields in Guest 1 from the booking contact.'
+        : 'Guest 1 already has a name.';
 
   return (
     <motion.div
@@ -535,19 +573,6 @@ export default function Step1GuestInformation({
             <PhoneIcon className="size-4 text-primary" />
             <h3 className="text-sm font-semibold">Booking Contact</h3>
           </div>
-          {showAddAsGuest && (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleAddContactAsGuest}
-              disabled={!canAddContactAsGuest}
-              className="h-8 gap-2 self-start"
-            >
-              <UserPlusIcon className="size-4" />
-              Add as guest
-            </Button>
-          )}
         </div>
         <div className="grid gap-3 sm:grid-cols-3">
           <div className="grid gap-1.5">
@@ -618,6 +643,54 @@ export default function Step1GuestInformation({
             }
           />
         </div>
+        {showAddAsGuest && (
+          <button
+            type="button"
+            role="switch"
+            aria-checked={contactAsGuestAdded}
+            onClick={handleContactGuestToggle}
+            disabled={!contactAsGuestAdded && !canAddContactAsGuest}
+            className={cn(
+              'mt-4 flex w-full items-center justify-between gap-3 rounded-xl border px-4 py-3 text-left transition-all',
+              contactAsGuestAdded
+                ? 'border-primary/25 bg-primary/10 text-primary'
+                : 'border-border bg-background hover:border-primary/30 hover:bg-primary/5',
+              !canAddContactAsGuest &&
+                !contactAsGuestAdded &&
+                'cursor-not-allowed opacity-60 hover:border-border hover:bg-background',
+            )}
+          >
+            <span className="min-w-0">
+              <span className="block text-sm font-semibold">
+                Use booking contact as Guest 1
+              </span>
+              <span className="mt-0.5 block text-xs text-muted-foreground">
+                {contactAsGuestHint}
+              </span>
+            </span>
+            <span
+              className={cn(
+                'flex h-6 w-11 shrink-0 items-center rounded-full border p-0.5 transition-colors',
+                contactAsGuestAdded
+                  ? 'border-primary bg-primary'
+                  : 'border-border bg-muted',
+              )}
+            >
+              <span
+                className={cn(
+                  'flex size-5 items-center justify-center rounded-full bg-background shadow-sm transition-transform',
+                  contactAsGuestAdded && 'translate-x-5 text-primary',
+                )}
+              >
+                {contactAsGuestAdded ? (
+                  <CheckIcon className="size-3" />
+                ) : (
+                  <UserPlusIcon className="size-3 text-muted-foreground" />
+                )}
+              </span>
+            </span>
+          </button>
+        )}
       </motion.div>
 
       {/* Guest Count */}

@@ -1,5 +1,6 @@
 import type { Company, TourCategoryResource, TourResource } from '@/api/model';
 import TenantLayout from '@/components/layouts/tenant-layout';
+import { usePage } from '@inertiajs/react';
 import { SearchIcon } from 'lucide-react';
 import { useState } from 'react';
 import TourCard from './dashboard/vendor-tours/components/TourCard';
@@ -25,6 +26,10 @@ type ArticlePageProps = {
 export default function Page({ data, categories }: ArticlePageProps) {
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState<number | ''>('');
+  const { url } = usePage();
+  const autoOpenTourId = Number(
+    new URLSearchParams(url.split('?')[1] ?? '').get('tour') ?? 0,
+  );
 
   const filteredData = data.filter((item) => {
     const matchSearch = item.tour.name
@@ -86,7 +91,12 @@ export default function Page({ data, categories }: ArticlePageProps) {
         <div className="space-y-4 p-4">
           <div className="grid w-full grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {filteredData.map((item) => (
-              <TourCard key={item.id} tour={item.tour} fromLogin={false} />
+              <TourCard
+                key={item.id}
+                tour={item.tour}
+                fromLogin={false}
+                autoOpenBookingModal={autoOpenTourId === Number(item.tour.id)}
+              />
             ))}
           </div>
         </div>
