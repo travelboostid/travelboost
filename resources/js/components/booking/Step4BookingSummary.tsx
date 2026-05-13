@@ -115,7 +115,12 @@ export default function Step4BookingSummary({
   const categoryBreakdown = useMemo(() => {
     const map = new Map<
       string,
-      { name: string; qty: number; unitPrice: number }
+      {
+        name: string;
+        qty: number;
+        unitPrice: number;
+        originalUnitPrice: number;
+      }
     >();
     for (const g of guests) {
       const cat = g.priceCategory ?? 'Uncategorized';
@@ -127,6 +132,7 @@ export default function Step4BookingSummary({
           name: PRICE_CATEGORY_LABELS[cat] ?? cat,
           qty: 1,
           unitPrice: g.price,
+          originalUnitPrice: g.originalPrice ?? g.price,
         });
       }
     }
@@ -237,7 +243,7 @@ export default function Step4BookingSummary({
                 >
                   <span className="text-muted-foreground">{cat.name}</span>
                   <div className="flex items-center gap-3">
-                    <span className="text-xs text-muted-foreground">
+                    <span className="text-xs font-medium text-muted-foreground">
                       x{cat.qty}
                     </span>
                     <span className="min-w-[100px] text-right font-medium">
@@ -257,6 +263,14 @@ export default function Step4BookingSummary({
                         {formatCurrency(pricing.subtotalGuests)}
                       </span>
                     </div>
+                    {pricing.promotionDiscount > 0 && (
+                      <div className="flex justify-between text-emerald-600">
+                        <span>Promotion Discount</span>
+                        <span className="font-medium">
+                          −{formatCurrency(pricing.promotionDiscount)}
+                        </span>
+                      </div>
+                    )}
                     <div className="flex justify-between text-muted-foreground">
                       <span>PPN ({vatPct}%)</span>
                       <span className="font-medium text-foreground">
@@ -285,7 +299,7 @@ export default function Step4BookingSummary({
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">Platform Fee</span>
               <div className="flex items-center gap-3">
-                <span className="text-xs text-muted-foreground">
+                <span className="text-xs font-medium text-muted-foreground">
                   x{pricing.paxCount}
                 </span>
                 <span className="min-w-[100px] text-right font-medium">
@@ -386,7 +400,7 @@ export default function Step4BookingSummary({
                   className={cn(
                     'rounded-md px-3 py-1.5 text-xs font-medium transition-all',
                     paymentType === 'down_payment'
-                      ? 'bg-[#1ebe5d] text-white shadow-sm'
+                      ? 'bg-primary text-primary-foreground shadow-sm'
                       : 'text-muted-foreground hover:text-foreground',
                   )}
                   onClick={() => setPaymentType('down_payment')}
@@ -398,7 +412,7 @@ export default function Step4BookingSummary({
                   className={cn(
                     'rounded-md px-3 py-1.5 text-xs font-medium transition-all',
                     paymentType === 'full_payment'
-                      ? 'bg-[#1ebe5d] text-white shadow-sm'
+                      ? 'bg-primary text-primary-foreground shadow-sm'
                       : 'text-muted-foreground opacity-50 hover:text-foreground',
                   )}
                   onClick={() => setPaymentType('full_payment')}

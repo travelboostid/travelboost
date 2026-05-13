@@ -57,6 +57,8 @@ import { format } from 'date-fns';
 
 ///////////tab 2
 type RoomPrice = {
+  id?: number | null;
+  schedule_id?: number | null;
   room_type_id: number | null;
   price: string;
   promotion: Adjustment;
@@ -69,10 +71,14 @@ type Adjustment = {
 };
 
 type Schedule = {
-  id?: number;
+  id?: number | null;
   departure_date: string;
   return_date: string;
   prices: RoomPrice[];
+  availability?: Partial<Record<AvailabilityField, number | string | null>> | null;
+  add_ons?: any;
+  promotion?: Adjustment;
+  commission?: Adjustment;
   //promotion: Adjustment
   //commission: Adjustment
 };
@@ -96,6 +102,42 @@ type AddOn = {
 type AddOnsState = {
   [scheduleId: number]: AddOn[];
 };
+
+type AvailabilityField =
+  | 'max_pax'
+  | 'WP'
+  | 'WPA'
+  | 'DP'
+  | 'FP'
+  | 'RS'
+  | 'BRS'
+  | 'CA'
+  | 'RF'
+  | 'EX'
+  | 'WL'
+  | 'available';
+
+type AvailabilityRow = Record<AvailabilityField, number> & {
+  id?: number | null;
+  schedule: string;
+};
+
+const EDITABLE_AVAILABILITY_FIELDS: AvailabilityField[] = ['max_pax', 'RS'];
+
+const AVAILABILITY_MOBILE_FIELDS: { key: AvailabilityField; label: string }[] =
+  [
+    { key: 'max_pax', label: 'Max' },
+    { key: 'RS', label: 'RS' },
+    { key: 'WP', label: 'WP' },
+    { key: 'WPA', label: 'WPA' },
+    { key: 'DP', label: 'DP' },
+    { key: 'FP', label: 'FP' },
+    { key: 'BRS', label: 'BRS' },
+    { key: 'CA', label: 'CA' },
+    { key: 'RF', label: 'RF' },
+    { key: 'EX', label: 'EX' },
+    { key: 'WL', label: 'WL' },
+  ];
 
 export default function Page({ tour }: Props) {
   const { props } = usePage() as any; // ✅ di sini
@@ -539,7 +581,7 @@ export default function Page({ tour }: Props) {
     });
   };
 
-  const availabilityData = useMemo(() => {
+  const availabilityData = useMemo<AvailabilityRow[]>(() => {
     return schedules.map((s) => {
       const a = s.availability || {};
 
@@ -552,6 +594,7 @@ export default function Page({ tour }: Props) {
         max_pax,
 
         WP: Number(a.WP || 0),
+        WPA: Number(a.WPA || 0),
         DP: Number(a.DP || 0),
         FP: Number(a.FP || 0),
         RS: Number(a.RS || 0),
@@ -566,7 +609,7 @@ export default function Page({ tour }: Props) {
     });
   }, [schedules]);
 
-  const [availability, setAvailability] = useState([]);
+  const [availability, setAvailability] = useState<AvailabilityRow[]>([]);
 
   useEffect(() => {
     setAvailability(availabilityData);
@@ -578,7 +621,11 @@ export default function Page({ tour }: Props) {
     setAvailability(availabilityData)
   }, [schedules])*/
 
-  const updateAvailability = (index: number, field: string, value: number) => {
+  const updateAvailability = (
+    index: number,
+    field: AvailabilityField,
+    value: number,
+  ) => {
     const updated = [...availability];
 
     updated[index] = {
@@ -609,6 +656,7 @@ export default function Page({ tour }: Props) {
       schedule_id: schedules[i]?.id ?? null, // pastikan schedule punya id dari DB
       max_pax: row.max_pax,
       WP: row.WP,
+      WPA: row.WPA,
       DP: row.DP,
       FP: row.FP,
       RS: row.RS,
@@ -2340,7 +2388,7 @@ export default function Page({ tour }: Props) {
                 </div>
 
                 <div className="hidden md:block rounded-lg border overflow-x-auto">
-                  <table className="w-full table-fixed text-sm min-w-[1000px]">
+                    <table className="w-full table-fixed text-sm min-w-[1080px]">
                     <colgroup>
                       <col className="w-[100px]" /> {/* Departure */}
                       <col className="w-[50px]" /> {/* Max Pax */}
@@ -2349,6 +2397,7 @@ export default function Page({ tour }: Props) {
                       <col className="w-[50px]" />
                       <col className="w-[50px]" />
                       <col className="w-[70px]" />
+                      <col className="w-[50px]" />
                       <col className="w-[50px]" />
                       <col className="w-[50px]" />
                       <col className="w-[50px]" />
@@ -2366,6 +2415,9 @@ export default function Page({ tour }: Props) {
                         </th>
                         <th className="p-3 text-right">
                           Waiting Payment <br /> (WP)
+                        </th>
+                        <th className="p-3 text-right">
+                          Waiting Approval <br /> (WPA)
                         </th>
                         <th className="p-3 text-right">
                           Down Payment <br /> (DP)
@@ -2392,7 +2444,7 @@ export default function Page({ tour }: Props) {
                           Waiting List <br /> (WL)
                         </th>
                         <th className="p-3 text-right">
-                          Available <br /> (WL)
+                          Available
                         </th>
                         <th className="p-3 text-right">Action</th>
                       </tr>

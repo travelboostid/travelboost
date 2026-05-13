@@ -139,7 +139,7 @@ class AuthController extends Controller
       ]);
       $userRole = $team->company->type === CompanyType::AGENT ? 'user:agent' : 'user:vendor';
       $teamRole = $team->invite_role;
-      $user->addRole([$userRole, $teamRole]);
+      $user->addRoles([$userRole, $teamRole]);
 
       // Reject other invitations with the same email
       CompanyTeam::where('invite_email', $user->email)

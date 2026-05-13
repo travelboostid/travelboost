@@ -52,6 +52,7 @@ export default function UpdateBankAccountDialog({
     account_number: bankAccount.account_number,
     account_name: bankAccount.account_name,
     branch: bankAccount.branch || '',
+    status: bankAccount.status || 'pending',
     is_default: bankAccount.is_default,
   });
 
@@ -59,7 +60,7 @@ export default function UpdateBankAccountDialog({
     e.preventDefault();
 
     form.put(
-      update({ company: company.username, bankAccount: bankAccount.id }).url,
+      update({ company: company.username, bank_account: bankAccount.id }).url,
       {
         preserveScroll: true,
         onError: () => setOpen(true), // 🔥 keep modal open on validation error

@@ -1,6 +1,6 @@
+import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
 import {
   Tooltip,
   TooltipContent,
@@ -14,11 +14,10 @@ import {
   FileTextIcon,
   HelpCircleIcon,
   InfoIcon,
-  TrashIcon,
   UploadCloudIcon,
   XIcon,
 } from 'lucide-react';
-import { useCallback, useMemo, useRef } from 'react';
+import { useCallback, useRef } from 'react';
 
 const itemVariants = {
   hidden: { opacity: 0, y: 14 },
@@ -272,9 +271,7 @@ function TravelDocumentCard({
               type="file"
               accept="image/*,.pdf"
               className="hidden"
-              onChange={(e) =>
-                handleFileSelect('visaFile', 'visaFileName', e)
-              }
+              onChange={(e) => handleFileSelect('visaFile', 'visaFileName', e)}
             />
             {doc.visaFileName ? (
               <div className="flex items-center gap-2 rounded-lg border bg-muted/30 px-3 py-2">

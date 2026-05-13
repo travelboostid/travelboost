@@ -19,7 +19,9 @@ class UpdateBookingRequest extends FormRequest
 
         return in_array($booking->status, [
             BookingStatus::RESERVED,
+            BookingStatus::BOOKING_RESERVED,
             BookingStatus::AWAITING_PAYMENT,
+            BookingStatus::WAITING_PAYMENT_APPROVAL,
         ]);
     }
 

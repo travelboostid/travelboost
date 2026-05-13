@@ -87,6 +87,12 @@ class Company extends Model
     return $this->hasMany(CompanyTeam::class);
   }
 
+  public function users()
+  {
+    return $this->belongsToMany(User::class, 'company_teams')
+      ->withTimestamps();
+  }
+
   public function tours()
   {
     return $this->hasMany(Tour::class);
@@ -180,6 +186,11 @@ class Company extends Model
 
   public function companySetting(): HasOne
   {
-      return $this->hasOne(CompanySettings::class, 'company_id');
+    return $this->hasOne(CompanySettings::class, 'company_id');
+  }
+
+  public function withdrawals()
+  {
+    return $this->morphMany(Withdrawal::class, 'owner');
   }
 }

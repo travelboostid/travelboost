@@ -109,6 +109,7 @@ function passengersToGuests(passengers: Passenger[]): GuestEntry[] {
       priceCategory: p.price_category ?? null,
       tourPriceId: 0,
       price: p.price_amount ?? 0,
+      originalPrice: p.price_amount ?? 0,
       roomTypeDescription: p.room_type ?? '',
       note: p.note ?? '',
     };

@@ -14,41 +14,15 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { Spinner } from '@/components/ui/spinner';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
-import { extractImageSrc } from '@/lib/utils';
 import { router } from '@inertiajs/react';
-import { IconBrandFacebook, IconPdf } from '@tabler/icons-react';
 import axios from 'axios';
-import {
-  Building2,
-  HeartIcon,
-  MessageSquareIcon,
-  SaveIcon,
-} from 'lucide-react';
 import { useEffect, useState } from 'react';
+import AgentMyTourCard from './AgentMyTourCard';
+import AgentVendorTourCard from './AgentVendorTourCard';
+import PublicTourCard from './PublicTourCard';
+import VendorTourCard from './VendorTourCard';
 
 type TourCardResource = TourResource & {
   earlybird?: number | string | null;
@@ -60,6 +34,15 @@ type TourCardResource = TourResource & {
   promoprice?: number | string | null;
   showprice?: number | string | null;
   user?: { phone?: string | null } | null;
+  agent_status?: string | { value: string };
+  has_copied?: boolean;
+  show_vendor_name?: boolean | number | string;
+  pivot?: {
+    status?: string | { value: string };
+    show_vendor_name?: boolean | number | string;
+    [key: string]: any;
+  };
+  agents?: any[];
 };
 
 export default function TourCard({
@@ -67,7 +50,7 @@ export default function TourCard({
   type = 'agent',
   partnership,
   isOwnCatalog = false,
-  fromLogin = false,
+  fromLogin = true,
 }: {
   tour: TourCardResource;
   type?: string;
@@ -78,20 +61,60 @@ export default function TourCard({
   const { company, auth } = usePageSharedDataProps();
   const floatingChat = useFloatingChatWidgetContext();
 
-  const [startingPrivateChat, setStartingPrivateChat] = useState(false);
+  const [startingChat, setStartingChat] = useState(false);
   const [liked, setLiked] = useState(Boolean(tour.is_liked));
-  const [showInfo, setShowInfo] = useState(false);
   const [pendingAction, setPendingAction] = useState<'like' | 'book' | null>(
     null,
   );
-  const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
+  const [isBookingOpen, setIsBookingOpen] = useState(false);
 
-  const hasDocument = Boolean(tour.document);
-  const canCopy = isOwnCatalog || partnership?.status === 'active';
-  const isVendorInactive = tour.status === 'inactive';
-  const hasBeenCopied = (tour as any).has_copied;
+  const isLandingPage = !fromLogin;
+  const isAgentDashboard = fromLogin && type === 'agent';
+  const isVendorDashboard = fromLogin && type === 'vendor';
 
-  const { src, srcSet } = extractImageSrc(tour.image as any);
+  const parseStatus = (statusObj: any): string | undefined => {
+    if (statusObj === undefined || statusObj === null) return undefined;
+    if (typeof statusObj === 'object') {
+      return String(statusObj.value || statusObj.name || '').toLowerCase();
+    }
+    return String(statusObj).toLowerCase();
+  };
+
+  const vendorStatusStr = parseStatus(tour.status);
+  const isVendorActive = vendorStatusStr === 'active';
+  const isVendorInactive = !isVendorActive;
+
+  let agentStatusStr: string | undefined = undefined;
+
+  if (tour.agent_status !== undefined && tour.agent_status !== null) {
+    agentStatusStr = parseStatus(tour.agent_status);
+  } else if (tour.pivot?.status !== undefined && tour.pivot?.status !== null) {
+    agentStatusStr = parseStatus(tour.pivot.status);
+  } else if (Array.isArray(tour.agents) && company?.id) {
+    const currentAgent = tour.agents.find(
+      (a: any) => Number(a.id) === Number(company.id),
+    );
+    if (
+      currentAgent?.pivot?.status !== undefined &&
+      currentAgent?.pivot?.status !== null
+    ) {
+      agentStatusStr = parseStatus(currentAgent.pivot.status);
+    }
+  }
+
+  let isAgentActive = false;
+  if (agentStatusStr !== undefined) {
+    isAgentActive = agentStatusStr === 'active';
+  } else if (isLandingPage && company?.type === 'agent') {
+    isAgentActive = vendorStatusStr === 'active';
+  } else {
+    isAgentActive = true;
+  }
+
+  if (isLandingPage) {
+    if (company?.type === 'agent' && !isAgentActive) return null;
+    if (company?.type === 'vendor' && !isVendorActive) return null;
+  }
 
   useEffect(() => {
     if (auth?.user) {
@@ -105,22 +128,24 @@ export default function TourCard({
               stored.returnUrl
           ) {
             sessionStorage.removeItem('pendingTourAction');
-            if (stored.action === 'like') {
-              toggleLike();
-            } else if (stored.action === 'book') {
-              setIsBookingModalOpen(true);
-            }
+            if (stored.action === 'like') handleLike();
+            else if (stored.action === 'book') setIsBookingOpen(true);
           }
-        } catch (e) {
-          console.error('Error parsing pendingTourAction:', e);
-        }
+        } catch (e) {}
       }
     }
   }, [auth?.user, tour.id]);
 
-  const toggleLike = async () => {
-    const response = await axios.post(`/me/tours/${tour.id}/like`);
-    setLiked(Boolean(response.data.liked));
+  const handleLike = async () => {
+    try {
+      const response = await axios.post(`/me/tours/${tour.id}/like`);
+      setLiked(Boolean(response.data.liked));
+    } catch (e) {}
+  };
+
+  const handleLikeClick = () => {
+    if (!auth?.user) setPendingAction('like');
+    else handleLike();
   };
 
   const handleCopy = () => {
@@ -135,321 +160,131 @@ export default function TourCard({
     );
   };
 
-  const handleViewBrochure = () => {
-    if (!hasDocument) return;
-    window.open(
-      viewBrochure({
-        company: company.username,
-        vendor: tour.company?.username || '',
-        tour: tour.id,
-      }).url,
-      '_blank',
-    );
-  };
-
-  const handleMessage = async () => {
+  const handleChat = async (targetId: number) => {
     try {
-      setStartingPrivateChat(true);
+      setStartingChat(true);
       floatingChat?.setAttachment({ type: 'tour', data: tour.id.toString() });
-      await floatingChat?.startPrivateChat({
-        type: 'company',
-        id: tour.company_id,
-      });
-    } catch (err) {
-      console.error(err);
+      await floatingChat?.startPrivateChat({ type: 'company', id: targetId });
     } finally {
-      setStartingPrivateChat(false);
+      setStartingChat(false);
     }
   };
 
-  const handleShareFacebookPdf = () => {
-    if (!hasDocument) return;
+  const handleViewBrochure = (isPublic: boolean) => {
+    if (!tour.document) return;
+    const url = isPublic
+      ? `/brochure/${tour.company?.username}/${tour.id}`
+      : viewBrochure({
+          company: company.username,
+          vendor: tour.company?.username || '',
+          tour: tour.id,
+        }).url;
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
+
+  const handleShareFacebook = () => {
+    if (!tour.document) return;
     const pdfUrl = viewBrochure({
       company: company.username,
       vendor: tour.company?.username || '',
       tour: tour.id,
     }).url;
-    const fbUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(pdfUrl)}`;
-    window.open(fbUrl, '_blank', 'noopener,noreferrer');
+    window.open(
+      `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(pdfUrl)}`,
+      '_blank',
+      'noopener,noreferrer',
+    );
   };
 
-  const formatPrice = (price: any) =>
-    new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      maximumFractionDigits: 0,
-    }).format(Number(price));
+  let isVendorNameVisible = true;
+  const isFalseLike = (val: any) =>
+    val === false || val === '0' || val === 0 || val === 'false';
 
-  const mainPrice = formatPrice(tour.showprice);
-  const discountPrice =
-    tour.earlybird && Number(tour.earlybird) > 0
-      ? formatPrice(tour.earlybird)
-      : tour.promoprice && Number(tour.promoprice) > 0
-        ? formatPrice(tour.promoprice)
-        : tour.promote_price && Number(tour.promote_price) > 0
-          ? formatPrice(tour.promote_price)
-          : null;
+  if (
+    isFalseLike(tour.show_vendor_name) ||
+    isFalseLike(tour.pivot?.show_vendor_name) ||
+    isFalseLike(partnership?.show_vendor_name)
+  ) {
+    isVendorNameVisible = false;
+  }
+
+  if (Array.isArray(tour.agents) && company?.id) {
+    const currentAgent = tour.agents.find(
+      (a: any) => Number(a.id) === Number(company.id),
+    );
+    if (
+      currentAgent?.pivot &&
+      isFalseLike(currentAgent.pivot.show_vendor_name)
+    ) {
+      isVendorNameVisible = false;
+    }
+  }
+
+  const canCopy = partnership?.status === 'active';
+  const hasCopied = Boolean(tour.has_copied);
 
   return (
     <>
-      <Card className="group relative flex flex-col h-full border-none shadow-sm hover:shadow-lg transition-all rounded-2xl overflow-hidden bg-white ring-1 ring-slate-100">
-        {isVendorInactive && (
-          <div className="absolute top-0 right-0 w-24 h-24 overflow-hidden z-30 pointer-events-none">
-            <div className="absolute top-[16px] right-[-28px] w-[120px] bg-yellow-400 text-black text-[9px] font-black py-1.5 text-center rotate-45 shadow-md border-b border-yellow-500 tracking-tighter">
-              VENDOR INACTIVE
-            </div>
-          </div>
-        )}
-
-        <div className="relative aspect-video overflow-hidden bg-slate-100">
-          <img
-            src={src}
-            srcSet={srcSet}
-            alt={tour.name}
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 cursor-pointer"
-            onClick={() => setShowInfo(true)}
-          />
-
-          {!fromLogin && (
-            <button
-              type="button"
-              onClick={() => {
-                if (!auth?.user) {
-                  setPendingAction('like');
-                } else {
-                  toggleLike();
-                }
-              }}
-              className="absolute top-2 right-2 z-30 rounded-full bg-white/80 p-1.5 shadow transition hover:scale-110"
-            >
-              <HeartIcon
-                size={18}
-                className={
-                  liked ? 'fill-red-500 text-red-500' : 'text-gray-400'
-                }
-              />
-            </button>
-          )}
-
-          <div className="absolute top-2 left-2 pointer-events-none">
-            <Badge className="bg-white/95 backdrop-blur-sm text-slate-800 border-none text-[9px] font-bold shadow-sm">
-              {tour.category?.name || 'Tour'}
-            </Badge>
-          </div>
-        </div>
-
-        <CardHeader className="p-4 pb-1 space-y-1">
-          <div className="flex items-center gap-1.5 text-slate-400 text-[10px] font-bold uppercase tracking-wider">
-            <Building2 size={10} className="text-primary" />
-            <span className="truncate">{tour.company?.name || 'Vendor'}</span>
-          </div>
-          <CardTitle
-            className="text-sm font-black text-slate-800 line-clamp-1 leading-tight cursor-pointer hover:text-primary transition-colors"
-            onClick={() => setShowInfo(true)}
-          >
-            {tour.name}
-          </CardTitle>
-        </CardHeader>
-
-        <CardContent className="px-4 py-2 flex-1">
-          <div className="flex flex-col">
-            {discountPrice ? (
-              <>
-                <span className="text-[10px] text-muted-foreground line-through decoration-red-400/60 font-medium">
-                  {mainPrice}
-                </span>
-                <div className="flex items-center gap-2">
-                  <span className="text-base font-black text-primary tracking-tight">
-                    {discountPrice}
-                  </span>
-                  <Badge className="bg-red-500 text-white border-none text-[8px] h-3.5 px-1 font-black">
-                    PROMO
-                  </Badge>
-                </div>
-              </>
-            ) : (
-              <span className="text-base font-black text-primary tracking-tight">
-                {mainPrice}
-              </span>
-            )}
-          </div>
-        </CardContent>
-
-        <div className="px-4 py-2 border-t border-slate-50 space-y-1">
-          <div className="flex items-center justify-between">
-            <span className="text-[9px] font-bold text-slate-400 uppercase">
-              Vendor Status
-            </span>
-            <span
-              className={`text-[9px] font-black uppercase ${tour.status === 'active' ? 'text-emerald-500' : 'text-red-500'}`}
-            >
-              {tour.status}
-            </span>
-          </div>
-          {hasBeenCopied && (
-            <div className="flex items-center justify-between border-t border-slate-50 pt-1">
-              <span className="text-[9px] font-bold text-slate-400 uppercase">
-                My Catalog Status
-              </span>
-              <span
-                className={`text-[9px] font-black uppercase ${(tour as any).agent_status === 'active' ? 'text-blue-600' : 'text-red-600'}`}
-              >
-                {(tour as any).agent_status}
-              </span>
-            </div>
-          )}
-        </div>
-
-        <CardFooter className="p-3 pt-1 flex items-center gap-1.5">
-          <Tooltip delayDuration={200}>
-            <TooltipTrigger asChild>
-              <Button
-                variant="secondary"
-                size="sm"
-                className="flex-1 rounded-xl bg-slate-100 h-9 border-none hover:bg-slate-200"
-                disabled={!hasDocument}
-                onClick={handleViewBrochure}
-              >
-                <IconPdf size={18} />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>View Brochure</p>
-            </TooltipContent>
-          </Tooltip>
-
-          {!isOwnCatalog && (
-            <>
-              <AlertDialog>
-                <Tooltip delayDuration={200}>
-                  <TooltipTrigger asChild>
-                    <div className="flex-1 flex">
-                      <AlertDialogTrigger asChild>
-                        <Button
-                          variant="default"
-                          size="sm"
-                          className={`w-full rounded-xl h-9 shadow-sm transition-all ${hasBeenCopied || isVendorInactive ? 'opacity-40 grayscale' : 'hover:scale-105 active:scale-95'}`}
-                          disabled={
-                            hasBeenCopied || isVendorInactive || !canCopy
-                          }
-                        >
-                          <SaveIcon size={18} />
-                        </Button>
-                      </AlertDialogTrigger>
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Add to Catalog</p>
-                  </TooltipContent>
-                </Tooltip>
-                <AlertDialogContent className="rounded-3xl border-none">
-                  <AlertDialogHeader>
-                    <AlertDialogTitle className="text-xl font-bold">
-                      Add to Catalog
-                    </AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Copy this product to your personal catalog?
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel className="rounded-xl font-bold">
-                      Cancel
-                    </AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={handleCopy}
-                      className="rounded-xl font-bold px-6"
-                    >
-                      Yes, Copy Now
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-
-              <Tooltip delayDuration={200}>
-                <TooltipTrigger asChild>
-                  <Button
-                    onClick={handleMessage}
-                    disabled={startingPrivateChat}
-                    variant="secondary"
-                    size="sm"
-                    className="flex-1 rounded-xl bg-slate-100 h-9 border-none hover:bg-slate-200"
-                  >
-                    {startingPrivateChat ? (
-                      <Spinner />
-                    ) : (
-                      <MessageSquareIcon size={18} />
-                    )}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Send Message</p>
-                </TooltipContent>
-              </Tooltip>
-
-              <Tooltip delayDuration={200}>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={handleShareFacebookPdf}
-                    disabled={!hasDocument}
-                    className="flex-1 rounded-xl bg-slate-100 h-9 border-none hover:bg-slate-200"
-                  >
-                    <IconBrandFacebook size={18} />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Share to Facebook</p>
-                </TooltipContent>
-              </Tooltip>
-            </>
-          )}
-        </CardFooter>
-      </Card>
-
-      {!fromLogin && (
-        <Dialog open={showInfo} onOpenChange={setShowInfo}>
-          <DialogContent className="max-w-md rounded-3xl border-none shadow-2xl">
-            <DialogHeader>
-              <DialogTitle className="text-xl font-bold">
-                {tour.name}
-              </DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 text-sm mt-2">
-              <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                <span className="font-bold text-slate-700">Destination: </span>
-                <span className="text-slate-600">
-                  {tour.destination || '—'}
-                </span>
-              </div>
-              {tour.description && (
-                <div>
-                  <span className="font-bold text-slate-700">Description</span>
-                  <p className="mt-1.5 text-slate-600 leading-relaxed whitespace-pre-wrap">
-                    {tour.description}
-                  </p>
-                </div>
-              )}
-            </div>
-          </DialogContent>
-        </Dialog>
+      {isLandingPage ? (
+        <PublicTourCard
+          tour={tour}
+          isVendorNameVisible={isVendorNameVisible}
+          isVendorInactive={
+            company?.type === 'agent' ? false : isVendorInactive
+          }
+          liked={liked}
+          onLike={handleLikeClick}
+          onViewBrochure={() => handleViewBrochure(true)}
+          onChat={() => handleChat(company?.id || tour.company_id)}
+          onBook={() => setIsBookingOpen(true)}
+          startingChat={startingChat}
+        />
+      ) : isVendorDashboard ? (
+        <VendorTourCard
+          tour={tour}
+          isVendorNameVisible={isVendorNameVisible}
+          isVendorInactive={isVendorInactive}
+          onViewBrochure={() => handleViewBrochure(false)}
+        />
+      ) : isAgentDashboard && isOwnCatalog ? (
+        <AgentMyTourCard
+          tour={tour}
+          isVendorNameVisible={isVendorNameVisible}
+          isVendorInactive={isVendorInactive}
+          onViewBrochure={() => handleViewBrochure(false)}
+          onChat={() => handleChat(tour.company_id)}
+          onShareFB={handleShareFacebook}
+          startingChat={startingChat}
+        />
+      ) : (
+        <AgentVendorTourCard
+          tour={tour}
+          isVendorNameVisible={isVendorNameVisible}
+          isVendorInactive={isVendorInactive}
+          canCopy={canCopy}
+          hasCopied={hasCopied}
+          onCopy={handleCopy}
+          onViewBrochure={() => handleViewBrochure(false)}
+          onChat={() => handleChat(tour.company_id)}
+          startingChat={startingChat}
+        />
       )}
 
       <AlertDialog
         open={!!pendingAction}
         onOpenChange={(open) => !open && setPendingAction(null)}
       >
-        <AlertDialogContent className="rounded-3xl border-none">
+        <AlertDialogContent className="rounded-3xl border-none dark:bg-slate-900">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-xl font-bold">
+            <AlertDialogTitle className="text-xl font-bold dark:text-white">
               Login Required
             </AlertDialogTitle>
-            <AlertDialogDescription>
+            <AlertDialogDescription className="dark:text-slate-400">
               Please login or register first to continue this action.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="rounded-xl font-bold">
+            <AlertDialogCancel className="rounded-xl font-bold dark:bg-slate-800 dark:text-white">
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction
@@ -474,8 +309,8 @@ export default function TourCard({
       </AlertDialog>
 
       <TourBookingModal
-        isOpen={isBookingModalOpen}
-        onClose={() => setIsBookingModalOpen(false)}
+        isOpen={isBookingOpen}
+        onClose={() => setIsBookingOpen(false)}
         tour={tour}
         onRequireLogin={
           !auth?.user ? () => setPendingAction('book') : undefined

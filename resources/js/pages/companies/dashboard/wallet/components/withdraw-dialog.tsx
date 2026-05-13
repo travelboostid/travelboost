@@ -14,8 +14,11 @@ import { Field, FieldGroup } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
-import { usePage } from '@inertiajs/react';
+import usePageProps from '@/hooks/use-page-props';
+import { store } from '@/routes/companies/dashboard/withdrawals';
+import { useForm, usePage } from '@inertiajs/react';
 import { useState } from 'react';
+import type { WalletPageProps } from '..';
 // import { useCreateWithdraw } from '@/api/payment/payment'
 
 const MIN_AMOUNT = 100_000;
@@ -25,37 +28,31 @@ type WithdrawDialogProps = {
 };
 
 export function WithdrawDialog({ children }: WithdrawDialogProps) {
+  const { company, wallet } = usePageProps<WalletPageProps>();
   const { balance } = usePage<{ balance: number }>().props;
+  const [open, setOpen] = useState(false);
 
-  const [amount, setAmount] = useState<number | null>(null);
-  const [ongoing, setOngoing] = useState(false);
+  const form = useForm({
+    wallet_id: wallet.id,
+    amount: 0,
+    bank_account_id: '',
+  });
 
   // const withdraw = useCreateWithdraw()
 
-  const isValid = amount !== null && amount >= MIN_AMOUNT && amount <= balance;
+  const isValid = form.data.amount >= MIN_AMOUNT && form.data.amount <= balance;
 
   const handleWithdraw = () => {
-    if (!isValid || ongoing) return;
-
-    setOngoing(true);
-
-    // Example API call
-    // withdraw.mutate(
-    //   { data: { amount } },
-    //   {
-    //     onSuccess: () => setOngoing(false),
-    //     onError: () => setOngoing(false),
-    //   }
-    // )
-
-    // temporary
-    setTimeout(() => setOngoing(false), 800);
+    form.post(store({ company: company.username }).url, {
+      onSuccess: () => {
+        form.reset();
+        setOpen(false);
+      },
+    });
   };
 
-  const loading = ongoing; // or withdraw.isPending
-
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={(open) => setOpen(open)}>
       <DialogTrigger asChild>{children}</DialogTrigger>
 
       <DialogContent className="sm:max-w-sm">
@@ -77,19 +74,26 @@ export function WithdrawDialog({ children }: WithdrawDialogProps) {
               max={balance}
               step={1000}
               placeholder={`Minimum ${MIN_AMOUNT}`}
-              value={amount ?? ''}
-              onChange={(e) =>
-                setAmount(e.target.value ? Number(e.target.value) : null)
-              }
+              value={form.data.amount}
+              onChange={(e) => {
+                const value = e.target.value ? Number(e.target.value) : 0;
+                form.setData('amount', value);
+              }}
             />
           </Field>
 
           <Field>
             <Label htmlFor="bank-account-id">Bank Account</Label>
-            <SelectBank name="bank_account_id" />
+            <SelectBank
+              name="bank_account_id"
+              value={form.data.bank_account_id}
+              onChange={(value) =>
+                form.setData('bank_account_id', String(value))
+              }
+            />
           </Field>
 
-          {amount !== null && amount > balance && (
+          {form.data.amount > balance && (
             <p className="text-sm text-destructive">
               Amount exceeds available balance
             </p>
@@ -101,8 +105,11 @@ export function WithdrawDialog({ children }: WithdrawDialogProps) {
             <Button variant="outline">Cancel</Button>
           </DialogClose>
 
-          <Button disabled={!isValid || loading} onClick={handleWithdraw}>
-            {loading && <Spinner />}
+          <Button
+            disabled={!isValid || form.processing}
+            onClick={handleWithdraw}
+          >
+            {form.processing && <Spinner />}
             Withdraw
           </Button>
         </DialogFooter>

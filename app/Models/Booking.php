@@ -28,6 +28,7 @@ class Booking extends Model
         'departure_date',
         'status',
         'reserved_type',
+        'reserved_expires_at',
         'pax_adult',
         'pax_child',
         'pax_infant',
@@ -48,6 +49,7 @@ class Booking extends Model
         return [
             'departure_date' => 'date',
             'status' => BookingStatus::class,
+            'reserved_expires_at' => 'datetime',
             'total_price' => 'decimal:2',
             'tax_amount' => 'decimal:2',
             'platform_fee' => 'decimal:2',

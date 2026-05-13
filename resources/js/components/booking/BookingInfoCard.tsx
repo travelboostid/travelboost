@@ -70,10 +70,16 @@ export default function BookingInfoCard({
     const map: Record<string, BookingStatusCode> = {
       'awaiting payment': 'waiting_payment',
       awaiting_payment: 'waiting_payment',
+      'waiting payment approval': 'waiting_payment_approval',
+      waiting_payment_approval: 'waiting_payment_approval',
       'down payment': 'down_payment',
       'full payment': 'full_payment',
       'waiting list': 'waiting_list',
       waiting_list: 'waiting_list',
+      'booking reserved': 'booking_reserved',
+      booking_reserved: 'booking_reserved',
+      'manual reserved': 'manual_reserved',
+      manual_reserved: 'manual_reserved',
       cancelled: 'cancel',
       refunded: 'refund',
     };
@@ -95,8 +101,8 @@ export default function BookingInfoCard({
     timeLeftSeconds < 300
       ? 'text-destructive animate-pulse'
       : timeLeftSeconds < 600
-        ? 'text-orange-500'
-        : 'text-destructive';
+        ? 'text-primary'
+        : 'text-primary';
 
   return (
     <div className="rounded-xl border bg-card p-3 text-sm shadow-sm ring-1 ring-primary/5">

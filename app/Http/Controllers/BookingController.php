@@ -2,10 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\Booking\ExpireBookingReservationsAction;
+use App\Actions\Booking\FinalizeBookingPaymentAction;
+use App\Actions\Booking\SyncAvailabilityAction;
 use App\Enums\BookingStatus;
+use App\Enums\PaymentStatus;
 use App\Http\Requests\StoreBookingRequest;
 use App\Models\Booking;
 use App\Models\BookingDocument;
+use App\Models\Payment;
 use App\Models\Tour;
 use App\Models\TourPrice;
 use App\Services\BookingNumberService;
@@ -18,6 +23,7 @@ use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 use Midtrans\Snap;
+use Midtrans\Transaction;
 
 class BookingController extends Controller
 {
@@ -29,7 +35,7 @@ class BookingController extends Controller
         $tour->load('company.companySetting', 'schedules.availability');
         $settings = $tour->company?->companySetting;
         $deadlineDays = (int) ($settings?->booking_deadline ?? 0);
-        $bookingTimeLimitMinutes = (int) ($settings?->booking_entry_time_limit ?: 30);
+        $bookingTimeLimitMinutes = $this->resolveBookingTimeLimitMinutes($tour);
         $minimumDownPaymentPct = (float) ($settings?->minimum_down_payment ?: 50);
         $cutoffDate = now()->addDays($deadlineDays)->toDateString();
 
@@ -50,6 +56,8 @@ class BookingController extends Controller
             }
 
             if ($schedule) {
+                app(ExpireBookingReservationsAction::class)->execute($tour->company, $tour->id);
+
                 $availability = \App\Models\TourAvailability::where('schedule_id', $schedule->id)
                     ->where('tour_id', $tour->id)
                     ->first();
@@ -84,7 +92,12 @@ class BookingController extends Controller
             $existingBooking = Booking::with('passengers')
                 ->where('user_id', $user->id)
                 ->where('tour_id', $tour->id)
-                ->whereIn('status', [BookingStatus::AWAITING_PAYMENT, BookingStatus::RESERVED])
+                ->whereIn('status', [
+                    BookingStatus::AWAITING_PAYMENT,
+                    BookingStatus::BOOKING_RESERVED,
+                    BookingStatus::WAITING_PAYMENT_APPROVAL,
+                    BookingStatus::RESERVED,
+                ])
                 ->whereDate('departure_date', request()->query('date'))
                 ->latest()
                 ->first();
@@ -138,6 +151,10 @@ class BookingController extends Controller
                         'categoryName' => $price->priceCategory?->name ?? 'Single',
                         'description' => $price->priceCategory?->description ?? '',
                         'price' => (float) $price->price,
+                        'promotionRate' => (float) $price->promotion_rate,
+                        'promotion' => (float) $price->promotion,
+                        'commissionRate' => (float) $price->commission_rate,
+                        'commission' => (float) $price->commission,
                     ];
                 })
                 ->values(),
@@ -158,6 +175,8 @@ class BookingController extends Controller
             ],
             'termConditions' => $settings?->term_conditions,
             'isResumingExistingBooking' => $isResumingExistingBooking,
+            'reservedExpiresAt' => $existingBooking?->reserved_expires_at?->toIso8601String(),
+            'remainingHoldSeconds' => $this->remainingHoldSeconds($existingBooking),
         ]);
     }
 
@@ -167,19 +186,31 @@ class BookingController extends Controller
     public function store(string $username, StoreBookingRequest $request, BookingService $bookingService): RedirectResponse
     {
         try {
+            $validated = $request->validated();
+            $existingBooking = Booking::query()
+                ->where('booking_number', data_get($validated, 'booking_number'))
+                ->where('user_id', $request->user()->id)
+                ->first();
+
+            if ($existingBooking) {
+                $this->ensureBookingNotExpired($existingBooking);
+            }
+
             $booking = $bookingService->createBooking(
-                $request->validated(),
+                $validated,
                 $request->user()
             );
 
             return back()->with('success', 'Booking successfully created.');
+        } catch (ValidationException $e) {
+            throw $e;
         } catch (\Exception $e) {
             return back()->with('error', 'Failed to create booking: '.$e->getMessage());
         }
     }
 
     /**
-     * Reserve a booking (set status to 'reserved' when entering step 2).
+     * Reserve a booking (set status to 'booking reserved' when entering step 2).
      */
     public function reserve(string $username, Tour $tour): RedirectResponse
     {
@@ -215,7 +246,21 @@ class BookingController extends Controller
 
         $this->validateExtraBedPassengers($data['passengers'] ?? []);
 
-        \Illuminate\Support\Facades\DB::transaction(function () use ($data, $tour) {
+        $bookingTimeLimitMinutes = $this->resolveBookingTimeLimitMinutes($tour);
+
+        $booking = \Illuminate\Support\Facades\DB::transaction(function () use ($data, $tour, $bookingTimeLimitMinutes) {
+            $existingBooking = Booking::query()
+                ->where('booking_number', $data['booking_number'])
+                ->where('user_id', request()->user()->id)
+                ->lockForUpdate()
+                ->first();
+
+            $reservedExpiresAt = $existingBooking?->status === BookingStatus::BOOKING_RESERVED
+                && $existingBooking->reserved_expires_at
+                && $existingBooking->reserved_expires_at->isFuture()
+                    ? $existingBooking->reserved_expires_at
+                    : now()->addMinutes($bookingTimeLimitMinutes);
+
             $booking = Booking::updateOrCreate(
                 [
                     'booking_number' => $data['booking_number'],
@@ -227,8 +272,9 @@ class BookingController extends Controller
                     'pax_adult' => $data['pax_adult'],
                     'pax_child' => $data['pax_child'],
                     'pax_infant' => $data['pax_infant'],
-                    'status' => BookingStatus::RESERVED,
+                    'status' => BookingStatus::BOOKING_RESERVED,
                     'reserved_type' => 'system',
+                    'reserved_expires_at' => $reservedExpiresAt,
                     'vendor_id' => $data['vendor_id'] ?? $tour->company_id,
                     'agent_id' => $data['agent_id'] ?? null,
                     'total_price' => $data['total_price'] ?? 0,
@@ -247,7 +293,11 @@ class BookingController extends Controller
                 $booking->passengers()->delete();
                 $booking->passengers()->createMany($data['passengers']);
             }
+
+            return $booking;
         });
+
+        app(SyncAvailabilityAction::class)->executeForBooking($booking->fresh());
 
         return back();
     }
@@ -257,11 +307,13 @@ class BookingController extends Controller
         $booking = $booking ?? $usernameOrBooking;
         abort_unless($booking instanceof Booking, 404);
         abort_unless($request->user()?->id === $booking->user_id, 403);
+        $booking = $this->ensureBookingNotExpired($booking);
 
         $validated = $request->validate([
             'sender_bank_name' => ['required', 'string', 'max:255'],
             'sender_account_number' => ['required', 'string', 'max:255', 'regex:/^\d+$/'],
             'transfer_amount' => ['required', 'numeric', 'min:1'],
+            'payment_type' => ['required', 'string', 'in:down_payment,full_payment'],
             'proof' => ['required', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:5120'],
         ]);
 
@@ -280,6 +332,7 @@ class BookingController extends Controller
                     'sender_bank' => $validated['sender_bank_name'],
                     'sender_account' => $validated['sender_account_number'],
                     'proof_path' => $path,
+                    'payment_type' => $validated['payment_type'],
                 ],
             ]);
 
@@ -292,10 +345,13 @@ class BookingController extends Controller
             ]);
 
             $booking->update([
-                'status' => BookingStatus::AWAITING_PAYMENT,
+                'status' => BookingStatus::WAITING_PAYMENT_APPROVAL,
                 'payment_mode' => 'manual',
+                'reserved_expires_at' => null,
             ]);
         });
+
+        app(SyncAvailabilityAction::class)->executeForBooking($booking->fresh());
 
         return back()->with('success', 'Payment proof submitted. We will verify shortly.');
     }
@@ -305,6 +361,7 @@ class BookingController extends Controller
         $booking = $booking ?? $usernameOrBooking;
         abort_unless($booking instanceof Booking, 404);
         abort_unless($request->user()?->id === $booking->user_id, 403);
+        $booking = $this->ensureBookingNotExpired($booking);
 
         $validated = $request->validate([
             'payment_type' => ['required', 'string', 'in:down_payment,full_payment'],
@@ -339,23 +396,27 @@ class BookingController extends Controller
             ];
 
             $snapToken = Snap::getSnapToken($params);
+            $orderId = $params['transaction_details']['order_id'];
 
             $payment->update([
                 'status' => 'pending',
                 'payload' => [
                     'payment_type' => $validated['payment_type'],
+                    'order_id' => $orderId,
                     'snap_token' => $snapToken,
                     'request' => $params,
                 ],
             ]);
 
             $booking->update([
-                'status' => BookingStatus::AWAITING_PAYMENT,
+                'status' => BookingStatus::BOOKING_RESERVED,
                 'payment_mode' => 'online',
             ]);
 
             return $payment;
         });
+
+        app(SyncAvailabilityAction::class)->executeForBooking($booking->fresh());
 
         return response()->json([
             'payment' => [
@@ -363,6 +424,103 @@ class BookingController extends Controller
                 'payload' => $payment->payload,
             ],
         ]);
+    }
+
+    public function confirmOnlinePayment(
+        Request $request,
+        Booking $booking,
+        Payment $payment
+    ): JsonResponse {
+        abort_unless($request->user()?->id === $booking->user_id, 403);
+        $booking = $this->ensureBookingNotExpired($booking);
+        abort_unless($payment->payable_type === Booking::class, 404);
+        abort_unless((int) $payment->payable_id === (int) $booking->id, 404);
+        abort_unless($payment->provider === 'midtrans', 422);
+
+        $orderId = data_get($payment->payload, 'order_id')
+            ?? data_get($payment->payload, 'request.transaction_details.order_id');
+
+        abort_unless(is_string($orderId) && $orderId !== '', 422);
+
+        $transactionStatus = (array) Transaction::status($orderId);
+        $newStatus = $this->mapMidtransStatus($transactionStatus['transaction_status'] ?? 'pending');
+
+        DB::transaction(function () use ($booking, $payment, $transactionStatus, $newStatus): void {
+            $payment->update([
+                'status' => $newStatus,
+                'payload' => array_merge($payment->payload ?? [], $transactionStatus),
+                'paid_at' => $newStatus === PaymentStatus::PAID ? now() : null,
+            ]);
+
+            if ($newStatus === PaymentStatus::PAID) {
+                app(FinalizeBookingPaymentAction::class)->execute($booking->fresh());
+            }
+        });
+
+        return response()->json([
+            'booking' => [
+                'id' => $booking->id,
+                'status' => $booking->fresh()->status->value,
+            ],
+            'payment' => [
+                'id' => $payment->id,
+                'status' => $payment->fresh()->status->value,
+            ],
+        ]);
+    }
+
+    public function confirmTenantOnlinePayment(
+        Request $request,
+        string $username,
+        Booking $booking,
+        Payment $payment
+    ): JsonResponse {
+        return $this->confirmOnlinePayment($request, $booking, $payment);
+    }
+
+    private function mapMidtransStatus(mixed $midtransStatus): PaymentStatus
+    {
+        return match ($midtransStatus) {
+            'capture', 'settlement' => PaymentStatus::PAID,
+            'pending' => PaymentStatus::PENDING,
+            'deny', 'cancel', 'expire' => PaymentStatus::FAILED,
+            default => PaymentStatus::PENDING,
+        };
+    }
+
+    private function resolveBookingTimeLimitMinutes(Tour $tour): int
+    {
+        $tour->loadMissing('company.companySetting');
+
+        $minutes = (int) ($tour->company?->companySetting?->booking_entry_time_limit ?? 0);
+
+        return $minutes > 0 ? $minutes : 10;
+    }
+
+    private function remainingHoldSeconds(?Booking $booking): ?int
+    {
+        if (
+            ! $booking
+            || $booking->status !== BookingStatus::BOOKING_RESERVED
+            || ! $booking->reserved_expires_at
+        ) {
+            return null;
+        }
+
+        return max(0, (int) now()->diffInSeconds($booking->reserved_expires_at, false));
+    }
+
+    private function ensureBookingNotExpired(Booking $booking): Booking
+    {
+        $booking = app(ExpireBookingReservationsAction::class)->expireIfDue($booking);
+
+        if ($booking->status === BookingStatus::EXPIRED) {
+            throw ValidationException::withMessages([
+                'booking' => 'This booking reservation has expired. Please start a new booking.',
+            ]);
+        }
+
+        return $booking;
     }
 
     /**

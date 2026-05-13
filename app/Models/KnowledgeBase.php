@@ -4,10 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class TourDocumentKnowledgeBase extends Model
+class KnowledgeBase extends Model
 {
   protected $fillable = [
-    'tour_id',
+    'owner_type',
+    'owner_id',
     'content',
     'embedding',
   ];
@@ -16,8 +17,8 @@ class TourDocumentKnowledgeBase extends Model
     'embedding' => 'array',
   ];
 
-  public function tour()
+  public function owner()
   {
-    return $this->belongsTo(Tour::class);
+    return $this->morphTo();
   }
 }

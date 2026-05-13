@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Affiliate;
 
+use App\Enums\WithdrawalStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Withdrawal;
 use Illuminate\Http\Request;
@@ -66,7 +67,7 @@ class WithdrawalController extends Controller
       'owner_id' => $user->id,
       'bank_account_id' => $validated['bank_account_id'],
       'amount' => $validated['amount'],
-      'status' => Withdrawal::STATUS_REQUESTED,
+      'status' => WithdrawalStatus::PENDING,
     ]);
 
     return back()->with('success', 'Withdrawal request submitted.');

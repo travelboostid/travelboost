@@ -3,8 +3,8 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use App\Enums\MediaType;
+use App\Events\MediaCreated;
 
 class Media extends Model
 {
@@ -29,11 +29,20 @@ class Media extends Model
     'data' => 'array'
   ];
 
+  protected $dispatchesEvents = [
+    'created' => MediaCreated::class,
+  ];
+
   /**
    * Get the owner that owns the media
    */
   public function owner()
   {
     return $this->morphTo();
+  }
+
+  public function knowledgeBase()
+  {
+    return $this->morphOne(KnowledgeBase::class, 'owner');
   }
 }

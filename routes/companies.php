@@ -82,7 +82,7 @@ Route::prefix('companies/{company:username}/dashboard')->middleware(['auth', 'co
   Route::post('payments/{payment}/cancel', [PaymentController::class, 'cancel'])->name('payments.cancel');
   Route::resource('bank-accounts', BankAccountController::class);
   Route::get('wallet-transactions', [WalletTransactionsController::class, 'index'])->name('wallet-transaction.index');
-  Route::get('withdrawals', [WithdrawalController::class, 'index'])->name('withdrawal.index');
+  Route::resource('withdrawals', WithdrawalController::class);
   Route::get('profile', [ProfileController::class, 'show'])->name('settings.profile.show');
 
   Route::get(
@@ -105,6 +105,10 @@ Route::prefix('companies/{company:username}/dashboard')->middleware(['auth', 'co
   Route::get('bookings/{booking}', [BookingIndexController::class, 'show'])->name('bookings.show');
   Route::get('bookings/{booking}/edit', [BookingIndexController::class, 'edit'])->name('bookings.edit');
   Route::put('bookings/{booking}', [BookingIndexController::class, 'update'])->name('bookings.update');
+  Route::post('bookings/{booking}/manual-payments/{payment}/accept', [BookingIndexController::class, 'acceptManualPayment'])
+    ->name('bookings.manual-payments.accept');
+  Route::post('bookings/{booking}/manual-payments/{payment}/decline', [BookingIndexController::class, 'declineManualPayment'])
+    ->name('bookings.manual-payments.decline');
   Route::singleton('chatbot', ChatbotController::class);
   Route::singleton('page', PageController::class);
   Route::singleton('agent-subscriptions', AgentSubscriptionController::class);

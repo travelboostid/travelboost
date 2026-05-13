@@ -10,8 +10,9 @@ use App\Models\ChatMessage;
 use App\Models\ChatRoomMember;
 use App\Models\Company;
 use App\Models\CompanySettings;
+use App\Models\KnowledgeBase;
+use App\Models\Media;
 use App\Models\Tour;
-use App\Models\TourDocumentKnowledgeBase;
 use App\Models\User;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Collection;
@@ -212,9 +213,10 @@ class ChatbotAgent implements Agent, Conversational
       );
     $this->trackTokenUsage($embedded);
     // Retrieve relevant documents based on the tour and user's question
-    $documents = TourDocumentKnowledgeBase::query()
+    $documents = KnowledgeBase::query()
       ->whereVectorSimilarTo('embedding', $embedded->embeddings[0] ?? null, minSimilarity: 0.1)
-      ->where('tour_id', $tour->id)
+      ->where('owner_type', Media::class)
+      ->where('owner_id', $tour->document_id)
       ->limit(3)
       ->pluck('content');
 
