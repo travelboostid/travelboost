@@ -164,7 +164,7 @@ function getBookingAction(
   }
 
   if (status === 'down payment' && href) {
-    return { label: 'Pay Remaining Balance', icon: CreditCardIcon, href };
+    return { label: 'Pay Balance', icon: CreditCardIcon, href };
   }
 
   if (status === 'full payment') {
