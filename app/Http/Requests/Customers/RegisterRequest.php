@@ -38,8 +38,8 @@ class RegisterRequest extends FormRequest
   {
     return [
       'name' => UserRules::name(),
-      'username' => UserRules::username(),
-      'email' => UserRules::email(),
+      'username' => UserRules::username($this->input('company_id')),
+      'email' => UserRules::email($this->input('company_id')),
       'password' => UserRules::password(),
       'company_id' => [
         'required',

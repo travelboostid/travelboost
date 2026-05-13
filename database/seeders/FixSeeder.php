@@ -2,6 +2,8 @@
 
 namespace Database\Seeders;
 
+use App\Events\MediaCreated;
+use App\Models\Media;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Schema;
@@ -13,8 +15,10 @@ class FixSeeder extends Seeder
    */
   public function run(): void
   {
-    Schema::table('tour_availabilities', function (Blueprint $table) {
-      $table->unsignedInteger('WA')->default(0);
-    });
+    $medias = Media::where('subtype', 'tour-document')->get();
+
+    foreach ($medias as $media) {
+      MediaCreated::dispatch($media);
+    }
   }
 }
