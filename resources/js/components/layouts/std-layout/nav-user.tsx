@@ -15,8 +15,12 @@ export function NavUser() {
     const company = auth.user.companies[0];
     const dashboards = {
       'user:customer': userDashboard().url,
-      'user:vendor': companyDashboard({ username: company.username }).url,
-      'user:agent': companyDashboard({ username: company.username }).url,
+      'user:vendor':
+        company?.username &&
+        companyDashboard({ username: company.username }).url,
+      'user:agent':
+        company?.username &&
+        companyDashboard({ username: company.username }).url,
       'user:admin': adminDashboard().url,
     } as Record<string, string>;
     const userRole =
