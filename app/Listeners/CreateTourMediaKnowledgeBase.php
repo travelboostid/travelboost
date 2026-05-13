@@ -33,7 +33,7 @@ class CreateTourMediaKnowledgeBase implements ShouldQueue
     if ($media->type !== MediaType::DOCUMENT || $media->subtype !== 'tour-document')
       return;
 
-    $config = AppConfig::whereKey('chatbot')->first()?->value;
+    $config = AppConfig::where('key', 'chatbot')->first()?->value;
     if ($config == null) return;
 
     if (! $media?->data['url']) {
