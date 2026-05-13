@@ -87,6 +87,12 @@ class Company extends Model
     return $this->hasMany(CompanyTeam::class);
   }
 
+  public function users()
+  {
+    return $this->belongsToMany(User::class, 'company_teams')
+      ->withTimestamps();
+  }
+
   public function tours()
   {
     return $this->hasMany(Tour::class);
