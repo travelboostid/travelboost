@@ -41,6 +41,8 @@ Route::prefix('companies/{company:username}/dashboard')->middleware(['auth'])->n
 Route::prefix('companies/{company:username}/dashboard')->middleware(['auth', 'company.access'])->name('companies.dashboard.')->group(function () {
   Route::get('/', [HomeController::class, 'index'])->name('index');
   Route::get('reports/room-listings', [RoomListingController::class, 'index'])->name('reports.room-listings.index');
+  Route::get('reports/room-listings/export/excel', [RoomListingController::class, 'exportExcel'])->name('reports.room-listings.export.excel');
+  Route::get('reports/room-listings/export/pdf', [RoomListingController::class, 'exportPdf'])->name('reports.room-listings.export.pdf');
   Route::get('reports/seat-availabilities', [SeatAvailabilityController::class, 'index'])->name('reports.seat-availabilities.index');
   Route::group(['prefix' => 'vendors/{vendor}', 'as' => 'vendor.'], function () {
     Route::get('/tours', [VendorTourCatalogController::class, 'index'])->name('tours.index');
