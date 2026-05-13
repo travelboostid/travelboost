@@ -119,7 +119,6 @@ export default function Step4BookingSummary({
         name: string;
         qty: number;
         unitPrice: number;
-        originalUnitPrice: number;
       }
     >();
     for (const g of guests) {
@@ -131,8 +130,7 @@ export default function Step4BookingSummary({
         map.set(cat, {
           name: PRICE_CATEGORY_LABELS[cat] ?? cat,
           qty: 1,
-          unitPrice: g.price,
-          originalUnitPrice: g.originalPrice ?? g.price,
+          unitPrice: g.originalPrice ?? g.price,
         });
       }
     }
@@ -144,11 +142,8 @@ export default function Step4BookingSummary({
     [displayAddOns],
   );
 
-  const subtotalBeforeTax =
-    pricing.subtotalGuests + pricing.platformFee + addOnsTotal;
   const vatPct = minimumVatPct ?? 11;
-  const ppn = Math.round(pricing.subtotalGuests * (vatPct / 100));
-  const grandTotal = subtotalBeforeTax + ppn + pricing.agentCommission;
+  const grandTotal = pricing.totalPrice + addOnsTotal;
   const dpPct = minimumDownPaymentPct ?? 50;
   const dpRate = dpPct / 100;
   const dpLabel = `Down Payment (${dpPct}%)`;
@@ -197,7 +192,7 @@ export default function Step4BookingSummary({
       >
         <div className="flex items-center gap-2">
           <ReceiptIcon className="size-5 text-primary" />
-          <h2 className="text-lg font-semibold">Booking Summary</h2>
+          <h2 className="text-lg font-semibold">Price Summary</h2>
         </div>
 
         <div className="divide-y rounded-xl border bg-card shadow-sm">
@@ -242,7 +237,10 @@ export default function Step4BookingSummary({
                   className="flex items-center justify-between"
                 >
                   <span className="text-muted-foreground">{cat.name}</span>
-                  <div className="flex items-center gap-3">
+                  <div className="flex flex-wrap items-center justify-end gap-2 text-right">
+                    <span className="text-xs font-medium text-muted-foreground">
+                      {formatCurrency(cat.unitPrice)}
+                    </span>
                     <span className="text-xs font-medium text-muted-foreground">
                       x{cat.qty}
                     </span>
@@ -274,7 +272,7 @@ export default function Step4BookingSummary({
                     <div className="flex justify-between text-muted-foreground">
                       <span>PPN ({vatPct}%)</span>
                       <span className="font-medium text-foreground">
-                        {formatCurrency(ppn)}
+                        {formatCurrency(pricing.ppn)}
                       </span>
                     </div>
                     {pricing.agentCommission > 0 && (

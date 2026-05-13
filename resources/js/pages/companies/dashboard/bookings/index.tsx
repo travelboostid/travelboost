@@ -685,24 +685,13 @@ export default function Page({ data }: PageProps) {
     >
       <Head title="Bookings" />
 
-      <div className="w-full space-y-6 p-4 md:p-6 max-w-screen-2xl mx-auto pb-20 min-w-0 overflow-hidden">
+      <div className="w-full flex flex-col gap-6 p-4 md:p-6 max-w-screen-2xl mx-auto pb-20 min-w-0 overflow-hidden">
         {/* ── Page header ─────────────────────────────────────── */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">
-              Bookings
-            </h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              {isAgent
-                ? 'Manage and monitor bookings for your agency.'
-                : 'Manage and monitor bookings from your tours.'}
-            </p>
-          </div>
-        </div>
-
         {/* ── Status filter tabs ───────────────────────────── */}
         <div className="flex flex-wrap gap-1.5">
-          {STATUS_TABS.map((tab) => {
+          {STATUS_TABS.filter(
+            (tab) => tab.value !== 'manual reserved',
+          ).map((tab) => {
             const params = new URLSearchParams(window.location.search);
             const activeStatus = params.get('status') ?? '';
             const isActive = activeStatus === tab.value;
@@ -742,7 +731,7 @@ export default function Page({ data }: PageProps) {
         </div>
 
         {/* ── Toolbar: search + view-columns ──────────────────── */}
-        <div className="flex flex-col sm:flex-row items-center gap-3 justify-between bg-slate-50/50 p-1 rounded-lg">
+        <div className="order-first flex flex-col sm:flex-row items-center gap-3 justify-between bg-slate-50/50 p-1 rounded-lg">
           <div className="relative w-full sm:max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input

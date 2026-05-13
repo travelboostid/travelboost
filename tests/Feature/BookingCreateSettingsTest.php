@@ -9,7 +9,9 @@ use App\Models\TourAvailability;
 use App\Models\TourSchedule;
 use App\Models\User;
 use Database\Seeders\Common\RolePermissionSeeder;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 beforeEach(function () {
     $this->withoutVite();
@@ -320,6 +322,112 @@ test('store maps payment method to booking payment mode', function () {
         'booking_number' => 'BKG-PAYMENT-MODE',
         'payment_mode' => 'manual',
     ]);
+});
+
+test('store persists room arrangement and travel document data', function () {
+    Storage::fake('public');
+
+    $user = User::factory()->create();
+    $company = Company::factory()->create([
+        'username' => 'persistvendor',
+        'type' => 'vendor',
+    ]);
+    $tour = Tour::factory()->create([
+        'company_id' => $company->id,
+        'status' => 'active',
+        'promote_price' => 0,
+    ]);
+
+    Domain::create([
+        'subdomain' => 'persistvendor',
+        'owner_type' => Company::class,
+        'owner_id' => $company->id,
+        'domain_enabled' => true,
+    ]);
+
+    $response = $this->actingAs($user)
+        ->post(route('bookings.store', [
+            'username' => 'persistvendor',
+            'tour' => $tour,
+        ]), [
+            'booking_number' => 'BKG-DATA-PERSISTENCE',
+            'tour_id' => $tour->id,
+            'departure_date' => now()->addDays(20)->toDateString(),
+            'pax_adult' => 2,
+            'pax_child' => 0,
+            'pax_infant' => 0,
+            'vendor_id' => $company->id,
+            'contact_name' => 'Data Persistence',
+            'contact_email' => 'data-persistence@example.com',
+            'contact_phone' => '08123456789',
+            'payment_type' => 'full_payment',
+            'payment_method' => 'manual_transfer',
+            'passengers' => [
+                [
+                    'title' => 'Mr',
+                    'first_name' => 'Primary',
+                    'last_name' => 'Guest',
+                    'pob' => 'Jakarta',
+                    'price_category' => 'Adult Twin',
+                    'price_amount' => 1_000_000,
+                    'passport_number' => 'A1234567',
+                    'passport_issue_date' => '2024-01-01',
+                    'passport_expiry_date' => '2030-01-01',
+                    'passport_file' => UploadedFile::fake()->image('passport.jpg'),
+                    'visa_number' => 'VISA-1',
+                    'visa_file' => UploadedFile::fake()->create('visa.pdf', 120, 'application/pdf'),
+                    'room_type' => 'Twin',
+                    'room_number' => '1',
+                ],
+                [
+                    'title' => 'Ms',
+                    'first_name' => 'Second',
+                    'last_name' => 'Guest',
+                    'pob' => 'Bandung',
+                    'price_category' => 'Adult Twin',
+                    'price_amount' => 1_000_000,
+                    'room_type' => 'Twin',
+                    'room_number' => '1',
+                ],
+            ],
+            'rooms' => [
+                [
+                    'room_type' => 'twin',
+                    'room_label' => 'Room 1',
+                    'bed_layout' => [
+                        ['bedType' => 'twin', 'guestId' => 'adult-0', 'position' => ['x' => 0, 'y' => 0]],
+                        ['bedType' => 'twin', 'guestId' => 'adult-1', 'position' => ['x' => 1, 'y' => 0]],
+                    ],
+                ],
+            ],
+            'total_price' => 2_000_000,
+            'tax_amount' => 220_000,
+            'platform_fee' => 50_000,
+            'commission_amount' => 0,
+            'grand_total' => 2_270_000,
+        ]);
+
+    $response->assertSessionHasNoErrors();
+
+    $booking = Booking::with(['passengers', 'rooms'])
+        ->where('booking_number', 'BKG-DATA-PERSISTENCE')
+        ->firstOrFail();
+    $passenger = $booking->passengers->firstWhere('first_name', 'Primary');
+
+    expect($booking->rooms)->toHaveCount(1)
+        ->and($booking->rooms->first()->bed_layout)->toBe([
+            ['bedType' => 'twin', 'guestId' => 'adult-0', 'position' => ['x' => 0, 'y' => 0]],
+            ['bedType' => 'twin', 'guestId' => 'adult-1', 'position' => ['x' => 1, 'y' => 0]],
+        ])
+        ->and($passenger->room_number)->toBe('1')
+        ->and($passenger->passport_issue_date->toDateString())->toBe('2024-01-01')
+        ->and($passenger->passport_expiry_date->toDateString())->toBe('2030-01-01')
+        ->and($passenger->visa_number)->toBe('VISA-1')
+        ->and($passenger->passport_file_path)->toStartWith('travel-documents/passports/')
+        ->and($passenger->visa_file_path)->toStartWith('travel-documents/visas/');
+
+    Storage::disk('public')->assertExists($passenger->passport_file_path);
+    Storage::disk('public')->assertExists($passenger->visa_file_path);
 });
 
 test('auto created booking for a selected schedule does not skip terms gate as a resume', function () {

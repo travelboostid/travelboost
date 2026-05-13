@@ -1,4 +1,3 @@
-import type { TourResource } from '@/api/model';
 import BookingInfoCard from '@/components/booking/BookingInfoCard';
 import type { ManualPaymentData } from '@/components/booking/ManualPaymentDialog';
 import Step1GuestInformation, {
@@ -6,6 +5,8 @@ import Step1GuestInformation, {
 } from '@/components/booking/Step1GuestInformation';
 import Step2RoomConfiguration, {
   autoRecommendRooms,
+  getRoomNumberByGuestId,
+  serializeRoomsForBooking,
   type RoomConfig,
 } from '@/components/booking/Step2RoomConfiguration';
 import Step3TravelDocuments from '@/components/booking/Step3TravelDocuments';
@@ -16,7 +17,6 @@ import Step4BookingSummary, {
 } from '@/components/booking/Step4BookingSummary';
 import WizardStepIndicator from '@/components/booking/WizardStepIndicator';
 import TenantLayout from '@/components/layouts/tenant-layout';
-import type { TourSchedule } from '@/components/tours/tour-booking-modal';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -32,9 +32,7 @@ import type { WizardStepId } from '@/constants/booking';
 import type {
   BookingContact,
   GuestEntry,
-  TourPrice,
   TravelDocumentEntry,
-  VendorInfo,
 } from '@/types/booking';
 import { calculateBookingPricing } from '@/utils/booking-calculations';
 import { router, usePage } from '@inertiajs/react';
@@ -42,14 +40,6 @@ import axios from 'axios';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ArrowLeftIcon, ArrowRightIcon, FileTextIcon } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-
-type PageProps = {
-  tour: TourResource & { schedules?: TourSchedule[] };
-  tourPrices: TourPrice[];
-  roomTypes: any[];
-  vendor: VendorInfo;
-  bookingNumber: string;
-};
 
 const DEFAULT_TNC = `1. The price shown is valid only for the selected departure date.
 2. Full payment is required to secure your booking.
@@ -69,7 +59,6 @@ export default function Page() {
     availability,
     addOns,
     existingBooking,
-    bookingDeadlineDays,
     bookingTimeLimitMinutes,
     minimumDownPaymentPct,
     minimumVatPct,
@@ -154,7 +143,7 @@ export default function Page() {
 
       let restoredPrice =
         parseFloat(p.price_amount) || (matchedPrice ? matchedPrice.price : 0);
-      let restoredOriginalPrice = matchedPrice
+      const restoredOriginalPrice = matchedPrice
         ? matchedPrice.price
         : restoredPrice;
 
@@ -212,7 +201,6 @@ export default function Page() {
       return;
     }
 
-    const newGuests: GuestEntry[] = [];
     const makeDefault = (
       id: string,
       type: 'adult' | 'child' | 'infant',
@@ -232,45 +220,53 @@ export default function Page() {
       note: '',
     });
 
-    for (let i = 0; i < adults; i++) {
-      newGuests.push(
-        guests.find((g) => g.id === `adult-${i}`) ??
-          makeDefault(`adult-${i}`, 'adult'),
-      );
-    }
-    for (let i = 0; i < children; i++) {
-      newGuests.push(
-        guests.find((g) => g.id === `child-${i}`) ??
-          makeDefault(`child-${i}`, 'child'),
-      );
-    }
-    for (let i = 0; i < infants; i++) {
-      newGuests.push(
-        guests.find((g) => g.id === `infant-${i}`) ??
-          makeDefault(`infant-${i}`, 'infant'),
-      );
-    }
+    setGuests((previousGuests) => {
+      const newGuests: GuestEntry[] = [];
 
-    const newDocs: TravelDocumentEntry[] = newGuests.map((g) => {
-      const existing = travelDocuments.find((d) => d.guestId === g.id);
-      return (
-        existing ?? {
-          guestId: g.id,
-          passportNumber: '',
-          passportIssueDate: '',
-          passportExpiryDate: '',
-          visaNumber: '',
-          passportFile: null,
-          passportFileName: '',
-          visaFile: null,
-          visaFileName: '',
-        }
-      );
+      for (let i = 0; i < adults; i++) {
+        newGuests.push(
+          previousGuests.find((g) => g.id === `adult-${i}`) ??
+            makeDefault(`adult-${i}`, 'adult'),
+        );
+      }
+      for (let i = 0; i < children; i++) {
+        newGuests.push(
+          previousGuests.find((g) => g.id === `child-${i}`) ??
+            makeDefault(`child-${i}`, 'child'),
+        );
+      }
+      for (let i = 0; i < infants; i++) {
+        newGuests.push(
+          previousGuests.find((g) => g.id === `infant-${i}`) ??
+            makeDefault(`infant-${i}`, 'infant'),
+        );
+      }
+
+      return newGuests;
     });
-
-    setGuests(newGuests);
-    setTravelDocuments(newDocs);
   }, [adults, children, infants]);
+
+  useEffect(() => {
+    setTravelDocuments((previousDocs) =>
+      guests.map((g) => {
+        const existing = previousDocs.find((d) => d.guestId === g.id);
+
+        return (
+          existing ?? {
+            guestId: g.id,
+            passportNumber: '',
+            passportIssueDate: '',
+            passportExpiryDate: '',
+            visaNumber: '',
+            passportFile: null,
+            passportFileName: '',
+            visaFile: null,
+            visaFileName: '',
+          }
+        );
+      }),
+    );
+  }, [guests]);
 
   // ─── Pricing (single source of truth) ───────────────────────────────
   const pricing = useMemo(
@@ -281,6 +277,24 @@ export default function Page() {
         minimumVatPct ?? 11,
       ),
     [guests, vendor, minimumVatPct],
+  );
+  const [selectedAddOns, setSelectedAddOns] = useState<AddOnItem[]>(
+    () => addOns ?? [],
+  );
+  const selectedAddOnsForPricing = useMemo(
+    () =>
+      selectedAddOns.map((addon) =>
+        addon.hasQty === false ? { ...addon, qty: guests.length } : addon,
+      ),
+    [selectedAddOns, guests.length],
+  );
+  const selectedAddOnsTotal = useMemo(
+    () =>
+      selectedAddOnsForPricing.reduce(
+        (sum, addon) => sum + addon.unitPrice * addon.qty,
+        0,
+      ),
+    [selectedAddOnsForPricing],
   );
 
   // ─── Timer (starts when entering Step 2) ────────────────────────────
@@ -305,6 +319,11 @@ export default function Page() {
   // ─── Navigation ─────────────────────────────────────────────────────
   const goNext = () => {
     if (currentStep === 1) {
+      if (timerStarted) {
+        confirmGoToStep2();
+        return;
+      }
+
       // Show confirmation modal before going to Step 2
       setShowStep2ConfirmModal(true);
       return;
@@ -493,6 +512,7 @@ export default function Page() {
       }));
     const addOnsTotal = addOnRows.reduce((sum, item) => sum + item.price, 0);
     const grandTotal = pricing.totalPrice + addOnsTotal;
+    const roomNumberByGuestId = getRoomNumberByGuestId(rooms);
     const payload = {
       tour_id: tour.id,
       departure_date: preselectedDate,
@@ -523,21 +543,15 @@ export default function Page() {
           passport_number: doc?.passportNumber || null,
           passport_issue_date: doc?.passportIssueDate || null,
           passport_expiry_date: doc?.passportExpiryDate || null,
+          passport_file: doc?.passportFile ?? null,
           visa_number: doc?.visaNumber || null,
+          visa_file: doc?.visaFile ?? null,
           room_type: g.roomTypeDescription || null,
-          room_number: null,
+          room_number: roomNumberByGuestId.get(g.id) ?? null,
           note: g.note || null,
         };
       }),
-      rooms: rooms.map((r) => ({
-        room_type: r.type,
-        room_label: r.label,
-        bed_layout: r.guestIds.map((gid, idx) => ({
-          bedType: r.type,
-          guestId: gid,
-          position: { x: idx, y: 0 },
-        })),
-      })),
+      rooms: serializeRoomsForBooking(rooms),
       addons: addOnRows,
       total_price: pricing.subtotalGuests,
       tax_amount: pricing.ppn,
@@ -547,6 +561,7 @@ export default function Page() {
     };
 
     router.post(`/bookings/${tour.id}`, payload as any, {
+      forceFormData: true,
       preserveScroll: true,
       onSuccess: () => {
         if (paymentMethod === 'midtrans') {
@@ -650,13 +665,6 @@ export default function Page() {
   };
 
   // ─── Helper ─────────────────────────────────────────────────────────
-  const getGuestDisplayName = (guest: GuestEntry) => {
-    const parts = [guest.title, guest.firstName, guest.lastName].filter(
-      Boolean,
-    );
-    return parts.length > 0 ? parts.join(' ') : '(unnamed)';
-  };
-
   // ─── Render ─────────────────────────────────────────────────────────
   if (!hasAgreedToTnc) {
     return (
@@ -761,6 +769,11 @@ export default function Page() {
                   contactEmail={contact.email}
                   contactPhone={contact.phone}
                   pricing={pricing}
+                  displayTotalPrice={
+                    currentStep === 4
+                      ? pricing.totalPrice + selectedAddOnsTotal
+                      : undefined
+                  }
                   timeLeftSeconds={timeLeft}
                   currentStep={currentStep}
                   timerStarted={timerStarted}
@@ -821,7 +834,8 @@ export default function Page() {
                         agentName={tenant?.name || '-'}
                         onPayNow={handlePayNow}
                         isSubmitting={isSubmitting}
-                        initialAddOns={addOns}
+                        initialAddOns={selectedAddOns}
+                        onAddOnsChange={setSelectedAddOns}
                         minimumDownPaymentPct={minimumDownPaymentPct}
                         minimumVatPct={minimumVatPct}
                         vendorBankInfo={vendorBankInfo}
@@ -867,7 +881,7 @@ export default function Page() {
                       onClick={goNext}
                       className="gap-2"
                     >
-                      {currentStep === 3 ? 'Skip' : 'Next'}
+                      Next
                       <ArrowRightIcon className="size-4" />
                     </Button>
                   </div>
