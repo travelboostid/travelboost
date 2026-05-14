@@ -662,7 +662,7 @@ export default function Step1GuestInformation({
           >
             <span className="min-w-0">
               <span className="block text-sm font-semibold">
-                Use booking contact as Guest 1
+                Use booking contact as a guest
               </span>
               <span className="mt-0.5 block text-xs text-muted-foreground">
                 {contactAsGuestHint}
