@@ -17,7 +17,7 @@ import {
   RefreshCwIcon,
   SearchCheckIcon,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 type BookingItem = {
   id: number;
@@ -57,6 +57,7 @@ type PageProps = {
   bookings: Paginated<BookingItem> | null;
   favorites: Paginated<TourItem> | null;
   activeTab: 'favorites' | 'current' | 'history';
+  selectedBookingNumber?: string | null;
 };
 
 type BookingAction = {
@@ -107,6 +108,10 @@ function normalizeStatus(status: string) {
   return status.toLowerCase().replaceAll('_', ' ');
 }
 
+function getBookingCardId(bookingNumber: string) {
+  return `booking-${bookingNumber.replace(/[^a-zA-Z0-9_-]/g, '-')}`;
+}
+
 function bookingCreateHref(
   booking: BookingItem,
   options: { reuseBookingNumber?: boolean } = {},
@@ -125,10 +130,16 @@ function bookingCreateHref(
   return `/bookings/${booking.tour.id}/create?${params.toString()}`;
 }
 
-function getBookingAction(
-  booking: BookingItem,
-  activeTab: PageProps['activeTab'],
-): BookingAction | null {
+function bookingPaymentStatusHref(booking: BookingItem) {
+  const params = new URLSearchParams({
+    tab: 'current',
+    booking_number: booking.booking_number,
+  });
+
+  return `/mybookings?${params.toString()}`;
+}
+
+function getBookingAction(booking: BookingItem): BookingAction | null {
   const status = normalizeStatus(booking.status);
   const href = bookingCreateHref(booking);
 
@@ -164,7 +175,11 @@ function getBookingAction(
   }
 
   if (status === 'down payment' && href) {
-    return { label: 'Pay Balance', icon: CreditCardIcon, href };
+    return {
+      label: 'Pay Balance',
+      icon: CreditCardIcon,
+      href: bookingCreateHref(booking, { reuseBookingNumber: true }) ?? href,
+    };
   }
 
   if (status === 'full payment') {
@@ -179,12 +194,7 @@ function getBookingAction(
     return {
       label: 'Check Payment Status',
       icon: SearchCheckIcon,
-      onClick: () =>
-        router.get(
-          '/mybookings',
-          { tab: activeTab },
-          { preserveScroll: true, preserveState: true, replace: true },
-        ),
+      href: bookingPaymentStatusHref(booking),
     };
   }
 
@@ -196,6 +206,7 @@ export default function Page({
   bookings,
   favorites,
   activeTab: initialActiveTab,
+  selectedBookingNumber: initialSelectedBookingNumber = null,
 }: PageProps) {
   const params = new URLSearchParams(window.location.search);
   const [activeTab, setActiveTab] = useState(
@@ -203,6 +214,8 @@ export default function Page({
       initialActiveTab ??
       'current',
   );
+  const selectedBookingNumber =
+    initialSelectedBookingNumber ?? params.get('booking_number') ?? null;
 
   const bookingCount = bookings?.data.length ?? 0;
   const favoriteCount = favorites?.data.length ?? 0;
@@ -212,6 +225,27 @@ export default function Page({
     setActiveTab(tab);
     router.get('/mybookings', { tab }, { preserveState: true, replace: true });
   };
+
+  useEffect(() => {
+    if (activeTab !== 'current' || !selectedBookingNumber) {
+      return;
+    }
+
+    const element = document.getElementById(
+      getBookingCardId(selectedBookingNumber),
+    );
+
+    if (!element) {
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      (element as HTMLElement).focus({ preventScroll: true });
+    }, 50);
+
+    return () => window.clearTimeout(timeout);
+  }, [activeTab, selectedBookingNumber, bookings?.data.length]);
 
   if (!auth.user) {
     return (
@@ -306,7 +340,9 @@ export default function Page({
                 <BookingCard
                   key={booking.id}
                   booking={booking}
-                  activeTab={activeTab}
+                  isHighlighted={
+                    selectedBookingNumber === booking.booking_number
+                  }
                 />
               ))}
               {(bookings?.data ?? []).length === 0 && (
@@ -333,11 +369,11 @@ export default function Page({
 
 function SummaryTile({ label, value }: { label: string; value: number }) {
   return (
-    <div className="flex h-20 min-w-0 flex-col justify-center rounded-xl border bg-background px-4 py-3 text-right sm:min-w-40">
-      <p className="text-[11px] font-medium leading-none text-muted-foreground">
+    <div className="grid h-20 min-w-0 grid-rows-[1rem_2rem] content-center justify-items-end gap-1 rounded-xl border bg-background px-4 py-3 text-right sm:min-w-40">
+      <p className="text-[11px] font-medium leading-4 text-muted-foreground">
         {label}
       </p>
-      <p className="mt-1 flex min-h-7 items-center justify-end text-2xl font-bold leading-none text-foreground">
+      <p className="flex h-8 items-center justify-end text-2xl font-bold leading-none text-foreground">
         {value}
       </p>
     </div>
@@ -346,11 +382,11 @@ function SummaryTile({ label, value }: { label: string; value: number }) {
 
 function SummaryTextTile({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex h-20 min-w-0 flex-col justify-center rounded-xl border bg-background px-4 py-3 text-right sm:min-w-40">
-      <p className="text-[11px] font-medium leading-none text-muted-foreground">
+    <div className="grid h-20 min-w-0 grid-rows-[1rem_2rem] content-center justify-items-end gap-1 rounded-xl border bg-background px-4 py-3 text-right sm:min-w-40">
+      <p className="text-[11px] font-medium leading-4 text-muted-foreground">
         {label}
       </p>
-      <p className="mt-1 flex min-h-7 items-center justify-end truncate text-sm font-bold leading-none text-foreground">
+      <p className="flex h-8 max-w-40 items-center justify-end truncate text-sm font-bold leading-5 text-foreground">
         {value}
       </p>
     </div>
@@ -410,23 +446,31 @@ function FavoriteCard({
 
 function BookingCard({
   booking,
-  activeTab,
+  isHighlighted,
 }: {
   booking: BookingItem;
-  activeTab: PageProps['activeTab'];
+  isHighlighted: boolean;
 }) {
   const status = normalizeStatus(booking.status);
   const imageMedia = booking.tour?.image as any;
   const hasImage = Boolean(imageMedia?.data?.files?.length);
   const image = extractImageSrc(imageMedia).src;
-  const action = getBookingAction(booking, activeTab);
+  const action = getBookingAction(booking);
   const statusClass =
     STATUS_STYLES[status] ??
     'bg-muted text-muted-foreground dark:bg-muted dark:text-muted-foreground';
 
   return (
-    <article className="group overflow-hidden rounded-2xl border bg-card shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md">
-      <div className="grid gap-0 md:grid-cols-[160px_1fr] lg:grid-cols-[180px_1fr_auto]">
+    <article
+      id={getBookingCardId(booking.booking_number)}
+      tabIndex={isHighlighted ? -1 : undefined}
+      className={cn(
+        'group overflow-hidden rounded-2xl border bg-card shadow-sm transition-all focus:outline-none hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md',
+        isHighlighted &&
+          'border-primary/50 ring-2 ring-primary/25 shadow-md shadow-primary/10',
+      )}
+    >
+      <div className="grid items-stretch gap-0 md:grid-cols-[160px_1fr] lg:grid-cols-[180px_1fr_auto]">
         <TourImage
           image={image}
           label={booking.tour?.name ?? 'Tour'}
@@ -477,8 +521,7 @@ function BookingCard({
         </div>
         <div
           className={cn(
-            'flex flex-col gap-4 border-t p-4 sm:p-5 lg:min-w-52 lg:border-l lg:border-t-0 lg:text-right',
-            hasImage ? 'lg:justify-between' : 'lg:justify-center',
+            'flex h-full flex-col justify-between gap-4 border-t p-4 sm:p-5 lg:min-h-40 lg:min-w-52 lg:border-l lg:border-t-0 lg:text-right',
           )}
         >
           <div>
@@ -555,7 +598,7 @@ function TourImage({
   }
 
   return (
-    <div className="flex h-28 items-center justify-center bg-primary/10 px-3 text-center text-2xl font-bold text-primary md:h-full md:min-h-40">
+    <div className="flex h-36 items-center justify-center overflow-hidden bg-primary/10 px-3 text-center text-2xl font-bold text-primary md:h-full md:min-h-40">
       {label.charAt(0).toUpperCase()}
     </div>
   );
