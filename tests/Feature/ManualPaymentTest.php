@@ -5,7 +5,10 @@ use App\Enums\CompanyTeamStatus;
 use App\Models\Booking;
 use App\Models\Company;
 use App\Models\CompanyTeam;
+use App\Models\Domain;
 use App\Models\Tour;
+use App\Models\TourAvailability;
+use App\Models\TourSchedule;
 use App\Models\User;
 use Database\Seeders\Common\RolePermissionSeeder;
 use Illuminate\Http\UploadedFile;
@@ -429,6 +432,168 @@ test('manual payment approval uses verified paid total instead of payload status
 
     expect($booking->fresh()->status->value)->toBe('down payment');
     expect($payment->fresh()->status->value)->toBe('paid');
+});
+
+test('booking create refresh exposes approved manual down payment result', function () {
+    $user = User::factory()->create();
+    $vendorUser = User::factory()->create();
+    $vendor = Company::factory()->create([
+        'username' => 'manualdpvendor',
+        'type' => 'vendor',
+    ]);
+    CompanyTeam::create([
+        'company_id' => $vendor->id,
+        'user_id' => $vendorUser->id,
+        'status' => CompanyTeamStatus::ACTIVE,
+        'is_owner' => true,
+        'accepted_at' => now(),
+    ]);
+    Domain::create([
+        'subdomain' => $vendor->username,
+        'owner_type' => Company::class,
+        'owner_id' => $vendor->id,
+        'domain_enabled' => true,
+        'subdomain_enabled' => true,
+    ]);
+
+    $tour = Tour::factory()->create([
+        'company_id' => $vendor->id,
+        'status' => 'active',
+    ]);
+    $schedule = TourSchedule::create([
+        'tour_id' => $tour->id,
+        'tour_code' => $tour->code,
+        'company_id' => $vendor->id,
+        'departure_date' => now()->addDays(20)->toDateString(),
+        'return_date' => now()->addDays(25)->toDateString(),
+        'is_active' => true,
+    ]);
+    TourAvailability::create([
+        'company_id' => $vendor->id,
+        'tour_id' => $tour->id,
+        'schedule_id' => $schedule->id,
+        'max_pax' => 10,
+        'available' => 10,
+    ]);
+    $booking = Booking::factory()->create([
+        'user_id' => $user->id,
+        'vendor_id' => $vendor->id,
+        'tour_id' => $tour->id,
+        'departure_date' => $schedule->departure_date,
+        'status' => BookingStatus::WAITING_PAYMENT_APPROVAL,
+        'payment_mode' => 'manual',
+        'grand_total' => 1_000_000,
+    ]);
+    $payment = $booking->payments()->create([
+        'owner_type' => User::class,
+        'owner_id' => $user->id,
+        'provider' => 'manual',
+        'payment_method' => 'bank_transfer',
+        'amount' => 250_000,
+        'status' => 'pending',
+        'payload' => ['payment_type' => 'down_payment'],
+    ]);
+
+    $this->actingAs($vendorUser)
+        ->post("/companies/{$vendor->username}/dashboard/bookings/{$booking->id}/manual-payments/{$payment->id}/accept")
+        ->assertRedirect();
+
+    $response = $this->actingAs($user)->get(route('bookings.create', [
+        'username' => $vendor->username,
+        'tour' => $tour,
+        'date' => $schedule->departure_date,
+        'booking_number' => $booking->booking_number,
+    ]));
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->component('tours/bookings/create')
+        ->where('bookingPaymentResult.bookingStatus', 'down payment')
+        ->where('bookingPaymentResult.paymentStatus', 'paid')
+        ->where('bookingPaymentResult.paymentMode', 'manual')
+        ->where('bookingPaymentResult.paidAmount', 250000)
+        ->where('bookingPaymentResult.remainingBalance', 750000));
+});
+
+test('booking create refresh exposes approved manual full payment result', function () {
+    $user = User::factory()->create();
+    $vendorUser = User::factory()->create();
+    $vendor = Company::factory()->create([
+        'username' => 'manualfpvendor',
+        'type' => 'vendor',
+    ]);
+    CompanyTeam::create([
+        'company_id' => $vendor->id,
+        'user_id' => $vendorUser->id,
+        'status' => CompanyTeamStatus::ACTIVE,
+        'is_owner' => true,
+        'accepted_at' => now(),
+    ]);
+    Domain::create([
+        'subdomain' => $vendor->username,
+        'owner_type' => Company::class,
+        'owner_id' => $vendor->id,
+        'domain_enabled' => true,
+        'subdomain_enabled' => true,
+    ]);
+
+    $tour = Tour::factory()->create([
+        'company_id' => $vendor->id,
+        'status' => 'active',
+    ]);
+    $schedule = TourSchedule::create([
+        'tour_id' => $tour->id,
+        'tour_code' => $tour->code,
+        'company_id' => $vendor->id,
+        'departure_date' => now()->addDays(20)->toDateString(),
+        'return_date' => now()->addDays(25)->toDateString(),
+        'is_active' => true,
+    ]);
+    TourAvailability::create([
+        'company_id' => $vendor->id,
+        'tour_id' => $tour->id,
+        'schedule_id' => $schedule->id,
+        'max_pax' => 10,
+        'available' => 10,
+    ]);
+    $booking = Booking::factory()->create([
+        'user_id' => $user->id,
+        'vendor_id' => $vendor->id,
+        'tour_id' => $tour->id,
+        'departure_date' => $schedule->departure_date,
+        'status' => BookingStatus::WAITING_PAYMENT_APPROVAL,
+        'payment_mode' => 'manual',
+        'grand_total' => 1_000_000,
+    ]);
+    $payment = $booking->payments()->create([
+        'owner_type' => User::class,
+        'owner_id' => $user->id,
+        'provider' => 'manual',
+        'payment_method' => 'bank_transfer',
+        'amount' => 1_000_000,
+        'status' => 'pending',
+        'payload' => ['payment_type' => 'full_payment'],
+    ]);
+
+    $this->actingAs($vendorUser)
+        ->post("/companies/{$vendor->username}/dashboard/bookings/{$booking->id}/manual-payments/{$payment->id}/accept")
+        ->assertRedirect();
+
+    $response = $this->actingAs($user)->get(route('bookings.create', [
+        'username' => $vendor->username,
+        'tour' => $tour,
+        'date' => $schedule->departure_date,
+        'booking_number' => $booking->booking_number,
+    ]));
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->component('tours/bookings/create')
+        ->where('bookingPaymentResult.bookingStatus', 'full payment')
+        ->where('bookingPaymentResult.paymentStatus', 'paid')
+        ->where('bookingPaymentResult.paymentMode', 'manual')
+        ->where('bookingPaymentResult.paidAmount', 1000000)
+        ->where('bookingPaymentResult.remainingBalance', 0));
 });
 
 test('vendor can decline pending manual payment proof and cancel booking', function () {

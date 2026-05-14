@@ -107,7 +107,10 @@ class BookingController extends Controller
                     ->where('booking_number', $requestedBookingNumber)
                     ->where('user_id', $user->id)
                     ->where('tour_id', $tour->id)
-                    ->whereIn('status', $resumableStatuses)
+                    ->whereIn('status', [
+                        ...$resumableStatuses,
+                        BookingStatus::FULL_PAYMENT,
+                    ])
                     ->whereDate('departure_date', request()->query('date'))
                     ->whereDate('departure_date', '>=', now()->toDateString())
                     ->latest()
@@ -187,6 +190,12 @@ class BookingController extends Controller
         $remainingBalance = $existingBooking
             ? max(0.0, (float) $existingBooking->grand_total - $paidAmount)
             : 0.0;
+        $latestPayment = $existingBooking?->payments()
+            ->latest()
+            ->first();
+        $bookingPaymentResult = $existingBooking && $latestPayment
+            ? $this->buildBookingPaymentResult($existingBooking->fresh(), $latestPayment)
+            : null;
 
         $tour->setRelation(
             'schedules',
@@ -238,6 +247,7 @@ class BookingController extends Controller
             'remainingHoldSeconds' => $this->remainingHoldSeconds($existingBooking),
             'paidAmount' => $paidAmount,
             'remainingBalance' => $remainingBalance,
+            'bookingPaymentResult' => $bookingPaymentResult,
             'bookingConflict' => $bookingConflict && request()->query('date')
                 ? $this->buildBookingConflict($bookingConflict, $tour, (string) request()->query('date'))
                 : null,
