@@ -657,7 +657,7 @@ return new class extends Migration
       $table->string('account_number');
       $table->string('account_name');
       $table->string('branch')->nullable();
-      $table->enum('status', BankAccountStatus::cases())->default(BankAccountStatus::PENDING);
+      $table->enum('status', ['pending', 'verified', 'rejected'])->default('pending');
       $table->boolean('is_default')->default(false); // mark default destination
       $table->timestamps();
     });

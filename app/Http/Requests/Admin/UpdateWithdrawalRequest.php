@@ -11,14 +11,7 @@ use Illuminate\Validation\Rules\Enum;
 class UpdateWithdrawalRequest extends FormRequest
 {
 
-  public function prepareForValidation()
-  {
-    $this->merge([
-      'sort' => $this->input('sort') ?? '-id',
-      'page' => $this->input('page') ?? 1,
-      'per_page' => $this->input('per_page') ?? 10,
-    ]);
-  }
+  public function prepareForValidation() {}
   /**
    * Determine if the user is authorized to make this request.
    */
