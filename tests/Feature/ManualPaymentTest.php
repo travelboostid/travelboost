@@ -43,7 +43,14 @@ test('customer can submit a manual payment proof for a booking', function () {
         'proof' => UploadedFile::fake()->image('proof.jpg'),
     ]);
 
-    $response->assertRedirect();
+    $response->assertRedirect()
+        ->assertSessionHas('bookingPaymentResult.bookingStatus', 'waiting payment approval')
+        ->assertSessionHas('bookingPaymentResult.paymentStatus', 'pending')
+        ->assertSessionHas('bookingPaymentResult.paymentMode', 'manual')
+        ->assertSessionHas('bookingPaymentResult.bookingNumber', $booking->booking_number)
+        ->assertSessionHas('bookingPaymentResult.tourName', $tour->name)
+        ->assertSessionHas('bookingPaymentResult.paidAmount', 0.0)
+        ->assertSessionHas('bookingPaymentResult.remainingBalance', 1_000_000.0);
 
     $this->assertDatabaseHas('payments', [
         'owner_type' => User::class,
@@ -273,7 +280,7 @@ test('midtrans webhook marks online booking payment as paid and updates booking 
     expect($payment->fresh()->status->value)->toBe('paid');
 });
 
-test('customer can confirm successful midtrans booking payment and update booking status', function () {
+test('customer can confirm successful midtrans booking payment after hold expiry and update booking status', function () {
     $user = User::factory()->create();
     $vendor = Company::factory()->create(['type' => 'vendor']);
     $tour = Tour::factory()->create(['company_id' => $vendor->id]);
@@ -284,6 +291,8 @@ test('customer can confirm successful midtrans booking payment and update bookin
         'status' => BookingStatus::BOOKING_RESERVED,
         'payment_mode' => 'online',
         'grand_total' => 1_000_000,
+        'reserved_type' => 'system',
+        'reserved_expires_at' => now()->subMinute(),
     ]);
 
     $payment = $booking->payments()->create([
@@ -318,7 +327,14 @@ test('customer can confirm successful midtrans booking payment and update bookin
 
     $response->assertOk()
         ->assertJsonPath('booking.status', 'full payment')
-        ->assertJsonPath('payment.status', 'paid');
+        ->assertJsonPath('payment.status', 'paid')
+        ->assertJsonPath('bookingPaymentResult.bookingStatus', 'full payment')
+        ->assertJsonPath('bookingPaymentResult.paymentStatus', 'paid')
+        ->assertJsonPath('bookingPaymentResult.paymentMode', 'online')
+        ->assertJsonPath('bookingPaymentResult.bookingNumber', $booking->booking_number)
+        ->assertJsonPath('bookingPaymentResult.tourName', $tour->name)
+        ->assertJsonPath('bookingPaymentResult.paidAmount', 1_000_000)
+        ->assertJsonPath('bookingPaymentResult.remainingBalance', 0);
 
     expect($booking->fresh()->status->value)->toBe('full payment');
     expect($payment->fresh()->status->value)->toBe('paid');
