@@ -73,6 +73,39 @@ function makeDefaultGuest(
   };
 }
 
+function splitContactName(
+  name: string,
+): { firstName: string; lastName: string } | null {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+
+  if (parts.length === 0) {
+    return null;
+  }
+
+  return {
+    firstName: parts[0] ?? '',
+    lastName: parts.slice(1).join(' '),
+  };
+}
+
+function isBlankAdultGuest(guest: GuestEntry): boolean {
+  return (
+    guest.type === 'adult' &&
+    guest.firstName.trim() === '' &&
+    guest.lastName.trim() === ''
+  );
+}
+
+function findLatestBlankAdultGuest(guests: GuestEntry[]): GuestEntry | null {
+  for (let index = guests.length - 1; index >= 0; index -= 1) {
+    if (isBlankAdultGuest(guests[index])) {
+      return guests[index];
+    }
+  }
+
+  return null;
+}
+
 function normalizePaymentValue(value: string | null | undefined): string {
   return (value ?? '').toLowerCase().replaceAll('_', ' ');
 }
@@ -603,25 +636,34 @@ export default function Page() {
   const handleContactGuestToggle = useCallback(
     (enabled: boolean) => {
       if (enabled) {
-        const contactName = contact.name.trim();
-        if (!contactName || adults + children >= (availability ?? 99)) {
+        const contactNameParts = splitContactName(contact.name);
+        const blankAdultGuest = findLatestBlankAdultGuest(guests);
+        const canAddNewAdult = adults + children < (availability ?? 99);
+
+        if (!contactNameParts || (!blankAdultGuest && !canAddNewAdult)) {
           return;
         }
 
-        const nameParts = contactName.split(/\s+/).filter(Boolean);
-        if (nameParts.length === 0) {
+        const { firstName, lastName } = contactNameParts;
+
+        if (blankAdultGuest) {
+          skipGuestSyncRef.current = true;
+          setGuests((previousGuests) =>
+            previousGuests.map((guest) =>
+              guest.id === blankAdultGuest.id
+                ? {
+                    ...guest,
+                    firstName,
+                    lastName,
+                  }
+                : guest,
+            ),
+          );
+          setContactGuestId(blankAdultGuest.id);
           return;
         }
 
-        const firstName = nameParts[0] ?? '';
-        const lastName = nameParts.slice(1).join(' ');
-        const guestId = 'contact-guest';
-
-        if (guests.some((guest) => guest.id === guestId)) {
-          setContactGuestId(guestId);
-          return;
-        }
-
+        const guestId = `adult-${adults}`;
         skipGuestSyncRef.current = true;
         setGuests((prev) => [
           ...prev,
@@ -637,18 +679,22 @@ export default function Page() {
       }
 
       if (contactGuestId) {
-        handleGuestRemove(contactGuestId);
+        skipGuestSyncRef.current = true;
+        setGuests((previousGuests) =>
+          previousGuests.map((guest) =>
+            guest.id === contactGuestId
+              ? {
+                  ...guest,
+                  firstName: '',
+                  lastName: '',
+                }
+              : guest,
+          ),
+        );
+        setContactGuestId(null);
       }
     },
-    [
-      adults,
-      availability,
-      children,
-      contact.name,
-      contactGuestId,
-      guests,
-      handleGuestRemove,
-    ],
+    [adults, availability, children, contact.name, contactGuestId, guests],
   );
 
   // ─── Validation ─────────────────────────────────────────────────────
@@ -986,6 +1032,18 @@ export default function Page() {
       preserveState: true,
       onSuccess: (page) => {
         const nextProps = page.props as any;
+        const refreshedPaymentResult =
+          (nextProps.bookingPaymentResult ??
+            nextProps.flash?.bookingPaymentResult) as
+            | BookingPaymentResultData
+            | null
+            | undefined;
+
+        if (refreshedPaymentResult) {
+          setPaymentResult(refreshedPaymentResult);
+          return;
+        }
+
         const refreshedBooking = nextProps.existingBooking ?? null;
         const bookingStatus =
           refreshedBooking?.status ?? paymentResult.bookingStatus;
