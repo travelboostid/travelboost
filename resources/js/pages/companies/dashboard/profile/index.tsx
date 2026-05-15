@@ -168,7 +168,7 @@ export default function Profile({ profile, account_status }: ProfilePageProps) {
                     defaultValue={profile.photo_url}
                   />
                   <Label className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">
-                    Agency Logo
+                    Logo
                   </Label>
                 </div>
 

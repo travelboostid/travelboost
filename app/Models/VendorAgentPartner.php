@@ -16,6 +16,7 @@ class VendorAgentPartner extends Model
     'accepted_at',
     'note',
     'show_vendor_name',
+    'payment_mode',
   ];
 
   protected function casts(): array

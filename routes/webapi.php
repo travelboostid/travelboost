@@ -19,6 +19,7 @@ use App\Http\Controllers\Webapi\UserController;
 use App\Http\Controllers\Webapi\TourController;
 use App\Http\Controllers\Webapi\WalletController;
 use App\Http\Controllers\Webapi\WithdrawalController;
+use App\Http\Controllers\Webapi\Admin\CompanyController as AdminCompanyController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('webapi')->group(function () {
@@ -38,6 +39,10 @@ Route::prefix('webapi')->group(function () {
     Route::put('companies/{company}/settings', [CompanyController::class, 'updateSettings']);
     Route::post('payments/create-topup-payment', [PaymentController::class, 'createTopupPayment']);
     Route::post('payments/create-agent-subscription-payment', [PaymentController::class, 'createAgentSubscriptionPayment']);
+  });
+
+  Route::middleware(['web', 'auth'])->prefix('admin')->group(function () {
+    Route::get('companies/search', [AdminCompanyController::class, 'searchCompanies']);
   });
 
   Route::middleware(['web', 'auth'])->prefix('geo')->group(function () {

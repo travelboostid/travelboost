@@ -34,7 +34,6 @@ import {
   Package,
   Phone,
   Search,
-  Sparkles,
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
@@ -368,7 +367,7 @@ export default function AgentList({ agents, userTier }: any) {
                 </Badge>
               </div>
 
-              <div className="w-full grid grid-cols-2 gap-4 mt-2">
+              <div className="w-full grid grid-cols-1 gap-4 mt-2">
                 <div
                   className={`p-4 rounded-xl border flex flex-col justify-center items-center text-center ${selectedAgent.subscription_status === 'active' ? 'bg-emerald-50/50 border-emerald-100' : 'bg-slate-50 border-slate-100'}`}
                 >
@@ -387,7 +386,7 @@ export default function AgentList({ agents, userTier }: any) {
                   </div>
                 </div>
 
-                <div className="bg-primary/5 border border-primary/10 p-4 rounded-xl flex flex-col justify-center items-center text-center">
+                {/* <div className="bg-primary/5 border border-primary/10 p-4 rounded-xl flex flex-col justify-center items-center text-center">
                   <Sparkles className="size-5 mb-2 text-primary" />
                   <span className="text-xs text-primary/70 uppercase font-semibold tracking-wider">
                     AI Credit Balance
@@ -395,7 +394,7 @@ export default function AgentList({ agents, userTier }: any) {
                   <span className="text-xl font-black text-primary mt-0.5">
                     {formatNumber(selectedAgent.ai_credit_balance)}
                   </span>
-                </div>
+                </div> */}
               </div>
 
               <div className="w-full grid grid-cols-2 gap-4 mt-2 bg-muted/30 p-5 rounded-xl border border-border">

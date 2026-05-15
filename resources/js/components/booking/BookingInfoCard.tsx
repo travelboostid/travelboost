@@ -45,6 +45,7 @@ type BookingInfoCardProps = {
   pricing: BookingPricing;
   timeLeftSeconds: number;
   currentStep?: number;
+  displayTotalPrice?: number;
   totalPaid?: number;
   timerStarted?: boolean;
 };
@@ -63,6 +64,7 @@ export default function BookingInfoCard({
   pricing,
   timeLeftSeconds,
   currentStep = 1,
+  displayTotalPrice,
   totalPaid = 0,
   timerStarted = false,
 }: BookingInfoCardProps) {
@@ -244,7 +246,9 @@ export default function BookingInfoCard({
                 Total Price:
               </span>{' '}
               <span className="font-bold text-foreground">
-                <AnimatedPrice value={pricing.subtotalGuests} />
+                <AnimatedPrice
+                  value={displayTotalPrice ?? pricing.subtotalGuests}
+                />
               </span>
             </p>
             <p>

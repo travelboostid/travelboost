@@ -13,10 +13,9 @@ import {
   CheckCircleIcon,
   ChevronRightIcon,
 } from 'lucide-react';
-import type { HomePageProps } from '..';
 
 export default function SubscriptionAlert() {
-  const { agentSubscription, company } = usePageProps<HomePageProps>();
+  const { agentSubscription, company } = usePageProps<any>();
 
   const formatDate = (dateString: string) => {
     if (!dateString) return '-';

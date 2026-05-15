@@ -1,22 +1,26 @@
-// lucide-map.ts
+// lucide-map.tsx
+import lucide from '@iconify-json/lucide/icons.json';
+import type { IconProps } from '@iconify/react';
+import { Icon } from '@iconify/react';
 import type { Data } from '@puckeditor/core';
-import type { LucideIcon } from 'lucide-react';
-import * as LucideIcons from 'lucide-react';
 
-export const LUCIDE_ICON_MAP: Record<string, LucideIcon> =
-  LucideIcons as unknown as Record<string, LucideIcon>;
+export const LUCIDE_ICON_NAMES = Object.keys(lucide.icons);
 
-export const LUCIDE_ICON_NAMES = Object.keys(LUCIDE_ICON_MAP);
+export type LucideIconName = (typeof LUCIDE_ICON_NAMES)[number];
 
-type LucideIconRendererProps = LucideIcons.LucideProps & { name: string };
+type LucideIconRendererProps = IconProps & {
+  name: string;
+};
 
 export function LucideIconRenderer({
   name,
   ...props
 }: LucideIconRendererProps) {
-  const Icon = LUCIDE_ICON_MAP[name] ?? LucideIcons.Circle;
+  const iconName = `lucide:${name}`;
 
-  return <Icon {...props} />;
+  const exists = name in lucide.icons;
+
+  return <Icon {...props} icon={exists ? iconName : 'lucide:circle'} />;
 }
 
 export function ensureAboutUsBlock(data: Data): Data {

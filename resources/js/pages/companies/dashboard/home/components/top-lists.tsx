@@ -1,65 +1,44 @@
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatIDR } from '@/lib/utils';
-import { ChevronRight, Medal } from 'lucide-react';
-import { useState } from 'react';
+import { Medal } from 'lucide-react';
 
 export function TopLists({ destinations, agents, type }: any) {
-  const [page, setPage] = useState(0);
   const isVendor = type === 'vendor';
-
-  const data = isVendor ? agents : destinations;
-  // Strictly slice to 5 items per view
-  const currentItems = data.slice(page * 5, (page + 1) * 5);
+  const data = (isVendor ? agents : destinations).slice(0, 5);
 
   return (
-    <Card className="border-none shadow-sm h-full">
-      <CardHeader className="flex flex-row items-center justify-between border-b pb-4">
-        <CardTitle className="text-sm font-bold flex items-center gap-2">
-          <Medal className="size-4 text-amber-500" />
-          {isVendor ? 'Top 5 Agents' : 'Top 5 Destinations'}
-        </CardTitle>
-        <Button
-          variant="ghost"
-          size="xs"
-          className="text-blue-600 text-[10px]"
-          onClick={() => setPage((prev) => (prev === 0 ? 1 : 0))}
-        >
-          Next <ChevronRight size={12} />
-        </Button>
-      </CardHeader>
-      <CardContent className="p-0">
-        <div className="divide-y">
-          {currentItems.map((item: any, idx: number) => (
-            <div
-              key={idx}
-              className="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors"
-            >
-              <div className="flex items-center gap-3">
-                <span className="text-xs font-bold text-slate-300 w-4">
-                  {page * 5 + idx + 1}
-                </span>
-                <div className="flex flex-col">
-                  <span className="text-xs font-bold truncate max-w-[120px]">
-                    {isVendor ? item.name : item.name}
-                  </span>
-                  <span className="text-[10px] text-slate-400">
-                    {isVendor ? `${item.pax} Total Pax` : item.code}
-                  </span>
-                </div>
-              </div>
-              <div className="text-right">
-                <div className="text-xs font-bold text-emerald-600">
-                  {formatIDR(isVendor ? item.profit : item.commission)}
-                </div>
-                <div className="text-[10px] text-slate-400 uppercase">
-                  {isVendor ? 'Profit' : 'Commission'}
-                </div>
+    <div className="bg-white dark:bg-slate-900 rounded-3xl ring-1 ring-slate-200 dark:ring-slate-800 shadow-sm overflow-hidden">
+      <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+        <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+          <Medal size={16} className="text-amber-500" /> Performance Leaders
+        </h4>
+      </div>
+      <div className="divide-y divide-slate-100 dark:divide-slate-800">
+        {data.map((item: any, i: number) => (
+          <div
+            key={i}
+            className="px-6 py-4 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all"
+          >
+            <div className="flex items-center gap-4">
+              <span className="text-[10px] font-black text-slate-300 dark:text-slate-600">
+                0{i + 1}
+              </span>
+              <div>
+                <p className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                  {item.name}
+                </p>
+                <p className="text-[10px] text-slate-400 dark:text-slate-500">
+                  {isVendor ? `${item.pax} Pax` : item.code}
+                </p>
               </div>
             </div>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
+            <div className="text-right">
+              <p className="text-xs font-black text-emerald-600 dark:text-emerald-500">
+                {formatIDR(isVendor ? item.profit : item.commission)}
+              </p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }

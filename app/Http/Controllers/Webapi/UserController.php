@@ -3,11 +3,9 @@
 namespace App\Http\Controllers\Webapi;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\UpdateUserRequest;
 use App\Http\Requests\UserIndexRequest;
 use App\Http\Resources\UserResource;
 use App\Models\User;
-use Illuminate\Support\Facades\Auth;
 
 class UserController extends Controller
 {
