@@ -96,6 +96,7 @@ class HandleInertiaRequests extends Middleware
                 'account_inactive' => $request->session()->get('account_inactive'),
                 'warning' => $request->session()->get('warning'),
                 'success' => $request->session()->get('success'),
+                'bookingPaymentResult' => $request->session()->get('bookingPaymentResult'),
             ],
             'subscription_rules' => [
                 'isMarketingDisabled' => $isMarketingDisabled,
