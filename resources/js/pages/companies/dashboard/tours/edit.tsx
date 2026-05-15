@@ -35,7 +35,7 @@ import { Fragment } from 'react';
 import { TourDocumentPicker } from '@/components/media/tour-document-picker';
 import MoneyInput from '@/components/ui/money-input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Copy, MoreVertical, Save, Trash2 } from 'lucide-react';
+import { Copy, InfoIcon, MoreVertical, Save, Trash2 } from 'lucide-react';
 
 import { Calendar } from '@/components/ui/calendar';
 import {
@@ -52,6 +52,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import axios from 'axios';
 import { format } from 'date-fns';
 
@@ -1147,9 +1152,6 @@ export default function Page({ tour }: Props) {
 
   //search availability
   const [searchDeparture, setSearchDeparture] = useState('');
-  const [statusFilter, setStatusFilter] = useState<
-    'all' | 'active' | 'inactive'
-  >('active');
 
   // FILTER
   const filteredData = useMemo(() => {
@@ -1161,20 +1163,9 @@ export default function Page({ tour }: Props) {
         ? row.departure_date === searchDeparture
         : true;
 
-      // status filter
-      let matchStatus = true;
-
-      if (statusFilter === 'active') {
-        matchStatus = row.departure_date > today;
-      }
-
-      if (statusFilter === 'inactive') {
-        matchStatus = row.departure_date <= today;
-      }
-
-      return matchDeparture && matchStatus;
+      return matchDeparture;
     });
-  }, [availability, searchDeparture, statusFilter]);
+  }, [availability, searchDeparture]);
 
   //paging availability
   const [currentPage, setCurrentPage] = useState(1);
@@ -1189,6 +1180,9 @@ export default function Page({ tour }: Props) {
 
   //
 
+  //search add ons
+  const [addOnsSearchDeparture, setAddOnsSearchDeparture] = useState('');
+
   //paging add ons
   const addOnsPerPage = 10;
 
@@ -1201,6 +1195,16 @@ export default function Page({ tour }: Props) {
     currentAddOnsPage * addOnsPerPage,
   );
   //
+
+  //filter add ons
+  const filteredAddOnsSchedules = paginatedSchedules.filter((schedule) => {
+    // FILTER DATE
+    const matchDeparture = addOnsSearchDeparture
+      ? schedule.departure_date === addOnsSearchDeparture
+      : true;
+
+    return matchDeparture;
+  });
 
   //paging schedule
   const schedulePerPage = 10;
@@ -2444,77 +2448,45 @@ export default function Page({ tour }: Props) {
 
             <TabsContent value="availability">
               <div className="space-y-4">
-                <div className="flex justify-between items-center px-4 py-2">
-                  <h3 className="text-lg font-semibold">
-                    <span className="font-semibold">
-                      Availability — {tour.name}
+                <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2">
+                  {/* LEFT */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">
+                      Search by departure date
                     </span>
-                  </h3>
-                  <span className="text-sm text-muted-foreground"></span>
-                </div>
 
-                <div className="px-4 py-2">
-                  <h3 className="text-lg font-semibold">
-                    <span className="text-foreground font-semibold">
-                      Quantity: pax
-                    </span>
-                  </h3>
+                    <input
+                      type="date"
+                      value={searchDeparture}
+                      onChange={(e) => {
+                        setSearchDeparture(e.target.value);
+                        setCurrentPage(1);
+                      }}
+                      className="rounded-lg border px-3 py-2 text-sm"
+                    />
+                  </div>
 
-                  <div className="mt-3 flex flex-wrap items-center gap-3">
-                    <div className="flex items-center gap-2">
-                      <span className="text-muted-foreground text-sm">
-                        Search by departure date
-                      </span>
-
-                      <input
-                        type="date"
-                        value={searchDeparture}
-                        onChange={(e) => {
-                          setSearchDeparture(e.target.value);
-                          setCurrentPage(1);
-                        }}
-                        className="rounded-lg border px-3 py-2 text-sm"
-                      />
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <span className="text-muted-foreground text-sm">
-                        Status
-                      </span>
-
-                      <select
-                        value={statusFilter}
-                        onChange={(e) => {
-                          setStatusFilter(
-                            e.target.value as 'all' | 'active' | 'inactive',
-                          );
-                          setCurrentPage(1);
-                        }}
-                        className="rounded-lg border px-3 py-2 text-sm"
-                      >
-                        <option value="all">All</option>
-                        <option value="active">Active</option>
-                        <option value="inactive">Inactive</option>
-                      </select>
-                    </div>
+                  {/* RIGHT */}
+                  <div className="rounded-lg border bg-muted/40 px-3 py-2 text-sm font-medium">
+                    Quantity: pax
                   </div>
                 </div>
 
                 <div className="hidden md:block rounded-xl border bg-background overflow-auto">
                   <table className="w-full text-xs border-separate border-spacing-0">
                     <colgroup>
-                      <col className="w-[180px]" /> {/* Departure */}
-                      <col className="w-[150px]" /> {/* Max Pax */}
-                      <col className="w-[80px]" />
-                      <col className="w-[80px]" />
-                      <col className="w-[80px]" />
-                      <col className="w-[80px]" />
-                      <col className="w-[80px]" />
-                      <col className="w-[80px]" />
-                      <col className="w-[80px]" />
-                      <col className="w-[80px]" />
-                      <col className="w-[80px]" />
-                      <col className="w-[80px]" />
+                      <col className="w-[200px]" /> {/* Departure */}
+                      <col className="w-[50px]" /> {/* Max Pax */}
+                      <col className="w-[50px]" />
+                      <col className="w-[50px]" />
+                      <col className="w-[50px]" />
+                      <col className="w-[50px]" />
+                      <col className="w-[50px]" />
+                      <col className="w-[50px]" />
+                      <col className="w-[50px]" />
+                      <col className="w-[50px]" />
+                      <col className="w-[50px]" />
+                      <col className="w-[50px]" />
                       <col className="w-[100px]" />
                       <col className="w-[70px]" /> {/* Action */}
                     </colgroup>
@@ -2527,41 +2499,141 @@ export default function Page({ tour }: Props) {
                           Max Pax
                         </th>
                         <th className="border-b p-2 text-right font-semibold">
-                          Manual <br /> Reserved <br /> (RS)
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="inline-flex items-center justify-end gap-1 cursor-help">
+                                <span>RS</span>
+
+                                <InfoIcon className="h-3 w-3 text-muted-foreground" />
+                              </div>
+                            </TooltipTrigger>
+
+                            <TooltipContent>Manual Reserved</TooltipContent>
+                          </Tooltip>
                         </th>
                         <th className="border-b p-2 text-right font-semibold">
-                          Waiting Payment <br /> (WP)
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="inline-flex items-center justify-end gap-1 cursor-help">
+                                <span>WP</span>
+
+                                <InfoIcon className="h-3 w-3 text-muted-foreground" />
+                              </div>
+                            </TooltipTrigger>
+
+                            <TooltipContent>Waiting Payment</TooltipContent>
+                          </Tooltip>
                         </th>
                         <th className="border-b p-2 text-right font-semibold">
-                          Waiting Payment Approval <br /> (WA)
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="inline-flex items-center justify-end gap-1 cursor-help">
+                                <span>WA</span>
+
+                                <InfoIcon className="h-3 w-3 text-muted-foreground" />
+                              </div>
+                            </TooltipTrigger>
+
+                            <TooltipContent>
+                              Waiting Payment Approval
+                            </TooltipContent>
+                          </Tooltip>
                         </th>
                         <th className="border-b p-2 text-right font-semibold">
-                          Down Payment <br /> (DP)
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="inline-flex items-center justify-end gap-1 cursor-help">
+                                <span>DP</span>
+
+                                <InfoIcon className="h-3 w-3 text-muted-foreground" />
+                              </div>
+                            </TooltipTrigger>
+
+                            <TooltipContent>Down Payment</TooltipContent>
+                          </Tooltip>
                         </th>
                         <th className="border-b p-2 text-right font-semibold">
-                          Full Payment <br /> (FP)
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="inline-flex items-center justify-end gap-1 cursor-help">
+                                <span>FP</span>
+
+                                <InfoIcon className="h-3 w-3 text-muted-foreground" />
+                              </div>
+                            </TooltipTrigger>
+
+                            <TooltipContent>Full Payment</TooltipContent>
+                          </Tooltip>
                         </th>
                         <th className="border-b p-2 text-right font-semibold">
-                          Booking <br /> Reserved <br /> (BR)
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="inline-flex items-center justify-end gap-1 cursor-help">
+                                <span>BR</span>
+
+                                <InfoIcon className="h-3 w-3 text-muted-foreground" />
+                              </div>
+                            </TooltipTrigger>
+
+                            <TooltipContent>Booking Reserved</TooltipContent>
+                          </Tooltip>
                         </th>
                         <th className="border-b p-2 text-right font-semibold">
-                          Cancel <br /> (CA)
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="inline-flex items-center justify-end gap-1 cursor-help">
+                                <span>CA</span>
+
+                                <InfoIcon className="h-3 w-3 text-muted-foreground" />
+                              </div>
+                            </TooltipTrigger>
+
+                            <TooltipContent>Cancel</TooltipContent>
+                          </Tooltip>
                         </th>
                         <th className="border-b p-2 text-right font-semibold">
-                          Refund <br /> (RF)
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="inline-flex items-center justify-end gap-1 cursor-help">
+                                <span>RF</span>
+
+                                <InfoIcon className="h-3 w-3 text-muted-foreground" />
+                              </div>
+                            </TooltipTrigger>
+
+                            <TooltipContent>Refund</TooltipContent>
+                          </Tooltip>
                         </th>
                         <th className="border-b p-2 text-right font-semibold">
-                          Expired <br /> EX)
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="inline-flex items-center justify-end gap-1 cursor-help">
+                                <span>EX</span>
+
+                                <InfoIcon className="h-3 w-3 text-muted-foreground" />
+                              </div>
+                            </TooltipTrigger>
+
+                            <TooltipContent>Expired</TooltipContent>
+                          </Tooltip>
                         </th>
                         <th className="border-b p-2 text-right font-semibold">
-                          Waiting List <br /> (WL)
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="inline-flex items-center justify-end gap-1 cursor-help">
+                                <span>WL</span>
+
+                                <InfoIcon className="h-3 w-3 text-muted-foreground" />
+                              </div>
+                            </TooltipTrigger>
+
+                            <TooltipContent>Waiting List</TooltipContent>
+                          </Tooltip>
                         </th>
                         <th className="border-b p-2 text-right font-semibold">
                           Available
                         </th>
-                        <th className="sticky right-0 z-40 bg-muted border-b p-2 text-right font-semibold">
-                          Action
-                        </th>
+                        <th className="sticky right-0 z-40 bg-muted border-b p-2 text-right font-semibold"></th>
                       </tr>
                     </thead>
 
@@ -2588,7 +2660,7 @@ export default function Page({ tour }: Props) {
                             </td>
 
                             {/* max pax */}
-                            <td className="p-3">
+                            <td className="border-b p-3">
                               <MoneyInput
                                 className="h-9 min-w-[45px] text-right text-xs"
                                 value={row.max_pax}
@@ -2603,7 +2675,7 @@ export default function Page({ tour }: Props) {
                             </td>
 
                             {/* RS */}
-                            <td className="p-3">
+                            <td className="border-b p-3">
                               <MoneyInput
                                 className="h-9 min-w-[45px] text-right text-xs"
                                 value={row.RS}
@@ -2914,17 +2986,20 @@ export default function Page({ tour }: Props) {
                         {/* Input grid */}
                         <div className="grid grid-cols-2 gap-2 text-sm">
                           {[
-                            { key: 'max_pax', label: 'Max' },
-                            { key: 'RS', label: 'RS' },
-                            { key: 'WP', label: 'WP' },
-                            { key: 'DP', label: 'DP' },
-                            { key: 'FP', label: 'FP' },
-                            { key: 'WPA', label: 'WA' },
-                            { key: 'BRS', label: 'BRS' },
-                            { key: 'CA', label: 'CA' },
-                            { key: 'RF', label: 'RF' },
-                            { key: 'EX', label: 'EX' },
-                            { key: 'WL', label: 'WL' },
+                            { key: 'max_pax', label: 'Max Pax' },
+                            { key: 'RS', label: 'Manual Reserved (RS)' },
+                            { key: 'WP', label: 'Waiting Payment (WP)' },
+                            {
+                              key: 'WPA',
+                              label: 'Waiting Payment Approval (WA)',
+                            },
+                            { key: 'DP', label: 'Down Payment (DP)' },
+                            { key: 'FP', label: 'Full Payment (FP)' },
+                            { key: 'BRS', label: 'Booking Reserved (BR)' },
+                            { key: 'CA', label: 'Cancel (CA)' },
+                            { key: 'RF', label: 'Refund (RF)' },
+                            { key: 'EX', label: 'Expired (EX)' },
+                            { key: 'WL', label: 'Waiting List (WL)' },
                           ].map((field) => (
                             <>
                               <div className="text-muted-foreground">
@@ -2985,21 +3060,28 @@ export default function Page({ tour }: Props) {
             {/* ================= TAB 4 — ADD ONS ================= */}
             <TabsContent value="addons">
               <div className="space-y-4">
-                <div className="flex justify-between items-center px-4 py-2">
-                  <h3 className="text-lg font-semibold">
-                    <span className="font-semibold">
-                      Add Ons Table — {tour.name}
+                <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2">
+                  {/* LEFT */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">
+                      Search by departure date
                     </span>
-                  </h3>
-                  <span className="text-sm text-muted-foreground"></span>
-                </div>
 
-                <div className="flex items-center justify-between px-4 py-2">
-                  <h3 className="text-lg font-semibold">
-                    <span className="text-foreground font-semibold">
-                      Currency: {tour.currency}
-                    </span>
-                  </h3>
+                    <input
+                      type="date"
+                      value={addOnsSearchDeparture}
+                      onChange={(e) => {
+                        setAddOnsSearchDeparture(e.target.value);
+                        setCurrentAddOnsPage(1);
+                      }}
+                      className="rounded-lg border px-3 py-2 text-sm"
+                    />
+                  </div>
+
+                  {/* RIGHT */}
+                  <div className="rounded-lg border bg-muted/40 px-3 py-2 text-sm font-medium">
+                    Currency: {tour.currency}
+                  </div>
                 </div>
 
                 <div className="rounded-lg border overflow-hidden">
@@ -3015,7 +3097,7 @@ export default function Page({ tour }: Props) {
                     </thead>
 
                     <tbody>
-                      {paginatedSchedules.map((schedule) => {
+                      {filteredAddOnsSchedules.map((schedule) => {
                         const rows = addOns[schedule.id] || [];
                         const rowCount = rows.length;
 

@@ -1,8 +1,12 @@
 import CompanyDashboardLayout from '@/components/layouts/company-dashboard';
-import { Badge } from '@/components/ui/badge';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { Head, router } from '@inertiajs/react';
-import { ChevronDownIcon } from 'lucide-react';
-import { useState } from 'react';
+import { ChevronDownIcon, InfoIcon } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 type Schedule = {
   id: number;
@@ -51,7 +55,6 @@ interface Props {
   filters: {
     search?: string;
     departure_date?: string;
-    status?: 'all' | 'active' | 'inactive';
   };
 }
 
@@ -61,13 +64,27 @@ export default function SeatAvailabilityIndex({
 }: Props) {
   const [search, setSearch] = useState(filters.search || '');
 
+  const today = new Date().toISOString().split('T')[0];
+
   const [departureDate, setDepartureDate] = useState(
-    filters.departure_date || '',
+    filters.departure_date || today,
   );
 
-  const [status, setStatus] = useState<'all' | 'active' | 'inactive'>(
-    (filters.status as 'all' | 'active' | 'inactive') || 'active',
-  );
+  useEffect(() => {
+    if (!filters.departure_date) {
+      router.get(
+        window.location.pathname,
+        {
+          search,
+          departure_date: today,
+        },
+        {
+          preserveState: true,
+          replace: true,
+        },
+      );
+    }
+  }, []);
 
   const [openTours, setOpenTours] = useState<number[]>([]);
   const [visibleSchedules, setVisibleSchedules] = useState<
@@ -82,7 +99,6 @@ export default function SeatAvailabilityIndex({
       {
         search: value,
         departure_date: departureDate,
-        status,
       },
       {
         preserveState: true,
@@ -99,24 +115,6 @@ export default function SeatAvailabilityIndex({
       {
         search,
         departure_date: value,
-        status,
-      },
-      {
-        preserveState: true,
-        replace: true,
-      },
-    );
-  };
-
-  const handleStatus = (value: 'all' | 'active' | 'inactive') => {
-    setStatus(value);
-
-    router.get(
-      window.location.pathname,
-      {
-        search,
-        departure_date: departureDate,
-        status: value,
       },
       {
         preserveState: true,
@@ -183,17 +181,6 @@ export default function SeatAvailabilityIndex({
       <Head title="Seat Availability" />
 
       <div className="space-y-6 p-4 md:p-6">
-        {/* HEADER */}
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">
-            Seat Availability
-          </h1>
-
-          <p className="mt-1 text-sm text-muted-foreground">
-            Monitor tour schedules and seat availability
-          </p>
-        </div>
-
         {/* SEARCH */}
         <div className="grid gap-4 md:grid-cols-3">
           <div>
@@ -222,24 +209,6 @@ export default function SeatAvailabilityIndex({
               className="w-full rounded-xl border px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
-        </div>
-
-        <div>
-          <label className="mb-1 block text-xs font-medium text-muted-foreground">
-            Status
-          </label>
-
-          <select
-            value={status}
-            onChange={(e) =>
-              handleStatus(e.target.value as 'all' | 'active' | 'inactive')
-            }
-            className="w-full rounded-xl border px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-primary"
-          >
-            <option value="all">All</option>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-          </select>
         </div>
 
         {/* TOUR LIST */}
@@ -293,27 +262,141 @@ export default function SeatAvailabilityIndex({
                             Max Pax
                           </th>
 
-                          <th className="border px-3 py-3 text-center">RS</th>
-                          <th className="border px-3 py-3 text-center">WP</th>
-                          <th className="border px-3 py-3 text-center">DP</th>
-                          <th className="border px-3 py-3 text-center">FP</th>
-                          <th className="border px-3 py-3 text-center">WA</th>
-                          <th className="border px-3 py-3 text-center">BRS</th>
-                          <th className="border px-3 py-3 text-center">CA</th>
-                          <th className="border px-3 py-3 text-center">RF</th>
-                          <th className="border px-3 py-3 text-center">EX</th>
-                          <th className="border px-3 py-3 text-center">WL</th>
+                          <th className="border px-3 py-3 text-center">
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className="inline-flex items-center gap-1 cursor-help">
+                                  <span>RS</span>
+
+                                  <InfoIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                                </div>
+                              </TooltipTrigger>
+
+                              <TooltipContent>Manual Reserved</TooltipContent>
+                            </Tooltip>
+                          </th>
+                          <th className="border px-3 py-3 text-center">
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className="inline-flex items-center gap-1 cursor-help">
+                                  <span>WP</span>
+
+                                  <InfoIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                                </div>
+                              </TooltipTrigger>
+
+                              <TooltipContent>Waiting Payment</TooltipContent>
+                            </Tooltip>
+                          </th>
+                          <th className="border px-3 py-3 text-center">
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className="inline-flex items-center gap-1 cursor-help">
+                                  <span>WA</span>
+
+                                  <InfoIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                                </div>
+                              </TooltipTrigger>
+
+                              <TooltipContent>
+                                Waiting Payment Approval
+                              </TooltipContent>
+                            </Tooltip>
+                          </th>
+                          <th className="border px-3 py-3 text-center">
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className="inline-flex items-center gap-1 cursor-help">
+                                  <span>DP</span>
+
+                                  <InfoIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                                </div>
+                              </TooltipTrigger>
+
+                              <TooltipContent>Down Payment</TooltipContent>
+                            </Tooltip>
+                          </th>
+                          <th className="border px-3 py-3 text-center">
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className="inline-flex items-center gap-1 cursor-help">
+                                  <span>FP</span>
+
+                                  <InfoIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                                </div>
+                              </TooltipTrigger>
+
+                              <TooltipContent>Full Payment</TooltipContent>
+                            </Tooltip>
+                          </th>
+                          <th className="border px-3 py-3 text-center">
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className="inline-flex items-center gap-1 cursor-help">
+                                  <span>BR</span>
+
+                                  <InfoIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                                </div>
+                              </TooltipTrigger>
+
+                              <TooltipContent>Booking Reserved</TooltipContent>
+                            </Tooltip>
+                          </th>
+                          <th className="border px-3 py-3 text-center">
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className="inline-flex items-center gap-1 cursor-help">
+                                  <span>CA</span>
+
+                                  <InfoIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                                </div>
+                              </TooltipTrigger>
+
+                              <TooltipContent>Cancel</TooltipContent>
+                            </Tooltip>
+                          </th>
+                          <th className="border px-3 py-3 text-center">
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className="inline-flex items-center gap-1 cursor-help">
+                                  <span>RF</span>
+
+                                  <InfoIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                                </div>
+                              </TooltipTrigger>
+
+                              <TooltipContent>Refund</TooltipContent>
+                            </Tooltip>
+                          </th>
+                          <th className="border px-3 py-3 text-center">
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className="inline-flex items-center gap-1 cursor-help">
+                                  <span>EX</span>
+
+                                  <InfoIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                                </div>
+                              </TooltipTrigger>
+
+                              <TooltipContent>Expired</TooltipContent>
+                            </Tooltip>
+                          </th>
+                          <th className="border px-3 py-3 text-center">
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className="inline-flex items-center gap-1 cursor-help">
+                                  <span>WL</span>
+
+                                  <InfoIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                                </div>
+                              </TooltipTrigger>
+
+                              <TooltipContent>Waiting List</TooltipContent>
+                            </Tooltip>
+                          </th>
 
                           <th className="border px-3 py-3 text-center">
                             Available
-                          </th>
-
-                          <th className="border px-3 py-3 text-center">
-                            Occupancy
-                          </th>
-
-                          <th className="border px-3 py-3 text-center">
-                            Status
                           </th>
                         </tr>
                       </thead>
@@ -350,11 +433,11 @@ export default function SeatAvailabilityIndex({
                                 key={schedule.id}
                                 className="hover:bg-slate-50"
                               >
-                                <td className="border px-3 py-3">
+                                <td className="border px-3 py-3 whitespace-nowrap min-w-[120px]">
                                   {formatDate(schedule.departure_date)}
                                 </td>
 
-                                <td className="border px-3 py-3">
+                                <td className="border px-3 py-3 whitespace-nowrap min-w-[120px]">
                                   {formatDate(schedule.return_date)}
                                 </td>
 
@@ -371,15 +454,15 @@ export default function SeatAvailabilityIndex({
                                 </td>
 
                                 <td className="border px-3 py-3 text-center">
+                                  {schedule.WPA}
+                                </td>
+
+                                <td className="border px-3 py-3 text-center">
                                   {schedule.DP}
                                 </td>
 
                                 <td className="border px-3 py-3 text-center">
                                   {schedule.FP}
-                                </td>
-
-                                <td className="border px-3 py-3 text-center">
-                                  {schedule.WPA}
                                 </td>
 
                                 <td className="border px-3 py-3 text-center">
@@ -402,39 +485,18 @@ export default function SeatAvailabilityIndex({
                                   {schedule.WL}
                                 </td>
 
-                                <td className="border px-3 py-3 text-center font-bold">
-                                  {schedule.available}
-                                </td>
-
-                                {/* PROGRESS */}
-                                <td className="border px-3 py-3">
-                                  <div className="flex items-center gap-3">
-                                    <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200">
-                                      <div
-                                        className={`h-full rounded-full ${
-                                          percent >= 100
-                                            ? 'bg-red-500'
-                                            : percent >= 80
-                                              ? 'bg-yellow-500'
-                                              : 'bg-green-500'
-                                        }`}
-                                        style={{
-                                          width: `${percent}%`,
-                                        }}
-                                      />
-                                    </div>
-
-                                    <span className="min-w-[45px] text-xs font-semibold">
-                                      {percent}%
-                                    </span>
-                                  </div>
-                                </td>
-
-                                {/* STATUS */}
                                 <td className="border px-3 py-3 text-center">
-                                  <Badge className={status.className}>
-                                    {status.label}
-                                  </Badge>
+                                  <span
+                                    className={`inline-flex min-w-[70px] justify-center rounded-full px-3 py-1 text-xs font-bold ${
+                                      schedule.available <= 0
+                                        ? 'bg-red-100 text-red-700'
+                                        : schedule.available <= 5
+                                          ? 'bg-yellow-100 text-yellow-700'
+                                          : 'bg-green-100 text-green-700'
+                                    }`}
+                                  >
+                                    {schedule.available}
+                                  </span>
                                 </td>
                               </tr>
                             );
