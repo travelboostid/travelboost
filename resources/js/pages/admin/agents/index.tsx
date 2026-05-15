@@ -150,7 +150,7 @@ export default function Page({ data }: PageProps) {
       breadcrumb={[{ title: 'Customers' }]}
     >
       <DataTable table={table} renderEmptyState={<EmptyAgents />}>
-        <DataTableToolbar table={table} />
+        <DataTableToolbar table={table}>Hello</DataTableToolbar>
       </DataTable>
     </AdminDashboardLayout>
   );

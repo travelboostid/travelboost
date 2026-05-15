@@ -5,7 +5,11 @@
  * OpenAPI spec version: 0.0.1
  */
 import type { CompanyResource } from './companyResource';
+import type { GetCompanies200Links } from './getCompanies200Links';
+import type { GetCompanies200Meta } from './getCompanies200Meta';
 
 export type GetCompanies200 = {
   data: CompanyResource[];
+  links: GetCompanies200Links;
+  meta: GetCompanies200Meta;
 };

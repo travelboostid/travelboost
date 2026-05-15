@@ -5,20 +5,13 @@
  * OpenAPI spec version: 0.0.1
  */
 
-export type GetCompaniesParams = {
-/**
- * @maxLength 50
- */
-type?: string | null;
-/**
- * e.g., 'travel_agency', 'hotel', 'tour_operator'
- */
-ids?: string | null;
+export type AdminSearchCompaniesParams = {
+include_ids?: string | null;
 /**
  * comma-separated list of IDs
  * @maxLength 100
  */
-search?: string | null;
+search_name?: string | null;
 /**
  * @minimum 1
  */
