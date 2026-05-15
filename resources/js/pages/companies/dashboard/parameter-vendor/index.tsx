@@ -155,7 +155,7 @@ export default function ParameterVendorPage() {
 
               <div>
                 <label className={labelClass}>
-                  <FormattedMessage defaultMessage="Document Completed Deadline before departure date (days)" />
+                  <FormattedMessage defaultMessage="Document Completed Deadline Before Departure Date (days)" />
                 </label>
 
                 <MoneyInput
@@ -232,7 +232,7 @@ export default function ParameterVendorPage() {
 
               <div>
                 <label className={labelClass}>
-                  <FormattedMessage defaultMessage="Full Payment Deadline before departure date (days)" />
+                  <FormattedMessage defaultMessage="Full Payment Deadline Before Departure Date (days)" />
                 </label>
 
                 <MoneyInput
@@ -309,7 +309,7 @@ export default function ParameterVendorPage() {
           {/* Payment Gateway */}
           <div className="rounded-2xl border bg-card p-4 shadow-sm sm:p-6">
             <h2 className="mb-5 text-lg font-semibold">
-              <FormattedMessage defaultMessage="Payment Gateway" />
+              <FormattedMessage defaultMessage="Credential Payment Gateway" />
             </h2>
 
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
