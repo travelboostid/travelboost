@@ -31,6 +31,7 @@ class IndexUserRequest extends FormRequest
   public function rules(): array
   {
     return [
+      'company_holder' => 'nullable|string|max:255', // expecting comma-separated company IDs
       'name' => 'nullable|string|max:255',
       'email' => 'nullable|string|email|max:255',
       'username' => 'nullable|string|max:255',

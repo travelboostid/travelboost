@@ -5,6 +5,7 @@
  * OpenAPI spec version: 0.0.1
  */
 import type { WithdrawalResourceWalletId } from './withdrawalResourceWalletId';
+import type { WithdrawalStatus } from './withdrawalStatus';
 import type { WithdrawalResourceNote } from './withdrawalResourceNote';
 import type { WithdrawalResourceApprovedAt } from './withdrawalResourceApprovedAt';
 import type { WithdrawalResourceProcessedAt } from './withdrawalResourceProcessedAt';
@@ -17,7 +18,7 @@ export interface WithdrawalResource {
   bank_account_id: number;
   wallet_id: WithdrawalResourceWalletId;
   amount: number;
-  status: string;
+  status: WithdrawalStatus;
   note: WithdrawalResourceNote;
   approved_at: WithdrawalResourceApprovedAt;
   processed_at: WithdrawalResourceProcessedAt;

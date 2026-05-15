@@ -33,6 +33,9 @@ Route::prefix('admin')->middleware(['auth', EnsureHasAdminAccess::class])->name(
     Route::get('affiliates', function () {
       return inertia('admin/database/affiliates/index');
     })->name('affiliates');
+
+    Route::put('users/bulk-update', [UserController::class, 'bulkUpdate'])->name('users.bulk-update');
+    Route::get('users/export-csv', [UserController::class, 'exportAsCsv'])->name('users.export-csv');
     Route::resource('users', UserController::class)->names('users');
     Route::resource('permissions', PermissionController::class)->names('permissions');
     Route::resource('roles', RoleController::class)->names('roles');

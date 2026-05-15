@@ -5,6 +5,12 @@
  * OpenAPI spec version: 0.0.1
  */
 import type { CompanySettingsLandingPageData } from './companySettingsLandingPageData';
+import type { CompanySettingsTermConditions } from './companySettingsTermConditions';
+import type { CompanySettingsManualBankTransfer } from './companySettingsManualBankTransfer';
+import type { CompanySettingsManualBankTransferAccountName } from './companySettingsManualBankTransferAccountName';
+import type { CompanySettingsManualBankTransferAccountNumber } from './companySettingsManualBankTransferAccountNumber';
+import type { CompanySettingsEmailPaymentGateway } from './companySettingsEmailPaymentGateway';
+import type { CompanySettingsPasswordPaymentGateway } from './companySettingsPasswordPaymentGateway';
 import type { CompanySettingsCreatedAt } from './companySettingsCreatedAt';
 import type { CompanySettingsUpdatedAt } from './companySettingsUpdatedAt';
 
@@ -15,6 +21,16 @@ export interface CompanySettings {
   chatbot_response_style: string;
   chatbot_default_language: string;
   landing_page_data: CompanySettingsLandingPageData;
+  booking_deadline: number;
+  minimum_down_payment: string;
+  minimum_vat: string;
+  term_conditions: CompanySettingsTermConditions;
+  booking_entry_time_limit: number;
+  manual_bank_transfer: CompanySettingsManualBankTransfer;
+  manual_bank_transfer_account_name: CompanySettingsManualBankTransferAccountName;
+  manual_bank_transfer_account_number: CompanySettingsManualBankTransferAccountNumber;
+  email_payment_gateway: CompanySettingsEmailPaymentGateway;
+  password_payment_gateway: CompanySettingsPasswordPaymentGateway;
   created_at: CompanySettingsCreatedAt;
   updated_at: CompanySettingsUpdatedAt;
 }

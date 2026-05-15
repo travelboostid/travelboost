@@ -1,3 +1,4 @@
+import { adminSearchCompanies } from '@/api/company/company';
 import type { UserResource } from '@/api/model';
 import { DataTable } from '@/components/data-table/data-table';
 import { DataTableColumnHeader } from '@/components/data-table/data-table-column-header';
@@ -8,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useDataTable } from '@/hooks/use-data-table';
 import { edit } from '@/routes/admin/database/users';
+import type { Option } from '@/types/data-table';
 import { Link } from '@inertiajs/react';
 import type { Column, ColumnDef } from '@tanstack/react-table';
 import dayjs from 'dayjs';
@@ -15,6 +17,7 @@ import relativeTime from 'dayjs/plugin/relativeTime';
 import { CalendarIcon, CircleDashedIcon, PencilIcon, Text } from 'lucide-react';
 import { useMemo } from 'react';
 import { EmptyUsers } from './components/empty-users';
+import { UsersTableActionBar } from './components/users-table-action-bar';
 dayjs.extend(relativeTime);
 
 const STATUS_OPTIONS = [
@@ -126,13 +129,35 @@ export default function UsersPage({ data, userRoles }: UsersPageProps) {
         enableSorting: false,
       },
       {
-        id: 'company',
+        id: 'company_holder',
         accessorKey: 'company.name',
         header: ({ column }: { column: Column<UserResource, unknown> }) => (
           <DataTableColumnHeader column={column} label="Company Holder" />
         ),
         cell: ({ row }) => <div>{row.original.company?.name ?? '-'}</div>,
         enableSorting: false,
+        meta: {
+          label: 'Company',
+          variant: 'multiSelect',
+          options: async (query, currentValues) => {
+            const response = await adminSearchCompanies({
+              search_name: query,
+              include_ids: currentValues?.size
+                ? Array.from(currentValues).join(',')
+                : undefined,
+            });
+
+            return response.data.map(
+              (company) =>
+                ({
+                  label: company.name,
+                  value: company.id.toString(),
+                }) as Option,
+            );
+          },
+          icon: CircleDashedIcon,
+        },
+        enableColumnFilter: true,
       },
       {
         id: 'status',
@@ -214,7 +239,11 @@ export default function UsersPage({ data, userRoles }: UsersPageProps) {
       openMenuIds={['database']}
       breadcrumb={[{ title: 'Database' }, { title: 'User Management' }]}
     >
-      <DataTable table={table} renderEmptyState={<EmptyUsers />}>
+      <DataTable
+        table={table}
+        renderEmptyState={<EmptyUsers />}
+        actionBar={<UsersTableActionBar table={table} />}
+      >
         <DataTableToolbar table={table} />
       </DataTable>
     </AdminDashboardLayout>

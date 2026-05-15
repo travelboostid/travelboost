@@ -5,14 +5,8 @@ namespace App\Http\Controllers\Webapi;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\CompanyIndexRequest;
 use App\Http\Requests\UpdateCompanySettingsRequest;
-use App\Http\Requests\UpdateUserRequest;
-use App\Http\Requests\UserIndexRequest;
-use App\Http\Requests\VendorIndexRequest;
 use App\Http\Resources\CompanyResource;
-use App\Http\Resources\UserResource;
 use App\Models\Company;
-use App\Models\User;
-use Illuminate\Support\Facades\Auth;
 
 class CompanyController extends Controller
 {
@@ -23,6 +17,16 @@ class CompanyController extends Controller
   public function index(CompanyIndexRequest $request)
   {
     $data = Company::query()
+      ->when($request->input('ids'), function ($q) use ($request) {
+        $ids = explode(',', $request->input('ids'));
+        $q->whereIn('id', $ids);
+      })
+      ->when($request->input('search'), function ($q) use ($request) {
+        $search = $request->input('search');
+        $q->where(function ($query) use ($search) {
+          $query->where('name', 'ilike', "%$search%");
+        });
+      })
       ->when($request->input('type'), function ($q) use ($request) {
         $q->where('type', $request->input('type'));
       })

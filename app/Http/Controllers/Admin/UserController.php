@@ -4,10 +4,12 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\IndexUserRequest;
+use App\Http\Requests\Admin\BulkUpdateUserRequest;
 use App\Http\Requests\Admin\UpdateUserRequest;
 use App\Models\Role;
 use App\Models\User;
 use Carbon\Carbon;
+use DB;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -40,6 +42,10 @@ class UserController extends Controller
       ->when($validated['status'] ?? null, function ($query, $status) {
         $selectedStatuses = explode(',', $status);
         $query->whereIn('status', $selectedStatuses);
+      })
+      ->when($validated['company_holder'] ?? null, function ($query, $companyIds) {
+        $companyIds = explode(',', $companyIds);
+        $query->whereIn('company_id', $companyIds);
       })
       ->when($validated['roles'] ?? null, function ($query, $selectedRoles) {
         $selectedRoles = explode(',', $selectedRoles);
@@ -118,6 +124,69 @@ class UserController extends Controller
     $validated = $request->validated();
     $user->update($validated);
     return back()->with('success', 'User updated successfully.');
+  }
+
+  public function bulkUpdate(BulkUpdateUserRequest $request)
+  {
+    $validated = $request->validated();
+    $users = User::whereIn('id', $validated['ids'])->get();
+    DB::transaction(function () use ($users, $validated) {
+      foreach ($users as $user) {
+        $user->update($validated);
+      }
+    });
+    return back()->with('success', 'User updated successfully.');
+  }
+
+  public function exportAsCsv(Request $request)
+  {
+    $validated = $request->validate([
+      'ids' => ['required', 'string'],
+    ]);
+
+    $userIds = explode(',', $validated['ids']);
+
+    $filename = 'users.csv';
+
+    $headers = [
+      'Content-Type' => 'text/csv',
+    ];
+
+    return response()->streamDownload(
+      function () use ($userIds) {
+
+        $file = fopen('php://output', 'w');
+
+        fprintf($file, chr(0xEF) . chr(0xBB) . chr(0xBF));
+
+        fputcsv($file, [
+          'ID',
+          'Username',
+          'Email',
+          'Name',
+          'Status',
+          'Created At',
+        ]);
+
+        User::whereIn('id', $userIds)
+          ->cursor()
+          ->each(function ($user) use ($file) {
+
+            fputcsv($file, [
+              $user->id,
+              $user->username,
+              $user->email,
+              $user->name,
+              $user->status->value,
+              $user->created_at->toDateTimeString(),
+            ]);
+          });
+
+        fclose($file);
+      },
+      $filename,
+      $headers
+    );
   }
 
   /**
