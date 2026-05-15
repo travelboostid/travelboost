@@ -36,6 +36,7 @@ class HomeController extends Controller
                 'bookings' => null,
                 'favorites' => null,
                 'activeTab' => $activeTab,
+                'selectedBookingNumber' => $request->string('booking_number')->toString() ?: null,
             ]);
         }
 
@@ -104,6 +105,7 @@ class HomeController extends Controller
             'bookings' => $bookings,
             'favorites' => $favorites,
             'activeTab' => $activeTab,
+            'selectedBookingNumber' => $request->string('booking_number')->toString() ?: null,
         ]);
     }
 

@@ -22,6 +22,48 @@ beforeEach(function () {
     DB::table('countries')->insertOrIgnore(['id' => 1, 'name' => 'Indonesia', 'continent_id' => 1, 'region_id' => 1]);
 });
 
+/**
+ * @return array{user: User, company: Company, tour: Tour, schedule: TourSchedule}
+ */
+function createBookingCreateScenario(string $username): array
+{
+    $user = User::factory()->create();
+    $company = Company::factory()->create([
+        'username' => $username,
+        'type' => 'vendor',
+    ]);
+
+    Domain::create([
+        'subdomain' => $username,
+        'owner_type' => Company::class,
+        'owner_id' => $company->id,
+        'domain_enabled' => true,
+        'subdomain_enabled' => true,
+    ]);
+
+    $tour = Tour::factory()->create([
+        'company_id' => $company->id,
+        'status' => 'active',
+    ]);
+    $schedule = TourSchedule::create([
+        'tour_id' => $tour->id,
+        'tour_code' => $tour->code,
+        'company_id' => $company->id,
+        'departure_date' => now()->addDays(20)->toDateString(),
+        'return_date' => now()->addDays(25)->toDateString(),
+        'is_active' => true,
+    ]);
+    TourAvailability::create([
+        'company_id' => $company->id,
+        'tour_id' => $tour->id,
+        'schedule_id' => $schedule->id,
+        'max_pax' => 10,
+        'available' => 10,
+    ]);
+
+    return compact('user', 'company', 'tour', 'schedule');
+}
+
 test('booking create passes vendor settings to the frontend and applies schedule deadline', function () {
     $user = User::factory()->create();
     $company = Company::factory()->create([
@@ -549,6 +591,7 @@ test('booking create exposes paid and remaining balances for down payment bookin
             'username' => 'balancevendor',
             'tour' => $tour,
             'date' => $schedule->departure_date,
+            'booking_number' => $booking->booking_number,
         ])
     );
 
@@ -558,6 +601,118 @@ test('booking create exposes paid and remaining balances for down payment bookin
         ->where('isResumingExistingBooking', true)
         ->where('paidAmount', 250000)
         ->where('remainingBalance', 750000));
+});
+
+test('same schedule waiting payment approval booking blocks silent reuse', function () {
+    ['user' => $user, 'company' => $company, 'tour' => $tour, 'schedule' => $schedule] = createBookingCreateScenario('wpaconflictvendor');
+
+    Booking::factory()->create([
+        'booking_number' => 'BKG-WPA-CONFLICT',
+        'user_id' => $user->id,
+        'vendor_id' => $company->id,
+        'tour_id' => $tour->id,
+        'departure_date' => $schedule->departure_date,
+        'status' => BookingStatus::WAITING_PAYMENT_APPROVAL,
+    ]);
+    $bookingCount = Booking::where('user_id', $user->id)
+        ->where('tour_id', $tour->id)
+        ->whereDate('departure_date', $schedule->departure_date)
+        ->count();
+
+    $response = $this->actingAs($user)->get(
+        route('bookings.create', [
+            'username' => 'wpaconflictvendor',
+            'tour' => $tour,
+            'date' => $schedule->departure_date,
+        ])
+    );
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->component('tours/bookings/create')
+        ->where('existingBooking', null)
+        ->where('isResumingExistingBooking', false)
+        ->where('bookingConflict.bookingNumber', 'BKG-WPA-CONFLICT')
+        ->where('bookingConflict.status', BookingStatus::WAITING_PAYMENT_APPROVAL->value)
+        ->where('bookingConflict.checkPaymentStatusUrl', '/mybookings?tab=current&booking_number=BKG-WPA-CONFLICT')
+        ->where('bookingConflict.newBookingUrl', "/bookings/{$tour->id}/create?date={$schedule->departure_date}&force_new=1"));
+    expect(Booking::where('user_id', $user->id)
+        ->where('tour_id', $tour->id)
+        ->whereDate('departure_date', $schedule->departure_date)
+        ->count())->toBe($bookingCount);
+});
+
+test('same schedule down payment booking blocks silent reuse and exposes balance continuation', function () {
+    ['user' => $user, 'company' => $company, 'tour' => $tour, 'schedule' => $schedule] = createBookingCreateScenario('dpconflictvendor');
+
+    Booking::factory()->create([
+        'booking_number' => 'BKG-DP-CONFLICT',
+        'user_id' => $user->id,
+        'vendor_id' => $company->id,
+        'tour_id' => $tour->id,
+        'departure_date' => $schedule->departure_date,
+        'status' => BookingStatus::DOWN_PAYMENT,
+        'grand_total' => 1_000_000,
+    ]);
+    $bookingCount = Booking::where('user_id', $user->id)
+        ->where('tour_id', $tour->id)
+        ->whereDate('departure_date', $schedule->departure_date)
+        ->count();
+
+    $response = $this->actingAs($user)->get(
+        route('bookings.create', [
+            'username' => 'dpconflictvendor',
+            'tour' => $tour,
+            'date' => $schedule->departure_date,
+        ])
+    );
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->component('tours/bookings/create')
+        ->where('existingBooking', null)
+        ->where('isResumingExistingBooking', false)
+        ->where('bookingConflict.bookingNumber', 'BKG-DP-CONFLICT')
+        ->where('bookingConflict.status', BookingStatus::DOWN_PAYMENT->value)
+        ->where('bookingConflict.continuePaymentUrl', "/bookings/{$tour->id}/create?date={$schedule->departure_date}&booking_number=BKG-DP-CONFLICT")
+        ->where('bookingConflict.newBookingUrl', "/bookings/{$tour->id}/create?date={$schedule->departure_date}&force_new=1"));
+    expect(Booking::where('user_id', $user->id)
+        ->where('tour_id', $tour->id)
+        ->whereDate('departure_date', $schedule->departure_date)
+        ->count())->toBe($bookingCount);
+});
+
+test('same schedule conflict can be bypassed only with force new booking', function () {
+    ['user' => $user, 'company' => $company, 'tour' => $tour, 'schedule' => $schedule] = createBookingCreateScenario('forcenewvendor');
+
+    Booking::factory()->create([
+        'booking_number' => 'BKG-FORCE-WPA',
+        'user_id' => $user->id,
+        'vendor_id' => $company->id,
+        'tour_id' => $tour->id,
+        'departure_date' => $schedule->departure_date,
+        'status' => BookingStatus::WAITING_PAYMENT_APPROVAL,
+    ]);
+
+    $response = $this->actingAs($user)->get(
+        route('bookings.create', [
+            'username' => 'forcenewvendor',
+            'tour' => $tour,
+            'date' => $schedule->departure_date,
+            'force_new' => 1,
+        ])
+    );
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->component('tours/bookings/create')
+        ->where('bookingConflict', null)
+        ->where('isResumingExistingBooking', false)
+        ->whereNot('bookingNumber', 'BKG-FORCE-WPA'));
+    expect(Booking::where('user_id', $user->id)
+        ->where('tour_id', $tour->id)
+        ->whereDate('departure_date', $schedule->departure_date)
+        ->count())->toBe(2);
 });
 
 test('expired future booking can be reordered with the same booking number', function () {

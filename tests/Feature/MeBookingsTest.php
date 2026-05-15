@@ -202,6 +202,30 @@ test('authenticated users see only active and future bookings in current and ter
         ->where('bookings.data.2.booking_number', 'BKG-HISTORY-PAST-FP'));
 });
 
+test('my bookings deep links to a specific current booking number', function () {
+    $user = User::factory()->create(['status' => UserStatus::ACTIVE]);
+    $vendor = Company::factory()->create(['type' => 'vendor']);
+    $tour = Tour::factory()->create(['company_id' => $vendor->id]);
+
+    Booking::factory()->create([
+        'user_id' => $user->id,
+        'vendor_id' => $vendor->id,
+        'tour_id' => $tour->id,
+        'status' => BookingStatus::WAITING_PAYMENT_APPROVAL,
+        'booking_number' => 'BKG-HIGHLIGHT-WPA',
+        'departure_date' => now()->addDays(10)->toDateString(),
+    ]);
+
+    $response = $this->actingAs($user)->get('/mybookings?tab=current&booking_number=BKG-HIGHLIGHT-WPA');
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->where('activeTab', 'current')
+        ->where('selectedBookingNumber', 'BKG-HIGHLIGHT-WPA')
+        ->has('bookings.data', 1)
+        ->where('bookings.data.0.booking_number', 'BKG-HIGHLIGHT-WPA'));
+});
+
 test('my bookings lazily expires stale booking reserved rows before rendering', function () {
     $user = User::factory()->create(['status' => UserStatus::ACTIVE]);
     $vendor = Company::factory()->create(['type' => 'vendor']);

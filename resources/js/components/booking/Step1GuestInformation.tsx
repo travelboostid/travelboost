@@ -505,9 +505,16 @@ export default function Step1GuestInformation({
       return;
     }
 
-    const firstGuest = guests[0];
+    const blankAdultGuest = [...guests]
+      .reverse()
+      .find(
+        (guest) =>
+          guest.type === 'adult' &&
+          guest.firstName.trim() === '' &&
+          guest.lastName.trim() === '',
+      );
     const contactName = contact.name.trim();
-    if (contactAsGuestAdded || !firstGuest || contactName === '') {
+    if (contactAsGuestAdded || !blankAdultGuest || contactName === '') {
       return;
     }
 
@@ -520,36 +527,32 @@ export default function Step1GuestInformation({
     const lastName = nameParts.slice(1).join(' ');
 
     onGuestUpdate({
-      ...firstGuest,
+      ...blankAdultGuest,
       firstName:
-        firstGuest.firstName.trim() === '' ? firstName : firstGuest.firstName,
+        blankAdultGuest.firstName.trim() === ''
+          ? firstName
+          : blankAdultGuest.firstName,
       lastName:
-        firstGuest.lastName.trim() === '' ? lastName : firstGuest.lastName,
+        blankAdultGuest.lastName.trim() === ''
+          ? lastName
+          : blankAdultGuest.lastName,
     });
     setContactAsGuestAdded(true);
   };
 
-  const guestOneHasBlankName =
-    guests.length > 0 &&
-    (guests[0].firstName.trim() === '' || guests[0].lastName.trim() === '');
+  const hasBlankAdultGuest = guests.some(
+    (guest) =>
+      guest.type === 'adult' &&
+      guest.firstName.trim() === '' &&
+      guest.lastName.trim() === '',
+  );
   const hasSeatForContactGuest = adults + children < maxGuests;
   const canAddContactAsGuest =
     showAddAsGuest &&
     contact.name.trim() !== '' &&
     (onContactGuestToggle
-      ? hasSeatForContactGuest
-      : guests.length > 0 && guestOneHasBlankName);
-  const contactAsGuestHint = onContactGuestToggle
-    ? contactAsGuestAdded
-      ? 'Turn off to remove the booking contact guest from the list.'
-      : hasSeatForContactGuest
-        ? `Add booking contact as Guest ${guests.length + 1}.`
-        : 'No remaining seat is available for another adult guest.'
-    : contactAsGuestAdded
-      ? 'Booking contact has already been copied once.'
-      : guestOneHasBlankName
-        ? 'Fill empty name fields in Guest 1 from the booking contact.'
-        : 'Guest 1 already has a name.';
+      ? hasBlankAdultGuest || hasSeatForContactGuest
+      : hasBlankAdultGuest);
 
   return (
     <motion.div
@@ -662,10 +665,7 @@ export default function Step1GuestInformation({
           >
             <span className="min-w-0">
               <span className="block text-sm font-semibold">
-                Use booking contact as Guest 1
-              </span>
-              <span className="mt-0.5 block text-xs text-muted-foreground">
-                {contactAsGuestHint}
+                Use booking contact as a guest
               </span>
             </span>
             <span
