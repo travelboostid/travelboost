@@ -12,6 +12,10 @@ type Settings = {
   manual_bank_transfer: string;
   manual_bank_transfer_account_name: string;
   manual_bank_transfer_account_number: string;
+  email_payment_gateway: string;
+  password_payment_gateway: string;
+  full_payment_deadline: number;
+  document_completed_deadline: number;
 };
 
 export default function ParameterVendorPage() {
@@ -35,6 +39,11 @@ export default function ParameterVendorPage() {
       props.settings?.manual_bank_transfer_account_name ?? '',
     manual_bank_transfer_account_number:
       props.settings?.manual_bank_transfer_account_number ?? '',
+    email_payment_gateway: props.settings?.email_payment_gateway ?? '',
+    password_payment_gateway: props.settings?.password_payment_gateway ?? '',
+    full_payment_deadline: props.settings?.full_payment_deadline ?? '',
+    document_completed_deadline:
+      props.settings?.document_completed_deadline ?? '',
     _method: 'put',
   });
 
@@ -55,7 +64,9 @@ export default function ParameterVendorPage() {
 
   const inputClass =
     'w-full rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-primary sm:px-4 sm:py-2.5';
-  const labelClass = 'mb-2 block text-sm font-medium text-foreground';
+  const labelClass =
+    'mb-2 block min-h-[48px] text-sm font-medium text-foreground';
+  const labelClassSingleRow = 'mb-2 block text-sm font-medium text-foreground';
 
   return (
     <CompanyDashboardLayout
@@ -107,7 +118,7 @@ export default function ParameterVendorPage() {
               <FormattedMessage defaultMessage="Booking Entry Rules" />
             </h2>
 
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
               <div>
                 <label className={labelClass}>
                   <FormattedMessage defaultMessage="Entry Deadline Before Departure Date (days)" />
@@ -141,6 +152,26 @@ export default function ParameterVendorPage() {
                   </p>
                 )}
               </div>
+
+              <div>
+                <label className={labelClass}>
+                  <FormattedMessage defaultMessage="Document Completed Deadline before departure date (days)" />
+                </label>
+
+                <MoneyInput
+                  value={data.document_completed_deadline}
+                  className={inputClass}
+                  onChange={(raw) =>
+                    setData('document_completed_deadline', Number(raw))
+                  }
+                />
+
+                {errors.document_completed_deadline && (
+                  <p className="mt-1 text-sm text-red-500">
+                    {errors.document_completed_deadline}
+                  </p>
+                )}
+              </div>
             </div>
           </div>
 
@@ -150,7 +181,7 @@ export default function ParameterVendorPage() {
               <FormattedMessage defaultMessage="Booking Payment Rules" />
             </h2>
 
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
               <div>
                 <label className={labelClass}>
                   <FormattedMessage defaultMessage="Minimum Down Payment (%)" />
@@ -198,6 +229,26 @@ export default function ParameterVendorPage() {
                   </p>
                 )}
               </div>
+
+              <div>
+                <label className={labelClass}>
+                  <FormattedMessage defaultMessage="Full Payment Deadline before departure date (days)" />
+                </label>
+
+                <MoneyInput
+                  value={data.full_payment_deadline}
+                  className={inputClass}
+                  onChange={(raw) =>
+                    setData('full_payment_deadline', Number(raw))
+                  }
+                />
+
+                {errors.document_completed_deadline && (
+                  <p className="mt-1 text-sm text-red-500">
+                    {errors.full_payment_deadline}
+                  </p>
+                )}
+              </div>
             </div>
           </div>
 
@@ -209,7 +260,7 @@ export default function ParameterVendorPage() {
 
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
               <div>
-                <label className={labelClass}>
+                <label className={labelClassSingleRow}>
                   <FormattedMessage defaultMessage="Bank Name" />
                 </label>
                 <input
@@ -223,7 +274,7 @@ export default function ParameterVendorPage() {
               </div>
 
               <div>
-                <label className={labelClass}>
+                <label className={labelClassSingleRow}>
                   <FormattedMessage defaultMessage="Account Name" />
                 </label>
                 <input
@@ -237,7 +288,7 @@ export default function ParameterVendorPage() {
               </div>
 
               <div className="md:col-span-2">
-                <label className={labelClass}>
+                <label className={labelClassSingleRow}>
                   <FormattedMessage defaultMessage="Account Number" />
                 </label>
                 <input
@@ -251,6 +302,57 @@ export default function ParameterVendorPage() {
                     )
                   }
                 />
+              </div>
+            </div>
+          </div>
+
+          {/* Payment Gateway */}
+          <div className="rounded-2xl border bg-card p-4 shadow-sm sm:p-6">
+            <h2 className="mb-5 text-lg font-semibold">
+              <FormattedMessage defaultMessage="Payment Gateway" />
+            </h2>
+
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+              <div>
+                <label className={labelClassSingleRow}>
+                  <FormattedMessage defaultMessage="Payment Gateway Email" />
+                </label>
+
+                <input
+                  type="email"
+                  className={inputClass}
+                  value={data.email_payment_gateway}
+                  onChange={(e) =>
+                    setData('email_payment_gateway', e.target.value)
+                  }
+                />
+
+                {errors.email_payment_gateway && (
+                  <p className="mt-1 text-sm text-red-500">
+                    {errors.email_payment_gateway}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label className={labelClassSingleRow}>
+                  <FormattedMessage defaultMessage="Payment Gateway Password" />
+                </label>
+
+                <input
+                  type="password"
+                  className={inputClass}
+                  value={data.password_payment_gateway}
+                  onChange={(e) =>
+                    setData('password_payment_gateway', e.target.value)
+                  }
+                />
+
+                {errors.password_payment_gateway && (
+                  <p className="mt-1 text-sm text-red-500">
+                    {errors.password_payment_gateway}
+                  </p>
+                )}
               </div>
             </div>
           </div>
