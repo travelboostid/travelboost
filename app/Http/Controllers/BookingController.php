@@ -13,6 +13,7 @@ use App\Models\BookingDocument;
 use App\Models\Payment;
 use App\Models\Tour;
 use App\Models\TourPrice;
+use App\Models\TourSchedule;
 use App\Services\BookingNumberService;
 use App\Services\BookingService;
 use Illuminate\Http\JsonResponse;
@@ -86,26 +87,78 @@ class BookingController extends Controller
         $bookingNumber = $bookingNumberService->generate((string) $companyId);
         $user = request()->user();
         $existingBooking = null;
+        $bookingConflict = null;
         $isResumingExistingBooking = false;
+        $requestedBookingNumber = request()->string('booking_number')->toString();
+        $forceNewBooking = request()->boolean('force_new');
 
         if ($user && $schedule) {
-            $existingBooking = Booking::with('passengers')
-                ->where('user_id', $user->id)
-                ->where('tour_id', $tour->id)
-                ->whereIn('status', [
-                    BookingStatus::AWAITING_PAYMENT,
-                    BookingStatus::BOOKING_RESERVED,
-                    BookingStatus::WAITING_PAYMENT_APPROVAL,
-                    BookingStatus::RESERVED,
-                ])
-                ->whereDate('departure_date', request()->query('date'))
-                ->latest()
-                ->first();
+            $resumableStatuses = [
+                BookingStatus::AWAITING_PAYMENT,
+                BookingStatus::BOOKING_RESERVED,
+                BookingStatus::WAITING_PAYMENT_APPROVAL,
+                BookingStatus::DOWN_PAYMENT,
+                BookingStatus::RESERVED,
+                BookingStatus::EXPIRED,
+            ];
+
+            if ($requestedBookingNumber !== '') {
+                $existingBooking = Booking::with(['passengers', 'rooms'])
+                    ->where('booking_number', $requestedBookingNumber)
+                    ->where('user_id', $user->id)
+                    ->where('tour_id', $tour->id)
+                    ->whereIn('status', [
+                        ...$resumableStatuses,
+                        BookingStatus::FULL_PAYMENT,
+                    ])
+                    ->whereDate('departure_date', request()->query('date'))
+                    ->whereDate('departure_date', '>=', now()->toDateString())
+                    ->latest()
+                    ->first();
+            }
+
+            if (! $existingBooking && ! $forceNewBooking) {
+                $bookingConflict = Booking::query()
+                    ->where('user_id', $user->id)
+                    ->where('tour_id', $tour->id)
+                    ->whereIn('status', [
+                        BookingStatus::WAITING_PAYMENT_APPROVAL,
+                        BookingStatus::DOWN_PAYMENT,
+                    ])
+                    ->whereDate('departure_date', request()->query('date'))
+                    ->whereDate('departure_date', '>=', now()->toDateString())
+                    ->latest()
+                    ->first();
+            }
+
+            if (! $existingBooking && ! $bookingConflict && ! $forceNewBooking) {
+                $existingBooking = Booking::with(['passengers', 'rooms'])
+                    ->where('user_id', $user->id)
+                    ->where('tour_id', $tour->id)
+                    ->whereIn('status', array_filter(
+                        $resumableStatuses,
+                        fn (BookingStatus $status): bool => $status !== BookingStatus::EXPIRED
+                    ))
+                    ->whereDate('departure_date', request()->query('date'))
+                    ->latest()
+                    ->first();
+            }
+
+            if (! $existingBooking && ! $bookingConflict && ! $forceNewBooking) {
+                $existingBooking = Booking::with(['passengers', 'rooms'])
+                    ->where('user_id', $user->id)
+                    ->where('tour_id', $tour->id)
+                    ->where('status', BookingStatus::EXPIRED)
+                    ->whereDate('departure_date', request()->query('date'))
+                    ->whereDate('departure_date', '>=', now()->toDateString())
+                    ->latest()
+                    ->first();
+            }
 
             if ($existingBooking) {
                 $bookingNumber = $existingBooking->booking_number;
                 $isResumingExistingBooking = true;
-            } else {
+            } elseif (! $bookingConflict) {
                 $existingBooking = Booking::create([
                     'booking_number' => $bookingNumber,
                     'user_id' => $user->id,
@@ -128,6 +181,21 @@ class BookingController extends Controller
                 ]);
             }
         }
+
+        $paidAmount = $existingBooking
+            ? (float) $existingBooking->payments()
+                ->where('status', PaymentStatus::PAID->value)
+                ->sum('amount')
+            : 0.0;
+        $remainingBalance = $existingBooking
+            ? max(0.0, (float) $existingBooking->grand_total - $paidAmount)
+            : 0.0;
+        $latestPayment = $existingBooking?->payments()
+            ->latest()
+            ->first();
+        $bookingPaymentResult = $existingBooking && $latestPayment
+            ? $this->buildBookingPaymentResult($existingBooking->fresh(), $latestPayment)
+            : null;
 
         $tour->setRelation(
             'schedules',
@@ -177,6 +245,12 @@ class BookingController extends Controller
             'isResumingExistingBooking' => $isResumingExistingBooking,
             'reservedExpiresAt' => $existingBooking?->reserved_expires_at?->toIso8601String(),
             'remainingHoldSeconds' => $this->remainingHoldSeconds($existingBooking),
+            'paidAmount' => $paidAmount,
+            'remainingBalance' => $remainingBalance,
+            'bookingPaymentResult' => $bookingPaymentResult,
+            'bookingConflict' => $bookingConflict && request()->query('date')
+                ? $this->buildBookingConflict($bookingConflict, $tour, (string) request()->query('date'))
+                : null,
         ]);
     }
 
@@ -302,6 +376,37 @@ class BookingController extends Controller
         return back();
     }
 
+    public function reorder(Request $request, Booking $booking): RedirectResponse
+    {
+        abort_unless($request->user()?->id === $booking->user_id, 403);
+
+        $booking = app(ExpireBookingReservationsAction::class)->expireIfDue($booking);
+        $booking->loadMissing(['agent', 'vendor', 'tour']);
+
+        abort_unless($booking->status === BookingStatus::EXPIRED, 422);
+        abort_unless($booking->departure_date?->isToday() || $booking->departure_date?->isFuture(), 422);
+
+        DB::transaction(function () use ($booking): void {
+            $booking->update([
+                'status' => BookingStatus::AWAITING_PAYMENT,
+                'reserved_type' => 'system',
+                'reserved_expires_at' => null,
+            ]);
+        });
+
+        app(SyncAvailabilityAction::class)->executeForBooking($booking->fresh());
+
+        $tenantUsername = $booking->agent?->username ?? $booking->vendor?->username;
+        abort_unless($tenantUsername && $booking->tour, 422);
+
+        return redirect()->route('bookings.create', [
+            'username' => $tenantUsername,
+            'tour' => $booking->tour,
+            'date' => $booking->departure_date->toDateString(),
+            'booking_number' => $booking->booking_number,
+        ]);
+    }
+
     public function storeManualPayment(Request $request, string|Booking $usernameOrBooking, ?Booking $booking = null): RedirectResponse
     {
         $booking = $booking ?? $usernameOrBooking;
@@ -317,11 +422,11 @@ class BookingController extends Controller
             'proof' => ['required', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:5120'],
         ]);
 
-        DB::transaction(function () use ($request, $booking, $validated): void {
+        $payment = DB::transaction(function () use ($request, $booking, $validated): Payment {
             $proof = $request->file('proof');
             $path = $proof->store('payment-proofs', 'public');
 
-            $booking->payments()->create([
+            $payment = $booking->payments()->create([
                 'owner_type' => get_class($request->user()),
                 'owner_id' => $request->user()->id,
                 'provider' => 'manual',
@@ -349,11 +454,15 @@ class BookingController extends Controller
                 'payment_mode' => 'manual',
                 'reserved_expires_at' => null,
             ]);
+
+            return $payment;
         });
 
         app(SyncAvailabilityAction::class)->executeForBooking($booking->fresh());
 
-        return back()->with('success', 'Payment proof submitted. We will verify shortly.');
+        return back()
+            ->with('success', 'Payment proof submitted. We will verify shortly.')
+            ->with('bookingPaymentResult', $this->buildBookingPaymentResult($booking->fresh(), $payment->fresh()));
     }
 
     public function storeOnlinePayment(Request $request, string|Booking $usernameOrBooking, ?Booking $booking = null): JsonResponse
@@ -423,6 +532,7 @@ class BookingController extends Controller
                 'id' => $payment->id,
                 'payload' => $payment->payload,
             ],
+            'bookingPaymentResult' => $this->buildBookingPaymentResult($booking->fresh(), $payment->fresh()),
         ]);
     }
 
@@ -432,7 +542,6 @@ class BookingController extends Controller
         Payment $payment
     ): JsonResponse {
         abort_unless($request->user()?->id === $booking->user_id, 403);
-        $booking = $this->ensureBookingNotExpired($booking);
         abort_unless($payment->payable_type === Booking::class, 404);
         abort_unless((int) $payment->payable_id === (int) $booking->id, 404);
         abort_unless($payment->provider === 'midtrans', 422);
@@ -444,6 +553,10 @@ class BookingController extends Controller
 
         $transactionStatus = (array) Transaction::status($orderId);
         $newStatus = $this->mapMidtransStatus($transactionStatus['transaction_status'] ?? 'pending');
+
+        if ($newStatus !== PaymentStatus::PAID) {
+            $booking = $this->ensureBookingNotExpired($booking);
+        }
 
         DB::transaction(function () use ($booking, $payment, $transactionStatus, $newStatus): void {
             $payment->update([
@@ -466,6 +579,7 @@ class BookingController extends Controller
                 'id' => $payment->id,
                 'status' => $payment->fresh()->status->value,
             ],
+            'bookingPaymentResult' => $this->buildBookingPaymentResult($booking->fresh(), $payment->fresh()),
         ]);
     }
 
@@ -486,6 +600,131 @@ class BookingController extends Controller
             'deny', 'cancel', 'expire' => PaymentStatus::FAILED,
             default => PaymentStatus::PENDING,
         };
+    }
+
+    /**
+     * @return array{
+     *     bookingNumber: string,
+     *     status: string,
+     *     checkPaymentStatusUrl: string,
+     *     continuePaymentUrl: string,
+     *     newBookingUrl: string
+     * }
+     */
+    private function buildBookingConflict(Booking $booking, Tour $tour, string $departureDate): array
+    {
+        return [
+            'bookingNumber' => $booking->booking_number,
+            'status' => $booking->status->value,
+            'checkPaymentStatusUrl' => '/mybookings?'.http_build_query([
+                'tab' => 'current',
+                'booking_number' => $booking->booking_number,
+            ]),
+            'continuePaymentUrl' => $this->bookingCreatePath($tour, $departureDate, [
+                'booking_number' => $booking->booking_number,
+            ]),
+            'newBookingUrl' => $this->bookingCreatePath($tour, $departureDate, [
+                'force_new' => 1,
+            ]),
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $parameters
+     */
+    private function bookingCreatePath(Tour $tour, string $departureDate, array $parameters = []): string
+    {
+        return '/bookings/'.$tour->id.'/create?'.http_build_query([
+            'date' => $departureDate,
+            ...$parameters,
+        ]);
+    }
+
+    /**
+     * @return array{
+     *     bookingId: int,
+     *     bookingNumber: string,
+     *     bookingStatus: string,
+     *     paymentStatus: string,
+     *     paymentMode: string|null,
+     *     tourName: string,
+     *     tourCode: string|null,
+     *     destination: string|null,
+     *     departureDate: string|null,
+     *     returnDate: string|null,
+     *     paxSummary: string,
+     *     grandTotal: float,
+     *     paidAmount: float,
+     *     remainingBalance: float,
+     *     image: mixed
+     * }
+     */
+    private function buildBookingPaymentResult(Booking $booking, ?Payment $payment = null): array
+    {
+        $booking->loadMissing(['tour.image', 'payments']);
+
+        $paidAmount = (float) $booking->payments()
+            ->where('status', PaymentStatus::PAID->value)
+            ->sum('amount');
+        $grandTotal = (float) $booking->grand_total;
+        $latestPayment = $payment ?? $booking->payments()
+            ->latest()
+            ->first();
+        $schedule = $this->resolvePaymentResultSchedule($booking);
+
+        return [
+            'bookingId' => $booking->id,
+            'bookingNumber' => $booking->booking_number,
+            'bookingStatus' => $booking->status->value,
+            'paymentStatus' => $latestPayment?->status instanceof PaymentStatus
+                ? $latestPayment->status->value
+                : (string) ($latestPayment?->status ?? ''),
+            'paymentMode' => $booking->payment_mode,
+            'tourName' => $booking->tour?->name ?? 'Selected tour',
+            'tourCode' => $booking->tour?->code,
+            'destination' => $booking->tour?->destination,
+            'departureDate' => $booking->departure_date?->toDateString(),
+            'returnDate' => $schedule?->return_date,
+            'paxSummary' => $this->buildPaxSummary($booking),
+            'grandTotal' => $grandTotal,
+            'paidAmount' => $paidAmount,
+            'remainingBalance' => max(0.0, $grandTotal - $paidAmount),
+            'image' => $booking->tour?->image?->toArray(),
+        ];
+    }
+
+    private function resolvePaymentResultSchedule(Booking $booking): ?TourSchedule
+    {
+        if (! $booking->tour || ! $booking->departure_date) {
+            return null;
+        }
+
+        return TourSchedule::query()
+            ->where('tour_id', $booking->tour_id)
+            ->whereDate('departure_date', $booking->departure_date)
+            ->first();
+    }
+
+    private function buildPaxSummary(Booking $booking): string
+    {
+        $segments = [];
+        $adultCount = (int) $booking->pax_adult;
+        $childCount = (int) $booking->pax_child;
+        $infantCount = (int) $booking->pax_infant;
+
+        if ($adultCount > 0) {
+            $segments[] = $adultCount.' adult'.($adultCount === 1 ? '' : 's');
+        }
+
+        if ($childCount > 0) {
+            $segments[] = $childCount.' child'.($childCount === 1 ? '' : 'ren');
+        }
+
+        if ($infantCount > 0) {
+            $segments[] = $infantCount.' infant'.($infantCount === 1 ? '' : 's');
+        }
+
+        return implode(', ', $segments) ?: 'No guests';
     }
 
     private function resolveBookingTimeLimitMinutes(Tour $tour): int

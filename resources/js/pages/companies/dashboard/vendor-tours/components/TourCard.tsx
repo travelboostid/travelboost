@@ -51,12 +51,14 @@ export default function TourCard({
   partnership,
   isOwnCatalog = false,
   fromLogin = true,
+  autoOpenBookingModal = false,
 }: {
   tour: TourCardResource;
   type?: string;
   partnership?: any;
   isOwnCatalog?: boolean;
   fromLogin?: boolean;
+  autoOpenBookingModal?: boolean;
 }) {
   const { company, auth } = usePageSharedDataProps();
   const floatingChat = useFloatingChatWidgetContext();
@@ -115,6 +117,12 @@ export default function TourCard({
     if (company?.type === 'agent' && !isAgentActive) return null;
     if (company?.type === 'vendor' && !isVendorActive) return null;
   }
+
+  useEffect(() => {
+    if (autoOpenBookingModal && isLandingPage) {
+      setIsBookingOpen(true);
+    }
+  }, [autoOpenBookingModal, isLandingPage]);
 
   useEffect(() => {
     if (auth?.user) {

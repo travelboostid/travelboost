@@ -24,6 +24,8 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  AdminSearchCompanies200,
+  AdminSearchCompaniesParams,
   AuthenticationExceptionResponse,
   CompanySettings,
   CompanyUpdateSettings200,
@@ -278,4 +280,96 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
       return useMutation(mutationOptions, queryClient);
     }
+    /**
+ * @summary Display a listing of the users
+ */
+export const adminSearchCompanies = (
+    params?: AdminSearchCompaniesParams,
+ options?: SecondParameter<typeof apiInstance>,signal?: AbortSignal
+) => {
+      
+      
+      return apiInstance<AdminSearchCompanies200>(
+      {url: `/admin/companies/search`, method: 'GET',
+        params, signal
+    },
+      options);
+    }
+  
+
+
+
+export const getAdminSearchCompaniesQueryKey = (params?: AdminSearchCompaniesParams,) => {
+    return [
+    `/admin/companies/search`, ...(params ? [params]: [])
+    ] as const;
+    }
+
     
+export const getAdminSearchCompaniesQueryOptions = <TData = Awaited<ReturnType<typeof adminSearchCompanies>>, TError = AuthenticationExceptionResponse | ValidationExceptionResponse>(params?: AdminSearchCompaniesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof adminSearchCompanies>>, TError, TData>>, request?: SecondParameter<typeof apiInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getAdminSearchCompaniesQueryKey(params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof adminSearchCompanies>>> = ({ signal }) => adminSearchCompanies(params, requestOptions, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof adminSearchCompanies>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type AdminSearchCompaniesQueryResult = NonNullable<Awaited<ReturnType<typeof adminSearchCompanies>>>
+export type AdminSearchCompaniesQueryError = AuthenticationExceptionResponse | ValidationExceptionResponse
+
+
+export function useAdminSearchCompanies<TData = Awaited<ReturnType<typeof adminSearchCompanies>>, TError = AuthenticationExceptionResponse | ValidationExceptionResponse>(
+ params: undefined |  AdminSearchCompaniesParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof adminSearchCompanies>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof adminSearchCompanies>>,
+          TError,
+          Awaited<ReturnType<typeof adminSearchCompanies>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiInstance>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useAdminSearchCompanies<TData = Awaited<ReturnType<typeof adminSearchCompanies>>, TError = AuthenticationExceptionResponse | ValidationExceptionResponse>(
+ params?: AdminSearchCompaniesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof adminSearchCompanies>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof adminSearchCompanies>>,
+          TError,
+          Awaited<ReturnType<typeof adminSearchCompanies>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useAdminSearchCompanies<TData = Awaited<ReturnType<typeof adminSearchCompanies>>, TError = AuthenticationExceptionResponse | ValidationExceptionResponse>(
+ params?: AdminSearchCompaniesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof adminSearchCompanies>>, TError, TData>>, request?: SecondParameter<typeof apiInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Display a listing of the users
+ */
+
+export function useAdminSearchCompanies<TData = Awaited<ReturnType<typeof adminSearchCompanies>>, TError = AuthenticationExceptionResponse | ValidationExceptionResponse>(
+ params?: AdminSearchCompaniesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof adminSearchCompanies>>, TError, TData>>, request?: SecondParameter<typeof apiInstance>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getAdminSearchCompaniesQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+

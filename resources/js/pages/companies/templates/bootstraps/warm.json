@@ -67,32 +67,32 @@
         "description": "Segala yang Anda butuhkan untuk perjalanan yang sempurna",
         "features": [
           {
-            "icon": "MapPin",
+            "icon": "map-pin",
             "title": "Destinasi Eksotis",
             "description": "Lokasi pilihan dari seluruh dunia"
           },
           {
-            "icon": "Users",
+            "icon": "users",
             "title": "Pemandu Ahli",
             "description": "Pemandu profesional dengan pengalaman bertahun-tahun"
           },
           {
-            "icon": "Clock",
+            "icon": "clock",
             "title": "Jadwal Fleksibel",
             "description": "Tur yang sesuai dengan ketersediaan Anda"
           },
           {
-            "icon": "Shield",
+            "icon": "shield",
             "title": "100% Aman",
             "description": "Asuransi perjalanan termasuk dalam semua paket"
           },
           {
-            "icon": "CreditCard",
+            "icon": "credit-card",
             "title": "Pembayaran Mudah",
             "description": "Berbagai opsi dan rencana pembayaran"
           },
           {
-            "icon": "Plane",
+            "icon": "plane",
             "title": "Dukungan 24/7",
             "description": "Bantuan kapan saja Anda membutuhkannya"
           }

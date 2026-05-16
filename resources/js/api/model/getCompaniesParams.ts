@@ -12,6 +12,10 @@ export type GetCompaniesParams = {
 type?: string | null;
 /**
  * e.g., 'travel_agency', 'hotel', 'tour_operator'
+ */
+ids?: string | null;
+/**
+ * comma-separated list of IDs
  * @maxLength 100
  */
 search?: string | null;

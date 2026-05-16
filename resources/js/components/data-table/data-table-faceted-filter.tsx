@@ -21,13 +21,16 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Separator } from '@/components/ui/separator';
+import { useDebouncedCallback } from '@/hooks/use-debounced-callback';
 import { cn } from '@/lib/utils';
 import type { Option } from '@/types/data-table';
 
 interface DataTableFacetedFilterProps<TData, TValue> {
   column?: Column<TData, TValue>;
   title?: string;
-  options: Option[];
+  options:
+    | Option[]
+    | ((query: string, currentValues: Set<TValue>) => Promise<Option[]>);
   multiple?: boolean;
 }
 
@@ -38,11 +41,34 @@ export function DataTableFacetedFilter<TData, TValue>({
   multiple,
 }: DataTableFacetedFilterProps<TData, TValue>) {
   const [open, setOpen] = React.useState(false);
+  const [loading, setLoading] = React.useState(false);
+  const [filterOptions, setFilterOptions] = React.useState(
+    typeof options === 'function' ? [] : options,
+  );
 
   const columnFilterValue = column?.getFilterValue();
-  const selectedValues = new Set(
-    Array.isArray(columnFilterValue) ? columnFilterValue : [],
+  const selectedValues = React.useMemo(
+    () => new Set(Array.isArray(columnFilterValue) ? columnFilterValue : []),
+    [columnFilterValue],
   );
+
+  const fetchOptions = useDebouncedCallback(
+    async (query: string) => {
+      if (typeof options === 'function') {
+        setLoading(true);
+        const fetchedOptions = await options(query, selectedValues);
+        setFilterOptions(fetchedOptions);
+        setLoading(false);
+      }
+    },
+    500, // Adjust the debounce delay as needed
+  );
+
+  React.useEffect(() => {
+    if (typeof options === 'function') {
+      fetchOptions('');
+    }
+  }, [options, fetchOptions]);
 
   const onItemSelect = React.useCallback(
     (option: Option, isSelected: boolean) => {
@@ -116,7 +142,7 @@ export function DataTableFacetedFilter<TData, TValue>({
                     {selectedValues.size} selected
                   </Badge>
                 ) : (
-                  options
+                  filterOptions
                     .filter((option) => selectedValues.has(option.value))
                     .map((option) => (
                       <Badge
@@ -134,54 +160,60 @@ export function DataTableFacetedFilter<TData, TValue>({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-50 p-0" align="start">
-        <Command>
-          <CommandInput placeholder={title} />
-          <CommandList className="max-h-full">
-            <CommandEmpty>No results found.</CommandEmpty>
-            <CommandGroup className="max-h-[300px] scroll-py-1 overflow-y-auto overflow-x-hidden">
-              {options.map((option) => {
-                const isSelected = selectedValues.has(option.value);
+        <Command shouldFilter={options instanceof Array}>
+          <CommandInput
+            placeholder={title}
+            onValueChange={(v) => fetchOptions(v)}
+          />
+          {loading && <CommandEmpty>Loading...</CommandEmpty>}
+          {!loading && (
+            <CommandList className="max-h-full">
+              <CommandEmpty>No results found.</CommandEmpty>
+              <CommandGroup className="max-h-[300px] scroll-py-1 overflow-y-auto overflow-x-hidden">
+                {filterOptions.map((option) => {
+                  const isSelected = selectedValues.has(option.value);
 
-                return (
-                  <CommandItem
-                    key={option.value}
-                    onSelect={() => onItemSelect(option, isSelected)}
-                  >
-                    <div
-                      className={cn(
-                        'flex size-4 items-center justify-center rounded-sm border border-primary',
-                        isSelected
-                          ? 'bg-primary'
-                          : 'opacity-50 [&_svg]:invisible',
-                      )}
+                  return (
+                    <CommandItem
+                      key={option.value}
+                      onSelect={() => onItemSelect(option, isSelected)}
                     >
-                      <Check />
-                    </div>
-                    {option.icon && <option.icon />}
-                    <span className="truncate">{option.label}</span>
-                    {option.count && (
-                      <span className="ml-auto font-mono text-xs">
-                        {option.count}
-                      </span>
-                    )}
-                  </CommandItem>
-                );
-              })}
-            </CommandGroup>
-            {selectedValues.size > 0 && (
-              <>
-                <CommandSeparator />
-                <CommandGroup>
-                  <CommandItem
-                    onSelect={() => onReset()}
-                    className="justify-center text-center"
-                  >
-                    Clear filters
-                  </CommandItem>
-                </CommandGroup>
-              </>
-            )}
-          </CommandList>
+                      <div
+                        className={cn(
+                          'flex size-4 items-center justify-center rounded-sm border border-primary',
+                          isSelected
+                            ? 'bg-primary'
+                            : 'opacity-50 [&_svg]:invisible',
+                        )}
+                      >
+                        <Check />
+                      </div>
+                      {option.icon && <option.icon />}
+                      <span className="truncate">{option.label}</span>
+                      {option.count && (
+                        <span className="ml-auto font-mono text-xs">
+                          {option.count}
+                        </span>
+                      )}
+                    </CommandItem>
+                  );
+                })}
+              </CommandGroup>
+              {selectedValues.size > 0 && (
+                <>
+                  <CommandSeparator />
+                  <CommandGroup>
+                    <CommandItem
+                      onSelect={() => onReset()}
+                      className="justify-center text-center"
+                    >
+                      Clear filters
+                    </CommandItem>
+                  </CommandGroup>
+                </>
+              )}
+            </CommandList>
+          )}
         </Command>
       </PopoverContent>
     </Popover>

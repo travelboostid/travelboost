@@ -89,35 +89,27 @@ export default function useAdminNavMainMenu() {
           items: [
             {
               id: 'fund.wallets',
-              title: 'Wallet',
+              title: 'Wallets',
               urlOrAction: '/admin/funds/wallets',
             },
             {
-              id: 'fund.payment-history',
-              title: 'Payment History',
-              urlOrAction: '/admin/funds/payment-history',
+              id: 'fund.wallet-transactions',
+              title: 'Wallet Transactions',
+              urlOrAction: '/admin/funds/wallet-transactions',
+            },
+            {
+              id: 'fund.payments',
+              title: 'Payments',
+              urlOrAction: '/admin/funds/payments',
             },
             {
               id: 'fund.bank-accounts',
               title: 'Bank Accounts',
               urlOrAction: '/admin/funds/bank-accounts',
             },
-          ],
-        },
-        {
-          id: 'withdrawal-requests',
-          title: 'Withdrawal Request',
-          urlOrAction: '#',
-          icon: WalletIcon,
-          items: [
             {
-              id: 'withdrawal-requests.history',
-              title: 'Wallet History',
-              urlOrAction: '/admin/funds/wallet-transactions',
-            },
-            {
-              id: 'withdrawal-requests.manage',
-              title: 'Withdrawal',
+              id: 'fund.withdrawals',
+              title: 'Withdrawals',
               urlOrAction: '/admin/funds/withdrawals',
             },
           ],

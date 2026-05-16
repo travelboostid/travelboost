@@ -122,6 +122,10 @@ type AvailabilityField =
 
 type AvailabilityRow = Record<AvailabilityField, number> & {
   id?: number | null;
+
+  departure_date: string;
+  return_date: string;
+
   schedule: string;
 };
 
@@ -592,6 +596,10 @@ export default function Page({ tour }: Props) {
 
       return {
         schedule_id: s.id,
+
+        departure_date: s.departure_date,
+        return_date: s.return_date,
+
         schedule: `${formatDate(s.departure_date)} → ${formatDate(s.return_date)}`,
 
         max_pax,
@@ -647,7 +655,9 @@ export default function Page({ tour }: Props) {
       row.BRS +
       row.CA +
       row.RF +
-      row.WA;
+      row.WPA +
+      row.WA +
+      row.WPA;
 
     setAvailability(updated);
   };
@@ -941,6 +951,35 @@ export default function Page({ tour }: Props) {
 
     const source = schedules[copySourceIndex];
 
+    // VALIDASI SUDAH DISAVE
+    if (!source.id) {
+      toast.error('Please save this schedule before copying');
+      return;
+    }
+
+    // VALIDASI AVAILABILITY
+    const sourceAvailability = Array.isArray(source.availability)
+      ? source.availability[0]
+      : source.availability;
+
+    if (!sourceAvailability) {
+      toast.error(
+        'Cannot copy schedule because availability data has not been set',
+      );
+      return;
+    }
+
+    // VALIDASI ADD ONS
+    const sourceAddonsValid =
+      source.add_ons?.length > 0
+        ? source.add_ons
+        : addOnsFromDb?.[source.id] || [];
+
+    if (!sourceAddonsValid || sourceAddonsValid.length === 0) {
+      toast.error('Cannot copy schedule because add-ons data has not been set');
+      return;
+    }
+
     const validDates = selectedDates
       .map((d) => format(d, 'yyyy-MM-dd'))
       .filter(Boolean);
@@ -1106,16 +1145,48 @@ export default function Page({ tour }: Props) {
     }
   };
 
+  //search availability
+  const [searchDeparture, setSearchDeparture] = useState('');
+  const [statusFilter, setStatusFilter] = useState<
+    'all' | 'active' | 'inactive'
+  >('active');
+
+  // FILTER
+  const filteredData = useMemo(() => {
+    const today = new Date().toISOString().split('T')[0];
+
+    return availability.filter((row) => {
+      // departure filter
+      const matchDeparture = searchDeparture
+        ? row.departure_date === searchDeparture
+        : true;
+
+      // status filter
+      let matchStatus = true;
+
+      if (statusFilter === 'active') {
+        matchStatus = row.departure_date > today;
+      }
+
+      if (statusFilter === 'inactive') {
+        matchStatus = row.departure_date <= today;
+      }
+
+      return matchDeparture && matchStatus;
+    });
+  }, [availability, searchDeparture, statusFilter]);
+
   //paging availability
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 10;
 
-  const totalPages = Math.ceil(availability.length / pageSize);
+  const totalPages = Math.ceil(filteredData.length / pageSize);
 
-  const paginatedAvailability = availability.slice(
+  const paginatedAvailability = filteredData.slice(
     (currentPage - 1) * pageSize,
     currentPage * pageSize,
   );
+
   //
 
   //paging add ons
@@ -2382,68 +2453,115 @@ export default function Page({ tour }: Props) {
                   <span className="text-sm text-muted-foreground"></span>
                 </div>
 
-                <div className="flex items-center justify-between px-4 py-2">
+                <div className="px-4 py-2">
                   <h3 className="text-lg font-semibold">
                     <span className="text-foreground font-semibold">
                       Quantity: pax
                     </span>
                   </h3>
+
+                  <div className="mt-3 flex flex-wrap items-center gap-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-muted-foreground text-sm">
+                        Search by departure date
+                      </span>
+
+                      <input
+                        type="date"
+                        value={searchDeparture}
+                        onChange={(e) => {
+                          setSearchDeparture(e.target.value);
+                          setCurrentPage(1);
+                        }}
+                        className="rounded-lg border px-3 py-2 text-sm"
+                      />
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <span className="text-muted-foreground text-sm">
+                        Status
+                      </span>
+
+                      <select
+                        value={statusFilter}
+                        onChange={(e) => {
+                          setStatusFilter(
+                            e.target.value as 'all' | 'active' | 'inactive',
+                          );
+                          setCurrentPage(1);
+                        }}
+                        className="rounded-lg border px-3 py-2 text-sm"
+                      >
+                        <option value="all">All</option>
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                      </select>
+                    </div>
+                  </div>
                 </div>
 
-                <div className="hidden md:block rounded-lg border overflow-x-auto">
-                  <table className="w-full table-fixed text-sm min-w-[1080px]">
+                <div className="hidden md:block rounded-xl border bg-background overflow-auto">
+                  <table className="w-full text-xs border-separate border-spacing-0">
                     <colgroup>
-                      <col className="w-[100px]" /> {/* Departure */}
-                      <col className="w-[50px]" /> {/* Max Pax */}
-                      <col className="w-[50px]" />
-                      <col className="w-[50px]" />
-                      <col className="w-[50px]" />
-                      <col className="w-[70px]" />
-                      <col className="w-[50px]" />
-                      <col className="w-[50px]" />
-                      <col className="w-[50px]" />
-                      <col className="w-[50px]" />
-                      <col className="w-[50px]" />
-                      <col className="w-[50px]" />
-                      <col className="w-[50px]" />
-                      <col className="w-[50px]" /> {/* Action */}
+                      <col className="w-[180px]" /> {/* Departure */}
+                      <col className="w-[150px]" /> {/* Max Pax */}
+                      <col className="w-[80px]" />
+                      <col className="w-[80px]" />
+                      <col className="w-[80px]" />
+                      <col className="w-[80px]" />
+                      <col className="w-[80px]" />
+                      <col className="w-[80px]" />
+                      <col className="w-[80px]" />
+                      <col className="w-[80px]" />
+                      <col className="w-[80px]" />
+                      <col className="w-[80px]" />
+                      <col className="w-[100px]" />
+                      <col className="w-[70px]" /> {/* Action */}
                     </colgroup>
-                    <thead className="bg-muted">
+                    <thead className="sticky top-0 z-30 bg-muted">
                       <tr>
-                        <th className="p-3 text-left">Departure → Return</th>
-                        <th className="p-3 text-right">Max Pax</th>
-                        <th className="p-3 text-right">
+                        <th className="sticky left-0 z-40 bg-muted border-b p-3 text-left font-semibold">
+                          Departure → Return
+                        </th>
+                        <th className="border-b p-2 text-right font-semibold">
+                          Max Pax
+                        </th>
+                        <th className="border-b p-2 text-right font-semibold">
                           Manual <br /> Reserved <br /> (RS)
                         </th>
-                        <th className="p-3 text-right">
+                        <th className="border-b p-2 text-right font-semibold">
                           Waiting Payment <br /> (WP)
                         </th>
-                        <th className="p-3 text-right">
+                        <th className="border-b p-2 text-right font-semibold">
                           Waiting Payment Approval <br /> (WA)
                         </th>
-                        <th className="p-3 text-right">
+                        <th className="border-b p-2 text-right font-semibold">
                           Down Payment <br /> (DP)
                         </th>
-                        <th className="p-3 text-right">
+                        <th className="border-b p-2 text-right font-semibold">
                           Full Payment <br /> (FP)
                         </th>
-                        <th className="p-3 text-right">
+                        <th className="border-b p-2 text-right font-semibold">
                           Booking <br /> Reserved <br /> (BR)
                         </th>
-                        <th className="p-3 text-right">
+                        <th className="border-b p-2 text-right font-semibold">
                           Cancel <br /> (CA)
                         </th>
-                        <th className="p-3 text-right">
+                        <th className="border-b p-2 text-right font-semibold">
                           Refund <br /> (RF)
                         </th>
-                        <th className="p-3 text-right">
+                        <th className="border-b p-2 text-right font-semibold">
                           Expired <br /> EX)
                         </th>
-                        <th className="p-3 text-right">
+                        <th className="border-b p-2 text-right font-semibold">
                           Waiting List <br /> (WL)
                         </th>
-                        <th className="p-3 text-right">Available</th>
-                        <th className="p-3 text-right">Action</th>
+                        <th className="border-b p-2 text-right font-semibold">
+                          Available
+                        </th>
+                        <th className="sticky right-0 z-40 bg-muted border-b p-2 text-right font-semibold">
+                          Action
+                        </th>
                       </tr>
                     </thead>
 
@@ -2452,13 +2570,27 @@ export default function Page({ tour }: Props) {
                         const realIndex = (currentPage - 1) * pageSize + i;
 
                         return (
-                          <tr key={row.id} className="border-t">
-                            <td className="p-3">{row.schedule}</td>
+                          <tr
+                            key={row.id}
+                            className="
+                              border-t
+                              odd:bg-muted/20
+                              hover:bg-muted/40
+                              transition-colors
+                            "
+                          >
+                            <td className="sticky left-0 z-20 bg-background border-b p-3 font-medium whitespace-nowrap">
+                              <div className="flex flex-col">
+                                <span>{formatDate(row.departure_date)}</span>
+
+                                <span>{formatDate(row.return_date)}</span>
+                              </div>
+                            </td>
 
                             {/* max pax */}
                             <td className="p-3">
                               <MoneyInput
-                                className="text-right"
+                                className="h-9 min-w-[45px] text-right text-xs"
                                 value={row.max_pax}
                                 onChange={(val) =>
                                   updateAvailability(
@@ -2473,7 +2605,7 @@ export default function Page({ tour }: Props) {
                             {/* RS */}
                             <td className="p-3">
                               <MoneyInput
-                                className="text-right"
+                                className="h-9 min-w-[45px] text-right text-xs"
                                 value={row.RS}
                                 onChange={(val) =>
                                   updateAvailability(
@@ -2486,160 +2618,110 @@ export default function Page({ tour }: Props) {
                             </td>
 
                             {/* WP */}
-                            <td className="p-3">
-                              <MoneyInput
-                                className="text-right"
-                                value={row.WP}
-                                onChange={(val) =>
-                                  updateAvailability(
-                                    realIndex,
-                                    'WP',
-                                    Number(val),
-                                  )
-                                }
-                                disabled={true}
-                              />
+                            <td className="border-b p-2 text-right">
+                              <span
+                                className={`inline-flex min-w-[60px] justify-center rounded-full px-2 py-1 text-xs font-semibold'
+                                }`}
+                              >
+                                {row.WP}
+                              </span>
                             </td>
 
                             {/* DP */}
-                            <td className="p-3">
-                              <MoneyInput
-                                className="text-right"
-                                value={row.DP}
-                                onChange={(val) =>
-                                  updateAvailability(
-                                    realIndex,
-                                    'DP',
-                                    Number(val),
-                                  )
-                                }
-                                disabled={true}
-                              />
+                            <td className="border-b p-2 text-right">
+                              <span
+                                className={`inline-flex min-w-[60px] justify-center rounded-full px-2 py-1 text-xs font-semibold'
+                                }`}
+                              >
+                                {row.DP}
+                              </span>
                             </td>
 
                             {/* FP */}
-                            <td className="p-3">
-                              <MoneyInput
-                                className="text-right"
-                                value={row.FP}
-                                onChange={(val) =>
-                                  updateAvailability(
-                                    realIndex,
-                                    'FP',
-                                    Number(val),
-                                  )
-                                }
-                                disabled={true}
-                              />
+                            <td className="border-b p-2 text-right">
+                              <span
+                                className={`inline-flex min-w-[60px] justify-center rounded-full px-2 py-1 text-xs font-semibold'
+                                }`}
+                              >
+                                {row.FP}
+                              </span>
                             </td>
 
                             {/* WA */}
-                            <td className="p-3">
-                              <MoneyInput
-                                className="text-right"
-                                value={row.WPA}
-                                onChange={(val) =>
-                                  updateAvailability(
-                                    realIndex,
-                                    'WPA',
-                                    Number(val),
-                                  )
-                                }
-                                disabled={true}
-                              />
+                            <td className="border-b p-2 text-right">
+                              <span
+                                className={`inline-flex min-w-[60px] justify-center rounded-full px-2 py-1 text-xs font-semibold'
+                                }`}
+                              >
+                                {row.WPA}
+                              </span>
                             </td>
 
                             {/* BRS */}
-                            <td className="p-3">
-                              <MoneyInput
-                                className="text-right"
-                                value={row.BRS}
-                                onChange={(val) =>
-                                  updateAvailability(
-                                    realIndex,
-                                    'BRS',
-                                    Number(val),
-                                  )
-                                }
-                                disabled={true}
-                              />
+                            <td className="border-b p-2 text-right">
+                              <span
+                                className={`inline-flex min-w-[60px] justify-center rounded-full px-2 py-1 text-xs font-semibold'
+                                }`}
+                              >
+                                {row.BRS}
+                              </span>
                             </td>
 
                             {/* CA */}
-                            <td className="p-3">
-                              <MoneyInput
-                                className="text-right"
-                                value={row.CA}
-                                onChange={(val) =>
-                                  updateAvailability(
-                                    realIndex,
-                                    'CA',
-                                    Number(val),
-                                  )
-                                }
-                                disabled={true}
-                              />
+                            <td className="border-b p-2 text-right">
+                              <span
+                                className={`inline-flex min-w-[60px] justify-center rounded-full px-2 py-1 text-xs font-semibold'
+                                }`}
+                              >
+                                {row.CA}
+                              </span>
                             </td>
 
                             {/* RF */}
-                            <td className="p-3">
-                              <MoneyInput
-                                className="text-right"
-                                value={row.RF}
-                                onChange={(val) =>
-                                  updateAvailability(
-                                    realIndex,
-                                    'RF',
-                                    Number(val),
-                                  )
-                                }
-                                disabled={true}
-                              />
+                            <td className="border-b p-2 text-right">
+                              <span
+                                className={`inline-flex min-w-[60px] justify-center rounded-full px-2 py-1 text-xs font-semibold'
+                                }`}
+                              >
+                                {row.RF}
+                              </span>
                             </td>
 
                             {/* EX */}
-                            <td className="p-3">
-                              <MoneyInput
-                                className="text-right"
-                                value={row.EX}
-                                onChange={(val) =>
-                                  updateAvailability(
-                                    realIndex,
-                                    'EX',
-                                    Number(val),
-                                  )
-                                }
-                                disabled={true}
-                              />
+                            <td className="border-b p-2 text-right">
+                              <span
+                                className={`inline-flex min-w-[60px] justify-center rounded-full px-2 py-1 text-xs font-semibold'
+                                }`}
+                              >
+                                {row.EX}
+                              </span>
                             </td>
 
                             {/* WL */}
-                            <td className="p-3">
-                              <MoneyInput
-                                className="text-right"
-                                value={row.WL}
-                                onChange={(val) =>
-                                  updateAvailability(
-                                    realIndex,
-                                    'WL',
-                                    Number(val),
-                                  )
-                                }
-                                disabled={true}
-                              />
+                            <td className="border-b p-2 text-right">
+                              <span
+                                className={`inline-flex min-w-[60px] justify-center rounded-full px-2 py-1 text-xs font-semibold'
+                                }`}
+                              >
+                                {row.WL}
+                              </span>
                             </td>
 
                             {/* available */}
-                            <td
-                              className={`p-3 text-right font-semibold ${
-                                row.available <= 0
-                                  ? 'text-red-500'
-                                  : 'text-green-600'
-                              }`}
-                            >
-                              {row.available}
+                            <td className="border-b p-2 text-right">
+                              <span
+                                className={`inline-flex min-w-[60px] justify-center rounded-full px-2 py-1 text-xs font-semibold ${
+                                  row.available <= 0
+                                    ? 'bg-red-100 text-red-600'
+                                    : row.available <= 5
+                                      ? 'bg-yellow-100 text-yellow-700'
+                                      : 'bg-green-100 text-green-700'
+                                }`}
+                              >
+                                {row.available}
+                              </span>
                             </td>
-                            <td className="sticky right-0 bg-background p-3">
+                            <td className="sticky right-0 z-20 bg-background border-b p-2">
                               <div className="relative z-50 flex justify-end">
                                 <DropdownMenu modal={false}>
                                   <DropdownMenuTrigger asChild>

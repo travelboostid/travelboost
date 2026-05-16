@@ -46,6 +46,8 @@ Route::get('/tours', [BaseHomeController::class, 'tours'])->name('tours');
 Route::redirect('/login', '/customers/login')->name('login');
 
 Route::middleware(['auth'])->group(function () {
+    Route::post('/bookings/{booking}/reorder', [BookingController::class, 'reorder'])
+        ->name('customer.bookings.reorder');
     Route::post('/bookings/{booking}/manual-payment', [BookingController::class, 'storeManualPayment'])
         ->name('customer.bookings.manual-payment');
     Route::post('/bookings/{booking}/online-payment', [BookingController::class, 'storeOnlinePayment'])

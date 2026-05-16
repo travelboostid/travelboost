@@ -1,4 +1,7 @@
 import BookingInfoCard from '@/components/booking/BookingInfoCard';
+import BookingPaymentResult, {
+  type BookingPaymentResultData,
+} from '@/components/booking/BookingPaymentResult';
 import type { ManualPaymentData } from '@/components/booking/ManualPaymentDialog';
 import Step1GuestInformation, {
   calculateAgeAtDeparture,
@@ -31,6 +34,7 @@ import { Button } from '@/components/ui/button';
 import type { WizardStepId } from '@/constants/booking';
 import type {
   BookingContact,
+  BookingStatusCode,
   GuestEntry,
   TravelDocumentEntry,
 } from '@/types/booking';
@@ -47,6 +51,81 @@ const DEFAULT_TNC = `1. The price shown is valid only for the selected departure
 4. All bookings are non-refundable unless stated otherwise.
 5. Changes to guest details or departure dates are subject to administrative fees.
 6. In the event of tour cancellation by the organizer, a full refund will be provided.`;
+
+function makeDefaultGuest(
+  id: string,
+  type: 'adult' | 'child' | 'infant',
+): GuestEntry {
+  return {
+    id,
+    type,
+    title: '',
+    firstName: '',
+    lastName: '',
+    dateOfBirth: '',
+    placeOfBirth: '',
+    priceCategory: null,
+    tourPriceId: 0,
+    price: 0,
+    originalPrice: 0,
+    roomTypeDescription: '',
+    note: '',
+  };
+}
+
+function splitContactName(
+  name: string,
+): { firstName: string; lastName: string } | null {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+
+  if (parts.length === 0) {
+    return null;
+  }
+
+  return {
+    firstName: parts[0] ?? '',
+    lastName: parts.slice(1).join(' '),
+  };
+}
+
+function isBlankAdultGuest(guest: GuestEntry): boolean {
+  return (
+    guest.type === 'adult' &&
+    guest.firstName.trim() === '' &&
+    guest.lastName.trim() === ''
+  );
+}
+
+function findLatestBlankAdultGuest(guests: GuestEntry[]): GuestEntry | null {
+  for (let index = guests.length - 1; index >= 0; index -= 1) {
+    if (isBlankAdultGuest(guests[index])) {
+      return guests[index];
+    }
+  }
+
+  return null;
+}
+
+function normalizePaymentValue(value: string | null | undefined): string {
+  return (value ?? '').toLowerCase().replaceAll('_', ' ');
+}
+
+function isConfirmedPaymentResult(
+  result: BookingPaymentResultData | undefined,
+): boolean {
+  if (!result) {
+    return false;
+  }
+
+  const bookingStatus = normalizePaymentValue(result.bookingStatus);
+  const paymentStatus = normalizePaymentValue(result.paymentStatus);
+
+  return (
+    paymentStatus === 'paid' ||
+    bookingStatus === 'down payment' ||
+    bookingStatus === 'full payment'
+  );
+}
 
 export default function Page() {
   const {
@@ -67,8 +146,18 @@ export default function Page() {
     isResumingExistingBooking,
     reservedExpiresAt,
     remainingHoldSeconds,
+    paidAmount,
+    remainingBalance,
+    bookingConflict,
+    flash,
   } = usePage<any>().props as any;
   const user = auth?.user;
+  const [paymentResult, setPaymentResult] =
+    useState<BookingPaymentResultData | null>(
+      () => flash?.bookingPaymentResult ?? null,
+    );
+  const [isRefreshingPaymentResult, setIsRefreshingPaymentResult] =
+    useState(false);
 
   const urlParams = useMemo(
     () => new URLSearchParams(window.location.search),
@@ -81,7 +170,9 @@ export default function Page() {
   const resumedStatus = existingBooking?.status ?? null;
 
   // ─── Wizard state ───────────────────────────────────────────────────
-  const [currentStep, setCurrentStep] = useState<WizardStepId>(1);
+  const [currentStep, setCurrentStep] = useState<WizardStepId>(
+    resumedStatus === 'down payment' ? 4 : 1,
+  );
   const [direction, setDirection] = useState(1); // 1=forward, -1=back
   const [hasAgreedToTnc, setHasAgreedToTnc] = useState(isResuming);
   const initialHoldSeconds =
@@ -89,14 +180,28 @@ export default function Page() {
       ? remainingHoldSeconds
       : reservedExpiresAt
         ? Math.ceil((new Date(reservedExpiresAt).getTime() - Date.now()) / 1000)
-      : (bookingTimeLimitMinutes ?? 10) * 60;
-  const [timeLeft, setTimeLeft] = useState(
-    Math.max(0, initialHoldSeconds),
-  );
+        : (bookingTimeLimitMinutes ?? 10) * 60;
+  const [timeLeft, setTimeLeft] = useState(Math.max(0, initialHoldSeconds));
   const [timerStarted, setTimerStarted] = useState(
     resumedStatus === 'reserved' || resumedStatus === 'booking reserved',
   );
   const [showStep2ConfirmModal, setShowStep2ConfirmModal] = useState(false);
+  const isBalancePayment = resumedStatus === 'down payment';
+  const conflictStatus = normalizePaymentValue(bookingConflict?.status);
+  const hasBookingConflict = Boolean(bookingConflict);
+  const paidAmountValue = Number(paidAmount ?? 0);
+  const remainingBalanceValue = Math.max(0, Number(remainingBalance ?? 0));
+  const bookingInfoStatus: BookingStatusCode = isBalancePayment
+    ? 'down_payment'
+    : resumedStatus === 'full payment'
+      ? 'full_payment'
+      : currentStep >= 2 || timerStarted
+        ? 'booking_reserved'
+        : 'waiting_payment';
+  const conflictDescription =
+    conflictStatus === 'down payment'
+      ? 'There is already a booking for this trip that requires balance payment. Would you like to create a new booking or settle the previous one?'
+      : 'There is already a booking for this trip that is currently waiting for payment approval. Would you like to create a new booking?';
 
   // ─── Contact ────────────────────────────────────────────────────────
   const [contact, setContact] = useState<BookingContact>({
@@ -105,11 +210,18 @@ export default function Page() {
     phone: existingBooking?.contact_phone || user?.phone || '',
     notes: existingBooking?.contact_notes || '',
   });
+  const [contactGuestId, setContactGuestId] = useState<string | null>(null);
 
   // ─── Guests ─────────────────────────────────────────────────────────
-  const [adults, setAdults] = useState(existingBooking?.pax_adult ?? 1);
-  const [children, setChildren] = useState(existingBooking?.pax_child ?? 0);
-  const [infants, setInfants] = useState(existingBooking?.pax_infant ?? 0);
+  const [adults, setAdults] = useState<number>(
+    Number(existingBooking?.pax_adult ?? 1),
+  );
+  const [children, setChildren] = useState<number>(
+    Number(existingBooking?.pax_child ?? 0),
+  );
+  const [infants, setInfants] = useState<number>(
+    Number(existingBooking?.pax_infant ?? 0),
+  );
   const [guests, setGuests] = useState<GuestEntry[]>(() => {
     if (!existingBooking?.passengers?.length) return [];
     // Hydrate guests from existing passengers
@@ -201,50 +313,40 @@ export default function Page() {
       return;
     }
 
-    const makeDefault = (
-      id: string,
-      type: 'adult' | 'child' | 'infant',
-    ): GuestEntry => ({
-      id,
-      type,
-      title: '',
-      firstName: '',
-      lastName: '',
-      dateOfBirth: '',
-      placeOfBirth: '',
-      priceCategory: null,
-      tourPriceId: 0,
-      price: 0,
-      originalPrice: 0,
-      roomTypeDescription: '',
-      note: '',
-    });
-
     setGuests((previousGuests) => {
       const newGuests: GuestEntry[] = [];
+      const contactGuest =
+        contactGuestId !== null
+          ? (previousGuests.find((guest) => guest.id === contactGuestId) ??
+            makeDefaultGuest(contactGuestId, 'adult'))
+          : null;
+      const adultSlots = contactGuest ? Math.max(0, adults - 1) : adults;
 
-      for (let i = 0; i < adults; i++) {
+      for (let i = 0; i < adultSlots; i++) {
         newGuests.push(
           previousGuests.find((g) => g.id === `adult-${i}`) ??
-            makeDefault(`adult-${i}`, 'adult'),
+            makeDefaultGuest(`adult-${i}`, 'adult'),
         );
+      }
+      if (contactGuest) {
+        newGuests.push(contactGuest);
       }
       for (let i = 0; i < children; i++) {
         newGuests.push(
           previousGuests.find((g) => g.id === `child-${i}`) ??
-            makeDefault(`child-${i}`, 'child'),
+            makeDefaultGuest(`child-${i}`, 'child'),
         );
       }
       for (let i = 0; i < infants; i++) {
         newGuests.push(
           previousGuests.find((g) => g.id === `infant-${i}`) ??
-            makeDefault(`infant-${i}`, 'infant'),
+            makeDefaultGuest(`infant-${i}`, 'infant'),
         );
       }
 
       return newGuests;
     });
-  }, [adults, children, infants]);
+  }, [adults, children, contactGuestId, infants]);
 
   useEffect(() => {
     setTravelDocuments((previousDocs) =>
@@ -296,6 +398,102 @@ export default function Page() {
       ),
     [selectedAddOnsForPricing],
   );
+  const selectedSchedule = useMemo(() => {
+    const schedules = Array.isArray(tour?.schedules) ? tour.schedules : [];
+
+    return (
+      schedules.find((schedule: any) => {
+        const departureDate = String(schedule?.departure_date ?? '').slice(
+          0,
+          10,
+        );
+
+        return departureDate === preselectedDate;
+      }) ?? null
+    );
+  }, [preselectedDate, tour?.schedules]);
+  const paxSummary = useMemo(() => {
+    const segments: string[] = [];
+
+    if (adults > 0) {
+      segments.push(`${adults} adult${adults === 1 ? '' : 's'}`);
+    }
+
+    if (children > 0) {
+      segments.push(`${children} child${children === 1 ? '' : 'ren'}`);
+    }
+
+    if (infants > 0) {
+      segments.push(`${infants} infant${infants === 1 ? '' : 's'}`);
+    }
+
+    return segments.join(', ') || 'No guests';
+  }, [adults, children, infants]);
+  const buildPaymentResultFallback = useCallback(
+    ({
+      bookingId,
+      bookingStatus,
+      paymentStatus,
+      paymentMode,
+      paidAmount: nextPaidAmount = paidAmountValue,
+      grandTotal: nextGrandTotal,
+      remainingBalance: nextRemainingBalance,
+    }: {
+      bookingId: number | string;
+      bookingStatus: string;
+      paymentStatus: string;
+      paymentMode: string | null;
+      paidAmount?: number;
+      grandTotal?: number;
+      remainingBalance?: number;
+    }): BookingPaymentResultData => {
+      const fallbackGrandTotal =
+        nextGrandTotal ??
+        (Number(existingBooking?.grand_total ?? 0) > 0
+          ? Number(existingBooking.grand_total)
+          : pricing.totalPrice + selectedAddOnsTotal);
+      const fallbackPaidAmount = Number(nextPaidAmount ?? 0);
+
+      return {
+        bookingId,
+        bookingNumber,
+        bookingStatus,
+        paymentStatus,
+        paymentMode,
+        tourName: tour?.name ?? 'Selected tour',
+        tourCode: tour?.code ?? null,
+        destination: tour?.destination ?? null,
+        departureDate:
+          preselectedDate || existingBooking?.departure_date || null,
+        returnDate:
+          selectedSchedule?.return_date ?? selectedSchedule?.returnDate ?? null,
+        paxSummary,
+        grandTotal: fallbackGrandTotal,
+        paidAmount: fallbackPaidAmount,
+        remainingBalance:
+          nextRemainingBalance ??
+          Math.max(0, fallbackGrandTotal - fallbackPaidAmount),
+        image: tour?.image ?? null,
+      };
+    },
+    [
+      bookingNumber,
+      existingBooking?.departure_date,
+      existingBooking?.grand_total,
+      paidAmountValue,
+      paxSummary,
+      preselectedDate,
+      pricing.totalPrice,
+      selectedAddOnsTotal,
+      selectedSchedule?.returnDate,
+      selectedSchedule?.return_date,
+      tour?.code,
+      tour?.destination,
+      tour?.image,
+      tour?.name,
+    ],
+  );
+  const inFlightOnlineConfirms = useRef(new Set<string>());
 
   // ─── Timer (starts when entering Step 2) ────────────────────────────
   useEffect(() => {
@@ -412,6 +610,10 @@ export default function Page() {
 
   const handleGuestRemove = useCallback(
     (guestId: string) => {
+      if (guestId === contactGuestId) {
+        setContactGuestId(null);
+      }
+
       const newGuests = guests.filter((g) => g.id !== guestId);
       if (newGuests.length === guests.length) {
         return;
@@ -428,7 +630,71 @@ export default function Page() {
       setChildren(newChildren);
       setInfants(newInfants);
     },
-    [guests],
+    [contactGuestId, guests],
+  );
+
+  const handleContactGuestToggle = useCallback(
+    (enabled: boolean) => {
+      if (enabled) {
+        const contactNameParts = splitContactName(contact.name);
+        const blankAdultGuest = findLatestBlankAdultGuest(guests);
+        const canAddNewAdult = adults + children < (availability ?? 99);
+
+        if (!contactNameParts || (!blankAdultGuest && !canAddNewAdult)) {
+          return;
+        }
+
+        const { firstName, lastName } = contactNameParts;
+
+        if (blankAdultGuest) {
+          skipGuestSyncRef.current = true;
+          setGuests((previousGuests) =>
+            previousGuests.map((guest) =>
+              guest.id === blankAdultGuest.id
+                ? {
+                    ...guest,
+                    firstName,
+                    lastName,
+                  }
+                : guest,
+            ),
+          );
+          setContactGuestId(blankAdultGuest.id);
+          return;
+        }
+
+        const guestId = `adult-${adults}`;
+        skipGuestSyncRef.current = true;
+        setGuests((prev) => [
+          ...prev,
+          {
+            ...makeDefaultGuest(guestId, 'adult'),
+            firstName,
+            lastName,
+          },
+        ]);
+        setAdults((prev) => prev + 1);
+        setContactGuestId(guestId);
+        return;
+      }
+
+      if (contactGuestId) {
+        skipGuestSyncRef.current = true;
+        setGuests((previousGuests) =>
+          previousGuests.map((guest) =>
+            guest.id === contactGuestId
+              ? {
+                  ...guest,
+                  firstName: '',
+                  lastName: '',
+                }
+              : guest,
+          ),
+        );
+        setContactGuestId(null);
+      }
+    },
+    [adults, availability, children, contact.name, contactGuestId, guests],
   );
 
   // ─── Validation ─────────────────────────────────────────────────────
@@ -494,6 +760,329 @@ export default function Page() {
 
   // ─── Submit ─────────────────────────────────────────────────────────
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const manualSubmitTimerWasRunning = useRef(false);
+
+  const stopHoldTimer = useCallback(() => {
+    setTimerStarted(false);
+    setShowStep2ConfirmModal(false);
+  }, []);
+
+  const showPaymentResult = useCallback(
+    (nextResult: BookingPaymentResultData) => {
+      stopHoldTimer();
+      setPaymentResult(nextResult);
+    },
+    [stopHoldTimer],
+  );
+
+  useEffect(() => {
+    if (paymentResult) {
+      stopHoldTimer();
+    }
+  }, [paymentResult, stopHoldTimer]);
+
+  useEffect(() => {
+    if (flash?.bookingPaymentResult) {
+      showPaymentResult(flash.bookingPaymentResult);
+    }
+  }, [flash?.bookingPaymentResult, showPaymentResult]);
+
+  const confirmOnlinePaymentAndShowResult = useCallback(
+    (
+      bookingId: number | string,
+      paymentId: number | string | undefined,
+      pendingResult: BookingPaymentResultData | undefined,
+      options: { showPendingResult: boolean },
+    ) => {
+      if (!paymentId) {
+        if (options.showPendingResult && pendingResult) {
+          showPaymentResult(pendingResult);
+        }
+        setIsSubmitting(false);
+        return;
+      }
+
+      const confirmKey = `${bookingId}:${paymentId}`;
+
+      if (inFlightOnlineConfirms.current.has(confirmKey)) {
+        return;
+      }
+
+      inFlightOnlineConfirms.current.add(confirmKey);
+
+      axios
+        .post(
+          `/bookings/${bookingId}/online-payment/${paymentId}/confirm`,
+          {},
+          {
+            withCredentials: true,
+            withXSRFToken: true,
+          },
+        )
+        .then((confirmResponse) => {
+          const nextResult =
+            (confirmResponse.data?.bookingPaymentResult as
+              | BookingPaymentResultData
+              | undefined) ?? pendingResult;
+
+          if (
+            isConfirmedPaymentResult(nextResult) ||
+            options.showPendingResult
+          ) {
+            if (nextResult) {
+              showPaymentResult(nextResult);
+            }
+          }
+        })
+        .catch(() => {
+          if (options.showPendingResult && pendingResult) {
+            showPaymentResult(pendingResult);
+          }
+        })
+        .finally(() => {
+          inFlightOnlineConfirms.current.delete(confirmKey);
+          setIsSubmitting(false);
+        });
+    },
+    [showPaymentResult],
+  );
+
+  const openSnapPayment = useCallback(
+    (
+      snapToken: string,
+      bookingId: number | string,
+      paymentId: number | string | undefined,
+      pendingResult: BookingPaymentResultData | undefined,
+    ) => {
+      const snap = (window as any).snap;
+      const callbacks = {
+        onSuccess: () => {
+          confirmOnlinePaymentAndShowResult(
+            bookingId,
+            paymentId,
+            pendingResult,
+            {
+              showPendingResult: true,
+            },
+          );
+        },
+        onPending: () => {
+          showPaymentResult(
+            pendingResult ??
+              buildPaymentResultFallback({
+                bookingId,
+                bookingStatus: 'booking reserved',
+                paymentStatus: 'pending',
+                paymentMode: 'online',
+              }),
+          );
+          setIsSubmitting(false);
+        },
+        onError: () => {
+          setIsSubmitting(false);
+        },
+        onClose: () => {
+          confirmOnlinePaymentAndShowResult(
+            bookingId,
+            paymentId,
+            pendingResult,
+            {
+              showPendingResult: false,
+            },
+          );
+        },
+      };
+
+      if (typeof snap?.pay !== 'function') {
+        showPaymentResult(
+          pendingResult ??
+            buildPaymentResultFallback({
+              bookingId,
+              bookingStatus: 'booking reserved',
+              paymentStatus: 'pending',
+              paymentMode: 'online',
+            }),
+        );
+        setIsSubmitting(false);
+        return;
+      }
+
+      snap.pay(snapToken, callbacks);
+    },
+    [
+      buildPaymentResultFallback,
+      confirmOnlinePaymentAndShowResult,
+      showPaymentResult,
+    ],
+  );
+
+  const startOnlinePayment = (
+    bookingId: number | string,
+    paymentType: PaymentType,
+    finalAmount: number,
+  ) => {
+    axios
+      .post(
+        `/bookings/${bookingId}/online-payment`,
+        {
+          payment_type: paymentType,
+          amount: finalAmount,
+        },
+        {
+          withCredentials: true,
+          withXSRFToken: true,
+        },
+      )
+      .then((response) => {
+        const snapToken = response.data?.payment?.payload?.snap_token as
+          | string
+          | undefined;
+        const paymentId = response.data?.payment?.id as
+          | number
+          | string
+          | undefined;
+        const pendingResult = response.data?.bookingPaymentResult as
+          | BookingPaymentResultData
+          | undefined;
+
+        if (!snapToken) {
+          showPaymentResult(
+            pendingResult ??
+              buildPaymentResultFallback({
+                bookingId,
+                bookingStatus: 'booking reserved',
+                paymentStatus: 'pending',
+                paymentMode: 'online',
+              }),
+          );
+          setIsSubmitting(false);
+          return;
+        }
+
+        openSnapPayment(snapToken, bookingId, paymentId, pendingResult);
+      })
+      .catch(() => setIsSubmitting(false));
+  };
+
+  const submitManualPayment = (
+    bookingId: number | string,
+    paymentType: PaymentType,
+    finalAmount: number,
+    manualData?: ManualPaymentData,
+  ) => {
+    if (!manualData?.proofFile) {
+      setIsSubmitting(false);
+      return;
+    }
+
+    manualSubmitTimerWasRunning.current = timerStarted;
+    stopHoldTimer();
+
+    const formData = new FormData();
+    formData.append('sender_bank_name', manualData.senderBankName);
+    formData.append('sender_account_number', manualData.senderAccountNumber);
+    formData.append(
+      'transfer_amount',
+      String(manualData.transferAmount || finalAmount),
+    );
+    formData.append('payment_type', paymentType);
+    formData.append('proof', manualData.proofFile);
+
+    router.post(`/bookings/${bookingId}/manual-payment`, formData, {
+      forceFormData: true,
+      preserveScroll: true,
+      onSuccess: (page) => {
+        const nextResult = (page.props as any)?.flash?.bookingPaymentResult as
+          | BookingPaymentResultData
+          | undefined;
+
+        showPaymentResult(
+          nextResult ??
+            buildPaymentResultFallback({
+              bookingId,
+              bookingStatus: 'waiting payment approval',
+              paymentStatus: 'pending',
+              paymentMode: 'manual',
+              paidAmount: paidAmountValue,
+            }),
+        );
+      },
+      onError: () => {
+        if (manualSubmitTimerWasRunning.current) {
+          setTimerStarted(true);
+        }
+        manualSubmitTimerWasRunning.current = false;
+        setIsSubmitting(false);
+      },
+      onFinish: () => {
+        manualSubmitTimerWasRunning.current = false;
+        setIsSubmitting(false);
+      },
+    });
+  };
+
+  const refreshPaymentStatus = useCallback(() => {
+    if (!paymentResult) {
+      return;
+    }
+
+    setIsRefreshingPaymentResult(true);
+    router.visit(`${window.location.pathname}${window.location.search}`, {
+      preserveScroll: true,
+      preserveState: true,
+      onSuccess: (page) => {
+        const nextProps = page.props as any;
+        const refreshedPaymentResult =
+          (nextProps.bookingPaymentResult ??
+            nextProps.flash?.bookingPaymentResult) as
+            | BookingPaymentResultData
+            | null
+            | undefined;
+
+        if (refreshedPaymentResult) {
+          setPaymentResult(refreshedPaymentResult);
+          return;
+        }
+
+        const refreshedBooking = nextProps.existingBooking ?? null;
+        const bookingStatus =
+          refreshedBooking?.status ?? paymentResult.bookingStatus;
+        const normalizedStatus = normalizePaymentValue(bookingStatus);
+        const paymentStatus =
+          normalizedStatus === 'down payment' ||
+          normalizedStatus === 'full payment'
+            ? 'paid'
+            : normalizedStatus === 'cancelled'
+              ? 'failed'
+              : paymentResult.paymentStatus;
+        const grandTotal = Number(
+          refreshedBooking?.grand_total ?? paymentResult.grandTotal,
+        );
+        const nextPaidAmount = Number(
+          nextProps.paidAmount ?? paymentResult.paidAmount,
+        );
+        const nextRemainingBalance = Number(
+          nextProps.remainingBalance ??
+            Math.max(0, grandTotal - nextPaidAmount),
+        );
+
+        setPaymentResult({
+          ...paymentResult,
+          bookingId: refreshedBooking?.id ?? paymentResult.bookingId,
+          bookingNumber:
+            refreshedBooking?.booking_number ?? paymentResult.bookingNumber,
+          bookingStatus,
+          paymentStatus,
+          paymentMode:
+            refreshedBooking?.payment_mode ?? paymentResult.paymentMode,
+          grandTotal,
+          paidAmount: nextPaidAmount,
+          remainingBalance: nextRemainingBalance,
+        });
+      },
+      onFinish: () => setIsRefreshingPaymentResult(false),
+    });
+  }, [paymentResult]);
 
   const handlePayNow = (
     paymentType: PaymentType,
@@ -504,6 +1093,21 @@ export default function Page() {
   ) => {
     setIsSubmitting(true);
 
+    if (isBalancePayment && existingBooking?.id) {
+      if (paymentMethod === 'midtrans') {
+        startOnlinePayment(existingBooking.id, paymentType, finalAmount);
+        return;
+      }
+
+      submitManualPayment(
+        existingBooking.id,
+        paymentType,
+        finalAmount,
+        manualData,
+      );
+      return;
+    }
+
     const addOnRows = addOns
       .filter((a) => a.qty > 0)
       .map((a) => ({
@@ -513,7 +1117,7 @@ export default function Page() {
     const addOnsTotal = addOnRows.reduce((sum, item) => sum + item.price, 0);
     const grandTotal = pricing.totalPrice + addOnsTotal;
     const roomNumberByGuestId = getRoomNumberByGuestId(rooms);
-    const payload = {
+    const payload: Record<string, unknown> = {
       tour_id: tour.id,
       departure_date: preselectedDate,
       pax_adult: adults,
@@ -551,7 +1155,6 @@ export default function Page() {
           note: g.note || null,
         };
       }),
-      rooms: serializeRoomsForBooking(rooms),
       addons: addOnRows,
       total_price: pricing.subtotalGuests,
       tax_amount: pricing.ppn,
@@ -559,6 +1162,10 @@ export default function Page() {
       commission_amount: pricing.agentCommission,
       grand_total: grandTotal,
     };
+
+    if (rooms.length > 0) {
+      payload.rooms = serializeRoomsForBooking(rooms);
+    }
 
     router.post(`/bookings/${tour.id}`, payload as any, {
       forceFormData: true,
@@ -571,56 +1178,7 @@ export default function Page() {
             return;
           }
 
-          axios
-            .post(
-              `/bookings/${bookingId}/online-payment`,
-              {
-                payment_type: paymentType,
-                amount: finalAmount,
-              },
-              {
-                withCredentials: true,
-                withXSRFToken: true,
-              },
-            )
-            .then((response) => {
-              const snapToken = response.data?.payment?.payload?.snap_token as
-                | string
-                | undefined;
-              const paymentId = response.data?.payment?.id as
-                | number
-                | string
-                | undefined;
-
-              if (!snapToken) {
-                setIsSubmitting(false);
-                return;
-              }
-
-              (window as any).snap.pay(snapToken, {
-                onSuccess: () => {
-                  if (!bookingId || !paymentId) {
-                    window.location.reload();
-                    return;
-                  }
-
-                  axios
-                    .post(
-                      `/bookings/${bookingId}/online-payment/${paymentId}/confirm`,
-                      {},
-                      {
-                        withCredentials: true,
-                        withXSRFToken: true,
-                      },
-                    )
-                    .finally(() => window.location.reload());
-                },
-                onError: () => window.location.reload(),
-                onClose: () => window.location.reload(),
-              });
-            })
-            .catch(() => setIsSubmitting(false));
-
+          startOnlinePayment(bookingId, paymentType, finalAmount);
           return;
         }
 
@@ -634,24 +1192,7 @@ export default function Page() {
           return;
         }
 
-        const formData = new FormData();
-        formData.append('sender_bank_name', manualData.senderBankName);
-        formData.append(
-          'sender_account_number',
-          manualData.senderAccountNumber,
-        );
-        formData.append(
-          'transfer_amount',
-          String(manualData.transferAmount || finalAmount),
-        );
-        formData.append('payment_type', paymentType);
-        formData.append('proof', manualData.proofFile);
-
-        router.post(`/bookings/${bookingId}/manual-payment`, formData, {
-          forceFormData: true,
-          preserveScroll: true,
-          onFinish: () => setIsSubmitting(false),
-        });
+        submitManualPayment(bookingId, paymentType, finalAmount, manualData);
       },
       onError: () => {
         setIsSubmitting(false);
@@ -666,6 +1207,63 @@ export default function Page() {
 
   // ─── Helper ─────────────────────────────────────────────────────────
   // ─── Render ─────────────────────────────────────────────────────────
+  if (paymentResult) {
+    return (
+      <TenantLayout>
+        <BookingPaymentResult
+          result={paymentResult}
+          onRefresh={refreshPaymentStatus}
+          isRefreshing={isRefreshingPaymentResult}
+        />
+      </TenantLayout>
+    );
+  }
+
+  if (hasBookingConflict) {
+    return (
+      <TenantLayout>
+        <div className="min-h-screen bg-linear-to-b from-background via-background to-muted/30" />
+        <AlertDialog open>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                {conflictStatus === 'down payment'
+                  ? 'Balance payment required'
+                  : 'Waiting Payment Approval'}
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                {conflictDescription}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => router.visit(bookingConflict.newBookingUrl)}
+              >
+                Yes, I want to make a new booking
+              </Button>
+              <Button
+                type="button"
+                onClick={() =>
+                  router.visit(
+                    conflictStatus === 'down payment'
+                      ? bookingConflict.continuePaymentUrl
+                      : bookingConflict.checkPaymentStatusUrl,
+                  )
+                }
+              >
+                {conflictStatus === 'down payment'
+                  ? 'Pay Balance'
+                  : 'Check Payment Status'}
+              </Button>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </TenantLayout>
+    );
+  }
+
   if (!hasAgreedToTnc) {
     return (
       <TenantLayout>
@@ -755,11 +1353,7 @@ export default function Page() {
                 {/* Booking Info Card */}
                 <BookingInfoCard
                   tour={tour}
-                  status={
-                    currentStep >= 2 || timerStarted
-                      ? 'booking_reserved'
-                      : 'waiting_payment'
-                  }
+                  status={bookingInfoStatus}
                   bookingNumber={bookingNumber ?? null}
                   invoiceNumber={null}
                   departureDate={preselectedDate}
@@ -769,6 +1363,7 @@ export default function Page() {
                   contactEmail={contact.email}
                   contactPhone={contact.phone}
                   pricing={pricing}
+                  totalPaid={paidAmountValue}
                   displayTotalPrice={
                     currentStep === 4
                       ? pricing.totalPrice + selectedAddOnsTotal
@@ -807,6 +1402,9 @@ export default function Page() {
                         tourPrices={tourPrices}
                         maxGuests={availability ?? 99}
                         departureDate={preselectedDate}
+                        contactGuestId={contactGuestId}
+                        onContactGuestToggle={handleContactGuestToggle}
+                        contactAsGuestAdded={contactGuestId !== null}
                       />
                     )}
                     {currentStep === 2 && (
@@ -838,6 +1436,9 @@ export default function Page() {
                         onAddOnsChange={setSelectedAddOns}
                         minimumDownPaymentPct={minimumDownPaymentPct}
                         minimumVatPct={minimumVatPct}
+                        paidAmount={paidAmountValue}
+                        remainingBalance={remainingBalanceValue}
+                        forceBalancePayment={isBalancePayment}
                         vendorBankInfo={vendorBankInfo}
                       />
                     )}
