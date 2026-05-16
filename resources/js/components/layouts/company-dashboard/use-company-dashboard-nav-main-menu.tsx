@@ -184,8 +184,8 @@ export function useCompanyDashboardNavMainMenu() {
       title: <FormattedMessage defaultMessage="Customers" />,
       urlOrAction: `/companies/${company.username}/dashboard/customers`,
       icon: BookUserIcon,
-      shouldDisplay: (roles, permissions) =>
-        roles.includes('user:agent') && permissions.includes('user.query'),
+      shouldDisplay: (_roles, permissions) =>
+        permissions.includes('user.query'),
     },
     {
       id: 'funds',

@@ -305,7 +305,7 @@ export default function CustomersPage({ data }: CustomersPageProps) {
     >
       <Head title="Customers" />
       <div className="w-full space-y-6 p-4 md:p-6 pb-20">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        {/* <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-foreground">
               Customers Management
@@ -314,7 +314,7 @@ export default function CustomersPage({ data }: CustomersPageProps) {
               View and manage all customer data, bookings, and notifications.
             </p>
           </div>
-        </div>
+        </div> */}
 
         <div className="rounded-xl border border-border bg-card shadow-sm w-full p-4 overflow-hidden">
           <DataTable table={table} renderEmptyState={<EmptyCustomers />}>

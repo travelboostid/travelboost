@@ -29,7 +29,7 @@ export default function Home() {
       breadcrumb={[{ title: 'Dashboard' }]}
       containerClassName="bg-slate-50/30 dark:bg-slate-950 min-h-screen"
     >
-      <Head title="Executive Overview" />
+      <Head title="Dashboard" />
       <div className="p-4 lg:p-8">
         <div className="max-w-7xl mx-auto space-y-8">
           <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -85,7 +85,7 @@ export default function Home() {
                 </div>
                 <CardContent className="p-6">
                   <span className="text-primary-foreground/80 text-[10px] font-black uppercase tracking-[0.2em]">
-                    AI Capabilities
+                    AI Credit
                   </span>
                   <h3 className="text-2xl font-bold mt-2">
                     {formatIDR(stats.ai_credit || 0)}
