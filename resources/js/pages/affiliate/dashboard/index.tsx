@@ -1,7 +1,7 @@
 import AffiliateDashboardLayout from '@/components/layouts/affiliate-dashboard';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardTitle } from '@/components/ui/card';
 import {
   Table,
   TableBody,
@@ -12,11 +12,28 @@ import {
 } from '@/components/ui/table';
 import { formatIDR } from '@/lib/utils';
 import { Head, Link } from '@inertiajs/react';
-import dayjs from 'dayjs';
-import relativeTime from 'dayjs/plugin/relativeTime';
-import { AlertCircle, Bell, Clock, LockKeyhole, Wallet } from 'lucide-react';
+import {
+  AlertCircle,
+  ArrowRight,
+  Bell,
+  BriefcaseBusiness,
+  Clock3,
+  LayoutDashboard,
+  LockKeyhole,
+  UserCheck,
+  Users,
+  Wallet,
+} from 'lucide-react';
 
-dayjs.extend(relativeTime);
+type DashboardProps = {
+  auth: any;
+  wallet_balance?: number;
+  tier?: string;
+  stats?: Record<string, number>;
+  unreadNotificationsCount?: number;
+  recentAgents?: any[];
+  networkPerformance?: any[];
+};
 
 export default function AffiliateDashboardIndex({
   auth,
@@ -24,10 +41,9 @@ export default function AffiliateDashboardIndex({
   tier = 'affiliate',
   stats = {},
   unreadNotificationsCount = 0,
-  recentNotifications = [],
   recentAgents = [],
   networkPerformance = [],
-}: any) {
+}: DashboardProps) {
   const user = auth?.user || { name: 'Affiliate Partner' };
   const profile = user?.affiliate_profile || user?.affiliateProfile;
 
@@ -36,461 +52,472 @@ export default function AffiliateDashboardIndex({
   const isMaster = tier === 'master_affiliate' || tier === 'master-affiliate';
   const isPartner = tier === 'partner';
 
+  const tierLabel = isPartner
+    ? 'Partner'
+    : isMaster
+      ? 'Master Affiliate'
+      : 'Affiliate';
+
+  const performanceCards = isPartner
+    ? [
+        {
+          title: 'Master Affiliates',
+          value: stats.total_ma || 0,
+          description: 'Approved network leaders.',
+          icon: Users,
+        },
+        {
+          title: 'Affiliates',
+          value: stats.total_affiliate || 0,
+          description: 'Approved affiliators.',
+          icon: UserCheck,
+        },
+        {
+          title: 'Agents',
+          value: stats.total_agent || 0,
+          description: 'Registered agents.',
+          icon: BriefcaseBusiness,
+        },
+      ]
+    : isMaster
+      ? [
+          {
+            title: 'Active Affiliates',
+            value: stats.total_affiliate_approved || 0,
+            description: 'Approved affiliators.',
+            icon: UserCheck,
+          },
+          {
+            title: 'Pending Approvals',
+            value: stats.total_affiliate_pending || 0,
+            description: 'Waiting for review.',
+            icon: Clock3,
+          },
+          {
+            title: 'Agent Networks',
+            value: stats.total_agent || 0,
+            description: 'Agents in your network.',
+            icon: BriefcaseBusiness,
+          },
+        ]
+      : [
+          {
+            title: 'Pending Agents',
+            value: stats.total_agent_pending || 0,
+            description: 'Awaiting subscription.',
+            icon: Clock3,
+          },
+          {
+            title: 'Subscribed Agents',
+            value: stats.total_agent_subscribed || 0,
+            description: 'Active subscribed agents.',
+            icon: UserCheck,
+          },
+        ];
+
+  const summaryCards = [
+    ...performanceCards,
+    {
+      title: 'Earned Commission',
+      value: formatIDR(stats.total_commission || 0),
+      description: 'Total commission earned.',
+      icon: Wallet,
+    },
+  ];
+
+  const displayedRecentAgents = recentAgents.slice(0, 5);
+  const displayedNetworkPerformance = networkPerformance.slice(0, 5);
+  const statsGridClass =
+    summaryCards.length === 3
+      ? 'grid gap-4 sm:grid-cols-2 lg:grid-cols-3'
+      : 'grid gap-4 sm:grid-cols-2 xl:grid-cols-4';
+
   return (
     <AffiliateDashboardLayout
       activeMenuIds={['dashboard']}
       breadcrumb={[{ title: 'Dashboard', url: '/affiliate/dashboard' }]}
+      containerClassName="min-h-screen bg-slate-50/60 dark:bg-slate-950"
     >
       <Head title="Dashboard" />
 
-      <div className="max-w-7xl mx-auto space-y-6 relative z-0">
+      <div className="mx-auto max-w-7xl space-y-8">
         {isPendingApproval && (
-          <div className="absolute inset-0 z-50 flex items-start justify-center pt-[15vh]">
-            <Card className="w-full max-w-lg shadow-2xl border-amber-200 bg-background/95 backdrop-blur-md p-8 text-center rounded-2xl mx-4">
-              <div className="w-20 h-20 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-5 shadow-inner">
-                <LockKeyhole className="w-10 h-10 text-amber-600" />
-              </div>
-              <h2 className="text-2xl font-bold text-foreground mb-3 tracking-tight">
-                Account Pending Approval
-              </h2>
-              <p className="text-muted-foreground mb-8 leading-relaxed">
-                Your registration as an affiliate partner is currently in the
-                review queue by your Network Partner. Dashboard access is
-                temporarily locked until approved.
-              </p>
+          <div className="fixed inset-0 z-40 flex items-start justify-center bg-slate-950/10 px-4 pt-28 backdrop-blur-sm">
+            <Card className="w-full max-w-xl rounded-3xl border-none bg-white/95 py-0 shadow-2xl ring-1 ring-slate-200 dark:bg-slate-900/95 dark:ring-slate-800">
+              <CardContent className="p-8 text-center">
+                <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-amber-100 text-amber-600 dark:bg-amber-500/15 dark:text-amber-300">
+                  <LockKeyhole className="h-9 w-9" />
+                </div>
+                <h2 className="mt-6 text-2xl font-bold text-slate-900 dark:text-slate-100">
+                  Account Pending Approval
+                </h2>
+                <p className="mt-3 text-sm leading-6 text-slate-500 dark:text-slate-400">
+                  Your affiliate registration is currently being reviewed by
+                  your network leader. Dashboard access remains limited until
+                  the approval process is completed.
+                </p>
 
-              {isProfileIncomplete ? (
-                <div className="bg-primary/10 border border-primary/20 p-5 rounded-xl text-left">
-                  <div className="flex items-start gap-3">
-                    <AlertCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-                    <div>
-                      <h4 className="font-semibold text-foreground">
-                        Speed Up Verification!
-                      </h4>
-                      <p className="text-sm text-primary/80 mt-1 mb-4">
-                        We detected that your profile is incomplete. Please fill
-                        out your contact details and address to expedite the
-                        process.
-                      </p>
-                      <Button
-                        asChild
-                        className="w-full bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm"
-                      >
-                        <Link href="/affiliate/dashboard/setup/profile">
-                          Complete Profile Now
-                        </Link>
-                      </Button>
+                {isProfileIncomplete ? (
+                  <div className="mt-8 rounded-2xl border border-amber-200 bg-amber-50 p-5 text-left dark:border-amber-500/30 dark:bg-amber-500/10">
+                    <div className="flex items-start gap-3">
+                      <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-300" />
+                      <div className="space-y-3">
+                        <div>
+                          <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                            Complete your profile to speed up verification
+                          </h3>
+                          <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+                            Add your phone number and full address so the team
+                            can validate your account faster.
+                          </p>
+                        </div>
+                        <Button asChild className="w-full rounded-xl">
+                          <Link href="/affiliate/dashboard/setup/profile">
+                            Complete Profile
+                          </Link>
+                        </Button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ) : (
-                <div className="bg-muted border border-border p-4 rounded-xl flex items-center justify-center gap-2 text-muted-foreground text-sm font-medium">
-                  <Clock className="w-4 h-4 text-muted-foreground" />
-                  Your profile is complete. Please wait for approval.
-                </div>
-              )}
+                ) : (
+                  <div className="mt-8 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                    Your profile is complete. Please wait while the review is
+                    finalized.
+                  </div>
+                )}
+              </CardContent>
             </Card>
-          </div>
-        )}
-
-        {!isPendingApproval && isProfileIncomplete && (
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-primary/10 border border-primary/20 p-4 rounded-xl shadow-sm">
-            <div className="flex items-start gap-3">
-              <AlertCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-              <div>
-                <h3 className="font-semibold text-foreground">
-                  Incomplete Profile
-                </h3>
-                <p className="text-sm text-primary/80 mt-1">
-                  Please complete your personal details such as WhatsApp Number
-                  and Address so your commissions can be processed without
-                  issues.
-                </p>
-              </div>
-            </div>
-            <Button
-              size="sm"
-              asChild
-              className="shrink-0 bg-primary hover:bg-primary/90 text-primary-foreground"
-            >
-              <Link href="/affiliate/dashboard/setup/profile">
-                Complete Profile
-              </Link>
-            </Button>
           </div>
         )}
 
         <div
-          className={`space-y-6 transition-all duration-300 ${isPendingApproval ? 'blur-[4px] opacity-40 pointer-events-none select-none grayscale-[30%]' : ''}`}
+          className={`space-y-8 transition-all duration-300 ${
+            isPendingApproval
+              ? 'pointer-events-none select-none opacity-40 blur-[4px]'
+              : ''
+          }`}
         >
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight text-slate-800 uppercase">
-                Affiliate Dashboard
-              </h1>
-              <p className="text-sm text-slate-500 mt-1">
-                Welcome back,{' '}
-                <span className="font-semibold text-slate-700">
-                  {user.name}
-                </span>
-                !
-              </p>
-            </div>
-            <div className="flex items-center gap-4 bg-slate-50 px-5 py-3 rounded-xl border border-slate-100">
-              <div className="p-2.5 bg-white rounded-full text-primary shadow-sm border border-slate-100">
-                <Wallet className="w-5 h-5" />
-              </div>
-              <div>
-                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                  Wallet Balance
-                </p>
-                <p className="text-xl font-bold text-slate-800 mt-0.5">
-                  {formatIDR(wallet_balance)}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-start">
-            {isPartner && (
-              <>
-                <Card className="shadow-sm border border-slate-100 bg-white flex flex-col h-full">
-                  <div className="p-5 flex-1 flex flex-col">
-                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
-                      TOTAL NETWORK
-                    </p>
-                    <div className="flex-1 flex items-center">
-                      <div className="grid grid-cols-2 w-full divide-x divide-slate-100">
-                        <div className="pr-4">
-                          <h3 className="text-3xl font-bold text-slate-800">
-                            {stats.total_ma || 0}
-                          </h3>
-                          <p className="text-[11px] text-slate-500 font-medium mt-1">
-                            Master Affiliates
-                          </p>
-                        </div>
-                        <div className="pl-4">
-                          <h3 className="text-3xl font-bold text-slate-800">
-                            {stats.total_affiliate || 0}
-                          </h3>
-                          <p className="text-[11px] text-slate-500 font-medium mt-1">
-                            Affiliators
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="mt-4 pt-4 border-t border-slate-100">
-                      <p className="text-[10px] text-slate-400">
-                        All registered partners
-                      </p>
-                    </div>
-                  </div>
-                </Card>
-                <Card className="shadow-sm border border-slate-100 bg-white flex flex-col h-full">
-                  <div className="p-5 flex-1 flex flex-col">
-                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
-                      AGENTS
-                    </p>
-                    <h3 className="text-3xl font-bold text-slate-800 flex-1 flex items-center">
-                      {stats.total_agent || 0}
+          {isProfileIncomplete && !isPendingApproval && (
+            <Card className="rounded-3xl border-none bg-amber-50 py-0 shadow-sm ring-1 ring-amber-200 dark:bg-amber-500/10 dark:ring-amber-500/30">
+              <CardContent className="flex flex-col gap-4 p-5 md:flex-row md:items-center md:justify-between">
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-300" />
+                  <div>
+                    <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                      Your profile still needs a few details
                     </h3>
-                    <div className="mt-4 pt-4 border-t border-slate-100">
-                      <p className="text-[10px] text-slate-400">
-                        Active agents from your networks
-                      </p>
-                    </div>
-                  </div>
-                </Card>
-              </>
-            )}
-
-            {isMaster && (
-              <>
-                <Card className="shadow-sm border border-slate-100 bg-white flex flex-col h-full">
-                  <div className="p-5 flex-1 flex flex-col">
-                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
-                      AFFILIATES STATUS
+                    <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+                      Complete your phone number and address so commission and
+                      verification processes can run smoothly.
                     </p>
-                    <div className="flex-1 flex items-center">
-                      <div className="grid grid-cols-2 w-full divide-x divide-slate-100">
-                        <div className="pr-4">
-                          <h3 className="text-3xl font-bold text-slate-800">
-                            {stats.total_affiliate_approved || 0}
-                          </h3>
-                          <p className="text-[11px] text-slate-500 font-medium mt-1">
-                            Active
-                          </p>
-                        </div>
-                        <div className="pl-4">
-                          <h3 className="text-3xl font-bold text-amber-600">
-                            {stats.total_affiliate_pending || 0}
-                          </h3>
-                          <p className="text-[11px] text-amber-600 font-medium mt-1">
-                            Pending Approvals
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="mt-4 pt-4 border-t border-slate-100">
-                      <p className="text-[10px] text-slate-400">
-                        Total affiliates in your network
-                      </p>
-                    </div>
                   </div>
-                </Card>
-                <Card className="shadow-sm border border-slate-100 bg-white flex flex-col h-full">
-                  <div className="p-5 flex-1 flex flex-col">
-                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
-                      AGENT NETWORKS
-                    </p>
-                    <h3 className="text-3xl font-bold text-slate-800 flex-1 flex items-center">
-                      {stats.total_agent || 0}
-                    </h3>
-                    <div className="mt-4 pt-4 border-t border-slate-100">
-                      <p className="text-[10px] text-slate-400">
-                        Active agents from your networks
-                      </p>
-                    </div>
-                  </div>
-                </Card>
-              </>
-            )}
-
-            {!isPartner && !isMaster && (
-              <>
-                <Card className="shadow-sm border border-slate-100 bg-white flex flex-col h-full">
-                  <div className="p-5 flex-1 flex flex-col">
-                    <p className="text-[11px] font-bold text-amber-600 uppercase tracking-wider mb-2">
-                      PENDING AGENTS
-                    </p>
-                    <h3 className="text-3xl font-bold text-amber-600 flex-1 flex items-center">
-                      {stats.total_agent_pending || 0}
-                    </h3>
-                    <div className="mt-4 pt-4 border-t border-slate-100">
-                      <p className="text-[10px] text-slate-400">
-                        Unpaid agent registrations
-                      </p>
-                    </div>
-                  </div>
-                </Card>
-                <Card className="shadow-sm border border-slate-100 bg-white flex flex-col h-full">
-                  <div className="p-5 flex-1 flex flex-col">
-                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
-                      SUBSCRIBED AGENTS
-                    </p>
-                    <h3 className="text-3xl font-bold text-slate-800 flex-1 flex items-center">
-                      {stats.total_agent_subscribed || 0}
-                    </h3>
-                    <div className="mt-4 pt-4 border-t border-slate-100">
-                      <p className="text-[10px] text-slate-400">
-                        Active and paid subscriptions
-                      </p>
-                    </div>
-                  </div>
-                </Card>
-              </>
-            )}
-
-            <Card className="shadow-sm border border-slate-100 bg-white flex flex-col h-full overflow-hidden relative">
-              <div className="p-5 flex-1 flex flex-col relative z-10">
-                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
-                  EARNED COMMISSION
-                </p>
-                <h3 className="text-3xl font-bold text-primary flex-1 flex items-center">
-                  {formatIDR(stats.total_commission || 0)}
-                </h3>
-                <div className="mt-4 pt-4 border-t border-slate-100">
-                  <p className="text-[10px] text-slate-400">
-                    Total income over time
-                  </p>
                 </div>
-              </div>
-              <Wallet className="absolute right-[-10px] top-[15px] w-16 h-16 text-slate-50 rotate-[-10deg] z-0 pointer-events-none" />
+                <Button asChild className="rounded-xl">
+                  <Link href="/affiliate/dashboard/setup/profile">
+                    Complete Profile
+                  </Link>
+                </Button>
+              </CardContent>
             </Card>
+          )}
 
-            <Card className="shadow-sm border border-slate-100 bg-white flex flex-col h-full">
-              <div className="p-5 flex-1 flex flex-col">
-                <div className="flex items-center justify-between mb-4">
-                  <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                    NOTIFICATIONS
-                  </p>
-                  <div className="relative">
-                    <Bell className="h-4 w-4 text-slate-400" />
-                    {unreadNotificationsCount > 0 && (
-                      <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span>
-                      </span>
-                    )}
+          <section>
+            <Card className="overflow-hidden rounded-3xl border-none bg-white py-0 shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
+              <CardContent className="bg-gradient-to-br from-white via-slate-50 to-slate-100 p-6 dark:from-slate-900 dark:via-slate-900 dark:to-slate-950 md:p-8">
+                <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+                  <div className="max-w-3xl">
+                    <div className="flex flex-wrap items-center gap-3">
+                      <Badge className="rounded-full bg-primary/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-primary hover:bg-primary/10 dark:bg-primary/15">
+                        {tierLabel}
+                      </Badge>
+                      <Badge
+                        className={`rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] ${
+                          isPendingApproval
+                            ? 'bg-amber-100 text-amber-700 hover:bg-amber-100 dark:bg-amber-500/15 dark:text-amber-300'
+                            : 'bg-emerald-100 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-500/15 dark:text-emerald-300'
+                        }`}
+                      >
+                        {isPendingApproval ? 'Pending Approval' : 'Active'}
+                      </Badge>
+                    </div>
+
+                    <div className="mt-5">
+                      <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100">
+                        Affiliate Dashboard
+                      </h1>
+                      <p className="mt-3 flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+                        <LayoutDashboard className="h-4 w-4" />
+                        Track your network, agent activity, and commission in
+                        one place.
+                      </p>
+                      <p className="mt-4 max-w-2xl text-sm text-slate-600 dark:text-slate-300">
+                        Welcome back,{' '}
+                        <span className="font-semibold text-slate-900 dark:text-slate-100">
+                          {user.name}
+                        </span>
+                        . Review your key metrics, monitor new registrations,
+                        and follow subscription conversion across your network.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid gap-3 sm:grid-cols-2 lg:min-w-[360px]">
+                    <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200 dark:bg-slate-900/80 dark:ring-slate-800">
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+                          Wallet Balance
+                        </span>
+                        <Wallet className="h-5 w-5 text-primary" />
+                      </div>
+                      <p className="mt-3 text-2xl font-black text-slate-900 dark:text-slate-100">
+                        {formatIDR(wallet_balance)}
+                      </p>
+                      <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                        Current available balance.
+                      </p>
+                    </div>
+
+                    <Link
+                      href="/affiliate/dashboard/notifications"
+                      className="group block rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200 transition-all hover:ring-primary/30 dark:bg-slate-900/80 dark:ring-slate-800 dark:hover:ring-primary/40"
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          <span className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+                            Notification
+                          </span>
+                          {unreadNotificationsCount > 0 && (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-red-600 dark:bg-red-500/15 dark:text-red-300">
+                              <span className="relative flex h-2 w-2">
+                                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75"></span>
+                                <span className="relative inline-flex h-2 w-2 rounded-full bg-red-500"></span>
+                              </span>
+                              New
+                            </span>
+                          )}
+                        </div>
+                        <Bell className="h-5 w-5 text-primary transition-transform group-hover:scale-105" />
+                      </div>
+                      <p className="mt-3 text-2xl font-black text-slate-900 dark:text-slate-100">
+                        {unreadNotificationsCount}
+                      </p>
+                      <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                        Open your latest affiliate notifications.
+                      </p>
+                    </Link>
                   </div>
                 </div>
-                <div className="flex-1 flex flex-col">
-                  {recentNotifications?.length > 0 ? (
-                    <div className="divide-y divide-slate-50 border-t border-slate-100 pt-2">
-                      {recentNotifications.map((notif: any) => (
-                        <div
-                          key={notif.id}
-                          className="py-2.5 flex items-start gap-3"
+              </CardContent>
+            </Card>
+          </section>
+
+          <section className={statsGridClass}>
+            {summaryCards.map((item) => {
+              const Icon = item.icon;
+
+              return (
+                <Card
+                  key={item.title}
+                  className="rounded-3xl border-none bg-white py-0 shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800"
+                >
+                  <CardContent className="p-6">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">
+                          {item.title}
+                        </p>
+                        <p className="mt-4 text-3xl font-black tracking-tight text-slate-900 dark:text-slate-100">
+                          {item.value}
+                        </p>
+                      </div>
+                      <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10 text-primary dark:bg-primary/15">
+                        <Icon className="h-5 w-5" />
+                      </div>
+                    </div>
+                    <p className="mt-4 text-sm text-slate-500 dark:text-slate-400">
+                      {item.description}
+                    </p>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </section>
+
+          <section className="grid gap-6 xl:grid-cols-2">
+            <Card className="overflow-hidden rounded-3xl border-none bg-white py-0 shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
+              <div className="flex flex-col gap-3 border-b border-slate-200 bg-slate-50/70 px-6 py-5 dark:border-slate-800 dark:bg-slate-950/40 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <CardTitle className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                    Recent Registrations
+                  </CardTitle>
+                  <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                    The newest agents added through your affiliate network.
+                  </p>
+                </div>
+                <Button
+                  asChild
+                  variant="ghost"
+                  className="justify-start rounded-xl px-0 text-primary hover:bg-transparent hover:text-primary/80"
+                >
+                  <Link href="/affiliate/dashboard/agent/list">
+                    View all
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Link>
+                </Button>
+              </div>
+
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-slate-100 hover:bg-transparent dark:border-slate-800">
+                      <TableHead className="px-6 text-[11px] font-black uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">
+                        Agent Name
+                      </TableHead>
+                      <TableHead className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">
+                        Package
+                      </TableHead>
+                      <TableHead className="px-6 text-right text-[11px] font-black uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">
+                        Status
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {displayedRecentAgents.length > 0 ? (
+                      displayedRecentAgents.map((agent: any) => (
+                        <TableRow
+                          key={agent.id}
+                          className="border-slate-100 hover:bg-slate-50/70 dark:border-slate-800 dark:hover:bg-slate-800/50"
                         >
-                          <div className="mt-1 shrink-0">
-                            {!notif.read_at ? (
-                              <div className="h-1.5 w-1.5 rounded-full bg-red-500" />
-                            ) : (
-                              <div className="h-1.5 w-1.5 rounded-full bg-slate-200" />
-                            )}
-                          </div>
-                          <div className="flex flex-col overflow-hidden">
-                            <span className="text-xs font-medium text-slate-700 truncate">
-                              {notif.data?.title ||
-                                notif.data?.message ||
-                                'System Notification'}
-                            </span>
-                            <span className="text-[9px] text-slate-400 mt-0.5">
-                              {dayjs(notif.created_at).format(
-                                'DD MMMM YYYY, HH:mm',
-                              )}
-                            </span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="flex-1 flex items-center justify-center text-[10px] text-slate-400 border-t border-slate-100">
-                      No new notifications.
-                    </div>
-                  )}
+                          <TableCell className="px-6 py-4 text-sm font-semibold text-slate-900 dark:text-slate-100">
+                            {agent.name}
+                          </TableCell>
+                          <TableCell className="py-4 text-sm text-slate-500 dark:text-slate-400">
+                            {agent.package}
+                          </TableCell>
+                          <TableCell className="px-6 py-4 text-right">
+                            <Badge
+                              variant="outline"
+                              className={`rounded-full border-0 px-3 py-1 text-[11px] font-semibold ${
+                                agent.status === 'Paid'
+                                  ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300'
+                                  : 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300'
+                              }`}
+                            >
+                              {agent.status}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell
+                          colSpan={3}
+                          className="px-6 py-10 text-center text-sm text-slate-500 dark:text-slate-400"
+                        >
+                          No recent registrations found.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </Card>
+
+            <Card className="overflow-hidden rounded-3xl border-none bg-white py-0 shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
+              <div className="flex flex-col gap-3 border-b border-slate-200 bg-slate-50/70 px-6 py-5 dark:border-slate-800 dark:bg-slate-950/40 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <CardTitle className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                    Affiliator Performance
+                  </CardTitle>
+                  <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                    Subscription conversion across your affiliator network.
+                  </p>
                 </div>
-              </div>
-            </Card>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <Card className="shadow-sm border border-slate-100 overflow-hidden bg-white">
-              <div className="bg-slate-50/50 border-b border-slate-100 flex flex-row items-center justify-between py-4 px-6">
-                <CardTitle className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                  Recent Registrations
-                </CardTitle>
-                <a
-                  href="/affiliate/dashboard/agent/list"
-                  className="text-xs font-semibold text-primary hover:text-primary/80 transition-colors"
+                <Button
+                  asChild
+                  variant="ghost"
+                  className="justify-start rounded-xl px-0 text-primary hover:bg-transparent hover:text-primary/80"
                 >
-                  View all
-                </a>
+                  <Link href="/affiliate/dashboard/network/list">
+                    View all
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Link>
+                </Button>
               </div>
-              <Table>
-                <TableHeader>
-                  <TableRow className="hover:bg-transparent border-slate-100">
-                    <TableHead className="text-[11px] font-semibold text-slate-400 uppercase h-10 px-6">
-                      Agent Name
-                    </TableHead>
-                    <TableHead className="text-[11px] font-semibold text-slate-400 uppercase h-10">
-                      Package
-                    </TableHead>
-                    <TableHead className="text-[11px] font-semibold text-slate-400 uppercase h-10 text-right px-6">
-                      Status
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {recentAgents.length > 0 ? (
-                    recentAgents.map((agent: any) => (
-                      <TableRow
-                        key={agent.id}
-                        className="border-slate-50 hover:bg-slate-50/50 transition-colors"
-                      >
-                        <TableCell className="text-xs text-slate-700 font-medium px-6 py-3">
-                          {agent.name}
-                        </TableCell>
-                        <TableCell className="text-xs text-slate-500 py-3">
-                          {agent.package}
-                        </TableCell>
-                        <TableCell className="text-right px-6 py-3">
-                          <Badge
-                            variant="outline"
-                            className={`text-[10px] px-2 py-0.5 font-medium border-0 ${agent.status === 'Paid' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}`}
-                          >
-                            {agent.status}
-                          </Badge>
+
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-slate-100 hover:bg-transparent dark:border-slate-800">
+                      <TableHead className="px-6 text-[11px] font-black uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">
+                        Affiliator Name
+                      </TableHead>
+                      <TableHead className="min-w-[220px] text-[11px] font-black uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">
+                        Conversion
+                      </TableHead>
+                      <TableHead className="px-6 text-right text-[11px] font-black uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">
+                        Status
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {displayedNetworkPerformance.length > 0 ? (
+                      displayedNetworkPerformance.map((network: any) => (
+                        <TableRow
+                          key={`${network.name}-${network.status}`}
+                          className="border-slate-100 hover:bg-slate-50/70 dark:border-slate-800 dark:hover:bg-slate-800/50"
+                        >
+                          <TableCell className="px-6 py-4 text-sm font-semibold text-slate-900 dark:text-slate-100">
+                            {network.name}
+                          </TableCell>
+                          <TableCell className="py-4">
+                            <div className="flex items-center gap-3">
+                              <div className="h-2.5 flex-1 rounded-full bg-slate-100 dark:bg-slate-800">
+                                <div
+                                  className="h-2.5 rounded-full bg-primary"
+                                  style={{
+                                    width: `${Math.min(network.conversion || 0, 100)}%`,
+                                  }}
+                                />
+                              </div>
+                              <span className="w-12 text-right text-sm font-semibold text-slate-700 dark:text-slate-300">
+                                {Math.round(network.conversion || 0)}%
+                              </span>
+                            </div>
+                            <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+                              {network.subscribed_agents || 0} subscribed of{' '}
+                              {network.total_agents || 0} total agents
+                            </p>
+                          </TableCell>
+                          <TableCell className="px-6 py-4 text-right">
+                            <Badge
+                              variant="outline"
+                              className={`rounded-full border-0 px-3 py-1 text-[11px] font-semibold ${
+                                network.status === 'Approved'
+                                  ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300'
+                                  : 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300'
+                              }`}
+                            >
+                              {network.status}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell
+                          colSpan={3}
+                          className="px-6 py-10 text-center text-sm text-slate-500 dark:text-slate-400"
+                        >
+                          No affiliator performance data found.
                         </TableCell>
                       </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell
-                        colSpan={3}
-                        className="text-center text-xs text-slate-400 py-8"
-                      >
-                        No recent registrations found.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </Card>
-
-            <Card className="shadow-sm border border-slate-100 overflow-hidden bg-white">
-              <div className="bg-slate-50/50 border-b border-slate-100 flex flex-row items-center justify-between py-4 px-6">
-                <CardTitle className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                  Network Performance
-                </CardTitle>
-                <a
-                  href="/affiliate/dashboard/network/list"
-                  className="text-xs font-semibold text-primary hover:text-primary/80 transition-colors"
-                >
-                  View all
-                </a>
+                    )}
+                  </TableBody>
+                </Table>
               </div>
-              <Table>
-                <TableHeader>
-                  <TableRow className="hover:bg-transparent border-slate-100">
-                    <TableHead className="text-[11px] font-semibold text-slate-400 uppercase h-10 px-6">
-                      Affiliate Name
-                    </TableHead>
-                    {/* <TableHead className="text-[11px] font-semibold text-slate-400 uppercase h-10">
-                      Revenue
-                    </TableHead> */}
-                    <TableHead className="text-[11px] font-semibold text-slate-400 uppercase h-10 text-right px-6">
-                      Status
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {networkPerformance.length > 0 ? (
-                    networkPerformance.map((net: any, idx: number) => (
-                      <TableRow
-                        key={idx}
-                        className="border-slate-50 hover:bg-slate-50/50 transition-colors"
-                      >
-                        <TableCell className="font-medium text-xs text-slate-700 px-6 py-3">
-                          {net.name}
-                        </TableCell>
-                        {/* <TableCell className="text-xs font-semibold text-primary py-3">
-                          {formatIDR(net.revenue)}
-                        </TableCell> */}
-                        <TableCell className="text-right px-6 py-3">
-                          <Badge
-                            variant="outline"
-                            className={`text-[10px] px-2 py-0.5 font-medium border-0 ${net.status === 'Approved' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}`}
-                          >
-                            {net.status}
-                          </Badge>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell
-                        colSpan={3}
-                        className="text-center text-xs text-slate-400 py-8"
-                      >
-                        No downlines network found.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
             </Card>
-          </div>
+          </section>
         </div>
       </div>
     </AffiliateDashboardLayout>
