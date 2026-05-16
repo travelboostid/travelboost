@@ -13,23 +13,39 @@ import { Field, FieldGroup } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { invite } from '@/routes/companies/dashboard/teams';
 import { useForm } from '@inertiajs/react';
 import { PlusIcon } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { useState } from 'react';
 
-export default function InviteTeamButton({ roles }: { roles: any[] }) {
+export default function InviteTeamButton({
+  roles,
+  children,
+}: {
+  roles: any[];
+  children?: ReactNode;
+}) {
   const [open, setOpen] = useState(false);
   const { company } = usePageSharedDataProps();
 
   const form = useForm({
-    invite_email: '',
-    invite_role: '' as string,
+    name: '',
+    email: '',
+    username: '',
+    password: '',
+    password_confirmation: '',
+    role: '' as string,
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
     form.post(invite({ company: company.username }).url, {
       preserveScroll: true,
       onError: () => setOpen(true),
@@ -42,69 +58,132 @@ export default function InviteTeamButton({ roles }: { roles: any[] }) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button>
-          <PlusIcon />
-          Invite new user
-        </Button>
-      </DialogTrigger>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <DialogTrigger asChild>
+            {children || (
+              <Button>
+                <PlusIcon />
+                Add Team Member
+              </Button>
+            )}
+          </DialogTrigger>
+        </TooltipTrigger>
+        <TooltipContent>Add team member</TooltipContent>
+      </Tooltip>
 
-      <DialogContent className="sm:max-w-sm">
+      <DialogContent className="sm:max-w-xl">
         <form onSubmit={handleSubmit} className="grid gap-4">
           <DialogHeader>
-            <DialogTitle>Invite New Team</DialogTitle>
+            <DialogTitle>Add Team Member</DialogTitle>
             <DialogDescription>
-              Enter the details of the new user you want to invite. Click send
-              invitation when you're done.
+              Create a team account that can sign in immediately after it is
+              added.
             </DialogDescription>
           </DialogHeader>
 
           <FieldGroup>
-            <Field>
-              <Label htmlFor="invite_email">User</Label>
-              <Input
-                id="invite_email"
-                placeholder="Email..."
-                value={form.data.invite_email}
-                onChange={(e) => form.setData('invite_email', e.target.value)}
-              />
-              <InputError message={form.errors.invite_email} />
-            </Field>
+            <div className="grid gap-4 md:grid-cols-2">
+              <Field>
+                <Label htmlFor="name">Full Name</Label>
+                <Input
+                  id="name"
+                  placeholder="Full name"
+                  value={form.data.name}
+                  onChange={(event) => form.setData('name', event.target.value)}
+                />
+                <InputError message={form.errors.name} />
+              </Field>
+
+              <Field>
+                <Label htmlFor="username">Username</Label>
+                <Input
+                  id="username"
+                  placeholder="Username"
+                  value={form.data.username}
+                  onChange={(event) =>
+                    form.setData('username', event.target.value)
+                  }
+                />
+                <InputError message={form.errors.username} />
+              </Field>
+            </div>
 
             <Field>
-              <Label htmlFor="invite_role">Role</Label>
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="email@example.com"
+                value={form.data.email}
+                onChange={(event) => form.setData('email', event.target.value)}
+              />
+              <InputError message={form.errors.email} />
+            </Field>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <Field>
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="Password"
+                  value={form.data.password}
+                  onChange={(event) =>
+                    form.setData('password', event.target.value)
+                  }
+                />
+                <InputError message={form.errors.password} />
+              </Field>
+
+              <Field>
+                <Label htmlFor="password_confirmation">Confirm Password</Label>
+                <Input
+                  id="password_confirmation"
+                  type="password"
+                  placeholder="Confirm password"
+                  value={form.data.password_confirmation}
+                  onChange={(event) =>
+                    form.setData('password_confirmation', event.target.value)
+                  }
+                />
+              </Field>
+            </div>
+
+            <Field>
+              <Label htmlFor="role">Role</Label>
               <ToggleGroup
                 type="single"
                 variant="outline"
                 spacing={2}
                 size="lg"
                 className="grid grid-cols-1 gap-2 rounded-xl"
-                value={form.data.invite_role}
-                onValueChange={(v) => form.setData('invite_role', v)}
+                value={form.data.role}
+                onValueChange={(value) => form.setData('role', value)}
               >
                 {roles.map((role) => (
                   <ToggleGroupItem
-                    name="invite_role"
+                    name="role"
                     key={role.name}
                     value={role.name}
                     aria-label={role.name}
                     className="block h-auto w-auto p-4 text-left"
                   >
                     <div className="font-bold">{role.display_name}</div>
-                    <div className="text-muted-foreground text-xs">
+                    <div className="text-xs text-muted-foreground">
                       {role.description}
                     </div>
                   </ToggleGroupItem>
                 ))}
               </ToggleGroup>
 
-              <InputError message={form.errors.invite_role} />
+              <InputError message={form.errors.role} />
             </Field>
           </FieldGroup>
 
           <DialogFooter className="mt-4">
             <Button type="submit" disabled={form.processing}>
-              {form.processing ? 'Sending...' : 'Send Invitation'}
+              {form.processing ? 'Creating...' : 'Create Account'}
             </Button>
           </DialogFooter>
         </form>

@@ -112,7 +112,7 @@ export default function AffiliatePaymentHistory({
                 <TableRow className="dark:border-slate-800">
                   <TableHead className="px-6">Source Agent</TableHead>
                   <TableHead>Tier</TableHead>
-                  <TableHead className="text-right">Base Amount</TableHead>
+                  {/* <TableHead className="text-right">Base Amount</TableHead> */}
                   <TableHead className="text-right">Rate</TableHead>
                   <TableHead className="text-right">Commission</TableHead>
                   <TableHead>Status</TableHead>
@@ -153,9 +153,9 @@ export default function AffiliatePaymentHistory({
                           {String(commission.tier).replace(/_/g, ' ')}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-right font-medium text-slate-700 dark:text-slate-300">
+                      {/* <TableCell className="text-right font-medium text-slate-700 dark:text-slate-300">
                         {formatIDR(Number(commission.base_amount || 0))}
-                      </TableCell>
+                      </TableCell> */}
                       <TableCell className="text-right">
                         <div className="inline-flex items-center gap-1 text-slate-700 dark:text-slate-300">
                           <BadgePercent className="h-4 w-4 text-primary" />
