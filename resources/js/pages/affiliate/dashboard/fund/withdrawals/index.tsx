@@ -70,6 +70,7 @@ export default function AffiliateWithdrawalsPage({
         { title: 'Fund', url: '#' },
         { title: 'Withdrawals', url: '/affiliate/dashboard/fund/withdrawals' },
       ]}
+      containerClassName="min-h-screen bg-slate-50/60 dark:bg-slate-950"
     >
       <Head title="Withdrawals" />
 
@@ -84,10 +85,8 @@ export default function AffiliateWithdrawalsPage({
           </p>
         </div>
 
-        {/* Ringkasan Statistik khusus Withdrawal */}
         <WithdrawalsSummary stats={stats} />
 
-        {/* Bar Filter */}
         <FilterBar
           dateRange={dateRange}
           onDateRangeChange={handleDateRangeChange}
@@ -97,7 +96,6 @@ export default function AffiliateWithdrawalsPage({
           onSortOrderChange={setSortOrder}
         />
 
-        {/* List Penarikan */}
         <section className="space-y-3">
           {filteredWithdrawals.length > 0 ? (
             filteredWithdrawals.map((withdrawal) => (

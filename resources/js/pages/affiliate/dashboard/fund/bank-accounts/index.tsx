@@ -23,11 +23,11 @@ function BankAccountCard({ account }: { account: any }) {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'verified':
-        return <CheckCircle className="w-5 h-5 text-primary" />;
+        return <CheckCircle className="h-5 w-5 text-primary" />;
       case 'pending':
-        return <Clock className="w-5 h-5 text-amber-500" />;
+        return <Clock className="h-5 w-5 text-amber-500" />;
       case 'rejected':
-        return <XCircle className="w-5 h-5 text-destructive" />;
+        return <XCircle className="h-5 w-5 text-destructive" />;
     }
   };
 
@@ -36,7 +36,7 @@ function BankAccountCard({ account }: { account: any }) {
       case 'verified':
         return 'bg-primary/10 text-primary';
       case 'pending':
-        return 'bg-amber-500/10 text-amber-600';
+        return 'bg-amber-500/10 text-amber-600 dark:text-amber-300';
       case 'rejected':
         return 'bg-destructive/10 text-destructive';
     }
@@ -44,33 +44,33 @@ function BankAccountCard({ account }: { account: any }) {
 
   return (
     <Card
-      className={`border-border shadow-sm transition-all hover:shadow-md ${account.is_default ? 'ring-2 ring-primary/30' : ''}`}
+      className={`border-border bg-white shadow-sm transition-all hover:shadow-md dark:bg-slate-900 dark:border-slate-800 ${account.is_default ? 'ring-2 ring-primary/30' : ''}`}
     >
       <CardContent className="pt-6">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-3 mb-4">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+          <div className="min-w-0 flex-1">
+            <div className="mb-4 flex flex-wrap items-center gap-3">
               <h3 className="text-lg font-bold text-foreground">
                 {account.provider}
               </h3>
-              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted/50 border border-border">
+              <div className="flex items-center gap-1.5 rounded-full border border-border bg-muted/50 px-2.5 py-1 dark:border-slate-700 dark:bg-slate-800/70">
                 {getStatusIcon(account.status)}
                 <span
-                  className={`text-xs font-semibold capitalize ${getStatusColor(account.status)} px-2 py-0.5 rounded-full`}
+                  className={`rounded-full px-2 py-0.5 text-xs font-semibold capitalize ${getStatusColor(account.status)}`}
                 >
                   {account.status}
                 </span>
               </div>
               {account.is_default && (
-                <span className="text-xs font-bold bg-secondary text-secondary-foreground px-2.5 py-1 rounded-full">
+                <span className="rounded-full bg-secondary px-2.5 py-1 text-xs font-bold text-secondary-foreground">
                   Default
                 </span>
               )}
             </div>
 
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
+            <div className="grid grid-cols-1 gap-4 text-sm sm:grid-cols-2 xl:grid-cols-4">
               <div>
-                <p className="text-xs text-muted-foreground mb-1">
+                <p className="mb-1 text-xs text-muted-foreground">
                   Account Holder
                 </p>
                 <p className="font-semibold text-foreground">
@@ -78,7 +78,7 @@ function BankAccountCard({ account }: { account: any }) {
                 </p>
               </div>
               <div>
-                <p className="text-xs text-muted-foreground mb-1">
+                <p className="mb-1 text-xs text-muted-foreground">
                   Account Number
                 </p>
                 <p className="font-semibold text-foreground">
@@ -86,13 +86,13 @@ function BankAccountCard({ account }: { account: any }) {
                 </p>
               </div>
               <div>
-                <p className="text-xs text-muted-foreground mb-1">Branch</p>
+                <p className="mb-1 text-xs text-muted-foreground">Branch</p>
                 <p className="font-semibold text-foreground">
-                  {account.branch || '—'}
+                  {account.branch || '-'}
                 </p>
               </div>
               <div>
-                <p className="text-xs text-muted-foreground mb-1">Date Added</p>
+                <p className="mb-1 text-xs text-muted-foreground">Date Added</p>
                 <p className="font-medium text-foreground/80">
                   {dayjs(account.created_at).fromNow()}
                 </p>
@@ -100,7 +100,7 @@ function BankAccountCard({ account }: { account: any }) {
             </div>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex justify-end gap-2 lg:justify-start">
             {account.status === 'verified' ? (
               <Button
                 variant="ghost"
@@ -108,16 +108,16 @@ function BankAccountCard({ account }: { account: any }) {
                 disabled
                 className="text-muted-foreground/50"
               >
-                <Edit2 className="w-4 h-4" />
+                <Edit2 className="h-4 w-4" />
               </Button>
             ) : (
               <UpdateBankAccountDialog bankAccount={account}>
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="text-muted-foreground hover:text-primary hover:bg-primary/10"
+                  className="text-muted-foreground hover:bg-primary/10 hover:text-primary"
                 >
-                  <Edit2 className="w-4 h-4" />
+                  <Edit2 className="h-4 w-4" />
                 </Button>
               </UpdateBankAccountDialog>
             )}
@@ -125,9 +125,9 @@ function BankAccountCard({ account }: { account: any }) {
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-destructive hover:text-destructive/80 hover:bg-destructive/10"
+                className="text-destructive hover:bg-destructive/10 hover:text-destructive/80"
               >
-                <Trash2 className="w-4 h-4" />
+                <Trash2 className="h-4 w-4" />
               </Button>
             </DeleteBankAccountDialog>
           </div>
@@ -149,21 +149,22 @@ export default function BankAccountsPage({ bank_accounts }: any) {
           url: '/affiliate/dashboard/fund/bank-accounts',
         },
       ]}
+      containerClassName="min-h-screen bg-slate-50/60 dark:bg-slate-950"
     >
       <Head title="Bank Accounts" />
-      <div className="max-w-5xl mx-auto space-y-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="mx-auto max-w-5xl space-y-6">
+        <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-foreground">
               Bank Accounts
             </h1>
-            <p className="text-muted-foreground mt-1 text-sm">
+            <p className="mt-1 text-sm text-muted-foreground">
               Manage bank accounts for your commission withdrawals.
             </p>
           </div>
           <CreateBankAccountDialog>
-            <Button className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm">
-              <PlusIcon className="w-4 h-4 mr-2" /> Add Bank Account
+            <Button className="shadow-sm">
+              <PlusIcon className="mr-2 h-4 w-4" /> Add Bank Account
             </Button>
           </CreateBankAccountDialog>
         </div>
