@@ -196,6 +196,111 @@ const BED_TYPES: Record<BedType, BedTypeInfo> = {
   },
 };
 
+type PersistedBookingRoom = {
+  room_type?: string | null;
+  room_label?: string | null;
+  bed_layout?: unknown;
+};
+
+type PersistedBookingPassenger = {
+  id?: number | string | null;
+  room_number?: string | number | null;
+};
+
+type PersistedBed = {
+  guestId?: string | null;
+  position?: { x?: number | string | null } | null;
+};
+
+const isBedType = (value: string): value is BedType =>
+  Object.prototype.hasOwnProperty.call(BED_TYPES, value);
+
+const parsePersistedBedLayout = (bedLayout: unknown): PersistedBed[] => {
+  if (Array.isArray(bedLayout)) {
+    return bedLayout as PersistedBed[];
+  }
+
+  if (typeof bedLayout === 'string' && bedLayout.trim() !== '') {
+    try {
+      const parsed = JSON.parse(bedLayout);
+
+      return Array.isArray(parsed) ? (parsed as PersistedBed[]) : [];
+    } catch {
+      return [];
+    }
+  }
+
+  return [];
+};
+
+export function deserializeRoomsFromBooking(
+  bookingRooms: PersistedBookingRoom[] | null | undefined,
+  guests: GuestEntry[],
+  passengers: PersistedBookingPassenger[] | null | undefined = [],
+): RoomConfig[] {
+  if (!Array.isArray(bookingRooms) || bookingRooms.length === 0) {
+    return [];
+  }
+
+  return bookingRooms.map((room, roomIndex) => {
+    const rawRoomType = String(room.room_type ?? '');
+    const type = isBedType(rawRoomType) ? rawRoomType : 'twin';
+    const capacity = BED_TYPES[type].capacity;
+    const bedLayout = parsePersistedBedLayout(room.bed_layout);
+    const highestSlot = bedLayout.reduce((highest, bed, index) => {
+      const slot = Number(bed.position?.x ?? index);
+
+      return Number.isFinite(slot) ? Math.max(highest, slot) : highest;
+    }, -1);
+    const guestIds = Array.from(
+      { length: Math.max(capacity, highestSlot + 1) },
+      () => '',
+    );
+
+    bedLayout.forEach((bed, index) => {
+      if (!bed.guestId) {
+        return;
+      }
+
+      const slot = Number(bed.position?.x ?? index);
+      const safeSlot = Number.isFinite(slot) && slot >= 0 ? slot : index;
+
+      while (guestIds.length <= safeSlot) {
+        guestIds.push('');
+      }
+
+      guestIds[safeSlot] = bed.guestId;
+    });
+
+    const roomNumber = String(roomIndex + 1);
+    const sharingGuestIds = (passengers ?? [])
+      .filter((passenger) => String(passenger.room_number ?? '') === roomNumber)
+      .map((passenger) => {
+        const matchedGuest = guests.find(
+          (guest) =>
+            guest.bookingPassengerId !== null &&
+            guest.bookingPassengerId !== undefined &&
+            Number(guest.bookingPassengerId) === Number(passenger.id),
+        );
+
+        return matchedGuest?.id ?? null;
+      })
+      .filter(
+        (guestId): guestId is string =>
+          typeof guestId === 'string' && !guestIds.includes(guestId),
+      );
+
+    return {
+      id: `room-${roomIndex + 1}`,
+      type,
+      label: room.room_label || `Room ${roomIndex + 1}`,
+      capacity,
+      guestIds,
+      sharingGuestIds: Array.from(new Set(sharingGuestIds)),
+    };
+  });
+}
+
 const itemVariants = {
   hidden: { opacity: 0, y: 14 },
   visible: { opacity: 1, y: 0, transition: { duration: 0.22 } },

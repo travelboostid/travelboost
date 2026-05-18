@@ -4,11 +4,14 @@ namespace App\Http\Controllers\Me;
 
 use App\Actions\Booking\ExpireBookingReservationsAction;
 use App\Enums\BookingStatus;
+use App\Enums\PaymentStatus;
 use App\Http\Controllers\Controller;
+use App\Models\Booking;
 use App\Models\Tour;
 use App\Models\TourAvailability;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -55,7 +58,15 @@ class HomeController extends Controller
 
         $bookings = $activeTab !== 'favorites'
           ? $user->bookings()
-              ->with(['tour.image', 'vendor'])
+              ->with([
+                  'tour.image',
+                  'tour.document',
+                  'tour.company.companySetting',
+                  'tour.company.settings',
+                  'vendor',
+                  'passengers',
+                  'payments',
+              ])
               ->when($activeTab === 'current', function ($query) use ($currentStatuses): void {
                   $query
                       ->whereIn('status', $currentStatuses)
@@ -87,6 +98,7 @@ class HomeController extends Controller
               ->latest()
               ->paginate(10)
               ->withQueryString()
+              ->through(fn (Booking $booking): array => $this->appendBookingPayload($booking))
           : null;
 
         $favorites = $activeTab === 'favorites'
@@ -107,6 +119,83 @@ class HomeController extends Controller
             'activeTab' => $activeTab,
             'selectedBookingNumber' => $request->string('booking_number')->toString() ?: null,
         ]);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function appendBookingPayload(Booking $booking): array
+    {
+        $paidAmount = (float) $booking->payments
+            ->where('status', PaymentStatus::PAID)
+            ->sum('amount');
+        $grandTotal = (float) $booking->grand_total;
+        $remainingBalance = max(0.0, $grandTotal - $paidAmount);
+        $status = $booking->status instanceof BookingStatus
+            ? $booking->status
+            : BookingStatus::tryFrom((string) $booking->status);
+        $isDownPayment = $status === BookingStatus::DOWN_PAYMENT;
+        $needsTravelDocuments = in_array($status, [
+            BookingStatus::DOWN_PAYMENT,
+            BookingStatus::FULL_PAYMENT,
+        ], true) && $this->bookingNeedsTravelDocuments($booking);
+
+        $company = $booking->tour?->company;
+        $settings = $company?->companySetting ?? $company?->settings ?? $company?->settings()->first();
+
+        return [
+            ...$booking->toArray(),
+            'paid_amount' => $paidAmount,
+            'remaining_balance' => $remainingBalance,
+            'display_amount_label' => $isDownPayment ? 'Remaining balance' : 'Grand total',
+            'display_amount' => $isDownPayment ? $remainingBalance : $grandTotal,
+            'needs_travel_documents' => $needsTravelDocuments,
+            'payment_deadline' => $this->buildDeadlinePayload($booking->departure_date, $settings?->full_payment_deadline),
+            'document_deadline' => $this->buildDeadlinePayload($booking->departure_date, $settings?->document_completed_deadline),
+            'document_url' => $this->buildDocumentUrl($booking),
+        ];
+    }
+
+    private function bookingNeedsTravelDocuments(Booking $booking): bool
+    {
+        if ($booking->passengers->isEmpty()) {
+            return false;
+        }
+
+        return $booking->passengers->contains(fn ($passenger): bool => blank($passenger->passport_number)
+            || blank($passenger->passport_issue_date)
+            || blank($passenger->passport_expiry_date)
+            || blank($passenger->passport_file_path)
+            || blank($passenger->visa_number)
+            || blank($passenger->visa_file_path));
+    }
+
+    private function buildDeadlinePayload(mixed $departureDate, mixed $daysBefore): ?array
+    {
+        if (! $departureDate || $daysBefore === null) {
+            return null;
+        }
+
+        $deadline = Carbon::parse($departureDate)
+            ->startOfDay()
+            ->subDays(max(0, (int) $daysBefore));
+        $daysRemaining = (int) now()->startOfDay()->diffInDays($deadline, false);
+
+        return [
+            'date' => $deadline->toDateString(),
+            'days_before_departure' => (int) $daysBefore,
+            'days_remaining' => $daysRemaining,
+            'is_overdue' => $daysRemaining < 0,
+        ];
+    }
+
+    private function buildDocumentUrl(Booking $booking): ?string
+    {
+        if (! $booking->tour?->document || ! $booking->tour?->company?->username) {
+            return null;
+        }
+
+        return "/brochure/{$booking->tour->company->username}/{$booking->tour->id}";
     }
 
     /**
