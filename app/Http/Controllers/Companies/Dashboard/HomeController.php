@@ -3,7 +3,10 @@
 namespace App\Http\Controllers\Companies\Dashboard;
 
 use App\Http\Controllers\Controller;
+use App\Models\Booking;
 use App\Models\Company;
+use App\Enums\BookingStatus;
+use App\Enums\CompanyType;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
@@ -11,112 +14,114 @@ class HomeController extends Controller
 {
   public function index(Company $company)
   {
-    $agentSubscription = $company->agentSubscription()->with('package')->latest()->first();
+    $company->load([
+      'aiCredit',
+      'agentSubscription.package'
+    ]);
 
     $unreadNotificationsCount = $company->unreadNotifications()->count();
-    $recentNotifications = $company->notifications()->latest()->take(5)->get();
+    $recentNotifications = $company->notifications()->latest()->get();
 
-    $isVendor = $company->type === 'vendor';
+    $companyType = $company->type instanceof \BackedEnum ? $company->type->value : $company->type;
+    $isVendor = $companyType === CompanyType::VENDOR->value;
+
     $companyColumn = $isVendor ? 'vendor_id' : 'agent_id';
+    $status = BookingStatus::FULL_PAYMENT->value;
 
-    $totalSales = DB::table('bookings')->where($companyColumn, $company->id)->where('status', 'paid')->sum('grand_total');
-    $totalPax = DB::table('bookings')->where($companyColumn, $company->id)->where('status', 'paid')->sum(DB::raw('pax_adult + pax_child + pax_infant'));
-    $totalOrder = DB::table('bookings')->where($companyColumn, $company->id)->where('status', 'paid')->count();
+    $baseQuery = Booking::where($companyColumn, $company->id)->where('status', $status);
 
-    $monthlySales = DB::table('bookings')->where($companyColumn, $company->id)->where('status', 'paid')->whereYear('created_at', now()->year)->whereMonth('created_at', now()->month)->sum('grand_total');
-    $monthlyPax = DB::table('bookings')->where($companyColumn, $company->id)->where('status', 'paid')->whereYear('created_at', now()->year)->whereMonth('created_at', now()->month)->sum(DB::raw('pax_adult + pax_child + pax_infant'));
+    $totalRevenue = (float) (clone $baseQuery)->sum('grand_total');
+    $totalPax = (int) (clone $baseQuery)->sum(DB::raw('pax_adult + pax_child + pax_infant'));
 
-    $profitColumn = $isVendor ? 'grand_total - commission_amount' : 'commission_amount';
-    $totalProfit = DB::table('bookings')->where($companyColumn, $company->id)->where('status', 'paid')->sum(DB::raw($profitColumn));
-    $monthlyProfit = DB::table('bookings')->where($companyColumn, $company->id)->where('status', 'paid')->whereYear('created_at', now()->year)->whereMonth('created_at', now()->month)->sum(DB::raw($profitColumn));
+    $profitColumn = $isVendor ? DB::raw('grand_total - commission_amount') : 'commission_amount';
+    $totalProfit = (float) (clone $baseQuery)->sum($profitColumn);
 
-    $customersCount = DB::table('users')->where('company_id', $company->id)->count();
-    $agentsCount = $isVendor ? DB::table('vendor_agent_partners')->where('vendor_id', $company->id)->where('status', 'active')->count() : 0;
+    $monthlyProfit = (float) (clone $baseQuery)
+      ->whereYear('created_at', now()->year)
+      ->whereMonth('created_at', now()->month)
+      ->sum($profitColumn);
 
-    $walletBalance = DB::table('wallets')->where('holder_type', 'company')->where('holder_id', $company->id)->where('slug', 'main')->value('balance') ?? 0;
+    $networkCount = (int) (clone $baseQuery)->distinct('user_id')->count('user_id');
 
-    $aiCreditBalance = DB::table('ai_credits')->where('company_id', $company->id)->value('balance') ?? 0;
+    $credit = $company->aiCredit;
 
     $stats = [
       'sales' => [
-        'total' => ['idr' => (float)$totalSales, 'pax' => (int)$totalPax, 'order' => (int)$totalOrder],
-        'monthly' => ['idr' => (float)$monthlySales, 'pax' => (int)$monthlyPax],
+        'total' => [
+          'idr' => $totalRevenue,
+          'pax' => $totalPax,
+        ]
       ],
       'commission' => [
-        'total' => (float)$totalProfit,
-        'monthly' => (float)$monthlyProfit,
+        'total' => $totalProfit,
+        'monthly' => $monthlyProfit,
       ],
       'counters' => [
-        'agents' => $agentsCount,
-        'customers' => $customersCount,
+        'customers' => $networkCount,
       ],
-      'ai_credit' => (float)$aiCreditBalance,
-      'wallet' => [
-        'balance' => (float)$walletBalance
-      ]
+      'ai_credit' => (float) ($credit->balance ?? 0),
     ];
 
-    $chartData = collect(range(1, 12))->map(function ($month) use ($companyColumn, $company) {
-      $sum = DB::table('bookings')
-        ->where($companyColumn, $company->id)
-        ->where('status', 'paid')
-        ->whereYear('created_at', now()->year)
-        ->whereMonth('created_at', $month)
+    $chartData = [];
+    for ($i = 11; $i >= 0; $i--) {
+      $monthDate = now()->subMonths($i);
+      $monthSales = (float) (clone $baseQuery)
+        ->whereYear('created_at', $monthDate->year)
+        ->whereMonth('created_at', $monthDate->month)
         ->sum('grand_total');
 
-      return [
-        'month' => now()->month($month)->format('M'),
-        'sales' => (float) $sum
+      $chartData[] = [
+        'month' => $monthDate->format('M'),
+        'sales' => $monthSales,
       ];
-    })->toArray();
+    }
 
-    $topDestinations = DB::table('bookings')
+    $topDestinations = Booking::query()
       ->join('tours', 'bookings.tour_id', '=', 'tours.id')
       ->where('bookings.' . $companyColumn, $company->id)
-      ->where('bookings.status', 'paid')
+      ->where('bookings.status', $status)
       ->select(
+        'tours.id',
         'tours.code',
         'tours.name',
         DB::raw('SUM(bookings.pax_adult + bookings.pax_child + bookings.pax_infant) as pax'),
-        DB::raw('SUM(bookings.grand_total) as revenue'),
-        DB::raw('SUM(bookings.commission_amount) as commission')
+        DB::raw('SUM(bookings.grand_total) as revenue')
       )
       ->groupBy('tours.id', 'tours.code', 'tours.name')
       ->orderByDesc('pax')
       ->limit(10)
-      ->get()
-      ->toArray();
+      ->get();
 
     $topAgents = [];
     if ($isVendor) {
-      $topAgents = DB::table('bookings')
+      $topAgents = Booking::query()
         ->join('companies', 'bookings.agent_id', '=', 'companies.id')
         ->where('bookings.vendor_id', $company->id)
-        ->where('bookings.status', 'paid')
+        ->where('bookings.status', $status)
         ->select(
           'companies.name',
           DB::raw('SUM(bookings.pax_adult + bookings.pax_child + bookings.pax_infant) as pax'),
-          DB::raw('SUM(bookings.grand_total) as revenue'),
-          DB::raw('SUM(bookings.grand_total - bookings.commission_amount) as profit')
+          DB::raw('SUM(bookings.grand_total) as revenue')
         )
         ->groupBy('companies.id', 'companies.name')
         ->orderByDesc('pax')
         ->limit(10)
-        ->get()
-        ->toArray();
+        ->get();
     }
 
-    $credit = $company->aiCredit()->first() ?: (object)['balance' => 0, 'limit' => 0];
-
     return Inertia::render('companies/dashboard/home/index', [
-      'agentSubscription' => $agentSubscription,
+      'company' => $company,
       'stats' => $stats,
       'chartData' => $chartData,
       'topDestinations' => $topDestinations,
       'topAgents' => $topAgents,
-      'recentNotifications' => $recentNotifications,
       'unreadNotificationsCount' => $unreadNotificationsCount,
-      'ai_credit' => $credit,
+      'recentNotifications' => $recentNotifications,
+      'agentSubscription' => $company->agentSubscription,
+      'aiCredit' => [
+        'balance' => (float) ($credit->balance ?? 0),
+        'limit' => (float) ($credit->limit ?? 0),
+      ],
     ]);
   }
 }

@@ -5,10 +5,11 @@ namespace App\Http\Controllers\Admin;
 use App\Enums\WithdrawalStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\IndexWalletRequest;
-use App\Http\Requests\Admin\IndexWithdrawalRequest;
 use App\Http\Requests\Admin\UpdateWithdrawalRequest;
+use App\Models\Company;
+use App\Models\User;
+use App\Models\Wallet;
 use App\Models\Withdrawal;
-use Bavix\Wallet\Models\Wallet;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -19,8 +20,29 @@ class WalletController extends Controller
   {
     $validated = $request->validated();
 
+    $holderTypes = [
+      'user' => User::class,
+      'company' => Company::class,
+    ];
+
     $data = Wallet::query()
       ->with(['holder'])
+      ->when($validated['holder'] ?? null, function ($query, $holders) use ($holderTypes) {
+
+        foreach ($holders as $holder) {
+          [$type, $id] = explode(':', $holder);
+
+          if (! isset($holderTypes[$type])) {
+            continue;
+          }
+
+          $query->orWhere(
+            fn($query) => $query
+              ->whereMorphedTo('holder', $holderTypes[$type])
+              ->where('holder_id', $id)
+          );
+        }
+      })
       ->when($validated['created_at'] ?? null, function ($query, $created_at) {
         $range = explode(',', $created_at);
 

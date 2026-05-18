@@ -1,3 +1,4 @@
+import { adminSearchResourceOwners } from '@/api/misc/misc';
 import { DataTable } from '@/components/data-table/data-table';
 import { DataTableColumnHeader } from '@/components/data-table/data-table-column-header';
 import { DataTableToolbar } from '@/components/data-table/data-table-toolbar';
@@ -9,18 +10,9 @@ import EmptyWalletTransactions from '@/pages/companies/dashboard/wallet-transact
 import type { ColumnDef } from '@tanstack/react-table';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
-import { CalendarIcon } from 'lucide-react';
+import { CalendarIcon, CircleDashedIcon } from 'lucide-react';
 import { useMemo } from 'react';
 dayjs.extend(relativeTime);
-
-const STATUS_OPTIONS = [
-  { label: 'Pending', value: 'pending' },
-  { label: 'Processing', value: 'processing' },
-  { label: 'Cancelled', value: 'cancelled' },
-  { label: 'Rejected', value: 'rejected' },
-  { label: 'Paid', value: 'paid' },
-];
-
 type WalletTransactionsPageProps = {
   data: {
     data: any[];
@@ -62,13 +54,39 @@ export default function WalletTransactionsPage({
         enableHiding: false,
       },
       {
-        id: 'wallet-owner',
+        id: 'wallet_holder',
+        accessorKey: 'wallet.holder',
         header: ({ column }) => (
           <DataTableColumnHeader column={column} label="Wallet Owner" />
         ),
         cell: ({ row }) => (
           <div>{row.original.wallet?.holder?.name ?? '-'}</div>
         ),
+        meta: {
+          label: 'Owner',
+          variant: 'select',
+          options: async (query, currentValues) => {
+            const response = await adminSearchResourceOwners({
+              types: 'company,user',
+              keyword: query,
+              include_ids: Array.from(currentValues),
+            } as any);
+
+            const companies = response.data.companies as any[];
+            const users = response.data.users as any[];
+            const companyOptions = companies.map((c) => ({
+              label: c.name,
+              value: `company:${c.id}`,
+            }));
+            const userOptions = users.map((c) => ({
+              label: c.name,
+              value: `user:${c.id}`,
+            }));
+            return [...companyOptions, ...userOptions];
+          },
+          icon: CircleDashedIcon,
+        },
+        enableColumnFilter: true,
       },
       {
         id: 'wallet',

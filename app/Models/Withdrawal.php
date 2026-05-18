@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use App\Enums\WithdrawalStatus;
-use Bavix\Wallet\Models\Wallet;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -17,15 +16,15 @@ class Withdrawal extends Model
     'amount',
     'status',
     'note',
-    'approved_at',
-    'processed_at',
+    'cancelled_at',
+    'rejected_at',
     'paid_at',
   ];
 
   protected $casts = [
     'amount' => 'decimal:2',
-    'approved_at' => 'datetime',
-    'processed_at' => 'datetime',
+    'cancelled_at' => 'datetime',
+    'rejected_at' => 'datetime',
     'paid_at' => 'datetime',
     'status' => WithdrawalStatus::class,
   ];
