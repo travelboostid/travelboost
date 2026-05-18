@@ -41,7 +41,7 @@ export default function AgentVendorTourCard({
         <div className="px-4 py-2 border-t border-slate-50 dark:border-slate-800/60">
           <div className="flex items-center justify-between">
             <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase">
-              Vendor Status
+              Vendor Tour Status
             </span>
             <span
               className={`text-[9px] font-black uppercase ${tour.status === 'active' ? 'text-emerald-500' : 'text-red-500'}`}

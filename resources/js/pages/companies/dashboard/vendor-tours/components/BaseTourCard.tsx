@@ -9,7 +9,7 @@ import {
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { extractImageSrc } from '@/lib/utils';
 import { Building2, MapPin } from 'lucide-react';
-import { ReactNode, useState } from 'react';
+import { useState, type ReactNode } from 'react';
 
 interface BaseTourCardProps {
   tour: any;
@@ -120,11 +120,11 @@ export default function BaseTourCard({
 
       <Dialog open={showInfo} onOpenChange={setShowInfo}>
         <DialogContent
-          className="max-w-3xl p-0 overflow-hidden rounded-2xl bg-white dark:bg-slate-900 border-none shadow-2xl"
+          className="w-[calc(100%-2rem)] max-w-3xl overflow-hidden rounded-2xl border-none bg-white p-0 shadow-2xl dark:bg-slate-900"
           aria-describedby={undefined}
         >
           <DialogTitle className="sr-only">{tour.name}</DialogTitle>
-          <div className="flex flex-col h-full max-h-[85vh]">
+          <div className="flex h-full max-h-[calc(100dvh-2rem)] flex-col sm:max-h-[85vh]">
             <div className="relative h-56 sm:h-64 shrink-0 w-full bg-slate-100 dark:bg-slate-800">
               <img
                 src={src}

@@ -22,7 +22,7 @@ import { router } from '@inertiajs/react';
 import { IconCalendarEvent, IconPdf } from '@tabler/icons-react';
 import axios from 'axios';
 import { HeartIcon, MessageSquareIcon } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import BaseTourCard from './BaseTourCard';
 
 export default function PublicTourCard({
@@ -57,6 +57,15 @@ export default function PublicTourCard({
   const vendorNameVisible =
     isVendorNameVisible !== undefined ? isVendorNameVisible : true;
 
+  const handleLike = useCallback(async () => {
+    try {
+      const response = await axios.post(`/me/tours/${tour.id}/like`);
+      setInternalLiked(Boolean(response.data.liked));
+    } catch {
+      return;
+    }
+  }, [tour.id]);
+
   useEffect(() => {
     if (auth?.user) {
       const pendingStr = sessionStorage.getItem('pendingTourAction');
@@ -77,17 +86,12 @@ export default function PublicTourCard({
               else setIsBookingOpen(true);
             }
           }
-        } catch (e) {}
+        } catch {
+          sessionStorage.removeItem('pendingTourAction');
+        }
       }
     }
-  }, [auth?.user, tour.id, onLike, onBook]);
-
-  const handleLike = async () => {
-    try {
-      const response = await axios.post(`/me/tours/${tour.id}/like`);
-      setInternalLiked(Boolean(response.data.liked));
-    } catch (e) {}
-  };
+  }, [auth?.user, tour.id, onLike, onBook, handleLike]);
 
   const handleLikeClick = () => {
     if (onLike) {
@@ -161,11 +165,11 @@ export default function PublicTourCard({
                 <Button
                   variant="secondary"
                   size="sm"
-                  className="w-12 shrink-0 rounded-xl bg-slate-100 dark:bg-slate-800 h-9 border-none text-slate-700 dark:text-slate-300"
+                  className="h-11 w-14 shrink-0 rounded-xl border-none bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 sm:h-9 sm:w-12"
                   disabled={!tour.document}
                   onClick={handleViewBrochureClick}
                 >
-                  <IconPdf size={18} />
+                  <IconPdf size={20} />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
@@ -177,11 +181,11 @@ export default function PublicTourCard({
                 <Button
                   variant="secondary"
                   size="sm"
-                  className="w-12 shrink-0 rounded-xl bg-slate-100 dark:bg-slate-800 h-9 border-none text-slate-700 dark:text-slate-300"
+                  className="h-11 w-14 shrink-0 rounded-xl border-none bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 sm:h-9 sm:w-12"
                   disabled={startingChat}
                   onClick={handleChatClick}
                 >
-                  {startingChat ? <Spinner /> : <MessageSquareIcon size={18} />}
+                  {startingChat ? <Spinner /> : <MessageSquareIcon size={20} />}
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
@@ -191,11 +195,11 @@ export default function PublicTourCard({
             <Button
               variant="default"
               size="sm"
-              className="flex-1 rounded-xl h-9 bg-primary text-primary-foreground font-bold flex items-center justify-center gap-2 shadow-sm hover:scale-105 active:scale-95 transition-transform"
+              className="flex h-11 min-w-0 flex-1 items-center justify-center gap-2 rounded-xl bg-primary px-3 text-xs font-bold text-primary-foreground shadow-sm transition-transform hover:scale-105 active:scale-95 sm:h-9 sm:text-sm"
               onClick={handleBookClick}
             >
-              <IconCalendarEvent size={18} />
-              <span className="hidden sm:inline">VIEW SCHEDULE</span>
+              <IconCalendarEvent size={20} />
+              <span className="truncate">View Schedule</span>
             </Button>
           </>
         }
