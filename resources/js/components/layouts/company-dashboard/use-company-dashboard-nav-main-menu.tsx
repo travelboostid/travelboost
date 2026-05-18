@@ -184,8 +184,8 @@ export function useCompanyDashboardNavMainMenu() {
       title: <FormattedMessage defaultMessage="Customers" />,
       urlOrAction: `/companies/${company.username}/dashboard/customers`,
       icon: BookUserIcon,
-      shouldDisplay: (roles, permissions) =>
-        roles.includes('user:agent') && permissions.includes('user.query'),
+      shouldDisplay: (_roles, permissions) =>
+        permissions.includes('user.query'),
     },
     {
       id: 'funds',
@@ -322,6 +322,14 @@ export function useCompanyDashboardNavMainMenu() {
           urlOrAction: `/companies/${company.username}/dashboard/parameter-vendor`,
           shouldDisplay: (roles, permissions) =>
             roles.includes('user:vendor') &&
+            permissions.includes('company-settings.query'),
+        },
+        {
+          id: 'settings.parameter-agent',
+          title: <FormattedMessage defaultMessage="Parameters" />,
+          urlOrAction: `/companies/${company.username}/dashboard/parameter-agent`,
+          shouldDisplay: (roles, permissions) =>
+            roles.includes('user:agent') &&
             permissions.includes('company-settings.query'),
         },
         {

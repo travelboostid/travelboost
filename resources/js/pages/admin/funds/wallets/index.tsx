@@ -1,3 +1,4 @@
+import { adminSearchResourceOwners } from '@/api/misc/misc';
 import { DataTable } from '@/components/data-table/data-table';
 import { DataTableColumnHeader } from '@/components/data-table/data-table-column-header';
 import { DataTableToolbar } from '@/components/data-table/data-table-toolbar';
@@ -7,13 +8,11 @@ import { useDataTable } from '@/hooks/use-data-table';
 import { formatIDR } from '@/lib/utils';
 import type { ColumnDef } from '@tanstack/react-table';
 import dayjs from 'dayjs';
-import relativeTime from 'dayjs/plugin/relativeTime';
-import { CalendarIcon } from 'lucide-react';
+import { CalendarIcon, CircleDashedIcon } from 'lucide-react';
 import { useMemo } from 'react';
 import { EmptyWallets } from './components/empty-wallets';
-dayjs.extend(relativeTime);
 
-type WithdrawalsPageProps = {
+type WalletsPageProps = {
   data: {
     data: any[];
     total: number;
@@ -23,8 +22,7 @@ type WithdrawalsPageProps = {
   };
 };
 
-export default function WithdrawalsPage({ data }: WithdrawalsPageProps) {
-  console.log('Withdrawals data:', data); // Debugging log
+export default function WalletsPage({ data }: WalletsPageProps) {
   const columns = useMemo<ColumnDef<any>[]>(
     () => [
       {
@@ -54,10 +52,37 @@ export default function WithdrawalsPage({ data }: WithdrawalsPageProps) {
       },
       {
         id: 'holder',
+        accessorKey: 'holder',
         header: ({ column }) => (
-          <DataTableColumnHeader column={column} label="Owner" />
+          <DataTableColumnHeader column={column} label="Holder" />
         ),
         cell: ({ row }) => <div>{row.original.holder?.name ?? '-'}</div>,
+        meta: {
+          label: 'Holder',
+          variant: 'multiSelect',
+          options: async (query, currentValues) => {
+            const response = await adminSearchResourceOwners({
+              types: 'company,user',
+              keyword: query,
+              include_ids: Array.from(currentValues),
+            } as any);
+
+            const companies = response.data.companies as any[];
+            const users = response.data.users as any[];
+            const companyOptions = companies.map((c) => ({
+              label: c.name,
+              value: `company:${c.id}`,
+            }));
+            const userOptions = users.map((c) => ({
+              label: c.name,
+              value: `user:${c.id}`,
+            }));
+            return [...companyOptions, ...userOptions];
+          },
+          icon: CircleDashedIcon,
+        },
+        enableColumnFilter: true,
+        enableSorting: false,
       },
       {
         id: 'name',

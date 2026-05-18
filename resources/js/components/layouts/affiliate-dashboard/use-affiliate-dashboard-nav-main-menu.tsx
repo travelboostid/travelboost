@@ -160,9 +160,9 @@ export function useAffiliateDashboardNavMainMenu() {
             urlOrAction: '/affiliate/dashboard/fund/withdrawals',
           },
           {
-            id: 'fund.history',
-            title: 'Payment History',
-            urlOrAction: '/affiliate/dashboard/fund/payments',
+            id: 'fund.payments',
+            title: 'Commission History',
+            urlOrAction: '/affiliate/dashboard/fund/commission-history',
           },
           {
             id: 'fund.bank',

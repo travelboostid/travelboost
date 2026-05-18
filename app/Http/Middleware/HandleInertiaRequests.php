@@ -102,6 +102,7 @@ class HandleInertiaRequests extends Middleware
                 'isMarketingDisabled' => $isMarketingDisabled,
                 'isExpired' => $isSubscriptionExpired,
             ],
+            'affiliateUnreadNotificationsCount' => $request->user()?->unreadNotifications()->count() ?? 0,
         ];
     }
 }

@@ -98,34 +98,39 @@ export default function TransactionsPage({
           url: '/affiliate/dashboard/fund/transactions',
         },
       ]}
+      containerClassName="min-h-screen bg-slate-50/60 dark:bg-slate-950"
     >
       <Head title="Wallet Transactions" />
 
       <div className="max-w-5xl grid gap-8 mx-auto">
         <section>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card className="shadow-xs border-slate-200">
+            <Card className="border-slate-200 shadow-xs dark:bg-slate-900 dark:border-slate-800">
               <CardContent className="pt-6">
                 <p className="text-sm text-muted-foreground mb-2">
                   Total Transactions
                 </p>
-                <p className="text-2xl font-bold text-slate-900">
+                <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">
                   {transaction_count.toString()}
                 </p>
               </CardContent>
             </Card>
-            <Card className="bg-emerald-50/50 shadow-xs border-emerald-100">
+            <Card className="bg-emerald-50/50 shadow-xs border-emerald-100 dark:bg-emerald-500/10 dark:border-emerald-500/20">
               <CardContent className="pt-6">
-                <p className="text-sm text-emerald-800/70 mb-2">Total Income</p>
-                <p className="text-2xl font-bold text-emerald-600">
+                <p className="text-sm text-emerald-800/70 mb-2 dark:text-emerald-300/80">
+                  Total Income
+                </p>
+                <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-300">
                   +{formatIDR(income_amount)}
                 </p>
               </CardContent>
             </Card>
-            <Card className="bg-rose-50/50 shadow-xs border-rose-100">
+            <Card className="bg-rose-50/50 shadow-xs border-rose-100 dark:bg-rose-500/10 dark:border-rose-500/20">
               <CardContent className="pt-6">
-                <p className="text-sm text-rose-800/70 mb-2">Total Expenses</p>
-                <p className="text-2xl font-bold text-rose-600">
+                <p className="text-sm text-rose-800/70 mb-2 dark:text-rose-300/80">
+                  Total Expenses
+                </p>
+                <p className="text-2xl font-bold text-rose-600 dark:text-rose-300">
                   -{formatIDR(expense_amount)}
                 </p>
               </CardContent>
@@ -138,20 +143,23 @@ export default function TransactionsPage({
             <PopoverTrigger asChild>
               <Button
                 variant="outline"
-                className="gap-2 font-normal border-slate-200 shadow-sm bg-white"
+                className="gap-2 bg-white font-normal border-slate-200 shadow-sm dark:bg-slate-900 dark:border-slate-800 dark:text-slate-100"
               >
                 <CalendarIcon className="w-4 h-4" />
                 {getDateRangeDisplayText(dateRange)}
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
+            <PopoverContent
+              className="w-auto p-0 dark:border-slate-800 dark:bg-slate-900"
+              align="start"
+            >
               <Calendar
                 mode="range"
                 defaultMonth={dateRange?.from}
                 selected={dateRange}
                 onSelect={handleDateRangeChange}
                 numberOfMonths={2}
-                className="rounded-md border"
+                className="rounded-md border dark:border-slate-800"
               />
             </PopoverContent>
           </Popover>
@@ -166,8 +174,8 @@ export default function TransactionsPage({
                 }
                 className={
                   transactionTypeFilter === filter.id
-                    ? 'bg-slate-900 text-white shadow-sm'
-                    : 'bg-white border-slate-200'
+                    ? 'bg-slate-900 text-white shadow-sm dark:bg-slate-100 dark:text-slate-900'
+                    : 'bg-white border-slate-200 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-100'
                 }
               >
                 {filter.label}
@@ -177,9 +185,9 @@ export default function TransactionsPage({
         </section>
 
         <section>
-          <Card className="border-slate-200 shadow-sm rounded-xl overflow-hidden">
-            <CardHeader className="bg-slate-50 border-b border-slate-100 pb-4">
-              <CardTitle className="text-lg flex items-center gap-2">
+          <Card className="overflow-hidden rounded-xl border-slate-200 shadow-sm dark:bg-slate-900 dark:border-slate-800">
+            <CardHeader className="border-b border-slate-100 bg-slate-50 pb-4 dark:border-slate-800 dark:bg-slate-950/60">
+              <CardTitle className="flex items-center gap-2 text-lg dark:text-slate-100">
                 {
                   transactionTypeFilters.find(
                     (f) => f.id === transactionTypeFilter,
@@ -218,7 +226,7 @@ function TransactionsList({ transactions }: { transactions: any[] }) {
   }
 
   return (
-    <div className="divide-y divide-slate-100">
+    <div className="divide-y divide-slate-100 dark:divide-slate-800">
       {transactions.map((transaction: any) => {
         const isIncome = transaction.type === 'income';
         const Icon = isIncome ? ArrowDownLeft : ArrowUpRight;
@@ -226,25 +234,25 @@ function TransactionsList({ transactions }: { transactions: any[] }) {
         return (
           <div
             key={transaction.id}
-            className="flex items-center justify-between p-4 hover:bg-slate-50 transition-colors group"
+            className="group flex items-center justify-between p-4 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/50"
           >
             <div className="flex items-center gap-4">
               <div
-                className={`p-3 rounded-full ${isIncome ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'}`}
+                className={`rounded-full p-3 ${isIncome ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-300' : 'bg-rose-100 text-rose-600 dark:bg-rose-500/15 dark:text-rose-300'}`}
               >
                 <Icon className="w-5 h-5" />
               </div>
               <div>
-                <p className="font-medium text-slate-900">
+                <p className="font-medium text-slate-900 dark:text-slate-100">
                   {transaction.meta?.description || 'Wallet Transaction'}
                 </p>
-                <p className="text-sm text-slate-500 mt-0.5">
+                <p className="mt-0.5 text-sm text-slate-500 dark:text-slate-400">
                   {dayjs(transaction.created_at).format('MMM DD, YYYY - HH:mm')}
                 </p>
               </div>
             </div>
             <div
-              className={`font-semibold text-base ${isIncome ? 'text-emerald-600' : 'text-rose-600'}`}
+              className={`text-base font-semibold ${isIncome ? 'text-emerald-600 dark:text-emerald-300' : 'text-rose-600 dark:text-rose-300'}`}
             >
               {isIncome ? '+' : '-'}
               {formatIDR(Math.abs(transaction.amount))}

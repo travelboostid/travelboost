@@ -31,6 +31,7 @@ class IndexWalletTransactionRequest extends FormRequest
   public function rules(): array
   {
     return [
+      'wallet_holder' => ['nullable', 'string'],
       'created_at' => 'nullable|string|max:255',
       'sort' => [
         'nullable',
