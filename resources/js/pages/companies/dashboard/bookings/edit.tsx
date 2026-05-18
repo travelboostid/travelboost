@@ -56,7 +56,9 @@ type Passenger = {
   passport_number: string | null;
   passport_issue_date: string | null;
   passport_expiry_date: string | null;
+  passport_file_path: string | null;
   visa_number: string | null;
+  visa_file_path: string | null;
   room_type: string | null;
   note: string | null;
 };
@@ -205,9 +207,15 @@ function passengersToTravelDocs(
           : '',
         visaNumber: p.visa_number ?? '',
         passportFile: null,
-        passportFileName: '',
+        passportFileName: p.passport_file_path
+          ? p.passport_file_path.split('/').pop() || ''
+          : '',
+        passportFilePath: p.passport_file_path ?? null,
         visaFile: null,
-        visaFileName: '',
+        visaFileName: p.visa_file_path
+          ? p.visa_file_path.split('/').pop() || ''
+          : '',
+        visaFilePath: p.visa_file_path ?? null,
       };
     })
     .filter(Boolean) as TravelDocumentEntry[];
@@ -429,8 +437,10 @@ function EditableWizard({
             visaNumber: '',
             passportFile: null,
             passportFileName: '',
+            passportFilePath: null,
             visaFile: null,
             visaFileName: '',
+            visaFilePath: null,
           }
         );
       }),

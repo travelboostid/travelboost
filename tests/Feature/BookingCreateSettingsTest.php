@@ -5,6 +5,7 @@ use App\Enums\PaymentStatus;
 use App\Models\Booking;
 use App\Models\Company;
 use App\Models\Domain;
+use App\Models\SavedPassenger;
 use App\Models\Tour;
 use App\Models\TourAvailability;
 use App\Models\TourSchedule;
@@ -131,6 +132,100 @@ test('booking create passes vendor settings to the frontend and applies schedule
         ->where('vendorBankInfo.bankName', 'BCA')
         ->where('vendorBankInfo.accountName', 'Travel Boost Vendor')
         ->where('vendorBankInfo.accountNumber', '1234567890'));
+});
+
+test('booking create exposes saved passengers for the authenticated user only', function () {
+    ['user' => $user, 'company' => $company, 'tour' => $tour, 'schedule' => $schedule] = createBookingCreateScenario('savedguestvendor');
+    $otherUser = User::factory()->create();
+
+    $savedPassenger = SavedPassenger::factory()->create([
+        'user_id' => $user->id,
+        'title' => 'Ms',
+        'first_name' => 'Saved',
+        'last_name' => 'Traveler',
+        'dob' => '1992-05-10',
+        'pob' => 'Jakarta',
+        'passport_number' => 'A12345678',
+        'passport_issue_date' => '2024-01-01',
+        'passport_expiry_date' => '2030-01-01',
+        'visa_number' => 'VISA-123',
+        'passport_file_path' => 'travel-documents/passports/saved-passport.pdf',
+        'visa_file_path' => 'travel-documents/visas/saved-visa.pdf',
+    ]);
+    SavedPassenger::factory()->create([
+        'user_id' => $otherUser->id,
+        'first_name' => 'Other',
+        'last_name' => 'Traveler',
+    ]);
+
+    $response = $this->actingAs($user)->get(route('bookings.create', [
+        'username' => $company->username,
+        'tour' => $tour,
+        'date' => $schedule->departure_date,
+    ]));
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->component('tours/bookings/create')
+        ->has('savedPassengers', 1)
+        ->where('savedPassengers.0.id', $savedPassenger->id)
+        ->where('savedPassengers.0.title', 'Ms')
+        ->where('savedPassengers.0.firstName', 'Saved')
+        ->where('savedPassengers.0.lastName', 'Traveler')
+        ->where('savedPassengers.0.dateOfBirth', '1992-05-10')
+        ->where('savedPassengers.0.placeOfBirth', 'Jakarta')
+        ->where('savedPassengers.0.passportNumber', 'A12345678')
+        ->where('savedPassengers.0.passportIssueDate', '2024-01-01')
+        ->where('savedPassengers.0.passportExpiryDate', '2030-01-01')
+        ->where('savedPassengers.0.visaNumber', 'VISA-123')
+        ->where('savedPassengers.0.passportFilePath', 'travel-documents/passports/saved-passport.pdf')
+        ->where('savedPassengers.0.passportFileName', 'saved-passport.pdf')
+        ->where('savedPassengers.0.visaFilePath', 'travel-documents/visas/saved-visa.pdf')
+        ->where('savedPassengers.0.visaFileName', 'saved-visa.pdf'));
+});
+
+test('booking create classifies saved passengers by traveler type for the selected departure date', function () {
+    ['user' => $user, 'company' => $company, 'tour' => $tour, 'schedule' => $schedule] = createBookingCreateScenario('savedguesttypevendor');
+    $departureDate = now()->parse($schedule->departure_date);
+
+    SavedPassenger::factory()->create([
+        'user_id' => $user->id,
+        'first_name' => 'Adult',
+        'last_name' => 'Traveler',
+        'dob' => $departureDate->copy()->subYears(20)->toDateString(),
+        'updated_at' => now()->subSeconds(3),
+    ]);
+    SavedPassenger::factory()->create([
+        'user_id' => $user->id,
+        'first_name' => 'Child',
+        'last_name' => 'Traveler',
+        'dob' => $departureDate->copy()->subYears(7)->toDateString(),
+        'updated_at' => now()->subSeconds(2),
+    ]);
+    SavedPassenger::factory()->create([
+        'user_id' => $user->id,
+        'first_name' => 'Infant',
+        'last_name' => 'Traveler',
+        'dob' => $departureDate->copy()->subYear()->toDateString(),
+        'updated_at' => now()->subSecond(),
+    ]);
+
+    $response = $this->actingAs($user)->get(route('bookings.create', [
+        'username' => $company->username,
+        'tour' => $tour,
+        'date' => $schedule->departure_date,
+    ]));
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->component('tours/bookings/create')
+        ->has('savedPassengers', 3)
+        ->where('savedPassengers.0.firstName', 'Infant')
+        ->where('savedPassengers.0.travelerType', 'infant')
+        ->where('savedPassengers.1.firstName', 'Child')
+        ->where('savedPassengers.1.travelerType', 'child')
+        ->where('savedPassengers.2.firstName', 'Adult')
+        ->where('savedPassengers.2.travelerType', 'adult'));
 });
 
 test('reserve rejects extra bed passengers without a twin or double base room', function () {
@@ -477,6 +572,146 @@ test('store persists room arrangement and travel document data', function () {
 
     Storage::disk('public')->assertExists($passenger->passport_file_path);
     Storage::disk('public')->assertExists($passenger->visa_file_path);
+});
+
+test('store auto saves submitted passengers with uploaded travel documents', function () {
+    Storage::fake('public');
+
+    ['user' => $user, 'company' => $company, 'tour' => $tour] = createBookingCreateScenario('autosaveguestvendor');
+    $tour->update(['promote_price' => 0]);
+
+    $response = $this->actingAs($user)
+        ->post(route('bookings.store', [
+            'username' => $company->username,
+            'tour' => $tour,
+        ]), [
+            'booking_number' => 'BKG-SAVED-GUEST-UPLOAD',
+            'tour_id' => $tour->id,
+            'departure_date' => now()->addDays(20)->toDateString(),
+            'pax_adult' => 1,
+            'pax_child' => 0,
+            'pax_infant' => 0,
+            'vendor_id' => $company->id,
+            'contact_name' => 'Saved Guest',
+            'contact_email' => 'saved-guest@example.com',
+            'contact_phone' => '08123456789',
+            'payment_type' => 'full_payment',
+            'payment_method' => 'manual_transfer',
+            'passengers' => [
+                [
+                    'title' => 'Mrs',
+                    'first_name' => 'Auto',
+                    'last_name' => 'Saved',
+                    'dob' => '1990-02-03',
+                    'pob' => 'Surabaya',
+                    'price_category' => 'Adult Single',
+                    'price_amount' => 1_000_000,
+                    'passport_number' => 'B12345678',
+                    'passport_issue_date' => '2024-02-01',
+                    'passport_expiry_date' => '2030-02-01',
+                    'passport_file' => UploadedFile::fake()->image('auto-passport.jpg'),
+                    'visa_number' => 'VISA-AUTO',
+                    'visa_file' => UploadedFile::fake()->create('auto-visa.pdf', 120, 'application/pdf'),
+                    'room_type' => 'Single',
+                    'room_number' => '1',
+                ],
+            ],
+            'total_price' => 1_000_000,
+            'tax_amount' => 110_000,
+            'platform_fee' => 25_000,
+            'commission_amount' => 0,
+            'grand_total' => 1_135_000,
+        ]);
+
+    $response->assertSessionHasNoErrors();
+
+    $savedPassenger = SavedPassenger::query()
+        ->where('user_id', $user->id)
+        ->where('first_name', 'Auto')
+        ->where('last_name', 'Saved')
+        ->firstOrFail();
+
+    expect($savedPassenger->title)->toBe('Mrs')
+        ->and($savedPassenger->dob->toDateString())->toBe('1990-02-03')
+        ->and($savedPassenger->pob)->toBe('Surabaya')
+        ->and($savedPassenger->passport_number)->toBe('B12345678')
+        ->and($savedPassenger->passport_issue_date->toDateString())->toBe('2024-02-01')
+        ->and($savedPassenger->passport_expiry_date->toDateString())->toBe('2030-02-01')
+        ->and($savedPassenger->visa_number)->toBe('VISA-AUTO')
+        ->and($savedPassenger->passport_file_path)->toStartWith('travel-documents/passports/')
+        ->and($savedPassenger->visa_file_path)->toStartWith('travel-documents/visas/');
+
+    Storage::disk('public')->assertExists($savedPassenger->passport_file_path);
+    Storage::disk('public')->assertExists($savedPassenger->visa_file_path);
+});
+
+test('store reuses saved passenger document paths without requiring new uploads', function () {
+    Storage::fake('public');
+
+    ['user' => $user, 'company' => $company, 'tour' => $tour] = createBookingCreateScenario('reuseguestvendor');
+    $tour->update(['promote_price' => 0]);
+    Storage::disk('public')->put('travel-documents/passports/reused-passport.pdf', 'passport');
+    Storage::disk('public')->put('travel-documents/visas/reused-visa.pdf', 'visa');
+
+    $response = $this->actingAs($user)
+        ->post(route('bookings.store', [
+            'username' => $company->username,
+            'tour' => $tour,
+        ]), [
+            'booking_number' => 'BKG-SAVED-GUEST-REUSE',
+            'tour_id' => $tour->id,
+            'departure_date' => now()->addDays(20)->toDateString(),
+            'pax_adult' => 1,
+            'pax_child' => 0,
+            'pax_infant' => 0,
+            'vendor_id' => $company->id,
+            'contact_name' => 'Reuse Guest',
+            'contact_email' => 'reuse-guest@example.com',
+            'contact_phone' => '08123456789',
+            'payment_type' => 'full_payment',
+            'payment_method' => 'manual_transfer',
+            'passengers' => [
+                [
+                    'title' => 'Mr',
+                    'first_name' => 'Reuse',
+                    'last_name' => 'Saved',
+                    'dob' => '1988-03-04',
+                    'pob' => 'Bandung',
+                    'price_category' => 'Adult Single',
+                    'price_amount' => 1_000_000,
+                    'passport_number' => 'C12345678',
+                    'passport_issue_date' => '2024-03-01',
+                    'passport_expiry_date' => '2030-03-01',
+                    'passport_file_path' => 'travel-documents/passports/reused-passport.pdf',
+                    'visa_number' => 'VISA-REUSE',
+                    'visa_file_path' => 'travel-documents/visas/reused-visa.pdf',
+                    'room_type' => 'Single',
+                    'room_number' => '1',
+                ],
+            ],
+            'total_price' => 1_000_000,
+            'tax_amount' => 110_000,
+            'platform_fee' => 25_000,
+            'commission_amount' => 0,
+            'grand_total' => 1_135_000,
+        ]);
+
+    $response->assertSessionHasNoErrors();
+
+    $booking = Booking::with('passengers')
+        ->where('booking_number', 'BKG-SAVED-GUEST-REUSE')
+        ->firstOrFail();
+    $passenger = $booking->passengers->first();
+    $savedPassenger = SavedPassenger::query()
+        ->where('user_id', $user->id)
+        ->where('first_name', 'Reuse')
+        ->where('last_name', 'Saved')
+        ->firstOrFail();
+
+    expect($passenger->passport_file_path)->toBe('travel-documents/passports/reused-passport.pdf')
+        ->and($passenger->visa_file_path)->toBe('travel-documents/visas/reused-visa.pdf')
+        ->and($savedPassenger->passport_file_path)->toBe('travel-documents/passports/reused-passport.pdf')
+        ->and($savedPassenger->visa_file_path)->toBe('travel-documents/visas/reused-visa.pdf');
 });
 
 test('auto created booking for a selected schedule does not skip terms gate as a resume', function () {

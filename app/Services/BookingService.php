@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Enums\BookingStatus;
+use App\Enums\UserGender;
 use App\Models\Booking;
 use App\Models\Tour;
 use App\Models\User;
@@ -72,24 +73,10 @@ class BookingService
             }
 
             if (! empty($data['passengers'])) {
-                $booking->passengers()->createMany($this->preparePassengerRows($data['passengers']));
+                $passengerRows = $this->preparePassengerRows($data['passengers']);
 
-                foreach ($data['passengers'] as $passenger) {
-                    if (! empty($passenger['save_to_address_book']) && $passenger['save_to_address_book'] == true) {
-                        $user->savedPassengers()->updateOrCreate(
-                            [
-                                'first_name' => $passenger['first_name'],
-                                'last_name' => data_get($passenger, 'last_name'),
-                            ],
-                            [
-                                'gender' => data_get($passenger, 'gender'),
-                                'dob' => data_get($passenger, 'dob'),
-                                'pob' => data_get($passenger, 'pob'),
-                                'passport_number' => data_get($passenger, 'passport_number'),
-                            ]
-                        );
-                    }
-                }
+                $booking->passengers()->createMany($passengerRows);
+                $this->syncSavedPassengers($user, $passengerRows);
             }
 
             if (array_key_exists('rooms', $data) && ! empty($data['rooms'])) {
@@ -149,6 +136,41 @@ class BookingService
                 ]);
             })
             ->all();
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $passengers
+     */
+    private function syncSavedPassengers(User $user, array $passengers): void
+    {
+        foreach ($passengers as $passenger) {
+            $firstName = trim((string) data_get($passenger, 'first_name'));
+
+            if ($firstName === '') {
+                continue;
+            }
+
+            $lastName = (string) data_get($passenger, 'last_name', '');
+
+            $user->savedPassengers()->updateOrCreate(
+                [
+                    'first_name' => $firstName,
+                    'last_name' => $lastName,
+                ],
+                [
+                    'title' => data_get($passenger, 'title'),
+                    'gender' => data_get($passenger, 'gender') ?: UserGender::UNSPECIFIED->value,
+                    'dob' => data_get($passenger, 'dob'),
+                    'pob' => data_get($passenger, 'pob'),
+                    'passport_number' => data_get($passenger, 'passport_number'),
+                    'passport_issue_date' => data_get($passenger, 'passport_issue_date'),
+                    'passport_expiry_date' => data_get($passenger, 'passport_expiry_date'),
+                    'visa_number' => data_get($passenger, 'visa_number'),
+                    'passport_file_path' => data_get($passenger, 'passport_file_path'),
+                    'visa_file_path' => data_get($passenger, 'visa_file_path'),
+                ]
+            );
+        }
     }
 
     private function resolvePaymentMode(?string $paymentMethod): ?string

@@ -14,11 +14,13 @@ use App\Models\Payment;
 use App\Models\Tour;
 use App\Models\TourPrice;
 use App\Models\TourSchedule;
+use App\Models\User;
 use App\Services\BookingNumberService;
 use App\Services\BookingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
@@ -248,6 +250,9 @@ class BookingController extends Controller
             'paidAmount' => $paidAmount,
             'remainingBalance' => $remainingBalance,
             'bookingPaymentResult' => $bookingPaymentResult,
+            'savedPassengers' => $user instanceof User
+                ? $this->buildSavedPassengerOptions($user, $schedule?->departure_date)
+                : [],
             'bookingConflict' => $bookingConflict && request()->query('date')
                 ? $this->buildBookingConflict($bookingConflict, $tour, (string) request()->query('date'))
                 : null,
@@ -600,6 +605,93 @@ class BookingController extends Controller
             'deny', 'cancel', 'expire' => PaymentStatus::FAILED,
             default => PaymentStatus::PENDING,
         };
+    }
+
+    /**
+     * @return array<int, array{
+     *     id: int,
+     *     title: string|null,
+     *     firstName: string,
+     *     lastName: string|null,
+     *     dateOfBirth: string|null,
+     *     travelerType: string|null,
+     *     placeOfBirth: string|null,
+     *     passportNumber: string|null,
+     *     passportIssueDate: string|null,
+     *     passportExpiryDate: string|null,
+     *     visaNumber: string|null,
+     *     passportFilePath: string|null,
+     *     passportFileName: string|null,
+     *     visaFilePath: string|null,
+     *     visaFileName: string|null
+     * }>
+     */
+    private function buildSavedPassengerOptions(User $user, mixed $departureDate): array
+    {
+        return $user->savedPassengers()
+            ->latest('updated_at')
+            ->get()
+            ->map(fn ($passenger): array => [
+                'id' => $passenger->id,
+                'title' => $passenger->title,
+                'firstName' => $passenger->first_name,
+                'lastName' => $passenger->last_name,
+                'dateOfBirth' => $passenger->dob?->toDateString(),
+                'travelerType' => $this->resolveSavedPassengerTravelerType(
+                    $passenger->dob?->toDateString(),
+                    $departureDate,
+                ),
+                'placeOfBirth' => $passenger->pob,
+                'passportNumber' => $passenger->passport_number,
+                'passportIssueDate' => $passenger->passport_issue_date?->toDateString(),
+                'passportExpiryDate' => $passenger->passport_expiry_date?->toDateString(),
+                'visaNumber' => $passenger->visa_number,
+                'passportFilePath' => $passenger->passport_file_path,
+                'passportFileName' => $this->fileNameFromPath($passenger->passport_file_path),
+                'visaFilePath' => $passenger->visa_file_path,
+                'visaFileName' => $this->fileNameFromPath($passenger->visa_file_path),
+            ])
+            ->values()
+            ->all();
+    }
+
+    private function resolveSavedPassengerTravelerType(?string $dateOfBirth, mixed $departureDate): ?string
+    {
+        if (! $dateOfBirth || ! $departureDate) {
+            return null;
+        }
+
+        try {
+            $dob = Carbon::parse($dateOfBirth);
+            $departure = Carbon::parse($departureDate);
+        } catch (\Throwable) {
+            return null;
+        }
+
+        if ($dob->greaterThan($departure)) {
+            return null;
+        }
+
+        $age = (int) $dob->diffInYears($departure);
+
+        if ($age < 2) {
+            return 'infant';
+        }
+
+        if ($age < 12) {
+            return 'child';
+        }
+
+        return 'adult';
+    }
+
+    private function fileNameFromPath(?string $path): ?string
+    {
+        if (! $path) {
+            return null;
+        }
+
+        return basename(str_replace('\\', '/', $path));
     }
 
     /**
