@@ -651,19 +651,11 @@ export default function Step1GuestInformation({
     setContactAsGuestAdded(true);
   };
 
-  const hasBlankAdultGuest = guests.some(
-    (guest) =>
-      guest.type === 'adult' &&
-      guest.firstName.trim() === '' &&
-      guest.lastName.trim() === '',
-  );
   const hasSeatForContactGuest = adults + children < maxGuests;
   const canAddContactAsGuest =
     showAddAsGuest &&
     contact.name.trim() !== '' &&
-    (onContactGuestToggle
-      ? hasBlankAdultGuest || hasSeatForContactGuest
-      : hasBlankAdultGuest);
+    hasSeatForContactGuest;
 
   return (
     <motion.div
@@ -813,7 +805,7 @@ export default function Step1GuestInformation({
             sublabel="12 years and above"
             icon={UserIcon}
             value={adults}
-            min={1}
+            min={0}
             max={maxGuests}
             onChange={onAdultsChange}
           />

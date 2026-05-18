@@ -48,6 +48,12 @@ Route::redirect('/login', '/customers/login')->name('login');
 Route::middleware(['auth'])->group(function () {
     Route::post('/bookings/{booking}/reorder', [BookingController::class, 'reorder'])
         ->name('customer.bookings.reorder');
+    Route::post('/bookings/{booking}/release-hold', [BookingController::class, 'releaseHold'])
+        ->name('customer.bookings.release-hold');
+    Route::post('/bookings/{booking}/travel-documents', [BookingController::class, 'updateTravelDocuments'])
+        ->name('customer.bookings.travel-documents');
+    Route::get('/bookings/{booking}/payment-result', [BookingController::class, 'paymentResult'])
+        ->name('customer.bookings.payment-result');
     Route::post('/bookings/{booking}/manual-payment', [BookingController::class, 'storeManualPayment'])
         ->name('customer.bookings.manual-payment');
     Route::post('/bookings/{booking}/online-payment', [BookingController::class, 'storeOnlinePayment'])

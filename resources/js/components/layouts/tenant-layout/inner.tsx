@@ -14,7 +14,7 @@ import { Header } from './header';
 
 const TENANT_THEME_CLASSES = ['light', 'dark', 'greenie', 'calmie', 'warmie'];
 
-export default function Inner({ children }: TenantLayoutProps) {
+export default function Inner({ children, onNavigateAway }: TenantLayoutProps) {
   const { auth, company, tenant } = usePageSharedDataProps();
   const { url } = usePage();
   const showFooter =
@@ -64,7 +64,7 @@ export default function Inner({ children }: TenantLayoutProps) {
           className={`${theme} bg-background text-foreground transition-colors duration-300`}
         >
           <div className="min-h-screen ">
-            <Header />
+            <Header onNavigateAway={onNavigateAway} />
             <main>{children}</main>
           </div>
           {showFooter && <Footer />}

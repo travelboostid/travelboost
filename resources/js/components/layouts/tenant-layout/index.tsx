@@ -4,6 +4,7 @@ import Inner from './inner';
 
 export type TenantLayoutProps = {
   children: ReactNode;
+  onNavigateAway?: (href: string) => void;
 };
 
 export default function TenantLayout(props: TenantLayoutProps) {
