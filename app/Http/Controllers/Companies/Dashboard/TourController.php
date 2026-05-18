@@ -13,186 +13,181 @@ use App\Models\Company;
 use App\Models\Currency;
 use App\Models\PriceCategory;
 use App\Models\Tour;
-use App\Models\TourAddOn;
-use App\Models\TourAvailability;
-use App\Models\TourPrice;
-use App\Models\TourSchedule;
 use App\Notifications\TourStatusChangedNotification;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class TourController extends Controller
 {
-  public function index(Company $company)
-  {
-    $tours = $company->tours()->orderBy('id', 'desc')->get();
+    public function index(Company $company)
+    {
+        $tours = $company->tours()->with('availabilities.schedule')->orderBy('id', 'desc')->get();
 
-    return Inertia::render('companies/dashboard/tours/index', [
-      'data' => $tours,
-    ]);
-  }
-
-  public function create(Company $company)
-  {
-    return Inertia::render('companies/dashboard/tours/create', [
-      'currencies' => Currency::select('code', 'name')
-        ->orderBy('code')
-        ->get(),
-    ]);
-  }
-
-  public function store(StoreTourRequest $request, Company $company)
-  {
-    $data = $request->validated();
-
-    DB::beginTransaction();
-
-    try {
-      $tour = $company->tours()->create($data);
-
-      DB::commit();
-
-      return redirect()
-        ->route('companies.dashboard.tours.edit', [
-          'company' => $company->username,
-          'tour' => $tour->id,
-        ])
-        ->with('tab', 'schedule');
-    } catch (\Throwable $e) {
-      DB::rollBack();
-
-      return back()->withErrors([
-        'error' => $e->getMessage(),
-      ]);
+        return Inertia::render('companies/dashboard/tours/index', [
+            'data' => $tours,
+        ]);
     }
-  }
 
-  public function edit(Company $company, Tour $tour)
-  {
-    app(ExpireBookingReservationsAction::class)->execute($company, $tour->id);
+    public function create(Company $company)
+    {
+        return Inertia::render('companies/dashboard/tours/create', [
+            'currencies' => Currency::select('code', 'name')
+                ->orderBy('code')
+                ->get(),
+        ]);
+    }
 
-    $tour->load([
-      'schedules.prices',
-      'schedules.availability',
-      'schedules.addOns',
-    ]);
+    public function store(StoreTourRequest $request, Company $company)
+    {
+        $data = $request->validated();
 
-    $addOnsFromDb = \App\Models\TourAddOn::where('company_id', $company->id)
-      ->where('tour_id', $tour->id)
-      ->get()
-      ->groupBy('schedule_id');
+        DB::beginTransaction();
 
-    return Inertia::render('companies/dashboard/tours/edit', [
-      'tour'           => $tour,
-      'addOnsFromDb' => $addOnsFromDb,
-      'currencies' => Currency::select('code', 'name')
-        ->orderBy('code')
-        ->get(),
-      'priceCategories' => PriceCategory::where('company_id', $company->id)
-        ->orderBy('name')
-        ->get(['id', 'name']),
-    ]);
-  }
+        try {
+            $tour = $company->tours()->create($data);
 
-  public function update(UpdateTourRequest $request, Company $company, Tour $tour)
-  {
-    if ($request->has('quick_update')) {
-      $payload = $request->all();
+            DB::commit();
 
-      if (array_key_exists('status', $payload)) {
-        $tour->status = $payload['status'];
-      }
+            return redirect()
+                ->route('companies.dashboard.tours.edit', [
+                    'company' => $company->username,
+                    'tour' => $tour->id,
+                ])
+                ->with('tab', 'schedule');
+        } catch (\Throwable $e) {
+            DB::rollBack();
 
-      $tour->save();
+            return back()->withErrors([
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
 
-      if ($tour->wasChanged('status')) {
-        $statusValue = is_object($tour->status) ? $tour->status->value : $tour->status;
+    public function edit(Company $company, Tour $tour)
+    {
+        app(ExpireBookingReservationsAction::class)->execute($company, $tour->id);
 
-        if ($statusValue === 'inactive') {
-          AgentTour::where('tour_id', $tour->id)->update(['status' => 'inactive']);
+        $tour->load([
+            'schedules.prices',
+            'schedules.availability',
+            'schedules.addOns',
+        ]);
+
+        $addOnsFromDb = \App\Models\TourAddOn::where('company_id', $company->id)
+            ->where('tour_id', $tour->id)
+            ->get()
+            ->groupBy('schedule_id');
+
+        return Inertia::render('companies/dashboard/tours/edit', [
+            'tour' => $tour,
+            'addOnsFromDb' => $addOnsFromDb,
+            'currencies' => Currency::select('code', 'name')
+                ->orderBy('code')
+                ->get(),
+            'priceCategories' => PriceCategory::where('company_id', $company->id)
+                ->orderBy('name')
+                ->get(['id', 'name']),
+        ]);
+    }
+
+    public function update(UpdateTourRequest $request, Company $company, Tour $tour)
+    {
+        if ($request->has('quick_update')) {
+            $payload = $request->all();
+
+            if (array_key_exists('status', $payload)) {
+                $tour->status = $payload['status'];
+            }
+
+            $tour->save();
+
+            if ($tour->wasChanged('status')) {
+                $statusValue = is_object($tour->status) ? $tour->status->value : $tour->status;
+
+                if ($statusValue === 'inactive') {
+                    AgentTour::where('tour_id', $tour->id)->update(['status' => 'inactive']);
+                }
+
+                $this->sendTourStatusNotification($tour);
+            }
+
+            return back();
         }
 
-        $this->sendTourStatusNotification($tour);
-      }
+        $data = $request->validated();
 
-      return back();
-    }
+        $data['showprice'] = (int) ($data['showprice'] ?? 0);
+        $data['promote_price'] = (int) ($data['promote_price'] ?? 0);
+        $data['category_id'] = $data['category_id'] ?: null;
+        $data['image_id'] = $data['image_id'] ?: null;
+        $data['document_id'] = $data['document_id'] ?: null;
 
-    $data = $request->validated();
+        DB::beginTransaction();
+        $availabilitySyncDates = [];
 
-    $data['showprice'] = (int) ($data['showprice'] ?? 0);
-    $data['promote_price'] = (int) ($data['promote_price'] ?? 0);
-    $data['category_id'] = $data['category_id'] ?: null;
-    $data['image_id'] = $data['image_id'] ?: null;
-    $data['document_id'] = $data['document_id'] ?: null;
+        try {
+            $tour->update($data);
 
-    DB::beginTransaction();
-    $availabilitySyncDates = [];
+            if ($tour->wasChanged('status')) {
+                $statusValue = is_object($tour->status) ? $tour->status->value : $tour->status;
 
-    try {
-      $tour->update($data);
+                if ($statusValue === 'inactive') {
+                    AgentTour::where('tour_id', $tour->id)->update(['status' => 'inactive']);
+                }
 
-      if ($tour->wasChanged('status')) {
-        $statusValue = is_object($tour->status) ? $tour->status->value : $tour->status;
+                $this->sendTourStatusNotification($tour);
+            }
 
-        if ($statusValue === 'inactive') {
-          AgentTour::where('tour_id', $tour->id)->update(['status' => 'inactive']);
+            TourUpdated::dispatch($tour);
+
+            DB::commit();
+
+            return redirect()->route('companies.dashboard.tours.edit', [
+                'company' => $company->username,
+                'tour' => $tour->id,
+            ])->with([
+                'success' => true,
+                'tab' => request('tab', 'schedule'),
+            ]);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+
+            return back()->withErrors([
+                'error' => $e->getMessage(),
+            ]);
         }
 
-        $this->sendTourStatusNotification($tour);
-      }
+        foreach (array_unique($availabilitySyncDates) as $departureDate) {
+            app(SyncAvailabilityAction::class)->execute($tour->id, $departureDate, $company->id);
+        }
 
-      TourUpdated::dispatch($tour);
-
-      DB::commit();
-
-      return redirect()->route('companies.dashboard.tours.edit', [
-        'company' => $company->username,
-        'tour'    => $tour->id,
-      ])->with([
-        'success' => true,
-        'tab' => request('tab', 'schedule'),
-      ]);
-    } catch (\Throwable $e) {
-      DB::rollBack();
-
-      return back()->withErrors([
-        'error' => $e->getMessage(),
-      ]);
+        return redirect()->route('companies.dashboard.tours.edit', [
+            'company' => $company->username,
+            'tour' => $tour->id,
+        ])->with([
+            'success' => true,
+            'tab' => request('tab', 'schedule'),
+        ]);
     }
 
-    foreach (array_unique($availabilitySyncDates) as $departureDate) {
-      app(SyncAvailabilityAction::class)->execute($tour->id, $departureDate, $company->id);
+    public function destroy(Company $company, Tour $tour)
+    {
+        $tour->delete();
+
+        return back();
     }
 
-    return redirect()->route('companies.dashboard.tours.edit', [
-      'company' => $company->username,
-      'tour' => $tour->id,
-    ])->with([
-      'success' => true,
-      'tab' => request('tab', 'schedule'),
-    ]);
-  }
+    protected function sendTourStatusNotification(Tour $tour)
+    {
+        $agentTours = AgentTour::where('tour_id', $tour->id)->with('company')->get();
+        $statusValue = is_object($tour->status) ? $tour->status->value : $tour->status;
 
-  public function destroy(Company $company, Tour $tour)
-  {
-    $tour->delete();
+        foreach ($agentTours as $agentTour) {
+            $agentCompany = $agentTour->company;
 
-    return back();
-  }
-
-  protected function sendTourStatusNotification(Tour $tour)
-  {
-    $agentTours = AgentTour::where('tour_id', $tour->id)->with('company')->get();
-    $statusValue = is_object($tour->status) ? $tour->status->value : $tour->status;
-
-    foreach ($agentTours as $agentTour) {
-      $agentCompany = $agentTour->company;
-
-      if ($agentCompany) {
-        $agentCompany->notify(new TourStatusChangedNotification($tour, $statusValue));
-      }
+            if ($agentCompany) {
+                $agentCompany->notify(new TourStatusChangedNotification($tour, $statusValue));
+            }
+        }
     }
-  }
 }
