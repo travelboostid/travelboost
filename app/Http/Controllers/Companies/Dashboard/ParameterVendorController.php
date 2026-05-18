@@ -18,6 +18,8 @@ class ParameterVendorController extends Controller
                 'minimum_down_payment' => 0,
                 'minimum_vat' => 0,
                 'booking_entry_time_limit' => 0,
+                'full_payment_deadline' => 0,
+                'document_completed_deadline' => 0,
             ]
         );
 

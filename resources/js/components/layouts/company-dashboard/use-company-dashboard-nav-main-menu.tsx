@@ -325,6 +325,14 @@ export function useCompanyDashboardNavMainMenu() {
             permissions.includes('company-settings.query'),
         },
         {
+          id: 'settings.parameter-agent',
+          title: <FormattedMessage defaultMessage="Parameters" />,
+          urlOrAction: `/companies/${company.username}/dashboard/parameter-agent`,
+          shouldDisplay: (roles, permissions) =>
+            roles.includes('user:agent') &&
+            permissions.includes('company-settings.query'),
+        },
+        {
           id: 'settings.teams',
           title: <FormattedMessage defaultMessage="User Management" />,
           urlOrAction: `/companies/${company.username}/dashboard/teams`,
