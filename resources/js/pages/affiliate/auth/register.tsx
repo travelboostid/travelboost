@@ -20,6 +20,7 @@ export default function Register() {
   const { data, setData, post, processing, errors } = useForm({
     name: '',
     email: '',
+    phone: '',
     username: '',
     password: '',
     password_confirmation: '',
@@ -110,6 +111,23 @@ export default function Register() {
               required
             />
             <InputError message={errors.username} />
+          </div>
+
+          <div className="grid gap-2">
+            <Label htmlFor="phone">
+              {intl.formatMessage({
+                id: 'auth.phone',
+                defaultMessage: 'Phone number',
+              })}
+            </Label>
+            <Input
+              id="phone"
+              value={data.phone}
+              onChange={(e) => setData('phone', e.target.value)}
+              placeholder="Phone number"
+              required
+            />
+            <InputError message={errors.phone} />
           </div>
 
           {/* input ktp */}
