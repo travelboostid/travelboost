@@ -17,7 +17,7 @@
           </tr>
           <tr>
             <td style="padding: 0 32px 8px;">
-              <div style="font-size: 12px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #14b8a6;">TravelBoost Team Access</div>
+              <div style="font-size: 12px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #14b8a6;">{{ $eyebrow }}</div>
             </td>
           </tr>
           <tr>
@@ -35,7 +35,7 @@
               <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse: separate; border-spacing: 0; border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden;">
                 <tr>
                   <td colspan="2" style="padding: 16px 18px; background-color: #f8fafc; border-bottom: 1px solid #e2e8f0;">
-                    <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #64748b;">Account Details</div>
+                    <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #64748b;">Details</div>
                   </td>
                 </tr>
                 @foreach ($details as $detail)
@@ -49,21 +49,12 @@
           </tr>
           <tr>
             <td style="padding: 0 32px 24px;">
-              <a href="{{ $loginUrl }}" style="display: inline-block; padding: 12px 22px; border-radius: 9999px; background-color: #0f172a; color: #ffffff; text-decoration: none; font-size: 14px; font-weight: 700;">Go to Company Login</a>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding: 0 32px 10px;">
-              <p style="margin: 0; font-size: 13px; line-height: 1.7; color: #475569;">
-                {{ $closing ?: 'If you did not expect this change, please contact your company owner or TravelBoost support immediately.' }}
-              </p>
+              <a href="{{ $actionUrl }}" style="display: inline-block; padding: 12px 22px; border-radius: 9999px; background-color: #0f172a; color: #ffffff; text-decoration: none; font-size: 14px; font-weight: 700;">{{ $actionLabel }}</a>
             </td>
           </tr>
           <tr>
             <td style="padding: 0 32px 30px;">
-              <p style="margin: 0; font-size: 13px; line-height: 1.7; color: #94a3b8;">
-                Company: {{ $company->name }}
-              </p>
+              <p style="margin: 0; font-size: 13px; line-height: 1.7; color: #475569;">{{ $closing }}</p>
             </td>
           </tr>
         </table>
