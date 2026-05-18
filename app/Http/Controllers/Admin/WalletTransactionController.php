@@ -5,10 +5,11 @@ namespace App\Http\Controllers\Admin;
 use App\Enums\WithdrawalStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\IndexWalletTransactionRequest;
-use App\Http\Requests\Admin\IndexWithdrawalRequest;
 use App\Http\Requests\Admin\UpdateWithdrawalRequest;
+use App\Models\Company;
+use App\Models\Transaction;
+use App\Models\User;
 use App\Models\Withdrawal;
-use Bavix\Wallet\Models\Transaction;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -18,9 +19,17 @@ class WalletTransactionController extends Controller
   public function index(IndexWalletTransactionRequest $request)
   {
     $validated = $request->validated();
-
+    $holderTypes = [
+      'user' => User::class,
+      'company' => Company::class,
+    ];
     $data = Transaction::query()
       ->with(['wallet', 'payable', 'wallet.holder'])
+      ->when($validated['wallet_holder'] ?? null, function ($query, $holder) use ($holderTypes) {
+        [$type, $id] = explode(':', $holder);
+        $model = $holderTypes[$type];
+        $query->whereWalletHolder($model, $id);
+      })
       ->when($validated['created_at'] ?? null, function ($query, $created_at) {
         $range = explode(',', $created_at);
 
