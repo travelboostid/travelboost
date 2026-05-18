@@ -1207,13 +1207,22 @@ export default function Page({ tour }: Props) {
   });
 
   //paging schedule
+  const [searchDepartureTab2, setSearchDepartureTab2] = useState('');
   const schedulePerPage = 10;
 
   const [currentSchedulePage, setCurrentSchedulePage] = useState(1);
 
-  const totalSchedulePages = Math.ceil(schedules.length / schedulePerPage);
+  const filteredSchedules = schedules.filter((item) => {
+    if (!searchDepartureTab2) return true;
 
-  const paginatedSchedulesTab = schedules.slice(
+    return item.departure_date === searchDepartureTab2;
+  });
+
+  const totalSchedulePages = Math.ceil(
+    filteredSchedules.length / schedulePerPage,
+  );
+
+  const paginatedSchedulesTab = filteredSchedules.slice(
     (currentSchedulePage - 1) * schedulePerPage,
     currentSchedulePage * schedulePerPage,
   );
@@ -1366,342 +1375,398 @@ export default function Page({ tour }: Props) {
             </TabsList>
 
             {/* ================= TAB 1 — TOUR ================= */}
-            <TabsContent value="tour">
+            <TabsContent value="tour" className="space-y-6">
               {/* <div className="grid gap-6"> changed for show in 2 column */}
-              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+              <div className="mx-auto max-w-7xl space-y-6">
                 {/* Image */}
                 {/* <div className="grid gap-2"> */}
-                <div className="grid gap-2 md:col-span-2">
-                  <Label htmlFor="name">Image</Label>
-                  <MediaPicker
-                    type="image"
-                    defaultValue={tour.image}
-                    params={{ owner_type: 'company', owner_id: company.id }}
-                    uploadParams={{
-                      owner_type: 'company',
-                      owner_id: company.id,
-                    }}
-                  >
-                    {(media, change) => {
-                      const mediaId = (media as MediaResource)?.id;
+                <div className="overflow-hidden rounded-3xl border bg-card shadow-sm">
+                  <div className="border-b bg-muted/40 px-6 py-4">
+                    <h2 className="text-lg font-semibold">Tour Cover</h2>
 
-                      // 🔥 sync ke inertia
-                      if (mediaId && data.image_id !== mediaId) {
-                        setData('image_id', mediaId);
-                      }
+                    <p className="text-sm text-muted-foreground">
+                      Upload attractive image for your catalog
+                    </p>
+                  </div>
 
-                      return (
-                        <div className="flex flex-col items-center gap-2">
-                          <img
-                            className="aspect-video max-w-[360px] rounded object-cover shadow"
-                            src={
-                              typeof media === 'string'
-                                ? media
-                                : extractImageSrc(media as any).src
-                            }
-                          />
+                  <div className="p-6">
+                    <MediaPicker
+                      type="image"
+                      defaultValue={tour.image}
+                      params={{ owner_type: 'company', owner_id: company.id }}
+                      uploadParams={{
+                        owner_type: 'company',
+                        owner_id: company.id,
+                      }}
+                    >
+                      {(media, change) => {
+                        const mediaId = (media as MediaResource)?.id;
 
-                          <Button type="button" onClick={change}>
-                            Change
-                          </Button>
-                        </div>
-                      );
-                    }}
-                  </MediaPicker>
-                  <InputError message={errors.media_id} />
+                        if (mediaId && data.image_id !== mediaId) {
+                          setData('image_id', mediaId);
+                        }
+
+                        return (
+                          <div className="flex flex-col items-center gap-5">
+                            <div className="mx-auto w-full max-w-xl overflow-hidden rounded-2xl border bg-muted shadow-sm">
+                              <img
+                                className="aspect-video w-full object-cover transition duration-300 group-hover:scale-[1.02]"
+                                src={
+                                  typeof media === 'string'
+                                    ? media
+                                    : extractImageSrc(media as any).src
+                                }
+                              />
+                            </div>
+
+                            <Button type="button" onClick={change}>
+                              Change Image
+                            </Button>
+                          </div>
+                        );
+                      }}
+                    </MediaPicker>
+                  </div>
                 </div>
 
                 {/* Code */}
-                <div className="grid gap-2">
-                  <Label htmlFor="code">Code</Label>
-                  <Input
-                    id="code"
-                    type="text"
-                    name="code"
-                    required
-                    placeholder="Tour Code"
-                    //defaultValue={tour.code}
-                    value={data.code}
-                    onChange={(e) => setData('code', e.target.value)}
-                  />
-                  <InputError message={errors.code} />
-                </div>
-                {/* Name */}
-                <div className="grid gap-2">
-                  <Label htmlFor="name">Name</Label>
-                  <Input
-                    id="name"
-                    type="text"
-                    name="name"
-                    required
-                    placeholder="Tour Name"
-                    //defaultValue={tour.name}
-                    value={data.name}
-                    onChange={(e) => setData('name', e.target.value)}
-                  />
-                  <InputError message={errors.name} />
-                </div>
+                <div className="rounded-3xl border bg-card shadow-sm overflow-hidden">
+                  {/* HEADER */}
+                  <div className="border-b bg-muted/40 px-6 py-4">
+                    <h2 className="text-lg font-semibold">Basic Information</h2>
 
-                {/* Description */}
-                <div className="grid gap-2">
-                  <Label htmlFor="description">Description</Label>
-                  <Textarea
-                    id="description"
-                    name="description"
-                    placeholder="Tour description"
-                    //defaultValue={tour.description}
-                    className="min-h-[65px] resize-none"
-                    onInput={(e) => {
-                      const el = e.currentTarget;
-                      el.style.height = 'auto';
-                      el.style.height = el.scrollHeight + 'px';
-                    }}
-                    value={data.description}
-                    onChange={(e) => setData('description', e.target.value)}
-                  />
-                  <InputError message={errors.description} />
-                </div>
+                    <p className="text-sm text-muted-foreground">
+                      Main information about your tour
+                    </p>
+                  </div>
+                  {/* BODY */}
+                  <div className="grid grid-cols-1 gap-5 p-6 md:grid-cols-2">
+                    <div className="grid gap-2">
+                      <Label htmlFor="code">Code</Label>
+                      <Input
+                        id="code"
+                        type="text"
+                        name="code"
+                        required
+                        placeholder="Tour Code"
+                        //defaultValue={tour.code}
+                        value={data.code}
+                        onChange={(e) => setData('code', e.target.value)}
+                      />
+                      <InputError message={errors.code} />
+                    </div>
+                    {/* Name */}
+                    <div className="grid gap-2">
+                      <Label htmlFor="name">Name</Label>
+                      <Input
+                        id="name"
+                        type="text"
+                        name="name"
+                        required
+                        placeholder="Tour Name"
+                        //defaultValue={tour.name}
+                        value={data.name}
+                        onChange={(e) => setData('name', e.target.value)}
+                      />
+                      <InputError message={errors.name} />
+                    </div>
 
-                {/* Duration */}
-                <div className="grid gap-2">
-                  <Label htmlFor="duration_days">Duration in Days</Label>
-                  <Input
-                    id="duration_days"
-                    type="number"
-                    name="duration_days"
-                    required
-                    placeholder="Duration"
-                    //defaultValue={tour.duration_days}
-                    value={data.duration_days}
-                    onChange={(e) => setData('duration_days', e.target.value)}
-                  />
-                  <InputError message={errors.duration_days} />
-                </div>
+                    {/* Description */}
+                    <div className="grid gap-2 md:col-span-2">
+                      <Label htmlFor="description">Description</Label>
+                      <Textarea
+                        id="description"
+                        name="description"
+                        placeholder="Tour description"
+                        //defaultValue={tour.description}
+                        className="min-h-[65px] resize-none"
+                        onInput={(e) => {
+                          const el = e.currentTarget;
+                          el.style.height = 'auto';
+                          el.style.height = el.scrollHeight + 'px';
+                        }}
+                        value={data.description}
+                        onChange={(e) => setData('description', e.target.value)}
+                      />
+                      <InputError message={errors.description} />
+                    </div>
 
-                <div className="grid gap-2">
-                  <Label htmlFor="continent_id">Continent</Label>
-                  <SelectContinent
-                    name="continent_id"
-                    value={continentId ?? undefined}
-                    onChange={(val) => {
-                      /*setContinentId(Number(val));
+                    {/* Duration */}
+                    <div className="grid gap-2">
+                      <Label htmlFor="duration_days">Duration in Days</Label>
+                      <Input
+                        id="duration_days"
+                        type="number"
+                        name="duration_days"
+                        required
+                        placeholder="Duration"
+                        //defaultValue={tour.duration_days}
+                        value={data.duration_days}
+                        onChange={(e) =>
+                          setData('duration_days', e.target.value)
+                        }
+                      />
+                      <InputError message={errors.duration_days} />
+                    </div>
+
+                    <div className="grid gap-2">
+                      <Label htmlFor="continent_id">Continent</Label>
+                      <SelectContinent
+                        name="continent_id"
+                        value={continentId ?? undefined}
+                        onChange={(val) => {
+                          /*setContinentId(Number(val));
                         setRegionId(null);
                         setCountryId(null);*/
-                      const id = Number(val);
+                          const id = Number(val);
 
-                      setContinentId(id);
-                      setRegionId(null);
-                      setCountryId(null);
+                          setContinentId(id);
+                          setRegionId(null);
+                          setCountryId(null);
 
-                      setData('continent_id', id); // ✅ WAJIB
-                      setData('region_id', ''); // reset
-                      setData('country_id', '');
-                    }}
-                  />
+                          setData('continent_id', id); // ✅ WAJIB
+                          setData('region_id', ''); // reset
+                          setData('country_id', '');
+                        }}
+                      />
 
-                  <InputError message={errors.continent_id} />
-                </div>
+                      <InputError message={errors.continent_id} />
+                    </div>
 
-                <div className="grid gap-2">
-                  <Label htmlFor="region_id">Region</Label>
-                  <SelectRegion
-                    name="region_id"
-                    continentId={continentId}
-                    value={regionId ?? undefined}
-                    onChange={(val) => {
-                      /*setRegionId(Number(val));
+                    <div className="grid gap-2">
+                      <Label htmlFor="region_id">Region</Label>
+                      <SelectRegion
+                        name="region_id"
+                        continentId={continentId}
+                        value={regionId ?? undefined}
+                        onChange={(val) => {
+                          /*setRegionId(Number(val));
                         setCountryId(null);*/
-                      const id = Number(val);
+                          const id = Number(val);
 
-                      setRegionId(id);
-                      setCountryId(null);
+                          setRegionId(id);
+                          setCountryId(null);
 
-                      setData('region_id', id); // ✅
-                      setData('country_id', ''); // reset
-                    }}
-                  />
-                  <InputError message={errors.region_id} />
-                </div>
+                          setData('region_id', id); // ✅
+                          setData('country_id', ''); // reset
+                        }}
+                      />
+                      <InputError message={errors.region_id} />
+                    </div>
 
-                <div className="grid gap-2">
-                  <Label htmlFor="country_id">Country</Label>
-                  <SelectCountry
-                    name="country_id"
-                    continentId={continentId}
-                    regionId={regionId}
-                    value={countryId ?? undefined}
-                    onChange={(val) => {
-                      //setCountryId(Number(val));
-                      const id = Number(val);
+                    <div className="grid gap-2">
+                      <Label htmlFor="country_id">Country</Label>
+                      <SelectCountry
+                        name="country_id"
+                        continentId={continentId}
+                        regionId={regionId}
+                        value={countryId ?? undefined}
+                        onChange={(val) => {
+                          //setCountryId(Number(val));
+                          const id = Number(val);
 
-                      setCountryId(id);
-                      setData('country_id', id); // ✅
-                    }}
-                  />
+                          setCountryId(id);
+                          setData('country_id', id); // ✅
+                        }}
+                      />
 
-                  <InputError message={errors.country_id} />
-                </div>
+                      <InputError message={errors.country_id} />
+                    </div>
 
-                {/* Destination */}
-                <div className="grid gap-2">
-                  <Label htmlFor="destination">Destination</Label>
-                  <Input
-                    id="destination"
-                    type="text"
-                    name="destination"
-                    placeholder="Destination"
-                    //defaultValue={tour.destination}
-                    value={data.destination}
-                    onChange={(e) => setData('destination', e.target.value)}
-                  />
-                  <InputError message={errors.destination} />
-                </div>
+                    {/* Destination */}
+                    <div className="grid gap-2">
+                      <Label htmlFor="destination">Destination</Label>
+                      <Input
+                        id="destination"
+                        type="text"
+                        name="destination"
+                        placeholder="Destination"
+                        //defaultValue={tour.destination}
+                        value={data.destination}
+                        onChange={(e) => setData('destination', e.target.value)}
+                      />
+                      <InputError message={errors.destination} />
+                    </div>
 
-                {/* Category */}
-                <div className="grid gap-2">
-                  <Label htmlFor="category_id">Category</Label>
-                  <SelectCategory
-                    name="category_id"
-                    //value={categoryId ?? undefined}
-                    /*onChange={(val) => {
+                    {/* Category */}
+                    <div className="grid gap-2">
+                      <Label htmlFor="category_id">Category</Label>
+                      <SelectCategory
+                        name="category_id"
+                        //value={categoryId ?? undefined}
+                        /*onChange={(val) => {
                         setCategoryId(Number(val));
                       }}*/
-                    value={data.category_id || undefined}
-                    onChange={(val) => setData('category_id', Number(val))}
-                  />
+                        value={data.category_id || undefined}
+                        onChange={(val) => setData('category_id', Number(val))}
+                      />
 
-                  <InputError message={errors.category_id} />
+                      <InputError message={errors.category_id} />
+                    </div>
+                  </div>
                 </div>
 
                 {/* Document */}
-                <div className="grid gap-2">
-                  <Label htmlFor="name">Document Itinerary</Label>
+                <div className="overflow-hidden rounded-3xl border bg-card shadow-sm">
+                  {/* HEADER */}
+                  <div className="border-b bg-muted/40 px-6 py-4">
+                    <h2 className="text-lg font-semibold">
+                      Publishing & Documents
+                    </h2>
 
-                  <TourDocumentPicker
-                    owner={{ type: 'company', id: company.id }}
-                    value={selectedDocument}
-                    onChange={(doc: any) => {
-                      setSelectedDocument(doc);
-                      setData('document_id', doc?.id);
-                    }}
-                  />
-
-                  <InputError message={errors.document_id} />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Status */}
-                  <div className="grid gap-2">
-                    <Label htmlFor="status">Status</Label>
-                    <Select
-                      name="status"
-                      //</div>defaultValue={tour.status}
-                      value={data.status}
-                      onValueChange={(val) => setData('status', val)}
-                    >
-                      <SelectTrigger className="w-full max-w-48">
-                        <SelectValue placeholder="Select status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectGroup>
-                          <SelectLabel>Select status</SelectLabel>
-                          <SelectItem value="active">Active</SelectItem>
-                          <SelectItem value="inactive">Inactive</SelectItem>
-                        </SelectGroup>
-                      </SelectContent>
-                    </Select>
-                    <InputError message={errors.status} />
+                    <p className="text-sm text-muted-foreground">
+                      Configure itinerary document, status and currency
+                    </p>
                   </div>
+                  {/* BODY */}
+                  <div className="space-y-6 p-6">
+                    <div className="grid gap-2">
+                      <Label htmlFor="name">Document Itinerary</Label>
 
-                  {/* CURRENCY */}
-                  <div className="grid gap-2">
-                    <Label>Currency</Label>
+                      <TourDocumentPicker
+                        owner={{ type: 'company', id: company.id }}
+                        value={selectedDocument}
+                        onChange={(doc: any) => {
+                          setSelectedDocument(doc);
+                          setData('document_id', doc?.id);
+                        }}
+                      />
 
-                    <SelectCurrency
-                      value={data.currency}
-                      onChange={(val) => setData('currency', val)}
-                    />
+                      <InputError message={errors.document_id} />
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Status */}
+                      <div className="grid gap-2">
+                        <Label htmlFor="status">Status</Label>
+                        <Select
+                          name="status"
+                          //</div>defaultValue={tour.status}
+                          value={data.status}
+                          onValueChange={(val) => setData('status', val)}
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select status" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectGroup>
+                              <SelectLabel>Select status</SelectLabel>
+                              <SelectItem value="active">Active</SelectItem>
+                              <SelectItem value="inactive">Inactive</SelectItem>
+                            </SelectGroup>
+                          </SelectContent>
+                        </Select>
+                        <InputError message={errors.status} />
+                      </div>
+
+                      {/* CURRENCY */}
+                      <div className="grid gap-2">
+                        <Label>Currency</Label>
+
+                        <SelectCurrency
+                          value={data.currency}
+                          onChange={(val) => setData('currency', val)}
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
 
                 {/* Normal Price show on catalog */}
-                <div className="grid gap-2">
-                  <Label htmlFor="showprice">
-                    Normal Price show on catalog
-                  </Label>
-                  <Input
-                    id="showprice_display"
-                    type="text"
-                    placeholder="Normal Price"
-                    value={displayPrice}
-                    onChange={(e) => handlePriceChange(e.target.value)}
-                  />
-                  <input type="hidden" name="showprice" value={rawPrice} />
-                  <InputError message={errors.showprice} />
-                </div>
+                <div className="overflow-hidden rounded-3xl border bg-card shadow-sm">
+                  <div className="border-b bg-muted/40 px-6 py-4">
+                    <h2 className="text-lg font-semibold">Pricing</h2>
 
-                <div className="rounded-lg border bg-muted/30 p-4 space-y-4">
-                  <div className="text-sm font-semibold text-muted-foreground">
-                    Promotion Settings
+                    <p className="text-sm text-muted-foreground">
+                      Configure normal and promotional prices
+                    </p>
                   </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* promote title */}
+                  <div className="space-y-6 p-6">
                     <div className="grid gap-2">
-                      <Label htmlFor="promote_title">
-                        Title Promotion on Catalog
+                      <Label htmlFor="showprice">
+                        Normal Price show on catalog
                       </Label>
                       <Input
-                        id="promote_title"
+                        id="showprice_display"
                         type="text"
-                        name="promote_title"
-                        placeholder="Title Promotion"
-                        //defaultValue={tour.promote_title}
-                        value={data.promote_title}
-                        onChange={(e) =>
-                          setData('promote_title', e.target.value)
-                        }
+                        placeholder="Normal Price"
+                        value={displayPrice}
+                        onChange={(e) => handlePriceChange(e.target.value)}
                       />
-                      <InputError message={errors.promote_title} />
+                      <input type="hidden" name="showprice" value={rawPrice} />
+                      <InputError message={errors.showprice} />
                     </div>
 
-                    {/* Promote Price */}
-                    <div className="grid gap-2">
-                      <Label htmlFor="promote_price">
-                        Promotion Price show on catalog
-                      </Label>
-                      <Input
-                        id="promote_price"
-                        type="text"
-                        placeholder="Promotion Price"
-                        value={displayPrice1}
-                        onChange={(e) => handlePriceChange1(e.target.value)}
-                      />
-                      <input
-                        type="hidden"
-                        name="promote_price"
-                        value={rawPrice1}
-                      />
-                      <InputError message={errors.promote_price} />
-                    </div>
+                    <div className="rounded-2xl border border-pink-200 bg-gradient-to-br from-pink-50 to-rose-50 p-5 shadow-sm">
+                      <div className="mb-5">
+                        <h3 className="font-semibold text-pink-700">
+                          Promotion Campaign
+                        </h3>
 
-                    {/* promote note — full width */}
-                    <div className="grid gap-2 md:col-span-2">
-                      <Label htmlFor="promote_note">
-                        Promotion Note on Catalog
-                      </Label>
-                      <Input
-                        id="promote_note"
-                        type="text"
-                        name="promote_note"
-                        placeholder="Promotion Note"
-                        //defaultValue={tour.promote_note}
-                        value={data.promote_note}
-                        onChange={(e) =>
-                          setData('promote_note', e.target.value)
-                        }
-                      />
-                      <InputError message={errors.promote_note} />
+                        <p className="text-sm text-muted-foreground">
+                          Highlight special offer on catalog
+                        </p>
+                      </div>
+
+                      <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+                        {/* promote title */}
+                        <div className="grid gap-2">
+                          <Label htmlFor="promote_title">
+                            Title Promotion on Catalog
+                          </Label>
+                          <Input
+                            id="promote_title"
+                            type="text"
+                            name="promote_title"
+                            placeholder="Title Promotion"
+                            //defaultValue={tour.promote_title}
+                            value={data.promote_title}
+                            onChange={(e) =>
+                              setData('promote_title', e.target.value)
+                            }
+                          />
+                          <InputError message={errors.promote_title} />
+                        </div>
+
+                        {/* Promote Price */}
+                        <div className="grid gap-2">
+                          <Label htmlFor="promote_price">
+                            Promotion Price show on catalog
+                          </Label>
+                          <Input
+                            id="promote_price"
+                            type="text"
+                            placeholder="Promotion Price"
+                            value={displayPrice1}
+                            onChange={(e) => handlePriceChange1(e.target.value)}
+                          />
+                          <input
+                            type="hidden"
+                            name="promote_price"
+                            value={rawPrice1}
+                          />
+                          <InputError message={errors.promote_price} />
+                        </div>
+
+                        {/* promote note — full width */}
+                        <div className="grid gap-2 md:col-span-2">
+                          <Label htmlFor="promote_note">
+                            Promotion Note on Catalog
+                          </Label>
+                          <Input
+                            id="promote_note"
+                            type="text"
+                            name="promote_note"
+                            placeholder="Promotion Note"
+                            //defaultValue={tour.promote_note}
+                            value={data.promote_note}
+                            onChange={(e) =>
+                              setData('promote_note', e.target.value)
+                            }
+                          />
+                          <InputError message={errors.promote_note} />
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1718,26 +1783,36 @@ export default function Page({ tour }: Props) {
 
             <TabsContent value="schedule">
               <div className="space-y-4">
-                {/* HEADER */}
-                <div className="flex justify-between items-center px-4 py-2">
-                  <h3 className="text-lg font-semibold">
-                    <span className="font-semibold">
-                      Tour Schedule and Price — {tour.name}
-                    </span>
-                  </h3>
-                  <span className="text-sm text-muted-foreground"></span>
+                <div className="flex flex-col gap-3 px-4 py-2 md:flex-row md:items-center md:justify-end">
+                  <div className="flex items-center gap-3">
+                    <Button type="button" onClick={addSchedule}>
+                      + Add New Schedule
+                    </Button>
+                  </div>
                 </div>
 
-                <div className="flex items-center justify-between px-4 py-2">
-                  <h3 className="text-lg font-semibold">
-                    <span className="text-foreground font-semibold">
-                      Currency: {tour.currency}
+                <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2">
+                  {/* LEFT */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">
+                      Search by departure date
                     </span>
-                  </h3>
 
-                  <Button type="button" onClick={addSchedule}>
-                    + Add New Schedule
-                  </Button>
+                    <input
+                      type="date"
+                      value={searchDepartureTab2}
+                      onChange={(e) => {
+                        setSearchDepartureTab2(e.target.value);
+                        setCurrentSchedulePage(1);
+                      }}
+                      className="rounded-lg border px-3 py-2 text-sm"
+                    />
+                  </div>
+
+                  {/* RIGHT */}
+                  <div className="rounded-lg border bg-muted/40 px-3 py-2 text-sm font-medium">
+                    Currency: {tour.currency}
+                  </div>
                 </div>
 
                 {/* DESKTOP TABLE */}
