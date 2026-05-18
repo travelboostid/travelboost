@@ -30,13 +30,17 @@ import SelectRegion from './components/select-region';
 
 import { useEffect } from 'react';
 
-import { Fragment } from 'react';
-
 import { TourDocumentPicker } from '@/components/media/tour-document-picker';
 import MoneyInput from '@/components/ui/money-input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Copy, InfoIcon, MoreVertical, Save, Trash2 } from 'lucide-react';
 
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
 import { Calendar } from '@/components/ui/calendar';
 import {
   Dialog,
@@ -763,12 +767,15 @@ export default function Page({ tour }: Props) {
   }, [schedules, addOnsFromDb]);
 
   const addRow = (scheduleId: number) => {
+    const newRow = {
+      description: '',
+      price: 0,
+      edit_status: false,
+    };
+
     setAddOns((prev) => ({
       ...prev,
-      [scheduleId]: [
-        ...(prev[scheduleId] || []),
-        { id: null, description: '', price: '', edit_status: false },
-      ],
+      [scheduleId]: [...(prev[scheduleId] || []), newRow],
     }));
   };
 
@@ -3204,99 +3211,126 @@ export default function Page({ tour }: Props) {
                   </div>
                 </div>
 
-                <div className="rounded-lg border overflow-hidden">
-                  <table className="w-full text-sm">
-                    <thead className="bg-muted">
-                      <tr>
-                        <th className="p-3 text-left">Departure → Return</th>
-                        <th className="p-3 text-left">Descriptions</th>
-                        <th className="p-3 text-left">Prices / Pax</th>
-                        <th className="p-3 text-left">Editable</th>
-                        <th className="p-3 text-left"></th>
-                      </tr>
-                    </thead>
+                <div className="space-y-4">
+                  <Accordion type="multiple" className="space-y-4">
+                    {filteredAddOnsSchedules.map((schedule) => {
+                      const rows = addOns[schedule.id] || [];
 
-                    <tbody>
-                      {filteredAddOnsSchedules.map((schedule) => {
-                        const rows = addOns[schedule.id] || [];
-                        const rowCount = rows.length;
+                      return (
+                        <AccordionItem
+                          key={schedule.id}
+                          value={`schedule-${schedule.id}`}
+                          className="overflow-hidden rounded-2xl border bg-card shadow-sm"
+                        >
+                          {/* HEADER */}
+                          <AccordionTrigger className="px-6 py-4 hover:no-underline">
+                            <div className="flex w-full items-center justify-between pr-4">
+                              {/* LEFT */}
+                              <div className="text-left">
+                                <div className="text-base font-semibold">
+                                  {formatDate(schedule.departure_date)} →{' '}
+                                  {formatDate(schedule.return_date)}
+                                </div>
 
-                        return (
-                          <Fragment key={schedule.id}>
-                            {/* KALAU ADA DATA */}
-                            {rows.length > 0 &&
-                              rows.map((row, index) => (
-                                <tr key={index} className="border-t">
-                                  {/* SCHEDULE */}
-                                  {index === 0 && (
-                                    <td
-                                      className="p-3 font-medium align-top"
-                                      rowSpan={rowCount + 1}
-                                    >
-                                      {formatDate(schedule.departure_date)} →{' '}
-                                      {formatDate(schedule.return_date)}
-                                    </td>
-                                  )}
+                                <div className="mt-1 text-sm text-muted-foreground">
+                                  {rows.length} add ons
+                                </div>
+                              </div>
 
-                                  {/* DESCRIPTION */}
-                                  <td className="p-3">
-                                    <input
-                                      type="text"
-                                      className="w-full border rounded px-2 py-1"
-                                      value={row.description}
-                                      onChange={(e) =>
-                                        updateRow(
-                                          schedule.id,
-                                          index,
-                                          'description',
-                                          e.target.value,
-                                        )
-                                      }
-                                    />
-                                  </td>
+                              {/* RIGHT */}
+                              <div className="rounded-lg border bg-muted/40 px-3 py-1 text-xs font-medium">
+                                {tour.currency}
+                              </div>
+                            </div>
+                          </AccordionTrigger>
 
-                                  {/* PRICE */}
-                                  <td className="p-3">
-                                    <MoneyInput
-                                      className="text-right"
-                                      value={row.price}
-                                      onChange={(val) =>
-                                        updateRow(
-                                          schedule.id,
-                                          index,
-                                          'price',
-                                          Number(val),
-                                        )
-                                      }
-                                    />
-                                  </td>
+                          {/* CONTENT */}
+                          <AccordionContent className="border-t bg-muted/20 px-6 py-5">
+                            <div className="space-y-4">
+                              {rows.map((row, index) => (
+                                <div
+                                  key={index}
+                                  className="rounded-2xl border bg-background p-5 shadow-sm transition hover:shadow-md"
+                                >
+                                  <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                                    {/* LEFT CONTENT */}
+                                    <div className="grid flex-1 grid-cols-1 gap-4 md:grid-cols-2">
+                                      {/* DESCRIPTION */}
+                                      <div className="space-y-2 md:col-span-2">
+                                        <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+                                          Add Ons Description
+                                        </Label>
 
-                                  {/* CHECKBOX */}
-                                  <td className="p-3 text-center">
-                                    <input
-                                      type="checkbox"
-                                      checked={row.edit_status}
-                                      onChange={(e) =>
-                                        updateRow(
-                                          schedule.id,
-                                          index,
-                                          'edit_status',
-                                          e.target.checked,
-                                        )
-                                      }
-                                    />
-                                  </td>
+                                        <Input
+                                          type="text"
+                                          placeholder="Example: Extra baggage, Visa, Single supplement"
+                                          value={row.description}
+                                          onChange={(e) =>
+                                            updateRow(
+                                              schedule.id,
+                                              index,
+                                              'description',
+                                              e.target.value,
+                                            )
+                                          }
+                                        />
+                                      </div>
 
-                                  {/* DELETE and SAVE */}
-                                  <td className="p-3 text-left">
-                                    <div className="flex items-center justify-center">
+                                      {/* PRICE */}
+                                      <div className="space-y-2">
+                                        <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+                                          Price Per Pax
+                                        </Label>
+
+                                        <MoneyInput
+                                          className="text-right"
+                                          value={row.price}
+                                          onChange={(val) =>
+                                            updateRow(
+                                              schedule.id,
+                                              index,
+                                              'price',
+                                              Number(val),
+                                            )
+                                          }
+                                        />
+                                      </div>
+
+                                      {/* EDITABLE */}
+                                      <div className="space-y-2">
+                                        <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+                                          Editable
+                                        </Label>
+
+                                        <div className="flex h-10 items-center rounded-xl border px-3">
+                                          <label className="flex items-center gap-2 text-sm">
+                                            <input
+                                              type="checkbox"
+                                              checked={row.edit_status}
+                                              onChange={(e) =>
+                                                updateRow(
+                                                  schedule.id,
+                                                  index,
+                                                  'edit_status',
+                                                  e.target.checked,
+                                                )
+                                              }
+                                            />
+                                            Allow Edit
+                                          </label>
+                                        </div>
+                                      </div>
+                                    </div>
+
+                                    {/* RIGHT ACTION */}
+                                    <div className="flex items-center justify-end lg:w-auto">
                                       <DropdownMenu modal={false}>
                                         <DropdownMenuTrigger asChild>
                                           <Button
                                             type="button"
                                             variant="ghost"
                                             size="icon"
-                                            className="h-8 w-8"
+                                            className="h-9 w-9 rounded-xl"
                                           >
                                             <MoreVertical className="h-4 w-4" />
                                           </Button>
@@ -3331,43 +3365,29 @@ export default function Page({ tour }: Props) {
                                             }
                                           >
                                             <Trash2 className="mr-2 h-4 w-4" />
-                                            Delete
+                                            Delete Add Ons
                                           </DropdownMenuItem>
                                         </DropdownMenuContent>
                                       </DropdownMenu>
                                     </div>
-                                  </td>
-                                </tr>
+                                  </div>
+                                </div>
                               ))}
 
-                            {/* ADD ROW BUTTON */}
-                            <tr className="border-t">
-                              {/* kalau belum ada row → schedule tetap tampil */}
-                              {rows.length === 0 && (
-                                <td className="p-3 font-medium">
-                                  {schedule.departure_date} →{' '}
-                                  {schedule.return_date}
-                                </td>
-                              )}
-
-                              <td
-                                colSpan={rows.length === 0 ? 4 : 4}
-                                className="p-3"
+                              {/* ADD BUTTON */}
+                              <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => addRow(schedule.id)}
                               >
-                                <button
-                                  type="button"
-                                  onClick={() => addRow(schedule.id)}
-                                  className="text-blue-600 text-sm"
-                                >
-                                  + Add Ons
-                                </button>
-                              </td>
-                            </tr>
-                          </Fragment>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+                                + Add Add Ons
+                              </Button>
+                            </div>
+                          </AccordionContent>
+                        </AccordionItem>
+                      );
+                    })}
+                  </Accordion>
                 </div>
                 <div className="mt-6 flex items-center justify-between border-t px-4 py-3">
                   <div className="text-sm text-muted-foreground">
