@@ -1311,11 +1311,58 @@ export default function Page({ tour }: Props) {
             value={activeTab}
             onValueChange={(val) => setActiveTab(val as any)}
           >
-            <TabsList className="mb-4">
-              <TabsTrigger value="tour">Master</TabsTrigger>
-              <TabsTrigger value="schedule">Schedule and Price</TabsTrigger>
-              <TabsTrigger value="availability">Availability</TabsTrigger>
-              <TabsTrigger value="addons">Adds On</TabsTrigger>
+            <TabsList className="mb-4 flex h-auto gap-3 bg-transparent p-0">
+              <TabsTrigger
+                value="tour"
+                className="
+                  rounded-full px-8 py-3 text-sm font-medium
+                  bg-slate-100 text-slate-900
+                  data-[state=active]:bg-primary
+                  data-[state=active]:text-white
+                  shadow-none
+                "
+              >
+                Master
+              </TabsTrigger>
+
+              <TabsTrigger
+                value="schedule"
+                className="
+                  rounded-full px-8 py-3 text-sm font-medium
+                  bg-slate-100 text-slate-900
+                  data-[state=active]:bg-primary
+                  data-[state=active]:text-white
+                  shadow-none
+                "
+              >
+                Schedule and Price
+              </TabsTrigger>
+
+              <TabsTrigger
+                value="availability"
+                className="
+                  rounded-full px-8 py-3 text-sm font-medium
+                  bg-slate-100 text-slate-900
+                  data-[state=active]:bg-primary
+                  data-[state=active]:text-white
+                  shadow-none
+                "
+              >
+                Availability
+              </TabsTrigger>
+
+              <TabsTrigger
+                value="addons"
+                className="
+                  rounded-full px-8 py-3 text-sm font-medium
+                  bg-slate-100 text-slate-900
+                  data-[state=active]:bg-primary
+                  data-[state=active]:text-white
+                  shadow-none
+                "
+              >
+                Adds On
+              </TabsTrigger>
             </TabsList>
 
             {/* ================= TAB 1 — TOUR ================= */}
@@ -1710,9 +1757,7 @@ export default function Page({ tour }: Props) {
                           Prices
                         </th>
 
-                        <th className="p-3 text-left" rowSpan={2}>
-                          Action
-                        </th>
+                        <th className="p-3 text-left" rowSpan={2}></th>
                       </tr>
 
                       <tr className="text-xs text-muted-foreground">
@@ -3092,7 +3137,7 @@ export default function Page({ tour }: Props) {
                         <th className="p-3 text-left">Descriptions</th>
                         <th className="p-3 text-left">Prices / Pax</th>
                         <th className="p-3 text-left">Editable</th>
-                        <th className="p-3 text-left">Action</th>
+                        <th className="p-3 text-left"></th>
                       </tr>
                     </thead>
 

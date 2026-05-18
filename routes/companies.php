@@ -11,6 +11,7 @@ use App\Http\Controllers\Companies\Dashboard\CustomerController;
 use App\Http\Controllers\Companies\Dashboard\HomeController;
 use App\Http\Controllers\Companies\Dashboard\NotificationController;
 use App\Http\Controllers\Companies\Dashboard\PageController;
+use App\Http\Controllers\Companies\Dashboard\ParameterAgentController;
 use App\Http\Controllers\Companies\Dashboard\ParameterVendorController;
 use App\Http\Controllers\Companies\Dashboard\PaymentController;
 use App\Http\Controllers\Companies\Dashboard\PriceCategoryController;
@@ -96,6 +97,16 @@ Route::prefix('companies/{company:username}/dashboard')->middleware(['auth', 'co
     'parameter-vendor',
     [ParameterVendorController::class, 'update']
   )->name('parameter-vendor.update');
+
+  Route::get(
+    'parameter-agent',
+    [ParameterAgentController::class, 'index']
+  )->name('parameter-agent.index');
+
+  Route::put(
+      'parameter-agent',
+      [ParameterAgentController::class, 'update']
+  )->name('parameter-agent.update');
 
   Route::put('profile', [ProfileController::class, 'update'])->name('settings.profile.update');
   Route::post('teams/invite', [TeamController::class, 'invite'])->name('teams.invite');

@@ -4,6 +4,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { Head, router } from '@inertiajs/react';
 import { ChevronDownIcon, InfoIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -172,6 +173,9 @@ export default function SeatAvailabilityIndex({
     });
   };
 
+  const { auth } = usePageSharedDataProps() as any;
+
+  const isAgent = auth?.roles?.includes('user:agent');
   return (
     <CompanyDashboardLayout
       openMenuIds={['reports']}
@@ -261,140 +265,148 @@ export default function SeatAvailabilityIndex({
                           <th className="border px-3 py-3 text-center">
                             Max Pax
                           </th>
+                          {!isAgent && (
+                            <>
+                              <th className="border px-3 py-3 text-center">
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <div className="inline-flex items-center gap-1 cursor-help">
+                                      <span>RS</span>
 
-                          <th className="border px-3 py-3 text-center">
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <div className="inline-flex items-center gap-1 cursor-help">
-                                  <span>RS</span>
+                                      <InfoIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                                    </div>
+                                  </TooltipTrigger>
 
-                                  <InfoIcon className="h-3.5 w-3.5 text-muted-foreground" />
-                                </div>
-                              </TooltipTrigger>
+                                  <TooltipContent>
+                                    Manual Reserved
+                                  </TooltipContent>
+                                </Tooltip>
+                              </th>
+                              <th className="border px-3 py-3 text-center">
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <div className="inline-flex items-center gap-1 cursor-help">
+                                      <span>WP</span>
 
-                              <TooltipContent>Manual Reserved</TooltipContent>
-                            </Tooltip>
-                          </th>
-                          <th className="border px-3 py-3 text-center">
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <div className="inline-flex items-center gap-1 cursor-help">
-                                  <span>WP</span>
+                                      <InfoIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                                    </div>
+                                  </TooltipTrigger>
 
-                                  <InfoIcon className="h-3.5 w-3.5 text-muted-foreground" />
-                                </div>
-                              </TooltipTrigger>
+                                  <TooltipContent>
+                                    Waiting Payment
+                                  </TooltipContent>
+                                </Tooltip>
+                              </th>
+                              <th className="border px-3 py-3 text-center">
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <div className="inline-flex items-center gap-1 cursor-help">
+                                      <span>WA</span>
 
-                              <TooltipContent>Waiting Payment</TooltipContent>
-                            </Tooltip>
-                          </th>
-                          <th className="border px-3 py-3 text-center">
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <div className="inline-flex items-center gap-1 cursor-help">
-                                  <span>WA</span>
+                                      <InfoIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                                    </div>
+                                  </TooltipTrigger>
 
-                                  <InfoIcon className="h-3.5 w-3.5 text-muted-foreground" />
-                                </div>
-                              </TooltipTrigger>
+                                  <TooltipContent>
+                                    Waiting Payment Approval
+                                  </TooltipContent>
+                                </Tooltip>
+                              </th>
+                              <th className="border px-3 py-3 text-center">
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <div className="inline-flex items-center gap-1 cursor-help">
+                                      <span>DP</span>
 
-                              <TooltipContent>
-                                Waiting Payment Approval
-                              </TooltipContent>
-                            </Tooltip>
-                          </th>
-                          <th className="border px-3 py-3 text-center">
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <div className="inline-flex items-center gap-1 cursor-help">
-                                  <span>DP</span>
+                                      <InfoIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                                    </div>
+                                  </TooltipTrigger>
 
-                                  <InfoIcon className="h-3.5 w-3.5 text-muted-foreground" />
-                                </div>
-                              </TooltipTrigger>
+                                  <TooltipContent>Down Payment</TooltipContent>
+                                </Tooltip>
+                              </th>
+                              <th className="border px-3 py-3 text-center">
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <div className="inline-flex items-center gap-1 cursor-help">
+                                      <span>FP</span>
 
-                              <TooltipContent>Down Payment</TooltipContent>
-                            </Tooltip>
-                          </th>
-                          <th className="border px-3 py-3 text-center">
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <div className="inline-flex items-center gap-1 cursor-help">
-                                  <span>FP</span>
+                                      <InfoIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                                    </div>
+                                  </TooltipTrigger>
 
-                                  <InfoIcon className="h-3.5 w-3.5 text-muted-foreground" />
-                                </div>
-                              </TooltipTrigger>
+                                  <TooltipContent>Full Payment</TooltipContent>
+                                </Tooltip>
+                              </th>
+                              <th className="border px-3 py-3 text-center">
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <div className="inline-flex items-center gap-1 cursor-help">
+                                      <span>BR</span>
 
-                              <TooltipContent>Full Payment</TooltipContent>
-                            </Tooltip>
-                          </th>
-                          <th className="border px-3 py-3 text-center">
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <div className="inline-flex items-center gap-1 cursor-help">
-                                  <span>BR</span>
+                                      <InfoIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                                    </div>
+                                  </TooltipTrigger>
 
-                                  <InfoIcon className="h-3.5 w-3.5 text-muted-foreground" />
-                                </div>
-                              </TooltipTrigger>
+                                  <TooltipContent>
+                                    Booking Reserved
+                                  </TooltipContent>
+                                </Tooltip>
+                              </th>
+                              <th className="border px-3 py-3 text-center">
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <div className="inline-flex items-center gap-1 cursor-help">
+                                      <span>CA</span>
 
-                              <TooltipContent>Booking Reserved</TooltipContent>
-                            </Tooltip>
-                          </th>
-                          <th className="border px-3 py-3 text-center">
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <div className="inline-flex items-center gap-1 cursor-help">
-                                  <span>CA</span>
+                                      <InfoIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                                    </div>
+                                  </TooltipTrigger>
 
-                                  <InfoIcon className="h-3.5 w-3.5 text-muted-foreground" />
-                                </div>
-                              </TooltipTrigger>
+                                  <TooltipContent>Cancel</TooltipContent>
+                                </Tooltip>
+                              </th>
+                              <th className="border px-3 py-3 text-center">
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <div className="inline-flex items-center gap-1 cursor-help">
+                                      <span>RF</span>
 
-                              <TooltipContent>Cancel</TooltipContent>
-                            </Tooltip>
-                          </th>
-                          <th className="border px-3 py-3 text-center">
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <div className="inline-flex items-center gap-1 cursor-help">
-                                  <span>RF</span>
+                                      <InfoIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                                    </div>
+                                  </TooltipTrigger>
 
-                                  <InfoIcon className="h-3.5 w-3.5 text-muted-foreground" />
-                                </div>
-                              </TooltipTrigger>
+                                  <TooltipContent>Refund</TooltipContent>
+                                </Tooltip>
+                              </th>
+                              <th className="border px-3 py-3 text-center">
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <div className="inline-flex items-center gap-1 cursor-help">
+                                      <span>EX</span>
 
-                              <TooltipContent>Refund</TooltipContent>
-                            </Tooltip>
-                          </th>
-                          <th className="border px-3 py-3 text-center">
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <div className="inline-flex items-center gap-1 cursor-help">
-                                  <span>EX</span>
+                                      <InfoIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                                    </div>
+                                  </TooltipTrigger>
 
-                                  <InfoIcon className="h-3.5 w-3.5 text-muted-foreground" />
-                                </div>
-                              </TooltipTrigger>
+                                  <TooltipContent>Expired</TooltipContent>
+                                </Tooltip>
+                              </th>
+                              <th className="border px-3 py-3 text-center">
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <div className="inline-flex items-center gap-1 cursor-help">
+                                      <span>WL</span>
 
-                              <TooltipContent>Expired</TooltipContent>
-                            </Tooltip>
-                          </th>
-                          <th className="border px-3 py-3 text-center">
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <div className="inline-flex items-center gap-1 cursor-help">
-                                  <span>WL</span>
+                                      <InfoIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                                    </div>
+                                  </TooltipTrigger>
 
-                                  <InfoIcon className="h-3.5 w-3.5 text-muted-foreground" />
-                                </div>
-                              </TooltipTrigger>
-
-                              <TooltipContent>Waiting List</TooltipContent>
-                            </Tooltip>
-                          </th>
-
+                                  <TooltipContent>Waiting List</TooltipContent>
+                                </Tooltip>
+                              </th>
+                            </>
+                          )}
                           <th className="border px-3 py-3 text-center">
                             Available
                           </th>
@@ -445,45 +457,49 @@ export default function SeatAvailabilityIndex({
                                   {schedule.max_pax}
                                 </td>
 
-                                <td className="border px-3 py-3 text-center">
-                                  {schedule.RS}
-                                </td>
+                                {!isAgent && (
+                                  <>
+                                    <td className="border px-3 py-3 text-center">
+                                      {schedule.RS}
+                                    </td>
 
-                                <td className="border px-3 py-3 text-center">
-                                  {schedule.WP}
-                                </td>
+                                    <td className="border px-3 py-3 text-center">
+                                      {schedule.WP}
+                                    </td>
 
-                                <td className="border px-3 py-3 text-center">
-                                  {schedule.WPA}
-                                </td>
+                                    <td className="border px-3 py-3 text-center">
+                                      {schedule.WPA}
+                                    </td>
 
-                                <td className="border px-3 py-3 text-center">
-                                  {schedule.DP}
-                                </td>
+                                    <td className="border px-3 py-3 text-center">
+                                      {schedule.DP}
+                                    </td>
 
-                                <td className="border px-3 py-3 text-center">
-                                  {schedule.FP}
-                                </td>
+                                    <td className="border px-3 py-3 text-center">
+                                      {schedule.FP}
+                                    </td>
 
-                                <td className="border px-3 py-3 text-center">
-                                  {schedule.BRS}
-                                </td>
+                                    <td className="border px-3 py-3 text-center">
+                                      {schedule.BRS}
+                                    </td>
 
-                                <td className="border px-3 py-3 text-center">
-                                  {schedule.CA}
-                                </td>
+                                    <td className="border px-3 py-3 text-center">
+                                      {schedule.CA}
+                                    </td>
 
-                                <td className="border px-3 py-3 text-center">
-                                  {schedule.RF}
-                                </td>
+                                    <td className="border px-3 py-3 text-center">
+                                      {schedule.RF}
+                                    </td>
 
-                                <td className="border px-3 py-3 text-center">
-                                  {schedule.EX}
-                                </td>
+                                    <td className="border px-3 py-3 text-center">
+                                      {schedule.EX}
+                                    </td>
 
-                                <td className="border px-3 py-3 text-center">
-                                  {schedule.WL}
-                                </td>
+                                    <td className="border px-3 py-3 text-center">
+                                      {schedule.WL}
+                                    </td>
+                                  </>
+                                )}
 
                                 <td className="border px-3 py-3 text-center">
                                   <span
@@ -505,7 +521,7 @@ export default function SeatAvailabilityIndex({
                         {item.schedules.length === 0 && (
                           <tr>
                             <td
-                              colSpan={16}
+                              colSpan={isAgent ? 4 : 14}
                               className="py-8 text-center text-muted-foreground"
                             >
                               No schedules found
