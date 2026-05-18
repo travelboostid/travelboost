@@ -60,16 +60,25 @@ function TravelDocumentCard({
   ) => {
     const file = e.target.files?.[0];
     if (file) {
-      onChange({ ...doc, [field]: file, [nameField]: file.name });
+      const pathField =
+        field === 'passportFile' ? 'passportFilePath' : 'visaFilePath';
+
+      onChange({
+        ...doc,
+        [field]: file,
+        [nameField]: file.name,
+        [pathField]: null,
+      });
     }
   };
 
   const handleFileRemove = (
     field: 'passportFile' | 'visaFile',
     nameField: 'passportFileName' | 'visaFileName',
+    pathField: 'passportFilePath' | 'visaFilePath',
     inputRef: React.RefObject<HTMLInputElement | null>,
   ) => {
-    onChange({ ...doc, [field]: null, [nameField]: '' });
+    onChange({ ...doc, [field]: null, [nameField]: '', [pathField]: null });
     if (inputRef.current) {
       inputRef.current.value = '';
     }
@@ -225,6 +234,7 @@ function TravelDocumentCard({
                     handleFileRemove(
                       'passportFile',
                       'passportFileName',
+                      'passportFilePath',
                       passportInputRef,
                     )
                   }
@@ -282,7 +292,12 @@ function TravelDocumentCard({
                 <button
                   type="button"
                   onClick={() =>
-                    handleFileRemove('visaFile', 'visaFileName', visaInputRef)
+                    handleFileRemove(
+                      'visaFile',
+                      'visaFileName',
+                      'visaFilePath',
+                      visaInputRef,
+                    )
                   }
                   className="shrink-0 rounded-full p-0.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
                 >

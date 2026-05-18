@@ -23,12 +23,18 @@ class SavedPassengerFactory extends Factory
 
         return [
             'user_id' => User::factory(),
+            'title' => $gender === UserGender::MALE->value ? 'Mr' : 'Ms',
             'first_name' => $this->faker->firstName($gender),
             'last_name' => $this->faker->lastName(),
             'gender' => $gender,
             'dob' => $this->faker->dateTimeBetween('-60 years', '-1 year')->format('Y-m-d'),
             'pob' => $this->faker->city(),
             'passport_number' => $this->faker->optional(0.7)->passthrough($this->faker->numerify('A########')),
+            'passport_issue_date' => $this->faker->optional(0.7)->dateTimeBetween('-5 years', '-1 year')?->format('Y-m-d'),
+            'passport_expiry_date' => $this->faker->optional(0.7)->dateTimeBetween('+1 year', '+8 years')?->format('Y-m-d'),
+            'visa_number' => $this->faker->optional(0.4)->bothify('VISA-#####'),
+            'passport_file_path' => null,
+            'visa_file_path' => null,
         ];
     }
 }

@@ -36,6 +36,7 @@ import type {
   BookingContact,
   BookingStatusCode,
   GuestEntry,
+  SavedPassengerOption,
   TravelDocumentEntry,
 } from '@/types/booking';
 import { calculateBookingPricing } from '@/utils/booking-calculations';
@@ -106,6 +107,22 @@ function findLatestBlankAdultGuest(guests: GuestEntry[]): GuestEntry | null {
   return null;
 }
 
+function makeDefaultTravelDocument(guestId: string): TravelDocumentEntry {
+  return {
+    guestId,
+    passportNumber: '',
+    passportIssueDate: '',
+    passportExpiryDate: '',
+    visaNumber: '',
+    passportFile: null,
+    passportFileName: '',
+    passportFilePath: null,
+    visaFile: null,
+    visaFileName: '',
+    visaFilePath: null,
+  };
+}
+
 function normalizePaymentValue(value: string | null | undefined): string {
   return (value ?? '').toLowerCase().replaceAll('_', ' ');
 }
@@ -149,9 +166,12 @@ export default function Page() {
     paidAmount,
     remainingBalance,
     bookingConflict,
+    savedPassengers,
     flash,
   } = usePage<any>().props as any;
   const user = auth?.user;
+  const savedPassengerOptions = (savedPassengers ??
+    []) as SavedPassengerOption[];
   const [paymentResult, setPaymentResult] =
     useState<BookingPaymentResultData | null>(
       () => flash?.bookingPaymentResult ?? null,
@@ -353,19 +373,7 @@ export default function Page() {
       guests.map((g) => {
         const existing = previousDocs.find((d) => d.guestId === g.id);
 
-        return (
-          existing ?? {
-            guestId: g.id,
-            passportNumber: '',
-            passportIssueDate: '',
-            passportExpiryDate: '',
-            visaNumber: '',
-            passportFile: null,
-            passportFileName: '',
-            visaFile: null,
-            visaFileName: '',
-          }
-        );
+        return existing ?? makeDefaultTravelDocument(g.id);
       }),
     );
   }, [guests]);
@@ -607,6 +615,37 @@ export default function Page() {
   const handleGuestUpdate = useCallback((updated: GuestEntry) => {
     setGuests((prev) => prev.map((g) => (g.id === updated.id ? updated : g)));
   }, []);
+
+  const handleSavedPassengerSelect = useCallback(
+    (guestId: string, savedPassenger: SavedPassengerOption) => {
+      const nextDocument: TravelDocumentEntry = {
+        ...makeDefaultTravelDocument(guestId),
+        passportNumber: savedPassenger.passportNumber ?? '',
+        passportIssueDate: savedPassenger.passportIssueDate ?? '',
+        passportExpiryDate: savedPassenger.passportExpiryDate ?? '',
+        visaNumber: savedPassenger.visaNumber ?? '',
+        passportFileName: savedPassenger.passportFileName ?? '',
+        passportFilePath: savedPassenger.passportFilePath ?? null,
+        visaFileName: savedPassenger.visaFileName ?? '',
+        visaFilePath: savedPassenger.visaFilePath ?? null,
+      };
+
+      setTravelDocuments((previousDocs) => {
+        const existingDocument = previousDocs.find(
+          (document) => document.guestId === guestId,
+        );
+
+        if (!existingDocument) {
+          return [...previousDocs, nextDocument];
+        }
+
+        return previousDocs.map((document) =>
+          document.guestId === guestId ? nextDocument : document,
+        );
+      });
+    },
+    [],
+  );
 
   const handleGuestRemove = useCallback(
     (guestId: string) => {
@@ -1148,8 +1187,12 @@ export default function Page() {
           passport_issue_date: doc?.passportIssueDate || null,
           passport_expiry_date: doc?.passportExpiryDate || null,
           passport_file: doc?.passportFile ?? null,
+          passport_file_path: doc?.passportFile
+            ? null
+            : (doc?.passportFilePath ?? null),
           visa_number: doc?.visaNumber || null,
           visa_file: doc?.visaFile ?? null,
+          visa_file_path: doc?.visaFile ? null : (doc?.visaFilePath ?? null),
           room_type: g.roomTypeDescription || null,
           room_number: roomNumberByGuestId.get(g.id) ?? null,
           note: g.note || null,
@@ -1405,6 +1448,8 @@ export default function Page() {
                         contactGuestId={contactGuestId}
                         onContactGuestToggle={handleContactGuestToggle}
                         contactAsGuestAdded={contactGuestId !== null}
+                        savedPassengers={savedPassengerOptions}
+                        onSavedPassengerSelect={handleSavedPassengerSelect}
                       />
                     )}
                     {currentStep === 2 && (

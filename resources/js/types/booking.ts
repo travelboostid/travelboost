@@ -54,6 +54,24 @@ export interface GuestEntry {
   note: string;
 }
 
+export interface SavedPassengerOption {
+  id: number;
+  title: string | null;
+  firstName: string;
+  lastName: string | null;
+  dateOfBirth: string | null;
+  travelerType: 'adult' | 'child' | 'infant' | null;
+  placeOfBirth: string | null;
+  passportNumber: string | null;
+  passportIssueDate: string | null;
+  passportExpiryDate: string | null;
+  visaNumber: string | null;
+  passportFilePath: string | null;
+  passportFileName: string | null;
+  visaFilePath: string | null;
+  visaFileName: string | null;
+}
+
 export interface TravelDocumentEntry {
   guestId: string;
   passportNumber: string;
@@ -62,8 +80,10 @@ export interface TravelDocumentEntry {
   visaNumber: string;
   passportFile: File | null;
   passportFileName: string;
+  passportFilePath: string | null;
   visaFile: File | null;
   visaFileName: string;
+  visaFilePath: string | null;
 }
 
 export interface BedSlot {
