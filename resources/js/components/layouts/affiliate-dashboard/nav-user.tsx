@@ -16,20 +16,17 @@ export function NavUser() {
   const { auth } = usePageSharedDataProps();
   const { resolvedTheme, setTheme } = useTheme();
 
-  const { unreadNotificationsCount } = usePage<any>().props;
+  const { unreadNotificationsCount, affiliateUnreadNotificationsCount } =
+    usePage<any>().props;
 
   const user = auth?.user;
   const profile = user?.affiliate_profile || user?.affiliateProfile;
   const tier = profile?.tier?.replace(/[-_]/g, ' ') || 'Affiliator';
-
-  // const avatarUrl = profile?.profile_photo_path
-  //   ? `/storage/${profile.profile_photo_path}`
-  //   : user?.photo_url || DEFAULT_PHOTO;
-
-  // const profile = user?.affiliate_profile || user?.affiliateProfile;
   const avatarUrl = profile?.photo_url || null;
 
-  const hasUnread = unreadNotificationsCount > 0;
+  const notificationCount =
+    unreadNotificationsCount ?? affiliateUnreadNotificationsCount ?? 0;
+  const hasUnread = notificationCount > 0;
 
   return (
     <DropdownMenu>
@@ -56,10 +53,15 @@ export function NavUser() {
           </Avatar>
 
           {hasUnread && (
-            <span className="absolute -top-1 -right-1 flex h-3 w-3">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500 border-2 border-white dark:border-slate-900"></span>
-            </span>
+            <>
+              <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500 border-2 border-white dark:border-slate-900"></span>
+              </span>
+              <span className="absolute -bottom-1 -right-2 min-w-5 rounded-full bg-red-500 px-1.5 py-0.5 text-center text-[10px] font-bold leading-none text-white shadow-sm">
+                {notificationCount > 99 ? '99+' : notificationCount}
+              </span>
+            </>
           )}
         </div>
       </DropdownMenuTrigger>
@@ -106,10 +108,9 @@ export function NavUser() {
               </div>
               <span>Notifications</span>
             </div>
-            {/* Lencana Angka Notifikasi */}
             {hasUnread && (
               <span className="bg-red-100 text-red-600 text-[10px] font-bold px-1.5 py-0.5 rounded-full">
-                {unreadNotificationsCount} New
+                {notificationCount} New
               </span>
             )}
           </Link>

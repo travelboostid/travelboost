@@ -32,35 +32,38 @@ export default function FilterBar({
   };
 
   return (
-    <div className="flex flex-wrap items-center gap-3 bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+    <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:flex-row sm:flex-wrap sm:items-center">
       <Popover>
         <PopoverTrigger asChild>
           <Button
             variant="outline"
             size="sm"
-            className="gap-2 h-9 border-slate-200"
+            className="h-9 w-full gap-2 border-slate-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 sm:w-auto"
           >
             <CalendarIcon className="w-4 h-4" />
             {getDateRangeDisplayText(dateRange)}
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-auto p-0" align="start">
+        <PopoverContent
+          className="w-auto p-0 dark:border-slate-800 dark:bg-slate-900"
+          align="start"
+        >
           <Calendar
             mode="range"
             defaultMonth={dateRange?.from}
             selected={dateRange}
             onSelect={onDateRangeChange}
             numberOfMonths={2}
-            className="rounded-md border"
+            className="rounded-md border dark:border-slate-800"
           />
         </PopoverContent>
       </Popover>
 
       <Select value={statusFilter} onValueChange={onStatusFilterChange}>
-        <SelectTrigger className="w-[160px] h-9 border-slate-200 bg-white">
+        <SelectTrigger className="h-9 w-full border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 sm:w-[160px]">
           <SelectValue placeholder="All Status" />
         </SelectTrigger>
-        <SelectContent>
+        <SelectContent className="dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100">
           <SelectItem value="all">All Status</SelectItem>
           <SelectItem value="requested">Requested</SelectItem>
           <SelectItem value="approved">Approved</SelectItem>
@@ -71,12 +74,12 @@ export default function FilterBar({
         </SelectContent>
       </Select>
 
-      <div className="flex-1" />
+      <div className="hidden flex-1 sm:block" />
 
       <Button
         variant="ghost"
         size="sm"
-        className="gap-2 text-slate-600 hover:text-slate-900"
+        className="h-9 w-full gap-2 justify-center text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-slate-100 sm:w-auto"
         onClick={() =>
           onSortOrderChange(sortOrder === 'newest' ? 'oldest' : 'newest')
         }

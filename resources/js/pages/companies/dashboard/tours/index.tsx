@@ -77,6 +77,12 @@ import { toast } from 'sonner';
 
 dayjs.extend(relativeTime);
 
+const isActiveAvailability = (availability: any): boolean => {
+  const departureDate = availability?.schedule?.departure_date;
+  if (!departureDate) return false;
+  return departureDate > new Date().toISOString().split('T')[0];
+};
+
 function RowActions({ tour }: { tour: TourResource }) {
   const { company } = usePageSharedDataProps();
   const { errors } = usePage().props;
@@ -329,12 +335,20 @@ function StatusCell({ row }: { row: any }) {
   );
 }
 
-function SortableHeader({ column, title }: { column: any; title: string }) {
+function SortableHeader({
+  column,
+  title,
+  className,
+}: {
+  column: any;
+  title: React.ReactNode;
+  className?: string;
+}) {
   return (
     <Button
       variant="ghost"
       onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-      className="-ml-4 h-8 hover:bg-transparent text-primary font-bold data-[state=open]:bg-transparent"
+      className={`-ml-4 h-8 hover:bg-transparent text-primary font-bold data-[state=open]:bg-transparent ${className ?? ''}`}
     >
       <span>{title}</span>
       {column.getIsSorted() === 'desc' ? (
@@ -438,21 +452,33 @@ export const columns: ColumnDef<TourResource>[] = [
   {
     id: 'seats',
     accessorFn: (row: any) =>
-      row.availabilities?.reduce(
-        (sum: number, item: any) => sum + (Number(item.available) || 0),
-        0,
-      ) || 0,
+      row.availabilities
+        ?.filter((item: any) => isActiveAvailability(item))
+        .reduce(
+          (sum: number, item: any) => sum + (Number(item.available) || 0),
+          0,
+        ) || 0,
     header: ({ column }) => (
-      <SortableHeader column={column} title="Available Seats" />
+      <SortableHeader
+        column={column}
+        title={
+          <span className="inline-block text-left leading-tight">
+            Available
+            <br />
+            Seats
+          </span>
+        }
+        className="w-[92px] justify-start"
+      />
     ),
     cell: ({ getValue }) => {
       const seats = getValue<number>();
       return (
-        <div className="flex items-center gap-2">
+        <div className="flex min-w-[72px] items-center gap-1.5">
           <span
             className={`h-2 w-2 rounded-full ${seats > 0 ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-red-500'}`}
           />
-          <span className="font-semibold text-slate-700">{seats}</span>
+          <span className="text-sm font-semibold text-slate-700">{seats}</span>
         </div>
       );
     },

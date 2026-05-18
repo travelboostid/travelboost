@@ -20,8 +20,63 @@ export default function AgentMyTourCard({
   onViewBrochure,
   onChat,
   onShareFB,
+  onBook,
   startingChat,
 }: any) {
+  const handleBookClick = () => {
+    const normalizedTour = Array.isArray(tour?.schedules)
+      ? {
+          ...tour,
+          schedules: tour.schedules.map((schedule: any) => {
+            if (Number.isFinite(Number(schedule?.price))) {
+              return schedule;
+            }
+
+            const priceOptions = Array.isArray(schedule?.prices)
+              ? schedule.prices
+                  .map((item: any) => {
+                    const basePrice = Number(item?.price ?? 0);
+                    const fixedPromotion = Number(item?.promotion ?? 0);
+                    const ratePromotion = Number(item?.promotion_rate ?? 0);
+
+                    if (!Number.isFinite(basePrice) || basePrice <= 0) {
+                      return null;
+                    }
+
+                    if (ratePromotion > 0) {
+                      return Math.max(
+                        0,
+                        Math.round(
+                          basePrice - (basePrice * ratePromotion) / 100,
+                        ),
+                      );
+                    }
+
+                    if (fixedPromotion > 0) {
+                      return Math.max(
+                        0,
+                        Math.round(basePrice - fixedPromotion),
+                      );
+                    }
+
+                    return basePrice;
+                  })
+                  .filter(
+                    (value: number | null): value is number => value !== null,
+                  )
+              : [];
+
+            return {
+              ...schedule,
+              price: priceOptions.length > 0 ? Math.min(...priceOptions) : 0,
+            };
+          }),
+        }
+      : tour;
+
+    onBook?.(normalizedTour);
+  };
+
   return (
     <BaseTourCard
       tour={tour}
@@ -31,7 +86,7 @@ export default function AgentMyTourCard({
         <div className="px-4 py-2 border-t border-slate-50 dark:border-slate-800/60 space-y-1">
           <div className="flex items-center justify-between">
             <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase">
-              Vendor Status
+              Vendor Tour Status
             </span>
             <span
               className={`text-[9px] font-black uppercase ${tour.status === 'active' ? 'text-emerald-500' : 'text-red-500'}`}
@@ -58,8 +113,9 @@ export default function AgentMyTourCard({
               <Button
                 variant="default"
                 size="sm"
+                type="button"
                 className="flex-1 rounded-xl h-9 shadow-sm bg-primary text-primary-foreground hover:scale-105 active:scale-95"
-                onClick={() => {}}
+                onClick={handleBookClick}
               >
                 <IconCalendarEvent size={18} />
               </Button>

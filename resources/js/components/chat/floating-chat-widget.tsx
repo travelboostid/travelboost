@@ -149,7 +149,7 @@ export default function FloatingChatWidget() {
   let whatsappUrl = '';
   if (phone) {
     const message = encodeURIComponent(
-      `Halo, saya ingin bertanya tentang layanan Anda.`,
+      `Hello, I would like to inquire about your services.`,
     );
     whatsappUrl = `https://wa.me/${phone}?text=${message}`;
   }
@@ -169,16 +169,16 @@ export default function FloatingChatWidget() {
       <div
         ref={containerRef}
         className={cn(
-          'fixed right-0 bottom-4 z-50 flex flex-col items-end gap-3', // PERUBAHAN: right-0 dan items-end
+          'pointer-events-none fixed right-0 bottom-4 z-50 flex flex-col items-end gap-3',
           open && 'hidden',
         )}
       >
         <div
           className={cn(
-            'flex flex-col gap-2.5 transition-all duration-300 ease-out origin-bottom-right', // PERUBAHAN: origin-bottom-right
+            'origin-bottom-right flex flex-col gap-2.5 transition-all duration-300 ease-out',
             isExpanded
-              ? 'scale-100 opacity-100 translate-y-0'
-              : 'scale-75 opacity-0 translate-y-8 pointer-events-none',
+              ? 'pointer-events-auto translate-y-0 scale-100 opacity-100'
+              : 'pointer-events-none translate-y-8 scale-75 opacity-0',
           )}
         >
           {whatsappUrl && (
@@ -224,10 +224,10 @@ export default function FloatingChatWidget() {
         <button
           onClick={() => setIsExpanded(!isExpanded)}
           className={cn(
-            'group h-16 w-14 rounded-l-xl flex items-center justify-center transition-all duration-300 z-50 shadow-[0_0_25px_rgba(225,29,72,0.4)]', // PERUBAHAN: rounded-l-xl
+            'pointer-events-auto group z-50 flex h-16 w-14 items-center justify-center rounded-l-xl shadow-[0_0_25px_rgba(225,29,72,0.4)] transition-all duration-300',
             isExpanded
               ? 'bg-slate-800 text-white shadow-none'
-              : 'bg-gradient-to-l from-primary to-rose-500 text-white hover:w-16 custom-pulse', // PERUBAHAN: bg-gradient-to-l
+              : 'custom-pulse bg-gradient-to-l from-primary to-rose-500 text-white hover:w-16',
           )}
         >
           <MessageSquareIcon

@@ -21,10 +21,18 @@ import { useForm } from '@inertiajs/react';
 import { Trash2Icon } from 'lucide-react';
 import { useState } from 'react';
 
-export default function DeleteTeamButton({ team }: { team: any }) {
+export default function DeleteTeamButton({
+  team,
+  disabled = false,
+}: {
+  team: any;
+  disabled?: boolean;
+}) {
   const { company } = usePageSharedDataProps();
   const [open, setOpen] = useState(false);
   const form = useForm();
+  const shouldDisable = disabled || team.is_owner;
+
   const handleDelete = () => {
     form.delete(destroy({ company: company.username, team: team.id }).url, {
       preserveScroll: true,
@@ -33,35 +41,30 @@ export default function DeleteTeamButton({ team }: { team: any }) {
       },
     });
   };
-  const shouldDisabled = team.is_owner;
 
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
-      <AlertDialogTrigger disabled={shouldDisabled}>
-        <Tooltip>
-          <TooltipTrigger>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <AlertDialogTrigger asChild>
             <Button
-              disabled={shouldDisabled}
+              disabled={shouldDisable}
               variant="outline"
               size="icon"
               className="h-8 w-8 text-destructive"
-              aria-label="Edit"
+              aria-label="Delete team member"
             >
               <Trash2Icon className="size-4" />
             </Button>
-          </TooltipTrigger>
-          <TooltipContent>Delete</TooltipContent>
-        </Tooltip>
-      </AlertDialogTrigger>
+          </AlertDialogTrigger>
+        </TooltipTrigger>
+        <TooltipContent>Delete team member</TooltipContent>
+      </Tooltip>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>
-            Delete {team.status === 'pending' ? 'invitation' : 'user'}?
-          </AlertDialogTitle>
+          <AlertDialogTitle>Delete team member?</AlertDialogTitle>
           <AlertDialogDescription>
-            {team.status === 'pending'
-              ? 'This will cancel the invitation. This action cannot be undone.'
-              : 'This will permanently remove the user. This action cannot be undone.'}
+            This will remove the team member from this company immediately.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
