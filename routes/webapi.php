@@ -19,7 +19,7 @@ use App\Http\Controllers\Webapi\UserController;
 use App\Http\Controllers\Webapi\TourController;
 use App\Http\Controllers\Webapi\WalletController;
 use App\Http\Controllers\Webapi\WithdrawalController;
-use App\Http\Controllers\Webapi\Admin\CompanyController as AdminCompanyController;
+use App\Http\Controllers\Webapi\Admin\MiscController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('webapi')->group(function () {
@@ -42,7 +42,8 @@ Route::prefix('webapi')->group(function () {
   });
 
   Route::middleware(['web', 'auth'])->prefix('admin')->group(function () {
-    Route::get('companies/search', [AdminCompanyController::class, 'searchCompanies']);
+    Route::get('misc/search-companies', [MiscController::class, 'searchCompanies']);
+    Route::get('misc/search-resource-owners', [MiscController::class, 'searchResourceOwners']);
   });
 
   Route::middleware(['web', 'auth'])->prefix('geo')->group(function () {
