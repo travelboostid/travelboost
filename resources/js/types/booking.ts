@@ -40,6 +40,7 @@ export interface RoomType {
 
 export interface GuestEntry {
   id: string; // client-side id
+  bookingPassengerId?: number | null;
   type: 'adult' | 'child' | 'infant';
   title: string; // e.g. "Mr", "Mrs", "Master"
   firstName: string;
