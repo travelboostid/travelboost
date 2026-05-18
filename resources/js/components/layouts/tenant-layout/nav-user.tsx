@@ -23,8 +23,22 @@ import {
   UserIcon,
 } from 'lucide-react';
 
-export function NavUser() {
+export function NavUser({
+  onNavigateAway,
+}: {
+  onNavigateAway?: (href: string) => void;
+}) {
   const { auth } = usePageSharedDataProps();
+  const href = '/me';
+
+  const handleClick = (event: MouseEvent) => {
+    if (!onNavigateAway) {
+      return;
+    }
+
+    event.preventDefault();
+    onNavigateAway(href);
+  };
 
   const handleLogout = () => {
     router.post('/logout');

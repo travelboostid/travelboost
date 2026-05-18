@@ -141,7 +141,7 @@ class BookingService
     /**
      * @param  array<int, array<string, mixed>>  $passengers
      */
-    private function syncSavedPassengers(User $user, array $passengers): void
+    public function syncSavedPassengers(User $user, array $passengers): void
     {
         foreach ($passengers as $passenger) {
             $firstName = trim((string) data_get($passenger, 'first_name'));

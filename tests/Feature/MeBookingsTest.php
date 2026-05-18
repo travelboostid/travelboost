@@ -1,11 +1,14 @@
 <?php
 
 use App\Enums\BookingStatus;
+use App\Enums\MediaType;
+use App\Enums\PaymentStatus;
 use App\Enums\UserStatus;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Models\Booking;
 use App\Models\Company;
 use App\Models\Domain;
+use App\Models\Media;
 use App\Models\Tour;
 use App\Models\TourAvailability;
 use App\Models\TourSchedule;
@@ -224,6 +227,77 @@ test('my bookings deep links to a specific current booking number', function () 
         ->where('selectedBookingNumber', 'BKG-HIGHLIGHT-WPA')
         ->has('bookings.data', 1)
         ->where('bookings.data.0.booking_number', 'BKG-HIGHLIGHT-WPA'));
+});
+
+test('my bookings exposes paid balance deadlines document completeness and brochure payload', function () {
+    $user = User::factory()->create(['status' => UserStatus::ACTIVE]);
+    $vendor = Company::factory()->create(['type' => 'vendor', 'username' => 'derivedvendor']);
+    $vendor->settings()->updateOrCreate([
+        'company_id' => $vendor->id,
+    ], [
+        'full_payment_deadline' => 7,
+        'document_completed_deadline' => 5,
+    ]);
+    $document = Media::create([
+        'owner_type' => Company::class,
+        'owner_id' => $vendor->id,
+        'name' => 'Tibet itinerary.pdf',
+        'type' => MediaType::DOCUMENT,
+        'subtype' => 'tour-document',
+        'data' => [
+            'url' => '/storage/media/documents/tibet-itinerary.pdf',
+            'mediaType' => 'application/pdf',
+        ],
+    ]);
+    $departureDate = now()->addDays(20)->toDateString();
+    $tour = Tour::factory()->create([
+        'company_id' => $vendor->id,
+        'document_id' => $document->id,
+    ]);
+    $booking = Booking::factory()->create([
+        'user_id' => $user->id,
+        'vendor_id' => $vendor->id,
+        'tour_id' => $tour->id,
+        'status' => BookingStatus::DOWN_PAYMENT,
+        'booking_number' => 'BKG-DERIVED-DP',
+        'departure_date' => $departureDate,
+        'grand_total' => 1_000_000,
+    ]);
+    $booking->payments()->create([
+        'owner_type' => User::class,
+        'owner_id' => $user->id,
+        'provider' => 'manual',
+        'payment_method' => 'bank_transfer',
+        'amount' => 300_000,
+        'status' => PaymentStatus::PAID,
+    ]);
+    $booking->passengers()->create([
+        'first_name' => 'Missing',
+        'last_name' => 'Docs',
+        'pob' => 'Jakarta',
+        'price_category' => 'Adult Twin',
+        'price_amount' => 1_000_000,
+        'passport_number' => 'P1234567',
+    ]);
+
+    $response = $this->actingAs($user)->get('/mybookings?tab=current');
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->where('activeTab', 'current')
+        ->has('bookings.data', 1)
+        ->where('bookings.data.0.booking_number', 'BKG-DERIVED-DP')
+        ->where('bookings.data.0.paid_amount', 300000)
+        ->where('bookings.data.0.remaining_balance', 700000)
+        ->where('bookings.data.0.display_amount_label', 'Remaining balance')
+        ->where('bookings.data.0.display_amount', 700000)
+        ->where('bookings.data.0.needs_travel_documents', true)
+        ->where('bookings.data.0.payment_deadline.date', now()->addDays(13)->toDateString())
+        ->where('bookings.data.0.payment_deadline.days_remaining', 13)
+        ->where('bookings.data.0.document_deadline.date', now()->addDays(15)->toDateString())
+        ->where('bookings.data.0.document_deadline.days_remaining', 15)
+        ->where('bookings.data.0.tour.document.id', $document->id)
+        ->where('bookings.data.0.document_url', "/brochure/{$vendor->username}/{$tour->id}"));
 });
 
 test('my bookings lazily expires stale booking reserved rows before rendering', function () {

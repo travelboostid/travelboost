@@ -47,6 +47,7 @@ type BookingInfoCardProps = {
   currentStep?: number;
   displayTotalPrice?: number;
   totalPaid?: number;
+  remainingBalance?: number;
   timerStarted?: boolean;
 };
 
@@ -66,6 +67,7 @@ export default function BookingInfoCard({
   currentStep = 1,
   displayTotalPrice,
   totalPaid = 0,
+  remainingBalance = 0,
   timerStarted = false,
 }: BookingInfoCardProps) {
   const normalizeStatus = (s: string): BookingStatusCode => {
@@ -240,7 +242,7 @@ export default function BookingInfoCard({
           <p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
             Pricing
           </p>
-          <div className="grid grid-cols-1 gap-1 text-xs sm:text-sm md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-1 text-xs sm:text-sm md:grid-cols-3">
             <p>
               <span className="text-muted-foreground md:mr-2">
                 Total Price:
@@ -257,6 +259,14 @@ export default function BookingInfoCard({
               </span>{' '}
               <span className="font-bold text-primary">
                 <AnimatedPrice value={totalPaid ?? 0} />
+              </span>
+            </p>
+            <p>
+              <span className="text-muted-foreground md:mr-2">
+                Remaining Balance:
+              </span>{' '}
+              <span className="font-bold text-foreground">
+                <AnimatedPrice value={remainingBalance ?? 0} />
               </span>
             </p>
           </div>

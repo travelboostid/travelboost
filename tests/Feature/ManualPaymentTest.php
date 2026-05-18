@@ -513,6 +513,22 @@ test('booking create refresh exposes approved manual down payment result', funct
         ->where('bookingPaymentResult.paymentMode', 'manual')
         ->where('bookingPaymentResult.paidAmount', 250000)
         ->where('bookingPaymentResult.remainingBalance', 750000));
+
+    $this->actingAs($user)
+        ->getJson("/bookings/{$booking->id}/payment-result")
+        ->assertOk()
+        ->assertJsonPath('bookingPaymentResult.bookingStatus', 'down payment')
+        ->assertJsonPath('bookingPaymentResult.paymentStatus', 'paid')
+        ->assertJsonPath('bookingPaymentResult.paymentMode', 'manual')
+        ->assertJsonPath('bookingPaymentResult.paidAmount', 250000)
+        ->assertJsonPath('bookingPaymentResult.remainingBalance', 750000);
+
+    $appHost = env('APP_HOST', 'localhost');
+    $this->actingAs($user)
+        ->getJson("http://{$vendor->username}.{$appHost}/bookings/{$booking->id}/payment-result")
+        ->assertOk()
+        ->assertJsonPath('bookingPaymentResult.bookingStatus', 'down payment')
+        ->assertJsonPath('bookingPaymentResult.paymentStatus', 'paid');
 });
 
 test('booking create refresh exposes approved manual full payment result', function () {
@@ -594,6 +610,44 @@ test('booking create refresh exposes approved manual full payment result', funct
         ->where('bookingPaymentResult.paymentMode', 'manual')
         ->where('bookingPaymentResult.paidAmount', 1000000)
         ->where('bookingPaymentResult.remainingBalance', 0));
+
+    $this->actingAs($user)
+        ->getJson("/bookings/{$booking->id}/payment-result")
+        ->assertOk()
+        ->assertJsonPath('bookingPaymentResult.bookingStatus', 'full payment')
+        ->assertJsonPath('bookingPaymentResult.paymentStatus', 'paid')
+        ->assertJsonPath('bookingPaymentResult.paymentMode', 'manual')
+        ->assertJsonPath('bookingPaymentResult.paidAmount', 1000000)
+        ->assertJsonPath('bookingPaymentResult.remainingBalance', 0);
+});
+
+test('another customer cannot read a booking payment result', function () {
+    $user = User::factory()->create();
+    $otherUser = User::factory()->create();
+    $vendor = Company::factory()->create(['type' => 'vendor']);
+    $tour = Tour::factory()->create(['company_id' => $vendor->id]);
+    $booking = Booking::factory()->create([
+        'user_id' => $user->id,
+        'vendor_id' => $vendor->id,
+        'tour_id' => $tour->id,
+        'status' => BookingStatus::DOWN_PAYMENT,
+        'payment_mode' => 'manual',
+        'grand_total' => 1_000_000,
+    ]);
+
+    $booking->payments()->create([
+        'owner_type' => User::class,
+        'owner_id' => $user->id,
+        'provider' => 'manual',
+        'payment_method' => 'bank_transfer',
+        'amount' => 250_000,
+        'status' => 'paid',
+        'payload' => ['payment_type' => 'down_payment'],
+    ]);
+
+    $this->actingAs($otherUser)
+        ->getJson("/bookings/{$booking->id}/payment-result")
+        ->assertForbidden();
 });
 
 test('vendor can decline pending manual payment proof and cancel booking', function () {
