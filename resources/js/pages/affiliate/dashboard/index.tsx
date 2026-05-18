@@ -140,9 +140,9 @@ export default function AffiliateDashboardIndex({
     >
       <Head title="Dashboard" />
 
-      <div className="mx-auto max-w-7xl space-y-8">
+      <div className="relative mx-auto max-w-7xl space-y-8">
         {isPendingApproval && (
-          <div className="fixed inset-0 z-40 flex items-start justify-center bg-slate-950/10 px-4 pt-28 backdrop-blur-sm">
+          <div className="absolute inset-0 z-20 flex items-start justify-center rounded-[2rem] bg-slate-950/10 px-4 py-10 backdrop-blur-sm">
             <Card className="w-full max-w-xl rounded-3xl border-none bg-white/95 py-0 shadow-2xl ring-1 ring-slate-200 dark:bg-slate-900/95 dark:ring-slate-800">
               <CardContent className="p-8 text-center">
                 <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-amber-100 text-amber-600 dark:bg-amber-500/15 dark:text-amber-300">
