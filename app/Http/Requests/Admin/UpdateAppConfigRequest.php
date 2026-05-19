@@ -22,7 +22,6 @@ class UpdateAppConfigRequest extends FormRequest
   public function rules(): array
   {
     return [
-      'key' => 'nullable|string|unique:app_configs,key,' . $this->route('appConfig')->id,
       'description' => 'nullable|string',
       'value' => 'nullable|array',
     ];
