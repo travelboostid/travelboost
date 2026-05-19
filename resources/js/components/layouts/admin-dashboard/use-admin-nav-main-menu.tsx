@@ -56,6 +56,16 @@ export default function useAdminNavMainMenu() {
               title: 'Roles',
               urlOrAction: '/admin/database/roles',
             },
+            {
+              id: 'database.medias',
+              title: 'Media',
+              urlOrAction: '/admin/database/medias',
+            },
+            {
+              id: 'database.knowledge-bases',
+              title: 'Knowledge Bases',
+              urlOrAction: '/admin/database/knowledge-bases',
+            },
           ],
         },
         {

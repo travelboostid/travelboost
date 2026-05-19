@@ -2,7 +2,9 @@
 
 namespace App\Models;
 
+use App\Enums\WithdrawalMethod;
 use App\Enums\WithdrawalStatus;
+use App\Events\WithdrawalUpdated;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -14,8 +16,10 @@ class Withdrawal extends Model
     'bank_account_id',
     'wallet_id',
     'amount',
+    'method',
     'status',
     'note',
+    'processing_at',
     'cancelled_at',
     'rejected_at',
     'paid_at',
@@ -26,6 +30,7 @@ class Withdrawal extends Model
     'cancelled_at' => 'datetime',
     'rejected_at' => 'datetime',
     'paid_at' => 'datetime',
+    'method' => WithdrawalMethod::class,
     'status' => WithdrawalStatus::class,
   ];
 
@@ -43,4 +48,8 @@ class Withdrawal extends Model
   {
     return $this->belongsTo(Wallet::class);
   }
+
+  protected $dispatchesEvents = [
+    'updated' => WithdrawalUpdated::class,
+  ];
 }

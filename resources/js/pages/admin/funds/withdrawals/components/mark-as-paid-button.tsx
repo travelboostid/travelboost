@@ -9,14 +9,18 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
-
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { update } from '@/routes/admin/funds/withdrawals';
 import { useForm } from '@inertiajs/react';
 import { CheckIcon } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
-export default function ApproveButton({ data }: { data: any }) {
+export default function MarkAsPaidButton({ data }: { data: any }) {
   const [open, setOpen] = useState(false);
   const form = useForm({
     status: 'paid',
@@ -40,17 +44,24 @@ export default function ApproveButton({ data }: { data: any }) {
 
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
-      <AlertDialogTrigger asChild>
-        <Button size="icon" variant="default">
-          <CheckIcon />
-        </Button>
-      </AlertDialogTrigger>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <AlertDialogTrigger asChild>
+            <Button size="icon" variant="default">
+              <CheckIcon />
+            </Button>
+          </AlertDialogTrigger>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>Mark as paid</p>
+        </TooltipContent>
+      </Tooltip>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+          <AlertDialogTitle>Mark as Paid</AlertDialogTitle>
           <AlertDialogDescription>
-            This action will mark this withdrawal as paid and process the
-            transaction. This action cannot be undone.
+            This action will mark this withdrawal as paid. Ensure you already
+            transferred the money.
           </AlertDialogDescription>
         </AlertDialogHeader>
 

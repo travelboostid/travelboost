@@ -40,17 +40,14 @@ class UserController extends Controller
         $query->where('address', 'ilike', "%$address%");
       })
       ->when($validated['status'] ?? null, function ($query, $status) {
-        $selectedStatuses = explode(',', $status);
-        $query->whereIn('status', $selectedStatuses);
+        $query->whereIn('status', $status);
       })
       ->when($validated['company_holder'] ?? null, function ($query, $companyIds) {
-        $companyIds = explode(',', $companyIds);
         $query->whereIn('company_id', $companyIds);
       })
-      ->when($validated['roles'] ?? null, function ($query, $selectedRoles) {
-        $selectedRoles = explode(',', $selectedRoles);
-        $query->whereHas('roles', function ($q) use ($selectedRoles) {
-          $q->whereIn('name', $selectedRoles);
+      ->when($validated['roles'] ?? null, function ($query, $roles) {
+        $query->whereHas('roles', function ($q) use ($roles) {
+          $q->whereIn('name', $roles);
         });
       })
       ->when($validated['created_at'] ?? null, function ($query, $created_at) {

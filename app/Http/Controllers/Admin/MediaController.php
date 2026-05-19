@@ -3,29 +3,37 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Admin\IndexBankAccountRequest;
-use App\Http\Requests\Admin\UpdateBankAccountRequest;
-use App\Models\BankAccount;
+use App\Http\Requests\Admin\BulkUpdateUserRequest;
+use App\Http\Requests\Admin\IndexMediaRequest;
+use App\Http\Requests\Admin\UpdateUserRequest;
 use App\Models\Company;
+use App\Models\Media;
 use App\Models\User;
-use Illuminate\Support\Carbon;
+use Carbon\Carbon;
+use DB;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 
-class BankAccountController extends Controller
+class MediaController extends Controller
 {
-  public function index(IndexBankAccountRequest $request)
+  /**
+   * Display a listing of the resource.
+   */
+  public function index(IndexMediaRequest $request)
   {
     $validated = $request->validated();
-
     $ownerTypes = [
       'user' => User::class,
       'company' => Company::class,
     ];
 
-    $data = BankAccount::query()
+    $data = Media::query()
       ->with(['owner'])
-      ->when($validated['provider'] ?? null, function ($query, $provider) {
-        $query->whereIn('provider', $provider);
+      ->when($validated['name'] ?? null, function ($query, $name) {
+        $query->where('name', 'ilike', "%$name%");
+      })
+      ->when($validated['type'] ?? null, function ($query, $status) {
+        $query->whereIn('type', $status);
       })
       ->when($validated['owner'] ?? null, function ($query, $owners) use ($ownerTypes) {
 
@@ -42,9 +50,6 @@ class BankAccountController extends Controller
               ->where('owner_id', $id)
           );
         }
-      })
-      ->when($validated['status'] ?? null, function ($query, $status) {
-        $query->whereIn('status', $status);
       })
       ->when($validated['created_at'] ?? null, function ($query, $created_at) {
         $range = explode(',', $created_at);
@@ -67,16 +72,9 @@ class BankAccountController extends Controller
         }
       })
       ->paginate($validated['per_page'] ?? 10);
-    return Inertia::render('admin/funds/bank-accounts/index', [
+
+    return Inertia::render('admin/database/medias/index', [
       'data' => $data,
     ]);
-  }
-
-  public function update(UpdateBankAccountRequest $request, BankAccount $bankAccount)
-  {
-    $validated = $request->validated();
-    $bankAccount->update($validated);
-
-    return redirect()->back()->with('success', 'Bank account updated successfully.');
   }
 }

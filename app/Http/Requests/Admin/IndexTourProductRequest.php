@@ -4,15 +4,14 @@ namespace App\Http\Requests\Admin;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class IndexBankAccountRequest extends FormRequest
+class IndexTourProductRequest extends FormRequest
 {
 
   public function prepareForValidation()
   {
     $this->merge([
-      'owner' => array_filter(explode(',', $this->input('owner', ''))),
+      'company' => array_filter(explode(',', $this->input('company', ''))),
       'status' => array_filter(explode(',', $this->input('status', ''))),
-      'provider' => array_filter(explode(',', $this->input('provider', ''))),
       'sort' => $this->input('sort') ?? '-id',
       'page' => $this->input('page') ?? 1,
       'per_page' => $this->input('per_page') ?? 10,
@@ -34,9 +33,10 @@ class IndexBankAccountRequest extends FormRequest
   public function rules(): array
   {
     return [
-      'owner' => ['nullable', 'array'],
+      'code' => ['nullable', 'code'],
+      'name' => ['nullable', 'string'],
+      'company' => ['nullable', 'array'],
       'status' => ['nullable', 'array'],
-      'provider' => ['nullable', 'array'],
       'created_at' => 'nullable|string|max:255',
       'sort' => [
         'nullable',
