@@ -166,6 +166,11 @@ export default function Page({ tour }: Props) {
     }
   }, [props.flash?.tab]);
 
+  // STATE
+  const [openDropdownIndex, setOpenDropdownIndex] = useState<number | null>(
+    null,
+  );
+
   const [continentId, setContinentId] = useState<number | null>(
     tour.continent_id ?? null,
   );
@@ -1157,25 +1162,30 @@ export default function Page({ tour }: Props) {
     }
   };
 
-  //search availability
-  const [searchDeparture, setSearchDeparture] = useState('');
+  // ================= search availability =================
+  const [searchDepartureFrom, setSearchDepartureFrom] = useState('');
+  const [searchDepartureTo, setSearchDepartureTo] = useState('');
 
-  // FILTER
+  // ================= filter availability =================
   const filteredData = useMemo(() => {
-    const today = new Date().toISOString().split('T')[0];
-
     return availability.filter((row) => {
-      // departure filter
-      const matchDeparture = searchDeparture
-        ? row.departure_date === searchDeparture
+      const departure = row.departure_date;
+
+      // FROM
+      const matchFrom = searchDepartureFrom
+        ? departure >= searchDepartureFrom
         : true;
 
-      return matchDeparture;
-    });
-  }, [availability, searchDeparture]);
+      // TO
+      const matchTo = searchDepartureTo ? departure <= searchDepartureTo : true;
 
-  //paging availability
+      return matchFrom && matchTo;
+    });
+  }, [availability, searchDepartureFrom, searchDepartureTo]);
+
+  // ================= pagination availability =================
   const [currentPage, setCurrentPage] = useState(1);
+
   const pageSize = 10;
 
   const totalPages = Math.ceil(filteredData.length / pageSize);
@@ -1185,55 +1195,93 @@ export default function Page({ tour }: Props) {
     currentPage * pageSize,
   );
 
-  //
-
   //search add ons
-  const [addOnsSearchDeparture, setAddOnsSearchDeparture] = useState('');
+  const [addOnsSearchDepartureFrom, setAddOnsSearchDepartureFrom] =
+    useState('');
 
-  //paging add ons
+  const [addOnsSearchDepartureTo, setAddOnsSearchDepartureTo] = useState('');
+
+  // paging add ons
   const addOnsPerPage = 10;
 
   const [currentAddOnsPage, setCurrentAddOnsPage] = useState(1);
 
-  const totalAddOnsPages = Math.ceil(schedules.length / addOnsPerPage);
+  // filter add ons
+  const filteredAddOnsSchedules = [...schedules]
+    .sort(
+      (a, b) =>
+        new Date(a.departure_date).getTime() -
+        new Date(b.departure_date).getTime(),
+    )
+    .filter((schedule) => {
+      const departure = schedule.departure_date;
 
-  const paginatedSchedules = schedules.slice(
+      const matchFrom = addOnsSearchDepartureFrom
+        ? departure >= addOnsSearchDepartureFrom
+        : true;
+
+      const matchTo = addOnsSearchDepartureTo
+        ? departure <= addOnsSearchDepartureTo
+        : true;
+
+      return matchFrom && matchTo;
+    });
+
+  // total pages add ons
+  const totalAddOnsPages = Math.ceil(
+    filteredAddOnsSchedules.length / addOnsPerPage,
+  );
+
+  // paginated result add ons
+  const paginatedAddOnsSchedules = filteredAddOnsSchedules.slice(
     (currentAddOnsPage - 1) * addOnsPerPage,
     currentAddOnsPage * addOnsPerPage,
   );
-  //
 
-  //filter add ons
-  const filteredAddOnsSchedules = paginatedSchedules.filter((schedule) => {
-    // FILTER DATE
-    const matchDeparture = addOnsSearchDeparture
-      ? schedule.departure_date === addOnsSearchDeparture
-      : true;
+  // ================= search schedule =================
+  const [searchDepartureFromTab2, setSearchDepartureFromTab2] = useState('');
 
-    return matchDeparture;
-  });
+  const [searchDepartureToTab2, setSearchDepartureToTab2] = useState('');
 
-  //paging schedule
-  const [searchDepartureTab2, setSearchDepartureTab2] = useState('');
+  // ================= pagination schedule =================
   const schedulePerPage = 10;
 
   const [currentSchedulePage, setCurrentSchedulePage] = useState(1);
 
+  // ================= filter schedule =================
   const filteredSchedules = schedules.filter((item) => {
-    if (!searchDepartureTab2) return true;
+    const departure = item.departure_date;
 
-    return item.departure_date === searchDepartureTab2;
+    // FROM
+    const matchFrom = searchDepartureFromTab2
+      ? departure >= searchDepartureFromTab2
+      : true;
+
+    // TO
+    const matchTo = searchDepartureToTab2
+      ? departure <= searchDepartureToTab2
+      : true;
+
+    return matchFrom && matchTo;
   });
 
+  // ================= total page schedule =================
   const totalSchedulePages = Math.ceil(
     filteredSchedules.length / schedulePerPage,
   );
 
+  // ================= paginated schedule =================
   const paginatedSchedulesTab = filteredSchedules.slice(
     (currentSchedulePage - 1) * schedulePerPage,
     currentSchedulePage * schedulePerPage,
   );
-  //
+
+  // ================= auto reset page schedule =================
+  useEffect(() => {
+    if (totalSchedulePages > 0 && currentSchedulePage > totalSchedulePages) {
+      setCurrentSchedulePage(1);
+    }
+  }, [currentSchedulePage, totalSchedulePages]);
 
   return (
     <CompanyDashboardLayout
@@ -1800,20 +1848,58 @@ export default function Page({ tour }: Props) {
 
                 <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2">
                   {/* LEFT */}
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-3">
                     <span className="text-sm text-muted-foreground">
-                      Search by departure date
+                      Departure Date
                     </span>
 
-                    <input
-                      type="date"
-                      value={searchDepartureTab2}
-                      onChange={(e) => {
-                        setSearchDepartureTab2(e.target.value);
-                        setCurrentSchedulePage(1);
-                      }}
-                      className="rounded-lg border px-3 py-2 text-sm"
-                    />
+                    {/* FROM */}
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground">
+                        From
+                      </span>
+
+                      <input
+                        type="date"
+                        value={searchDepartureFromTab2}
+                        onChange={(e) => {
+                          setSearchDepartureFromTab2(e.target.value);
+                          setCurrentSchedulePage(1);
+                        }}
+                        className="rounded-lg border px-3 py-2 text-sm"
+                      />
+                    </div>
+
+                    {/* TO */}
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground">To</span>
+
+                      <input
+                        type="date"
+                        value={searchDepartureToTab2}
+                        onChange={(e) => {
+                          setSearchDepartureToTab2(e.target.value);
+                          setCurrentSchedulePage(1);
+                        }}
+                        className="rounded-lg border px-3 py-2 text-sm"
+                      />
+                    </div>
+
+                    {/* RESET */}
+                    {(searchDepartureFromTab2 || searchDepartureToTab2) && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setSearchDepartureFromTab2('');
+                          setSearchDepartureToTab2('');
+                          setCurrentSchedulePage(1);
+                        }}
+                      >
+                        Reset
+                      </Button>
+                    )}
                   </div>
 
                   {/* RIGHT */}
@@ -1916,6 +2002,7 @@ export default function Page({ tour }: Props) {
                                       <option value="">Select Category</option>
 
                                       {(priceCategories || [])
+                                        .sort((a, b) => a.id - b.id)
                                         .filter((cat) => {
                                           const selectedIds = (
                                             item.prices || []
@@ -2121,7 +2208,12 @@ export default function Page({ tour }: Props) {
 
                             {/* ACTION */}
                             <td className="p-2">
-                              <DropdownMenu>
+                              <DropdownMenu
+                                open={openDropdownIndex === index}
+                                onOpenChange={(open) => {
+                                  setOpenDropdownIndex(open ? index : null);
+                                }}
+                              >
                                 <DropdownMenuTrigger asChild>
                                   <Button
                                     variant="ghost"
@@ -2149,7 +2241,11 @@ export default function Page({ tour }: Props) {
                                   {/* COPY */}
                                   <DropdownMenuItem
                                     className="cursor-pointer"
-                                    onClick={() => openCopyModal(index)}
+                                    onClick={() => {
+                                      openCopyModal(index);
+
+                                      setOpenDropdownIndex(null);
+                                    }}
                                   >
                                     <Copy className="mr-2 h-4 w-4" />
                                     Copy Schedule
@@ -2160,7 +2256,11 @@ export default function Page({ tour }: Props) {
                                   {/* DELETE */}
                                   <DropdownMenuItem
                                     className="cursor-pointer text-red-600 focus:bg-red-50 focus:text-red-600"
-                                    onClick={() => removeSchedule(index)}
+                                    onClick={() => {
+                                      removeSchedule(index);
+
+                                      setOpenDropdownIndex(null);
+                                    }}
                                   >
                                     <Trash2 className="mr-2 h-4 w-4" />
                                     Delete Schedule
@@ -2175,7 +2275,8 @@ export default function Page({ tour }: Props) {
                   </table>
                   <div className="flex items-center justify-between border-t px-4 py-3">
                     <div className="text-sm text-muted-foreground">
-                      Page {currentSchedulePage} of {totalSchedulePages}
+                      Page {totalSchedulePages === 0 ? 0 : currentSchedulePage}{' '}
+                      of {totalSchedulePages}
                     </div>
 
                     <div className="flex items-center gap-2">
@@ -2204,7 +2305,7 @@ export default function Page({ tour }: Props) {
 
                 {/* MOBILE VERSION */}
                 <div className="md:hidden space-y-4">
-                  {paginatedSchedules.map((item, pageIndex) => {
+                  {paginatedSchedulesTab.map((item, pageIndex) => {
                     const index =
                       (currentSchedulePage - 1) * schedulePerPage + pageIndex;
 
@@ -2577,20 +2678,58 @@ export default function Page({ tour }: Props) {
               <div className="space-y-4">
                 <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2">
                   {/* LEFT */}
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-3">
                     <span className="text-sm text-muted-foreground">
-                      Search by departure date
+                      Departure Date
                     </span>
 
-                    <input
-                      type="date"
-                      value={searchDeparture}
-                      onChange={(e) => {
-                        setSearchDeparture(e.target.value);
-                        setCurrentPage(1);
-                      }}
-                      className="rounded-lg border px-3 py-2 text-sm"
-                    />
+                    {/* FROM */}
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground">
+                        From
+                      </span>
+
+                      <input
+                        type="date"
+                        value={searchDepartureFrom}
+                        onChange={(e) => {
+                          setSearchDepartureFrom(e.target.value);
+                          setCurrentPage(1);
+                        }}
+                        className="rounded-lg border px-3 py-2 text-sm"
+                      />
+                    </div>
+
+                    {/* TO */}
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground">To</span>
+
+                      <input
+                        type="date"
+                        value={searchDepartureTo}
+                        onChange={(e) => {
+                          setSearchDepartureTo(e.target.value);
+                          setCurrentPage(1);
+                        }}
+                        className="rounded-lg border px-3 py-2 text-sm"
+                      />
+                    </div>
+
+                    {/* RESET */}
+                    {(searchDepartureFrom || searchDepartureTo) && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setSearchDepartureFrom('');
+                          setSearchDepartureTo('');
+                          setCurrentPage(1);
+                        }}
+                      >
+                        Reset Date
+                      </Button>
+                    )}
                   </div>
 
                   {/* RIGHT */}
@@ -3189,20 +3328,58 @@ export default function Page({ tour }: Props) {
               <div className="space-y-4">
                 <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2">
                   {/* LEFT */}
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <span className="text-sm text-muted-foreground">
-                      Search by departure date
+                      Departure Date
                     </span>
 
-                    <input
-                      type="date"
-                      value={addOnsSearchDeparture}
-                      onChange={(e) => {
-                        setAddOnsSearchDeparture(e.target.value);
-                        setCurrentAddOnsPage(1);
-                      }}
-                      className="rounded-lg border px-3 py-2 text-sm"
-                    />
+                    {/* FROM */}
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground">
+                        From
+                      </span>
+
+                      <input
+                        type="date"
+                        value={addOnsSearchDepartureFrom}
+                        onChange={(e) => {
+                          setAddOnsSearchDepartureFrom(e.target.value);
+                          setCurrentAddOnsPage(1);
+                        }}
+                        className="rounded-lg border px-3 py-2 text-sm"
+                      />
+                    </div>
+
+                    {/* TO */}
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground">To</span>
+
+                      <input
+                        type="date"
+                        value={addOnsSearchDepartureTo}
+                        onChange={(e) => {
+                          setAddOnsSearchDepartureTo(e.target.value);
+                          setCurrentAddOnsPage(1);
+                        }}
+                        className="rounded-lg border px-3 py-2 text-sm"
+                      />
+                    </div>
+
+                    {/* RESET */}
+                    {(addOnsSearchDepartureFrom || addOnsSearchDepartureTo) && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setAddOnsSearchDepartureFrom('');
+                          setAddOnsSearchDepartureTo('');
+                          setCurrentAddOnsPage(1);
+                        }}
+                      >
+                        Reset Date
+                      </Button>
+                    )}
                   </div>
 
                   {/* RIGHT */}
@@ -3213,7 +3390,7 @@ export default function Page({ tour }: Props) {
 
                 <div className="space-y-4">
                   <Accordion type="multiple" className="space-y-4">
-                    {filteredAddOnsSchedules.map((schedule) => {
+                    {paginatedAddOnsSchedules.map((schedule) => {
                       const rows = addOns[schedule.id] || [];
 
                       return (
@@ -3254,9 +3431,9 @@ export default function Page({ tour }: Props) {
                                 >
                                   <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                                     {/* LEFT CONTENT */}
-                                    <div className="grid flex-1 grid-cols-1 gap-4 md:grid-cols-2">
+                                    <div className="grid flex-1 grid-cols-1 gap-4 md:grid-cols-3">
                                       {/* DESCRIPTION */}
-                                      <div className="space-y-2 md:col-span-2">
+                                      <div className="space-y-2">
                                         <Label className="text-xs uppercase tracking-wide text-muted-foreground">
                                           Add Ons Description
                                         </Label>
