@@ -90,23 +90,30 @@ class TourController extends Controller
         ]);
     }
 
-    public function update(UpdateTourRequest $request, Company $company, Tour $tour)
-    {
-        if ($request->has('quick_update')) {
-            $payload = $request->all();
+  public function update(UpdateTourRequest $request, Company $company, Tour $tour)
+  {
+    if ($request->has('quick_update')) {
+      $payload = $request->only([
+        'status',
+        'category_id',
+      ]);
 
-            if (array_key_exists('status', $payload)) {
-                $tour->status = $payload['status'];
-            }
+      if (array_key_exists('category_id', $payload)) {
+        $payload['category_id'] = $payload['category_id'] ?: null;
+      }
 
-            $tour->save();
+      $tour->fill($payload);
+      $tour->save();
 
-            if ($tour->wasChanged('status')) {
-                $statusValue = is_object($tour->status) ? $tour->status->value : $tour->status;
+      if ($tour->wasChanged('status')) {
+        $statusValue = is_object($tour->status)
+          ? $tour->status->value
+          : $tour->status;
 
-                if ($statusValue === 'inactive') {
-                    AgentTour::where('tour_id', $tour->id)->update(['status' => 'inactive']);
-                }
+        if ($statusValue === 'inactive') {
+          AgentTour::where('tour_id', $tour->id)
+            ->update(['status' => 'inactive']);
+        }
 
                 $this->sendTourStatusNotification($tour);
             }
@@ -170,9 +177,19 @@ class TourController extends Controller
         ]);
     }
 
-    public function destroy(Company $company, Tour $tour)
-    {
-        $tour->delete();
+  public function destroy(Company $company, Tour $tour)
+  {
+     $hasBookings = DB::table('bookings')
+      ->where('tour_id', $tour->tour_id)
+      ->exists();
+
+    if ($hasBookings) {
+      return back()->withErrors([
+        'delete_error' => 'Cannot remove this tour from your catalog because it has existing bookings. Please cancel or complete bookings first.'
+      ]);
+    }
+
+    $tour->delete();
 
         return back();
     }

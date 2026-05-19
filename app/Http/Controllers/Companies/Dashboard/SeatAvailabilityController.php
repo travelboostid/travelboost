@@ -44,19 +44,7 @@ class SeatAvailabilityController extends Controller
 
                     if ($departureDate) {
                         $q->whereHas('schedule', function ($sq) use ($departureDate) {
-                            $sq->whereDate('departure_date', $departureDate);
-                        });
-                    }
-
-                    if ($status === 'active') {
-                        $q->whereHas('schedule', function ($sq) {
-                            $sq->whereDate('departure_date', '>', now()->toDateString());
-                        });
-                    }
-
-                    if ($status === 'inactive') {
-                        $q->whereHas('schedule', function ($sq) {
-                            $sq->whereDate('departure_date', '<=', now()->toDateString());
+                            $sq->whereDate('departure_date', '>=', $departureDate);
                         });
                     }
                 },
@@ -70,7 +58,7 @@ class SeatAvailabilityController extends Controller
 
             ->when($departureDate, function ($q) use ($departureDate) {
                 $q->whereHas('availabilities.schedule', function ($sq) use ($departureDate) {
-                    $sq->whereDate('departure_date', $departureDate);
+                    $sq->whereDate('departure_date', '>=', $departureDate);
                 });
             })
 

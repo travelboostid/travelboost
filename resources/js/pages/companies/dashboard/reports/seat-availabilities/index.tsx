@@ -203,7 +203,7 @@ export default function SeatAvailabilityIndex({
 
           <div>
             <label className="mb-1 block text-xs font-medium text-muted-foreground">
-              Departure Date
+              Departure Date From
             </label>
 
             <input

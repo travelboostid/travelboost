@@ -27,6 +27,17 @@ class CategoryController extends Controller
 
   public function store(StoreTourCategoryRequest $request, Company $company)
   {
+    $exists = TourCategory::query()
+        ->where('company_id', $company->id)
+        ->whereRaw('LOWER(name) = ?', [strtolower($request->name)])
+        ->exists();
+
+    if ($exists) {
+        return back()->withErrors([
+            'name' => 'Category name already exists for this company.'
+        ]);
+    }
+
     $company->tourCategories()->create($request->validated());
 
     return redirect()->back();
@@ -40,6 +51,16 @@ class CategoryController extends Controller
 
   public function destroy(Company $company, TourCategory $category)
   {
+    $usedInTours = \App\Models\Tour::query()
+        ->where('category_id', $category->id)
+        ->exists();
+
+    if ($usedInTours) {
+        return back()->withErrors([
+            'delete_error' => 'Category cannot be deleted because it is already used by tours.'
+        ]);
+    }
+    
     $category->delete();
     return redirect()->back();
   }

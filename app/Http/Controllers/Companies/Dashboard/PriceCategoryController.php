@@ -13,7 +13,7 @@ class PriceCategoryController extends Controller
     public function index(Request $request, Company $company)
     {
         $categories = PriceCategory::where('company_id', $company->id)
-            ->latest()
+            ->orderBy('id')
             ->get();
 
         return Inertia::render('companies/dashboard/price-categories/index', [
