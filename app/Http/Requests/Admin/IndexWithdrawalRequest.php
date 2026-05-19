@@ -10,6 +10,9 @@ class IndexWithdrawalRequest extends FormRequest
   public function prepareForValidation()
   {
     $this->merge([
+      'owner' => array_filter(explode(',', $this->input('owner', ''))),
+      'method' => array_filter(explode(',', $this->input('method', ''))),
+      'status' => array_filter(explode(',', $this->input('status', ''))),
       'sort' => $this->input('sort') ?? '-id',
       'page' => $this->input('page') ?? 1,
       'per_page' => $this->input('per_page') ?? 10,
@@ -31,7 +34,9 @@ class IndexWithdrawalRequest extends FormRequest
   public function rules(): array
   {
     return [
-      'status' => 'nullable|string|max:255',
+      'owner' => ['nullable', 'array'],
+      'method' => ['nullable', 'array'],
+      'status' => ['nullable', 'array'],
       'created_at' => 'nullable|string|max:255',
       'sort' => [
         'nullable',

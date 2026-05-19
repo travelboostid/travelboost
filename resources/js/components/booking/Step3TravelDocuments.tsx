@@ -60,16 +60,25 @@ function TravelDocumentCard({
   ) => {
     const file = e.target.files?.[0];
     if (file) {
-      onChange({ ...doc, [field]: file, [nameField]: file.name });
+      const pathField =
+        field === 'passportFile' ? 'passportFilePath' : 'visaFilePath';
+
+      onChange({
+        ...doc,
+        [field]: file,
+        [nameField]: file.name,
+        [pathField]: null,
+      });
     }
   };
 
   const handleFileRemove = (
     field: 'passportFile' | 'visaFile',
     nameField: 'passportFileName' | 'visaFileName',
+    pathField: 'passportFilePath' | 'visaFilePath',
     inputRef: React.RefObject<HTMLInputElement | null>,
   ) => {
-    onChange({ ...doc, [field]: null, [nameField]: '' });
+    onChange({ ...doc, [field]: null, [nameField]: '', [pathField]: null });
     if (inputRef.current) {
       inputRef.current.value = '';
     }
@@ -81,12 +90,12 @@ function TravelDocumentCard({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -10 }}
       transition={{ delay: guestIndex * 0.05 }}
-      className="rounded-xl border bg-card p-4 shadow-sm ring-1 ring-border/50"
+      className="w-full max-w-full overflow-hidden rounded-xl border bg-card p-4 shadow-sm ring-1 ring-border/50"
     >
-      <div className="mb-3 flex items-center gap-2">
+      <div className="mb-3 flex min-w-0 flex-wrap items-center gap-2">
         <div
           className={cn(
-            'flex size-7 items-center justify-center rounded-full text-xs font-bold',
+            'flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-bold',
             isAdult
               ? 'bg-primary/10 text-primary'
               : guestType === 'child'
@@ -96,13 +105,13 @@ function TravelDocumentCard({
         >
           {guestIndex + 1}
         </div>
-        <h4 className="text-sm font-semibold text-foreground">
+        <h4 className="min-w-0 flex-1 truncate text-sm font-semibold text-foreground">
           {guestName || `Guest ${guestIndex + 1}`}
         </h4>
         <Badge
           variant="secondary"
           className={cn(
-            'px-2 py-0 text-[10px] font-bold uppercase',
+            'shrink-0 px-2 py-0 text-[10px] font-bold uppercase',
             isAdult
               ? 'bg-primary/10 text-primary'
               : guestType === 'child'
@@ -114,9 +123,9 @@ function TravelDocumentCard({
         </Badge>
       </div>
 
-      <div className="grid gap-6 sm:grid-cols-2">
+      <div className="grid min-w-0 gap-4 md:grid-cols-2">
         {/* Left: Passport */}
-        <div className="flex flex-col gap-3">
+        <div className="flex min-w-0 flex-col gap-3">
           <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
             Passport
           </p>
@@ -130,7 +139,7 @@ function TravelDocumentCard({
               onChange={(e) =>
                 onChange({ ...doc, passportNumber: e.target.value })
               }
-              className="h-9 text-sm"
+              className="h-9 w-full min-w-0 max-w-full text-sm"
             />
           </div>
           <div className="grid gap-1">
@@ -143,7 +152,7 @@ function TravelDocumentCard({
               onChange={(e) =>
                 onChange({ ...doc, passportIssueDate: e.target.value })
               }
-              className="h-9 text-sm"
+              className="h-9 w-full min-w-0 max-w-full text-sm"
             />
           </div>
           <div className="grid gap-1">
@@ -173,7 +182,7 @@ function TravelDocumentCard({
                 onChange({ ...doc, passportExpiryDate: e.target.value })
               }
               className={cn(
-                'h-9 text-sm',
+                'h-9 w-full min-w-0 max-w-full text-sm',
                 doc.passportExpiryDate &&
                   departureDate &&
                   (() => {
@@ -214,9 +223,9 @@ function TravelDocumentCard({
               }
             />
             {doc.passportFileName ? (
-              <div className="flex items-center gap-2 rounded-lg border bg-muted/30 px-3 py-2">
+              <div className="flex min-w-0 max-w-full items-center gap-2 overflow-hidden rounded-lg border bg-muted/30 px-3 py-2">
                 <FileTextIcon className="size-4 shrink-0 text-primary" />
-                <span className="flex-1 truncate text-xs text-foreground">
+                <span className="min-w-0 flex-1 truncate text-xs text-foreground">
                   {doc.passportFileName}
                 </span>
                 <button
@@ -225,6 +234,7 @@ function TravelDocumentCard({
                     handleFileRemove(
                       'passportFile',
                       'passportFileName',
+                      'passportFilePath',
                       passportInputRef,
                     )
                   }
@@ -237,17 +247,17 @@ function TravelDocumentCard({
               <button
                 type="button"
                 onClick={() => passportInputRef.current?.click()}
-                className="flex items-center gap-2 rounded-lg border border-dashed px-3 py-2 text-xs text-muted-foreground transition-colors hover:border-primary/40 hover:bg-primary/5 hover:text-primary"
+                className="flex min-w-0 max-w-full items-center gap-2 overflow-hidden rounded-lg border border-dashed px-3 py-2 text-xs text-muted-foreground transition-colors hover:border-primary/40 hover:bg-primary/5 hover:text-primary"
               >
-                <UploadCloudIcon className="size-3.5" />
-                Upload file
+                <UploadCloudIcon className="size-3.5 shrink-0" />
+                <span className="truncate">Upload file</span>
               </button>
             )}
           </div>
         </div>
 
         {/* Right: Visa */}
-        <div className="flex flex-col gap-3">
+        <div className="flex min-w-0 flex-col gap-3">
           <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
             Visa
           </p>
@@ -259,7 +269,7 @@ function TravelDocumentCard({
               placeholder="e.g. V98765432"
               value={doc.visaNumber}
               onChange={(e) => onChange({ ...doc, visaNumber: e.target.value })}
-              className="h-9 text-sm"
+              className="h-9 w-full min-w-0 max-w-full text-sm"
             />
           </div>
           <div className="grid gap-1">
@@ -274,15 +284,20 @@ function TravelDocumentCard({
               onChange={(e) => handleFileSelect('visaFile', 'visaFileName', e)}
             />
             {doc.visaFileName ? (
-              <div className="flex items-center gap-2 rounded-lg border bg-muted/30 px-3 py-2">
+              <div className="flex min-w-0 max-w-full items-center gap-2 overflow-hidden rounded-lg border bg-muted/30 px-3 py-2">
                 <FileTextIcon className="size-4 shrink-0 text-primary" />
-                <span className="flex-1 truncate text-xs text-foreground">
+                <span className="min-w-0 flex-1 truncate text-xs text-foreground">
                   {doc.visaFileName}
                 </span>
                 <button
                   type="button"
                   onClick={() =>
-                    handleFileRemove('visaFile', 'visaFileName', visaInputRef)
+                    handleFileRemove(
+                      'visaFile',
+                      'visaFileName',
+                      'visaFilePath',
+                      visaInputRef,
+                    )
                   }
                   className="shrink-0 rounded-full p-0.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
                 >
@@ -293,10 +308,10 @@ function TravelDocumentCard({
               <button
                 type="button"
                 onClick={() => visaInputRef.current?.click()}
-                className="flex items-center gap-2 rounded-lg border border-dashed px-3 py-2 text-xs text-muted-foreground transition-colors hover:border-primary/40 hover:bg-primary/5 hover:text-primary"
+                className="flex min-w-0 max-w-full items-center gap-2 overflow-hidden rounded-lg border border-dashed px-3 py-2 text-xs text-muted-foreground transition-colors hover:border-primary/40 hover:bg-primary/5 hover:text-primary"
               >
-                <UploadCloudIcon className="size-3.5" />
-                Upload file
+                <UploadCloudIcon className="size-3.5 shrink-0" />
+                <span className="truncate">Upload file</span>
               </button>
             )}
           </div>
@@ -328,16 +343,18 @@ export default function Step3TravelDocuments({
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="space-y-6"
+      className="w-full max-w-full space-y-6 overflow-hidden"
     >
-      <div className="flex items-center gap-2">
-        <FileTextIcon className="size-5 text-primary" />
-        <h2 className="text-lg font-semibold">Travel Documents</h2>
+      <div className="flex min-w-0 items-center gap-2">
+        <FileTextIcon className="size-5 shrink-0 text-primary" />
+        <h2 className="min-w-0 truncate text-lg font-semibold">
+          Travel Documents
+        </h2>
       </div>
 
-      <div className="flex items-start gap-3 rounded-lg border border-blue-200/50 bg-blue-50/50 px-4 py-3 dark:border-blue-900/30 dark:bg-blue-950/20">
+      <div className="flex min-w-0 max-w-full items-start gap-3 overflow-hidden rounded-lg border border-blue-200/50 bg-blue-50/50 px-4 py-3 dark:border-blue-900/30 dark:bg-blue-950/20">
         <InfoIcon className="mt-0.5 size-4 shrink-0 text-blue-500" />
-        <div className="text-xs leading-relaxed text-blue-700 dark:text-blue-300">
+        <div className="min-w-0 text-xs leading-relaxed text-blue-700 dark:text-blue-300">
           <p className="font-semibold">
             These documents are optional and can be submitted later.
           </p>
@@ -350,7 +367,7 @@ export default function Step3TravelDocuments({
         </div>
       </div>
 
-      <div className="space-y-4">
+      <div className="w-full max-w-full space-y-4 overflow-hidden">
         {guests.map((guest, idx) => {
           const doc = travelDocuments.find((d) => d.guestId === guest.id);
           if (!doc) return null;

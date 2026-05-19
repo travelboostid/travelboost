@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Webapi;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\WalletResource;
-use Bavix\Wallet\Models\Wallet;
+use App\Models\Wallet;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 

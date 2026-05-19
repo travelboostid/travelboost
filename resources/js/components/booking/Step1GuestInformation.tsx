@@ -25,7 +25,12 @@ import {
   TITLE_OPTIONS,
 } from '@/constants/booking';
 import { cn } from '@/lib/utils';
-import type { BookingContact, GuestEntry, TourPrice } from '@/types/booking';
+import type {
+  BookingContact,
+  GuestEntry,
+  SavedPassengerOption,
+  TourPrice,
+} from '@/types/booking';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   AlertCircleIcon,
@@ -39,7 +44,7 @@ import {
   UserPlusIcon,
   XIcon,
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 const containerVariants = {
   hidden: {},
@@ -133,6 +138,8 @@ function GuestDetailForm({
   onRemove,
   tourPrices,
   departureDate,
+  savedPassengers,
+  onSavedPassengerSelect,
 }: {
   guest: GuestEntry;
   index: number;
@@ -140,8 +147,14 @@ function GuestDetailForm({
   onRemove?: () => void;
   tourPrices: TourPrice[];
   departureDate: string;
+  savedPassengers: SavedPassengerOption[];
+  onSavedPassengerSelect?: (
+    guestId: string,
+    savedPassenger: SavedPassengerOption,
+  ) => void;
 }) {
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [savedGuestDropdownOpen, setSavedGuestDropdownOpen] = useState(false);
   const isAdult = guest.type === 'adult';
   const isInfant = guest.type === 'infant';
   const titleOptions = TITLE_OPTIONS[guest.type] ?? [];
@@ -208,6 +221,43 @@ function GuestDetailForm({
   } else if (age !== null && age < 0) {
     ageError = 'Date of birth cannot be after departure date.';
   }
+
+  const filteredSavedPassengers = useMemo(() => {
+    const query = guest.firstName.trim().toLowerCase();
+
+    return savedPassengers
+      .filter((savedPassenger) => savedPassenger.travelerType === guest.type)
+      .filter((savedPassenger) => {
+        if (!query) {
+          return true;
+        }
+
+        return [
+          savedPassenger.firstName,
+          savedPassenger.lastName,
+          savedPassenger.passportNumber,
+          savedPassenger.visaNumber,
+        ]
+          .filter(Boolean)
+          .some((value) => value?.toLowerCase().includes(query));
+      })
+      .slice(0, 8);
+  }, [guest.firstName, guest.type, savedPassengers]);
+
+  const handleSavedPassengerSelect = (
+    savedPassenger: SavedPassengerOption,
+  ) => {
+    setSavedGuestDropdownOpen(false);
+    onChange({
+      ...guest,
+      title: savedPassenger.title ?? '',
+      firstName: savedPassenger.firstName,
+      lastName: savedPassenger.lastName ?? '',
+      dateOfBirth: savedPassenger.dateOfBirth ?? '',
+      placeOfBirth: savedPassenger.placeOfBirth ?? '',
+    });
+    onSavedPassengerSelect?.(guest.id, savedPassenger);
+  };
 
   return (
     <motion.div
@@ -314,12 +364,66 @@ function GuestDetailForm({
           <Label className="text-[11px] text-muted-foreground">
             First Name *
           </Label>
-          <Input
-            placeholder="John"
-            value={guest.firstName}
-            onChange={(e) => onChange({ ...guest, firstName: e.target.value })}
-            className="h-9 text-sm"
-          />
+          <div className="relative">
+            <Input
+              placeholder="John"
+              value={guest.firstName}
+              onFocus={() => {
+                if (savedPassengers.length > 0) {
+                  setSavedGuestDropdownOpen(true);
+                }
+              }}
+              onBlur={() => {
+                window.setTimeout(() => setSavedGuestDropdownOpen(false), 120);
+              }}
+              onChange={(e) => {
+                onChange({ ...guest, firstName: e.target.value });
+                if (savedPassengers.length > 0) {
+                  setSavedGuestDropdownOpen(true);
+                }
+              }}
+              className="h-9 text-sm"
+            />
+            {savedGuestDropdownOpen && filteredSavedPassengers.length > 0 && (
+              <div className="absolute left-0 right-0 top-full z-40 mt-1 overflow-hidden rounded-lg border bg-popover text-popover-foreground shadow-lg">
+                <div className="max-h-64 overflow-y-auto p-1">
+                  {filteredSavedPassengers.map((savedPassenger) => {
+                    const fullName = [
+                      savedPassenger.firstName,
+                      savedPassenger.lastName,
+                    ]
+                      .filter(Boolean)
+                      .join(' ');
+                    const meta = [
+                      savedPassenger.passportNumber
+                        ? `Passport ${savedPassenger.passportNumber}`
+                        : null,
+                      savedPassenger.visaNumber
+                        ? `Visa ${savedPassenger.visaNumber}`
+                        : null,
+                    ].filter(Boolean);
+
+                    return (
+                      <button
+                        key={savedPassenger.id}
+                        type="button"
+                        onMouseDown={(event) => event.preventDefault()}
+                        onClick={() => handleSavedPassengerSelect(savedPassenger)}
+                        className="flex w-full flex-col rounded-md px-3 py-2 text-left transition-colors hover:bg-accent hover:text-accent-foreground"
+                      >
+                        <span className="text-sm font-medium">{fullName}</span>
+                        {meta.length > 0 && (
+                          <span className="mt-0.5 text-[11px] text-muted-foreground">
+                            {meta.join(' | ')}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
         <div className="grid gap-1">
           <Label className="text-[11px] text-muted-foreground">
@@ -459,6 +563,11 @@ type Step1Props = {
   onContactGuestToggle?: (enabled: boolean) => void;
   contactAsGuestAdded?: boolean;
   onContactAsGuestAddedChange?: (value: boolean) => void;
+  savedPassengers?: SavedPassengerOption[];
+  onSavedPassengerSelect?: (
+    guestId: string,
+    savedPassenger: SavedPassengerOption,
+  ) => void;
 };
 
 export default function Step1GuestInformation({
@@ -481,6 +590,8 @@ export default function Step1GuestInformation({
   onContactGuestToggle,
   contactAsGuestAdded: controlledContactAsGuestAdded,
   onContactAsGuestAddedChange,
+  savedPassengers = [],
+  onSavedPassengerSelect,
 }: Step1Props) {
   const [uncontrolledContactAsGuestAdded, setUncontrolledContactAsGuestAdded] =
     useState(false);
@@ -540,19 +651,11 @@ export default function Step1GuestInformation({
     setContactAsGuestAdded(true);
   };
 
-  const hasBlankAdultGuest = guests.some(
-    (guest) =>
-      guest.type === 'adult' &&
-      guest.firstName.trim() === '' &&
-      guest.lastName.trim() === '',
-  );
   const hasSeatForContactGuest = adults + children < maxGuests;
   const canAddContactAsGuest =
     showAddAsGuest &&
     contact.name.trim() !== '' &&
-    (onContactGuestToggle
-      ? hasBlankAdultGuest || hasSeatForContactGuest
-      : hasBlankAdultGuest);
+    hasSeatForContactGuest;
 
   return (
     <motion.div
@@ -702,7 +805,7 @@ export default function Step1GuestInformation({
             sublabel="12 years and above"
             icon={UserIcon}
             value={adults}
-            min={1}
+            min={0}
             max={maxGuests}
             onChange={onAdultsChange}
           />
@@ -752,6 +855,8 @@ export default function Step1GuestInformation({
                   onRemove={() => onGuestRemove(guest.id)}
                   tourPrices={tourPrices}
                   departureDate={departureDate}
+                  savedPassengers={savedPassengers}
+                  onSavedPassengerSelect={onSavedPassengerSelect}
                 />
               ))}
             </motion.div>

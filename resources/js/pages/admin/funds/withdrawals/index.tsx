@@ -1,3 +1,4 @@
+import { adminSearchResourceOwners } from '@/api/misc/misc';
 import { DataTable } from '@/components/data-table/data-table';
 import { DataTableColumnHeader } from '@/components/data-table/data-table-column-header';
 import { DataTableToolbar } from '@/components/data-table/data-table-toolbar';
@@ -7,13 +8,12 @@ import { useDataTable } from '@/hooks/use-data-table';
 import { formatIDR } from '@/lib/utils';
 import type { ColumnDef } from '@tanstack/react-table';
 import dayjs from 'dayjs';
-import relativeTime from 'dayjs/plugin/relativeTime';
 import { CalendarIcon, CircleDashedIcon } from 'lucide-react';
 import { useMemo } from 'react';
-import ApproveButton from './components/approve-button';
 import { EmptyWithdrawals } from './components/empty-withdrawals';
+import MarkAsPaidButton from './components/mark-as-paid-button';
+import ProcessButton from './components/process-button';
 import RejectButton from './components/reject-button';
-dayjs.extend(relativeTime);
 
 const STATUS_OPTIONS = [
   { label: 'Pending', value: 'pending' },
@@ -21,6 +21,11 @@ const STATUS_OPTIONS = [
   { label: 'Cancelled', value: 'cancelled' },
   { label: 'Rejected', value: 'rejected' },
   { label: 'Paid', value: 'paid' },
+];
+
+const METHOD_OPTIONS = [
+  { label: 'Auto', value: 'auto' },
+  { label: 'Manual Transfer', value: 'manual' },
 ];
 
 type WithdrawalsPageProps = {
@@ -34,7 +39,6 @@ type WithdrawalsPageProps = {
 };
 
 export default function WithdrawalsPage({ data }: WithdrawalsPageProps) {
-  console.log('Withdrawals data:', data); // Debugging log
   const columns = useMemo<ColumnDef<any>[]>(
     () => [
       {
@@ -62,12 +66,40 @@ export default function WithdrawalsPage({ data }: WithdrawalsPageProps) {
         enableSorting: true,
         enableHiding: false,
       },
+
       {
-        id: 'requester',
+        id: 'owner',
+        accessorKey: 'owner',
         header: ({ column }) => (
           <DataTableColumnHeader column={column} label="Requester" />
         ),
         cell: ({ row }) => <div>{row.original.owner?.name ?? '-'}</div>,
+        meta: {
+          label: 'Requester',
+          variant: 'multiSelect',
+          options: async (query, currentValues) => {
+            const response = await adminSearchResourceOwners({
+              types: 'company,user',
+              keyword: query,
+              include_ids: Array.from(currentValues),
+            } as any);
+
+            const companies = response.data.companies as any[];
+            const users = response.data.users as any[];
+            const companyOptions = companies.map((c) => ({
+              label: c.name,
+              value: `company:${c.id}`,
+            }));
+            const userOptions = users.map((c) => ({
+              label: c.name,
+              value: `user:${c.id}`,
+            }));
+            return [...companyOptions, ...userOptions];
+          },
+          icon: CircleDashedIcon,
+        },
+        enableColumnFilter: true,
+        enableSorting: false,
       },
       {
         id: 'wallet',
@@ -75,6 +107,22 @@ export default function WithdrawalsPage({ data }: WithdrawalsPageProps) {
           <DataTableColumnHeader column={column} label="Wallet" />
         ),
         cell: ({ row }) => <div>{row.original.wallet?.name ?? '-'}</div>,
+      },
+      {
+        id: 'method',
+        accessorKey: 'method',
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} label="Method" />
+        ),
+        cell: ({ cell }) => <div>{cell.getValue<any>()}</div>,
+        meta: {
+          label: 'Method',
+          placeholder: 'Search method...',
+          variant: 'multiSelect',
+          options: METHOD_OPTIONS,
+          icon: CircleDashedIcon,
+        },
+        enableColumnFilter: true,
       },
       {
         id: 'status',
@@ -132,7 +180,10 @@ export default function WithdrawalsPage({ data }: WithdrawalsPageProps) {
           return (
             <div className="flex gap-2">
               {row.original.status === 'pending' && (
-                <ApproveButton data={row.original} />
+                <ProcessButton data={row.original} />
+              )}
+              {row.original.status === 'processing' && (
+                <MarkAsPaidButton data={row.original} />
               )}
               {row.original.status === 'pending' && (
                 <RejectButton data={row.original} />

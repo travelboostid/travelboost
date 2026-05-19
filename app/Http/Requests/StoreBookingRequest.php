@@ -28,7 +28,7 @@ class StoreBookingRequest extends FormRequest
             'booking_number' => ['required', 'string'],
             'tour_id' => ['required', 'exists:tours,id'],
             'departure_date' => ['required', 'date', 'after_or_equal:today'],
-            'pax_adult' => ['required', 'integer', 'min:1'],
+            'pax_adult' => ['required', 'integer', 'min:0'],
             'pax_child' => ['required', 'integer', 'min:0'],
             'pax_infant' => ['required', 'integer', 'min:0'],
             'vendor_id' => ['nullable', 'exists:companies,id'],

@@ -10,6 +10,9 @@ class IndexUserRequest extends FormRequest
   public function prepareForValidation()
   {
     $this->merge([
+      'company_holder' => array_filter(explode(',', $this->input('company_holder', ''))),
+      'roles' => array_filter(explode(',', $this->input('roles', ''))),
+      'status' => array_filter(explode(',', $this->input('status', ''))),
       'sort' => $this->input('sort') ?? '-id',
       'page' => $this->input('page') ?? 1,
       'per_page' => $this->input('per_page') ?? 10,
@@ -31,14 +34,14 @@ class IndexUserRequest extends FormRequest
   public function rules(): array
   {
     return [
-      'company_holder' => 'nullable|string|max:255', // expecting comma-separated company IDs
+      'company_holder' => 'nullable|array', // expecting comma-separated company IDs
       'name' => 'nullable|string|max:255',
       'email' => 'nullable|string|email|max:255',
       'username' => 'nullable|string|max:255',
       'phone' => 'nullable|string|max:255',
-      'roles' => 'nullable|string|max:255',
+      'roles' => 'nullable|array',
       'address' => 'nullable|string|max:255',
-      'status' => 'nullable|string|max:255',
+      'status' => 'nullable|array',
       'created_at' => 'nullable|string|max:255',
       'sort' => [
         'nullable',

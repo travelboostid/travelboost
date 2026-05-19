@@ -4,15 +4,15 @@ namespace App\Enums;
 
 enum MediaImageSubtype: string
 {
-  case TOUR_IMAGE = 'tour_image';
+  case TOUR_IMAGE = 'tour-image';
   case PHOTO = 'photo';
   case OTHER = 'other';
 }
 
 enum MediaDocumentSubtype: string
 {
-  case TOUR_DOCUMENT = 'tour_document';
-  case IDENTITY_CARD = 'identity_card';
+  case TOUR_DOCUMENT = 'tour-document';
+  case IDENTITY_CARD = 'identity-card';
   case OTHER = 'other';
 }
 

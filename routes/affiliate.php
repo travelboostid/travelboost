@@ -63,6 +63,7 @@ Route::prefix('affiliate')
           Route::get('/wallet', [WalletController::class, 'index'])->name('wallet');
           Route::get('/transactions', [WalletTransactionsController::class, 'index'])->name('transactions');
           Route::get('/withdrawals', [WithdrawalController::class, 'index'])->name('withdrawals');
+          Route::get('/commission-history', [PaymentController::class, 'index'])->name('commission-history');
           Route::get('/payments', [PaymentController::class, 'index'])->name('payments');
 
           Route::prefix('bank-accounts')->name('bank-accounts.')->group(function () {

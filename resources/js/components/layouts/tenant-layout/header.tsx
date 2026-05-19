@@ -5,10 +5,15 @@ import { show as showLogin } from '@/routes/customers/login';
 import { show as showRegister } from '@/routes/customers/register';
 import { Link, router, usePage } from '@inertiajs/react';
 import { MenuIcon, XIcon } from 'lucide-react';
+import type { MouseEvent } from 'react';
 import { useEffect, useState } from 'react';
 import { NavUser } from './nav-user';
 
-export function Header() {
+export function Header({
+  onNavigateAway,
+}: {
+  onNavigateAway?: (href: string) => void;
+}) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const { auth, company, tenant } = usePageSharedDataProps();
@@ -47,12 +52,28 @@ export function Header() {
     }
   }, [auth?.user]);
 
+  const handleNavigate =
+    (href: string) => (event: MouseEvent) => {
+      if (!onNavigateAway) {
+        setIsMenuOpen(false);
+        return;
+      }
+
+      event.preventDefault();
+      setIsMenuOpen(false);
+      onNavigateAway(href);
+    };
+
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* LOGO */}
-          <Link href="/" className="flex items-center gap-2">
+          <Link
+            href="/"
+            className="flex items-center gap-2"
+            onClick={handleNavigate('/')}
+          >
             {tenantCompany?.photo_url ? (
               <img
                 src={tenantCompany.photo_url}
@@ -71,6 +92,7 @@ export function Header() {
           <nav className="hidden md:flex items-center gap-8 absolute left-1/2 -translate-x-1/2">
             <Link
               href="/"
+              onClick={handleNavigate('/')}
               className={`transition-colors font-medium ${
                 url === '/'
                   ? 'text-primary'
@@ -81,6 +103,7 @@ export function Header() {
             </Link>
             <Link
               href="/tours"
+              onClick={handleNavigate('/tours')}
               className={`transition-colors font-medium ${
                 url.startsWith('/tours')
                   ? 'text-primary'
@@ -91,6 +114,7 @@ export function Header() {
             </Link>
             <Link
               href="/mybookings"
+              onClick={handleNavigate('/mybookings')}
               className={`transition-colors font-medium ${
                 url.startsWith('/mybookings')
                   ? 'text-primary'
@@ -101,6 +125,7 @@ export function Header() {
             </Link>
             <Link
               href="/#about-us"
+              onClick={handleNavigate('/#about-us')}
               className="transition-colors font-medium text-muted-foreground hover:text-foreground"
             >
               About Us
@@ -110,7 +135,7 @@ export function Header() {
           {/* DESKTOP BUTTON - RIGHT ALIGNED */}
           <div className="hidden md:flex items-center justify-end gap-4">
             {auth?.user ? (
-              <NavUser />
+              <NavUser onNavigateAway={onNavigateAway} />
             ) : (
               <>
                 <Button asChild variant="ghost">
@@ -145,48 +170,48 @@ export function Header() {
             <nav className="flex flex-col gap-4">
               <Link
                 href="/"
+                onClick={handleNavigate('/')}
                 className={`transition-colors font-bold ${
                   url === '/'
                     ? 'text-primary'
                     : 'text-muted-foreground hover:text-foreground'
                 }`}
-                onClick={() => setIsMenuOpen(false)}
               >
                 Home
               </Link>
               <Link
                 href="/tours"
+                onClick={handleNavigate('/tours')}
                 className={`transition-colors font-bold ${
                   url.startsWith('/tours')
                     ? 'text-primary'
                     : 'text-muted-foreground hover:text-foreground'
                 }`}
-                onClick={() => setIsMenuOpen(false)}
               >
                 Tours
               </Link>
               <Link
                 href="/mybookings"
+                onClick={handleNavigate('/mybookings')}
                 className={`transition-colors font-bold ${
                   url.startsWith('/mybookings')
                     ? 'text-primary'
                     : 'text-muted-foreground hover:text-foreground'
                 }`}
-                onClick={() => setIsMenuOpen(false)}
               >
                 My Bookings
               </Link>
               <Link
                 href="/#about-us"
+                onClick={handleNavigate('/#about-us')}
                 className="transition-colors font-bold text-muted-foreground hover:text-foreground"
-                onClick={() => setIsMenuOpen(false)}
               >
                 About Us
               </Link>
 
               <div className="flex flex-col gap-2 pt-4 border-t border-border mt-2">
                 {auth?.user ? (
-                  <NavUser />
+                  <NavUser onNavigateAway={onNavigateAway} />
                 ) : (
                   <>
                     <Button

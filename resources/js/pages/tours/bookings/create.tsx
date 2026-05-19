@@ -8,6 +8,7 @@ import Step1GuestInformation, {
 } from '@/components/booking/Step1GuestInformation';
 import Step2RoomConfiguration, {
   autoRecommendRooms,
+  deserializeRoomsFromBooking,
   getRoomNumberByGuestId,
   serializeRoomsForBooking,
   type RoomConfig,
@@ -36,6 +37,7 @@ import type {
   BookingContact,
   BookingStatusCode,
   GuestEntry,
+  SavedPassengerOption,
   TravelDocumentEntry,
 } from '@/types/booking';
 import { calculateBookingPricing } from '@/utils/booking-calculations';
@@ -51,6 +53,7 @@ const DEFAULT_TNC = `1. The price shown is valid only for the selected departure
 4. All bookings are non-refundable unless stated otherwise.
 5. Changes to guest details or departure dates are subject to administrative fees.
 6. In the event of tour cancellation by the organizer, a full refund will be provided.`;
+const CONTACT_GUEST_ID = 'booking-contact-guest';
 
 function makeDefaultGuest(
   id: string,
@@ -88,22 +91,28 @@ function splitContactName(
   };
 }
 
-function isBlankAdultGuest(guest: GuestEntry): boolean {
-  return (
-    guest.type === 'adult' &&
-    guest.firstName.trim() === '' &&
-    guest.lastName.trim() === ''
-  );
+function makeDefaultTravelDocument(guestId: string): TravelDocumentEntry {
+  return {
+    guestId,
+    passportNumber: '',
+    passportIssueDate: '',
+    passportExpiryDate: '',
+    visaNumber: '',
+    passportFile: null,
+    passportFileName: '',
+    passportFilePath: null,
+    visaFile: null,
+    visaFileName: '',
+    visaFilePath: null,
+  };
 }
 
-function findLatestBlankAdultGuest(guests: GuestEntry[]): GuestEntry | null {
-  for (let index = guests.length - 1; index >= 0; index -= 1) {
-    if (isBlankAdultGuest(guests[index])) {
-      return guests[index];
-    }
+function fileNameFromPath(path: string | null | undefined): string {
+  if (!path) {
+    return '';
   }
 
-  return null;
+  return path.split(/[\\/]/).pop() ?? '';
 }
 
 function normalizePaymentValue(value: string | null | undefined): string {
@@ -149,9 +158,12 @@ export default function Page() {
     paidAmount,
     remainingBalance,
     bookingConflict,
+    savedPassengers,
     flash,
   } = usePage<any>().props as any;
   const user = auth?.user;
+  const savedPassengerOptions = (savedPassengers ??
+    []) as SavedPassengerOption[];
   const [paymentResult, setPaymentResult] =
     useState<BookingPaymentResultData | null>(
       () => flash?.bookingPaymentResult ?? null,
@@ -168,13 +180,18 @@ export default function Page() {
   // ─── Determine if we're resuming an existing booking ──────────────
   const isResuming = !!existingBooking && !!isResumingExistingBooking;
   const resumedStatus = existingBooking?.status ?? null;
+  const isDocumentUpdateMode =
+    urlParams.get('step') === 'documents' &&
+    (resumedStatus === 'down payment' || resumedStatus === 'full payment');
 
   // ─── Wizard state ───────────────────────────────────────────────────
   const [currentStep, setCurrentStep] = useState<WizardStepId>(
-    resumedStatus === 'down payment' ? 4 : 1,
+    isDocumentUpdateMode ? 3 : resumedStatus === 'down payment' ? 4 : 1,
   );
   const [direction, setDirection] = useState(1); // 1=forward, -1=back
-  const [hasAgreedToTnc, setHasAgreedToTnc] = useState(isResuming);
+  const [hasAgreedToTnc, setHasAgreedToTnc] = useState(
+    isResuming || isDocumentUpdateMode,
+  );
   const initialHoldSeconds =
     typeof remainingHoldSeconds === 'number'
       ? remainingHoldSeconds
@@ -186,6 +203,11 @@ export default function Page() {
     resumedStatus === 'reserved' || resumedStatus === 'booking reserved',
   );
   const [showStep2ConfirmModal, setShowStep2ConfirmModal] = useState(false);
+  const [pendingExitTarget, setPendingExitTarget] = useState<{
+    href?: string;
+    historyBack?: boolean;
+  } | null>(null);
+  const [isReleasingHold, setIsReleasingHold] = useState(false);
   const isBalancePayment = resumedStatus === 'down payment';
   const conflictStatus = normalizePaymentValue(bookingConflict?.status);
   const hasBookingConflict = Boolean(bookingConflict);
@@ -214,7 +236,7 @@ export default function Page() {
 
   // ─── Guests ─────────────────────────────────────────────────────────
   const [adults, setAdults] = useState<number>(
-    Number(existingBooking?.pax_adult ?? 1),
+    Number(existingBooking?.pax_adult ?? 0),
   );
   const [children, setChildren] = useState<number>(
     Number(existingBooking?.pax_child ?? 0),
@@ -278,6 +300,7 @@ export default function Page() {
 
       restored.push({
         id,
+        bookingPassengerId: Number(p.id),
         type,
         title: p.title ?? '',
         firstName: p.first_name ?? '',
@@ -297,13 +320,48 @@ export default function Page() {
   });
 
   // ─── Rooms ──────────────────────────────────────────────────────────
-  const [rooms, setRooms] = useState<RoomConfig[]>([]);
-  const roomsGuestFingerprint = useRef<string>('');
+  const [rooms, setRooms] = useState<RoomConfig[]>(() =>
+    deserializeRoomsFromBooking(
+      existingBooking?.rooms ?? [],
+      guests,
+      existingBooking?.passengers ?? [],
+    ),
+  );
+  const roomsGuestFingerprint = useRef<string>(
+    rooms.length > 0
+      ? JSON.stringify(guests.map((g) => `${g.id}-${g.priceCategory}`))
+      : '',
+  );
   const skipGuestSyncRef = useRef(false);
 
   // ─── Travel Documents ──────────────────────────────────────────────
   const [travelDocuments, setTravelDocuments] = useState<TravelDocumentEntry[]>(
-    [],
+    () =>
+      guests.map((guest) => {
+        const passenger = (existingBooking?.passengers ?? []).find(
+          (item: any) => Number(item.id) === Number(guest.bookingPassengerId),
+        );
+
+        if (!passenger) {
+          return makeDefaultTravelDocument(guest.id);
+        }
+
+        return {
+          ...makeDefaultTravelDocument(guest.id),
+          passportNumber: passenger.passport_number ?? '',
+          passportIssueDate: passenger.passport_issue_date
+            ? String(passenger.passport_issue_date).slice(0, 10)
+            : '',
+          passportExpiryDate: passenger.passport_expiry_date
+            ? String(passenger.passport_expiry_date).slice(0, 10)
+            : '',
+          visaNumber: passenger.visa_number ?? '',
+          passportFilePath: passenger.passport_file_path ?? null,
+          passportFileName: fileNameFromPath(passenger.passport_file_path),
+          visaFilePath: passenger.visa_file_path ?? null,
+          visaFileName: fileNameFromPath(passenger.visa_file_path),
+        };
+      }),
   );
 
   // ─── Sync guest array when pax counts change ────────────────────────
@@ -353,19 +411,7 @@ export default function Page() {
       guests.map((g) => {
         const existing = previousDocs.find((d) => d.guestId === g.id);
 
-        return (
-          existing ?? {
-            guestId: g.id,
-            passportNumber: '',
-            passportIssueDate: '',
-            passportExpiryDate: '',
-            visaNumber: '',
-            passportFile: null,
-            passportFileName: '',
-            visaFile: null,
-            visaFileName: '',
-          }
-        );
+        return existing ?? makeDefaultTravelDocument(g.id);
       }),
     );
   }, [guests]);
@@ -398,6 +444,15 @@ export default function Page() {
       ),
     [selectedAddOnsForPricing],
   );
+  const computedGrandTotal = pricing.totalPrice + selectedAddOnsTotal;
+  const snapshotGrandTotal =
+    Number(existingBooking?.grand_total ?? 0) > 0
+      ? Number(existingBooking.grand_total)
+      : computedGrandTotal;
+  const snapshotRemainingBalance =
+    paidAmountValue > 0 || remainingBalanceValue > 0
+      ? remainingBalanceValue
+      : Math.max(0, snapshotGrandTotal - paidAmountValue);
   const selectedSchedule = useMemo(() => {
     const schedules = Array.isArray(tour?.schedules) ? tour.schedules : [];
 
@@ -514,6 +569,69 @@ export default function Page() {
     return () => clearInterval(interval);
   }, [timerStarted]);
 
+  const navigateToExitTarget = useCallback(
+    (target: { href?: string; historyBack?: boolean }) => {
+      if (target.href) {
+        router.visit(target.href);
+        return;
+      }
+
+      window.history.back();
+    },
+    [],
+  );
+
+  const requestIntentionalExit = useCallback(
+    (
+      target: { href?: string; historyBack?: boolean },
+      options: { releaseHold?: boolean } = {},
+    ) => {
+      const shouldReleaseHold =
+        options.releaseHold === true &&
+        Boolean(existingBooking?.id) &&
+        timerStarted &&
+        !paymentResult &&
+        !isBalancePayment;
+
+      if (shouldReleaseHold) {
+        setPendingExitTarget(target);
+        return;
+      }
+
+      navigateToExitTarget(target);
+    },
+    [
+      existingBooking?.id,
+      isBalancePayment,
+      navigateToExitTarget,
+      paymentResult,
+      timerStarted,
+    ],
+  );
+
+  const confirmIntentionalExit = useCallback(() => {
+    if (!pendingExitTarget || !existingBooking?.id) {
+      return;
+    }
+
+    setIsReleasingHold(true);
+
+    router.post(
+      `/bookings/${existingBooking.id}/release-hold`,
+      {},
+      {
+        preserveScroll: true,
+        onFinish: () => {
+          setIsReleasingHold(false);
+          setTimerStarted(false);
+          const target = pendingExitTarget;
+          setPendingExitTarget(null);
+          navigateToExitTarget(target);
+        },
+      },
+    );
+  }, [existingBooking?.id, navigateToExitTarget, pendingExitTarget]);
+
   // ─── Navigation ─────────────────────────────────────────────────────
   const goNext = () => {
     if (currentStep === 1) {
@@ -591,22 +709,120 @@ export default function Page() {
   };
 
   const goBack = () => {
+    if (currentStep > 1) {
+      setDirection(-1);
+      setCurrentStep((s) => Math.max(1, s - 1) as WizardStepId);
+      return;
+    }
+
     if (currentStep === 1 && hasAgreedToTnc) {
+      if (isDocumentUpdateMode) {
+        router.visit(
+          `/mybookings?tab=current&booking_number=${encodeURIComponent(
+            bookingNumber,
+          )}`,
+        );
+        return;
+      }
+
       setHasAgreedToTnc(false);
       setTimeLeft((bookingTimeLimitMinutes ?? 10) * 60);
       return;
     }
+
     if (currentStep === 1) {
-      window.history.back();
+      requestIntentionalExit({ historyBack: true });
       return;
     }
-    setDirection(-1);
-    setCurrentStep((s) => Math.max(1, s - 1) as WizardStepId);
   };
+
+  const releaseHoldDialog = (
+    <AlertDialog
+      open={pendingExitTarget !== null}
+      onOpenChange={(open) => {
+        if (!open && !isReleasingHold) {
+          setPendingExitTarget(null);
+        }
+      }}
+    >
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Release reserved seats?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Leaving this booking will release your reserved seats and stop the
+            hold timer. You can start again from My Bookings if the departure is
+            still available.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={isReleasingHold}>
+            Stay here
+          </AlertDialogCancel>
+          <AlertDialogAction
+            onClick={(event) => {
+              event.preventDefault();
+              confirmIntentionalExit();
+            }}
+            disabled={isReleasingHold}
+          >
+            {isReleasingHold ? 'Releasing...' : 'Release and leave'}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
 
   const handleGuestUpdate = useCallback((updated: GuestEntry) => {
     setGuests((prev) => prev.map((g) => (g.id === updated.id ? updated : g)));
   }, []);
+
+  const handleAdultsChange = useCallback(
+    (nextAdults: number) => {
+      if (nextAdults <= 0) {
+        skipGuestSyncRef.current = true;
+        setGuests((previousGuests) =>
+          previousGuests.filter((guest) => guest.type !== 'adult'),
+        );
+        setAdults(0);
+        setContactGuestId(null);
+        return;
+      }
+
+      setAdults(nextAdults);
+    },
+    [],
+  );
+
+  const handleSavedPassengerSelect = useCallback(
+    (guestId: string, savedPassenger: SavedPassengerOption) => {
+      const nextDocument: TravelDocumentEntry = {
+        ...makeDefaultTravelDocument(guestId),
+        passportNumber: savedPassenger.passportNumber ?? '',
+        passportIssueDate: savedPassenger.passportIssueDate ?? '',
+        passportExpiryDate: savedPassenger.passportExpiryDate ?? '',
+        visaNumber: savedPassenger.visaNumber ?? '',
+        passportFileName: savedPassenger.passportFileName ?? '',
+        passportFilePath: savedPassenger.passportFilePath ?? null,
+        visaFileName: savedPassenger.visaFileName ?? '',
+        visaFilePath: savedPassenger.visaFilePath ?? null,
+      };
+
+      setTravelDocuments((previousDocs) => {
+        const existingDocument = previousDocs.find(
+          (document) => document.guestId === guestId,
+        );
+
+        if (!existingDocument) {
+          return [...previousDocs, nextDocument];
+        }
+
+        return previousDocs.map((document) =>
+          document.guestId === guestId ? nextDocument : document,
+        );
+      });
+    },
+    [],
+  );
 
   const handleGuestRemove = useCallback(
     (guestId: string) => {
@@ -637,64 +853,37 @@ export default function Page() {
     (enabled: boolean) => {
       if (enabled) {
         const contactNameParts = splitContactName(contact.name);
-        const blankAdultGuest = findLatestBlankAdultGuest(guests);
         const canAddNewAdult = adults + children < (availability ?? 99);
 
-        if (!contactNameParts || (!blankAdultGuest && !canAddNewAdult)) {
+        if (!contactNameParts || contactGuestId || !canAddNewAdult) {
           return;
         }
 
         const { firstName, lastName } = contactNameParts;
-
-        if (blankAdultGuest) {
-          skipGuestSyncRef.current = true;
-          setGuests((previousGuests) =>
-            previousGuests.map((guest) =>
-              guest.id === blankAdultGuest.id
-                ? {
-                    ...guest,
-                    firstName,
-                    lastName,
-                  }
-                : guest,
-            ),
-          );
-          setContactGuestId(blankAdultGuest.id);
-          return;
-        }
-
-        const guestId = `adult-${adults}`;
         skipGuestSyncRef.current = true;
         setGuests((prev) => [
           ...prev,
           {
-            ...makeDefaultGuest(guestId, 'adult'),
+            ...makeDefaultGuest(CONTACT_GUEST_ID, 'adult'),
             firstName,
             lastName,
           },
         ]);
         setAdults((prev) => prev + 1);
-        setContactGuestId(guestId);
+        setContactGuestId(CONTACT_GUEST_ID);
         return;
       }
 
       if (contactGuestId) {
         skipGuestSyncRef.current = true;
         setGuests((previousGuests) =>
-          previousGuests.map((guest) =>
-            guest.id === contactGuestId
-              ? {
-                  ...guest,
-                  firstName: '',
-                  lastName: '',
-                }
-              : guest,
-          ),
+          previousGuests.filter((guest) => guest.id !== contactGuestId),
         );
+        setAdults((prev) => Math.max(0, prev - 1));
         setContactGuestId(null);
       }
     },
-    [adults, availability, children, contact.name, contactGuestId, guests],
+    [adults, availability, children, contact.name, contactGuestId],
   );
 
   // ─── Validation ─────────────────────────────────────────────────────
@@ -727,7 +916,6 @@ export default function Page() {
     contact.phone.trim() !== '' &&
     phoneRegex.test(contact.phone.trim()) &&
     guests.length > 0 &&
-    adults > 0 &&
     !isAvailabilityExceeded &&
     extraBedValid &&
     guests.every((g) => {
@@ -1027,62 +1215,89 @@ export default function Page() {
     }
 
     setIsRefreshingPaymentResult(true);
-    router.visit(`${window.location.pathname}${window.location.search}`, {
-      preserveScroll: true,
-      preserveState: true,
-      onSuccess: (page) => {
-        const nextProps = page.props as any;
-        const refreshedPaymentResult =
-          (nextProps.bookingPaymentResult ??
-            nextProps.flash?.bookingPaymentResult) as
-            | BookingPaymentResultData
-            | null
-            | undefined;
-
-        if (refreshedPaymentResult) {
-          setPaymentResult(refreshedPaymentResult);
-          return;
+    void axios
+      .get<{ bookingPaymentResult?: BookingPaymentResultData }>(
+        `/bookings/${paymentResult.bookingId}/payment-result`,
+      )
+      .then((response) => {
+        if (response.data.bookingPaymentResult) {
+          setPaymentResult(response.data.bookingPaymentResult);
         }
-
-        const refreshedBooking = nextProps.existingBooking ?? null;
-        const bookingStatus =
-          refreshedBooking?.status ?? paymentResult.bookingStatus;
-        const normalizedStatus = normalizePaymentValue(bookingStatus);
-        const paymentStatus =
-          normalizedStatus === 'down payment' ||
-          normalizedStatus === 'full payment'
-            ? 'paid'
-            : normalizedStatus === 'cancelled'
-              ? 'failed'
-              : paymentResult.paymentStatus;
-        const grandTotal = Number(
-          refreshedBooking?.grand_total ?? paymentResult.grandTotal,
-        );
-        const nextPaidAmount = Number(
-          nextProps.paidAmount ?? paymentResult.paidAmount,
-        );
-        const nextRemainingBalance = Number(
-          nextProps.remainingBalance ??
-            Math.max(0, grandTotal - nextPaidAmount),
-        );
-
-        setPaymentResult({
-          ...paymentResult,
-          bookingId: refreshedBooking?.id ?? paymentResult.bookingId,
-          bookingNumber:
-            refreshedBooking?.booking_number ?? paymentResult.bookingNumber,
-          bookingStatus,
-          paymentStatus,
-          paymentMode:
-            refreshedBooking?.payment_mode ?? paymentResult.paymentMode,
-          grandTotal,
-          paidAmount: nextPaidAmount,
-          remainingBalance: nextRemainingBalance,
-        });
-      },
-      onFinish: () => setIsRefreshingPaymentResult(false),
-    });
+      })
+      .finally(() => setIsRefreshingPaymentResult(false));
   }, [paymentResult]);
+
+  const submitTravelDocumentsOnly = useCallback(() => {
+    if (!existingBooking?.id) {
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    const formData = new FormData();
+    let rowIndex = 0;
+
+    guests.forEach((guest) => {
+      if (!guest.bookingPassengerId) {
+        return;
+      }
+
+      const doc =
+        travelDocuments.find((document) => document.guestId === guest.id) ??
+        makeDefaultTravelDocument(guest.id);
+
+      formData.append(`passengers[${rowIndex}][id]`, String(guest.bookingPassengerId));
+      formData.append(
+        `passengers[${rowIndex}][passport_number]`,
+        doc.passportNumber,
+      );
+      formData.append(
+        `passengers[${rowIndex}][passport_issue_date]`,
+        doc.passportIssueDate,
+      );
+      formData.append(
+        `passengers[${rowIndex}][passport_expiry_date]`,
+        doc.passportExpiryDate,
+      );
+      formData.append(`passengers[${rowIndex}][visa_number]`, doc.visaNumber);
+
+      if (doc.passportFile) {
+        formData.append(
+          `passengers[${rowIndex}][passport_file]`,
+          doc.passportFile,
+        );
+      } else if (doc.passportFilePath) {
+        formData.append(
+          `passengers[${rowIndex}][passport_file_path]`,
+          doc.passportFilePath,
+        );
+      }
+
+      if (doc.visaFile) {
+        formData.append(`passengers[${rowIndex}][visa_file]`, doc.visaFile);
+      } else if (doc.visaFilePath) {
+        formData.append(
+          `passengers[${rowIndex}][visa_file_path]`,
+          doc.visaFilePath,
+        );
+      }
+
+      rowIndex += 1;
+    });
+
+    router.post(`/bookings/${existingBooking.id}/travel-documents`, formData, {
+      forceFormData: true,
+      preserveScroll: true,
+      onSuccess: () => {
+        router.visit(
+          `/mybookings?tab=current&booking_number=${encodeURIComponent(
+            bookingNumber,
+          )}`,
+        );
+      },
+      onFinish: () => setIsSubmitting(false),
+    });
+  }, [bookingNumber, existingBooking?.id, guests, travelDocuments]);
 
   const handlePayNow = (
     paymentType: PaymentType,
@@ -1148,8 +1363,12 @@ export default function Page() {
           passport_issue_date: doc?.passportIssueDate || null,
           passport_expiry_date: doc?.passportExpiryDate || null,
           passport_file: doc?.passportFile ?? null,
+          passport_file_path: doc?.passportFile
+            ? null
+            : (doc?.passportFilePath ?? null),
           visa_number: doc?.visaNumber || null,
           visa_file: doc?.visaFile ?? null,
+          visa_file_path: doc?.visaFile ? null : (doc?.visaFilePath ?? null),
           room_type: g.roomTypeDescription || null,
           room_number: roomNumberByGuestId.get(g.id) ?? null,
           note: g.note || null,
@@ -1266,7 +1485,11 @@ export default function Page() {
 
   if (!hasAgreedToTnc) {
     return (
-      <TenantLayout>
+      <TenantLayout
+        onNavigateAway={(href) =>
+          requestIntentionalExit({ href }, { releaseHold: true })
+        }
+      >
         <div className="min-h-screen bg-linear-to-b from-background via-background to-muted/30">
           <motion.div
             key="tnc"
@@ -1294,7 +1517,12 @@ export default function Page() {
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => window.history.back()}
+                  onClick={() =>
+                    requestIntentionalExit(
+                      { historyBack: true },
+                      { releaseHold: true },
+                    )
+                  }
                 >
                   Back
                 </Button>
@@ -1310,12 +1538,17 @@ export default function Page() {
             </div>
           </motion.div>
         </div>
+        {releaseHoldDialog}
       </TenantLayout>
     );
   }
 
   return (
-    <TenantLayout>
+    <TenantLayout
+      onNavigateAway={(href) =>
+        requestIntentionalExit({ href }, { releaseHold: true })
+      }
+    >
       <div className="min-h-screen bg-linear-to-b from-background via-background to-muted/30">
         <div className="mx-auto w-full max-w-5xl px-4 pt-4">
           <div className="flex flex-col md:flex-row md:items-start md:gap-4 lg:gap-6">
@@ -1364,11 +1597,8 @@ export default function Page() {
                   contactPhone={contact.phone}
                   pricing={pricing}
                   totalPaid={paidAmountValue}
-                  displayTotalPrice={
-                    currentStep === 4
-                      ? pricing.totalPrice + selectedAddOnsTotal
-                      : undefined
-                  }
+                  remainingBalance={snapshotRemainingBalance}
+                  displayTotalPrice={snapshotGrandTotal}
                   timeLeftSeconds={timeLeft}
                   currentStep={currentStep}
                   timerStarted={timerStarted}
@@ -1393,7 +1623,7 @@ export default function Page() {
                         adults={adults}
                         children={children}
                         infants={infants}
-                        onAdultsChange={setAdults}
+                        onAdultsChange={handleAdultsChange}
                         onChildrenChange={setChildren}
                         onInfantsChange={setInfants}
                         guests={guests}
@@ -1405,6 +1635,8 @@ export default function Page() {
                         contactGuestId={contactGuestId}
                         onContactGuestToggle={handleContactGuestToggle}
                         contactAsGuestAdded={contactGuestId !== null}
+                        savedPassengers={savedPassengerOptions}
+                        onSavedPassengerSelect={handleSavedPassengerSelect}
                       />
                     )}
                     {currentStep === 2 && (
@@ -1448,20 +1680,20 @@ export default function Page() {
 
               {/* Navigation */}
               {currentStep < 4 && (
-                <div className="flex items-center justify-between pb-12 pt-4">
+                <div className="flex flex-col gap-3 pb-28 pt-4 sm:flex-row sm:items-center sm:justify-between sm:pb-12">
                   {currentStep > 1 ? (
                     <Button
                       type="button"
                       variant="outline"
                       onClick={goBack}
-                      className="gap-2"
+                      className="w-full gap-2 sm:w-auto"
                     >
                       <ArrowLeftIcon className="size-4" /> Back
                     </Button>
                   ) : (
-                    <div />
+                    <div className="hidden sm:block" />
                   )}
-                  <div className="flex flex-col items-end gap-2">
+                  <div className="flex min-w-0 flex-col gap-2 sm:items-end">
                     {currentStep === 1 && isAvailabilityExceeded && (
                       <span className="text-sm font-semibold text-destructive">
                         Not enough availability. Only {availability} seats left.
@@ -1476,13 +1708,24 @@ export default function Page() {
                     <Button
                       type="button"
                       disabled={
+                        (currentStep === 3 &&
+                          isDocumentUpdateMode &&
+                          isSubmitting) ||
                         (currentStep === 1 && !canProceedStep1) ||
                         (currentStep === 2 && !canProceedStep2)
                       }
-                      onClick={goNext}
-                      className="gap-2"
+                      onClick={
+                        currentStep === 3 && isDocumentUpdateMode
+                          ? submitTravelDocumentsOnly
+                          : goNext
+                      }
+                      className="w-full gap-2 sm:w-auto"
                     >
-                      Next
+                      {currentStep === 3 && isDocumentUpdateMode
+                        ? isSubmitting
+                          ? 'Saving...'
+                          : 'Save Documents'
+                        : 'Next'}
                       <ArrowRightIcon className="size-4" />
                     </Button>
                   </div>
@@ -1528,6 +1771,8 @@ export default function Page() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        {releaseHoldDialog}
       </div>
     </TenantLayout>
   );

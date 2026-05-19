@@ -1,363 +1,248 @@
-import type { TourResource } from '@/api/model';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
+import { adminSearchResourceOwners } from '@/api/misc/misc';
+import { DataTable } from '@/components/data-table/data-table';
+import { DataTableColumnHeader } from '@/components/data-table/data-table-column-header';
+import { DataTableToolbar } from '@/components/data-table/data-table-toolbar';
 import AdminDashboardLayout from '@/components/layouts/admin-dashboard';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Input } from '@/components/ui/input';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+import { useDataTable } from '@/hooks/use-data-table';
 import { extractImageSrc } from '@/lib/utils';
-import TourDetailDialog from '@/pages/companies/dashboard/tours/components/tour-detail-dialog';
-import { Head, Link, router } from '@inertiajs/react';
-import {
-  flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  useReactTable,
-  type ColumnDef,
-  type ColumnFiltersState,
-  type SortingState,
-  type VisibilityState,
-} from '@tanstack/react-table';
+import type { Option } from '@/types/data-table';
+import type { ColumnDef } from '@tanstack/react-table';
 import dayjs from 'dayjs';
-import relativeTime from 'dayjs/plugin/relativeTime';
-import { ChevronDown, EditIcon, EyeIcon, TrashIcon } from 'lucide-react';
-import * as React from 'react';
-import { toast } from 'sonner';
-dayjs.extend(relativeTime);
+import { CalendarIcon, CircleDashedIcon, TextIcon } from 'lucide-react';
+import { useMemo } from 'react';
+import { EmptyProducts } from './components/empty-products';
 
-function RowActions({ tour }: { tour: TourResource }) {
-  const handleDelete = () => {
-    router.delete(`/admin/tours/products/${tour.id}`, {
-      preserveScroll: true,
-      onSuccess: () => {
-        toast.success('Tour deleted successfully', {
-          position: 'top-center',
-        });
-      },
-    });
-  };
-
-  return (
-    <div className="flex gap-1">
-      <TourDetailDialog tour={tour}>
-        <Button variant="ghost" size="icon">
-          <EyeIcon className="h-4 w-4" />
-        </Button>
-      </TourDetailDialog>
-      <Link href={`/admin/tours/products/${tour.id}/edit`}>
-        <Button variant="ghost" size="icon">
-          <EditIcon className="h-4 w-4" />
-        </Button>
-      </Link>
-      <AlertDialog>
-        <AlertDialogTrigger asChild>
-          <Button variant="ghost" size="icon">
-            <TrashIcon className="h-4 w-4 text-destructive" />
-          </Button>
-        </AlertDialogTrigger>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the
-              tour &quot;{tour.name}&quot;.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete}>
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </div>
-  );
-}
-
-export const columns: ColumnDef<TourResource>[] = [
-  {
-    id: 'select',
-    header: ({ table }) => (
-      <Checkbox
-        checked={
-          table.getIsAllPageRowsSelected() ||
-          (table.getIsSomePageRowsSelected() && 'indeterminate')
-        }
-        onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-        aria-label="Select all"
-      />
-    ),
-    cell: ({ row }) => (
-      <Checkbox
-        checked={row.getIsSelected()}
-        onCheckedChange={(value) => row.toggleSelected(!!value)}
-        aria-label="Select row"
-      />
-    ),
-    enableSorting: false,
-    enableHiding: false,
-  },
-  {
-    accessorKey: 'code',
-    header: 'Code',
-    cell: ({ row }) => (
-      <div className="font-mono text-xs">{row.getValue('code')}</div>
-    ),
-  },
-  {
-    accessorKey: 'name',
-    header: 'Name',
-    cell: ({ row }) => (
-      <div className="max-w-48 truncate font-medium">
-        {row.getValue('name')}
-      </div>
-    ),
-  },
-  {
-    accessorFn: (row) => row.company?.name ?? '-',
-    id: 'vendor',
-    header: 'Vendor',
-    cell: ({ row }) => <div>{row.original.company?.name ?? '-'}</div>,
-  },
-  {
-    accessorFn: (row) => row.category?.name ?? '-',
-    id: 'category',
-    header: 'Category',
-    cell: ({ row }) => <div>{row.original.category?.name ?? '-'}</div>,
-  },
-  {
-    accessorFn: (row) => row.destination,
-    id: 'destination',
-    header: 'Destination',
-    cell: ({ row }) => (
-      <div className="max-w-32 truncate">{row.original.destination}</div>
-    ),
-  },
-  {
-    header: 'Image',
-    cell: ({ row }) => {
-      const { src } = extractImageSrc(row.original.image as any);
-      return (
-        <div>
-          <img
-            src={src}
-            className="aspect-video w-16 rounded object-cover"
-            alt={row.original.name}
-          />
-        </div>
-      );
-    },
-  },
-  {
-    accessorKey: 'status',
-    header: 'Status',
-    cell: ({ row }) => {
-      const status = row.getValue<string>('status');
-      return (
-        <Badge variant={status === 'active' ? 'default' : 'secondary'}>
-          {status}
-        </Badge>
-      );
-    },
-  },
-  {
-    accessorKey: 'created_at',
-    header: 'Created',
-    cell: ({ row }) => (
-      <div className="text-muted-foreground">
-        {dayjs(row.getValue('created_at')).fromNow()}
-      </div>
-    ),
-  },
-  {
-    id: 'actions',
-    enableHiding: false,
-    cell: ({ row }) => <RowActions tour={row.original} />,
-  },
+const STATUS_OPTIONS = [
+  { label: 'Active', value: 'active' },
+  { label: 'Inactive', value: 'inactive' },
 ];
 
-type PageProps = {
+type TourProductsPageProps = {
   data: {
-    data: TourResource[];
+    data: any[];
     total: number;
+    per_page: number;
+    current_page: number;
+    last_page: number;
   };
 };
 
-export default function Page({ data }: PageProps) {
-  const [sorting, setSorting] = React.useState<SortingState>([]);
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
+export default function TourProductsPage({ data }: TourProductsPageProps) {
+  const columns = useMemo<ColumnDef<any>[]>(
+    () => [
+      {
+        id: 'select',
+        header: ({ table }) => (
+          <Checkbox
+            checked={
+              table.getIsAllPageRowsSelected() ||
+              (table.getIsSomePageRowsSelected() && 'indeterminate')
+            }
+            onCheckedChange={(value) =>
+              table.toggleAllPageRowsSelected(!!value)
+            }
+            aria-label="Select all"
+          />
+        ),
+        cell: ({ row }) => (
+          <Checkbox
+            checked={row.getIsSelected()}
+            onCheckedChange={(value) => row.toggleSelected(!!value)}
+            aria-label="Select row"
+          />
+        ),
+        enableSorting: false,
+        enableHiding: false,
+      },
+      {
+        id: 'code',
+        accessorKey: 'code',
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} label="Code" />
+        ),
+        cell: ({ row }) => (
+          <div className="font-mono text-xs">{row.getValue('code')}</div>
+        ),
+        meta: {
+          label: 'Code',
+          placeholder: 'Search codes...',
+          variant: 'text',
+          icon: TextIcon,
+        },
+        enableSorting: true,
+        enableColumnFilter: true,
+      },
+      {
+        id: 'name',
+        accessorKey: 'name',
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} label="Name" />
+        ),
+        cell: ({ row }) => (
+          <div className="max-w-48 truncate font-medium">
+            {row.getValue('name')}
+          </div>
+        ),
+        meta: {
+          label: 'Name',
+          placeholder: 'Search names...',
+          variant: 'text',
+          icon: TextIcon,
+        },
+        enableSorting: true,
+        enableColumnFilter: true,
+      },
+      {
+        id: 'company',
+        accessorKey: 'company',
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} label="Vendor" />
+        ),
+        cell: ({ row }) => <div>{row.original.company?.name ?? '-'}</div>,
+        meta: {
+          label: 'Vendor',
+          variant: 'multiSelect',
+          options: async (query, currentValues) => {
+            const response = await adminSearchResourceOwners({
+              types: 'company',
+              keyword: query,
+              include_ids: Array.from(currentValues)
+                .map((v) => `company:${v}`)
+                .join(','),
+            } as any);
+
+            const companies = response.data.companies as any[];
+            return companies.map(
+              (company) =>
+                ({
+                  label: company.name,
+                  value: company.id.toString(),
+                }) as Option,
+            );
+          },
+          icon: CircleDashedIcon,
+        },
+        enableSorting: false,
+        enableColumnFilter: true,
+      },
+      {
+        id: 'category',
+        accessorFn: (row) => row.category?.name ?? '-',
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} label="Category" />
+        ),
+        cell: ({ row }) => <div>{row.original.category?.name ?? '-'}</div>,
+        enableSorting: false,
+      },
+      {
+        id: 'destination',
+        accessorFn: (row) => row.destination,
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} label="Destination" />
+        ),
+        cell: ({ row }) => (
+          <div className="max-w-32 truncate">{row.original.destination}</div>
+        ),
+        enableSorting: false,
+      },
+      {
+        header: 'Image',
+        cell: ({ row }) => {
+          const { src } = extractImageSrc(row.original.image as any);
+          return (
+            <div>
+              <img
+                src={src}
+                className="aspect-video w-16 rounded object-cover"
+                alt={row.original.name}
+              />
+            </div>
+          );
+        },
+        enableSorting: false,
+      },
+      {
+        id: 'status',
+        accessorKey: 'status',
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} label="Status" />
+        ),
+        cell: ({ row }) => {
+          const status = row.getValue<string>('status');
+          return (
+            <Badge variant={status === 'active' ? 'default' : 'secondary'}>
+              {status}
+            </Badge>
+          );
+        },
+        meta: {
+          label: 'Status',
+          placeholder: 'Search status...',
+          variant: 'multiSelect',
+          options: STATUS_OPTIONS,
+          icon: CircleDashedIcon,
+        },
+        enableSorting: true,
+        enableColumnFilter: true,
+      },
+      {
+        id: 'created_at',
+        accessorKey: 'created_at',
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} label="Created at" />
+        ),
+        cell: ({ row }) => (
+          <div className="text-muted-foreground">
+            {dayjs(row.getValue('created_at')).fromNow()}
+          </div>
+        ),
+        meta: {
+          label: 'Created date',
+          placeholder: 'Search created date...',
+          variant: 'dateRange',
+          icon: CalendarIcon,
+        },
+        enableSorting: true,
+        enableColumnFilter: true,
+      },
+      {
+        id: 'actions',
+        enableHiding: false,
+        cell: ({ row }) => <div></div>,
+      },
+    ],
     [],
   );
-  const [columnVisibility, setColumnVisibility] =
-    React.useState<VisibilityState>({});
-  const [rowSelection, setRowSelection] = React.useState({});
 
-  const table = useReactTable({
+  const { table } = useDataTable({
+    queryKeys: {
+      perPage: 'per_page',
+      page: 'page',
+    },
     data: data.data,
     columns,
-    onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
-    getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    onColumnVisibilityChange: setColumnVisibility,
-    onRowSelectionChange: setRowSelection,
-    state: {
-      sorting,
-      columnFilters,
-      columnVisibility,
-      rowSelection,
+    pageCount: data.last_page,
+    rowCount: data.total,
+    shallow: false,
+    initialState: {
+      sorting: [{ id: 'id', desc: true }],
+      columnPinning: { right: ['actions'] },
     },
+    getRowId: (row) => row.id.toString(),
   });
 
   return (
     <AdminDashboardLayout
-      activeMenuIds={['tour', 'tour.products']}
-      openMenuIds={['tour']}
-      breadcrumb={[{ title: 'Tours' }, { title: 'Products' }]}
+      containerClassName="p-4"
+      activeMenuIds={['funds', 'funds.wallets']}
+      openMenuIds={['funds']}
+      breadcrumb={[{ title: 'Funds' }, { title: 'Wallets' }]}
     >
-      <Head title="Tour Products" />
-      <div className="w-full p-4">
-        <div className="flex items-center py-4">
-          <Input
-            placeholder="Filter tour name..."
-            value={(table.getColumn('name')?.getFilterValue() as string) ?? ''}
-            onChange={(event) =>
-              table.getColumn('name')?.setFilterValue(event.target.value)
-            }
-            className="max-w-sm"
-          />
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="ml-auto">
-                Columns <ChevronDown />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuGroup>
-                {table
-                  .getAllColumns()
-                  .filter((column) => column.getCanHide())
-                  .map((column) => {
-                    return (
-                      <DropdownMenuCheckboxItem
-                        key={column.id}
-                        className="capitalize"
-                        checked={column.getIsVisible()}
-                        onCheckedChange={(value) =>
-                          column.toggleVisibility(!!value)
-                        }
-                      >
-                        {column.id}
-                      </DropdownMenuCheckboxItem>
-                    );
-                  })}
-              </DropdownMenuGroup>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-        <Table className="table-fixed min-w-200">
-          <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => {
-                  return (
-                    <TableHead key={header.id}>
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext(),
-                          )}
-                    </TableHead>
-                  );
-                })}
-              </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  data-state={row.getIsSelected() && 'selected'}
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext(),
-                      )}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell
-                  colSpan={columns.length}
-                  className="h-24 text-center"
-                >
-                  No results.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-        <div className="flex items-center justify-end space-x-2 py-4">
-          <div className="flex-1 text-sm text-muted-foreground">
-            {table.getFilteredSelectedRowModel().rows.length} of{' '}
-            {table.getFilteredRowModel().rows.length} row(s) selected.
-          </div>
-          <div className="space-x-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => table.previousPage()}
-              disabled={!table.getCanPreviousPage()}
-            >
-              Previous
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => table.nextPage()}
-              disabled={!table.getCanNextPage()}
-            >
-              Next
-            </Button>
-          </div>
-        </div>
-      </div>
+      <DataTable table={table} renderEmptyState={<EmptyProducts />}>
+        <DataTableToolbar table={table} />
+      </DataTable>
     </AdminDashboardLayout>
   );
 }

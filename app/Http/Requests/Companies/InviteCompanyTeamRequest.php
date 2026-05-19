@@ -3,33 +3,33 @@
 namespace App\Http\Requests\Companies;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rules\Password;
 
 class InviteCompanyTeamRequest extends FormRequest
 {
-  /**
-   * Determine if the user is authorized to make this request.
-   */
   public function authorize(): bool
   {
     return true;
   }
 
-  /**
-   * Get the validation rules that apply to the request.
-   *
-   * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
-   */
   public function rules(): array
   {
+    $companyId = $this->route('company')?->id;
+
     return [
-      'invite_email' => [
-        'required',
-        'email',
-        'unique:users,email',
-      ],
-      'invite_role' => [
+      'name' => ['required', 'string', 'max:255'],
+      'email' => ['required', 'email', 'max:255', 'unique:users,email'],
+      'username' => ['required', 'string', 'max:255', 'unique:users,username'],
+      'password' => ['required', 'confirmed', Password::defaults()],
+      'role' => [
         'required',
         'string',
+        'exists:roles,name',
+        function (string $attribute, mixed $value, \Closure $fail) use ($companyId): void {
+          if (!is_string($value) || !str_starts_with($value, "company:{$companyId}:")) {
+            $fail('The selected role is invalid.');
+          }
+        },
       ],
     ];
   }

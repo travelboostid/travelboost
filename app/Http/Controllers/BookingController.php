@@ -14,11 +14,14 @@ use App\Models\Payment;
 use App\Models\Tour;
 use App\Models\TourPrice;
 use App\Models\TourSchedule;
+use App\Models\User;
 use App\Services\BookingNumberService;
 use App\Services\BookingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
@@ -164,7 +167,7 @@ class BookingController extends Controller
                     'user_id' => $user->id,
                     'tour_id' => $tour->id,
                     'departure_date' => request()->query('date'),
-                    'pax_adult' => 1,
+                    'pax_adult' => 0,
                     'pax_child' => 0,
                     'pax_infant' => 0,
                     'status' => BookingStatus::AWAITING_PAYMENT,
@@ -248,6 +251,9 @@ class BookingController extends Controller
             'paidAmount' => $paidAmount,
             'remainingBalance' => $remainingBalance,
             'bookingPaymentResult' => $bookingPaymentResult,
+            'savedPassengers' => $user instanceof User
+                ? $this->buildSavedPassengerOptions($user, $schedule?->departure_date)
+                : [],
             'bookingConflict' => $bookingConflict && request()->query('date')
                 ? $this->buildBookingConflict($bookingConflict, $tour, (string) request()->query('date'))
                 : null,
@@ -291,7 +297,7 @@ class BookingController extends Controller
         $data = request()->validate([
             'tour_id' => ['required', 'exists:tours,id'],
             'departure_date' => ['required', 'date'],
-            'pax_adult' => ['required', 'integer', 'min:1'],
+            'pax_adult' => ['required', 'integer', 'min:0'],
             'pax_child' => ['required', 'integer', 'min:0'],
             'pax_infant' => ['required', 'integer', 'min:0'],
             'booking_number' => ['required', 'string'],
@@ -306,9 +312,9 @@ class BookingController extends Controller
             'platform_fee' => ['nullable', 'numeric', 'min:0'],
             'commission_amount' => ['nullable', 'numeric', 'min:0'],
             'grand_total' => ['nullable', 'numeric', 'min:0'],
-            'passengers' => ['nullable', 'array'],
+            'passengers' => ['required', 'array', 'min:1'],
             'passengers.*.title' => ['nullable', 'string', 'max:20'],
-            'passengers.*.first_name' => ['required_with:passengers', 'string', 'max:255'],
+            'passengers.*.first_name' => ['required', 'string', 'max:255'],
             'passengers.*.last_name' => ['nullable', 'string', 'max:255'],
             'passengers.*.dob' => ['nullable', 'date'],
             'passengers.*.pob' => ['nullable', 'string', 'max:255'],
@@ -374,6 +380,136 @@ class BookingController extends Controller
         app(SyncAvailabilityAction::class)->executeForBooking($booking->fresh());
 
         return back();
+    }
+
+    public function releaseHold(Request $request, string|Booking $usernameOrBooking, ?Booking $booking = null): RedirectResponse
+    {
+        $booking = $booking ?? $usernameOrBooking;
+        abort_unless($booking instanceof Booking, 404);
+        abort_unless($request->user()?->id === $booking->user_id, 403);
+
+        $booking = DB::transaction(function () use ($booking): Booking {
+            $lockedBooking = Booking::query()
+                ->whereKey($booking->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if (
+                $lockedBooking->status === BookingStatus::BOOKING_RESERVED
+                && $lockedBooking->reserved_type === 'system'
+            ) {
+                $lockedBooking->update([
+                    'status' => BookingStatus::EXPIRED,
+                    'reserved_expires_at' => null,
+                ]);
+            }
+
+            return $lockedBooking->fresh();
+        });
+
+        app(SyncAvailabilityAction::class)->executeForBooking($booking);
+
+        return back()->with('success', 'Booking hold released.');
+    }
+
+    public function updateTravelDocuments(Request $request, string|Booking $usernameOrBooking, ?Booking $booking = null): RedirectResponse
+    {
+        $booking = $booking ?? $usernameOrBooking;
+        abort_unless($booking instanceof Booking, 404);
+        abort_unless($request->user()?->id === $booking->user_id, 403);
+        abort_unless(in_array($booking->status, [
+            BookingStatus::DOWN_PAYMENT,
+            BookingStatus::FULL_PAYMENT,
+        ], true), 422);
+
+        $validated = $request->validate([
+            'passengers' => ['required', 'array', 'min:1'],
+            'passengers.*.id' => ['required', 'integer', 'exists:booking_passengers,id'],
+            'passengers.*.passport_number' => ['nullable', 'string', 'max:255'],
+            'passengers.*.passport_issue_date' => ['nullable', 'date'],
+            'passengers.*.passport_expiry_date' => ['nullable', 'date'],
+            'passengers.*.passport_file' => ['nullable', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:5120'],
+            'passengers.*.passport_file_path' => ['nullable', 'string'],
+            'passengers.*.visa_number' => ['nullable', 'string', 'max:255'],
+            'passengers.*.visa_file' => ['nullable', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:5120'],
+            'passengers.*.visa_file_path' => ['nullable', 'string'],
+        ]);
+
+        $updatedPassengers = DB::transaction(function () use ($request, $booking, $validated): array {
+            $passengers = $booking->passengers()
+                ->whereIn('id', collect($validated['passengers'])->pluck('id'))
+                ->get()
+                ->keyBy('id');
+            $updatedPassengers = [];
+
+            foreach ($validated['passengers'] as $index => $passengerData) {
+                $passenger = $passengers->get((int) $passengerData['id']);
+
+                abort_unless($passenger, 403);
+
+                $update = Arr::only($passengerData, [
+                    'passport_number',
+                    'passport_issue_date',
+                    'passport_expiry_date',
+                    'visa_number',
+                ]);
+
+                if ($request->hasFile("passengers.{$index}.passport_file")) {
+                    $update['passport_file_path'] = $request
+                        ->file("passengers.{$index}.passport_file")
+                        ->store('travel-documents/passports', 'public');
+                } elseif (array_key_exists('passport_file_path', $passengerData)) {
+                    $update['passport_file_path'] = $passengerData['passport_file_path'];
+                }
+
+                if ($request->hasFile("passengers.{$index}.visa_file")) {
+                    $update['visa_file_path'] = $request
+                        ->file("passengers.{$index}.visa_file")
+                        ->store('travel-documents/visas', 'public');
+                } elseif (array_key_exists('visa_file_path', $passengerData)) {
+                    $update['visa_file_path'] = $passengerData['visa_file_path'];
+                }
+
+                $passenger->update($update);
+                $updatedPassengers[] = Arr::only($passenger->fresh()->getAttributes(), [
+                    'title',
+                    'first_name',
+                    'last_name',
+                    'gender',
+                    'dob',
+                    'pob',
+                    'passport_number',
+                    'passport_issue_date',
+                    'passport_expiry_date',
+                    'visa_number',
+                    'passport_file_path',
+                    'visa_file_path',
+                ]);
+            }
+
+            return $updatedPassengers;
+        });
+
+        if ($request->user() instanceof User) {
+            app(BookingService::class)->syncSavedPassengers($request->user(), $updatedPassengers);
+        }
+
+        return back()->with('success', 'Travel documents updated.');
+    }
+
+    public function paymentResult(Request $request, string|Booking $usernameOrBooking, ?Booking $booking = null): JsonResponse
+    {
+        $booking = $booking ?? $usernameOrBooking;
+        abort_unless($booking instanceof Booking, 404);
+        abort_unless($request->user()?->id === $booking->user_id, 403);
+
+        $latestPayment = $booking->payments()
+            ->latest()
+            ->first();
+
+        return response()->json([
+            'bookingPaymentResult' => $this->buildBookingPaymentResult($booking->fresh(), $latestPayment),
+        ]);
     }
 
     public function reorder(Request $request, Booking $booking): RedirectResponse
@@ -600,6 +736,93 @@ class BookingController extends Controller
             'deny', 'cancel', 'expire' => PaymentStatus::FAILED,
             default => PaymentStatus::PENDING,
         };
+    }
+
+    /**
+     * @return array<int, array{
+     *     id: int,
+     *     title: string|null,
+     *     firstName: string,
+     *     lastName: string|null,
+     *     dateOfBirth: string|null,
+     *     travelerType: string|null,
+     *     placeOfBirth: string|null,
+     *     passportNumber: string|null,
+     *     passportIssueDate: string|null,
+     *     passportExpiryDate: string|null,
+     *     visaNumber: string|null,
+     *     passportFilePath: string|null,
+     *     passportFileName: string|null,
+     *     visaFilePath: string|null,
+     *     visaFileName: string|null
+     * }>
+     */
+    private function buildSavedPassengerOptions(User $user, mixed $departureDate): array
+    {
+        return $user->savedPassengers()
+            ->latest('updated_at')
+            ->get()
+            ->map(fn ($passenger): array => [
+                'id' => $passenger->id,
+                'title' => $passenger->title,
+                'firstName' => $passenger->first_name,
+                'lastName' => $passenger->last_name,
+                'dateOfBirth' => $passenger->dob?->toDateString(),
+                'travelerType' => $this->resolveSavedPassengerTravelerType(
+                    $passenger->dob?->toDateString(),
+                    $departureDate,
+                ),
+                'placeOfBirth' => $passenger->pob,
+                'passportNumber' => $passenger->passport_number,
+                'passportIssueDate' => $passenger->passport_issue_date?->toDateString(),
+                'passportExpiryDate' => $passenger->passport_expiry_date?->toDateString(),
+                'visaNumber' => $passenger->visa_number,
+                'passportFilePath' => $passenger->passport_file_path,
+                'passportFileName' => $this->fileNameFromPath($passenger->passport_file_path),
+                'visaFilePath' => $passenger->visa_file_path,
+                'visaFileName' => $this->fileNameFromPath($passenger->visa_file_path),
+            ])
+            ->values()
+            ->all();
+    }
+
+    private function resolveSavedPassengerTravelerType(?string $dateOfBirth, mixed $departureDate): ?string
+    {
+        if (! $dateOfBirth || ! $departureDate) {
+            return null;
+        }
+
+        try {
+            $dob = Carbon::parse($dateOfBirth);
+            $departure = Carbon::parse($departureDate);
+        } catch (\Throwable) {
+            return null;
+        }
+
+        if ($dob->greaterThan($departure)) {
+            return null;
+        }
+
+        $age = (int) $dob->diffInYears($departure);
+
+        if ($age < 2) {
+            return 'infant';
+        }
+
+        if ($age < 12) {
+            return 'child';
+        }
+
+        return 'adult';
+    }
+
+    private function fileNameFromPath(?string $path): ?string
+    {
+        if (! $path) {
+            return null;
+        }
+
+        return basename(str_replace('\\', '/', $path));
     }
 
     /**

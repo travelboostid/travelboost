@@ -3,14 +3,15 @@
 namespace App\Http\Controllers\Affiliate;
 
 use App\Http\Controllers\Controller;
-use App\Models\Payment;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
+use Inertia\Response;
 
 class PaymentController extends Controller
 {
-  public function index(Request $request)
+  public function index(Request $request): Response
   {
     $user = $request->user();
 
@@ -22,50 +23,36 @@ class PaymentController extends Controller
       ? Carbon::parse($request->input('to'))->endOfDay()
       : now()->endOfDay();
 
-    // ====================================================================
-    // [DEPLOYMENT] UNCOMMENT QUERY DI BAWAH DAN HAPUS BLOK DUMMY SAAT LIVE
-    // ====================================================================
-    /*
-        $payments = Payment::with('payable')
-            ->where('owner_type', get_class($user))
-            ->where('owner_id', $user->id)
-            ->whereBetween('created_at', [$from, $to])
-            ->latest()
-            ->get();
-        */
-
-    // ====================================================================
-    // [DUMMY INJECTION] HAPUS SAAT DEPLOYMENT
-    // ====================================================================
-    $payments = collect([
-      [
-        'id' => 'PAY-001',
-        'amount' => 100000,
-        'status' => 'paid',
-        'provider' => 'Midtrans',
-        'payment_method' => 'Gopay',
-        'created_at' => now()->subDays(2),
-        'paid_at' => now()->subDays(2),
-        'payable_type' => 'WalletTopup',
-      ],
-      [
-        'id' => 'PAY-002',
-        'amount' => 250000,
-        'status' => 'pending',
-        'provider' => 'Midtrans',
-        'payment_method' => 'Bank Transfer',
-        'created_at' => now()->subHours(5),
-        'paid_at' => null,
-        'payable_type' => 'WalletTopup',
-      ]
-    ]);
-    // ====================================================================
+    $commissions = DB::table('affiliate_commission_histories')
+      ->join('companies', 'affiliate_commission_histories.company_id', '=', 'companies.id')
+      ->leftJoin('payments', 'affiliate_commission_histories.payment_id', '=', 'payments.id')
+      ->select(
+        'affiliate_commission_histories.id',
+        'affiliate_commission_histories.tier',
+        'affiliate_commission_histories.base_amount',
+        'affiliate_commission_histories.commission_rate',
+        'affiliate_commission_histories.commission_amount',
+        'affiliate_commission_histories.status',
+        'affiliate_commission_histories.created_at',
+        'companies.name as company_name',
+        'companies.username as company_username',
+        'payments.provider',
+        'payments.payment_method',
+      )
+      ->where('affiliate_commission_histories.recipient_id', $user->id)
+      ->whereBetween('affiliate_commission_histories.created_at', [$from, $to])
+      ->orderByDesc('affiliate_commission_histories.created_at')
+      ->get();
 
     return Inertia::render('affiliate/dashboard/fund/payments/index', [
-      'payments' => $payments,
+      'commissions' => $commissions,
       'filters' => [
         'from' => $request->input('from') ? $from->toDateString() : null,
         'to' => $request->input('to') ? $to->toDateString() : null,
+      ],
+      'summary' => [
+        'total_records' => $commissions->count(),
+        'total_amount' => (int) round($commissions->sum('commission_amount')),
       ],
     ]);
   }

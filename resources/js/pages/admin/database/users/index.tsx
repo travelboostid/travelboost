@@ -1,4 +1,4 @@
-import { adminSearchCompanies } from '@/api/company/company';
+import { adminSearchResourceOwners } from '@/api/misc/misc';
 import type { UserResource } from '@/api/model';
 import { DataTable } from '@/components/data-table/data-table';
 import { DataTableColumnHeader } from '@/components/data-table/data-table-column-header';
@@ -114,7 +114,7 @@ export default function UsersPage({ data, userRoles }: UsersPageProps) {
               }>
             )?.map((role, idx) => (
               <Badge key={idx} variant="secondary">
-                {role.display_name ?? role.name}
+                {role.name}
               </Badge>
             )) ?? '-'}
           </div>
@@ -135,19 +135,20 @@ export default function UsersPage({ data, userRoles }: UsersPageProps) {
           <DataTableColumnHeader column={column} label="Company Holder" />
         ),
         cell: ({ row }) => <div>{row.original.company?.name ?? '-'}</div>,
-        enableSorting: false,
         meta: {
-          label: 'Company',
+          label: 'Company Holder',
           variant: 'multiSelect',
           options: async (query, currentValues) => {
-            const response = await adminSearchCompanies({
-              search_name: query,
-              include_ids: currentValues?.size
-                ? Array.from(currentValues).join(',')
-                : undefined,
-            });
+            const response = await adminSearchResourceOwners({
+              types: 'company',
+              keyword: query,
+              include_ids: Array.from(currentValues)
+                .map((v) => `company:${v}`)
+                .join(','),
+            } as any);
 
-            return response.data.map(
+            const companies = response.data.companies as any[];
+            return companies.map(
               (company) =>
                 ({
                   label: company.name,
@@ -157,6 +158,7 @@ export default function UsersPage({ data, userRoles }: UsersPageProps) {
           },
           icon: CircleDashedIcon,
         },
+        enableSorting: false,
         enableColumnFilter: true,
       },
       {

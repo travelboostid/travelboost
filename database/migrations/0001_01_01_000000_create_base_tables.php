@@ -1,15 +1,12 @@
 <?php
 
-use App\Enums\BankAccountStatus;
 use App\Enums\BookingStatus;
 use App\Enums\CompanyType;
 use App\Enums\CompanyTeamStatus;
-use App\Enums\MediaType;
 use App\Enums\PaymentStatus;
 use App\Enums\UserGender;
 use App\Enums\UserStatus;
 use App\Enums\VendorAgentPartnerStatus;
-use App\Enums\WithdrawalStatus;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -668,10 +665,12 @@ return new class extends Migration
       $table->foreignId('bank_account_id')->constrained('bank_accounts')->restrictOnDelete();
       $table->integer('wallet_id')->nullable();
       $table->decimal('amount', 18, 2);
+      $table->enum('method', ['auto', 'manual'])->default('manual');
       $table->enum('status', ['pending', 'processing', 'rejected', 'cancelled', 'paid'])->default('pending');
       $table->text('note')->nullable();
-      $table->timestamp('approved_at')->nullable();
-      $table->timestamp('processed_at')->nullable();
+      $table->timestamp('processing_at')->nullable();
+      $table->timestamp('cancelled_at')->nullable();
+      $table->timestamp('rejected_at')->nullable();
       $table->timestamp('paid_at')->nullable();
       $table->timestamps();
       $table->index(['bank_account_id']);

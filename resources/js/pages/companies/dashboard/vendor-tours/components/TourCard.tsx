@@ -18,7 +18,7 @@ import {
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { router } from '@inertiajs/react';
 import axios from 'axios';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import AgentMyTourCard from './AgentMyTourCard';
 import AgentVendorTourCard from './AgentVendorTourCard';
 import PublicTourCard from './PublicTourCard';
@@ -69,6 +69,8 @@ export default function TourCard({
     null,
   );
   const [isBookingOpen, setIsBookingOpen] = useState(false);
+  const [selectedBookingTour, setSelectedBookingTour] =
+    useState<TourCardResource | null>(null);
 
   const isLandingPage = !fromLogin;
   const isAgentDashboard = fromLogin && type === 'agent';
@@ -113,19 +115,28 @@ export default function TourCard({
     isAgentActive = true;
   }
 
-  if (isLandingPage) {
-    if (company?.type === 'agent' && !isAgentActive) return null;
-    if (company?.type === 'vendor' && !isVendorActive) return null;
-  }
+  const shouldHideLandingTour =
+    isLandingPage &&
+    ((company?.type === 'agent' && !isAgentActive) ||
+      (company?.type === 'vendor' && !isVendorActive));
+
+  const handleLike = useCallback(async () => {
+    try {
+      const response = await axios.post(`/me/tours/${tour.id}/like`);
+      setLiked(Boolean(response.data.liked));
+    } catch {
+      return;
+    }
+  }, [tour.id]);
 
   useEffect(() => {
-    if (autoOpenBookingModal && isLandingPage) {
+    if (autoOpenBookingModal && isLandingPage && !shouldHideLandingTour) {
       setIsBookingOpen(true);
     }
-  }, [autoOpenBookingModal, isLandingPage]);
+  }, [autoOpenBookingModal, isLandingPage, shouldHideLandingTour]);
 
   useEffect(() => {
-    if (auth?.user) {
+    if (auth?.user && !shouldHideLandingTour) {
       const pendingStr = sessionStorage.getItem('pendingTourAction');
       if (pendingStr) {
         try {
@@ -139,17 +150,14 @@ export default function TourCard({
             if (stored.action === 'like') handleLike();
             else if (stored.action === 'book') setIsBookingOpen(true);
           }
-        } catch (e) {}
+        } catch {
+          sessionStorage.removeItem('pendingTourAction');
+        }
       }
     }
-  }, [auth?.user, tour.id]);
+  }, [auth?.user, tour.id, handleLike, shouldHideLandingTour]);
 
-  const handleLike = async () => {
-    try {
-      const response = await axios.post(`/me/tours/${tour.id}/like`);
-      setLiked(Boolean(response.data.liked));
-    } catch (e) {}
-  };
+  if (shouldHideLandingTour) return null;
 
   const handleLikeClick = () => {
     if (!auth?.user) setPendingAction('like');
@@ -230,6 +238,7 @@ export default function TourCard({
 
   const canCopy = partnership?.status === 'active';
   const hasCopied = Boolean(tour.has_copied);
+  const bookingTour = selectedBookingTour ?? tour;
 
   return (
     <>
@@ -244,7 +253,10 @@ export default function TourCard({
           onLike={handleLikeClick}
           onViewBrochure={() => handleViewBrochure(true)}
           onChat={() => handleChat(company?.id || tour.company_id)}
-          onBook={() => setIsBookingOpen(true)}
+          onBook={(nextTour: TourCardResource) => {
+            setSelectedBookingTour(nextTour);
+            setIsBookingOpen(true);
+          }}
           startingChat={startingChat}
         />
       ) : isVendorDashboard ? (
@@ -253,6 +265,10 @@ export default function TourCard({
           isVendorNameVisible={isVendorNameVisible}
           isVendorInactive={isVendorInactive}
           onViewBrochure={() => handleViewBrochure(false)}
+          onBook={(nextTour: TourCardResource) => {
+            setSelectedBookingTour(nextTour);
+            setIsBookingOpen(true);
+          }}
         />
       ) : isAgentDashboard && isOwnCatalog ? (
         <AgentMyTourCard
@@ -262,6 +278,10 @@ export default function TourCard({
           onViewBrochure={() => handleViewBrochure(false)}
           onChat={() => handleChat(tour.company_id)}
           onShareFB={handleShareFacebook}
+          onBook={(nextTour: TourCardResource) => {
+            setSelectedBookingTour(nextTour);
+            setIsBookingOpen(true);
+          }}
           startingChat={startingChat}
         />
       ) : (
@@ -318,8 +338,11 @@ export default function TourCard({
 
       <TourBookingModal
         isOpen={isBookingOpen}
-        onClose={() => setIsBookingOpen(false)}
-        tour={tour}
+        onClose={() => {
+          setIsBookingOpen(false);
+          setSelectedBookingTour(null);
+        }}
+        tour={bookingTour}
         onRequireLogin={
           !auth?.user ? () => setPendingAction('book') : undefined
         }

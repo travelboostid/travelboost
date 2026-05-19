@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\IndexBankAccountRequest;
 use App\Http\Requests\Admin\UpdateBankAccountRequest;
 use App\Models\BankAccount;
+use App\Models\Company;
+use App\Models\User;
 use Illuminate\Support\Carbon;
 use Inertia\Inertia;
 
@@ -15,15 +17,34 @@ class BankAccountController extends Controller
   {
     $validated = $request->validated();
 
+    $ownerTypes = [
+      'user' => User::class,
+      'company' => Company::class,
+    ];
+
     $data = BankAccount::query()
       ->with(['owner'])
       ->when($validated['provider'] ?? null, function ($query, $provider) {
-        $providers = explode(',', $provider);
-        $query->whereIn('provider', $providers);
+        $query->whereIn('provider', $provider);
+      })
+      ->when($validated['owner'] ?? null, function ($query, $owners) use ($ownerTypes) {
+
+        foreach ($owners as $owner) {
+          [$type, $id] = explode(':', $owner);
+
+          if (! isset($ownerTypes[$type])) {
+            continue;
+          }
+
+          $query->orWhere(
+            fn($query) => $query
+              ->whereMorphedTo('owner', $ownerTypes[$type])
+              ->where('owner_id', $id)
+          );
+        }
       })
       ->when($validated['status'] ?? null, function ($query, $status) {
-        $statuses = explode(',', $status);
-        $query->whereIn('status', $statuses);
+        $query->whereIn('status', $status);
       })
       ->when($validated['created_at'] ?? null, function ($query, $created_at) {
         $range = explode(',', $created_at);

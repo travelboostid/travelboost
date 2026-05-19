@@ -120,7 +120,7 @@ export default function TourBookingModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="flex h-[90vh] max-h-[44rem] max-w-2xl flex-col gap-0 overflow-hidden p-0 sm:max-w-2xl md:max-w-3xl">
+      <DialogContent className="flex h-[calc(100dvh-2rem)] max-h-[44rem] w-[calc(100%-2rem)] max-w-2xl flex-col gap-0 overflow-hidden p-0 sm:h-[90vh] sm:max-w-2xl md:max-w-3xl">
         {/* Header Section (Centered) */}
         <div className="relative shrink-0 border-b bg-card px-4 pb-3 pt-4 sm:px-6 sm:pb-4 sm:pt-5">
           <DialogHeader className="flex flex-col items-center justify-center text-center">

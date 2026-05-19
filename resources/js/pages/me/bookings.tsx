@@ -1,13 +1,20 @@
 import TenantLayout from '@/components/layouts/tenant-layout';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { formatIDR } from '@/constants/booking';
 import { cn, extractImageSrc } from '@/lib/utils';
 import { Link, router } from '@inertiajs/react';
+import { IconPdf } from '@tabler/icons-react';
 import dayjs from 'dayjs';
 import {
   ArrowRightIcon,
   CalendarIcon,
+  ClipboardCheckIcon,
   ClockIcon,
   CreditCardIcon,
   FileTextIcon,
@@ -25,6 +32,14 @@ type BookingItem = {
   status: string;
   departure_date: string | null;
   grand_total: string | number;
+  paid_amount?: string | number | null;
+  remaining_balance?: string | number | null;
+  display_amount?: string | number | null;
+  display_amount_label?: string | null;
+  needs_travel_documents?: boolean;
+  payment_deadline?: DeadlineInfo | null;
+  document_deadline?: DeadlineInfo | null;
+  document_url?: string | null;
   tour: {
     id: number;
     code?: string | null;
@@ -32,8 +47,17 @@ type BookingItem = {
     destination?: string | null;
     duration_days?: number | null;
     image?: unknown;
+    document?: unknown;
+    company?: { id: number; username?: string | null; name?: string | null };
   } | null;
   vendor: { id: number; name: string } | null;
+};
+
+type DeadlineInfo = {
+  date: string;
+  days_before_departure: number;
+  days_remaining: number;
+  is_overdue: boolean;
 };
 
 type TourItem = {
@@ -137,6 +161,36 @@ function bookingPaymentStatusHref(booking: BookingItem) {
   });
 
   return `/mybookings?${params.toString()}`;
+}
+
+function bookingDocumentsHref(booking: BookingItem) {
+  const href = bookingCreateHref(booking, { reuseBookingNumber: true });
+
+  if (!href) {
+    return null;
+  }
+
+  return `${href}&step=documents`;
+}
+
+function deadlineText(label: string, deadline?: DeadlineInfo | null) {
+  if (!deadline) {
+    return null;
+  }
+
+  const date = dayjs(deadline.date).format('DD MMM YYYY');
+
+  if (deadline.is_overdue) {
+    return `${label} was due on ${date}`;
+  }
+
+  if (deadline.days_remaining === 0) {
+    return `${label} is due today`;
+  }
+
+  return `${label} in ${deadline.days_remaining} day${
+    deadline.days_remaining === 1 ? '' : 's'
+  } (${date})`;
 }
 
 function getBookingAction(booking: BookingItem): BookingAction | null {
@@ -456,9 +510,25 @@ function BookingCard({
   const hasImage = Boolean(imageMedia?.data?.files?.length);
   const image = extractImageSrc(imageMedia).src;
   const action = getBookingAction(booking);
+  const documentHref =
+    booking.needs_travel_documents &&
+    (status === 'down payment' || status === 'full payment')
+      ? bookingDocumentsHref(booking)
+      : null;
+  const paymentDeadline = deadlineText(
+    'Balance payment',
+    booking.payment_deadline,
+  );
+  const documentDeadline = deadlineText(
+    'Travel documents',
+    booking.document_deadline,
+  );
   const statusClass =
     STATUS_STYLES[status] ??
     'bg-muted text-muted-foreground dark:bg-muted dark:text-muted-foreground';
+  const actionCount = [action, documentHref, booking.document_url].filter(
+    Boolean,
+  ).length;
 
   return (
     <article
@@ -478,11 +548,6 @@ function BookingCard({
         />
         <div className="min-w-0 p-4 sm:p-5">
           <div className="flex flex-wrap items-center gap-2">
-            {booking.tour?.code && (
-              <Badge variant="outline" className="font-mono text-[10px]">
-                {booking.tour.code}
-              </Badge>
-            )}
             <Badge
               variant="secondary"
               className={cn('capitalize', statusClass)}
@@ -493,12 +558,24 @@ function BookingCard({
           <h2 className="mt-3 line-clamp-2 text-lg font-bold leading-tight text-foreground">
             {booking.tour?.name ?? 'Tour'}
           </h2>
-          <p className="mt-1 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-            {booking.booking_number}
-          </p>
-          <div className="mt-4 grid gap-2 text-sm text-muted-foreground sm:grid-cols-3">
+          <div className="mt-2 min-w-0">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+              Booking number
+            </p>
+            <p className="mt-0.5 break-all font-mono text-xs font-semibold uppercase tracking-[0.12em] text-foreground/85">
+              {booking.booking_number}
+            </p>
+          </div>
+          <div className="mt-4 grid gap-2 text-sm text-muted-foreground sm:grid-cols-2 xl:grid-cols-4">
+            <InfoChip
+              icon={FileTextIcon}
+              label={booking.tour?.code ?? 'Tour code pending'}
+              caption="tourcode"
+              valueClassName="font-mono text-base font-semibold text-foreground"
+            />
             <InfoChip
               icon={CalendarIcon}
+              caption="departure date"
               label={
                 booking.departure_date
                   ? dayjs(booking.departure_date).format('DD MMM YYYY')
@@ -507,10 +584,12 @@ function BookingCard({
             />
             <InfoChip
               icon={MapPinIcon}
+              caption="destination"
               label={booking.tour?.destination ?? 'Destination pending'}
             />
             <InfoChip
               icon={ClockIcon}
+              caption="duration"
               label={
                 booking.tour?.duration_days
                   ? `${booking.tour.duration_days} days`
@@ -521,18 +600,92 @@ function BookingCard({
         </div>
         <div
           className={cn(
-            'flex h-full flex-col justify-between gap-4 border-t p-4 sm:p-5 lg:min-h-40 lg:min-w-52 lg:border-l lg:border-t-0 lg:text-right',
+            'flex h-full flex-col justify-between gap-4 border-t p-4 sm:p-5 lg:min-h-40 lg:min-w-56 lg:border-l lg:border-t-0 lg:text-right',
           )}
         >
-          <div>
+          <div className="space-y-2">
             <p className="text-xs font-medium text-muted-foreground">
-              Grand total
+              {booking.display_amount_label ?? 'Grand total'}
             </p>
             <p className="mt-1 text-lg font-bold text-foreground">
-              {formatIDR(booking.grand_total)}
+              {formatIDR(booking.display_amount ?? booking.grand_total)}
             </p>
+            {status === 'down payment' && (
+              <p className="text-xs text-muted-foreground">
+                Paid {formatIDR(booking.paid_amount ?? 0)}
+              </p>
+            )}
+            {(status === 'down payment' || documentHref) && (
+              <div className="grid max-w-full gap-1.5 justify-items-start lg:justify-items-end">
+                {status === 'down payment' && paymentDeadline && (
+                  <DeadlineBadge tone="payment" label={paymentDeadline} />
+                )}
+                {documentDeadline && (
+                  <DeadlineBadge tone="document" label={documentDeadline} />
+                )}
+              </div>
+            )}
           </div>
-          {action && <BookingActionButton action={action} />}
+          <div
+            className={cn(
+              'grid min-w-0 gap-2',
+              actionCount >= 3
+                ? 'grid-cols-1 sm:grid-cols-3'
+                : actionCount === 2
+                  ? 'grid-cols-1 sm:grid-cols-2'
+                  : 'grid-cols-1',
+            )}
+          >
+            {action && <BookingActionButton action={action} />}
+            {documentHref && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    asChild
+                    variant="outline"
+                    aria-label="Complete Documents"
+                    className="h-9 w-full min-w-0 gap-1.5 rounded-xl px-2 text-xs"
+                  >
+                    <Link href={documentHref}>
+                      <ClipboardCheckIcon className="size-4" />
+                      <span className="truncate font-semibold sm:sr-only">
+                        Complete Documents
+                      </span>
+                    </Link>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  Complete missing passport and visa documents.
+                </TooltipContent>
+              </Tooltip>
+            )}
+            {booking.document_url && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    asChild
+                    variant="outline"
+                    aria-label="View trip PDF"
+                    className="h-9 w-full min-w-0 gap-1.5 rounded-xl px-2 text-xs"
+                  >
+                    <a
+                      href={booking.document_url}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      <IconPdf size={18} />
+                      <span className="truncate font-semibold sm:sr-only">
+                        Itinerary
+                      </span>
+                    </a>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  View itinerary and other trip information.
+                </TooltipContent>
+              </Tooltip>
+            )}
+          </div>
         </div>
       </div>
     </article>
@@ -544,13 +697,16 @@ function BookingActionButton({ action }: { action: BookingAction }) {
   const content = (
     <>
       <Icon className="size-4" />
-      {action.label}
+      <span className="truncate">{action.label}</span>
     </>
   );
 
   if (action.href) {
     return (
-      <Button asChild className="h-10 w-full gap-2 rounded-xl">
+      <Button
+        asChild
+        className="h-9 w-full min-w-0 gap-1.5 rounded-xl px-2 text-xs"
+      >
         <Link href={action.href}>{content}</Link>
       </Button>
     );
@@ -559,7 +715,7 @@ function BookingActionButton({ action }: { action: BookingAction }) {
   return (
     <Button
       type="button"
-      className="h-10 w-full gap-2 rounded-xl"
+      className="h-9 w-full min-w-0 gap-1.5 rounded-xl px-2 text-xs"
       onClick={action.onClick}
     >
       {content}
@@ -567,11 +723,50 @@ function BookingActionButton({ action }: { action: BookingAction }) {
   );
 }
 
-function InfoChip({ icon: Icon, label }: { icon: LucideIcon; label: string }) {
+function DeadlineBadge({
+  label,
+  tone,
+}: {
+  label: string;
+  tone: 'payment' | 'document';
+}) {
   return (
-    <div className="flex min-h-10 min-w-0 items-center gap-2 rounded-lg bg-muted/50 px-3 py-2">
+    <span
+      className={cn(
+        'inline-flex max-w-full items-center rounded-full px-2.5 py-1 text-[11px] font-medium leading-4',
+        tone === 'payment'
+          ? 'bg-red-50 text-red-700 ring-1 ring-red-100 dark:bg-red-950/30 dark:text-red-300 dark:ring-red-900/40'
+          : 'bg-amber-50 text-amber-700 ring-1 ring-amber-100 dark:bg-amber-950/30 dark:text-amber-300 dark:ring-amber-900/40',
+      )}
+    >
+      {label}
+    </span>
+  );
+}
+
+function InfoChip({
+  icon: Icon,
+  label,
+  caption,
+  valueClassName,
+}: {
+  icon: LucideIcon;
+  label: string;
+  caption: string;
+  valueClassName?: string;
+}) {
+  return (
+    <div className="relative flex min-h-14 min-w-0 max-w-full items-center gap-2 overflow-hidden rounded-lg bg-muted/50 px-3 pb-2 pt-5">
+      <span className="absolute right-2 top-1 max-w-[calc(100%-1rem)] truncate rounded-md bg-muted px-1.5 py-0.5 text-[9px] font-semibold uppercase leading-none tracking-[0.08em] text-muted-foreground">
+        {caption}
+      </span>
       <Icon className="size-4 shrink-0 text-primary" />
-      <span className="truncate">{label}</span>
+      <span
+        title={label}
+        className={cn('min-w-0 flex-1 truncate', valueClassName)}
+      >
+        {label}
+      </span>
     </div>
   );
 }

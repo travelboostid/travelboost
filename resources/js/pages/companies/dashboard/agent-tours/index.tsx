@@ -74,6 +74,12 @@ import { toast } from 'sonner';
 
 dayjs.extend(relativeTime);
 
+const isActiveAvailability = (availability: any): boolean => {
+  const departureDate = availability?.schedule?.departure_date;
+  if (!departureDate) return false;
+  return departureDate > new Date().toISOString().split('T')[0];
+};
+
 function RowActions({ row }: { row: any }) {
   const agentTour = row.original;
   const tour = agentTour.tour;
@@ -340,12 +346,20 @@ function StatusCell({ row }: { row: any }) {
   );
 }
 
-function SortableHeader({ column, title }: { column: any; title: string }) {
+function SortableHeader({
+  column,
+  title,
+  className,
+}: {
+  column: any;
+  title: React.ReactNode;
+  className?: string;
+}) {
   return (
     <Button
       variant="ghost"
       onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-      className="-ml-4 h-8 hover:bg-transparent text-primary font-bold data-[state=open]:bg-transparent"
+      className={`-ml-4 h-8 hover:bg-transparent text-primary font-bold data-[state=open]:bg-transparent ${className ?? ''}`}
     >
       <span>{title}</span>
       {column.getIsSorted() === 'desc' ? (
@@ -462,21 +476,33 @@ export const columns: ColumnDef<any>[] = [
   {
     id: 'seats',
     accessorFn: (row: any) =>
-      row.tour?.availabilities?.reduce(
-        (sum: number, item: any) => sum + (Number(item.available) || 0),
-        0,
-      ) || 0,
+      row.tour?.availabilities
+        ?.filter((item: any) => isActiveAvailability(item))
+        .reduce(
+          (sum: number, item: any) => sum + (Number(item.available) || 0),
+          0,
+        ) || 0,
     header: ({ column }) => (
-      <SortableHeader column={column} title="Available Seats" />
+      <SortableHeader
+        column={column}
+        title={
+          <span className="inline-block text-left leading-tight">
+            Available
+            <br />
+            Seats
+          </span>
+        }
+        className="w-[92px] justify-start"
+      />
     ),
     cell: ({ getValue }) => {
       const seats = getValue<number>();
       return (
-        <div className="flex items-center gap-2">
+        <div className="flex min-w-[72px] items-center gap-1.5">
           <span
             className={`h-2 w-2 rounded-full ${seats > 0 ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-red-500'}`}
           />
-          <span className="font-semibold text-slate-700">{seats}</span>
+          <span className="text-sm font-semibold text-slate-700">{seats}</span>
         </div>
       );
     },
@@ -583,14 +609,14 @@ export default function Page({ data }: PageProps) {
     >
       <div className="w-full space-y-6 p-4 md:p-8 max-w-[1600px] mx-auto pb-20">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-6">
-          <div>
-            <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">
-              Agent Tour Catalog
-            </h1>
-            <p className="text-base text-slate-500 mt-2">
-              Manage your copied tours, update status, and monitor seat
-              availability.
-            </p>
+          <div className="relative w-full sm:w-[700px] border border-slate-200 rounded-xl shadow-sm">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <Input
+              placeholder="Search tour, vendor, or category..."
+              value={globalFilter ?? ''}
+              onChange={(e) => setGlobalFilter(e.target.value)}
+              className="pl-11 h-11 w-full bg-slate-50 border-transparent focus-visible:bg-white focus-visible:ring-2 focus-visible:ring-primary/20 rounded-xl transition-all shadow-inner"
+            />
           </div>
         </div>
 
@@ -623,15 +649,6 @@ export default function Page({ data }: PageProps) {
           </Tabs>
 
           <div className="flex flex-col sm:flex-row w-full lg:w-auto gap-3">
-            <div className="relative w-full sm:w-[300px]">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-              <Input
-                placeholder="Search tour, vendor, or category..."
-                value={globalFilter ?? ''}
-                onChange={(e) => setGlobalFilter(e.target.value)}
-                className="pl-11 h-11 w-full bg-slate-50 border-transparent focus-visible:bg-white focus-visible:ring-2 focus-visible:ring-primary/20 rounded-xl transition-all shadow-inner"
-              />
-            </div>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button

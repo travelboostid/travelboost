@@ -56,6 +56,16 @@ export default function useAdminNavMainMenu() {
               title: 'Roles',
               urlOrAction: '/admin/database/roles',
             },
+            {
+              id: 'database.medias',
+              title: 'Media',
+              urlOrAction: '/admin/database/medias',
+            },
+            {
+              id: 'database.knowledge-bases',
+              title: 'Knowledge Bases',
+              urlOrAction: '/admin/database/knowledge-bases',
+            },
           ],
         },
         {
@@ -82,33 +92,33 @@ export default function useAdminNavMainMenu() {
           ],
         },
         {
-          id: 'fund',
+          id: 'funds',
           title: 'Funds',
           urlOrAction: '#',
           icon: WalletIcon,
           items: [
             {
-              id: 'fund.wallets',
+              id: 'funds.wallets',
               title: 'Wallets',
               urlOrAction: '/admin/funds/wallets',
             },
             {
-              id: 'fund.wallet-transactions',
+              id: 'funds.wallet-transactions',
               title: 'Wallet Transactions',
               urlOrAction: '/admin/funds/wallet-transactions',
             },
             {
-              id: 'fund.payments',
+              id: 'funds.payments',
               title: 'Payments',
               urlOrAction: '/admin/funds/payments',
             },
             {
-              id: 'fund.bank-accounts',
+              id: 'funds.bank-accounts',
               title: 'Bank Accounts',
               urlOrAction: '/admin/funds/bank-accounts',
             },
             {
-              id: 'fund.withdrawals',
+              id: 'funds.withdrawals',
               title: 'Withdrawals',
               urlOrAction: '/admin/funds/withdrawals',
             },
