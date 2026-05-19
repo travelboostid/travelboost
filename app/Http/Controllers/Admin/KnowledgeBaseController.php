@@ -3,30 +3,28 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Admin\IndexBankAccountRequest;
-use App\Http\Requests\Admin\UpdateBankAccountRequest;
-use App\Models\BankAccount;
-use App\Models\Company;
-use App\Models\User;
+use App\Http\Requests\Admin\IndexKnowledgeBaseRequest;
+use App\Models\KnowledgeBase;
+use App\Models\Media;
+use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Inertia\Inertia;
 
-class BankAccountController extends Controller
+class KnowledgeBaseController extends Controller
 {
-  public function index(IndexBankAccountRequest $request)
+  /**
+   * Display a listing of the resource.
+   */
+  public function index(IndexKnowledgeBaseRequest $request)
   {
     $validated = $request->validated();
 
     $ownerTypes = [
-      'user' => User::class,
-      'company' => Company::class,
+      'media' => Media::class,
     ];
 
-    $data = BankAccount::query()
+    $data = KnowledgeBase::query()
       ->with(['owner'])
-      ->when($validated['provider'] ?? null, function ($query, $provider) {
-        $query->whereIn('provider', $provider);
-      })
       ->when($validated['owner'] ?? null, function ($query, $owners) use ($ownerTypes) {
 
         foreach ($owners as $owner) {
@@ -67,16 +65,56 @@ class BankAccountController extends Controller
         }
       })
       ->paginate($validated['per_page'] ?? 10);
-    return Inertia::render('admin/funds/bank-accounts/index', [
+    return Inertia::render('admin/database/knowledge-base/index', [
       'data' => $data,
     ]);
   }
 
-  public function update(UpdateBankAccountRequest $request, BankAccount $bankAccount)
+  /**
+   * Show the form for creating a new resource.
+   */
+  public function create()
   {
-    $validated = $request->validated();
-    $bankAccount->update($validated);
+    //
+  }
 
-    return redirect()->back()->with('success', 'Bank account updated successfully.');
+  /**
+   * Store a newly created resource in storage.
+   */
+  public function store(Request $request)
+  {
+    //
+  }
+
+  /**
+   * Display the specified resource.
+   */
+  public function show(string $id)
+  {
+    //
+  }
+
+  /**
+   * Show the form for editing the specified resource.
+   */
+  public function edit(string $id)
+  {
+    //
+  }
+
+  /**
+   * Update the specified resource in storage.
+   */
+  public function update(Request $request, string $id)
+  {
+    //
+  }
+
+  /**
+   * Remove the specified resource from storage.
+   */
+  public function destroy(string $id)
+  {
+    //
   }
 }

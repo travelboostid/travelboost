@@ -212,7 +212,6 @@ export function useDataTable<TData>(props: UseDataTableProps<TData>) {
   );
 
   const initialColumnFilters: ColumnFiltersState = React.useMemo(() => {
-    console.log('Initial filter values:', filterValues);
     if (enableAdvancedFilter) return [];
 
     return Object.entries(filterValues).reduce<ColumnFiltersState>(

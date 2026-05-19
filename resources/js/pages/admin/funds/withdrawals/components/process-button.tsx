@@ -9,32 +9,40 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Field,
+  FieldContent,
+  FieldDescription,
+  FieldLabel,
+  FieldTitle,
+} from '@/components/ui/field';
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-
 import { update } from '@/routes/admin/funds/withdrawals';
 import { useForm } from '@inertiajs/react';
-import { XIcon } from 'lucide-react';
+import { ArrowRightIcon } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
-export default function RejectButton({ data }: { data: any }) {
+export default function ProcessButton({ data }: { data: any }) {
   const [open, setOpen] = useState(false);
   const form = useForm({
-    status: 'rejected',
+    method: data.method,
+    status: 'processing',
   });
 
   const handleSubmit = () => {
     form.put(update(data.id).url, {
       onSuccess: () => {
         setOpen(false);
-        toast.success('Withdrawal rejected successfully');
+        toast.success('Withdrawal processed successfully');
       },
       onError: (err) => {
-        toast.error('Failed to reject withdrawal', {
+        toast.error('Failed to process withdrawal', {
           description:
             err.status ||
             'An unexpected error occurred. Check the logs for more details.',
@@ -48,23 +56,40 @@ export default function RejectButton({ data }: { data: any }) {
       <Tooltip>
         <TooltipTrigger asChild>
           <AlertDialogTrigger asChild>
-            <Button size="icon" variant="destructive">
-              <XIcon />
+            <Button size="icon" variant="default">
+              <ArrowRightIcon />
             </Button>
           </AlertDialogTrigger>
         </TooltipTrigger>
         <TooltipContent>
-          <p>Reject withdrawal</p>
+          <p>Process withdrawal</p>
         </TooltipContent>
       </Tooltip>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+          <AlertDialogTitle>Process Withdrawal</AlertDialogTitle>
           <AlertDialogDescription>
-            This action will mark this withdrawal as rejected and cancel the
-            transaction. User will be notified about the rejection. This action
-            cannot be undone.
+            This action will mark this withdrawal as processing.
           </AlertDialogDescription>
+          <FieldLabel>
+            <Field orientation="horizontal">
+              <Checkbox
+                id="auto-processing-checkbox"
+                checked={form.data.method === 'auto'}
+                onCheckedChange={(v) =>
+                  form.setData('method', v ? 'auto' : 'manual')
+                }
+              />
+              <FieldContent>
+                <FieldTitle>Autotransfer</FieldTitle>
+                <FieldDescription>
+                  Check this option to process transfer via payment gateway.
+                  Left unchecked if you prefer to transfer manually and update
+                  manually to paid after transfer.
+                </FieldDescription>
+              </FieldContent>
+            </Field>
+          </FieldLabel>
         </AlertDialogHeader>
 
         <AlertDialogFooter>

@@ -114,7 +114,7 @@ export default function UsersPage({ data, userRoles }: UsersPageProps) {
               }>
             )?.map((role, idx) => (
               <Badge key={idx} variant="secondary">
-                {role.display_name ?? role.name}
+                {role.name}
               </Badge>
             )) ?? '-'}
           </div>
@@ -135,7 +135,6 @@ export default function UsersPage({ data, userRoles }: UsersPageProps) {
           <DataTableColumnHeader column={column} label="Company Holder" />
         ),
         cell: ({ row }) => <div>{row.original.company?.name ?? '-'}</div>,
-        enableSorting: false,
         meta: {
           label: 'Company Holder',
           variant: 'multiSelect',
@@ -159,6 +158,7 @@ export default function UsersPage({ data, userRoles }: UsersPageProps) {
           },
           icon: CircleDashedIcon,
         },
+        enableSorting: false,
         enableColumnFilter: true,
       },
       {

@@ -10,6 +10,8 @@ use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\VendorCatalogController;
 use App\Http\Controllers\Admin\VendorController;
 use App\Http\Controllers\Admin\IndexController;
+use App\Http\Controllers\Admin\KnowledgeBaseController;
+use App\Http\Controllers\Admin\MediaController;
 use App\Http\Controllers\Admin\PaymentController;
 use App\Http\Controllers\Admin\PermissionController;
 use App\Http\Controllers\Admin\RoleController;
@@ -39,6 +41,8 @@ Route::prefix('admin')->middleware(['auth', EnsureHasAdminAccess::class])->name(
     Route::resource('users', UserController::class)->names('users');
     Route::resource('permissions', PermissionController::class)->names('permissions');
     Route::resource('roles', RoleController::class)->names('roles');
+    Route::resource('knowledge-bases', KnowledgeBaseController::class)->names('knowledge-bases');
+    Route::resource('medias', MediaController::class)->names('medias');
   });
   Route::prefix('funds')->name('funds.')->group(function () {
     Route::resource('withdrawals', WithdrawalController::class);

@@ -665,9 +665,10 @@ return new class extends Migration
       $table->foreignId('bank_account_id')->constrained('bank_accounts')->restrictOnDelete();
       $table->integer('wallet_id')->nullable();
       $table->decimal('amount', 18, 2);
-      $table->enum('method', ['auto', 'manual-trigger', 'manual-transfer'])->default('manual-trigger');
+      $table->enum('method', ['auto', 'manual'])->default('manual');
       $table->enum('status', ['pending', 'processing', 'rejected', 'cancelled', 'paid'])->default('pending');
       $table->text('note')->nullable();
+      $table->timestamp('processing_at')->nullable();
       $table->timestamp('cancelled_at')->nullable();
       $table->timestamp('rejected_at')->nullable();
       $table->timestamp('paid_at')->nullable();
