@@ -171,6 +171,8 @@ export default function Page({ tour }: Props) {
     null,
   );
 
+  const [selectedSchedule, setSelectedSchedule] = useState<any | null>(null);
+
   const [continentId, setContinentId] = useState<number | null>(
     tour.continent_id ?? null,
   );
@@ -378,21 +380,32 @@ export default function Page({ tour }: Props) {
 
       // update schedules dengan id asli database
       if (res.data?.schedules) {
-        setSchedules((prev) => {
-          const existing = prev.filter((s) => s.id !== null);
+        setSchedules((prev) =>
+          prev.map((localSchedule) => {
+            // cari schedule hasil save berdasarkan departure_date
+            const savedSchedule = res.data.schedules.find(
+              (dbSchedule: any) =>
+                dbSchedule.departure_date === localSchedule.departure_date,
+            );
 
-          const merged = res.data.schedules.map((dbSchedule, index) => ({
-            ...dbSchedule,
-            prices: schedules[index]?.prices || [],
-            availability: schedules[index]?.availability || null,
-            add_ons: schedules[index]?.add_ons || [],
-          }));
+            // kalau tidak ada, pakai data lama
+            if (!savedSchedule) {
+              return localSchedule;
+            }
 
-          return [...existing, ...merged];
-        });
+            // replace hanya field dari database
+            return {
+              ...localSchedule,
+              id: savedSchedule.id,
+            };
+          }),
+        );
       }
 
       toast.success('Schedule saved');
+
+      // CLOSE DROPDOWN
+      setOpenDropdownIndex(null);
     } catch (err) {
       toast.error('Failed save schedule');
     }
@@ -948,6 +961,7 @@ export default function Page({ tour }: Props) {
   const openCopyModal = (index: number) => {
     setCopySourceIndex(index);
     setCopyDates(['']);
+    setSelectedSchedule(schedules[index]);
     setCopyOpen(true);
   };
 
@@ -1249,21 +1263,24 @@ export default function Page({ tour }: Props) {
   const [currentSchedulePage, setCurrentSchedulePage] = useState(1);
 
   // ================= filter schedule =================
-  const filteredSchedules = schedules.filter((item) => {
-    const departure = item.departure_date;
+  const filteredSchedules = schedules
+    .map((item, index) => ({
+      ...item,
+      originalIndex: index,
+    }))
+    .filter((item) => {
+      const departure = item.departure_date;
 
-    // FROM
-    const matchFrom = searchDepartureFromTab2
-      ? departure >= searchDepartureFromTab2
-      : true;
+      const matchFrom = searchDepartureFromTab2
+        ? departure >= searchDepartureFromTab2
+        : true;
 
-    // TO
-    const matchTo = searchDepartureToTab2
-      ? departure <= searchDepartureToTab2
-      : true;
+      const matchTo = searchDepartureToTab2
+        ? departure <= searchDepartureToTab2
+        : true;
 
-    return matchFrom && matchTo;
-  });
+      return matchFrom && matchTo;
+    });
 
   // ================= total page schedule =================
   const totalSchedulePages = Math.ceil(
@@ -1938,10 +1955,8 @@ export default function Page({ tour }: Props) {
 
                     {/* ================= BODY ================= */}
                     <tbody>
-                      {paginatedSchedulesTab.map((item, pageIndex) => {
-                        const index =
-                          (currentSchedulePage - 1) * schedulePerPage +
-                          pageIndex;
+                      {paginatedSchedulesTab.map((item) => {
+                        const index = item.originalIndex;
 
                         return (
                           <tr key={index} className="align-top border-t">
@@ -2305,9 +2320,8 @@ export default function Page({ tour }: Props) {
 
                 {/* MOBILE VERSION */}
                 <div className="md:hidden space-y-4">
-                  {paginatedSchedulesTab.map((item, pageIndex) => {
-                    const index =
-                      (currentSchedulePage - 1) * schedulePerPage + pageIndex;
+                  {paginatedSchedulesTab.map((item) => {
+                    const index = item.originalIndex;
 
                     return (
                       <div
@@ -3603,9 +3617,22 @@ export default function Page({ tour }: Props) {
             <DialogContent className="max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
               <DialogHeader>
                 <DialogTitle>
-                  Copy Schedule To New Departure Dates <br></br>
-                  <br></br>
-                  {tour.name}
+                  <div className="space-y-2">
+                    <div className="text-lg font-semibold">
+                      Copy Schedule To New Departure Dates
+                    </div>
+
+                    <div className="rounded-lg border bg-muted/40 px-3 py-2 text-sm">
+                      <div className="font-medium">{tour.name}</div>
+
+                      {selectedSchedule && (
+                        <div className="mt-1 text-muted-foreground">
+                          {formatDate(selectedSchedule.departure_date)} →{' '}
+                          {formatDate(selectedSchedule.return_date)}
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </DialogTitle>
               </DialogHeader>
 
