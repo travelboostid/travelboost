@@ -5,4 +5,8 @@
  * OpenAPI spec version: 0.0.1
  */
 
-export type WalletResourceMeta = unknown[] | null | string[];
+export type CreateAiCreditTopupPaymentBody = {
+  company_id: number;
+  /** @minimum 1000 */
+  amount: number;
+};

@@ -55,18 +55,4 @@ class WalletTransactionController extends Controller
       'data' => $data,
     ]);
   }
-
-  public function update(UpdateWithdrawalRequest $request, Withdrawal $withdrawal)
-  {
-    $validated = $request->validated();
-    DB::transaction(function () use ($withdrawal, $validated) {
-      if (WithdrawalStatus::from($validated['status']) === WithdrawalStatus::PAID) {
-        $wallet = $withdrawal->wallet;
-        $wallet->withdraw($withdrawal->amount);
-      }
-      $withdrawal->update($validated);
-    });
-
-    return redirect()->back()->with('success', 'Withdrawal approved successfully.');
-  }
 }

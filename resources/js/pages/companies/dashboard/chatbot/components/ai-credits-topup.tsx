@@ -1,4 +1,4 @@
-import { useCreateTopupPayment } from '@/api/payment/payment';
+import { useCreateAiCreditTopupPayment } from '@/api/payment/payment';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -23,12 +23,12 @@ export default function AiCreditsTopup() {
   const [ongoing] = useState(false);
   const isValid = amount !== null && amount >= MIN_AMOUNT;
   const { company } = usePageSharedDataProps();
-  const topup = useCreateTopupPayment();
+  const topup = useCreateAiCreditTopupPayment();
   const handleTopup = () => {
     if (!isValid || ongoing) return;
 
     topup.mutate(
-      { data: { amount, owner_type: 'company', owner_id: company.id } },
+      { data: { amount, company_id: company.id } },
       {
         onSuccess: (payment) => {
           const snapToken = (payment.data.payload as any)?.snap_token as string;
