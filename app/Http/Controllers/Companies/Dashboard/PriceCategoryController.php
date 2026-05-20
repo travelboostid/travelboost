@@ -3,17 +3,17 @@
 namespace App\Http\Controllers\Companies\Dashboard;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use Inertia\Inertia;
 use App\Models\Company;
 use App\Models\PriceCategory;
+use Illuminate\Http\Request;
+use Inertia\Inertia;
 
 class PriceCategoryController extends Controller
 {
     public function index(Request $request, Company $company)
     {
         $categories = PriceCategory::where('company_id', $company->id)
-            ->latest()
+            ->orderBy('id')
             ->get();
 
         return Inertia::render('companies/dashboard/price-categories/index', [
@@ -59,6 +59,7 @@ class PriceCategoryController extends Controller
     public function destroy(Company $company, PriceCategory $price_category)
     {
         $price_category->delete();
+
         return redirect()->back();
     }
 }

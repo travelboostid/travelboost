@@ -36,7 +36,7 @@ class SeatAvailabilityController extends Controller
 
         $tours = Tour::query()
             ->with([
-                'availabilities' => function ($q) use ($departureDate, $status) {
+                'availabilities' => function ($q) use ($departureDate) {
 
                     $q->with([
                         'schedule:id,tour_id,departure_date,return_date',
@@ -44,19 +44,7 @@ class SeatAvailabilityController extends Controller
 
                     if ($departureDate) {
                         $q->whereHas('schedule', function ($sq) use ($departureDate) {
-                            $sq->whereDate('departure_date', $departureDate);
-                        });
-                    }
-
-                    if ($status === 'active') {
-                        $q->whereHas('schedule', function ($sq) {
-                            $sq->whereDate('departure_date', '>', now()->toDateString());
-                        });
-                    }
-
-                    if ($status === 'inactive') {
-                        $q->whereHas('schedule', function ($sq) {
-                            $sq->whereDate('departure_date', '<=', now()->toDateString());
+                            $sq->whereDate('departure_date', '>=', $departureDate);
                         });
                     }
                 },
@@ -70,7 +58,7 @@ class SeatAvailabilityController extends Controller
 
             ->when($departureDate, function ($q) use ($departureDate) {
                 $q->whereHas('availabilities.schedule', function ($sq) use ($departureDate) {
-                    $sq->whereDate('departure_date', $departureDate);
+                    $sq->whereDate('departure_date', '>=', $departureDate);
                 });
             })
 
@@ -90,7 +78,7 @@ class SeatAvailabilityController extends Controller
                 $q->where(
                     'name',
                     'ilike',
-                    '%' . $request->search . '%'
+                    '%'.$request->search.'%'
                 );
             })
 
@@ -108,33 +96,33 @@ class SeatAvailabilityController extends Controller
                 ],
 
                 'schedules' => $tour->availabilities
-                  ->filter(fn ($item) => $item->schedule)
-                  ->map(function ($item) {
-                    return [
-                        'id' => $item->id,
+                    ->filter(fn ($item) => $item->schedule)
+                    ->map(function ($item) {
+                        return [
+                            'id' => $item->id,
 
-                        'schedule_id' => $item->schedule_id,
+                            'schedule_id' => $item->schedule_id,
 
-                        'departure_date' => $item->schedule?->departure_date,
-                        'return_date' => $item->schedule?->return_date,
+                            'departure_date' => $item->schedule?->departure_date,
+                            'return_date' => $item->schedule?->return_date,
 
-                        'max_pax' => $item->max_pax,
+                            'max_pax' => $item->max_pax,
 
-                        'RS' => $item->RS,
-                        'WP' => $item->WP,
-                        'DP' => $item->DP,
-                        'FP' => $item->FP,
-                        'WA' => $item->WA,
-                        'WPA' => $item->WPA,
-                        'BRS' => $item->BRS,
-                        'CA' => $item->CA,
-                        'RF' => $item->RF,
-                        'EX' => $item->EX,
-                        'WL' => $item->WL,
+                            'RS' => $item->RS,
+                            'WP' => $item->WP,
+                            'DP' => $item->DP,
+                            'FP' => $item->FP,
+                            'WA' => $item->WA,
+                            'WPA' => $item->WPA,
+                            'BRS' => $item->BRS,
+                            'CA' => $item->CA,
+                            'RF' => $item->RF,
+                            'EX' => $item->EX,
+                            'WL' => $item->WL,
 
-                        'available' => $item->available,
-                    ];
-                })->values(),
+                            'available' => $item->available,
+                        ];
+                    })->values(),
             ];
         });
 

@@ -17,7 +17,7 @@ class AgentTourController extends Controller
 
         $tours = $company->agentTours()
             ->with([
-                'tour.company',
+                'tour.company.companySetting',
                 'tour.category',
                 'tour.image',
                 'tour.document',
