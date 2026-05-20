@@ -7,13 +7,15 @@ use App\Enums\AgentSubscriptionStatus;
 use App\Enums\PaymentStatus;
 use App\Http\Controllers\Controller;
 use App\Models\AffiliateProfile;
+use App\Models\AgentSubscription;
 use App\Models\AgentSubscriptionPackage;
 use App\Models\AppConfig;
 use App\Models\Booking;
 use App\Models\Company;
 use App\Models\Payment;
 use App\Models\User;
-use App\Notifications\NewReferralNotification;
+use App\Notifications\AffiliateAgentSubscriptionNotification;
+use App\Notifications\AgentSubscriptionActivatedNotification;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -156,11 +158,11 @@ class MidtransWebhookController extends Controller
 
         $existingSubscription = $owner->agentSubscription()->first();
 
-        if (! $existingSubscription) {
-            $this->createNewSubscription($owner, $package);
-        } else {
-            $this->renewSubscription($existingSubscription, $package);
-        }
+        $subscription = ! $existingSubscription
+            ? $this->createNewSubscription($owner, $package)
+            : $this->renewSubscription($existingSubscription, $package);
+
+        $owner->notify(new AgentSubscriptionActivatedNotification($owner, $subscription, $package));
 
         // --- MENGAKTIFKAN SUBDOMAIN AGEN ---
         $domain = \App\Models\Domain::where('owner_id', $owner->id)
@@ -209,9 +211,11 @@ class MidtransWebhookController extends Controller
 
                     if ($affCommissionAmount > 0) {
                         $affiliateUser->wallet->deposit($affCommissionAmount, [
-                            'type' => 'commission',
-                            'description' => 'Subscription commission from Agent '.$owner->name,
+                            'type' => 'affiliate-commission',
+                            'description' => 'Income from affiliate commission for '.$owner->name.' subscription payment',
                             'payment_id' => $payment->id,
+                            'company_id' => $owner->id,
+                            'tier' => 'affiliate',
                         ]);
 
                         DB::table('affiliate_commission_histories')->insert([
@@ -227,9 +231,18 @@ class MidtransWebhookController extends Controller
                             'updated_at' => now(),
                         ]);
 
-                        $title = "Langganan Berhasil: {$owner->name}";
-                        $message = "Agen {$owner->name} telah berhasil membayar paket langganan. Komisi afiliasi telah ditambahkan ke dalam dompet Anda.";
-                        $affiliateUser->notify(new NewReferralNotification($title, $message));
+                    }
+
+                    if ($this->isActiveAffiliateProfile($affiliateProfile)) {
+                        $affiliateUser->notify(new AffiliateAgentSubscriptionNotification(
+                            $owner,
+                            $subscription,
+                            $package,
+                            $affiliateProfile,
+                            null,
+                            'affiliate',
+                            $affCommissionAmount
+                        ));
                     }
 
                     if ($affiliateProfile->upline_id) {
@@ -243,9 +256,11 @@ class MidtransWebhookController extends Controller
 
                             if ($maCommissionAmount > 0) {
                                 $maUser->wallet->deposit($maCommissionAmount, [
-                                    'type' => 'commission',
-                                    'description' => 'MA Subscription commission from Agent '.$owner->name,
+                                    'type' => 'affiliate-commission',
+                                    'description' => 'Income from master affiliate commission for '.$owner->name.' subscription payment',
                                     'payment_id' => $payment->id,
+                                    'company_id' => $owner->id,
+                                    'tier' => 'master_affiliate',
                                 ]);
 
                                 DB::table('affiliate_commission_histories')->insert([
@@ -261,23 +276,35 @@ class MidtransWebhookController extends Controller
                                     'updated_at' => now(),
                                 ]);
 
-                                $title = "Langganan Berhasil: {$owner->name}";
-                                $message = "Agen {$owner->name} dari jaringan Anda telah membayar paket langganan. Komisi Master Affiliate telah ditambahkan ke dalam dompet Anda.";
-                                $maUser->notify(new NewReferralNotification($title, $message));
+                            }
+
+                            if ($this->isActiveAffiliateProfile($maProfile)) {
+                                $maUser->notify(new AffiliateAgentSubscriptionNotification(
+                                    $owner,
+                                    $subscription,
+                                    $package,
+                                    $affiliateProfile,
+                                    $maProfile,
+                                    'master_affiliate',
+                                    $maCommissionAmount
+                                ));
                             }
 
                             if ($maProfile && $maProfile->upline_id) {
                                 $partnerUser = User::find($maProfile->upline_id);
                                 if ($partnerUser) {
+                                    $partnerProfile = AffiliateProfile::where('user_id', $partnerUser->id)->first();
                                     $partnerCommissionRate = isset($adminConfig['partner_commission']) ? (float) $adminConfig['partner_commission'] : 0;
                                     // Gunakan Harga Dasar Komisi yang sudah dikurangi PPN
                                     $partnerCommissionAmount = ($commissionBasePrice * $partnerCommissionRate) / 100;
 
                                     if ($partnerCommissionAmount > 0) {
                                         $partnerUser->wallet->deposit($partnerCommissionAmount, [
-                                            'type' => 'commission',
-                                            'description' => 'Partner Subscription commission from Agent '.$owner->name,
+                                            'type' => 'affiliate-commission',
+                                            'description' => 'Income from partner commission for '.$owner->name.' subscription payment',
                                             'payment_id' => $payment->id,
+                                            'company_id' => $owner->id,
+                                            'tier' => 'partner',
                                         ]);
 
                                         DB::table('affiliate_commission_histories')->insert([
@@ -293,9 +320,18 @@ class MidtransWebhookController extends Controller
                                             'updated_at' => now(),
                                         ]);
 
-                                        $title = "Langganan Berhasil: {$owner->name}";
-                                        $message = "Agen {$owner->name} dari jaringan Anda telah membayar paket langganan. Komisi Partner telah ditambahkan ke dalam dompet Anda.";
-                                        $partnerUser->notify(new NewReferralNotification($title, $message));
+                                    }
+
+                                    if ($this->isActiveAffiliateProfile($partnerProfile)) {
+                                        $partnerUser->notify(new AffiliateAgentSubscriptionNotification(
+                                            $owner,
+                                            $subscription,
+                                            $package,
+                                            $affiliateProfile,
+                                            $maProfile,
+                                            'partner',
+                                            $partnerCommissionAmount
+                                        ));
                                     }
                                 }
                             }
@@ -326,16 +362,16 @@ class MidtransWebhookController extends Controller
         return $package;
     }
 
-    private function createNewSubscription(Company $owner, AgentSubscriptionPackage $package): void
+    private function createNewSubscription(Company $owner, AgentSubscriptionPackage $package): AgentSubscription
     {
-        $owner->agentSubscription()->create([
+        return $owner->agentSubscription()->create([
             'package_id' => $package->id,
             'started_at' => now(),
             'ended_at' => now()->addMonths($package->duration_months),
         ]);
     }
 
-    private function renewSubscription($existingSubscription, AgentSubscriptionPackage $package): void
+    private function renewSubscription(AgentSubscription $existingSubscription, AgentSubscriptionPackage $package): AgentSubscription
     {
         $newEndDate = $existingSubscription->status === AgentSubscriptionStatus::ACTIVE
           ? $existingSubscription->ended_at->addMonths($package->duration_months)
@@ -346,6 +382,20 @@ class MidtransWebhookController extends Controller
             'started_at' => now(),
             'ended_at' => $newEndDate,
         ]);
+
+        return $existingSubscription->fresh();
+    }
+
+    private function isActiveAffiliateProfile(?AffiliateProfile $profile): bool
+    {
+        if (! $profile?->user) {
+            return false;
+        }
+
+        $profileStatus = $profile->status instanceof \BackedEnum ? $profile->status->value : $profile->status;
+        $userStatus = $profile->user->status instanceof \BackedEnum ? $profile->user->status->value : $profile->user->status;
+
+        return $profileStatus === 'approved' && $userStatus === 'active';
     }
 
     private function processAiCreditTopup(Payment $payment): void
@@ -387,7 +437,7 @@ class MidtransWebhookController extends Controller
         $topup = $payment->payable;
 
         $owner->wallet->deposit($topup->amount, [
-            'type' => 'topup',
+            'type' => 'wallet-topup',
             'description' => 'Wallet topup via Midtrans',
             'payment_id' => $payment->id,
         ]);
