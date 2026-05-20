@@ -79,7 +79,7 @@ export default function NetworkApprovals() {
       <Head title={isPartner ? 'MA Approvals' : 'Affiliate Approvals'} />
 
       <div className="space-y-6">
-        <div>
+        {/* <div>
           <h1 className="text-2xl font-bold tracking-tight text-foreground">
             {isPartner ? 'Master Affiliate Approvals' : 'Affiliate Approvals'}
           </h1>
@@ -88,7 +88,7 @@ export default function NetworkApprovals() {
               ? 'Review and manage Master Affiliate applications.'
               : 'Review and manage Affiliators joining your network.'}
           </p>
-        </div>
+        </div> */}
 
         <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
           <div className="flex bg-muted p-1 rounded-lg">
@@ -231,9 +231,9 @@ export default function NetworkApprovals() {
           {selectedUser && (
             <div className="flex flex-col items-center justify-center space-y-4 pt-4 pb-2">
               <Avatar className="h-20 w-20 border-4 border-border">
-                {selectedUser.profile_photo_path && (
+                {selectedUser.photo_url && (
                   <AvatarImage
-                    src={`/storage/${selectedUser.profile_photo_path}`}
+                    src={selectedUser.photo_url}
                     alt={selectedUser.name}
                     className="object-cover"
                   />
@@ -288,15 +288,13 @@ export default function NetworkApprovals() {
                   <span className="text-xs text-muted-foreground mb-2">
                     ID Photo Document
                   </span>
-                  {selectedUser.identity_photo_path ? (
+                  {selectedUser.identity_card_url ? (
                     <img
-                      src={`/storage/${selectedUser.identity_photo_path}`}
+                      src={selectedUser.identity_card_url}
                       alt="ID Document"
                       className="w-full max-w-sm rounded-lg border border-border cursor-pointer hover:opacity-90 transition-opacity"
                       onClick={() =>
-                        setPreviewImage(
-                          `/storage/${selectedUser.identity_photo_path}`,
-                        )
+                        setPreviewImage(selectedUser.identity_card_url)
                       }
                     />
                   ) : (
