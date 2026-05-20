@@ -1,3 +1,4 @@
+import { TermsAgreement } from '@/components/auth/terms-agreement';
 import InputError from '@/components/input-error';
 import AuthLayout from '@/components/layouts/auth/auth-layout';
 import TextLink from '@/components/text-link';
@@ -16,6 +17,8 @@ export default function Register() {
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [termsError, setTermsError] = useState('');
 
   const { data, setData, post, processing, errors } = useForm({
     name: '',
@@ -31,6 +34,14 @@ export default function Register() {
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!termsAccepted) {
+      setTermsError(
+        'You must agree to the Terms and Conditions before creating an account.',
+      );
+      return;
+    }
+
     post('/affiliate/register');
   };
 
@@ -49,7 +60,6 @@ export default function Register() {
       <Head title="Register" />
       <form onSubmit={submit} className="flex flex-col gap-6">
         <div className="grid gap-6">
-          {/* info referral jika ada */}
           {referralCode && (
             <div className="p-4 bg-muted/50 border rounded-lg space-y-2">
               <Label>
@@ -63,7 +73,6 @@ export default function Register() {
             </div>
           )}
 
-          {/* data profil */}
           <div className="grid gap-2">
             <Label htmlFor="name">
               {intl.formatMessage({ id: 'auth.name', defaultMessage: 'Name' })}
@@ -73,6 +82,7 @@ export default function Register() {
               value={data.name}
               onChange={(e) => setData('name', e.target.value)}
               placeholder="Full name"
+              tabIndex={1}
               required
             />
             <InputError message={errors.name} />
@@ -91,6 +101,7 @@ export default function Register() {
               value={data.email}
               onChange={(e) => setData('email', e.target.value)}
               placeholder="email@example.com"
+              tabIndex={2}
               required
             />
             <InputError message={errors.email} />
@@ -108,6 +119,7 @@ export default function Register() {
               value={data.username}
               onChange={(e) => setData('username', e.target.value)}
               placeholder="Username"
+              tabIndex={3}
               required
             />
             <InputError message={errors.username} />
@@ -125,12 +137,12 @@ export default function Register() {
               value={data.phone}
               onChange={(e) => setData('phone', e.target.value)}
               placeholder="Phone number"
+              tabIndex={4}
               required
             />
             <InputError message={errors.phone} />
           </div>
 
-          {/* input ktp */}
           <div className="grid gap-2">
             <Label htmlFor="ktp_number">
               {intl.formatMessage({
@@ -150,6 +162,7 @@ export default function Register() {
                 setData('ktp_number', val);
               }}
               placeholder="16-digit KTP number"
+              tabIndex={5}
               required
             />
             {data.ktp_number.length > 0 && data.ktp_number.length < 16 && (
@@ -177,12 +190,12 @@ export default function Register() {
               onChange={(e) =>
                 setData('ktp_file', e.target.files ? e.target.files[0] : null)
               }
+              tabIndex={6}
               required
             />
             <InputError message={errors.ktp_file} />
           </div>
 
-          {/* password */}
           <div className="grid gap-2">
             <Label htmlFor="password">
               {intl.formatMessage({
@@ -197,12 +210,14 @@ export default function Register() {
                 value={data.password}
                 onChange={(e) => setData('password', e.target.value)}
                 placeholder="Password"
+                tabIndex={7}
                 required
               />
               <button
                 type="button"
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
                 onClick={() => setShowPassword(!showPassword)}
+                tabIndex={-1}
               >
                 {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
@@ -226,19 +241,39 @@ export default function Register() {
                   setData('password_confirmation', e.target.value)
                 }
                 placeholder="Confirm password"
+                tabIndex={8}
                 required
               />
               <button
                 type="button"
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                tabIndex={-1}
               >
                 {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             </div>
           </div>
 
-          <Button type="submit" className="w-full" disabled={processing}>
+          <TermsAgreement
+            variant="affiliate"
+            checked={termsAccepted}
+            onCheckedChange={(checked) => {
+              setTermsAccepted(checked);
+              if (checked) {
+                setTermsError('');
+              }
+            }}
+            tabIndex={9}
+            error={termsError}
+          />
+
+          <Button
+            type="submit"
+            className="w-full"
+            disabled={processing || !termsAccepted}
+            tabIndex={10}
+          >
             {processing && <Spinner />}
             {intl.formatMessage({
               id: 'auth.btn_register',
@@ -252,7 +287,7 @@ export default function Register() {
             id: 'auth.has_account',
             defaultMessage: 'Already have an account?',
           })}{' '}
-          <TextLink href="/affiliate/login">
+          <TextLink href="/affiliate/login" tabIndex={11}>
             {intl.formatMessage({
               id: 'auth.log_in',
               defaultMessage: 'Log in',
