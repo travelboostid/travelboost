@@ -21,10 +21,14 @@ class TourController extends Controller
 {
     public function index(Company $company)
     {
-        $tours = $company->tours()->with('availabilities.schedule')->orderBy('id', 'desc')->get();
+        $tours = $company->tours()
+            ->with('availabilities.schedule')
+            ->orderBy('id', 'desc')
+            ->get();
 
         return Inertia::render('companies/dashboard/tours/index', [
             'data' => $tours,
+            'bookingDeadlineDays' => (int) ($company->companySetting?->booking_deadline ?? 0),
         ]);
     }
 
@@ -93,10 +97,14 @@ class TourController extends Controller
     public function update(UpdateTourRequest $request, Company $company, Tour $tour)
     {
         if ($request->has('quick_update')) {
-            $payload = $request->all();
+            $payload = $request->validated();
 
             if (array_key_exists('status', $payload)) {
                 $tour->status = $payload['status'];
+            }
+
+            if (array_key_exists('category_id', $payload)) {
+                $tour->category_id = $payload['category_id'];
             }
 
             $tour->save();
