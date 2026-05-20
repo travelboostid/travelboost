@@ -29,9 +29,11 @@ class HomeController extends Controller
         $isVendor = $companyType === CompanyType::VENDOR->value;
 
         $companyColumn = $isVendor ? 'vendor_id' : 'agent_id';
-        $status = BookingStatus::FULL_PAYMENT->value;
+        $fullPaymentStatus = BookingStatus::FULL_PAYMENT->value;
 
-        $baseQuery = Booking::where($companyColumn, $company->id)->where('status', $status);
+        $baseQuery = Booking::query()
+            ->where($companyColumn, $company->id)
+            ->where('status', $fullPaymentStatus);
 
         $totalRevenue = (float) (clone $baseQuery)->sum('grand_total');
         $totalPax = (int) (clone $baseQuery)->sum(DB::raw('pax_adult + pax_child + pax_infant'));
@@ -85,7 +87,7 @@ class HomeController extends Controller
         $topDestinations = Booking::query()
             ->join('tours', 'bookings.tour_id', '=', 'tours.id')
             ->where('bookings.'.$companyColumn, $company->id)
-            ->where('bookings.status', $status)
+            ->where('bookings.status', $fullPaymentStatus)
             ->select(
                 'tours.id',
                 'tours.code',
@@ -103,7 +105,7 @@ class HomeController extends Controller
             $topAgents = Booking::query()
                 ->join('companies', 'bookings.agent_id', '=', 'companies.id')
                 ->where('bookings.vendor_id', $company->id)
-                ->where('bookings.status', $status)
+                ->where('bookings.status', $fullPaymentStatus)
                 ->select(
                     'companies.name',
                     DB::raw('SUM(bookings.pax_adult + bookings.pax_child + bookings.pax_infant) as pax'),

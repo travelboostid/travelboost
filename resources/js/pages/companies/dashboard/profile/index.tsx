@@ -51,7 +51,7 @@ export default function Profile({ profile, account_status }: ProfilePageProps) {
     village_id: profile.village_id || '',
     postal_code: profile.postal_code || '',
     subdomain: profile.domain?.subdomain || '',
-    domain_enabled: profile.domain?.domain_enabled || false,
+    domain_enabled: Boolean(profile.domain?.domain),
     domain: profile.domain?.domain || '',
     photo_id: profile.photo_id || undefined,
     identity_number: profile.identity_number || '',
@@ -115,6 +115,16 @@ export default function Profile({ profile, account_status }: ProfilePageProps) {
     profile.identity_card?.data?.url ||
     profile.identity_card?.url ||
     profile.identity_card?.original_url;
+  const invitedBy = profile.invited_by
+    ? [
+        profile.invited_by.name,
+        profile.invited_by.referral_code
+          ? `(${profile.invited_by.referral_code})`
+          : null,
+      ]
+        .filter(Boolean)
+        .join(' ')
+    : '-';
 
   return (
     <CompanyDashboardLayout
@@ -214,6 +224,17 @@ export default function Profile({ profile, account_status }: ProfilePageProps) {
                     <InputError message={form.errors.email} />
                   </div>
                   <div className="space-y-2">
+                    <Label htmlFor="invited_by">
+                      <FormattedMessage defaultMessage="Invited By" />
+                    </Label>
+                    <Input
+                      id="invited_by"
+                      value={invitedBy}
+                      readOnly
+                      className="bg-muted text-muted-foreground"
+                    />
+                  </div>
+                  <div className="space-y-2">
                     <Label htmlFor="subdomain">
                       <FormattedMessage defaultMessage="Subdomain" />{' '}
                       <span className="text-destructive">*</span>
@@ -248,9 +269,12 @@ export default function Profile({ profile, account_status }: ProfilePageProps) {
                       </div>
                       <Switch
                         checked={form.data.domain_enabled}
-                        onCheckedChange={(checked) =>
-                          form.setData('domain_enabled', checked)
-                        }
+                        onCheckedChange={(checked) => {
+                          form.setData('domain_enabled', checked);
+                          if (!checked) {
+                            form.setData('domain', '');
+                          }
+                        }}
                       />
                     </div>
                     {form.data.domain_enabled && (

@@ -23,13 +23,24 @@ dayjs.extend(relativeTime);
 
 type PageProps = {
   data: {
-    data: Company[];
+    data: AgentCompany[];
     total: number;
   };
 };
 
+type AgentCompany = Company & {
+  referrer?: {
+    name?: string | null;
+    email?: string | null;
+    affiliate_profile?: {
+      referral_code?: string | null;
+      tier?: string | null;
+    } | null;
+  } | null;
+};
+
 export default function Page({ data }: PageProps) {
-  const columns = useMemo<ColumnDef<Company>[]>(
+  const columns = useMemo<ColumnDef<AgentCompany>[]>(
     () => [
       {
         id: 'select',
@@ -59,10 +70,19 @@ export default function Page({ data }: PageProps) {
       {
         id: 'name',
         accessorKey: 'name',
-        header: ({ column }: { column: Column<Company, unknown> }) => (
+        header: ({ column }: { column: Column<AgentCompany, unknown> }) => (
           <DataTableColumnHeader column={column} label="Name" />
         ),
-        cell: ({ cell }) => <div>{cell.getValue<Company['name']>()}</div>,
+        cell: ({ row }) => (
+          <div className="min-w-[180px]">
+            <div className="font-medium text-slate-900 dark:text-slate-100">
+              {row.original.name}
+            </div>
+            <div className="text-xs text-slate-500 dark:text-slate-400">
+              @{row.original.username}
+            </div>
+          </div>
+        ),
         meta: {
           label: 'Name',
           placeholder: 'Search names...',
@@ -74,10 +94,14 @@ export default function Page({ data }: PageProps) {
       {
         id: 'email',
         accessorKey: 'email',
-        header: ({ column }: { column: Column<Company, unknown> }) => (
+        header: ({ column }: { column: Column<AgentCompany, unknown> }) => (
           <DataTableColumnHeader column={column} label="Email" />
         ),
-        cell: ({ cell }) => <div>{cell.getValue<Company['email']>()}</div>,
+        cell: ({ cell }) => (
+          <div className="text-sm text-slate-700 dark:text-slate-300">
+            {cell.getValue<AgentCompany['email']>() || '-'}
+          </div>
+        ),
         meta: {
           label: 'Email',
           placeholder: 'Search email...',
@@ -89,15 +113,75 @@ export default function Page({ data }: PageProps) {
       {
         id: 'phone',
         accessorKey: 'phone',
-        header: ({ column }: { column: Column<Company, unknown> }) => (
+        header: ({ column }: { column: Column<AgentCompany, unknown> }) => (
           <DataTableColumnHeader column={column} label="Phone" />
         ),
-        cell: ({ cell }) => <div>{cell.getValue<string>()}</div>,
+        cell: ({ cell }) => (
+          <div className="text-sm text-slate-700 dark:text-slate-300">
+            {cell.getValue<string>() || '-'}
+          </div>
+        ),
+      },
+      {
+        id: 'affiliator',
+        accessorKey: 'referrer.name',
+        header: ({ column }: { column: Column<AgentCompany, unknown> }) => (
+          <DataTableColumnHeader column={column} label="Affiliator" />
+        ),
+        cell: ({ row }) => {
+          const referrer = row.original.referrer;
+          const tier = referrer?.affiliate_profile?.tier;
+
+          if (!referrer) {
+            return <span className="text-sm text-slate-400">No referral</span>;
+          }
+
+          return (
+            <div className="min-w-[180px]">
+              <div className="font-medium text-slate-900 dark:text-slate-100">
+                {referrer.name || '-'}
+              </div>
+              <div className="text-xs text-slate-500 dark:text-slate-400">
+                {referrer.email || '-'}
+              </div>
+              {tier && (
+                <Badge
+                  variant="outline"
+                  className="mt-1 capitalize border-primary/20 bg-primary/5 text-primary"
+                >
+                  {tier.replace(/_/g, ' ')}
+                </Badge>
+              )}
+            </div>
+          );
+        },
+      },
+      {
+        id: 'referral_code',
+        accessorKey: 'referrer.affiliate_profile.referral_code',
+        header: ({ column }: { column: Column<AgentCompany, unknown> }) => (
+          <DataTableColumnHeader column={column} label="Referral Code" />
+        ),
+        cell: ({ row }) => {
+          const referralCode =
+            row.original.referrer?.affiliate_profile?.referral_code;
+
+          return referralCode ? (
+            <Badge
+              variant="secondary"
+              className="font-mono tracking-wide text-slate-700 dark:text-slate-200"
+            >
+              {referralCode}
+            </Badge>
+          ) : (
+            <span className="text-sm text-slate-400">-</span>
+          );
+        },
       },
       {
         id: 'status',
         accessorKey: 'status',
-        header: ({ column }: { column: Column<Company, unknown> }) => (
+        header: ({ column }: { column: Column<AgentCompany, unknown> }) => (
           <DataTableColumnHeader column={column} label="Status" />
         ),
         cell: ({ cell }) => (
@@ -109,7 +193,7 @@ export default function Page({ data }: PageProps) {
       {
         id: 'created_at',
         accessorKey: 'created_at',
-        header: ({ column }: { column: Column<Company, unknown> }) => (
+        header: ({ column }: { column: Column<AgentCompany, unknown> }) => (
           <DataTableColumnHeader column={column} label="Join Date" />
         ),
         cell: ({ cell }) => {

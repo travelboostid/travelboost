@@ -1,3 +1,4 @@
+import { TermsAgreement } from '@/components/auth/terms-agreement';
 import InputError from '@/components/input-error';
 import AuthLayout from '@/components/layouts/auth/auth-layout';
 import TextLink from '@/components/text-link';
@@ -9,12 +10,24 @@ import { show as showLogin } from '@/routes/companies/login';
 import { store } from '@/routes/companies/register';
 import { Form, Head, usePage } from '@inertiajs/react';
 import { Eye, EyeOff } from 'lucide-react';
+import type { FormEvent } from 'react';
 import { useState } from 'react';
 
 export default function Register() {
   const { affiliate } = usePage().props as any;
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [termsError, setTermsError] = useState('');
+
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    if (!termsAccepted) {
+      event.preventDefault();
+      setTermsError(
+        'You must agree to the Terms and Conditions before creating an account.',
+      );
+    }
+  };
 
   return (
     <AuthLayout
@@ -27,6 +40,7 @@ export default function Register() {
         resetOnSuccess={['password', 'password_confirmation']}
         disableWhileProcessing
         className="flex flex-col gap-6"
+        onSubmit={handleSubmit}
       >
         {({ processing, errors }) => (
           <>
@@ -83,7 +97,7 @@ export default function Register() {
                   id="username"
                   type="text"
                   required
-                  tabIndex={1}
+                  tabIndex={3}
                   autoComplete="username"
                   name="username"
                   placeholder="Username"
@@ -98,7 +112,7 @@ export default function Register() {
                     id="password"
                     type={showPassword ? 'text' : 'password'}
                     required
-                    tabIndex={3}
+                    tabIndex={4}
                     autoComplete="new-password"
                     name="password"
                     placeholder="Password"
@@ -107,6 +121,7 @@ export default function Register() {
                     type="button"
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
                     onClick={() => setShowPassword(!showPassword)}
+                    tabIndex={-1}
                   >
                     {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
@@ -121,7 +136,7 @@ export default function Register() {
                     id="password_confirmation"
                     type={showConfirmPassword ? 'text' : 'password'}
                     required
-                    tabIndex={4}
+                    tabIndex={5}
                     autoComplete="new-password"
                     name="password_confirmation"
                     placeholder="Confirm password"
@@ -130,6 +145,7 @@ export default function Register() {
                     type="button"
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    tabIndex={-1}
                   >
                     {showConfirmPassword ? (
                       <EyeOff size={16} />
@@ -141,12 +157,25 @@ export default function Register() {
                 <InputError message={errors.password_confirmation} />
               </div>
 
+              <TermsAgreement
+                variant="agent"
+                checked={termsAccepted}
+                onCheckedChange={(checked) => {
+                  setTermsAccepted(checked);
+                  if (checked) {
+                    setTermsError('');
+                  }
+                }}
+                tabIndex={6}
+                error={termsError}
+              />
+
               <Button
                 type="submit"
                 className="mt-2 w-full"
-                tabIndex={5}
+                tabIndex={7}
                 data-test="register-user-button"
-                disabled={processing}
+                disabled={processing || !termsAccepted}
               >
                 {processing && <Spinner />}
                 Create account
@@ -155,7 +184,7 @@ export default function Register() {
 
             <div className="text-center text-sm text-muted-foreground">
               Already have an account?{' '}
-              <TextLink href={showLogin()} tabIndex={6}>
+              <TextLink href={showLogin()} tabIndex={8}>
                 Log in
               </TextLink>
             </div>

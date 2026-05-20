@@ -37,12 +37,6 @@ import {
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
-const formatNumber = (num: number) => {
-  return new Intl.NumberFormat('id-ID', { maximumFractionDigits: 0 }).format(
-    num,
-  );
-};
-
 export default function AgentList({ agents, userTier }: any) {
   const [selectedAgent, setSelectedAgent] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -109,10 +103,6 @@ export default function AgentList({ agents, userTier }: any) {
     >
       <Head title="Agent List" />
       <div className="space-y-6">
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">
-          Agent
-        </h1>
-
         <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
           <div className="relative w-full sm:w-80">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -127,9 +117,9 @@ export default function AgentList({ agents, userTier }: any) {
         </div>
 
         <Card className="border-border">
-          <CardHeader className="bg-muted/50 border-b border-border">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Building2 className="size-4 text-primary" /> Agent Directory
+          <CardHeader className="border-b border-border bg-white px-5 py-0">
+            <CardTitle className="flex items-center gap-2 text-base font-semibold text-foreground py-0 my-0">
+              <Building2 className="size-4 text-primary" /> Agent List
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
