@@ -50,14 +50,12 @@ class BookingController extends Controller
 
         $schedule = null;
         $availableSeats = 0;
+        $isScheduleBookable = false;
         if (request()->query('date')) {
-            $schedule = \App\Models\TourSchedule::where('tour_code', $tour->code)
-                ->whereDate('departure_date', request()->query('date'))
-                ->first();
-
-            if ($schedule && $schedule->departure_date < $cutoffDate) {
-                $schedule = null;
-            }
+            $requestedDepartureDate = request()->string('date')->toString();
+            $schedule = $this->resolveActiveSchedule($tour, $requestedDepartureDate);
+            $isScheduleBookable = $schedule !== null
+                && $this->isDepartureDateInsideBookingWindow($tour, $requestedDepartureDate);
 
             if ($schedule) {
                 app(ExpireBookingReservationsAction::class)->execute($tour->company, $tour->id);
@@ -66,7 +64,7 @@ class BookingController extends Controller
                     ->where('tour_id', $tour->id)
                     ->first();
 
-                $availableSeats = $availability ? (int) $availability->available : 0;
+                $availableSeats = $isScheduleBookable && $availability ? (int) $availability->available : 0;
 
                 $addOns = \App\Models\TourAddOn::where('schedule_id', $schedule->id)
                     ->where('tour_id', $tour->id)
@@ -106,21 +104,28 @@ class BookingController extends Controller
             ];
 
             if ($requestedBookingNumber !== '') {
+                $requestedBookingStatuses = $isScheduleBookable
+                    ? [
+                        ...$resumableStatuses,
+                        BookingStatus::FULL_PAYMENT,
+                    ]
+                    : [
+                        BookingStatus::DOWN_PAYMENT,
+                        BookingStatus::FULL_PAYMENT,
+                    ];
+
                 $existingBooking = Booking::with(['passengers', 'rooms'])
                     ->where('booking_number', $requestedBookingNumber)
                     ->where('user_id', $user->id)
                     ->where('tour_id', $tour->id)
-                    ->whereIn('status', [
-                        ...$resumableStatuses,
-                        BookingStatus::FULL_PAYMENT,
-                    ])
+                    ->whereIn('status', $requestedBookingStatuses)
                     ->whereDate('departure_date', request()->query('date'))
                     ->whereDate('departure_date', '>=', now()->toDateString())
                     ->latest()
                     ->first();
             }
 
-            if (! $existingBooking && ! $forceNewBooking) {
+            if (! $existingBooking && ! $forceNewBooking && $isScheduleBookable) {
                 $bookingConflict = Booking::query()
                     ->where('user_id', $user->id)
                     ->where('tour_id', $tour->id)
@@ -134,7 +139,7 @@ class BookingController extends Controller
                     ->first();
             }
 
-            if (! $existingBooking && ! $bookingConflict && ! $forceNewBooking) {
+            if (! $existingBooking && ! $bookingConflict && ! $forceNewBooking && $isScheduleBookable) {
                 $existingBooking = Booking::with(['passengers', 'rooms'])
                     ->where('user_id', $user->id)
                     ->where('tour_id', $tour->id)
@@ -147,7 +152,7 @@ class BookingController extends Controller
                     ->first();
             }
 
-            if (! $existingBooking && ! $bookingConflict && ! $forceNewBooking) {
+            if (! $existingBooking && ! $bookingConflict && ! $forceNewBooking && $isScheduleBookable) {
                 $existingBooking = Booking::with(['passengers', 'rooms'])
                     ->where('user_id', $user->id)
                     ->where('tour_id', $tour->id)
@@ -161,7 +166,7 @@ class BookingController extends Controller
             if ($existingBooking) {
                 $bookingNumber = $existingBooking->booking_number;
                 $isResumingExistingBooking = true;
-            } elseif (! $bookingConflict) {
+            } elseif (! $bookingConflict && $isScheduleBookable) {
                 $existingBooking = Booking::create([
                     'booking_number' => $bookingNumber,
                     'user_id' => $user->id,
@@ -203,7 +208,7 @@ class BookingController extends Controller
         $tour->setRelation(
             'schedules',
             $tour->schedules
-                ->filter(fn ($tourSchedule) => $tourSchedule->departure_date >= $cutoffDate)
+                ->filter(fn ($tourSchedule) => (bool) $tourSchedule->is_active && $tourSchedule->departure_date >= $cutoffDate)
                 ->values()
         );
 
@@ -214,6 +219,7 @@ class BookingController extends Controller
                 ->when($schedule, function ($query) use ($schedule) {
                     $query->where('schedule_id', $schedule->id);
                 })
+                ->orderBy('id')
                 ->get()
                 ->unique('price_category_id')
                 ->map(function ($price) {
@@ -323,6 +329,12 @@ class BookingController extends Controller
             'passengers.*.room_type' => ['nullable', 'string'],
             'passengers.*.note' => ['nullable', 'string', 'max:1000'],
         ]);
+
+        if (! $this->resolveBookableSchedule($tour, (string) $data['departure_date'])) {
+            throw ValidationException::withMessages([
+                'departure_date' => 'Booking window closed.',
+            ]);
+        }
 
         $this->validateExtraBedPassengers($data['passengers'] ?? []);
 
@@ -521,6 +533,14 @@ class BookingController extends Controller
 
         abort_unless($booking->status === BookingStatus::EXPIRED, 422);
         abort_unless($booking->departure_date?->isToday() || $booking->departure_date?->isFuture(), 422);
+        abort_unless(
+            $booking->tour && $this->resolveBookableSchedule(
+                $booking->tour,
+                $booking->departure_date->toDateString(),
+                $booking->vendor_id
+            ),
+            422
+        );
 
         DB::transaction(function () use ($booking): void {
             $booking->update([
@@ -925,6 +945,36 @@ class BookingController extends Controller
         return TourSchedule::query()
             ->where('tour_id', $booking->tour_id)
             ->whereDate('departure_date', $booking->departure_date)
+            ->first();
+    }
+
+    private function resolveBookableSchedule(Tour $tour, string $departureDate, ?int $companyId = null): ?TourSchedule
+    {
+        if (! $this->isDepartureDateInsideBookingWindow($tour, $departureDate)) {
+            return null;
+        }
+
+        return $this->resolveActiveSchedule($tour, $departureDate, $companyId);
+    }
+
+    private function isDepartureDateInsideBookingWindow(Tour $tour, string $departureDate): bool
+    {
+        $tour->loadMissing('company.companySetting');
+
+        $parsedDepartureDate = Carbon::parse($departureDate)->startOfDay();
+        $deadlineDays = (int) ($tour->company?->companySetting?->booking_deadline ?? 0);
+        $cutoffDate = now()->startOfDay()->addDays($deadlineDays);
+
+        return $parsedDepartureDate->gte($cutoffDate);
+    }
+
+    private function resolveActiveSchedule(Tour $tour, string $departureDate, ?int $companyId = null): ?TourSchedule
+    {
+        return TourSchedule::query()
+            ->where('tour_id', $tour->id)
+            ->where('company_id', $companyId ?? $tour->company_id)
+            ->where('is_active', true)
+            ->whereDate('departure_date', Carbon::parse($departureDate)->toDateString())
             ->first();
     }
 

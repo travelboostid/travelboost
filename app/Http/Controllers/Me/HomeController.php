@@ -9,6 +9,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Booking;
 use App\Models\Tour;
 use App\Models\TourAvailability;
+use App\Models\TourSchedule;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -72,23 +73,14 @@ class HomeController extends Controller
                       ->whereIn('status', $currentStatuses)
                       ->where(function ($query): void {
                           $query
-                              ->whereNotIn('status', [
-                                  BookingStatus::AWAITING_PAYMENT->value,
-                                  BookingStatus::FULL_PAYMENT->value,
-                                  BookingStatus::EXPIRED->value,
-                              ])
-                              ->orWhereNull('departure_date')
+                              ->whereNull('departure_date')
                               ->orWhereDate('departure_date', '>=', now()->toDateString());
                       });
               })
               ->when($activeTab === 'history', function ($query): void {
                   $query->where(function ($query): void {
                       $query
-                          ->where(function ($query): void {
-                              $query
-                                  ->where('status', BookingStatus::FULL_PAYMENT->value)
-                                  ->whereDate('departure_date', '<', now()->toDateString());
-                          })
+                          ->whereDate('departure_date', '<', now()->toDateString())
                           ->orWhereIn('status', [
                               BookingStatus::CANCELLED->value,
                               BookingStatus::REFUNDED->value,
@@ -142,6 +134,7 @@ class HomeController extends Controller
 
         $company = $booking->tour?->company;
         $settings = $company?->companySetting ?? $company?->settings ?? $company?->settings()->first();
+        $actionEligibility = $this->resolveActionEligibility($booking, $status, $settings);
 
         return [
             ...$booking->toArray(),
@@ -153,7 +146,57 @@ class HomeController extends Controller
             'payment_deadline' => $this->buildDeadlinePayload($booking->departure_date, $settings?->full_payment_deadline),
             'document_deadline' => $this->buildDeadlinePayload($booking->departure_date, $settings?->document_completed_deadline),
             'document_url' => $this->buildDocumentUrl($booking),
+            ...$actionEligibility,
         ];
+    }
+
+    private function resolveActionEligibility(Booking $booking, ?BookingStatus $status, mixed $settings): array
+    {
+        $canContinueBooking = in_array($status, [
+            BookingStatus::AWAITING_PAYMENT,
+            BookingStatus::BOOKING_RESERVED,
+        ], true);
+        $canReorder = $status === BookingStatus::EXPIRED;
+
+        if (! $canContinueBooking && ! $canReorder) {
+            return [
+                'can_continue_booking' => false,
+                'can_reorder' => false,
+                'booking_window_closed' => false,
+                'action_unavailable_reason' => null,
+            ];
+        }
+
+        $isBookable = $this->bookingScheduleIsBookable($booking, $settings);
+
+        return [
+            'can_continue_booking' => $canContinueBooking && $isBookable,
+            'can_reorder' => $canReorder && $isBookable,
+            'booking_window_closed' => ! $isBookable,
+            'action_unavailable_reason' => $isBookable ? null : 'Booking window closed',
+        ];
+    }
+
+    private function bookingScheduleIsBookable(Booking $booking, mixed $settings): bool
+    {
+        if (! $booking->tour_id || ! $booking->vendor_id || ! $booking->departure_date) {
+            return false;
+        }
+
+        $departureDate = Carbon::parse($booking->departure_date)->startOfDay();
+        $deadlineDays = (int) ($settings?->booking_deadline ?? 0);
+        $cutoffDate = now()->startOfDay()->addDays($deadlineDays);
+
+        if ($departureDate->lt($cutoffDate)) {
+            return false;
+        }
+
+        return TourSchedule::query()
+            ->where('tour_id', $booking->tour_id)
+            ->where('company_id', $booking->vendor_id)
+            ->where('is_active', true)
+            ->whereDate('departure_date', $departureDate->toDateString())
+            ->exists();
     }
 
     private function bookingNeedsTravelDocuments(Booking $booking): bool
