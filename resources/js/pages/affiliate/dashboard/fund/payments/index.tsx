@@ -57,7 +57,7 @@ export default function AffiliatePaymentHistory({
       <Head title="Commission History" />
 
       <div className="mx-auto max-w-6xl space-y-6">
-        <div>
+        {/* <div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
             Commission History
           </h1>
@@ -65,7 +65,7 @@ export default function AffiliatePaymentHistory({
             Review commissions received from agent subscriptions across your
             affiliate network.
           </p>
-        </div>
+        </div> */}
 
         <section className="grid gap-4 sm:grid-cols-2">
           {summaryCards.map((item) => {
@@ -139,11 +139,11 @@ export default function AffiliatePaymentHistory({
                         <div className="font-semibold text-slate-900 dark:text-slate-100">
                           {commission.company_name}
                         </div>
-                        <div className="text-xs text-slate-500 dark:text-slate-400">
+                        {/* <div className="text-xs text-slate-500 dark:text-slate-400">
                           {commission.payment_method ||
                             commission.provider ||
                             '-'}
-                        </div>
+                        </div> */}
                       </TableCell>
                       <TableCell>
                         <Badge

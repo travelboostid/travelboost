@@ -5,20 +5,57 @@ import { formatIDR } from '@/lib/utils';
 import { Head, Link } from '@inertiajs/react';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
-import { Bell, LayoutDashboard, Sparkles } from 'lucide-react';
+import { ArrowUpRight, Bell, LayoutDashboard, Sparkles } from 'lucide-react';
 import { ChartAreaInteractive } from './components/chart-area-interactive';
 import { SectionCards } from './components/section-cards';
 import SubscriptionAlert from './components/subscription-alert';
 
 dayjs.extend(relativeTime);
 
+const normalizeCurrency = (value: string) =>
+  value.replace(/^Rp[\s\u00a0]*/i, '');
+
+const getCurrencyTextClass = (value: string, base = 'text-xl') => {
+  const digits = normalizeCurrency(value).replace(/\D/g, '').length;
+
+  if (digits >= 13) return 'text-base';
+  if (digits >= 10) return 'text-lg';
+
+  return base;
+};
+
+function CurrencyAmount({
+  value,
+  valueClassName = 'text-xl font-bold text-slate-900 dark:text-slate-100',
+  prefixClassName = 'text-sm font-semibold text-slate-500 dark:text-slate-400',
+  baseSize = 'text-xl',
+}: {
+  value: string;
+  valueClassName?: string;
+  prefixClassName?: string;
+  baseSize?: string;
+}) {
+  const normalizedValue = normalizeCurrency(value);
+
+  return (
+    <div className="flex min-w-0 items-baseline gap-1.5">
+      <span className={`shrink-0 ${prefixClassName}`}>Rp</span>
+      <span
+        className={`min-w-0 whitespace-nowrap leading-tight tabular-nums ${valueClassName} ${getCurrencyTextClass(value, baseSize)}`}
+      >
+        {normalizedValue}
+      </span>
+    </div>
+  );
+}
+
 export default function Home() {
   const {
     company,
     stats,
     chartData,
-    topDestinations,
-    topAgents,
+    topDestinations: _topDestinations,
+    topAgents: _topAgents,
     recentNotifications = [],
     unreadNotificationsCount = 0,
   } = usePageProps<any>();
@@ -30,30 +67,39 @@ export default function Home() {
       containerClassName="bg-slate-50/30 dark:bg-slate-950 min-h-screen"
     >
       <Head title="Dashboard" />
-      <div className="p-4 lg:p-8">
+      <div className="px-4 py-4 sm:px-6 lg:px-8 lg:py-8">
         <div className="max-w-7xl mx-auto space-y-8">
-          <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div>
-              <h1 className="text-3xl font-extrabold tracking-tight text-slate-4000 dark:text-slate-100">
+          <header className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div className="min-w-0">
+              <h1 className="text-3xl font-bold tracking-tight text-slate-4000 dark:text-slate-100">
                 Dashboard
               </h1>
-              <p className="text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-2">
+              <p className="text-slate-500 dark:text-slate-400 mt-1 flex min-w-0 items-center gap-2">
                 <LayoutDashboard size={14} /> Global performance analytics for{' '}
-                {company.name}
+                <span className="truncate">{company.name}</span>
               </p>
             </div>
-            <div className="flex items-center gap-3">
-              <div className="hidden lg:flex flex-col items-end mr-4">
-                <span className="text-xs text-slate-400 dark:text-slate-500 uppercase font-bold tracking-widest">
+            <div className="flex w-full items-start justify-between gap-3 md:w-auto md:items-center md:justify-end">
+              <div className="flex min-w-0 flex-1 flex-col md:flex-none md:items-end">
+                <span className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400 dark:text-slate-500">
                   Wallet Balance
                 </span>
-                <span className="text-xl font-black text-slate-900 dark:text-slate-100">
-                  {formatIDR(stats.wallet?.balance || 0)}
-                </span>
+                <CurrencyAmount
+                  value={formatIDR(stats.wallet?.balance || 0)}
+                  valueClassName="font-bold text-slate-900 dark:text-slate-100"
+                  baseSize="text-xl"
+                />
+                <Link
+                  href={`/companies/${company.username}/dashboard/withdrawals`}
+                  className="mt-2 inline-flex w-fit items-center justify-center gap-1.5 rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100"
+                >
+                  Withdrawal
+                  <ArrowUpRight size={13} />
+                </Link>
               </div>
               <Link
                 href={`/companies/${company.username}/dashboard/notifications`}
-                className="relative p-2.5 bg-white dark:bg-slate-900 rounded-full ring-1 ring-slate-200 dark:ring-slate-800 shadow-sm transition-all hover:ring-2 hover:ring-primary/20"
+                className="relative shrink-0 rounded-full bg-white p-2.5 shadow-sm ring-1 ring-slate-200 transition-all hover:ring-2 hover:ring-primary/20 dark:bg-slate-900 dark:ring-slate-800"
               >
                 <Bell
                   size={20}
@@ -70,48 +116,54 @@ export default function Home() {
 
           {company.type === 'agent' && <SubscriptionAlert />}
 
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-            <div className="lg:col-span-3 space-y-6">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
+            <div className="space-y-6 min-w-0 lg:col-span-3">
               <SectionCards stats={stats} company={company} />
               <div className="bg-white dark:bg-slate-900 rounded-3xl p-2 shadow-sm ring-1 ring-slate-200 dark:ring-slate-800">
                 <ChartAreaInteractive data={chartData} />
               </div>
             </div>
 
-            <div className="space-y-6">
-              <Card className="rounded-3xl border-none bg-primary text-primary-foreground shadow-sm overflow-hidden relative">
-                <div className="absolute -right-4 -bottom-4 opacity-20">
-                  <Sparkles size={120} />
+            <div className="space-y-6 min-w-0">
+              <Card className="relative overflow-hidden rounded-3xl bg-white text-slate-900 shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:text-slate-100 dark:ring-slate-800">
+                <div className="absolute -right-6 -bottom-8 text-primary opacity-10">
+                  <Sparkles size={104} />
                 </div>
-                <CardContent className="p-6">
-                  <span className="text-primary-foreground/80 text-[10px] font-black uppercase tracking-[0.2em]">
-                    AI Credit
-                  </span>
-                  <h3 className="text-2xl font-bold mt-2">
-                    {formatIDR(stats.ai_credit || 0)}
-                  </h3>
-                  <p className="text-xs text-primary-foreground/80 mt-1">
-                    Available Credits
-                  </p>
+                <CardContent className="relative p-6 py-2">
+                  <div className="flex min-w-0 items-start gap-5">
+                    <div className="shrink-0 rounded-2xl bg-primary/10 p-4 text-primary dark:bg-primary/20">
+                      <Sparkles size={20} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">
+                        AI Credit
+                      </span>
+                      <div className="mt-1">
+                        <CurrencyAmount
+                          value={formatIDR(stats.ai_credit || 0)}
+                          valueClassName="font-bold text-slate-900 dark:text-slate-100"
+                          prefixClassName="text-sm font-semibold text-slate-500 dark:text-slate-400"
+                          baseSize="text-xl"
+                        />
+                      </div>
+                      <p className="mt-1.5 text-xs font-medium text-slate-500 dark:text-slate-400">
+                        Available Credits
+                      </p>
+                    </div>
+                  </div>
                   <Link
                     href={`/companies/${company.username}/dashboard/${company.type === 'agent' ? 'chatbot' : 'ai-credits'}`}
+                    className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-xs font-semibold text-white shadow-sm transition hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100"
                   >
-                    <button className="mt-6 w-full py-2.5 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-xl text-xs font-bold transition-all border border-white/20">
-                      Recharge Now
-                    </button>
+                    Top Up
+                    <ArrowUpRight size={14} />
                   </Link>
                 </CardContent>
               </Card>
 
-              {/* <TopLists
-                destinations={topDestinations}
-                agents={topAgents}
-                type={company.type}
-              /> */}
-
               <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 ring-1 ring-slate-200 dark:ring-slate-800 shadow-sm">
                 <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center justify-between">
-                  Activity Feed
+                  Notification
                   <Link
                     href={`/companies/${company.username}/dashboard/notifications`}
                     className="text-xs text-primary hover:underline"
@@ -120,7 +172,7 @@ export default function Home() {
                   </Link>
                 </h4>
                 <div className="mt-6 space-y-5">
-                  {recentNotifications.slice(0, 3).map((notif: any) => (
+                  {recentNotifications.slice(0, 5).map((notif: any) => (
                     <div
                       key={notif.id}
                       className="flex gap-4 group cursor-default"

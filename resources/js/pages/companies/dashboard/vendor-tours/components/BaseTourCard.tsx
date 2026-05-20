@@ -66,11 +66,11 @@ export default function BaseTourCard({
             onClick={() => setShowInfo(true)}
           />
           {imageAction}
-          <div className="absolute top-3 left-3 pointer-events-none">
+          {/* <div className="absolute top-3 left-3 pointer-events-none">
             <Badge className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm text-slate-800 dark:text-slate-100 border-none text-[9px] px-1.5 py-0.5 font-bold shadow-sm">
               {tour.category?.name || 'Tour'}
             </Badge>
-          </div>
+          </div> */}
         </div>
 
         <CardHeader className="px-3.5 pt-0 pb-0 space-y-0.5">

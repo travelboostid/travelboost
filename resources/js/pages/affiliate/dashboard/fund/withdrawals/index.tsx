@@ -75,7 +75,7 @@ export default function AffiliateWithdrawalsPage({
       <Head title="Withdrawals" />
 
       <div className="max-w-5xl mx-auto space-y-6">
-        <div>
+        {/* <div>
           <h1 className="text-2xl font-bold tracking-tight">
             Withdrawal History
           </h1>
@@ -83,7 +83,7 @@ export default function AffiliateWithdrawalsPage({
             Monitor all your commission withdrawal requests and their current
             status.
           </p>
-        </div>
+        </div> */}
 
         <WithdrawalsSummary stats={stats} />
 
