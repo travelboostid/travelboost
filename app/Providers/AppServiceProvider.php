@@ -2,7 +2,13 @@
 
 namespace App\Providers;
 
+use App\Models\AffiliateProfile;
 use App\Models\AgentSubscriptionPayment;
+use App\Models\AiCreditTopupPayment;
+use App\Models\AnonymousUser;
+use App\Models\Company;
+use App\Models\Media;
+use App\Models\User;
 use App\Models\WalletTopupPayment;
 use Carbon\CarbonImmutable;
 use Illuminate\Auth\Middleware\Authenticate;
@@ -17,72 +23,74 @@ use Intervention\Image\ImageManager;
 
 class AppServiceProvider extends ServiceProvider
 {
-  /**
-   * Register any application services.
-   */
-  public function register(): void
-  {
-    $this->app->singleton(ImageManager::class, function () {
-      return new ImageManager(new Driver());
-    });
-  }
+    /**
+     * Register any application services.
+     */
+    public function register(): void
+    {
+        $this->app->singleton(ImageManager::class, function () {
+            return new ImageManager(new Driver);
+        });
+    }
 
-  /**
-   * Bootstrap any application services.
-   */
-  public function boot(): void
-  {
-    Relation::morphMap([
-      'wallet-topup-payment' => WalletTopupPayment::class,
-      'agent-subscription-payment' => AgentSubscriptionPayment::class,
-      'company' => \App\Models\Company::class,
-      'user' => \App\Models\User::class,
-      'anonymous-user' => \App\Models\AnonymousUser::class,
-      'affiliate' => \App\Models\AffiliateProfile::class,
-      'media' => \App\Models\Media::class,
-    ]);
-    Authenticate::redirectUsing(function ($request) {
-      if ($request->expectsJson()) {
-        return null; // → 401 (important for API/Inertia)
-      }
+    /**
+     * Bootstrap any application services.
+     */
+    public function boot(): void
+    {
+        Relation::morphMap([
+            'wallet-topup-payment' => WalletTopupPayment::class,
+            'agent-subscription-payment' => AgentSubscriptionPayment::class,
+            'ai-credit-topup-payment' => AiCreditTopupPayment::class,
+            'company' => Company::class,
+            'user' => User::class,
+            'anonymous-user' => AnonymousUser::class,
+            'affiliate' => AffiliateProfile::class,
+            'media' => Media::class,
+        ]);
+        Authenticate::redirectUsing(function ($request) {
+            if ($request->expectsJson()) {
+                return null; // → 401 (important for API/Inertia)
+            }
 
-      $redirectPath = '/'; // Default redirect path
-      $domain = Context::get('domain');
-      if ($domain == null) {
-        $redirectPath = route('companies.login.show');
-      } else if ($domain->owner instanceof \App\Models\Company) {
-        $redirectPath = route('customers.login.show');
-      } else if ($domain->owner instanceof \App\Models\AffiliateProfile) {
-        $redirectPath = '/affiliate/login';
-      } else {
-        $redirectPath = '/'; // Fallback to general login if domain owner type is unrecognized
-      }
-      return $redirectPath;
-    });
+            $redirectPath = '/'; // Default redirect path
+            $domain = Context::get('domain');
+            if ($domain == null) {
+                $redirectPath = route('companies.login.show');
+            } elseif ($domain->owner instanceof Company) {
+                $redirectPath = route('customers.login.show');
+            } elseif ($domain->owner instanceof AffiliateProfile) {
+                $redirectPath = '/affiliate/login';
+            } else {
+                $redirectPath = '/'; // Fallback to general login if domain owner type is unrecognized
+            }
 
-    $this->configureDefaults();
-  }
+            return $redirectPath;
+        });
 
-  /**
-   * Configure default behaviors for production-ready applications.
-   */
-  protected function configureDefaults(): void
-  {
-    Date::use(CarbonImmutable::class);
+        $this->configureDefaults();
+    }
 
-    DB::prohibitDestructiveCommands(
-      app()->isProduction(),
-    );
+    /**
+     * Configure default behaviors for production-ready applications.
+     */
+    protected function configureDefaults(): void
+    {
+        Date::use(CarbonImmutable::class);
 
-    Password::defaults(
-      fn(): ?Password => app()->isProduction()
-        ? Password::min(12)
-        ->mixedCase()
-        ->letters()
-        ->numbers()
-        ->symbols()
-        ->uncompromised()
-        : null
-    );
-  }
+        DB::prohibitDestructiveCommands(
+            app()->isProduction(),
+        );
+
+        Password::defaults(
+            fn (): ?Password => app()->isProduction()
+              ? Password::min(12)
+                  ->mixedCase()
+                  ->letters()
+                  ->numbers()
+                  ->symbols()
+                  ->uncompromised()
+              : null
+        );
+    }
 }
