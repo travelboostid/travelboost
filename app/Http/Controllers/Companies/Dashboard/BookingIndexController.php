@@ -260,6 +260,7 @@ class BookingIndexController extends Controller
                 ->when($schedule, function ($query) use ($schedule) {
                     $query->where('schedule_id', $schedule->id);
                 })
+                ->orderBy('id')
                 ->get()
                 ->unique('price_category_id')
                 ->map(function ($price) {

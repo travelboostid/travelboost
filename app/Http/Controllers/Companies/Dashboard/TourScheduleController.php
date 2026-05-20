@@ -2,12 +2,16 @@
 
 namespace App\Http\Controllers\Companies\Dashboard;
 
+use App\Actions\Booking\SyncAvailabilityAction;
+use App\Enums\BookingStatus;
 use App\Http\Controllers\Controller;
+use App\Models\Booking;
 use App\Models\Company;
 use App\Models\Tour;
-use App\Models\TourSchedule;
 use App\Models\TourPrice;
+use App\Models\TourSchedule;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class TourScheduleController extends Controller
@@ -34,10 +38,10 @@ class TourScheduleController extends Controller
 
             // DELETE schedule
             if (count($data['schedules']) > 0 && count($incomingScheduleIds) > 0) {
-              $deleteIds = array_diff($existingScheduleIds, $incomingScheduleIds);
-              if (!empty($deleteIds)) {
-                  TourSchedule::whereIn('id', $deleteIds)->delete();
-              }
+                $deleteIds = array_diff($existingScheduleIds, $incomingScheduleIds);
+                if (! empty($deleteIds)) {
+                    TourSchedule::whereIn('id', $deleteIds)->delete();
+                }
             }
 
             $newlyCreatedSchedules = [];
@@ -45,18 +49,29 @@ class TourScheduleController extends Controller
             foreach ($data['schedules'] as $schedule) {
 
                 $isNewSchedule = empty($schedule['id']);
-                
+                $oldDepartureDate = null;
+                if (! $isNewSchedule) {
+                    $oldDepartureDate = TourSchedule::query()
+                        ->where('tour_id', $tour->id)
+                        ->whereKey($schedule['id'])
+                        ->value('departure_date');
+                    $oldDepartureDate = $oldDepartureDate
+                        ? Carbon::parse($oldDepartureDate)->toDateString()
+                        : null;
+                }
+                $newDepartureDate = Carbon::parse($schedule['departure_date'])->toDateString();
+
                 $scheduleModel = TourSchedule::updateOrCreate(
                     [
-                      'id' => $schedule['id'] ?? null,
-                      'tour_id' => $tour->id,
+                        'id' => $schedule['id'] ?? null,
+                        'tour_id' => $tour->id,
                     ],
                     [
-                        'tour_id'        => $tour->id,
-                        'company_id'     => $company->id,
-                        'tour_code'      => $tour->code,
-                        'departure_date' => $schedule['departure_date'],
-                        'return_date'    => $schedule['return_date'] ?? null,
+                        'tour_id' => $tour->id,
+                        'company_id' => $company->id,
+                        'tour_code' => $tour->code,
+                        'departure_date' => $newDepartureDate,
+                        'return_date' => $schedule['return_date'] ?? null,
                     ]
                 );
 
@@ -83,7 +98,9 @@ class TourScheduleController extends Controller
 
                 foreach ($schedule['prices'] ?? [] as $price) {
 
-                    if (empty($price['room_type_id'])) continue;
+                    if (empty($price['room_type_id'])) {
+                        continue;
+                    }
 
                     $promotionRate = 0;
                     $promotionValue = 0;
@@ -105,18 +122,18 @@ class TourScheduleController extends Controller
 
                     TourPrice::updateOrCreate(
                         [
-                          'schedule_id' => $scheduleModel->id,
-                          'price_category_id' => $price['room_type_id'],
+                            'schedule_id' => $scheduleModel->id,
+                            'price_category_id' => $price['room_type_id'],
                         ],
                         [
-                            'company_id'        => $company->id,
-                            'tour_code'         => $tour->code,
-                            'price'             => (int) ($price['price'] ?? 0),
-                            'currency'          => $tour->currency,
-                            'promotion_rate'    => $promotionRate,
-                            'promotion'         => $promotionValue,
-                            'commission_rate'   => $commissionRate,
-                            'commission'        => $commissionValue,
+                            'company_id' => $company->id,
+                            'tour_code' => $tour->code,
+                            'price' => (int) ($price['price'] ?? 0),
+                            'currency' => $tour->currency,
+                            'promotion_rate' => $promotionRate,
+                            'promotion' => $promotionValue,
+                            'commission_rate' => $commissionRate,
+                            'commission' => $commissionValue,
                         ]
                     );
                 }
@@ -142,13 +159,13 @@ class TourScheduleController extends Controller
 
                         $scheduleModel->addOns()->updateOrCreate(
                             [
-                                'company_id'  => $company->id,
-                                'tour_id'     => $tour->id,
+                                'company_id' => $company->id,
+                                'tour_id' => $tour->id,
                                 'schedule_id' => $scheduleModel->id,
                                 'description' => $addon['description'],
                             ],
                             [
-                                'price'       => $addon['price'] ?? 0,
+                                'price' => $addon['price'] ?? 0,
                                 'edit_status' => $addon['edit_status'] ?? false,
                             ]
                         );
@@ -160,10 +177,20 @@ class TourScheduleController extends Controller
                     $scheduleModel->availability()->updateOrCreate(
                         ['schedule_id' => $scheduleModel->id],
                         [
+                            'company_id' => $company->id,
+                            'tour_id' => $tour->id,
                             'max_pax' => $schedule['availability']['max_pax'] ?? 0,
                             'available' => $schedule['availability']['available'] ?? 0,
                         ]
                     );
+                }
+
+                if (! $isNewSchedule && $oldDepartureDate && $oldDepartureDate !== $newDepartureDate) {
+                    $this->syncBookingDepartureDates($tour, $company, $oldDepartureDate, $newDepartureDate);
+
+                    if ($scheduleModel->availability()->exists()) {
+                        app(SyncAvailabilityAction::class)->execute($tour->id, $newDepartureDate, $company->id);
+                    }
                 }
             }
 
@@ -177,7 +204,7 @@ class TourScheduleController extends Controller
             DB::rollBack();
 
             return back()->withErrors([
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
         }
     }
@@ -192,7 +219,36 @@ class TourScheduleController extends Controller
         $schedule->delete();
 
         return back()->with([
-            'success' => true
+            'success' => true,
         ]);
+    }
+
+    private function syncBookingDepartureDates(Tour $tour, Company $company, string $oldDate, string $newDate): void
+    {
+        Booking::query()
+            ->where('tour_id', $tour->id)
+            ->where('vendor_id', $company->id)
+            ->whereDate('departure_date', $oldDate)
+            ->whereIn('status', $this->scheduleSyncedBookingStatuses())
+            ->update([
+                'departure_date' => $newDate,
+            ]);
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function scheduleSyncedBookingStatuses(): array
+    {
+        return [
+            BookingStatus::AWAITING_PAYMENT->value,
+            BookingStatus::WAITING_PAYMENT_APPROVAL->value,
+            BookingStatus::RESERVED->value,
+            BookingStatus::BOOKING_RESERVED->value,
+            BookingStatus::DOWN_PAYMENT->value,
+            BookingStatus::FULL_PAYMENT->value,
+            BookingStatus::EXPIRED->value,
+            BookingStatus::WAITING_LIST->value,
+        ];
     }
 }

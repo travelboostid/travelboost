@@ -29,16 +29,6 @@ export function NavUser({
   onNavigateAway?: (href: string) => void;
 }) {
   const { auth } = usePageSharedDataProps();
-  const href = '/me';
-
-  const handleClick = (event: MouseEvent) => {
-    if (!onNavigateAway) {
-      return;
-    }
-
-    event.preventDefault();
-    onNavigateAway(href);
-  };
 
   const handleLogout = () => {
     router.post('/logout');

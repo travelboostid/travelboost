@@ -5,9 +5,11 @@ use App\Enums\PaymentStatus;
 use App\Models\Booking;
 use App\Models\Company;
 use App\Models\Domain;
+use App\Models\PriceCategory;
 use App\Models\SavedPassenger;
 use App\Models\Tour;
 use App\Models\TourAvailability;
+use App\Models\TourPrice;
 use App\Models\TourSchedule;
 use App\Models\User;
 use Database\Seeders\Common\RolePermissionSeeder;
@@ -65,13 +67,72 @@ function createBookingCreateScenario(string $username): array
     return compact('user', 'company', 'tour', 'schedule');
 }
 
+test('booking create exposes tour prices in vendor configured row order', function () {
+    ['user' => $user, 'company' => $company, 'tour' => $tour, 'schedule' => $schedule] = createBookingCreateScenario('priceordervendor');
+
+    $adultTriple = PriceCategory::create([
+        'company_id' => $company->id,
+        'name' => 'Adult Triple',
+        'room_type' => 'triple',
+    ]);
+    $adultSingle = PriceCategory::create([
+        'company_id' => $company->id,
+        'name' => 'Adult Single',
+        'room_type' => 'single',
+    ]);
+    $adultDouble = PriceCategory::create([
+        'company_id' => $company->id,
+        'name' => 'Adult Double',
+        'room_type' => 'double',
+    ]);
+
+    TourPrice::create([
+        'company_id' => $company->id,
+        'tour_code' => $tour->code,
+        'schedule_id' => $schedule->id,
+        'price_category_id' => $adultTriple->id,
+        'currency' => 'IDR',
+        'price' => 2_000_000,
+    ]);
+    TourPrice::create([
+        'company_id' => $company->id,
+        'tour_code' => $tour->code,
+        'schedule_id' => $schedule->id,
+        'price_category_id' => $adultSingle->id,
+        'currency' => 'IDR',
+        'price' => 1_000_000,
+    ]);
+    TourPrice::create([
+        'company_id' => $company->id,
+        'tour_code' => $tour->code,
+        'schedule_id' => $schedule->id,
+        'price_category_id' => $adultDouble->id,
+        'currency' => 'IDR',
+        'price' => 3_000_000,
+    ]);
+
+    $response = $this->actingAs($user)->get(route('bookings.create', [
+        'username' => $company->username,
+        'tour' => $tour,
+        'date' => $schedule->departure_date,
+    ]));
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->component('tours/bookings/create')
+        ->has('tourPrices', 3)
+        ->where('tourPrices.0.categoryName', 'Adult Triple')
+        ->where('tourPrices.1.categoryName', 'Adult Single')
+        ->where('tourPrices.2.categoryName', 'Adult Double'));
+});
+
 test('booking create passes vendor settings to the frontend and applies schedule deadline', function () {
     $user = User::factory()->create();
     $company = Company::factory()->create([
         'username' => 'deadlinevendor',
         'type' => 'vendor',
     ]);
-    $company->companySetting()->update([
+    $company->companySetting()->updateOrCreate([], [
         'booking_deadline' => 7,
         'booking_entry_time_limit' => 25,
         'minimum_down_payment' => 30,
@@ -132,6 +193,7 @@ test('booking create passes vendor settings to the frontend and applies schedule
         ->where('vendorBankInfo.bankName', 'BCA')
         ->where('vendorBankInfo.accountName', 'Travel Boost Vendor')
         ->where('vendorBankInfo.accountNumber', '1234567890'));
+    expect(Booking::where('user_id', $user->id)->exists())->toBeFalse();
 });
 
 test('booking create exposes saved passengers for the authenticated user only', function () {
@@ -238,6 +300,22 @@ test('reserve rejects extra bed passengers without a twin or double base room', 
         'company_id' => $company->id,
         'status' => 'active',
     ]);
+    $departureDate = now()->addDays(20)->toDateString();
+    $schedule = TourSchedule::create([
+        'tour_id' => $tour->id,
+        'tour_code' => $tour->code,
+        'company_id' => $company->id,
+        'departure_date' => $departureDate,
+        'return_date' => now()->addDays(25)->toDateString(),
+        'is_active' => true,
+    ]);
+    TourAvailability::create([
+        'company_id' => $company->id,
+        'tour_id' => $tour->id,
+        'schedule_id' => $schedule->id,
+        'max_pax' => 10,
+        'available' => 10,
+    ]);
 
     Domain::create([
         'subdomain' => 'extrabedvendor',
@@ -257,7 +335,7 @@ test('reserve rejects extra bed passengers without a twin or double base room', 
             'tour' => $tour,
         ]), [
             'tour_id' => $tour->id,
-            'departure_date' => now()->addDays(20)->toDateString(),
+            'departure_date' => $departureDate,
             'pax_adult' => 1,
             'pax_child' => 0,
             'pax_infant' => 0,
@@ -285,7 +363,7 @@ test('reserve stores server hold expiry using ten minute fallback when setting i
         'username' => 'timerfallbackvendor',
         'type' => 'vendor',
     ]);
-    $company->companySetting()->update([
+    $company->companySetting()->updateOrCreate([], [
         'booking_entry_time_limit' => 0,
     ]);
     $tour = Tour::factory()->create([
@@ -374,6 +452,46 @@ test('reserve rejects zero passengers before starting the hold timer', function 
     $this->assertDatabaseMissing('bookings', [
         'booking_number' => 'BKG-ZERO-PAX',
         'status' => BookingStatus::BOOKING_RESERVED->value,
+    ]);
+});
+
+test('reserve rejects schedules after the vendor booking deadline without starting a hold', function () {
+    ['user' => $user, 'company' => $company, 'tour' => $tour, 'schedule' => $schedule] = createBookingCreateScenario('closedreservevendor');
+    $company->companySetting()->updateOrCreate([], [
+        'booking_deadline' => 30,
+    ]);
+
+    $response = $this->actingAs($user)
+        ->from(route('bookings.create', [
+            'username' => $company->username,
+            'tour' => $tour,
+            'date' => $schedule->departure_date,
+        ]))
+        ->post(route('bookings.reserve', [
+            'username' => $company->username,
+            'tour' => $tour,
+        ]), [
+            'tour_id' => $tour->id,
+            'departure_date' => $schedule->departure_date,
+            'pax_adult' => 1,
+            'pax_child' => 0,
+            'pax_infant' => 0,
+            'booking_number' => 'BKG-CLOSED-RESERVE',
+            'vendor_id' => $company->id,
+            'passengers' => [
+                [
+                    'first_name' => 'Closed',
+                    'last_name' => 'Window',
+                    'price_category' => 'Adult Twin',
+                    'room_type' => 'Twin',
+                    'price_amount' => 1000000,
+                ],
+            ],
+        ]);
+
+    $response->assertSessionHasErrors('departure_date');
+    $this->assertDatabaseMissing('bookings', [
+        'booking_number' => 'BKG-CLOSED-RESERVE',
     ]);
 });
 
@@ -953,6 +1071,77 @@ test('booking create exposes paid and remaining balances for down payment bookin
         ->where('remainingBalance', 750000));
 });
 
+test('booking create exposes paid booking room payload without hold timer', function () {
+    ['user' => $user, 'company' => $company, 'tour' => $tour, 'schedule' => $schedule] = createBookingCreateScenario('paidroompayloadvendor');
+
+    $booking = Booking::factory()->create([
+        'booking_number' => 'BKG-PAID-ROOMS',
+        'user_id' => $user->id,
+        'vendor_id' => $company->id,
+        'tour_id' => $tour->id,
+        'departure_date' => $schedule->departure_date,
+        'status' => BookingStatus::DOWN_PAYMENT,
+        'payment_mode' => 'manual',
+        'grand_total' => 1_000_000,
+        'reserved_type' => 'system',
+        'reserved_expires_at' => null,
+        'pax_adult' => 1,
+        'pax_infant' => 1,
+    ]);
+    $booking->payments()->create([
+        'owner_type' => User::class,
+        'owner_id' => $user->id,
+        'provider' => 'manual',
+        'payment_method' => 'bank_transfer',
+        'amount' => 250_000,
+        'status' => PaymentStatus::PAID,
+    ]);
+    $adult = $booking->passengers()->create([
+        'first_name' => 'Paid',
+        'last_name' => 'Adult',
+        'pob' => 'Jakarta',
+        'price_category' => 'Adult Single',
+        'price_amount' => 1_000_000,
+        'room_number' => '1',
+    ]);
+    $infant = $booking->passengers()->create([
+        'first_name' => 'Paid',
+        'last_name' => 'Infant',
+        'pob' => 'Jakarta',
+        'price_category' => 'Infant',
+        'price_amount' => 0,
+        'room_number' => '1',
+    ]);
+    $booking->rooms()->create([
+        'room_type' => 'single',
+        'room_label' => 'Room 1',
+        'bed_layout' => [
+            ['bedType' => 'single', 'guestId' => (string) $adult->id, 'position' => ['x' => 0, 'y' => 0]],
+        ],
+    ]);
+
+    $response = $this->actingAs($user)->get(route('bookings.create', [
+        'username' => $company->username,
+        'tour' => $tour,
+        'date' => $schedule->departure_date,
+        'booking_number' => $booking->booking_number,
+    ]));
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->component('tours/bookings/create')
+        ->where('isResumingExistingBooking', true)
+        ->where('existingBooking.booking_number', 'BKG-PAID-ROOMS')
+        ->where('existingBooking.status', BookingStatus::DOWN_PAYMENT->value)
+        ->where('existingBooking.passengers.0.id', $adult->id)
+        ->where('existingBooking.passengers.1.id', $infant->id)
+        ->where('existingBooking.rooms.0.bed_layout.0.guestId', (string) $adult->id)
+        ->where('paidAmount', 250000)
+        ->where('remainingBalance', 750000)
+        ->where('reservedExpiresAt', null)
+        ->where('remainingHoldSeconds', null));
+});
+
 test('same schedule waiting payment approval booking blocks silent reuse', function () {
     ['user' => $user, 'company' => $company, 'tour' => $tour, 'schedule' => $schedule] = createBookingCreateScenario('wpaconflictvendor');
 
@@ -1232,6 +1421,66 @@ test('expired future booking can be reset through reorder endpoint with the same
         ->where('existingBooking.rooms.0.room_type', 'twin')
         ->where('existingBooking.rooms.0.room_label', 'Room 1')
         ->where('existingBooking.rooms.0.bed_layout.0.guestId', 'adult-0'));
+});
+
+test('reorder endpoint rejects expired bookings after the vendor booking deadline', function () {
+    $user = User::factory()->create();
+    $company = Company::factory()->create([
+        'username' => 'closedreordervendor',
+        'type' => 'vendor',
+    ]);
+    $company->companySetting()->updateOrCreate([], [
+        'booking_deadline' => 30,
+    ]);
+
+    Domain::create([
+        'subdomain' => 'closedreordervendor',
+        'owner_type' => Company::class,
+        'owner_id' => $company->id,
+        'domain_enabled' => true,
+        'subdomain_enabled' => true,
+    ]);
+
+    $tour = Tour::factory()->create([
+        'company_id' => $company->id,
+        'status' => 'active',
+    ]);
+    $schedule = TourSchedule::create([
+        'tour_id' => $tour->id,
+        'tour_code' => $tour->code,
+        'company_id' => $company->id,
+        'departure_date' => now()->addDays(10)->toDateString(),
+        'return_date' => now()->addDays(15)->toDateString(),
+        'is_active' => true,
+    ]);
+    TourAvailability::create([
+        'company_id' => $company->id,
+        'tour_id' => $tour->id,
+        'schedule_id' => $schedule->id,
+        'max_pax' => 10,
+        'available' => 10,
+    ]);
+
+    $booking = Booking::factory()->create([
+        'booking_number' => 'BKG-CLOSED-REORDER',
+        'user_id' => $user->id,
+        'vendor_id' => $company->id,
+        'tour_id' => $tour->id,
+        'departure_date' => $schedule->departure_date,
+        'status' => BookingStatus::EXPIRED,
+        'reserved_type' => 'system',
+        'reserved_expires_at' => null,
+    ]);
+
+    $this->actingAs($user)
+        ->post("/bookings/{$booking->id}/reorder")
+        ->assertStatus(422);
+
+    $this->assertDatabaseHas('bookings', [
+        'id' => $booking->id,
+        'booking_number' => 'BKG-CLOSED-REORDER',
+        'status' => BookingStatus::EXPIRED->value,
+    ]);
 });
 
 test('selecting the same schedule reuses a future expired booking number without query parameter', function () {

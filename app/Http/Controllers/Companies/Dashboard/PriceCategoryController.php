@@ -3,10 +3,10 @@
 namespace App\Http\Controllers\Companies\Dashboard;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use Inertia\Inertia;
 use App\Models\Company;
 use App\Models\PriceCategory;
+use Illuminate\Http\Request;
+use Inertia\Inertia;
 
 class PriceCategoryController extends Controller
 {
@@ -59,6 +59,7 @@ class PriceCategoryController extends Controller
     public function destroy(Company $company, PriceCategory $price_category)
     {
         $price_category->delete();
+
         return redirect()->back();
     }
 }
