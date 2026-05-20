@@ -33,4 +33,6 @@ export interface CompanySettings {
   password_payment_gateway: CompanySettingsPasswordPaymentGateway;
   created_at: CompanySettingsCreatedAt;
   updated_at: CompanySettingsUpdatedAt;
+  full_payment_deadline: number;
+  document_completed_deadline: number;
 }

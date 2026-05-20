@@ -44,7 +44,10 @@ class ProcessAutoWithdrawalJob implements ShouldQueue
       return;
     }
 
-    $wallet->withdraw($withdrawal->amount);
+    $wallet->withdraw($withdrawal->amount, [
+      'type' => 'withdrawal',
+      'description' => 'Withdrawal',
+    ]);
 
     // TODO: process payout
 

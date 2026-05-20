@@ -5,6 +5,7 @@
  * OpenAPI spec version: 0.0.1
  */
 import type { WalletResourceHolder } from './walletResourceHolder';
+import type { WalletResourceDescription } from './walletResourceDescription';
 import type { WalletResourceMeta } from './walletResourceMeta';
 import type { WalletResourceCurrency } from './walletResourceCurrency';
 import type { WalletResourceStatus } from './walletResourceStatus';
@@ -14,14 +15,14 @@ import type { WalletResourceTransactionCount } from './walletResourceTransaction
 import type { WalletResourceLinks } from './walletResourceLinks';
 
 export interface WalletResource {
-  id: string;
+  id: number;
   uuid: string;
   holder?: WalletResourceHolder;
-  holder_id: string;
+  holder_id: number;
   holder_type: string;
   name: string;
   slug: string;
-  description: string;
+  description: WalletResourceDescription;
   balance: string;
   balance_int: string;
   balance_formatted: string;
@@ -29,8 +30,7 @@ export interface WalletResource {
   currency: WalletResourceCurrency;
   status: WalletResourceStatus;
   type: WalletResourceType;
-  /** Statistics */
-  total_deposits?: string;
+  total_deposits: unknown;
   total_withdrawals?: WalletResourceTotalWithdrawals;
   transaction_count: WalletResourceTransactionCount;
   /** Dates */

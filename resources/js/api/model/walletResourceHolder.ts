@@ -7,7 +7,7 @@
 import type { WalletResourceHolderType } from './walletResourceHolderType';
 
 export type WalletResourceHolder = {
-  id: string;
+  id: number;
   name: string;
   email: string;
   type: WalletResourceHolderType;

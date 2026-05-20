@@ -4,99 +4,100 @@ import process from 'process';
 
 // CONFIGS
 const CONFIG = {
-  branch: 'dev',
-  sshUser: 'travelboost',
-  sshHost: '103.127.138.76',
-  remotePath: '~/travelboost-dev',
-  buildPath: 'public/build',
+    branch: 'dev',
+    sshUser: 'travelboost',
+    sshHost: '103.127.138.76',
+    remotePath: '~/travelboost-dev',
+    buildPath: 'public/build',
 };
 
 // HELPERS
 function run(cmd, options = {}) {
-  console.log(`\n> ${cmd}`);
-  execSync(cmd, { stdio: 'inherit', ...options });
+    console.log(`\n> ${cmd}`);
+    execSync(cmd, { stdio: 'inherit', ...options });
 }
 
 function getOutput(cmd) {
-  return execSync(cmd, { encoding: 'utf-8' }).trim();
+    return execSync(cmd, { encoding: 'utf-8' }).trim();
 }
 
 function assert(condition, message) {
-  if (!condition) {
-    console.error(`\n❌ ${message}`);
-    process.exit(1);
-  }
+    if (!condition) {
+        console.error(`\n❌ ${message}`);
+        process.exit(1);
+    }
 }
 
 function ssh(cmd) {
-  const { sshUser, sshHost } = CONFIG;
+    const { sshUser, sshHost } = CONFIG;
 
-  return `ssh ${sshUser}@${sshHost} "${cmd}"`;
+    return `ssh ${sshUser}@${sshHost} "${cmd}"`;
 }
 
 // DEPLOY
 try {
-  console.log('🚀 Deploying...');
+    console.log('🚀 Deploying...');
 
-  const { branch, remotePath, buildPath, sshUser, sshHost } = CONFIG;
+    const { branch, remotePath, buildPath, sshUser, sshHost } = CONFIG;
 
-  // --- 0. Pre-checks ---
-  const env = fs.readFileSync('.env', 'utf-8');
+    // --- 0. Pre-checks ---
+    const env = fs.readFileSync('.env', 'utf-8');
 
-  assert(env.includes('APP_ENV=development'), 'APP_ENV must be development');
+    assert(env.includes('APP_ENV=development'), 'APP_ENV must be development');
 
-  // --- 1. Git safety checks ---
-  const currentBranch = getOutput('git rev-parse --abbrev-ref HEAD');
+    // --- 1. Git safety checks ---
+    const currentBranch = getOutput('git rev-parse --abbrev-ref HEAD');
 
-  assert(
-    currentBranch === branch,
-    `Current branch is "${currentBranch}", must be "${branch}"`,
-  );
+    assert(
+        currentBranch === branch,
+        `Current branch is "${currentBranch}", must be "${branch}"`,
+    );
 
-  const status = getOutput('git status --porcelain');
+    const status = getOutput('git status --porcelain');
 
-  assert(status === '', 'You have uncommitted changes');
+    assert(status === '', 'You have uncommitted changes');
 
-  run('git fetch origin');
+    run('git fetch origin');
 
-  const local = getOutput('git rev-parse HEAD');
-  const remote = getOutput(`git rev-parse origin/${branch}`);
+    const local = getOutput('git rev-parse HEAD');
+    const remote = getOutput(`git rev-parse origin/${branch}`);
 
-  assert(
-    local === remote,
-    `Local branch is not up-to-date with origin/${branch}`,
-  );
+    assert(
+        local === remote,
+        `Local branch is not up-to-date with origin/${branch}`,
+    );
 
-  // --- 2. Upload .env ---
-  run(`scp .env ${sshUser}@${sshHost}:${remotePath}/.env`);
+    // --- 2. Upload .env ---
+    run(`scp .env ${sshUser}@${sshHost}:${remotePath}/.env`);
 
-  // --- 3. Update VPS backend ---
-  run(
-    ssh(
-      `cd ${remotePath} && ` +
-        `git pull origin ${branch} && ` +
-        `composer install --no-dev --optimize-autoloader && ` +
-        `php artisan optimize:clear && ` +
-        `php artisan migrate --force`,
-    ),
-  );
+    // --- 3. Update VPS backend ---
+    run(
+        ssh(
+            `cd ${remotePath} && ` +
+                `git pull origin ${branch} && ` +
+                `composer install --no-dev --optimize-autoloader && ` +
+                `php artisan optimize:clear && ` +
+                `php artisan migrate --force && ` +
+                `sudo supervisorctl restart all`,
+        ),
+    );
 
-  // --- 4. Build frontend ---
-  run('pnpm install --frozen-lockfile');
-  run('pnpm build');
+    // --- 4. Build frontend ---
+    run('pnpm install --frozen-lockfile');
+    run('pnpm build');
 
-  // --- 5. Upload assets ---
-  const remoteBuildPath = `${sshUser}@${sshHost}:${remotePath}/${buildPath}`;
+    // --- 5. Upload assets ---
+    const remoteBuildPath = `${sshUser}@${sshHost}:${remotePath}/${buildPath}`;
 
-  try {
-    run(`rsync -avz --delete ${buildPath}/ ${remoteBuildPath}/`);
-  } catch {
-    console.log('⚠️ rsync not found, fallback to scp...');
-    run(`scp -r ${buildPath}/* ${remoteBuildPath}/`);
-  }
+    try {
+        run(`rsync -avz --delete ${buildPath}/ ${remoteBuildPath}/`);
+    } catch {
+        console.log('⚠️ rsync not found, fallback to scp...');
+        run(`scp -r ${buildPath}/* ${remoteBuildPath}/`);
+    }
 
-  console.log('\n✅ Deploy successful');
+    console.log('\n✅ Deploy successful');
 } catch (err) {
-  console.error('\n❌ Deploy failed', err);
-  process.exit(1);
+    console.error('\n❌ Deploy failed', err);
+    process.exit(1);
 }

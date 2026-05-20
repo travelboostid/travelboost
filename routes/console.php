@@ -1,6 +1,7 @@
 <?php
 
 use App\Actions\Booking\ExpireBookingReservationsAction;
+use App\Jobs\MarkExpiredPaymentsJob;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
@@ -26,5 +27,11 @@ Schedule::call(function () {
     app(ExpireBookingReservationsAction::class)->execute();
 })->everyMinute()
     ->name('release-expired-reservations')
+    ->withoutOverlapping()
+    ->onOneServer();
+
+Schedule::job(new MarkExpiredPaymentsJob)
+    ->everyMinute()
+    ->name('mark-expired-payments')
     ->withoutOverlapping()
     ->onOneServer();
