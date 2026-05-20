@@ -30,13 +30,17 @@ import SelectRegion from './components/select-region';
 
 import { useEffect } from 'react';
 
-import { Fragment } from 'react';
-
 import { TourDocumentPicker } from '@/components/media/tour-document-picker';
 import MoneyInput from '@/components/ui/money-input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Copy, InfoIcon, MoreVertical, Save, Trash2 } from 'lucide-react';
 
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
 import { Calendar } from '@/components/ui/calendar';
 import {
   Dialog,
@@ -161,6 +165,13 @@ export default function Page({ tour }: Props) {
       setActiveTab(props.flash.tab);
     }
   }, [props.flash?.tab]);
+
+  // STATE
+  const [openDropdownIndex, setOpenDropdownIndex] = useState<number | null>(
+    null,
+  );
+
+  const [selectedSchedule, setSelectedSchedule] = useState<any | null>(null);
 
   const [continentId, setContinentId] = useState<number | null>(
     tour.continent_id ?? null,
@@ -369,21 +380,32 @@ export default function Page({ tour }: Props) {
 
       // update schedules dengan id asli database
       if (res.data?.schedules) {
-        setSchedules((prev) => {
-          const existing = prev.filter((s) => s.id !== null);
+        setSchedules((prev) =>
+          prev.map((localSchedule) => {
+            // cari schedule hasil save berdasarkan departure_date
+            const savedSchedule = res.data.schedules.find(
+              (dbSchedule: any) =>
+                dbSchedule.departure_date === localSchedule.departure_date,
+            );
 
-          const merged = res.data.schedules.map((dbSchedule, index) => ({
-            ...dbSchedule,
-            prices: schedules[index]?.prices || [],
-            availability: schedules[index]?.availability || null,
-            add_ons: schedules[index]?.add_ons || [],
-          }));
+            // kalau tidak ada, pakai data lama
+            if (!savedSchedule) {
+              return localSchedule;
+            }
 
-          return [...existing, ...merged];
-        });
+            // replace hanya field dari database
+            return {
+              ...localSchedule,
+              id: savedSchedule.id,
+            };
+          }),
+        );
       }
 
       toast.success('Schedule saved');
+
+      // CLOSE DROPDOWN
+      setOpenDropdownIndex(null);
     } catch (err) {
       toast.error('Failed save schedule');
     }
@@ -763,12 +785,15 @@ export default function Page({ tour }: Props) {
   }, [schedules, addOnsFromDb]);
 
   const addRow = (scheduleId: number) => {
+    const newRow = {
+      description: '',
+      price: 0,
+      edit_status: false,
+    };
+
     setAddOns((prev) => ({
       ...prev,
-      [scheduleId]: [
-        ...(prev[scheduleId] || []),
-        { id: null, description: '', price: '', edit_status: false },
-      ],
+      [scheduleId]: [...(prev[scheduleId] || []), newRow],
     }));
   };
 
@@ -936,6 +961,7 @@ export default function Page({ tour }: Props) {
   const openCopyModal = (index: number) => {
     setCopySourceIndex(index);
     setCopyDates(['']);
+    setSelectedSchedule(schedules[index]);
     setCopyOpen(true);
   };
 
@@ -1150,25 +1176,30 @@ export default function Page({ tour }: Props) {
     }
   };
 
-  //search availability
-  const [searchDeparture, setSearchDeparture] = useState('');
+  // ================= search availability =================
+  const [searchDepartureFrom, setSearchDepartureFrom] = useState('');
+  const [searchDepartureTo, setSearchDepartureTo] = useState('');
 
-  // FILTER
+  // ================= filter availability =================
   const filteredData = useMemo(() => {
-    const today = new Date().toISOString().split('T')[0];
-
     return availability.filter((row) => {
-      // departure filter
-      const matchDeparture = searchDeparture
-        ? row.departure_date === searchDeparture
+      const departure = row.departure_date;
+
+      // FROM
+      const matchFrom = searchDepartureFrom
+        ? departure >= searchDepartureFrom
         : true;
 
-      return matchDeparture;
-    });
-  }, [availability, searchDeparture]);
+      // TO
+      const matchTo = searchDepartureTo ? departure <= searchDepartureTo : true;
 
-  //paging availability
+      return matchFrom && matchTo;
+    });
+  }, [availability, searchDepartureFrom, searchDepartureTo]);
+
+  // ================= pagination availability =================
   const [currentPage, setCurrentPage] = useState(1);
+
   const pageSize = 10;
 
   const totalPages = Math.ceil(filteredData.length / pageSize);
@@ -1178,55 +1209,96 @@ export default function Page({ tour }: Props) {
     currentPage * pageSize,
   );
 
-  //
-
   //search add ons
-  const [addOnsSearchDeparture, setAddOnsSearchDeparture] = useState('');
+  const [addOnsSearchDepartureFrom, setAddOnsSearchDepartureFrom] =
+    useState('');
 
-  //paging add ons
+  const [addOnsSearchDepartureTo, setAddOnsSearchDepartureTo] = useState('');
+
+  // paging add ons
   const addOnsPerPage = 10;
 
   const [currentAddOnsPage, setCurrentAddOnsPage] = useState(1);
 
-  const totalAddOnsPages = Math.ceil(schedules.length / addOnsPerPage);
+  // filter add ons
+  const filteredAddOnsSchedules = [...schedules]
+    .sort(
+      (a, b) =>
+        new Date(a.departure_date).getTime() -
+        new Date(b.departure_date).getTime(),
+    )
+    .filter((schedule) => {
+      const departure = schedule.departure_date;
 
-  const paginatedSchedules = schedules.slice(
+      const matchFrom = addOnsSearchDepartureFrom
+        ? departure >= addOnsSearchDepartureFrom
+        : true;
+
+      const matchTo = addOnsSearchDepartureTo
+        ? departure <= addOnsSearchDepartureTo
+        : true;
+
+      return matchFrom && matchTo;
+    });
+
+  // total pages add ons
+  const totalAddOnsPages = Math.ceil(
+    filteredAddOnsSchedules.length / addOnsPerPage,
+  );
+
+  // paginated result add ons
+  const paginatedAddOnsSchedules = filteredAddOnsSchedules.slice(
     (currentAddOnsPage - 1) * addOnsPerPage,
     currentAddOnsPage * addOnsPerPage,
   );
-  //
 
-  //filter add ons
-  const filteredAddOnsSchedules = paginatedSchedules.filter((schedule) => {
-    // FILTER DATE
-    const matchDeparture = addOnsSearchDeparture
-      ? schedule.departure_date === addOnsSearchDeparture
-      : true;
+  // ================= search schedule =================
+  const [searchDepartureFromTab2, setSearchDepartureFromTab2] = useState('');
 
-    return matchDeparture;
-  });
+  const [searchDepartureToTab2, setSearchDepartureToTab2] = useState('');
 
-  //paging schedule
-  const [searchDepartureTab2, setSearchDepartureTab2] = useState('');
+  // ================= pagination schedule =================
   const schedulePerPage = 10;
 
   const [currentSchedulePage, setCurrentSchedulePage] = useState(1);
 
-  const filteredSchedules = schedules.filter((item) => {
-    if (!searchDepartureTab2) return true;
+  // ================= filter schedule =================
+  const filteredSchedules = schedules
+    .map((item, index) => ({
+      ...item,
+      originalIndex: index,
+    }))
+    .filter((item) => {
+      const departure = item.departure_date;
 
-    return item.departure_date === searchDepartureTab2;
-  });
+      const matchFrom = searchDepartureFromTab2
+        ? departure >= searchDepartureFromTab2
+        : true;
 
+      const matchTo = searchDepartureToTab2
+        ? departure <= searchDepartureToTab2
+        : true;
+
+      return matchFrom && matchTo;
+    });
+
+  // ================= total page schedule =================
   const totalSchedulePages = Math.ceil(
     filteredSchedules.length / schedulePerPage,
   );
 
+  // ================= paginated schedule =================
   const paginatedSchedulesTab = filteredSchedules.slice(
     (currentSchedulePage - 1) * schedulePerPage,
     currentSchedulePage * schedulePerPage,
   );
-  //
+
+  // ================= auto reset page schedule =================
+  useEffect(() => {
+    if (totalSchedulePages > 0 && currentSchedulePage > totalSchedulePages) {
+      setCurrentSchedulePage(1);
+    }
+  }, [currentSchedulePage, totalSchedulePages]);
 
   return (
     <CompanyDashboardLayout
@@ -1793,20 +1865,58 @@ export default function Page({ tour }: Props) {
 
                 <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2">
                   {/* LEFT */}
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-3">
                     <span className="text-sm text-muted-foreground">
-                      Search by departure date
+                      Departure Date
                     </span>
 
-                    <input
-                      type="date"
-                      value={searchDepartureTab2}
-                      onChange={(e) => {
-                        setSearchDepartureTab2(e.target.value);
-                        setCurrentSchedulePage(1);
-                      }}
-                      className="rounded-lg border px-3 py-2 text-sm"
-                    />
+                    {/* FROM */}
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground">
+                        From
+                      </span>
+
+                      <input
+                        type="date"
+                        value={searchDepartureFromTab2}
+                        onChange={(e) => {
+                          setSearchDepartureFromTab2(e.target.value);
+                          setCurrentSchedulePage(1);
+                        }}
+                        className="rounded-lg border px-3 py-2 text-sm"
+                      />
+                    </div>
+
+                    {/* TO */}
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground">To</span>
+
+                      <input
+                        type="date"
+                        value={searchDepartureToTab2}
+                        onChange={(e) => {
+                          setSearchDepartureToTab2(e.target.value);
+                          setCurrentSchedulePage(1);
+                        }}
+                        className="rounded-lg border px-3 py-2 text-sm"
+                      />
+                    </div>
+
+                    {/* RESET */}
+                    {(searchDepartureFromTab2 || searchDepartureToTab2) && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setSearchDepartureFromTab2('');
+                          setSearchDepartureToTab2('');
+                          setCurrentSchedulePage(1);
+                        }}
+                      >
+                        Reset
+                      </Button>
+                    )}
                   </div>
 
                   {/* RIGHT */}
@@ -1845,10 +1955,8 @@ export default function Page({ tour }: Props) {
 
                     {/* ================= BODY ================= */}
                     <tbody>
-                      {paginatedSchedulesTab.map((item, pageIndex) => {
-                        const index =
-                          (currentSchedulePage - 1) * schedulePerPage +
-                          pageIndex;
+                      {paginatedSchedulesTab.map((item) => {
+                        const index = item.originalIndex;
 
                         return (
                           <tr key={index} className="align-top border-t">
@@ -1909,6 +2017,7 @@ export default function Page({ tour }: Props) {
                                       <option value="">Select Category</option>
 
                                       {(priceCategories || [])
+                                        .sort((a, b) => a.id - b.id)
                                         .filter((cat) => {
                                           const selectedIds = (
                                             item.prices || []
@@ -2114,7 +2223,12 @@ export default function Page({ tour }: Props) {
 
                             {/* ACTION */}
                             <td className="p-2">
-                              <DropdownMenu>
+                              <DropdownMenu
+                                open={openDropdownIndex === index}
+                                onOpenChange={(open) => {
+                                  setOpenDropdownIndex(open ? index : null);
+                                }}
+                              >
                                 <DropdownMenuTrigger asChild>
                                   <Button
                                     variant="ghost"
@@ -2142,7 +2256,11 @@ export default function Page({ tour }: Props) {
                                   {/* COPY */}
                                   <DropdownMenuItem
                                     className="cursor-pointer"
-                                    onClick={() => openCopyModal(index)}
+                                    onClick={() => {
+                                      openCopyModal(index);
+
+                                      setOpenDropdownIndex(null);
+                                    }}
                                   >
                                     <Copy className="mr-2 h-4 w-4" />
                                     Copy Schedule
@@ -2153,7 +2271,11 @@ export default function Page({ tour }: Props) {
                                   {/* DELETE */}
                                   <DropdownMenuItem
                                     className="cursor-pointer text-red-600 focus:bg-red-50 focus:text-red-600"
-                                    onClick={() => removeSchedule(index)}
+                                    onClick={() => {
+                                      removeSchedule(index);
+
+                                      setOpenDropdownIndex(null);
+                                    }}
                                   >
                                     <Trash2 className="mr-2 h-4 w-4" />
                                     Delete Schedule
@@ -2168,7 +2290,8 @@ export default function Page({ tour }: Props) {
                   </table>
                   <div className="flex items-center justify-between border-t px-4 py-3">
                     <div className="text-sm text-muted-foreground">
-                      Page {currentSchedulePage} of {totalSchedulePages}
+                      Page {totalSchedulePages === 0 ? 0 : currentSchedulePage}{' '}
+                      of {totalSchedulePages}
                     </div>
 
                     <div className="flex items-center gap-2">
@@ -2197,9 +2320,8 @@ export default function Page({ tour }: Props) {
 
                 {/* MOBILE VERSION */}
                 <div className="md:hidden space-y-4">
-                  {paginatedSchedules.map((item, pageIndex) => {
-                    const index =
-                      (currentSchedulePage - 1) * schedulePerPage + pageIndex;
+                  {paginatedSchedulesTab.map((item) => {
+                    const index = item.originalIndex;
 
                     return (
                       <div
@@ -2570,20 +2692,58 @@ export default function Page({ tour }: Props) {
               <div className="space-y-4">
                 <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2">
                   {/* LEFT */}
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-3">
                     <span className="text-sm text-muted-foreground">
-                      Search by departure date
+                      Departure Date
                     </span>
 
-                    <input
-                      type="date"
-                      value={searchDeparture}
-                      onChange={(e) => {
-                        setSearchDeparture(e.target.value);
-                        setCurrentPage(1);
-                      }}
-                      className="rounded-lg border px-3 py-2 text-sm"
-                    />
+                    {/* FROM */}
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground">
+                        From
+                      </span>
+
+                      <input
+                        type="date"
+                        value={searchDepartureFrom}
+                        onChange={(e) => {
+                          setSearchDepartureFrom(e.target.value);
+                          setCurrentPage(1);
+                        }}
+                        className="rounded-lg border px-3 py-2 text-sm"
+                      />
+                    </div>
+
+                    {/* TO */}
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground">To</span>
+
+                      <input
+                        type="date"
+                        value={searchDepartureTo}
+                        onChange={(e) => {
+                          setSearchDepartureTo(e.target.value);
+                          setCurrentPage(1);
+                        }}
+                        className="rounded-lg border px-3 py-2 text-sm"
+                      />
+                    </div>
+
+                    {/* RESET */}
+                    {(searchDepartureFrom || searchDepartureTo) && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setSearchDepartureFrom('');
+                          setSearchDepartureTo('');
+                          setCurrentPage(1);
+                        }}
+                      >
+                        Reset Date
+                      </Button>
+                    )}
                   </div>
 
                   {/* RIGHT */}
@@ -3182,20 +3342,58 @@ export default function Page({ tour }: Props) {
               <div className="space-y-4">
                 <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2">
                   {/* LEFT */}
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <span className="text-sm text-muted-foreground">
-                      Search by departure date
+                      Departure Date
                     </span>
 
-                    <input
-                      type="date"
-                      value={addOnsSearchDeparture}
-                      onChange={(e) => {
-                        setAddOnsSearchDeparture(e.target.value);
-                        setCurrentAddOnsPage(1);
-                      }}
-                      className="rounded-lg border px-3 py-2 text-sm"
-                    />
+                    {/* FROM */}
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground">
+                        From
+                      </span>
+
+                      <input
+                        type="date"
+                        value={addOnsSearchDepartureFrom}
+                        onChange={(e) => {
+                          setAddOnsSearchDepartureFrom(e.target.value);
+                          setCurrentAddOnsPage(1);
+                        }}
+                        className="rounded-lg border px-3 py-2 text-sm"
+                      />
+                    </div>
+
+                    {/* TO */}
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground">To</span>
+
+                      <input
+                        type="date"
+                        value={addOnsSearchDepartureTo}
+                        onChange={(e) => {
+                          setAddOnsSearchDepartureTo(e.target.value);
+                          setCurrentAddOnsPage(1);
+                        }}
+                        className="rounded-lg border px-3 py-2 text-sm"
+                      />
+                    </div>
+
+                    {/* RESET */}
+                    {(addOnsSearchDepartureFrom || addOnsSearchDepartureTo) && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setAddOnsSearchDepartureFrom('');
+                          setAddOnsSearchDepartureTo('');
+                          setCurrentAddOnsPage(1);
+                        }}
+                      >
+                        Reset Date
+                      </Button>
+                    )}
                   </div>
 
                   {/* RIGHT */}
@@ -3204,99 +3402,126 @@ export default function Page({ tour }: Props) {
                   </div>
                 </div>
 
-                <div className="rounded-lg border overflow-hidden">
-                  <table className="w-full text-sm">
-                    <thead className="bg-muted">
-                      <tr>
-                        <th className="p-3 text-left">Departure → Return</th>
-                        <th className="p-3 text-left">Descriptions</th>
-                        <th className="p-3 text-left">Prices / Pax</th>
-                        <th className="p-3 text-left">Editable</th>
-                        <th className="p-3 text-left"></th>
-                      </tr>
-                    </thead>
+                <div className="space-y-4">
+                  <Accordion type="multiple" className="space-y-4">
+                    {paginatedAddOnsSchedules.map((schedule) => {
+                      const rows = addOns[schedule.id] || [];
 
-                    <tbody>
-                      {filteredAddOnsSchedules.map((schedule) => {
-                        const rows = addOns[schedule.id] || [];
-                        const rowCount = rows.length;
+                      return (
+                        <AccordionItem
+                          key={schedule.id}
+                          value={`schedule-${schedule.id}`}
+                          className="overflow-hidden rounded-2xl border bg-card shadow-sm"
+                        >
+                          {/* HEADER */}
+                          <AccordionTrigger className="px-6 py-4 hover:no-underline">
+                            <div className="flex w-full items-center justify-between pr-4">
+                              {/* LEFT */}
+                              <div className="text-left">
+                                <div className="text-base font-semibold">
+                                  {formatDate(schedule.departure_date)} →{' '}
+                                  {formatDate(schedule.return_date)}
+                                </div>
 
-                        return (
-                          <Fragment key={schedule.id}>
-                            {/* KALAU ADA DATA */}
-                            {rows.length > 0 &&
-                              rows.map((row, index) => (
-                                <tr key={index} className="border-t">
-                                  {/* SCHEDULE */}
-                                  {index === 0 && (
-                                    <td
-                                      className="p-3 font-medium align-top"
-                                      rowSpan={rowCount + 1}
-                                    >
-                                      {formatDate(schedule.departure_date)} →{' '}
-                                      {formatDate(schedule.return_date)}
-                                    </td>
-                                  )}
+                                <div className="mt-1 text-sm text-muted-foreground">
+                                  {rows.length} add ons
+                                </div>
+                              </div>
 
-                                  {/* DESCRIPTION */}
-                                  <td className="p-3">
-                                    <input
-                                      type="text"
-                                      className="w-full border rounded px-2 py-1"
-                                      value={row.description}
-                                      onChange={(e) =>
-                                        updateRow(
-                                          schedule.id,
-                                          index,
-                                          'description',
-                                          e.target.value,
-                                        )
-                                      }
-                                    />
-                                  </td>
+                              {/* RIGHT */}
+                              <div className="rounded-lg border bg-muted/40 px-3 py-1 text-xs font-medium">
+                                {tour.currency}
+                              </div>
+                            </div>
+                          </AccordionTrigger>
 
-                                  {/* PRICE */}
-                                  <td className="p-3">
-                                    <MoneyInput
-                                      className="text-right"
-                                      value={row.price}
-                                      onChange={(val) =>
-                                        updateRow(
-                                          schedule.id,
-                                          index,
-                                          'price',
-                                          Number(val),
-                                        )
-                                      }
-                                    />
-                                  </td>
+                          {/* CONTENT */}
+                          <AccordionContent className="border-t bg-muted/20 px-6 py-5">
+                            <div className="space-y-4">
+                              {rows.map((row, index) => (
+                                <div
+                                  key={index}
+                                  className="rounded-2xl border bg-background p-5 shadow-sm transition hover:shadow-md"
+                                >
+                                  <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                                    {/* LEFT CONTENT */}
+                                    <div className="grid flex-1 grid-cols-1 gap-4 md:grid-cols-3">
+                                      {/* DESCRIPTION */}
+                                      <div className="space-y-2">
+                                        <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+                                          Add Ons Description
+                                        </Label>
 
-                                  {/* CHECKBOX */}
-                                  <td className="p-3 text-center">
-                                    <input
-                                      type="checkbox"
-                                      checked={row.edit_status}
-                                      onChange={(e) =>
-                                        updateRow(
-                                          schedule.id,
-                                          index,
-                                          'edit_status',
-                                          e.target.checked,
-                                        )
-                                      }
-                                    />
-                                  </td>
+                                        <Input
+                                          type="text"
+                                          placeholder="Example: Extra baggage, Visa, Single supplement"
+                                          value={row.description}
+                                          onChange={(e) =>
+                                            updateRow(
+                                              schedule.id,
+                                              index,
+                                              'description',
+                                              e.target.value,
+                                            )
+                                          }
+                                        />
+                                      </div>
 
-                                  {/* DELETE and SAVE */}
-                                  <td className="p-3 text-left">
-                                    <div className="flex items-center justify-center">
+                                      {/* PRICE */}
+                                      <div className="space-y-2">
+                                        <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+                                          Price Per Pax
+                                        </Label>
+
+                                        <MoneyInput
+                                          className="text-right"
+                                          value={row.price}
+                                          onChange={(val) =>
+                                            updateRow(
+                                              schedule.id,
+                                              index,
+                                              'price',
+                                              Number(val),
+                                            )
+                                          }
+                                        />
+                                      </div>
+
+                                      {/* EDITABLE */}
+                                      <div className="space-y-2">
+                                        <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+                                          Editable
+                                        </Label>
+
+                                        <div className="flex h-10 items-center rounded-xl border px-3">
+                                          <label className="flex items-center gap-2 text-sm">
+                                            <input
+                                              type="checkbox"
+                                              checked={row.edit_status}
+                                              onChange={(e) =>
+                                                updateRow(
+                                                  schedule.id,
+                                                  index,
+                                                  'edit_status',
+                                                  e.target.checked,
+                                                )
+                                              }
+                                            />
+                                            Allow Edit
+                                          </label>
+                                        </div>
+                                      </div>
+                                    </div>
+
+                                    {/* RIGHT ACTION */}
+                                    <div className="flex items-center justify-end lg:w-auto">
                                       <DropdownMenu modal={false}>
                                         <DropdownMenuTrigger asChild>
                                           <Button
                                             type="button"
                                             variant="ghost"
                                             size="icon"
-                                            className="h-8 w-8"
+                                            className="h-9 w-9 rounded-xl"
                                           >
                                             <MoreVertical className="h-4 w-4" />
                                           </Button>
@@ -3331,43 +3556,29 @@ export default function Page({ tour }: Props) {
                                             }
                                           >
                                             <Trash2 className="mr-2 h-4 w-4" />
-                                            Delete
+                                            Delete Add Ons
                                           </DropdownMenuItem>
                                         </DropdownMenuContent>
                                       </DropdownMenu>
                                     </div>
-                                  </td>
-                                </tr>
+                                  </div>
+                                </div>
                               ))}
 
-                            {/* ADD ROW BUTTON */}
-                            <tr className="border-t">
-                              {/* kalau belum ada row → schedule tetap tampil */}
-                              {rows.length === 0 && (
-                                <td className="p-3 font-medium">
-                                  {schedule.departure_date} →{' '}
-                                  {schedule.return_date}
-                                </td>
-                              )}
-
-                              <td
-                                colSpan={rows.length === 0 ? 4 : 4}
-                                className="p-3"
+                              {/* ADD BUTTON */}
+                              <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => addRow(schedule.id)}
                               >
-                                <button
-                                  type="button"
-                                  onClick={() => addRow(schedule.id)}
-                                  className="text-blue-600 text-sm"
-                                >
-                                  + Add Ons
-                                </button>
-                              </td>
-                            </tr>
-                          </Fragment>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+                                + Add Add Ons
+                              </Button>
+                            </div>
+                          </AccordionContent>
+                        </AccordionItem>
+                      );
+                    })}
+                  </Accordion>
                 </div>
                 <div className="mt-6 flex items-center justify-between border-t px-4 py-3">
                   <div className="text-sm text-muted-foreground">
@@ -3406,9 +3617,22 @@ export default function Page({ tour }: Props) {
             <DialogContent className="max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
               <DialogHeader>
                 <DialogTitle>
-                  Copy Schedule To New Departure Dates <br></br>
-                  <br></br>
-                  {tour.name}
+                  <div className="space-y-2">
+                    <div className="text-lg font-semibold">
+                      Copy Schedule To New Departure Dates
+                    </div>
+
+                    <div className="rounded-lg border bg-muted/40 px-3 py-2 text-sm">
+                      <div className="font-medium">{tour.name}</div>
+
+                      {selectedSchedule && (
+                        <div className="mt-1 text-muted-foreground">
+                          {formatDate(selectedSchedule.departure_date)} →{' '}
+                          {formatDate(selectedSchedule.return_date)}
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </DialogTitle>
               </DialogHeader>
 

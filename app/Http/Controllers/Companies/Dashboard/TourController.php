@@ -27,24 +27,59 @@ class TourController extends Controller
             'data' => $tours,
         ]);
     }
+  }
 
-    public function create(Company $company)
-    {
-        return Inertia::render('companies/dashboard/tours/create', [
-            'currencies' => Currency::select('code', 'name')
-                ->orderBy('code')
-                ->get(),
-        ]);
-    }
+  public function edit(Company $company, Tour $tour)
+  {
+    app(ExpireBookingReservationsAction::class)->execute($company, $tour->id);
 
-    public function store(StoreTourRequest $request, Company $company)
-    {
-        $data = $request->validated();
+    $tour->load([
+      'schedules.prices',
+      'schedules.availability',
+      'schedules.addOns',
+    ]);
 
-        DB::beginTransaction();
+    $addOnsFromDb = \App\Models\TourAddOn::where('company_id', $company->id)
+      ->where('tour_id', $tour->id)
+      ->get()
+      ->groupBy('schedule_id');
 
-        try {
-            $tour = $company->tours()->create($data);
+    return Inertia::render('companies/dashboard/tours/edit', [
+      'tour'           => $tour,
+      'addOnsFromDb' => $addOnsFromDb,
+      'currencies' => Currency::select('code', 'name')
+        ->orderBy('code')
+        ->get(),
+      'priceCategories' => PriceCategory::where('company_id', $company->id)
+        ->orderBy('name')
+        ->get(['id', 'name']),
+    ]);
+  }
+
+  public function update(UpdateTourRequest $request, Company $company, Tour $tour)
+  {
+    if ($request->has('quick_update')) {
+      $payload = $request->only([
+        'status',
+        'category_id',
+      ]);
+
+      if (array_key_exists('category_id', $payload)) {
+        $payload['category_id'] = $payload['category_id'] ?: null;
+      }
+
+      $tour->fill($payload);
+      $tour->save();
+
+      if ($tour->wasChanged('status')) {
+        $statusValue = is_object($tour->status)
+          ? $tour->status->value
+          : $tour->status;
+
+        if ($statusValue === 'inactive') {
+          AgentTour::where('tour_id', $tour->id)
+            ->update(['status' => 'inactive']);
+        }
 
             DB::commit();
 
@@ -177,17 +212,42 @@ class TourController extends Controller
         return back();
     }
 
-    protected function sendTourStatusNotification(Tour $tour)
-    {
-        $agentTours = AgentTour::where('tour_id', $tour->id)->with('company')->get();
-        $statusValue = is_object($tour->status) ? $tour->status->value : $tour->status;
+    return redirect()->route('companies.dashboard.tours.edit', [
+      'company' => $company->username,
+      'tour' => $tour->id,
+    ])->with([
+      'success' => true,
+      'tab' => request('tab', 'schedule'),
+    ]);
+  }
 
-        foreach ($agentTours as $agentTour) {
-            $agentCompany = $agentTour->company;
+  public function destroy(Company $company, Tour $tour)
+  {
+     $hasBookings = DB::table('bookings')
+      ->where('tour_id', $tour->tour_id)
+      ->exists();
 
-            if ($agentCompany) {
-                $agentCompany->notify(new TourStatusChangedNotification($tour, $statusValue));
-            }
-        }
+    if ($hasBookings) {
+      return back()->withErrors([
+        'delete_error' => 'Cannot remove this tour from your catalog because it has existing bookings. Please cancel or complete bookings first.'
+      ]);
+    }
+
+    $tour->delete();
+
+    return back();
+  }
+
+  protected function sendTourStatusNotification(Tour $tour)
+  {
+    $agentTours = AgentTour::where('tour_id', $tour->id)->with('company')->get();
+    $statusValue = is_object($tour->status) ? $tour->status->value : $tour->status;
+
+    foreach ($agentTours as $agentTour) {
+      $agentCompany = $agentTour->company;
+
+      if ($agentCompany) {
+        $agentCompany->notify(new TourStatusChangedNotification($tour, $statusValue));
+      }
     }
 }

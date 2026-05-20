@@ -27,6 +27,7 @@ class UpdateTourRequest extends FormRequest
     }
 
     return [
+      'code'         => 'required|string|max:255',
       'name'         => 'nullable|string|max:255',
       'description'  => 'nullable|string',
       'duration_days' => 'nullable|integer|min:1',

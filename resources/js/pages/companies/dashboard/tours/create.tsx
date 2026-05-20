@@ -39,6 +39,12 @@ import SelectRegion from './components/select-region';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import { InfoIcon } from 'lucide-react';
 
 ///////////tab 2
 type RoomPrice = {
@@ -68,6 +74,8 @@ type PriceCategory = {
 /////////////
 
 export default function Page() {
+  const [activeTab, setActiveTab] = useState<'tour' | 'schedule'>('tour');
+
   const [continentId, setContinentId] = useState<number | null>(null);
   const [regionId, setRegionId] = useState<number | null>(null);
   const [countryId, setCountryId] = useState<number | null>(null);
@@ -254,6 +262,31 @@ export default function Page() {
     setSchedules(updated);
   };
 
+  //paging schedule
+  const [searchDepartureTab2, setSearchDepartureTab2] = useState('');
+  const schedulePerPage = 10;
+
+  const [currentSchedulePage, setCurrentSchedulePage] = useState(1);
+
+  const filteredSchedules = schedules.filter((item) => {
+    if (!searchDepartureTab2) return true;
+
+    return item.departure_date === searchDepartureTab2;
+  });
+
+  const totalSchedulePages = Math.ceil(
+    filteredSchedules.length / schedulePerPage,
+  );
+
+  const paginatedSchedulesTab = filteredSchedules.slice(
+    (currentSchedulePage - 1) * schedulePerPage,
+    currentSchedulePage * schedulePerPage,
+  );
+  //
+
+  //search availability
+  const [searchDeparture, setSearchDeparture] = useState('');
+
   return (
     <CompanyDashboardLayout
       openMenuIds={['tours']}
@@ -281,130 +314,201 @@ export default function Page() {
         className="space-y-4"
       >
         <div className="container mx-auto space-y-4 p-4">
-          <Tabs defaultValue="tour" className="w-full" key="tour-form">
-            <TabsList className="mb-4">
-              <TabsTrigger value="tour">Master</TabsTrigger>
-              <TabsTrigger value="schedule">Schedule and Price</TabsTrigger>
-              <TabsTrigger value="availability">Availability</TabsTrigger>
-              <TabsTrigger value="addons">Adds On</TabsTrigger>
+          <Tabs
+            value={activeTab}
+            onValueChange={(val) => setActiveTab(val as any)}
+          >
+            <TabsList className="mb-4 flex h-auto gap-3 bg-transparent p-0">
+              <TabsTrigger
+                value="tour"
+                className="
+                  rounded-full px-8 py-3 text-sm font-medium
+                  bg-slate-100 text-slate-900
+                  data-[state=active]:bg-primary
+                  data-[state=active]:text-white
+                  shadow-none
+                "
+              >
+                Master
+              </TabsTrigger>
+
+              <TabsTrigger
+                value="schedule"
+                className="
+                  rounded-full px-8 py-3 text-sm font-medium
+                  bg-slate-100 text-slate-900
+                  data-[state=active]:bg-primary
+                  data-[state=active]:text-white
+                  shadow-none
+                "
+              >
+                Schedule and Price
+              </TabsTrigger>
+
+              <TabsTrigger
+                value="availability"
+                className="
+                  rounded-full px-8 py-3 text-sm font-medium
+                  bg-slate-100 text-slate-900
+                  data-[state=active]:bg-primary
+                  data-[state=active]:text-white
+                  shadow-none
+                "
+              >
+                Availability
+              </TabsTrigger>
+
+              <TabsTrigger
+                value="addons"
+                className="
+                  rounded-full px-8 py-3 text-sm font-medium
+                  bg-slate-100 text-slate-900
+                  data-[state=active]:bg-primary
+                  data-[state=active]:text-white
+                  shadow-none
+                "
+              >
+                Adds On
+              </TabsTrigger>
             </TabsList>
 
             {/* ================= TAB 1 — TOUR ================= */}
-            <TabsContent value="tour">
+            <TabsContent value="tour" className="space-y-6">
               {/* <div className="grid gap-6"> changed for show in 2 column */}
-              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+              <div className="mx-auto max-w-7xl space-y-6">
                 {/* Image */}
                 {/* <div className="grid gap-2"> */}
-                <div className="grid gap-2 md:col-span-2">
-                  <Label htmlFor="name">Image</Label>
-                  <MediaPicker
-                    type="image"
-                    params={{ owner_type: 'company', owner_id: company.id }}
-                    uploadParams={{
-                      owner_type: 'company',
-                      owner_id: company.id,
-                    }}
-                  >
-                    {(media, change) => {
-                      const mediaId = (media as MediaResource)?.id;
+                <div className="overflow-hidden rounded-3xl border bg-card shadow-sm">
+                  <div className="border-b bg-muted/40 px-6 py-4">
+                    <h2 className="text-lg font-semibold">Tour Cover</h2>
 
-                      // 🔥 sync ke inertia
-                      if (mediaId && data.image_id !== mediaId) {
-                        setData('image_id', mediaId);
-                      }
+                    <p className="text-sm text-muted-foreground">
+                      Upload attractive image for your catalog
+                    </p>
+                  </div>
+                  <div className="p-6">
+                    <MediaPicker
+                      type="image"
+                      params={{ owner_type: 'company', owner_id: company.id }}
+                      uploadParams={{
+                        owner_type: 'company',
+                        owner_id: company.id,
+                      }}
+                    >
+                      {(media, change) => {
+                        const mediaId = (media as MediaResource)?.id;
 
-                      return (
-                        <div className="flex flex-col items-center gap-2">
-                          <img
-                            className="aspect-video max-w-[360px] rounded object-cover shadow"
-                            src={
-                              typeof media === 'string'
-                                ? media
-                                : extractImageSrc(media as any).src
-                            }
-                          />
+                        // 🔥 sync ke inertia
+                        if (mediaId && data.image_id !== mediaId) {
+                          setData('image_id', mediaId);
+                        }
 
-                          <Button type="button" onClick={change}>
-                            Change
-                          </Button>
-                        </div>
-                      );
-                    }}
-                  </MediaPicker>
-                  <InputError message={errors.media_id} />
+                        return (
+                          <div className="flex flex-col items-center gap-2">
+                            <img
+                              className="aspect-video max-w-[360px] rounded object-cover shadow"
+                              src={
+                                typeof media === 'string'
+                                  ? media
+                                  : extractImageSrc(media as any).src
+                              }
+                            />
+
+                            <Button type="button" onClick={change}>
+                              Change
+                            </Button>
+                          </div>
+                        );
+                      }}
+                    </MediaPicker>
+                    <InputError message={errors.media_id} />
+                  </div>
                 </div>
 
                 {/* Code */}
-                <div className="grid gap-2">
-                  <Label htmlFor="code">Code</Label>
-                  <Input
-                    id="code"
-                    type="text"
-                    name="code"
-                    required
-                    placeholder="Tour Code"
-                    value={data.code}
-                    onChange={(e) => setData('code', e.target.value)}
-                  />
-                  <InputError message={errors.code} />
-                </div>
-                {/* Name */}
-                <div className="grid gap-2">
-                  <Label htmlFor="name">Name</Label>
-                  <Input
-                    id="name"
-                    type="text"
-                    name="name"
-                    required
-                    placeholder="Tour Name"
-                    value={data.name}
-                    onChange={(e) => setData('name', e.target.value)}
-                  />
-                  <InputError message={errors.name} />
-                </div>
+                <div className="rounded-3xl border bg-card shadow-sm overflow-hidden">
+                  {/* HEADER */}
+                  <div className="border-b bg-muted/40 px-6 py-4">
+                    <h2 className="text-lg font-semibold">Basic Information</h2>
 
-                {/* Description */}
-                <div className="grid gap-2">
-                  {/* <div className="grid gap-2 md:col-span-2"> */}
-                  <Label htmlFor="description">Description</Label>
-                  {/*<Textarea
+                    <p className="text-sm text-muted-foreground">
+                      Main information about your tour
+                    </p>
+                  </div>
+                  {/* BODY */}
+                  <div className="grid grid-cols-1 gap-5 p-6 md:grid-cols-2">
+                    <div className="grid gap-2">
+                      <Label htmlFor="code">Code</Label>
+                      <Input
+                        id="code"
+                        type="text"
+                        name="code"
+                        required
+                        placeholder="Tour Code"
+                        value={data.code}
+                        onChange={(e) => setData('code', e.target.value)}
+                      />
+                      <InputError message={errors.code} />
+                    </div>
+                    {/* Name */}
+                    <div className="grid gap-2">
+                      <Label htmlFor="name">Name</Label>
+                      <Input
+                        id="name"
+                        type="text"
+                        name="name"
+                        required
+                        placeholder="Tour Name"
+                        value={data.name}
+                        onChange={(e) => setData('name', e.target.value)}
+                      />
+                      <InputError message={errors.name} />
+                    </div>
+
+                    {/* Description */}
+                    <div className="grid gap-2">
+                      {/* <div className="grid gap-2 md:col-span-2"> */}
+                      <Label htmlFor="description">Description</Label>
+                      {/*<Textarea
                       id="description"
                       name="description"
                       placeholder="Tour description"
                     /> */}
-                  <Textarea
-                    id="description"
-                    name="description"
-                    placeholder="Tour description"
-                    className="min-h-[65px] resize-none"
-                    onInput={(e) => {
-                      const el = e.currentTarget;
-                      el.style.height = 'auto';
-                      el.style.height = el.scrollHeight + 'px';
-                    }}
-                    value={data.description}
-                    onChange={(e) => setData('description', e.target.value)}
-                  />
-                  <InputError message={errors.description} />
-                </div>
+                      <Textarea
+                        id="description"
+                        name="description"
+                        placeholder="Tour description"
+                        className="min-h-[65px] resize-none"
+                        onInput={(e) => {
+                          const el = e.currentTarget;
+                          el.style.height = 'auto';
+                          el.style.height = el.scrollHeight + 'px';
+                        }}
+                        value={data.description}
+                        onChange={(e) => setData('description', e.target.value)}
+                      />
+                      <InputError message={errors.description} />
+                    </div>
 
-                {/* Duration */}
-                <div className="grid gap-2">
-                  <Label htmlFor="duration_days">Duration in Days</Label>
-                  <Input
-                    id="duration_days"
-                    type="number"
-                    name="duration_days"
-                    required
-                    placeholder="Duration"
-                    value={data.duration_days}
-                    onChange={(e) => setData('duration_days', e.target.value)}
-                  />
-                  <InputError message={errors.duration_days} />
-                </div>
+                    {/* Duration */}
+                    <div className="grid gap-2">
+                      <Label htmlFor="duration_days">Duration in Days</Label>
+                      <Input
+                        id="duration_days"
+                        type="number"
+                        name="duration_days"
+                        required
+                        placeholder="Duration"
+                        value={data.duration_days}
+                        onChange={(e) =>
+                          setData('duration_days', e.target.value)
+                        }
+                      />
+                      <InputError message={errors.duration_days} />
+                    </div>
 
-                {/* Continent */}
-                {/* <div className="grid gap-2">
+                    {/* Continent */}
+                    {/* <div className="grid gap-2">
                     <Label htmlFor="continent">Continent</Label>
                     <Input
                       id="continent"
@@ -414,295 +518,320 @@ export default function Page() {
                     />
                     <InputError message={errors.continent} />
                   </div> */}
-                {/* Category */}
-                {/* <div className="grid gap-2">
+                    {/* Category */}
+                    {/* <div className="grid gap-2">
                     <Label htmlFor="continent_id">Continent</Label>
                     <SelectContinent name="continent_id" />
 
                     <InputError message={errors.continent_id} />
                   </div> */}
-                <div className="grid gap-2">
-                  <Label htmlFor="continent_id">Continent</Label>
-                  <SelectContinent
-                    name="continent_id"
-                    value={continentId ?? undefined}
-                    onChange={(val) => {
-                      const id = Number(val);
+                    <div className="grid gap-2">
+                      <Label htmlFor="continent_id">Continent</Label>
+                      <SelectContinent
+                        name="continent_id"
+                        value={continentId ?? undefined}
+                        onChange={(val) => {
+                          const id = Number(val);
 
-                      setContinentId(id);
-                      setRegionId(null);
-                      setCountryId(null);
+                          setContinentId(id);
+                          setRegionId(null);
+                          setCountryId(null);
 
-                      setData('continent_id', id); // ✅ WAJIB
-                      setData('region_id', ''); // reset
-                      setData('country_id', '');
-                    }}
-                  />
-                  <InputError message={errors.continent_id} />
-                </div>
+                          setData('continent_id', id); // ✅ WAJIB
+                          setData('region_id', ''); // reset
+                          setData('country_id', '');
+                        }}
+                      />
+                      <InputError message={errors.continent_id} />
+                    </div>
 
-                <div className="grid gap-2">
-                  <Label htmlFor="region_id">Region</Label>
-                  <SelectRegion
-                    name="region_id"
-                    continentId={continentId}
-                    value={regionId ?? undefined}
-                    onChange={(val) => {
-                      const id = Number(val);
+                    <div className="grid gap-2">
+                      <Label htmlFor="region_id">Region</Label>
+                      <SelectRegion
+                        name="region_id"
+                        continentId={continentId}
+                        value={regionId ?? undefined}
+                        onChange={(val) => {
+                          const id = Number(val);
 
-                      setRegionId(id);
-                      setCountryId(null);
+                          setRegionId(id);
+                          setCountryId(null);
 
-                      setData('region_id', id); // ✅
-                      setData('country_id', ''); // reset
-                    }}
-                  />
-                  <InputError message={errors.region_id} />
-                </div>
+                          setData('region_id', id); // ✅
+                          setData('country_id', ''); // reset
+                        }}
+                      />
+                      <InputError message={errors.region_id} />
+                    </div>
 
-                <div className="grid gap-2">
-                  <Label htmlFor="country_id">Country</Label>
-                  <SelectCountry
-                    name="country_id"
-                    continentId={continentId}
-                    regionId={regionId}
-                    value={countryId ?? undefined}
-                    onChange={(val) => {
-                      const id = Number(val);
+                    <div className="grid gap-2">
+                      <Label htmlFor="country_id">Country</Label>
+                      <SelectCountry
+                        name="country_id"
+                        continentId={continentId}
+                        regionId={regionId}
+                        value={countryId ?? undefined}
+                        onChange={(val) => {
+                          const id = Number(val);
 
-                      setCountryId(id);
-                      setData('country_id', id); // ✅
-                    }}
-                  />
-                  <InputError message={errors.country_id} />
-                </div>
+                          setCountryId(id);
+                          setData('country_id', id); // ✅
+                        }}
+                      />
+                      <InputError message={errors.country_id} />
+                    </div>
 
-                {/* Destination */}
-                <div className="grid gap-2">
-                  <Label htmlFor="destination">Destination</Label>
-                  <Input
-                    id="destination"
-                    type="text"
-                    name="destination"
-                    placeholder="Destination"
-                    value={data.destination}
-                    onChange={(e) => setData('destination', e.target.value)}
-                  />
-                  <InputError message={errors.destination} />
-                </div>
+                    {/* Destination */}
+                    <div className="grid gap-2">
+                      <Label htmlFor="destination">Destination</Label>
+                      <Input
+                        id="destination"
+                        type="text"
+                        name="destination"
+                        placeholder="Destination"
+                        value={data.destination}
+                        onChange={(e) => setData('destination', e.target.value)}
+                      />
+                      <InputError message={errors.destination} />
+                    </div>
 
-                {/* Category */}
-                <div className="grid gap-2">
-                  <Label htmlFor="category_id">Category</Label>
-                  <SelectCategory
-                    name="category_id"
-                    value={data.category_id || undefined}
-                    onChange={(val) => setData('category_id', Number(val))}
-                  />
+                    {/* Category */}
+                    <div className="grid gap-2">
+                      <Label htmlFor="category_id">Category</Label>
+                      <SelectCategory
+                        name="category_id"
+                        value={data.category_id || undefined}
+                        onChange={(val) => setData('category_id', Number(val))}
+                      />
 
-                  <InputError message={errors.category_id} />
+                      <InputError message={errors.category_id} />
+                    </div>
+                  </div>
                 </div>
 
                 {/* Document */}
-                <div className="grid gap-2">
+                <div className="overflow-hidden rounded-3xl border bg-card shadow-sm">
                   {/* <div className="grid gap-2 md:col-span-2"> */}
-                  <Label htmlFor="name">Document Itinerary</Label>
-                  <MediaPicker
-                    type="document"
-                    params={{ owner_type: 'company', owner_id: company.id }}
-                    uploadParams={{
-                      owner_type: 'company',
-                      owner_id: company.id,
-                    }}
-                  >
-                    {(media, change) => {
-                      const mediaId = (media as any)?.id;
-                      const url =
-                        (media as any)?.url || (media as any)?.data?.url;
+                  {/* HEADER */}
+                  <div className="border-b bg-muted/40 px-6 py-4">
+                    <h2 className="text-lg font-semibold">
+                      Publishing & Documents
+                    </h2>
 
-                      // 🔥 sync ke inertia
-                      if (mediaId && data.document_id !== mediaId) {
-                        setData('document_id', mediaId);
-                      }
-
-                      return (
-                        <Item variant="outline" className="space-y-2">
-                          <ItemContent className="space-y-2">
-                            {url ? (
-                              <div className="rounded border p-4 bg-muted/20">
-                                <p className="text-sm font-medium">
-                                  {(media as any)?.name || 'Document uploaded'}
-                                </p>
-
-                                <Dialog>
-                                  <DialogTrigger asChild>
-                                    <Button
-                                      type="button"
-                                      variant="outline"
-                                      size="sm"
-                                    >
-                                      View PDF
-                                    </Button>
-                                  </DialogTrigger>
-
-                                  <DialogContent className="max-w-5xl h-[90vh]">
-                                    <iframe
-                                      src={url}
-                                      className="h-full w-full rounded-md border"
-                                      title="PDF Preview"
-                                    />
-                                  </DialogContent>
-                                </Dialog>
-                              </div>
-                            ) : (
-                              <ItemTitle>No document selected</ItemTitle>
-                            )}
-                          </ItemContent>
-
-                          <ItemActions>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={change}
-                              type="button"
-                            >
-                              Change
-                            </Button>
-                          </ItemActions>
-                        </Item>
-                      );
-                    }}
-                  </MediaPicker>
-                  <InputError message={errors.document_id} />
-                </div>
-
-                {/* Status */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* STATUS */}
-                  <div className="grid gap-2">
-                    <Label htmlFor="status">Status at Catalog</Label>
-
-                    <Select
-                      name="status"
-                      value={data.status}
-                      onValueChange={(val) => setData('status', val)}
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectGroup>
-                          <SelectLabel>Select status</SelectLabel>
-                          <SelectItem value="active">Active</SelectItem>
-                          <SelectItem value="inactive">Inactive</SelectItem>
-                        </SelectGroup>
-                      </SelectContent>
-                    </Select>
-
-                    <InputError message={errors.status} />
+                    <p className="text-sm text-muted-foreground">
+                      Configure itinerary document, status and currency
+                    </p>
                   </div>
+                  {/* BODY */}
+                  <div className="space-y-6 p-6">
+                    <div className="grid gap-2">
+                      <Label htmlFor="name">Document Itinerary</Label>
+                      <MediaPicker
+                        type="document"
+                        params={{ owner_type: 'company', owner_id: company.id }}
+                        uploadParams={{
+                          owner_type: 'company',
+                          owner_id: company.id,
+                        }}
+                      >
+                        {(media, change) => {
+                          const mediaId = (media as any)?.id;
+                          const url =
+                            (media as any)?.url || (media as any)?.data?.url;
 
-                  {/* CURRENCY */}
-                  <div className="grid gap-2">
-                    <Label>Currency</Label>
+                          // 🔥 sync ke inertia
+                          if (mediaId && data.document_id !== mediaId) {
+                            setData('document_id', mediaId);
+                          }
 
-                    <SelectCurrency
-                      value={data.currency}
-                      onChange={(val) => setData('currency', val)}
-                    />
+                          return (
+                            <Item variant="outline" className="space-y-2">
+                              <ItemContent className="space-y-2">
+                                {url ? (
+                                  <div className="rounded border p-4 bg-muted/20">
+                                    <p className="text-sm font-medium">
+                                      {(media as any)?.name ||
+                                        'Document uploaded'}
+                                    </p>
+
+                                    <Dialog>
+                                      <DialogTrigger asChild>
+                                        <Button
+                                          type="button"
+                                          variant="outline"
+                                          size="sm"
+                                        >
+                                          View PDF
+                                        </Button>
+                                      </DialogTrigger>
+
+                                      <DialogContent className="max-w-5xl h-[90vh]">
+                                        <iframe
+                                          src={url}
+                                          className="h-full w-full rounded-md border"
+                                          title="PDF Preview"
+                                        />
+                                      </DialogContent>
+                                    </Dialog>
+                                  </div>
+                                ) : (
+                                  <ItemTitle>No document selected</ItemTitle>
+                                )}
+                              </ItemContent>
+
+                              <ItemActions>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={change}
+                                  type="button"
+                                >
+                                  Change
+                                </Button>
+                              </ItemActions>
+                            </Item>
+                          );
+                        }}
+                      </MediaPicker>
+                      <InputError message={errors.document_id} />
+                    </div>
+
+                    {/* Status */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* STATUS */}
+                      <div className="grid gap-2">
+                        <Label htmlFor="status">Status at Catalog</Label>
+
+                        <Select
+                          name="status"
+                          value={data.status}
+                          onValueChange={(val) => setData('status', val)}
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select status" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectGroup>
+                              <SelectLabel>Select status</SelectLabel>
+                              <SelectItem value="active">Active</SelectItem>
+                              <SelectItem value="inactive">Inactive</SelectItem>
+                            </SelectGroup>
+                          </SelectContent>
+                        </Select>
+
+                        <InputError message={errors.status} />
+                      </div>
+
+                      {/* CURRENCY */}
+                      <div className="grid gap-2">
+                        <Label>Currency</Label>
+
+                        <SelectCurrency
+                          value={data.currency}
+                          onChange={(val) => setData('currency', val)}
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
 
                 {/* Normal Price show on catalog */}
-                <div className="grid gap-2">
-                  <Label htmlFor="showprice">
-                    Normal Price show on catalog
-                  </Label>
+                <div className="overflow-hidden rounded-3xl border bg-card shadow-sm">
+                  <div className="border-b bg-muted/40 px-6 py-4">
+                    <h2 className="text-lg font-semibold">Pricing</h2>
 
-                  <div className="flex gap-2">
-                    {/* ✅ Price Input */}
-                    <Input
-                      id="showprice_display"
-                      type="text"
-                      placeholder="Normal Price"
-                      value={displayPrice}
-                      onChange={(e) => handlePriceChange(e.target.value)}
-                    />
+                    <p className="text-sm text-muted-foreground">
+                      Configure normal and promotional prices
+                    </p>
                   </div>
-
-                  {/* hidden raw value */}
-                  <input type="hidden" name="showprice" value={rawPrice} />
-
-                  <InputError message={errors.showprice} />
-                </div>
-
-                <div className="rounded-lg border bg-muted/30 p-4 space-y-4">
-                  <div className="text-sm font-semibold text-muted-foreground">
-                    Promotion Settings
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* promote title */}
+                  <div className="space-y-6 p-6">
                     <div className="grid gap-2">
-                      <Label htmlFor="promote_title">
-                        Title Promotion on Catalog
+                      <Label htmlFor="showprice">
+                        Normal Price show on catalog
                       </Label>
                       <Input
-                        id="promote_title"
+                        id="showprice_display"
                         type="text"
-                        name="promote_title"
-                        placeholder="Title Promotion"
-                        value={data.promote_title}
-                        onChange={(e) =>
-                          setData('promote_title', e.target.value)
-                        }
+                        placeholder="Normal Price"
+                        value={displayPrice}
+                        onChange={(e) => handlePriceChange(e.target.value)}
                       />
-                      <InputError message={errors.promote_title} />
+                      {/* hidden raw value */}
+                      <input type="hidden" name="showprice" value={rawPrice} />
+
+                      <InputError message={errors.showprice} />
                     </div>
 
-                    {/* Promote Price */}
-                    <div className="grid gap-2">
-                      <Label htmlFor="promote_price">
-                        Promotion Price show on catalog
-                      </Label>
+                    <div className="rounded-2xl border border-pink-200 bg-gradient-to-br from-pink-50 to-rose-50 p-5 shadow-sm">
+                      <div className="mb-5">
+                        <h3 className="font-semibold text-pink-700">
+                          Promotion Campaign
+                        </h3>
 
-                      <div className="flex gap-2">
-                        {/* ✅ Price */}
-                        <Input
-                          id="promote_price_display"
-                          type="text"
-                          placeholder="Promotion Price"
-                          value={displayPrice1}
-                          onChange={(e) => handlePriceChange1(e.target.value)}
-                        />
+                        <p className="text-sm text-muted-foreground">
+                          Highlight special offer on catalog
+                        </p>
                       </div>
 
-                      {/* hidden raw value */}
-                      <input
-                        type="hidden"
-                        name="promote_price"
-                        value={rawPrice1}
-                      />
+                      <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+                        {/* promote title */}
+                        <div className="grid gap-2">
+                          <Label htmlFor="promote_title">
+                            Title Promotion on Catalog
+                          </Label>
+                          <Input
+                            id="promote_title"
+                            type="text"
+                            name="promote_title"
+                            placeholder="Title Promotion"
+                            value={data.promote_title}
+                            onChange={(e) =>
+                              setData('promote_title', e.target.value)
+                            }
+                          />
+                          <InputError message={errors.promote_title} />
+                        </div>
 
-                      <InputError message={errors.promote_price} />
-                    </div>
+                        {/* Promote Price */}
+                        <div className="grid gap-2">
+                          <Label htmlFor="promote_price">
+                            Promotion Price show on catalog
+                          </Label>
+                          <Input
+                            id="promote_price_display"
+                            type="text"
+                            placeholder="Promotion Price"
+                            value={displayPrice1}
+                            onChange={(e) => handlePriceChange1(e.target.value)}
+                          />
+                          {/* hidden raw value */}
+                          <input
+                            type="hidden"
+                            name="promote_price"
+                            value={rawPrice1}
+                          />
 
-                    {/* promote note — full width */}
-                    <div className="grid gap-2 md:col-span-2">
-                      <Label htmlFor="promote_note">
-                        Promotion Note on Catalog
-                      </Label>
-                      <Input
-                        id="promote_note"
-                        type="text"
-                        name="promote_note"
-                        placeholder="Promotion Note"
-                        value={data.promote_note}
-                        onChange={(e) =>
-                          setData('promote_note', e.target.value)
-                        }
-                      />
-                      <InputError message={errors.promote_note} />
+                          <InputError message={errors.promote_price} />
+                        </div>
+
+                        {/* promote note — full width */}
+                        <div className="grid gap-2 md:col-span-2">
+                          <Label htmlFor="promote_note">
+                            Promotion Note on Catalog
+                          </Label>
+                          <Input
+                            id="promote_note"
+                            type="text"
+                            name="promote_note"
+                            placeholder="Promotion Note"
+                            value={data.promote_note}
+                            onChange={(e) =>
+                              setData('promote_note', e.target.value)
+                            }
+                          />
+                          <InputError message={errors.promote_note} />
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -734,26 +863,36 @@ export default function Page() {
             {/* ================= TAB 2 — JADWAL ================= */}
             <TabsContent value="schedule">
               <div className="space-y-4">
-                {/* HEADER */}
-                <div className="flex justify-between items-center px-4 py-2">
-                  <h3 className="text-lg font-semibold">
-                    <span className="font-semibold">
-                      Tour Schedule and Price —
-                    </span>
-                  </h3>
-                  <span className="text-sm text-muted-foreground"></span>
+                <div className="flex flex-col gap-3 px-4 py-2 md:flex-row md:items-center md:justify-end">
+                  <div className="flex items-center gap-3">
+                    <Button type="button" onClick={addSchedule} disabled>
+                      + Add New Schedule
+                    </Button>
+                  </div>
                 </div>
 
-                <div className="flex items-center justify-between px-4 py-2">
-                  <h3 className="text-lg font-semibold">
-                    <span className="text-foreground font-semibold">
-                      Currency:
+                <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2">
+                  {/* LEFT */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">
+                      Search by departure date
                     </span>
-                  </h3>
 
-                  <Button type="button" onClick={addSchedule}>
-                    + Add New Schedule
-                  </Button>
+                    <input
+                      type="date"
+                      value={searchDepartureTab2}
+                      onChange={(e) => {
+                        setSearchDepartureTab2(e.target.value);
+                        setCurrentSchedulePage(1);
+                      }}
+                      className="rounded-lg border px-3 py-2 text-sm"
+                    />
+                  </div>
+
+                  {/* RIGHT */}
+                  <div className="rounded-lg border bg-muted/40 px-3 py-2 text-sm font-medium">
+                    Currency:
+                  </div>
                 </div>
 
                 {/* DESKTOP TABLE */}
@@ -773,9 +912,7 @@ export default function Page() {
                           Prices
                         </th>
 
-                        <th className="p-3 text-left" rowSpan={2}>
-                          Action
-                        </th>
+                        <th className="p-3 text-left" rowSpan={2}></th>
                       </tr>
 
                       <tr className="text-xs text-muted-foreground">
@@ -785,7 +922,6 @@ export default function Page() {
                         <th className="p-2">Commission</th>
                       </tr>
                     </thead>
-
                     {/* ================= BODY ================= */}
                     <tbody>
                       {schedules.map((item, index) => (
@@ -1369,55 +1505,192 @@ export default function Page() {
 
             <TabsContent value="availability">
               <div className="space-y-4">
-                <div className="flex justify-between items-center px-4 py-2">
-                  <h3 className="text-lg font-semibold">
-                    <span className="font-semibold">Availability —</span>
-                  </h3>
-                  <span className="text-sm text-muted-foreground"></span>
-                </div>
-
-                <div className="flex items-center justify-between px-4 py-2">
-                  <h3 className="text-lg font-semibold">
-                    <span className="text-foreground font-semibold">
-                      Quantity: pax
+                <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2">
+                  {/* LEFT */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">
+                      Search by departure date
                     </span>
-                  </h3>
+
+                    <input
+                      type="date"
+                      value={searchDeparture}
+                      onChange={(e) => {
+                        setSearchDeparture(e.target.value);
+                        setCurrentPage(1);
+                      }}
+                      className="rounded-lg border px-3 py-2 text-sm"
+                    />
+                  </div>
+
+                  {/* RIGHT */}
+                  <div className="rounded-lg border bg-muted/40 px-3 py-2 text-sm font-medium">
+                    Quantity: pax
+                  </div>
                 </div>
 
-                <div className="rounded-lg border overflow-hidden">
-                  <table className="w-full text-sm">
-                    <thead className="bg-muted">
+                <div className="hidden md:block rounded-xl border bg-background overflow-auto">
+                  <table className="w-full text-xs border-separate border-spacing-0">
+                    <colgroup>
+                      <col className="w-[200px]" /> {/* Departure */}
+                      <col className="w-[50px]" /> {/* Max Pax */}
+                      <col className="w-[50px]" />
+                      <col className="w-[50px]" />
+                      <col className="w-[50px]" />
+                      <col className="w-[50px]" />
+                      <col className="w-[50px]" />
+                      <col className="w-[50px]" />
+                      <col className="w-[50px]" />
+                      <col className="w-[50px]" />
+                      <col className="w-[50px]" />
+                      <col className="w-[50px]" />
+                      <col className="w-[100px]" />
+                      <col className="w-[70px]" /> {/* Action */}
+                    </colgroup>
+                    <thead className="sticky top-0 z-30 bg-muted">
                       <tr>
-                        <th className="p-3 text-left">Departure → Return</th>
-                        <th className="p-3 text-right">Max Pax</th>
-                        <th className="p-3 text-right">
-                          Waiting Payment <br /> (WP)
+                        <th className="sticky left-0 z-40 bg-muted border-b p-3 text-left font-semibold">
+                          Departure → Return
                         </th>
-                        <th className="p-3 text-right">
-                          Down Payment <br /> (DP)
+                        <th className="border-b p-2 text-right font-semibold">
+                          Max Pax
                         </th>
-                        <th className="p-3 text-right">
-                          Full Payment <br /> (FP)
+                        <th className="border-b p-2 text-right font-semibold">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="inline-flex items-center justify-end gap-1 cursor-help">
+                                <span>RS</span>
+
+                                <InfoIcon className="h-3 w-3 text-muted-foreground" />
+                              </div>
+                            </TooltipTrigger>
+
+                            <TooltipContent>Manual Reserved</TooltipContent>
+                          </Tooltip>
                         </th>
-                        <th className="p-3 text-right">
-                          Reserved <br /> (RS)
+                        <th className="border-b p-2 text-right font-semibold">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="inline-flex items-center justify-end gap-1 cursor-help">
+                                <span>WP</span>
+
+                                <InfoIcon className="h-3 w-3 text-muted-foreground" />
+                              </div>
+                            </TooltipTrigger>
+
+                            <TooltipContent>Waiting Payment</TooltipContent>
+                          </Tooltip>
                         </th>
-                        <th className="p-3 text-right">
-                          Cancel <br /> (CA)
+                        <th className="border-b p-2 text-right font-semibold">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="inline-flex items-center justify-end gap-1 cursor-help">
+                                <span>WA</span>
+
+                                <InfoIcon className="h-3 w-3 text-muted-foreground" />
+                              </div>
+                            </TooltipTrigger>
+
+                            <TooltipContent>
+                              Waiting Payment Approval
+                            </TooltipContent>
+                          </Tooltip>
                         </th>
-                        <th className="p-3 text-right">
-                          Refund <br /> (RF)
+                        <th className="border-b p-2 text-right font-semibold">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="inline-flex items-center justify-end gap-1 cursor-help">
+                                <span>DP</span>
+
+                                <InfoIcon className="h-3 w-3 text-muted-foreground" />
+                              </div>
+                            </TooltipTrigger>
+
+                            <TooltipContent>Down Payment</TooltipContent>
+                          </Tooltip>
                         </th>
-                        <th className="p-3 text-right">
-                          Expired <br /> EX)
+                        <th className="border-b p-2 text-right font-semibold">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="inline-flex items-center justify-end gap-1 cursor-help">
+                                <span>FP</span>
+
+                                <InfoIcon className="h-3 w-3 text-muted-foreground" />
+                              </div>
+                            </TooltipTrigger>
+
+                            <TooltipContent>Full Payment</TooltipContent>
+                          </Tooltip>
                         </th>
-                        <th className="p-3 text-right">
-                          Waiting List <br /> (WL)
+                        <th className="border-b p-2 text-right font-semibold">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="inline-flex items-center justify-end gap-1 cursor-help">
+                                <span>BR</span>
+
+                                <InfoIcon className="h-3 w-3 text-muted-foreground" />
+                              </div>
+                            </TooltipTrigger>
+
+                            <TooltipContent>Booking Reserved</TooltipContent>
+                          </Tooltip>
                         </th>
-                        <th className="p-3 text-right">
-                          Available <br /> (WL)
+                        <th className="border-b p-2 text-right font-semibold">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="inline-flex items-center justify-end gap-1 cursor-help">
+                                <span>CA</span>
+
+                                <InfoIcon className="h-3 w-3 text-muted-foreground" />
+                              </div>
+                            </TooltipTrigger>
+
+                            <TooltipContent>Cancel</TooltipContent>
+                          </Tooltip>
                         </th>
-                        <th className="p-3 text-right">Action</th>
+                        <th className="border-b p-2 text-right font-semibold">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="inline-flex items-center justify-end gap-1 cursor-help">
+                                <span>RF</span>
+
+                                <InfoIcon className="h-3 w-3 text-muted-foreground" />
+                              </div>
+                            </TooltipTrigger>
+
+                            <TooltipContent>Refund</TooltipContent>
+                          </Tooltip>
+                        </th>
+                        <th className="border-b p-2 text-right font-semibold">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="inline-flex items-center justify-end gap-1 cursor-help">
+                                <span>EX</span>
+
+                                <InfoIcon className="h-3 w-3 text-muted-foreground" />
+                              </div>
+                            </TooltipTrigger>
+
+                            <TooltipContent>Expired</TooltipContent>
+                          </Tooltip>
+                        </th>
+                        <th className="border-b p-2 text-right font-semibold">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="inline-flex items-center justify-end gap-1 cursor-help">
+                                <span>WL</span>
+
+                                <InfoIcon className="h-3 w-3 text-muted-foreground" />
+                              </div>
+                            </TooltipTrigger>
+
+                            <TooltipContent>Waiting List</TooltipContent>
+                          </Tooltip>
+                        </th>
+                        <th className="border-b p-2 text-right font-semibold">
+                          Available
+                        </th>
+                        <th className="sticky right-0 z-40 bg-muted border-b p-2 text-right font-semibold"></th>
                       </tr>
                     </thead>
 
@@ -1432,39 +1705,23 @@ export default function Page() {
             {/* ================= TAB 4 — ADD ONS ================= */}
             <TabsContent value="addons">
               <div className="space-y-4">
-                <div className="flex justify-between items-center px-4 py-2">
-                  <h3 className="text-lg font-semibold">
-                    <span className="font-semibold">Add Ons Table —</span>
-                  </h3>
-                  <span className="text-sm text-muted-foreground"></span>
-                </div>
-
-                <div className="flex items-center justify-between px-4 py-2">
-                  <h3 className="text-lg font-semibold">
-                    <span className="text-foreground font-semibold">
-                      Currency:
+                <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">
+                      Search by departure date
                     </span>
-                  </h3>
-                </div>
 
-                <div className="rounded-lg border overflow-hidden">
-                  <table className="w-full text-sm">
-                    <thead className="bg-muted">
-                      <tr>
-                        <th className="p-3 text-left">Departure → Return</th>
-                        <th className="p-3 text-left">Descriptions</th>
-                        <th className="p-3 text-left">Prices</th>
-                        <th className="p-3 text-left">Editable</th>
-                        <th className="p-3 text-left">Action</th>
-                      </tr>
-                    </thead>
-
-                    <tbody></tbody>
-                  </table>
+                    <input
+                      type="date"
+                      value=""
+                      className="rounded-lg border px-3 py-2 text-sm"
+                    />
+                  </div>
+                  <div className="rounded-lg border bg-muted/40 px-3 py-2 text-sm font-medium">
+                    Currency:
+                  </div>
                 </div>
               </div>
-
-              <div className="flex justify-start pt-6 border-t"></div>
             </TabsContent>
           </Tabs>
 
