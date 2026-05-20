@@ -35,6 +35,24 @@ type DashboardProps = {
   networkPerformance?: any[];
 };
 
+const getResponsiveAmountClass = (value: string | number) => {
+  const length = String(value).length;
+
+  if (length >= 20) {
+    return 'text-lg sm:text-xl';
+  }
+
+  if (length >= 16) {
+    return 'text-xl sm:text-2xl';
+  }
+
+  if (length >= 12) {
+    return 'text-2xl';
+  }
+
+  return 'text-2xl sm:text-3xl';
+};
+
 export default function AffiliateDashboardIndex({
   auth,
   wallet_balance = 0,
@@ -122,6 +140,7 @@ export default function AffiliateDashboardIndex({
       value: formatIDR(stats.total_commission || 0),
       description: 'Total commission earned.',
       icon: Wallet,
+      isCurrency: true,
     },
   ];
 
@@ -148,7 +167,7 @@ export default function AffiliateDashboardIndex({
                 <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-amber-100 text-amber-600 dark:bg-amber-500/15 dark:text-amber-300">
                   <LockKeyhole className="h-9 w-9" />
                 </div>
-                <h2 className="mt-6 text-2xl font-bold text-slate-900 dark:text-slate-100">
+                <h2 className="mt-6 text-2xl font-semibold text-slate-900 dark:text-slate-100">
                   Account Pending Approval
                 </h2>
                 <p className="mt-3 text-sm leading-6 text-slate-500 dark:text-slate-400">
@@ -163,7 +182,7 @@ export default function AffiliateDashboardIndex({
                       <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-300" />
                       <div className="space-y-3">
                         <div>
-                          <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                          <h3 className="text-sm font-medium text-slate-900 dark:text-slate-100">
                             Complete your profile to speed up verification
                           </h3>
                           <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
@@ -180,7 +199,7 @@ export default function AffiliateDashboardIndex({
                     </div>
                   </div>
                 ) : (
-                  <div className="mt-8 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                  <div className="mt-8 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-normal text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
                     Your profile is complete. Please wait while the review is
                     finalized.
                   </div>
@@ -203,7 +222,7 @@ export default function AffiliateDashboardIndex({
                 <div className="flex items-start gap-3">
                   <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-300" />
                   <div>
-                    <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                    <h3 className="text-sm font-medium text-slate-900 dark:text-slate-100">
                       Your profile still needs a few details
                     </h3>
                     <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
@@ -227,11 +246,11 @@ export default function AffiliateDashboardIndex({
                 <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
                   <div className="max-w-3xl">
                     <div className="flex flex-wrap items-center gap-3">
-                      <Badge className="rounded-full bg-primary/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-primary hover:bg-primary/10 dark:bg-primary/15">
+                      <Badge className="rounded-full bg-primary/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-primary hover:bg-primary/10 dark:bg-primary/15">
                         {tierLabel}
                       </Badge>
                       <Badge
-                        className={`rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] ${
+                        className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] ${
                           isPendingApproval
                             ? 'bg-amber-100 text-amber-700 hover:bg-amber-100 dark:bg-amber-500/15 dark:text-amber-300'
                             : 'bg-emerald-100 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-500/15 dark:text-emerald-300'
@@ -242,7 +261,7 @@ export default function AffiliateDashboardIndex({
                     </div>
 
                     <div className="mt-5">
-                      <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100">
+                      <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
                         Affiliate Dashboard
                       </h1>
                       <p className="mt-3 flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
@@ -252,7 +271,7 @@ export default function AffiliateDashboardIndex({
                       </p>
                       <p className="mt-4 max-w-2xl text-sm text-slate-600 dark:text-slate-300">
                         Welcome back,{' '}
-                        <span className="font-semibold text-slate-900 dark:text-slate-100">
+                        <span className="font-medium text-slate-900 dark:text-slate-100">
                           {user.name}
                         </span>
                         . Review your key metrics, monitor new registrations,
@@ -262,14 +281,16 @@ export default function AffiliateDashboardIndex({
                   </div>
 
                   <div className="grid gap-3 sm:grid-cols-2 lg:min-w-[360px]">
-                    <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200 dark:bg-slate-900/80 dark:ring-slate-800">
+                    <div className="min-w-0 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200 dark:bg-slate-900/80 dark:ring-slate-800">
                       <div className="flex items-center justify-between gap-3">
-                        <span className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+                        <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
                           Wallet Balance
                         </span>
                         <Wallet className="h-5 w-5 text-primary" />
                       </div>
-                      <p className="mt-3 text-2xl font-black text-slate-900 dark:text-slate-100">
+                      <p
+                        className={`mt-3 break-words font-semibold leading-tight text-slate-900 dark:text-slate-100 ${getResponsiveAmountClass(formatIDR(wallet_balance))}`}
+                      >
                         {formatIDR(wallet_balance)}
                       </p>
                       <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
@@ -283,11 +304,11 @@ export default function AffiliateDashboardIndex({
                     >
                       <div className="flex items-center justify-between gap-3">
                         <div className="flex items-center gap-3">
-                          <span className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+                          <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
                             Notification
                           </span>
                           {unreadNotificationsCount > 0 && (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-red-600 dark:bg-red-500/15 dark:text-red-300">
+                            <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-red-600 dark:bg-red-500/15 dark:text-red-300">
                               <span className="relative flex h-2 w-2">
                                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75"></span>
                                 <span className="relative inline-flex h-2 w-2 rounded-full bg-red-500"></span>
@@ -298,11 +319,11 @@ export default function AffiliateDashboardIndex({
                         </div>
                         <Bell className="h-5 w-5 text-primary transition-transform group-hover:scale-105" />
                       </div>
-                      <p className="mt-3 text-2xl font-black text-slate-900 dark:text-slate-100">
+                      <p className="mt-3 text-2xl font-semibold text-slate-900 dark:text-slate-100">
                         {unreadNotificationsCount}
                       </p>
                       <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                        Open your latest affiliate notifications.
+                        Open your latest notifications.
                       </p>
                     </Link>
                   </div>
@@ -322,11 +343,17 @@ export default function AffiliateDashboardIndex({
                 >
                   <CardContent className="p-6">
                     <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">
+                      <div className="min-w-0">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">
                           {item.title}
                         </p>
-                        <p className="mt-4 text-3xl font-black tracking-tight text-slate-900 dark:text-slate-100">
+                        <p
+                          className={`mt-4 break-words font-semibold leading-tight tracking-tight text-slate-900 dark:text-slate-100 ${
+                            item.isCurrency
+                              ? getResponsiveAmountClass(item.value)
+                              : 'text-3xl'
+                          }`}
+                        >
                           {item.value}
                         </p>
                       </div>
@@ -347,7 +374,7 @@ export default function AffiliateDashboardIndex({
             <Card className="overflow-hidden rounded-3xl border-none bg-white py-0 shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
               <div className="flex flex-col gap-3 border-b border-slate-200 bg-slate-50/70 px-6 py-5 dark:border-slate-800 dark:bg-slate-950/40 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <CardTitle className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                  <CardTitle className="text-sm font-semibold text-slate-900 dark:text-slate-100">
                     Recent Registrations
                   </CardTitle>
                   <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
@@ -370,13 +397,13 @@ export default function AffiliateDashboardIndex({
                 <Table>
                   <TableHeader>
                     <TableRow className="border-slate-100 hover:bg-transparent dark:border-slate-800">
-                      <TableHead className="px-6 text-[11px] font-black uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">
+                      <TableHead className="px-6 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">
                         Agent Name
                       </TableHead>
-                      <TableHead className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">
+                      <TableHead className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">
                         Package
                       </TableHead>
-                      <TableHead className="px-6 text-right text-[11px] font-black uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">
+                      <TableHead className="px-6 text-right text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">
                         Status
                       </TableHead>
                     </TableRow>
@@ -388,7 +415,7 @@ export default function AffiliateDashboardIndex({
                           key={agent.id}
                           className="border-slate-100 hover:bg-slate-50/70 dark:border-slate-800 dark:hover:bg-slate-800/50"
                         >
-                          <TableCell className="px-6 py-4 text-sm font-semibold text-slate-900 dark:text-slate-100">
+                          <TableCell className="px-6 py-4 text-sm font-medium text-slate-900 dark:text-slate-100">
                             {agent.name}
                           </TableCell>
                           <TableCell className="py-4 text-sm text-slate-500 dark:text-slate-400">
@@ -426,7 +453,7 @@ export default function AffiliateDashboardIndex({
             <Card className="overflow-hidden rounded-3xl border-none bg-white py-0 shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
               <div className="flex flex-col gap-3 border-b border-slate-200 bg-slate-50/70 px-6 py-5 dark:border-slate-800 dark:bg-slate-950/40 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <CardTitle className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                  <CardTitle className="text-sm font-semibold text-slate-900 dark:text-slate-100">
                     Affiliator Performance
                   </CardTitle>
                   <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
@@ -449,13 +476,13 @@ export default function AffiliateDashboardIndex({
                 <Table>
                   <TableHeader>
                     <TableRow className="border-slate-100 hover:bg-transparent dark:border-slate-800">
-                      <TableHead className="px-6 text-[11px] font-black uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">
+                      <TableHead className="px-6 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">
                         Affiliator Name
                       </TableHead>
-                      <TableHead className="min-w-[220px] text-[11px] font-black uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">
+                      <TableHead className="min-w-[220px] text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">
                         Conversion
                       </TableHead>
-                      <TableHead className="px-6 text-right text-[11px] font-black uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">
+                      <TableHead className="px-6 text-right text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">
                         Status
                       </TableHead>
                     </TableRow>
@@ -467,7 +494,7 @@ export default function AffiliateDashboardIndex({
                           key={`${network.name}-${network.status}`}
                           className="border-slate-100 hover:bg-slate-50/70 dark:border-slate-800 dark:hover:bg-slate-800/50"
                         >
-                          <TableCell className="px-6 py-4 text-sm font-semibold text-slate-900 dark:text-slate-100">
+                          <TableCell className="px-6 py-4 text-sm font-medium text-slate-900 dark:text-slate-100">
                             {network.name}
                           </TableCell>
                           <TableCell className="py-4">
@@ -480,7 +507,7 @@ export default function AffiliateDashboardIndex({
                                   }}
                                 />
                               </div>
-                              <span className="w-12 text-right text-sm font-semibold text-slate-700 dark:text-slate-300">
+                              <span className="w-12 text-right text-sm font-medium text-slate-700 dark:text-slate-300">
                                 {Math.round(network.conversion || 0)}%
                               </span>
                             </div>
