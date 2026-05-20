@@ -11,40 +11,32 @@ use Inertia\Inertia;
 
 class ProfileController extends Controller
 {
-    public function show(Request $request, Company $company)
-    {
-        $company->load(['domain', 'identityCard', 'referrer.affiliateProfile']);
+  public function show(Request $request, Company $company)
+  {
+    $company->load(['domain', 'identityCard']);
 
-        /** @var \App\Models\User|null $user */
-        $user = $request->user();
+    /** @var \App\Models\User|null $user */
+    $user = $request->user();
 
-        $userStatus = $user ? $user->status : 'inactive';
-        $statusValue = $userStatus instanceof \BackedEnum ? $userStatus->value : $userStatus;
-        $referrer = $company->referrer;
+    $userStatus = $user ? $user->status : 'inactive';
+    $statusValue = $userStatus instanceof \BackedEnum ? $userStatus->value : $userStatus;
 
-        $company->setAttribute('invited_by', $referrer ? [
-            'name' => $referrer->name,
-            'referral_code' => $referrer->affiliateProfile?->referral_code,
-        ] : null);
+    return Inertia::render('companies/dashboard/profile/index', [
+      'profile' => $company,
+      'account_status' => strtolower((string)$statusValue),
+    ]);
+  }
 
-        return Inertia::render('companies/dashboard/profile/index', [
-            'profile' => $company,
-            'account_status' => strtolower((string) $statusValue),
-        ]);
-    }
+  public function update(UpdateProfileRequest $request, Company $company)
+  {
+    $validated = $request->validated();
 
-    public function update(UpdateProfileRequest $request, Company $company)
-    {
-        $validated = $request->validated();
+    $updateDomainDto = Arr::only($validated, ['subdomain', 'domain', 'domain_enabled']);
+    $companyDto = Arr::except($validated, ['subdomain', 'domain', 'domain_enabled']);
 
-        $updateDomainDto = Arr::only($validated, ['subdomain', 'domain', 'domain_enabled']);
-        $companyDto = Arr::except($validated, ['subdomain', 'domain', 'domain_enabled']);
-        $updateDomainDto['domain'] = $request->boolean('domain_enabled') ? ($updateDomainDto['domain'] ?? null) : null;
-        $updateDomainDto['domain_enabled'] = filled($updateDomainDto['domain']);
+    $company->forceFill($companyDto)->save();
+    $company->domain()->updateOrCreate([], $updateDomainDto);
 
-        $company->forceFill($companyDto)->save();
-        $company->domain()->updateOrCreate([], $updateDomainDto);
-
-        return back()->with('success', 'Profile updated successfully.');
-    }
+    return back()->with('success', 'Profile updated successfully.');
+  }
 }

@@ -137,12 +137,12 @@ export default function NetworkList() {
       <Head title={title} />
 
       <div className="space-y-6">
-        {/* <div>
+        <div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
             {title}
           </h1>
           <p className="text-slate-500 text-sm mt-1">{description}</p>
-        </div> */}
+        </div>
 
         <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
           <div className="relative w-full sm:w-80">

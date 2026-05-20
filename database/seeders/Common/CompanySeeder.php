@@ -17,116 +17,112 @@ use Illuminate\Support\Facades\Hash;
 
 class CompanySeeder extends Seeder
 {
-    public function run(): void
-    {
-        $packages = [
-            [
-                'name' => 'Free Trial 1 Month',
-                'duration_months' => 1,
-                'price' => 0,
-                'is_active' => true,
-            ],
-            [
-                'name' => 'Basic Subscription',
-                'duration_months' => 12,
-                'price' => 6000000,
-                'is_active' => true,
-            ],
-        ];
+  public function run(): void
+  {
+    $packages = [
+      [
+        'name' => 'Free Trial 1 Month',
+        'duration_months' => 1,
+        'price' => 0,
+        'is_active' => true,
+      ],
+      [
+        'name' => 'Basic Subscription',
+        'duration_months' => 12,
+        'price' => 6000000,
+        'is_active' => true,
+      ],
+    ];
 
-        foreach ($packages as $package) {
-            AgentSubscriptionPackage::factory()->create($package);
-        }
-
-        $companies = [
-            [
-                'username' => 'vendor',
-                'subdomain' => 'vendor',
-                'company_type' => CompanyType::VENDOR,
-                'deposit' => 100000000,
-            ],
-            [
-                'username' => 'john',
-                'subdomain' => 'john',
-                'company_type' => CompanyType::AGENT,
-            ],
-            [
-                'username' => 'greatchinatour',
-                'subdomain' => 'greatchinatour',
-                'company_type' => CompanyType::VENDOR,
-            ],
-        ];
-
-        foreach ($companies as $seed) {
-            $user = User::where('username', $seed['username'])->first();
-            if (! $user) {
-                $this->command->error("User with username '{$seed['username']}' not found. Please run UserSeeder first.");
-
-                continue;
-            }
-
-            $company = Company::factory()->create([
-                'username' => $seed['username'],
-                'type' => $seed['company_type'],
-                'name' => ucfirst($seed['username']).' Company',
-                'email' => $user->email,
-                'address' => 'Jakarta',
-                'phone' => '0123456789',
-            ]);
-            if (isset($seed['deposit']) && $seed['deposit'] > 0) {
-                $company->wallet->deposit($seed['deposit'], [
-                    'type' => 'seed-balance',
-                    'description' => 'Initial seeded wallet balance',
-                ]);
-            }
-
-            $company->domain()->create([
-                'subdomain' => $seed['subdomain'],
-                'domain_enabled' => true,
-                'subdomain_enabled' => true,
-            ]);
-
-            $user->companies()->attach($company->id, [
-                'status' => CompanyTeamStatus::ACTIVE,
-                'is_owner' => true,
-            ]);
-
-            $team = Team::where('name', "company:{$company->id}")->firstOrCreate();
-            $superadmin = Role::where('name', "company:{$company->id}:superadmin")->firstOrCreate();
-            $user->addRole($superadmin, $team);
-
-            if ($company['type'] === CompanyType::AGENT) {
-                AgentSubscription::create([
-                    'company_id' => $company->id,
-                    'package_id' => 2,
-                    'started_at' => now(),
-                    'ended_at' => now()->addDays(999),
-                ]);
-            }
-        }
-
-        $vendorCompany = Company::where('username', 'vendor')->first();
-        $johnCompany = Company::where('username', 'john')->first();
-
-        if ($vendorCompany && $johnCompany) {
-            VendorAgentPartner::create([
-                'vendor_id' => $vendorCompany->id,
-                'agent_id' => $johnCompany->id,
-                'status' => VendorAgentPartnerStatus::ACTIVE,
-                'applied_at' => now(),
-                'accepted_at' => now(),
-            ]);
-        }
-
-        $jane = User::factory()->create([
-            'company_id' => $johnCompany ? $johnCompany->id : 2,
-            'name' => 'Jane',
-            'email' => 'jane@travelboost.co.id',
-            'username' => 'jane',
-            'address' => 'Jakarta',
-            'phone' => '0',
-            'password' => Hash::make('jane'),
-        ]);
-        $jane->syncRoles(['user:customer']);
+    foreach ($packages as $package) {
+      AgentSubscriptionPackage::factory()->create($package);
     }
+
+    $companies = [
+      [
+        'username' => 'vendor',
+        'subdomain' => 'vendor',
+        'company_type' => CompanyType::VENDOR,
+        'deposit' => 100000000,
+      ],
+      [
+        'username' => 'john',
+        'subdomain' => 'john',
+        'company_type' => CompanyType::AGENT,
+      ],
+      [
+        'username' => 'greatchinatour',
+        'subdomain' => 'greatchinatour',
+        'company_type' => CompanyType::VENDOR,
+      ],
+    ];
+
+    foreach ($companies as $seed) {
+      $user = User::where('username', $seed['username'])->first();
+      if (!$user) {
+        $this->command->error("User with username '{$seed['username']}' not found. Please run UserSeeder first.");
+        continue;
+      }
+
+      $company = Company::factory()->create([
+        'username' => $seed['username'],
+        'type' => $seed['company_type'],
+        'name' => ucfirst($seed['username']) . ' Company',
+        'email' => $user->email,
+        'address' => 'Jakarta',
+        'phone' => '0123456789',
+      ]);
+      if (isset($seed['deposit']) && $seed['deposit'] > 0) {
+        $company->wallet->deposit($seed['deposit']);
+      }
+
+      $company->domain()->create([
+        'subdomain' => $seed['subdomain'],
+        'domain_enabled' => true,
+        'subdomain_enabled' => true,
+      ]);
+
+      $user->companies()->attach($company->id, [
+        'status' => CompanyTeamStatus::ACTIVE,
+        'is_owner' => true,
+      ]);
+
+      $team = Team::where('name', "company:{$company->id}")->firstOrCreate();
+      $superadmin = Role::where('name', "company:{$company->id}:superadmin")->firstOrCreate();
+      $user->addRole($superadmin, $team);
+
+      if ($company['type'] === CompanyType::AGENT) {
+        AgentSubscription::create([
+          'company_id' => $company->id,
+          'package_id' => 2,
+          'started_at' => now(),
+          'ended_at' => now()->addDays(999),
+        ]);
+      }
+    }
+
+    $vendorCompany = Company::where('username', 'vendor')->first();
+    $johnCompany = Company::where('username', 'john')->first();
+
+    if ($vendorCompany && $johnCompany) {
+      VendorAgentPartner::create([
+        'vendor_id' => $vendorCompany->id,
+        'agent_id' => $johnCompany->id,
+        'status' => VendorAgentPartnerStatus::ACTIVE,
+        'applied_at' => now(),
+        'accepted_at' => now(),
+      ]);
+    }
+
+    $jane = User::factory()->create([
+      'company_id' => $johnCompany ? $johnCompany->id : 2,
+      'name' => 'Jane',
+      'email' => 'jane@travelboost.co.id',
+      'username' => 'jane',
+      'address' => 'Jakarta',
+      'phone' => '0',
+      'password' => Hash::make('jane'),
+    ]);
+    $jane->syncRoles(['user:customer']);
+  }
 }

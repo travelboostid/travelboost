@@ -1,7 +1,6 @@
 <?php
 
 use App\Actions\Booking\ExpireBookingReservationsAction;
-use App\Console\Commands\CheckAgentSubscriptionExpiry;
 use App\Jobs\MarkExpiredPaymentsJob;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
@@ -28,12 +27,6 @@ Schedule::call(function () {
     app(ExpireBookingReservationsAction::class)->execute();
 })->everyMinute()
     ->name('release-expired-reservations')
-    ->withoutOverlapping()
-    ->onOneServer();
-
-Schedule::command(CheckAgentSubscriptionExpiry::class)
-    ->dailyAt(config('travelboost.agent_subscription_expiry_check_time', '00:00'))
-    ->name('agent-subscription-expiry-check')
     ->withoutOverlapping()
     ->onOneServer();
 

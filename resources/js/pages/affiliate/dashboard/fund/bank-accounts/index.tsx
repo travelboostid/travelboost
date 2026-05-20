@@ -154,14 +154,14 @@ export default function BankAccountsPage({ bank_accounts }: any) {
       <Head title="Bank Accounts" />
       <div className="mx-auto max-w-5xl space-y-6">
         <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
-          {/* <div>
+          <div>
             <h1 className="text-2xl font-bold tracking-tight text-foreground">
               Bank Accounts
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
               Manage bank accounts for your commission withdrawals.
             </p>
-          </div> */}
+          </div>
           <CreateBankAccountDialog>
             <Button className="shadow-sm">
               <PlusIcon className="mr-2 h-4 w-4" /> Add Bank Account

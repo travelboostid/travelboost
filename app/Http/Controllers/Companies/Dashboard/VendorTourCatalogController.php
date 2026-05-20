@@ -31,12 +31,10 @@ class VendorTourCatalogController extends Controller
         $tours = $toursQuery
             ->with([
                 'company:id,username,name',
-                'company.companySetting',
                 'category',
                 'image',
                 'document',
                 'schedules.availability',
-                'schedules.prices.priceCategory',
             ])
             ->when(request('category'), function ($query, $categoryId) use ($vendor) {
                 $query->where(function ($q) use ($categoryId, $vendor) {
@@ -64,12 +62,10 @@ class VendorTourCatalogController extends Controller
                 $q->where('status', 'active')
                     ->with([
                         'company:id,username,name',
-                        'company.companySetting',
                         'category',
                         'image',
                         'document',
                         'schedules.availability',
-                        'schedules.prices.priceCategory',
                     ]);
             }])
             ->get()
@@ -85,12 +81,10 @@ class VendorTourCatalogController extends Controller
             ->values()
             ->loadMissing([
                 'company:id,username,name',
-                'company.companySetting',
                 'category',
                 'image',
                 'document',
                 'schedules.availability',
-                'schedules.prices.priceCategory',
             ])
             ->map(function ($tour) use ($copiedTourIds, $company) {
                 $tour->has_copied = $copiedTourIds->contains($tour->id);

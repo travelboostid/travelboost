@@ -10,8 +10,8 @@ import {
 
 export function ChartAreaInteractive({ data }: { data: any[] }) {
   return (
-    <div className="w-full p-4 sm:p-6">
-      <div className="mb-6 px-1 sm:mb-8 sm:px-2">
+    <div className="w-full p-6">
+      <div className="flex items-center justify-between mb-8 px-2">
         <div>
           <h4 className="text-sm font-black text-slate-900 dark:text-slate-100 uppercase tracking-wider">
             Revenue Analytics
@@ -21,7 +21,7 @@ export function ChartAreaInteractive({ data }: { data: any[] }) {
           </p>
         </div>
       </div>
-      <div className="h-[260px] sm:h-[300px]">
+      <div className="h-[300px]">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart
             data={data}
