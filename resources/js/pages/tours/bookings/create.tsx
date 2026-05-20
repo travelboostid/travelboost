@@ -259,6 +259,7 @@ export default function Page() {
         tenant,
         bookingNumber,
         availability,
+        bookingSeatLimit,
         addOns,
         existingBooking,
         bookingTimeLimitMinutes,
@@ -278,6 +279,16 @@ export default function Page() {
     const user = auth?.user;
     const savedPassengerOptions = (savedPassengers ??
         []) as SavedPassengerOption[];
+    const rawSeatLimit = bookingSeatLimit ?? availability;
+    const parsedSeatLimit =
+        rawSeatLimit === null || rawSeatLimit === undefined
+            ? null
+            : Number(rawSeatLimit);
+    const bookingSeatLimitValue =
+        parsedSeatLimit !== null && Number.isFinite(parsedSeatLimit)
+            ? Math.max(0, parsedSeatLimit)
+            : null;
+    const maxSeatTakingGuests = bookingSeatLimitValue ?? 99;
     const [paymentResult, setPaymentResult] =
         useState<BookingPaymentResultData | null>(
             () => flash?.bookingPaymentResult ?? null,
@@ -1027,7 +1038,7 @@ export default function Page() {
         (enabled: boolean) => {
             if (enabled) {
                 const contactNameParts = splitContactName(contact.name);
-                const canAddNewAdult = adults + children < (availability ?? 99);
+                const canAddNewAdult = adults + children < maxSeatTakingGuests;
 
                 if (!contactNameParts || contactGuestId || !canAddNewAdult) {
                     return;
@@ -1059,7 +1070,7 @@ export default function Page() {
                 setContactGuestId(null);
             }
         },
-        [adults, availability, children, contact.name, contactGuestId],
+        [adults, children, contact.name, contactGuestId, maxSeatTakingGuests],
     );
 
     // ─── Validation ─────────────────────────────────────────────────────
@@ -1068,7 +1079,8 @@ export default function Page() {
 
     const paxTakingSeats = adults + children;
     const isAvailabilityExceeded =
-        availability !== null && paxTakingSeats > availability;
+        bookingSeatLimitValue !== null &&
+        paxTakingSeats > bookingSeatLimitValue;
 
     const extraBedGuests = guests.filter((g) =>
         g.priceCategory?.toLowerCase().includes('extra bed'),
@@ -1864,7 +1876,7 @@ export default function Page() {
                                                     handleGuestRemove
                                                 }
                                                 tourPrices={tourPrices}
-                                                maxGuests={availability ?? 99}
+                                                maxGuests={maxSeatTakingGuests}
                                                 departureDate={preselectedDate}
                                                 contactGuestId={contactGuestId}
                                                 onContactGuestToggle={
@@ -1963,8 +1975,10 @@ export default function Page() {
                                             isAvailabilityExceeded && (
                                                 <span className="text-sm font-semibold text-destructive">
                                                     Not enough availability.
-                                                    Only {availability} seats
-                                                    left.
+                                                    This booking can include up
+                                                    to {maxSeatTakingGuests}{' '}
+                                                    seat-taking guests for this
+                                                    schedule.
                                                 </span>
                                             )}
                                         {currentStep === 1 &&

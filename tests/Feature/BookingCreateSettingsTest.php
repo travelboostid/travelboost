@@ -67,6 +67,22 @@ function createBookingCreateScenario(string $username): array
     return compact('user', 'company', 'tour', 'schedule');
 }
 
+/**
+ * @return array<int, array<string, mixed>>
+ */
+function bookingPassengers(int $count): array
+{
+    return collect(range(1, $count))
+        ->map(fn (int $index): array => [
+            'first_name' => "Guest {$index}",
+            'last_name' => 'Passenger',
+            'price_category' => 'Adult Twin',
+            'room_type' => 'Twin',
+            'price_amount' => 1_000_000,
+        ])
+        ->all();
+}
+
 test('booking create exposes tour prices in vendor configured row order', function () {
     ['user' => $user, 'company' => $company, 'tour' => $tour, 'schedule' => $schedule] = createBookingCreateScenario('priceordervendor');
 
@@ -636,6 +652,179 @@ test('booking create returns server remaining hold seconds when resuming reserve
     $response->assertInertia(fn ($page) => $page
         ->where('reservedExpiresAt', now()->addMinutes(7)->toIso8601String())
         ->where('remainingHoldSeconds', 420));
+});
+
+test('booking create credits the current hold back into the editable booking seat limit', function () {
+    ['user' => $user, 'company' => $company, 'tour' => $tour, 'schedule' => $schedule] = createBookingCreateScenario('seatlimitvendor');
+
+    $booking = Booking::factory()->create([
+        'booking_number' => 'BKG-SEAT-LIMIT',
+        'user_id' => $user->id,
+        'vendor_id' => $company->id,
+        'tour_id' => $tour->id,
+        'departure_date' => $schedule->departure_date,
+        'status' => BookingStatus::BOOKING_RESERVED,
+        'reserved_type' => 'system',
+        'reserved_expires_at' => now()->addMinutes(8),
+        'pax_adult' => 3,
+        'pax_child' => 0,
+        'pax_infant' => 0,
+    ]);
+
+    app(\App\Actions\Booking\SyncAvailabilityAction::class)->executeForBooking($booking);
+
+    $response = $this->actingAs($user)->get(route('bookings.create', [
+        'username' => $company->username,
+        'tour' => $tour,
+        'date' => $schedule->departure_date,
+        'booking_number' => 'BKG-SEAT-LIMIT',
+    ]));
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->component('tours/bookings/create')
+        ->where('availability', 7)
+        ->where('bookingSeatLimit', 10)
+        ->where('existingBooking.booking_number', 'BKG-SEAT-LIMIT'));
+});
+
+test('reserve allows the owner to expand within their current held seat limit', function () {
+    ['user' => $user, 'company' => $company, 'tour' => $tour, 'schedule' => $schedule] = createBookingCreateScenario('expandholdvendor');
+
+    $booking = Booking::factory()->create([
+        'booking_number' => 'BKG-EXPAND-HOLD',
+        'user_id' => $user->id,
+        'vendor_id' => $company->id,
+        'tour_id' => $tour->id,
+        'departure_date' => $schedule->departure_date,
+        'status' => BookingStatus::BOOKING_RESERVED,
+        'reserved_type' => 'system',
+        'reserved_expires_at' => now()->addMinutes(8),
+        'pax_adult' => 3,
+        'pax_child' => 0,
+        'pax_infant' => 0,
+    ]);
+    app(\App\Actions\Booking\SyncAvailabilityAction::class)->executeForBooking($booking);
+    expect((int) TourAvailability::where('schedule_id', $schedule->id)->first()->available)->toBe(7);
+
+    $response = $this->actingAs($user)
+        ->from(route('bookings.create', [
+            'username' => $company->username,
+            'tour' => $tour,
+            'date' => $schedule->departure_date,
+            'booking_number' => 'BKG-EXPAND-HOLD',
+        ]))
+        ->post(route('bookings.reserve', [
+            'username' => $company->username,
+            'tour' => $tour,
+        ]), [
+            'tour_id' => $tour->id,
+            'departure_date' => $schedule->departure_date,
+            'pax_adult' => 10,
+            'pax_child' => 0,
+            'pax_infant' => 0,
+            'booking_number' => 'BKG-EXPAND-HOLD',
+            'vendor_id' => $company->id,
+            'passengers' => bookingPassengers(10),
+        ]);
+
+    $response->assertRedirect();
+    $response->assertSessionHasNoErrors();
+
+    expect($booking->fresh()->pax_adult)->toBe(10)
+        ->and((int) TourAvailability::where('schedule_id', $schedule->id)->first()->available)->toBe(0);
+});
+
+test('reserve rejects expanding the same booking beyond free seats plus its current hold', function () {
+    ['user' => $user, 'company' => $company, 'tour' => $tour, 'schedule' => $schedule] = createBookingCreateScenario('oversameholdvendor');
+
+    $booking = Booking::factory()->create([
+        'booking_number' => 'BKG-OVER-SAME-HOLD',
+        'user_id' => $user->id,
+        'vendor_id' => $company->id,
+        'tour_id' => $tour->id,
+        'departure_date' => $schedule->departure_date,
+        'status' => BookingStatus::BOOKING_RESERVED,
+        'reserved_type' => 'system',
+        'reserved_expires_at' => now()->addMinutes(8),
+        'pax_adult' => 3,
+        'pax_child' => 0,
+        'pax_infant' => 0,
+    ]);
+    app(\App\Actions\Booking\SyncAvailabilityAction::class)->executeForBooking($booking);
+
+    $response = $this->actingAs($user)
+        ->from(route('bookings.create', [
+            'username' => $company->username,
+            'tour' => $tour,
+            'date' => $schedule->departure_date,
+            'booking_number' => 'BKG-OVER-SAME-HOLD',
+        ]))
+        ->post(route('bookings.reserve', [
+            'username' => $company->username,
+            'tour' => $tour,
+        ]), [
+            'tour_id' => $tour->id,
+            'departure_date' => $schedule->departure_date,
+            'pax_adult' => 11,
+            'pax_child' => 0,
+            'pax_infant' => 0,
+            'booking_number' => 'BKG-OVER-SAME-HOLD',
+            'vendor_id' => $company->id,
+            'passengers' => bookingPassengers(11),
+        ]);
+
+    $response->assertSessionHasErrors('availability');
+
+    expect($booking->fresh()->pax_adult)->toBe(3)
+        ->and((int) TourAvailability::where('schedule_id', $schedule->id)->first()->available)->toBe(7);
+});
+
+test('reserve does not let another customer use seats held by a different booking', function () {
+    ['user' => $owner, 'company' => $company, 'tour' => $tour, 'schedule' => $schedule] = createBookingCreateScenario('otherholdvendor');
+    $otherUser = User::factory()->create();
+
+    $booking = Booking::factory()->create([
+        'booking_number' => 'BKG-OTHER-HOLD',
+        'user_id' => $owner->id,
+        'vendor_id' => $company->id,
+        'tour_id' => $tour->id,
+        'departure_date' => $schedule->departure_date,
+        'status' => BookingStatus::BOOKING_RESERVED,
+        'reserved_type' => 'system',
+        'reserved_expires_at' => now()->addMinutes(8),
+        'pax_adult' => 3,
+        'pax_child' => 0,
+        'pax_infant' => 0,
+    ]);
+    app(\App\Actions\Booking\SyncAvailabilityAction::class)->executeForBooking($booking);
+
+    $response = $this->actingAs($otherUser)
+        ->from(route('bookings.create', [
+            'username' => $company->username,
+            'tour' => $tour,
+            'date' => $schedule->departure_date,
+        ]))
+        ->post(route('bookings.reserve', [
+            'username' => $company->username,
+            'tour' => $tour,
+        ]), [
+            'tour_id' => $tour->id,
+            'departure_date' => $schedule->departure_date,
+            'pax_adult' => 8,
+            'pax_child' => 0,
+            'pax_infant' => 0,
+            'booking_number' => 'BKG-OTHER-CUSTOMER',
+            'vendor_id' => $company->id,
+            'passengers' => bookingPassengers(8),
+        ]);
+
+    $response->assertSessionHasErrors('availability');
+    $this->assertDatabaseMissing('bookings', [
+        'booking_number' => 'BKG-OTHER-CUSTOMER',
+        'status' => BookingStatus::BOOKING_RESERVED->value,
+    ]);
+    expect((int) TourAvailability::where('schedule_id', $schedule->id)->first()->available)->toBe(7);
 });
 
 test('store maps payment method to booking payment mode', function () {

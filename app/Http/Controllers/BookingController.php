@@ -12,6 +12,7 @@ use App\Models\Booking;
 use App\Models\BookingDocument;
 use App\Models\Payment;
 use App\Models\Tour;
+use App\Models\TourAvailability;
 use App\Models\TourPrice;
 use App\Models\TourSchedule;
 use App\Models\User;
@@ -198,6 +199,12 @@ class BookingController extends Controller
         $remainingBalance = $existingBooking
             ? max(0.0, (float) $existingBooking->grand_total - $paidAmount)
             : 0.0;
+        $bookingSeatLimit = $availableSeats + $this->heldSeatCountForBooking(
+            $existingBooking,
+            $tour->id,
+            $this->normalizeDateString($schedule?->departure_date),
+            $tour->company_id
+        );
         $latestPayment = $existingBooking?->payments()
             ->latest()
             ->first();
@@ -240,6 +247,7 @@ class BookingController extends Controller
             'existingBooking' => $existingBooking,
             'roomTypes' => [],
             'availability' => $availableSeats,
+            'bookingSeatLimit' => $bookingSeatLimit,
             'addOns' => $addOns,
             'bookingDeadlineDays' => $deadlineDays,
             'bookingTimeLimitMinutes' => $bookingTimeLimitMinutes,
@@ -340,12 +348,42 @@ class BookingController extends Controller
 
         $bookingTimeLimitMinutes = $this->resolveBookingTimeLimitMinutes($tour);
 
-        $booking = \Illuminate\Support\Facades\DB::transaction(function () use ($data, $tour, $bookingTimeLimitMinutes) {
+        $booking = DB::transaction(function () use ($data, $tour, $bookingTimeLimitMinutes) {
+            $vendorId = (int) ($data['vendor_id'] ?? $tour->company_id);
             $existingBooking = Booking::query()
                 ->where('booking_number', $data['booking_number'])
                 ->where('user_id', request()->user()->id)
                 ->lockForUpdate()
                 ->first();
+
+            $schedule = $this->resolveBookableSchedule($tour, (string) $data['departure_date'], $vendorId);
+            if (! $schedule) {
+                throw ValidationException::withMessages([
+                    'departure_date' => 'Booking window closed.',
+                ]);
+            }
+
+            $availability = TourAvailability::query()
+                ->where('company_id', $vendorId)
+                ->where('tour_id', $tour->id)
+                ->where('schedule_id', $schedule->id)
+                ->lockForUpdate()
+                ->first();
+
+            $bookingSeatLimit = ($availability ? (int) $availability->available : 0)
+                + $this->heldSeatCountForBooking(
+                    $existingBooking,
+                    $tour->id,
+                    $this->normalizeDateString($schedule->departure_date),
+                    $vendorId
+                );
+            $requestedSeatCount = (int) $data['pax_adult'] + (int) $data['pax_child'];
+
+            if ($requestedSeatCount > $bookingSeatLimit) {
+                throw ValidationException::withMessages([
+                    'availability' => "This booking can include up to {$bookingSeatLimit} seat-taking guests for this schedule.",
+                ]);
+            }
 
             $reservedExpiresAt = $existingBooking?->status === BookingStatus::BOOKING_RESERVED
                 && $existingBooking->reserved_expires_at
@@ -367,7 +405,7 @@ class BookingController extends Controller
                     'status' => BookingStatus::BOOKING_RESERVED,
                     'reserved_type' => 'system',
                     'reserved_expires_at' => $reservedExpiresAt,
-                    'vendor_id' => $data['vendor_id'] ?? $tour->company_id,
+                    'vendor_id' => $vendorId,
                     'agent_id' => $data['agent_id'] ?? null,
                     'total_price' => $data['total_price'] ?? 0,
                     'tax_amount' => $data['tax_amount'] ?? 0,
@@ -1020,6 +1058,52 @@ class BookingController extends Controller
         }
 
         return max(0, (int) now()->diffInSeconds($booking->reserved_expires_at, false));
+    }
+
+    private function normalizeDateString(\DateTimeInterface|string|null $date): ?string
+    {
+        if ($date === null) {
+            return null;
+        }
+
+        if ($date instanceof \DateTimeInterface) {
+            return $date->format('Y-m-d');
+        }
+
+        return Carbon::parse($date)->toDateString();
+    }
+
+    private function heldSeatCountForBooking(
+        ?Booking $booking,
+        ?int $tourId = null,
+        ?string $departureDate = null,
+        ?int $vendorId = null
+    ): int {
+        if (! $booking) {
+            return 0;
+        }
+
+        if ($tourId !== null && (int) $booking->tour_id !== $tourId) {
+            return 0;
+        }
+
+        if ($vendorId !== null && (int) $booking->vendor_id !== $vendorId) {
+            return 0;
+        }
+
+        if ($departureDate !== null && $this->normalizeDateString($booking->departure_date) !== $departureDate) {
+            return 0;
+        }
+
+        $status = $booking->status instanceof BookingStatus
+            ? $booking->status
+            : BookingStatus::tryFrom((string) $booking->status);
+
+        if (! $status?->reducesAvailability()) {
+            return 0;
+        }
+
+        return max(0, (int) $booking->pax_adult + (int) $booking->pax_child);
     }
 
     private function ensureBookingNotExpired(Booking $booking): Booking
