@@ -74,38 +74,10 @@ import { toast } from 'sonner';
 
 dayjs.extend(relativeTime);
 
-const addDays = (date: Date, days: number) => {
-  const result = new Date(date);
-  result.setDate(result.getDate() + days);
-
-  return result;
-};
-
-const toDateString = (date: Date) => {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-
-  return `${year}-${month}-${day}`;
-};
-
-const getBookingDeadlineDays = (tour: any): number =>
-  Number(
-    tour?.company?.company_setting?.booking_deadline ??
-      tour?.company?.companySetting?.booking_deadline ??
-      0,
-  );
-
-const isActiveAvailability = (
-  availability: any,
-  bookingDeadlineDays = 0,
-): boolean => {
+const isActiveAvailability = (availability: any): boolean => {
   const departureDate = availability?.schedule?.departure_date;
   if (!departureDate) return false;
-
-  const cutoffDate = toDateString(addDays(new Date(), bookingDeadlineDays));
-
-  return departureDate >= cutoffDate;
+  return departureDate > new Date().toISOString().split('T')[0];
 };
 
 function RowActions({ row }: { row: any }) {
@@ -505,9 +477,7 @@ export const columns: ColumnDef<any>[] = [
     id: 'seats',
     accessorFn: (row: any) =>
       row.tour?.availabilities
-        ?.filter((item: any) =>
-          isActiveAvailability(item, getBookingDeadlineDays(row.tour)),
-        )
+        ?.filter((item: any) => isActiveAvailability(item))
         .reduce(
           (sum: number, item: any) => sum + (Number(item.available) || 0),
           0,
@@ -517,7 +487,7 @@ export const columns: ColumnDef<any>[] = [
         column={column}
         title={
           <span className="inline-block text-left leading-tight">
-            Total
+            Available
             <br />
             Seats
           </span>

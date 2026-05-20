@@ -94,10 +94,10 @@ class WithdrawalController extends Controller
     }
     if ($withdrawal->method === WithdrawalMethod::MANUAL && $withdrawal->status === WithdrawalStatus::PAID) {
       $wallet = $withdrawal->loadMissing('wallet')->wallet;
+      $wallet = $withdrawal->wallet;
       $wallet->withdraw($withdrawal->amount, [
-        'type' => 'wallet-withdrawal',
-        'description' => 'Withdrawal request approved',
-        'withdrawal_id' => $withdrawal->id,
+        'type' => 'withdrawal',
+        'description' => 'Withdrawal',
       ]);
     }
 

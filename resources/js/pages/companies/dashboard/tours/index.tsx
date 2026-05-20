@@ -77,31 +77,10 @@ import { toast } from 'sonner';
 
 dayjs.extend(relativeTime);
 
-const addDays = (date: Date, days: number) => {
-  const result = new Date(date);
-  result.setDate(result.getDate() + days);
-
-  return result;
-};
-
-const toDateString = (date: Date) => {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-
-  return `${year}-${month}-${day}`;
-};
-
-const isActiveAvailability = (
-  availability: any,
-  bookingDeadlineDays = 0,
-): boolean => {
+const isActiveAvailability = (availability: any): boolean => {
   const departureDate = availability?.schedule?.departure_date;
   if (!departureDate) return false;
-
-  const cutoffDate = toDateString(addDays(new Date(), bookingDeadlineDays));
-
-  return departureDate >= cutoffDate;
+  return departureDate > new Date().toISOString().split('T')[0];
 };
 
 function RowActions({ tour }: { tour: TourResource }) {
@@ -474,9 +453,7 @@ export const columns: ColumnDef<TourResource>[] = [
     id: 'seats',
     accessorFn: (row: any) =>
       row.availabilities
-        ?.filter((item: any) =>
-          isActiveAvailability(item, Number(row.booking_deadline_days || 0)),
-        )
+        ?.filter((item: any) => isActiveAvailability(item))
         .reduce(
           (sum: number, item: any) => sum + (Number(item.available) || 0),
           0,
@@ -486,7 +463,7 @@ export const columns: ColumnDef<TourResource>[] = [
         column={column}
         title={
           <span className="inline-block text-left leading-tight">
-            Total
+            Available
             <br />
             Seats
           </span>
@@ -535,10 +512,9 @@ export const columns: ColumnDef<TourResource>[] = [
 
 type PageProps = {
   data: any;
-  bookingDeadlineDays?: number;
 };
 
-export default function Page({ data, bookingDeadlineDays = 0 }: PageProps) {
+export default function Page({ data }: PageProps) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
     [],
@@ -550,24 +526,15 @@ export default function Page({ data, bookingDeadlineDays = 0 }: PageProps) {
   const [globalFilter, setGlobalFilter] = React.useState('');
   const { company } = usePageSharedDataProps();
 
-  const dataWithDeadline = React.useMemo(
-    () =>
-      data.map((tour: any) => ({
-        ...tour,
-        booking_deadline_days: bookingDeadlineDays,
-      })),
-    [data, bookingDeadlineDays],
-  );
-
   const filteredData = React.useMemo(() => {
-    let result = dataWithDeadline;
+    let result = data;
     if (activeTab !== 'all') {
       result = result.filter(
         (tour: any) => (tour.status || 'inactive').toLowerCase() === activeTab,
       );
     }
     return result;
-  }, [dataWithDeadline, activeTab]);
+  }, [data, activeTab]);
 
   const globalFilterFn = (row: any, columnId: string, filterValue: string) => {
     const search = filterValue.toLowerCase();
