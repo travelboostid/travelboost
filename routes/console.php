@@ -2,6 +2,7 @@
 
 use App\Actions\Booking\ExpireBookingReservationsAction;
 use App\Console\Commands\CheckAgentSubscriptionExpiry;
+use App\Jobs\MarkExpiredPaymentsJob;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
@@ -33,5 +34,11 @@ Schedule::call(function () {
 Schedule::command(CheckAgentSubscriptionExpiry::class)
     ->dailyAt(config('travelboost.agent_subscription_expiry_check_time', '00:00'))
     ->name('agent-subscription-expiry-check')
+    ->withoutOverlapping()
+    ->onOneServer();
+
+Schedule::job(new MarkExpiredPaymentsJob)
+    ->everyMinute()
+    ->name('mark-expired-payments')
     ->withoutOverlapping()
     ->onOneServer();

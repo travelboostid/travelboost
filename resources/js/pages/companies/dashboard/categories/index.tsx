@@ -19,7 +19,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
-import { router } from '@inertiajs/react';
+import { router, usePage } from '@inertiajs/react';
 import {
   flexRender,
   getCoreRowModel,
@@ -89,6 +89,7 @@ export const columns: ColumnDef<TourCategoryResource>[] = [
 ];
 
 export default function Page({ data }: { data: any }) {
+  const { errors } = usePage().props as any;
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
     [],
@@ -130,6 +131,11 @@ export default function Page({ data }: { data: any }) {
       }
     >
       <div className="w-full p-4">
+        {errors.delete_error && (
+          <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {errors.delete_error}
+          </div>
+        )}
         <div className="flex items-center py-4">
           <Input
             placeholder="Filter name..."

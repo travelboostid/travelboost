@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Admin;
 
+use App\Enums\WithdrawalMethod;
 use App\Enums\WithdrawalStatus;
 use App\Models\Withdrawal;
 use Illuminate\Foundation\Http\FormRequest;
@@ -31,28 +32,45 @@ class UpdateWithdrawalRequest extends FormRequest
     $withdrawal = $this->route('withdrawal');
 
     return [
+      'method' => [
+        'nullable',
+        new Enum(WithdrawalMethod::class),
+        function ($attribute, $value, $fail) use ($withdrawal) {
+          if ($withdrawal->status !== WithdrawalStatus::PENDING) {
+            $fail('Only pending withdrawal can update method.');
+          }
+        },
+      ],
       'status' => [
-        'required',
+        'nullable',
         new Enum(WithdrawalStatus::class),
         function ($attribute, $value, $fail) use ($withdrawal) {
-          $currentStatus = $withdrawal->status;
+          $method = $this->filled('method')
+            ? WithdrawalMethod::from($this->input('method'))
+            : $withdrawal->method;
+          $updateValue = WithdrawalStatus::from($value);
 
-          // Only allow update to paid if current status is pending
-          if ($value === WithdrawalStatus::PAID && $currentStatus !== WithdrawalStatus::PENDING) {
-            $fail('Only pending withdrawal can be marked as paid.');
-          }
+          $current = $withdrawal->status;
 
-          if ($value === WithdrawalStatus::REJECTED && $currentStatus !== WithdrawalStatus::PENDING) {
-            $fail('Only pending withdrawal can be rejected.');
-          }
+          $allowed =
+            match ($method) {
+              WithdrawalMethod::AUTO => (
+                ($current === WithdrawalStatus::PENDING && $updateValue === WithdrawalStatus::PROCESSING) ||
+                ($current === WithdrawalStatus::PENDING && $updateValue === WithdrawalStatus::REJECTED)
+              ),
 
-          if ($value === WithdrawalStatus::CANCELLED && $currentStatus !== WithdrawalStatus::PENDING) {
-            $fail('Only pending withdrawal can be cancelled.');
-          }
+              WithdrawalMethod::MANUAL => (
+                ($current === WithdrawalStatus::PENDING && $updateValue === WithdrawalStatus::PROCESSING) ||
+                ($current === WithdrawalStatus::PENDING && $updateValue === WithdrawalStatus::REJECTED) ||
+                ($current === WithdrawalStatus::PROCESSING && $updateValue === WithdrawalStatus::PAID) ||
+                ($current === WithdrawalStatus::PROCESSING && $updateValue === WithdrawalStatus::REJECTED)
+              ),
 
-          // Don't allow changing back to pending
-          if ($value === WithdrawalStatus::PENDING && $currentStatus !== WithdrawalStatus::PENDING) {
-            $fail('Cannot change status back to pending.');
+              default => false,
+            };
+
+          if (! $allowed) {
+            $fail('Invalid withdrawal status transition.');
           }
         },
       ],

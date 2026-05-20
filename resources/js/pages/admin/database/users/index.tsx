@@ -1,5 +1,4 @@
 import { adminSearchResourceOwners } from '@/api/misc/misc';
-import type { UserResource } from '@/api/model';
 import { DataTable } from '@/components/data-table/data-table';
 import { DataTableColumnHeader } from '@/components/data-table/data-table-column-header';
 import { DataTableToolbar } from '@/components/data-table/data-table-toolbar';
@@ -11,7 +10,7 @@ import { useDataTable } from '@/hooks/use-data-table';
 import { edit } from '@/routes/admin/database/users';
 import type { Option } from '@/types/data-table';
 import { Link } from '@inertiajs/react';
-import type { Column, ColumnDef } from '@tanstack/react-table';
+import type { ColumnDef } from '@tanstack/react-table';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import { CalendarIcon, CircleDashedIcon, PencilIcon, Text } from 'lucide-react';
@@ -21,233 +20,243 @@ import { UsersTableActionBar } from './components/users-table-action-bar';
 dayjs.extend(relativeTime);
 
 const STATUS_OPTIONS = [
-  { label: 'Active', value: 'active' },
-  { label: 'Inactive', value: 'inactive' },
-  { label: 'Suspended', value: 'suspended' },
+    { label: 'Active', value: 'active' },
+    { label: 'Inactive', value: 'inactive' },
+    { label: 'Suspended', value: 'suspended' },
 ];
 
 type UsersPageProps = {
-  data: {
-    data: any[];
-    total: number;
-    per_page: number;
-    current_page: number;
-    last_page: number;
-  };
-  userRoles: string[];
+    data: {
+        data: any[];
+        total: number;
+        per_page: number;
+        current_page: number;
+        last_page: number;
+    };
+    userRoles: string[];
 };
 
 export default function UsersPage({ data, userRoles }: UsersPageProps) {
-  const USER_ROLE_OPTIONS = userRoles.map((role) => ({
-    label: role.replace('user:', ''),
-    value: role,
-  }));
-  const columns = useMemo<ColumnDef<any>[]>(
-    () => [
-      {
-        id: 'select',
-        header: ({ table }) => (
-          <Checkbox
-            checked={
-              table.getIsAllPageRowsSelected() ||
-              (table.getIsSomePageRowsSelected() && 'indeterminate')
-            }
-            onCheckedChange={(value) =>
-              table.toggleAllPageRowsSelected(!!value)
-            }
-            aria-label="Select all"
-          />
-        ),
-        cell: ({ row }) => (
-          <Checkbox
-            checked={row.getIsSelected()}
-            onCheckedChange={(value) => row.toggleSelected(!!value)}
-            aria-label="Select row"
-          />
-        ),
-        size: 32,
-        enableSorting: true,
-        enableHiding: false,
-      },
-      {
-        id: 'name',
-        accessorKey: 'name',
-        header: ({ column }: { column: Column<UserResource, unknown> }) => (
-          <DataTableColumnHeader column={column} label="Name" />
-        ),
-        cell: ({ cell }) => <div>{cell.getValue<UserResource['name']>()}</div>,
-        meta: {
-          label: 'Name',
-          placeholder: 'Search names...',
-          variant: 'text',
-          icon: Text,
-        },
-        enableColumnFilter: true,
-      },
-      {
-        id: 'email',
-        accessorKey: 'email',
-        header: ({ column }: { column: Column<UserResource, unknown> }) => (
-          <DataTableColumnHeader column={column} label="Email" />
-        ),
-        cell: ({ cell }) => <div>{cell.getValue<UserResource['email']>()}</div>,
-        meta: {
-          label: 'Email',
-          placeholder: 'Search email...',
-          variant: 'text',
-          icon: Text,
-        },
-        enableColumnFilter: true,
-      },
-      {
-        id: 'roles',
-        accessorKey: 'roles',
-        header: ({ column }: { column: Column<UserResource, unknown> }) => (
-          <DataTableColumnHeader column={column} label="Roles" />
-        ),
-        cell: ({ row }) => (
-          <div className="flex flex-wrap gap-1">
-            {(
-              row.original.roles as Array<{
-                display_name?: string;
-                name?: string;
-              }>
-            )?.map((role, idx) => (
-              <Badge key={idx} variant="secondary">
-                {role.display_name ?? role.name}
-              </Badge>
-            )) ?? '-'}
-          </div>
-        ),
-        meta: {
-          label: 'Roles',
-          variant: 'multiSelect',
-          options: USER_ROLE_OPTIONS,
-          icon: CircleDashedIcon,
-        },
-        enableColumnFilter: true,
-        enableSorting: false,
-      },
-      {
-        id: 'company_holder',
-        accessorKey: 'company.name',
-        header: ({ column }: { column: Column<UserResource, unknown> }) => (
-          <DataTableColumnHeader column={column} label="Company Holder" />
-        ),
-        cell: ({ row }) => <div>{row.original.company?.name ?? '-'}</div>,
-        enableSorting: false,
-        meta: {
-          label: 'Company Holder',
-          variant: 'multiSelect',
-          options: async (query, currentValues) => {
-            const response = await adminSearchResourceOwners({
-              types: 'company',
-              keyword: query,
-              include_ids: Array.from(currentValues)
-                .map((v) => `company:${v}`)
-                .join(','),
-            } as any);
+    const USER_ROLE_OPTIONS = userRoles.map((role) => ({
+        label: role.replace('user:', ''),
+        value: role,
+    }));
+    const columns = useMemo<ColumnDef<any>[]>(
+        () => [
+            {
+                id: 'select',
+                header: ({ table }) => (
+                    <Checkbox
+                        checked={
+                            table.getIsAllPageRowsSelected() ||
+                            (table.getIsSomePageRowsSelected() &&
+                                'indeterminate')
+                        }
+                        onCheckedChange={(value) =>
+                            table.toggleAllPageRowsSelected(!!value)
+                        }
+                        aria-label="Select all"
+                    />
+                ),
+                cell: ({ row }) => (
+                    <Checkbox
+                        checked={row.getIsSelected()}
+                        onCheckedChange={(value) => row.toggleSelected(!!value)}
+                        aria-label="Select row"
+                    />
+                ),
+                size: 32,
+                enableSorting: true,
+                enableHiding: false,
+            },
+            {
+                id: 'name',
+                accessorKey: 'name',
+                header: ({ column }) => (
+                    <DataTableColumnHeader column={column} label="Name" />
+                ),
+                cell: ({ cell }) => <div>{cell.getValue<any>()}</div>,
+                meta: {
+                    label: 'Name',
+                    placeholder: 'Search names...',
+                    variant: 'text',
+                    icon: Text,
+                },
+                enableColumnFilter: true,
+            },
+            {
+                id: 'email',
+                accessorKey: 'email',
+                header: ({ column }) => (
+                    <DataTableColumnHeader column={column} label="Email" />
+                ),
+                cell: ({ cell }) => <div>{cell.getValue<any>()}</div>,
+                meta: {
+                    label: 'Email',
+                    placeholder: 'Search email...',
+                    variant: 'text',
+                    icon: Text,
+                },
+                enableColumnFilter: true,
+            },
+            {
+                id: 'roles',
+                accessorKey: 'roles',
+                header: ({ column }) => (
+                    <DataTableColumnHeader column={column} label="Roles" />
+                ),
+                cell: ({ row }) => (
+                    <div className="flex flex-wrap gap-1">
+                        {(
+                            row.original.roles as Array<{
+                                display_name?: string;
+                                name?: string;
+                            }>
+                        )?.map((role, idx) => (
+                            <Badge key={idx} variant="secondary">
+                                {role.name}
+                            </Badge>
+                        )) ?? '-'}
+                    </div>
+                ),
+                meta: {
+                    label: 'Roles',
+                    variant: 'multiSelect',
+                    options: USER_ROLE_OPTIONS,
+                    icon: CircleDashedIcon,
+                },
+                enableColumnFilter: true,
+                enableSorting: false,
+            },
+            {
+                id: 'company_holder',
+                accessorKey: 'company.name',
+                header: ({ column }) => (
+                    <DataTableColumnHeader
+                        column={column}
+                        label="Company Holder"
+                    />
+                ),
+                cell: ({ row }) => (
+                    <div>{row.original.company?.name ?? '-'}</div>
+                ),
+                meta: {
+                    label: 'Company Holder',
+                    variant: 'multiSelect',
+                    options: async (query, currentValues) => {
+                        const response = await adminSearchResourceOwners({
+                            types: 'company',
+                            keyword: query,
+                            include_ids: Array.from(currentValues)
+                                .map((v) => `company:${v}`)
+                                .join(','),
+                        } as any);
 
-            const companies = response.data.companies as any[];
-            return companies.map(
-              (company) =>
-                ({
-                  label: company.name,
-                  value: company.id.toString(),
-                }) as Option,
-            );
-          },
-          icon: CircleDashedIcon,
-        },
-        enableColumnFilter: true,
-      },
-      {
-        id: 'status',
-        accessorKey: 'status',
-        header: ({ column }: { column: Column<UserResource, unknown> }) => (
-          <DataTableColumnHeader column={column} label="Status" />
-        ),
-        cell: ({ cell }) => <div>{cell.getValue<any>()}</div>,
-        meta: {
-          label: 'Status',
-          placeholder: 'Search status...',
-          variant: 'multiSelect',
-          options: STATUS_OPTIONS,
-          icon: CircleDashedIcon,
-        },
-        enableColumnFilter: true,
-      },
-      {
-        id: 'created_at',
-        accessorKey: 'created_at',
-        header: ({ column }: { column: Column<UserResource, unknown> }) => (
-          <DataTableColumnHeader column={column} label="Join Date" />
-        ),
-        cell: ({ cell }) => {
-          const createdAt = cell.getValue<UserResource['created_at']>();
+                        const companies = response.data.companies as any[];
+                        return companies.map(
+                            (company) =>
+                                ({
+                                    label: company.name,
+                                    value: company.id.toString(),
+                                }) as Option,
+                        );
+                    },
+                    icon: CircleDashedIcon,
+                },
+                enableSorting: false,
+                enableColumnFilter: true,
+            },
+            {
+                id: 'status',
+                accessorKey: 'status',
+                header: ({ column }) => (
+                    <DataTableColumnHeader column={column} label="Status" />
+                ),
+                cell: ({ cell }) => <div>{cell.getValue<any>()}</div>,
+                meta: {
+                    label: 'Status',
+                    placeholder: 'Search status...',
+                    variant: 'multiSelect',
+                    options: STATUS_OPTIONS,
+                    icon: CircleDashedIcon,
+                },
+                enableColumnFilter: true,
+            },
+            {
+                id: 'created_at',
+                accessorKey: 'created_at',
+                header: ({ column }) => (
+                    <DataTableColumnHeader column={column} label="Join Date" />
+                ),
+                cell: ({ cell }) => {
+                    const createdAt = cell.getValue<any>();
 
-          return (
-            <div className="flex items-center gap-1">
-              {dayjs(createdAt).fromNow()}
-            </div>
-          );
-        },
-        meta: {
-          label: 'Join Date',
-          placeholder: 'Search join date...',
-          variant: 'dateRange',
-          icon: CalendarIcon,
-        },
-        enableColumnFilter: true,
-      },
-      {
-        id: 'actions',
-        cell: ({ row }) => {
-          return (
-            <Link href={edit({ user: row.original.id }).url}>
-              <Button variant="ghost" size="icon" className="rounded-full">
-                <PencilIcon className="size-4" />
-              </Button>
-            </Link>
-          );
-        },
-        size: 32,
-      },
-    ],
-    [USER_ROLE_OPTIONS],
-  );
+                    return (
+                        <div className="flex items-center gap-1">
+                            {dayjs(createdAt).fromNow()}
+                        </div>
+                    );
+                },
+                meta: {
+                    label: 'Join Date',
+                    placeholder: 'Search join date...',
+                    variant: 'dateRange',
+                    icon: CalendarIcon,
+                },
+                enableColumnFilter: true,
+            },
+            {
+                id: 'actions',
+                cell: ({ row }) => {
+                    return (
+                        <Link href={edit({ user: row.original.id }).url}>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="rounded-full"
+                            >
+                                <PencilIcon className="size-4" />
+                            </Button>
+                        </Link>
+                    );
+                },
+                size: 32,
+            },
+        ],
+        [USER_ROLE_OPTIONS],
+    );
 
-  const { table } = useDataTable({
-    queryKeys: {
-      perPage: 'per_page',
-      page: 'page',
-    },
-    data: data.data,
-    columns,
-    pageCount: data.last_page,
-    rowCount: data.total,
-    shallow: false,
-    initialState: {
-      sorting: [{ id: 'id', desc: true }],
-      columnPinning: { right: ['actions'] },
-    },
-    getRowId: (row) => row.id.toString(),
-  });
+    const { table } = useDataTable({
+        queryKeys: {
+            perPage: 'per_page',
+            page: 'page',
+        },
+        data: data.data,
+        columns,
+        pageCount: data.last_page,
+        rowCount: data.total,
+        shallow: false,
+        initialState: {
+            sorting: [{ id: 'id', desc: true }],
+            columnPinning: { right: ['actions'] },
+        },
+        getRowId: (row) => row.id.toString(),
+    });
 
-  return (
-    <AdminDashboardLayout
-      containerClassName="p-4"
-      activeMenuIds={['database', 'database.users']}
-      openMenuIds={['database']}
-      breadcrumb={[{ title: 'Database' }, { title: 'User Management' }]}
-    >
-      <DataTable
-        table={table}
-        renderEmptyState={<EmptyUsers />}
-        actionBar={<UsersTableActionBar table={table} />}
-      >
-        <DataTableToolbar table={table} />
-      </DataTable>
-    </AdminDashboardLayout>
-  );
+    return (
+        <AdminDashboardLayout
+            containerClassName="p-4"
+            activeMenuIds={['database', 'database.users']}
+            openMenuIds={['database']}
+            breadcrumb={[{ title: 'Database' }, { title: 'User Management' }]}
+        >
+            <DataTable
+                table={table}
+                renderEmptyState={<EmptyUsers />}
+                actionBar={<UsersTableActionBar table={table} />}
+            >
+                <DataTableToolbar table={table} />
+            </DataTable>
+        </AdminDashboardLayout>
+    );
 }

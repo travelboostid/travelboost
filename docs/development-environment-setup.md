@@ -25,6 +25,7 @@ VS Code is mandatory for this project.
 - [Intelephense](https://marketplace.visualstudio.com/items?itemName=bmewburn.vscode-intelephense-client) — PHP language server
 - [Laravel Extension Pack](https://marketplace.visualstudio.com/items?itemName=laravel.vscode-laravel) — Laravel tooling
 - [PHP Tools](https://marketplace.visualstudio.com/items?itemName=DEVSENSE.phptools-vscode) — PHP debugging and tools
+- [Laravel Pint](https://marketplace.visualstudio.com/items?itemName=open-southeners.laravel-pint) - Integrate Pint for formatting PHP
 
 Make sure **PHP Intelephense** is set as the default formatter for PHP, and **Prettier** is set as the default formatter for TSX.
 

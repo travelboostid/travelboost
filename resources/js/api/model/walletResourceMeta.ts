@@ -5,4 +5,4 @@
  * OpenAPI spec version: 0.0.1
  */
 
-export type WalletResourceMeta = string | string[];
+export type WalletResourceMeta = unknown[] | null | string[];

@@ -39,6 +39,7 @@ Route::prefix('webapi')->group(function () {
     Route::put('companies/{company}/settings', [CompanyController::class, 'updateSettings']);
     Route::post('payments/create-topup-payment', [PaymentController::class, 'createTopupPayment']);
     Route::post('payments/create-agent-subscription-payment', [PaymentController::class, 'createAgentSubscriptionPayment']);
+    Route::post('payments/create-ai-credit-topup-payment', [PaymentController::class, 'createAiCreditTopupPayment']);
   });
 
   Route::middleware(['web', 'auth'])->prefix('admin')->group(function () {

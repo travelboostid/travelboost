@@ -7,8 +7,6 @@
 import type { WithdrawalResourceWalletId } from './withdrawalResourceWalletId';
 import type { WithdrawalStatus } from './withdrawalStatus';
 import type { WithdrawalResourceNote } from './withdrawalResourceNote';
-import type { WithdrawalResourceApprovedAt } from './withdrawalResourceApprovedAt';
-import type { WithdrawalResourceProcessedAt } from './withdrawalResourceProcessedAt';
 import type { WithdrawalResourcePaidAt } from './withdrawalResourcePaidAt';
 import type { WithdrawalResourceCreatedAt } from './withdrawalResourceCreatedAt';
 
@@ -20,8 +18,8 @@ export interface WithdrawalResource {
   amount: number;
   status: WithdrawalStatus;
   note: WithdrawalResourceNote;
-  approved_at: WithdrawalResourceApprovedAt;
-  processed_at: WithdrawalResourceProcessedAt;
+  approved_at: string;
+  processed_at: string;
   paid_at: WithdrawalResourcePaidAt;
   created_at: WithdrawalResourceCreatedAt;
 }

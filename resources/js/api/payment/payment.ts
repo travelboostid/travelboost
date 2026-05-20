@@ -27,6 +27,8 @@ import type {
   AuthenticationExceptionResponse,
   CreateAgentSubscriptionPayment200,
   CreateAgentSubscriptionPaymentBody,
+  CreateAiCreditTopupPayment200,
+  CreateAiCreditTopupPaymentBody,
   CreateTopupPayment200,
   CreateTopupPaymentBody,
   GetPayments200,
@@ -259,6 +261,70 @@ export const useCreateAgentSubscriptionPayment = <TError = ValidationExceptionRe
       > => {
 
       const mutationOptions = getCreateAgentSubscriptionPaymentMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
+ * @summary Create payment for AI credit topup
+ */
+export const createAiCreditTopupPayment = (
+    createAiCreditTopupPaymentBody: CreateAiCreditTopupPaymentBody,
+ options?: SecondParameter<typeof apiInstance>,signal?: AbortSignal
+) => {
+      
+      
+      return apiInstance<CreateAiCreditTopupPayment200>(
+      {url: `/payments/create-ai-credit-topup-payment`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: createAiCreditTopupPaymentBody, signal
+    },
+      options);
+    }
+  
+
+
+export const getCreateAiCreditTopupPaymentMutationOptions = <TError = AuthenticationExceptionResponse | ValidationExceptionResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAiCreditTopupPayment>>, TError,{data: CreateAiCreditTopupPaymentBody}, TContext>, request?: SecondParameter<typeof apiInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof createAiCreditTopupPayment>>, TError,{data: CreateAiCreditTopupPaymentBody}, TContext> => {
+
+const mutationKey = ['createAiCreditTopupPayment'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createAiCreditTopupPayment>>, {data: CreateAiCreditTopupPaymentBody}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createAiCreditTopupPayment(data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateAiCreditTopupPaymentMutationResult = NonNullable<Awaited<ReturnType<typeof createAiCreditTopupPayment>>>
+    export type CreateAiCreditTopupPaymentMutationBody = CreateAiCreditTopupPaymentBody
+    export type CreateAiCreditTopupPaymentMutationError = AuthenticationExceptionResponse | ValidationExceptionResponse
+
+    /**
+ * @summary Create payment for AI credit topup
+ */
+export const useCreateAiCreditTopupPayment = <TError = AuthenticationExceptionResponse | ValidationExceptionResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAiCreditTopupPayment>>, TError,{data: CreateAiCreditTopupPaymentBody}, TContext>, request?: SecondParameter<typeof apiInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof createAiCreditTopupPayment>>,
+        TError,
+        {data: CreateAiCreditTopupPaymentBody},
+        TContext
+      > => {
+
+      const mutationOptions = getCreateAiCreditTopupPaymentMutationOptions(options);
 
       return useMutation(mutationOptions, queryClient);
     }

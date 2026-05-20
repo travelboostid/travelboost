@@ -10,6 +10,9 @@ class IndexBankAccountRequest extends FormRequest
   public function prepareForValidation()
   {
     $this->merge([
+      'owner' => array_filter(explode(',', $this->input('owner', ''))),
+      'status' => array_filter(explode(',', $this->input('status', ''))),
+      'provider' => array_filter(explode(',', $this->input('provider', ''))),
       'sort' => $this->input('sort') ?? '-id',
       'page' => $this->input('page') ?? 1,
       'per_page' => $this->input('per_page') ?? 10,
@@ -31,8 +34,9 @@ class IndexBankAccountRequest extends FormRequest
   public function rules(): array
   {
     return [
-      'provider' => 'nullable|string|max:255',
-      'status' => 'nullable|in:pending,verified,rejected',
+      'owner' => ['nullable', 'array'],
+      'status' => ['nullable', 'array'],
+      'provider' => ['nullable', 'array'],
       'created_at' => 'nullable|string|max:255',
       'sort' => [
         'nullable',
