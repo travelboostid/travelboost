@@ -28,4 +28,9 @@ class TourPrice extends Model
     {
         return $this->belongsTo(PriceCategory::class, 'price_category_id');
     }
+
+    public function schedule()
+    {
+        return $this->belongsTo(TourSchedule::class, 'schedule_id');
+    }
 }
