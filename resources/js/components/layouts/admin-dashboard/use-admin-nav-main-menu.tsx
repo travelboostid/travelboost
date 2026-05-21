@@ -66,6 +66,11 @@ export default function useAdminNavMainMenu() {
                             title: 'Knowledge Bases',
                             urlOrAction: '/admin/database/knowledge-bases',
                         },
+                        {
+                            id: 'database.ai-usage-logs',
+                            title: 'AI Usage Logs',
+                            urlOrAction: '/admin/database/ai-usage-logs',
+                        },
                     ],
                 },
                 {
