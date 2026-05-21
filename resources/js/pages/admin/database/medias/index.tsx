@@ -1,3 +1,4 @@
+import { adminSearchResourceOwners } from '@/api/misc/misc';
 import { DataTable } from '@/components/data-table/data-table';
 import { DataTableColumnHeader } from '@/components/data-table/data-table-column-header';
 import { DataTableToolbar } from '@/components/data-table/data-table-toolbar';
@@ -10,6 +11,7 @@ import dayjs from 'dayjs';
 import { CalendarIcon, CircleDashedIcon, TextIcon } from 'lucide-react';
 import { useMemo } from 'react';
 import { AddMediaButton } from './components/add-media-button';
+import DeleteButton from './components/delete-button';
 import { EmptyMedias } from './components/empty-medias';
 
 const TYPE_OPTIONS = [
@@ -64,6 +66,40 @@ export default function MediasPage({ data }: MediasPageProps) {
                 size: 32,
                 enableSorting: true,
                 enableHiding: false,
+            },
+            {
+                id: 'owner',
+                accessorKey: 'owner',
+                header: ({ column }) => (
+                    <DataTableColumnHeader column={column} label="Owner" />
+                ),
+                cell: ({ row }) => <div>{row.original.owner?.name ?? '-'}</div>,
+                meta: {
+                    label: 'Owner',
+                    variant: 'multiSelect',
+                    options: async (query, currentValues) => {
+                        const response = await adminSearchResourceOwners({
+                            types: 'company,user',
+                            keyword: query,
+                            include_ids: Array.from(currentValues),
+                        } as any);
+
+                        const companies = response.data.companies as any[];
+                        const users = response.data.users as any[];
+                        const companyOptions = companies.map((c) => ({
+                            label: c.name,
+                            value: `company:${c.id}`,
+                        }));
+                        const userOptions = users.map((c) => ({
+                            label: c.name,
+                            value: `user:${c.id}`,
+                        }));
+                        return [...companyOptions, ...userOptions];
+                    },
+                    icon: CircleDashedIcon,
+                },
+                enableColumnFilter: true,
+                enableSorting: false,
             },
             {
                 id: 'name',
@@ -139,7 +175,11 @@ export default function MediasPage({ data }: MediasPageProps) {
             {
                 id: 'actions',
                 cell: ({ row }) => {
-                    return <div></div>;
+                    return (
+                        <div className="flex gap-1">
+                            <DeleteButton data={row.original} />
+                        </div>
+                    );
                 },
                 size: 32,
             },

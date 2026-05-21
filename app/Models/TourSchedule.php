@@ -2,11 +2,7 @@
 
 namespace App\Models;
 
-use App\Enums\TourStatus;
-use App\Events\TourCreated;
-use App\Events\TourUpdated;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class TourSchedule extends Model
 {
@@ -34,7 +30,8 @@ class TourSchedule extends Model
 
     public function prices()
     {
-        return $this->hasMany(TourPrice::class, 'schedule_id');
+        return $this->hasMany(TourPrice::class, 'schedule_id')
+            ->orderBy('id');
     }
 
     public function tour()

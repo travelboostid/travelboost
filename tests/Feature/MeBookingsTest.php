@@ -1,12 +1,14 @@
 <?php
 
 use App\Enums\BookingStatus;
+use App\Enums\CompanyTeamStatus;
 use App\Enums\MediaType;
 use App\Enums\PaymentStatus;
 use App\Enums\UserStatus;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Models\Booking;
 use App\Models\Company;
+use App\Models\CompanyTeam;
 use App\Models\Domain;
 use App\Models\Media;
 use App\Models\Tour;
@@ -199,10 +201,156 @@ test('authenticated users see only active and future bookings in current and ter
     $response->assertOk();
     $response->assertInertia(fn ($page) => $page
         ->where('activeTab', 'history')
-        ->has('bookings.data', 3)
+        ->has('bookings.data', 5)
         ->where('bookings.data.0.booking_number', 'BKG-HISTORY-REFUNDED')
         ->where('bookings.data.1.booking_number', 'BKG-HISTORY-CANCELLED')
-        ->where('bookings.data.2.booking_number', 'BKG-HISTORY-PAST-FP'));
+        ->where('bookings.data.2.booking_number', 'BKG-HISTORY-PAST-FP')
+        ->where('bookings.data.3.booking_number', 'BKG-HIDDEN-PAST-AWAITING')
+        ->where('bookings.data.4.booking_number', 'BKG-HIDDEN-PAST-EXPIRED'));
+});
+
+test('my bookings hides continue and reorder actions after the vendor booking deadline', function () {
+    $user = User::factory()->create(['status' => UserStatus::ACTIVE]);
+    $vendor = Company::factory()->create(['type' => 'vendor']);
+    $vendor->companySetting()->updateOrCreate([], [
+        'booking_deadline' => 30,
+    ]);
+    $tour = Tour::factory()->create(['company_id' => $vendor->id]);
+    $closedDate = now()->addDays(10)->toDateString();
+    $schedule = TourSchedule::create([
+        'tour_id' => $tour->id,
+        'tour_code' => $tour->code,
+        'company_id' => $vendor->id,
+        'departure_date' => $closedDate,
+        'return_date' => now()->addDays(15)->toDateString(),
+        'is_active' => true,
+    ]);
+    TourAvailability::create([
+        'company_id' => $vendor->id,
+        'tour_id' => $tour->id,
+        'schedule_id' => $schedule->id,
+        'max_pax' => 20,
+        'available' => 12,
+    ]);
+
+    Booking::factory()->create([
+        'user_id' => $user->id,
+        'vendor_id' => $vendor->id,
+        'tour_id' => $tour->id,
+        'status' => BookingStatus::AWAITING_PAYMENT,
+        'booking_number' => 'BKG-CLOSED-AWAITING',
+        'departure_date' => $closedDate,
+        'created_at' => now()->subMinute(),
+    ]);
+    Booking::factory()->create([
+        'user_id' => $user->id,
+        'vendor_id' => $vendor->id,
+        'tour_id' => $tour->id,
+        'status' => BookingStatus::EXPIRED,
+        'booking_number' => 'BKG-CLOSED-EXPIRED',
+        'departure_date' => $closedDate,
+        'created_at' => now(),
+    ]);
+
+    $response = $this->actingAs($user)->get('/mybookings?tab=current');
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->where('activeTab', 'current')
+        ->has('bookings.data', 2)
+        ->where('bookings.data.0.booking_number', 'BKG-CLOSED-EXPIRED')
+        ->where('bookings.data.0.can_reorder', false)
+        ->where('bookings.data.0.booking_window_closed', true)
+        ->where('bookings.data.0.action_unavailable_reason', 'Booking window closed')
+        ->where('bookings.data.1.booking_number', 'BKG-CLOSED-AWAITING')
+        ->where('bookings.data.1.can_continue_booking', false)
+        ->where('bookings.data.1.booking_window_closed', true)
+        ->where('bookings.data.1.action_unavailable_reason', 'Booking window closed'));
+});
+
+test('vendor schedule date updates sync active booking departure dates shown in my bookings', function () {
+    $customer = User::factory()->create(['status' => UserStatus::ACTIVE]);
+    $vendorUser = User::factory()->create(['status' => UserStatus::ACTIVE]);
+    $vendor = Company::factory()->create([
+        'username' => 'schedule-sync-vendor',
+        'type' => 'vendor',
+    ]);
+    CompanyTeam::create([
+        'company_id' => $vendor->id,
+        'user_id' => $vendorUser->id,
+        'role' => 'owner',
+        'status' => CompanyTeamStatus::ACTIVE,
+    ]);
+    $tour = Tour::factory()->create([
+        'company_id' => $vendor->id,
+        'status' => 'active',
+    ]);
+    $oldDate = now()->addDays(40)->toDateString();
+    $newDate = now()->addDays(45)->toDateString();
+    $schedule = TourSchedule::create([
+        'tour_id' => $tour->id,
+        'tour_code' => $tour->code,
+        'company_id' => $vendor->id,
+        'departure_date' => $oldDate,
+        'return_date' => now()->addDays(45)->toDateString(),
+        'is_active' => true,
+    ]);
+    $availability = TourAvailability::create([
+        'company_id' => $vendor->id,
+        'tour_id' => $tour->id,
+        'schedule_id' => $schedule->id,
+        'max_pax' => 10,
+        'available' => 10,
+    ]);
+
+    $activeBooking = Booking::factory()->create([
+        'user_id' => $customer->id,
+        'vendor_id' => $vendor->id,
+        'tour_id' => $tour->id,
+        'status' => BookingStatus::DOWN_PAYMENT,
+        'booking_number' => 'BKG-SYNC-ACTIVE',
+        'departure_date' => $oldDate,
+        'pax_adult' => 2,
+        'pax_child' => 0,
+    ]);
+    $refundedBooking = Booking::factory()->create([
+        'user_id' => $customer->id,
+        'vendor_id' => $vendor->id,
+        'tour_id' => $tour->id,
+        'status' => BookingStatus::REFUNDED,
+        'booking_number' => 'BKG-SYNC-REFUNDED',
+        'departure_date' => $oldDate,
+    ]);
+
+    $this->actingAs($vendorUser)->post(route('companies.dashboard.tours.schedules.store', [
+        'company' => $vendor->username,
+        'tour' => $tour->id,
+    ]), [
+        'schedules' => [
+            [
+                'id' => $schedule->id,
+                'departure_date' => $newDate,
+                'return_date' => now()->addDays(50)->toDateString(),
+                'prices' => [],
+                'availability' => [
+                    'max_pax' => 10,
+                    'available' => 10,
+                ],
+            ],
+        ],
+    ])->assertOk();
+
+    expect($activeBooking->fresh()->departure_date->toDateString())->toBe($newDate)
+        ->and($refundedBooking->fresh()->departure_date->toDateString())->toBe($oldDate)
+        ->and((int) $availability->fresh()->DP)->toBe(2)
+        ->and((int) $availability->fresh()->available)->toBe(8);
+
+    $response = $this->actingAs($customer)->get('/mybookings?tab=current');
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->where('bookings.data.0.booking_number', 'BKG-SYNC-ACTIVE')
+        ->where('bookings.data.0.departure_date', fn (string $date): bool => str_starts_with($date, $newDate)));
 });
 
 test('my bookings deep links to a specific current booking number', function () {

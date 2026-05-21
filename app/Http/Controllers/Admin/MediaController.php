@@ -76,4 +76,11 @@ class MediaController extends Controller
             'data' => $data,
         ]);
     }
+
+    public function destroy(Media $media)
+    {
+        $media->delete();
+
+        return redirect()->back()->with('success', 'Role deleted successfully');
+    }
 }

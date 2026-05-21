@@ -231,4 +231,26 @@ return [
         'chatbot_response_style' => 'professional',
         'chatbot_default_language' => 'auto',
     ],
+    'bank_account_providers' => [
+        [
+            'code' => 'bca',
+            'name' => 'BCA',
+        ],
+        [
+            'code' => 'bni',
+            'name' => 'BNI',
+        ],
+        [
+            'code' => 'mandiri',
+            'name' => 'Mandiri',
+        ],
+        [
+            'code' => 'ovo',
+            'name' => 'OVO',
+        ],
+        [
+            'code' => 'gopay',
+            'name' => 'GoPay',
+        ],
+    ],
 ];

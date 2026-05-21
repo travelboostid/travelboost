@@ -9,6 +9,7 @@ import {
     DialogFooter,
     DialogTrigger,
 } from '@/components/ui/dialog';
+import { Field, FieldLabel } from '@/components/ui/field';
 import {
     Select,
     SelectContent,
@@ -20,6 +21,7 @@ import {
 } from '@/components/ui/select';
 import { UploadCloudIcon } from 'lucide-react';
 import { useState } from 'react';
+import MediaOwnerSelector from './media-owner-selector';
 
 type AddMediaButtonProps = {
     afterUpload?: (data?: MediaResource | string | null) => void;
@@ -29,8 +31,10 @@ export function AddMediaButton({
     afterUpload: afterUpload,
 }: AddMediaButtonProps) {
     const [open, setOpen] = useState(false);
-    const [owner, setOwner] = useState({ id: 1, type: 'user' });
+    const [owner, setOwner] = useState<string | undefined>();
     const [subtype, setSubtype] = useState('tour-image');
+    const ownerType = owner?.split(':')?.[0];
+    const ownerId = Number(owner?.split(':')?.[1]);
 
     const handleChange = (value?: MediaResource | string) => {
         afterUpload?.(value);
@@ -49,33 +53,42 @@ export function AddMediaButton({
                 </Button>
             </DialogTrigger>
             <DialogContent className="w-full max-w-200">
-                <Select value={subtype} onValueChange={setSubtype}>
-                    <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select media type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectGroup>
-                            <SelectLabel>Media type</SelectLabel>
-                            <SelectItem value="tour-image">
-                                Tour Image
-                            </SelectItem>
-                            <SelectItem value="photo">Photo</SelectItem>
-                            <SelectItem value="general-knowledge-base-document">
-                                General Knowlege Base
-                            </SelectItem>
-                            <SelectItem value="identity-card">
-                                ID Card
-                            </SelectItem>
-                        </SelectGroup>
-                    </SelectContent>
-                </Select>
-                {subtype === 'tour-image' && (
+                <Field>
+                    <FieldLabel>Owner</FieldLabel>
+                    <MediaOwnerSelector value={owner} onChange={setOwner} />
+                </Field>
+                <Field>
+                    <FieldLabel>Type</FieldLabel>
+
+                    <Select value={subtype} onValueChange={setSubtype}>
+                        <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select media type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectGroup>
+                                <SelectLabel>Media type</SelectLabel>
+                                <SelectItem value="tour-image">
+                                    Tour Image
+                                </SelectItem>
+                                <SelectItem value="photo">Photo</SelectItem>
+                                <SelectItem value="general-knowledge-base-document">
+                                    General Knowlege Base
+                                </SelectItem>
+                                <SelectItem value="identity-card">
+                                    ID Card
+                                </SelectItem>
+                            </SelectGroup>
+                        </SelectContent>
+                    </Select>
+                </Field>
+
+                {owner && subtype === 'tour-image' && (
                     <ImageMediaUploader
                         afterUpload={handleAfterUpload}
                         aspect={16 / 9}
                         uploadParams={{
-                            owner_type: owner.type,
-                            owner_id: owner.id,
+                            owner_type: ownerType,
+                            owner_id: ownerId,
                             type: 'image',
                             subtype: 'tour-image',
                         }}
@@ -99,13 +112,13 @@ export function AddMediaButton({
                         )}
                     />
                 )}
-                {subtype === 'photo' && (
+                {owner && subtype === 'photo' && (
                     <ImageMediaUploader
                         afterUpload={handleAfterUpload}
                         aspect={1}
                         uploadParams={{
-                            owner_type: owner.type,
-                            owner_id: owner.id,
+                            owner_type: ownerType,
+                            owner_id: ownerId,
                             type: 'image',
                             subtype: 'photo',
                         }}
@@ -130,13 +143,13 @@ export function AddMediaButton({
                     />
                 )}
 
-                {subtype === 'general-knowledge-base-document' && (
+                {owner && subtype === 'general-knowledge-base-document' && (
                     <RawMediaUploader
                         afterUpload={handleAfterUpload}
                         accept="application/pdf"
                         uploadParams={{
-                            owner_type: owner.type,
-                            owner_id: owner.id,
+                            owner_type: ownerType,
+                            owner_id: ownerId,
                             type: 'document',
                             subtype: 'general-knowledge-base-document',
                         }}
@@ -167,13 +180,13 @@ export function AddMediaButton({
                         }}
                     />
                 )}
-                {subtype === 'identity-card' && (
+                {owner && subtype === 'identity-card' && (
                     <RawMediaUploader
                         afterUpload={handleAfterUpload}
                         accept="image/jpeg,application/pdf"
                         uploadParams={{
-                            owner_type: owner.type,
-                            owner_id: owner.id,
+                            owner_type: ownerType,
+                            owner_id: ownerId,
                             type: 'document',
                             subtype: 'identity-card',
                         }}
