@@ -8,8 +8,6 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\IndexWithdrawalRequest;
 use App\Http\Requests\Admin\UpdateWithdrawalRequest;
 use App\Jobs\ProcessAutoWithdrawalJob;
-use App\Models\Company;
-use App\Models\User;
 use App\Models\Withdrawal;
 use Illuminate\Support\Carbon;
 use Inertia\Inertia;
@@ -19,10 +17,6 @@ class WithdrawalController extends Controller
     public function index(IndexWithdrawalRequest $request)
     {
         $validated = $request->validated();
-        $ownerTypes = [
-            'user' => User::class,
-            'company' => Company::class,
-        ];
 
         $data = Withdrawal::query()
             ->with(['wallet', 'bankAccount', 'owner'])
@@ -32,21 +26,16 @@ class WithdrawalController extends Controller
             ->when($validated['status'] ?? null, function ($query, $status) {
                 $query->whereIn('status', $status);
             })
-            ->when($validated['owner'] ?? null, function ($query, $owners) use ($ownerTypes) {
+            ->when($validated['owner'] ?? null, function ($query, $owners) {
+                $owners = collect($owners)
+                    ->map(function ($owner) {
+                        [$type, $id] = explode(':', $owner, 2);
 
-                foreach ($owners as $owner) {
-                    [$type, $id] = explode(':', $owner);
+                        return [$type, (int) $id];
+                    })
+                    ->all();
 
-                    if (! isset($ownerTypes[$type])) {
-                        continue;
-                    }
-
-                    $query->orWhere(
-                        fn ($query) => $query
-                            ->whereMorphedTo('owner', $ownerTypes[$type])
-                            ->where('owner_id', $id)
-                    );
-                }
+                $query->whereOwnerIn($owners);
             })
             ->when($validated['created_at'] ?? null, function ($query, $created_at) {
                 $range = explode(',', $created_at);

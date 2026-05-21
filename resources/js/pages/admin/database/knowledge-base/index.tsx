@@ -8,7 +8,7 @@ import { useDataTable } from '@/hooks/use-data-table';
 import type { Column, ColumnDef } from '@tanstack/react-table';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
-import { CalendarIcon, CircleDashedIcon } from 'lucide-react';
+import { CalendarIcon } from 'lucide-react';
 import { useMemo } from 'react';
 import { EmptyKnowledgeBases } from './components/empty-knowledge-bases';
 dayjs.extend(relativeTime);
@@ -64,25 +64,11 @@ export default function KnowledgeBasePage({ data }: KnowledgeBasePageProps) {
                 header: ({ column }) => (
                     <DataTableColumnHeader column={column} label="Content" />
                 ),
-                cell: ({ cell }) => <div>{cell.getValue<any>()}</div>,
-            },
-            {
-                id: 'status',
-                accessorKey: 'status',
-                header: ({
-                    column,
-                }: {
-                    column: Column<UserResource, unknown>;
-                }) => <DataTableColumnHeader column={column} label="Status" />,
-                cell: ({ cell }) => <div>{cell.getValue<any>()}</div>,
-                meta: {
-                    label: 'Status',
-                    placeholder: 'Search status...',
-                    variant: 'multiSelect',
-                    options: STATUS_OPTIONS,
-                    icon: CircleDashedIcon,
-                },
-                enableColumnFilter: true,
+                cell: ({ cell }) => (
+                    <div className="max-w-200 truncate">
+                        {cell.getValue<string>()}
+                    </div>
+                ),
             },
             {
                 id: 'created_at',

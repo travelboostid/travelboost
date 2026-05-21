@@ -11,51 +11,53 @@ use Inertia\Inertia;
 
 class BankAccountController extends Controller
 {
-  // Display a list of bank accounts for the specified company
-  public function index(Company $company)
-  {
-    $bankAccounts = $company->bankAccounts()
-      ->orderBy('is_default', 'desc') // Prioritize default accounts
-      ->orderBy('created_at', 'desc') // Sort by creation date
-      ->get();
+    // Display a list of bank accounts for the specified company
+    public function index(Company $company)
+    {
+        $bankAccounts = $company->bankAccounts()
+            ->orderBy('is_default', 'desc') // Prioritize default accounts
+            ->orderBy('created_at', 'desc') // Sort by creation date
+            ->get();
 
-    return Inertia::render('companies/dashboard/bank-accounts/index', [
-      'bank_accounts' => $bankAccounts,
-      'providers' => ['BCA', 'BNI', 'MANDIRI', 'OVO', 'GOPAY'], // List of bank providers
-    ]);
-  }
-
-  // Store a new bank account for the specified company
-  public function store(CreateBankAccountRequest $request, Company $company)
-  {
-    $account = $company->bankAccounts()->create($request->validated());
-
-    // If this account is marked as default, unset previous defaults
-    if ($request->validated()['is_default'] ?? false) {
-      $company->bankAccounts()
-        ->where('id', '!=', $account->id)
-        ->update(['is_default' => false]);
+        return Inertia::render('companies/dashboard/bank-accounts/index', [
+            'bankAccounts' => $bankAccounts,
+            'bankAccountProviders' => config('travelboost.bank_account_providers'),
+        ]);
     }
 
-    return back(); // Redirect back after storing
-  }
+    // Store a new bank account for the specified company
+    public function store(CreateBankAccountRequest $request, Company $company)
+    {
+        $account = $company->bankAccounts()->create($request->validated());
 
-  // Update an existing bank account
-  public function update(UpdateBankAccountRequest $request, Company $company, BankAccount $bankAccount)
-  {
-    $bankAccount->update($request->validated());
-    if ($request->validated()['is_default'] ?? false) {
-      $company->bankAccounts()
-        ->where('id', '!=', $bankAccount->id)
-        ->update(['is_default' => false]);
+        // If this account is marked as default, unset previous defaults
+        if ($request->validated()['is_default'] ?? false) {
+            $company->bankAccounts()
+                ->where('id', '!=', $account->id)
+                ->update(['is_default' => false]);
+        }
+
+        return back(); // Redirect back after storing
     }
-    return back(); // Redirect back after updating
-  }
 
-  // Delete a bank account for the specified company
-  public function destroy(Company $company, BankAccount $bankAccount)
-  {
-    $company->bankAccounts()->where('id', $bankAccount->id)->delete();
-    return back(); // Redirect back after deletion
-  }
+    // Update an existing bank account
+    public function update(UpdateBankAccountRequest $request, Company $company, BankAccount $bankAccount)
+    {
+        $bankAccount->update($request->validated());
+        if ($request->validated()['is_default'] ?? false) {
+            $company->bankAccounts()
+                ->where('id', '!=', $bankAccount->id)
+                ->update(['is_default' => false]);
+        }
+
+        return back(); // Redirect back after updating
+    }
+
+    // Delete a bank account for the specified company
+    public function destroy(Company $company, BankAccount $bankAccount)
+    {
+        $company->bankAccounts()->where('id', $bankAccount->id)->delete();
+
+        return back(); // Redirect back after deletion
+    }
 }

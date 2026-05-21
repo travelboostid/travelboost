@@ -8,22 +8,22 @@ use Symfony\Component\HttpFoundation\Response;
 
 class EnsureHasAdminAccess
 {
-  /**
-   * Handle an incoming request.
-   *
-   * @param  Closure(Request): (Response)  $next
-   */
-  public function handle(Request $request, Closure $next): Response
-  {
-    $user = $request->user();
+    /**
+     * Handle an incoming request.
+     *
+     * @param  Closure(Request): (Response)  $next
+     */
+    public function handle(Request $request, Closure $next): Response
+    {
+        $user = $request->user();
 
-    if (! $user) {
-      return redirect()->route('admin.login');
-    }
-    if (! $user->hasRole('user:admin')) {
-      abort(403, 'Unauthorized: required admin privileges to access this resource.');
-    }
+        if (! $user) {
+            return redirect()->route('admin.login.show');
+        }
+        if (! $user->hasRole('user:admin')) {
+            abort(403, 'Unauthorized: required admin privileges to access this resource.');
+        }
 
-    return $next($request);
-  }
+        return $next($request);
+    }
 }

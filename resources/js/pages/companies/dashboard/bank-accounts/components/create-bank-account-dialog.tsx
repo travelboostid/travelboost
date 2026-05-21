@@ -1,3 +1,4 @@
+import { store } from '@/actions/App/Http/Controllers/Companies/Dashboard/BankAccountController';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
 import {
@@ -20,24 +21,25 @@ import {
 } from '@/components/ui/select';
 import { Spinner } from '@/components/ui/spinner';
 import { Switch } from '@/components/ui/switch';
+import usePageProps from '@/hooks/use-page-props';
 import { useForm } from '@inertiajs/react';
+import type { ReactNode } from 'react';
 import { useState } from 'react';
+import type { BankAccountsPageProps } from '..';
 
-const BANK_PROVIDERS = [
-    { value: 'bca', label: 'BCA (Bank Central Asia)' },
-    { value: 'bni', label: 'BNI (Bank Negara Indonesia)' },
-    { value: 'mandiri', label: 'Bank Mandiri' },
-    { value: 'bri', label: 'Bank Rakyat Indonesia' },
-    { value: 'ovo', label: 'OVO' },
-    { value: 'gopay', label: 'GoPay' },
-];
+type CreateBankAccountDialogProps = {
+    children: ReactNode;
+};
 
 export default function CreateBankAccountDialog({
     children,
-}: {
-    children: React.ReactNode;
-}) {
+}: CreateBankAccountDialogProps) {
+    const { company, bankAccountProviders } =
+        usePageProps<BankAccountsPageProps>();
     const [open, setOpen] = useState(false);
+
+    console.log('Bank Account Providers:', bankAccountProviders); // Debugging log
+
     const form = useForm({
         provider: '',
         account_number: '',
@@ -48,8 +50,10 @@ export default function CreateBankAccountDialog({
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        form.post('/affiliate/dashboard/fund/bank-accounts', {
+
+        form.post(store({ company: company.username }).url, {
             preserveScroll: true,
+            onError: () => setOpen(true), // 🔥 keep modal open on validation error
             onSuccess: () => {
                 form.reset();
                 setOpen(false);
@@ -60,86 +64,118 @@ export default function CreateBankAccountDialog({
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>{children}</DialogTrigger>
+
             <DialogContent className="sm:max-w-md">
                 <DialogHeader>
                     <DialogTitle>Add Bank Account</DialogTitle>
                 </DialogHeader>
-                <form onSubmit={handleSubmit} className="space-y-5">
+
+                {/* ❗ ONLY ONE submit button, ONLY ONE form */}
+                <form onSubmit={handleSubmit} className="space-y-6">
+                    {/* Provider Selection */}
                     <div className="grid gap-2">
-                        <Label>Bank / Provider</Label>
+                        <Label htmlFor="provider">Provider *</Label>
                         <Select
-                            onValueChange={(v) => form.setData('provider', v)}
+                            value={form.data.provider}
+                            onValueChange={(value) =>
+                                form.setData('provider', value)
+                            }
                         >
                             <SelectTrigger>
                                 <SelectValue placeholder="Select provider" />
                             </SelectTrigger>
                             <SelectContent>
-                                {BANK_PROVIDERS.map((p) => (
-                                    <SelectItem key={p.value} value={p.value}>
-                                        {p.label}
+                                {bankAccountProviders.map((provider) => (
+                                    <SelectItem
+                                        key={provider.code}
+                                        value={provider.code}
+                                    >
+                                        {provider.name}
                                     </SelectItem>
                                 ))}
                             </SelectContent>
                         </Select>
                         <InputError message={form.errors.provider} />
                     </div>
+
+                    {/* Account Number */}
                     <div className="grid gap-2">
-                        <Label>Account Number</Label>
+                        <Label htmlFor="account_number">Account Number *</Label>
                         <Input
+                            id="account_number"
+                            placeholder="Enter account number"
                             value={form.data.account_number}
                             onChange={(e) =>
                                 form.setData('account_number', e.target.value)
                             }
+                            maxLength={50}
                         />
                         <InputError message={form.errors.account_number} />
                     </div>
+
+                    {/* Account Name */}
                     <div className="grid gap-2">
-                        <Label>Account Holder Name</Label>
+                        <Label htmlFor="account_name">
+                            Account Holder Name *
+                        </Label>
                         <Input
+                            id="account_name"
+                            placeholder="Enter account holder name"
                             value={form.data.account_name}
                             onChange={(e) =>
                                 form.setData('account_name', e.target.value)
                             }
+                            maxLength={100}
                         />
                         <InputError message={form.errors.account_name} />
                     </div>
+
+                    {/* Branch (Optional) */}
                     <div className="grid gap-2">
-                        <Label>Branch (Optional)</Label>
+                        <Label htmlFor="branch">Branch (Optional)</Label>
                         <Input
+                            id="branch"
+                            placeholder="Enter branch name"
                             value={form.data.branch}
                             onChange={(e) =>
                                 form.setData('branch', e.target.value)
                             }
+                            maxLength={100}
                         />
                         <InputError message={form.errors.branch} />
                     </div>
-                    <div className="flex items-center justify-between border-t pt-4">
-                        <div>
-                            <Label>Set as default account</Label>
-                            <p className="text-xs text-muted-foreground mt-0.5">
-                                Use this account for withdrawals.
+
+                    {/* Set as Default */}
+                    <div className="flex items-center justify-between space-x-2">
+                        <div className="space-y-0.5">
+                            <Label htmlFor="is_default">
+                                Set as default account
+                            </Label>
+                            <p className="text-sm text-muted-foreground">
+                                This account will be used as the primary
+                                destination for payments
                             </p>
                         </div>
                         <Switch
+                            id="is_default"
                             checked={form.data.is_default}
-                            onCheckedChange={(c) =>
-                                form.setData('is_default', c)
+                            onCheckedChange={(checked) =>
+                                form.setData('is_default', checked)
                             }
                         />
                     </div>
+                    <InputError message={form.errors.is_default} />
+
                     <DialogFooter>
                         <DialogClose asChild>
-                            <Button variant="outline" type="button">
+                            <Button type="button" variant="outline">
                                 Cancel
                             </Button>
                         </DialogClose>
-                        <Button
-                            type="submit"
-                            disabled={form.processing}
-                            className="bg-primary hover:bg-primary/90"
-                        >
-                            {form.processing && <Spinner className="mr-2" />}{' '}
-                            Save
+
+                        <Button type="submit" disabled={form.processing}>
+                            {form.processing && <Spinner className="mr-2" />}
+                            Add Account
                         </Button>
                     </DialogFooter>
                 </form>

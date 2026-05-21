@@ -4,7 +4,7 @@ namespace App\Models;
 
 use App\Enums\MediaType;
 use App\Events\MediaCreated;
-use App\Events\MediaDeleted;
+use App\Events\MediaDeleting;
 use Illuminate\Database\Eloquent\Model;
 
 class Media extends Model
@@ -32,7 +32,7 @@ class Media extends Model
 
     protected $dispatchesEvents = [
         'created' => MediaCreated::class,
-        'deleted' => MediaDeleted::class,
+        'deleting' => MediaDeleting::class,
     ];
 
     /**
