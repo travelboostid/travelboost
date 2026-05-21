@@ -654,7 +654,7 @@ return new class extends Migration
         Schema::create('bank_accounts', function (Blueprint $table) {
             $table->id();
             $table->morphs('owner'); // creates owner_id + owner_type
-            $table->string('provider'); // BCA, BNI, MANDIRI, OVO, GOPAY
+            $table->string('provider'); // bca, bni, mandiri, ovo, gopay
             $table->string('account_number');
             $table->string('account_name');
             $table->string('branch')->nullable();

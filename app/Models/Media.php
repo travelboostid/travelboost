@@ -4,7 +4,8 @@ namespace App\Models;
 
 use App\Enums\MediaType;
 use App\Events\MediaCreated;
-use App\Events\MediaDeleted;
+use App\Events\MediaDeleting;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 
 class Media extends Model
@@ -32,7 +33,7 @@ class Media extends Model
 
     protected $dispatchesEvents = [
         'created' => MediaCreated::class,
-        'deleted' => MediaDeleted::class,
+        'deleting' => MediaDeleting::class,
     ];
 
     /**
@@ -46,5 +47,26 @@ class Media extends Model
     public function knowledgeBase()
     {
         return $this->morphOne(KnowledgeBase::class, 'owner');
+    }
+
+    public function scopeWhereOwnerIn(
+        Builder $query,
+        array $owners
+    ): Builder {
+        $grouped = [];
+
+        foreach ($owners as [$type, $id]) {
+            $grouped[$type][] = $id;
+        }
+
+        return $query->where(function (Builder $query) use ($grouped) {
+            foreach ($grouped as $type => $ids) {
+                $query->orWhere(function (Builder $query) use ($type, $ids) {
+                    $query
+                        ->whereMorphedTo('owner', $type)
+                        ->whereIn('owner_id', $ids);
+                });
+            }
+        });
     }
 }

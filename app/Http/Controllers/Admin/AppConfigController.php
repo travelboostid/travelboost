@@ -10,36 +10,37 @@ use Inertia\Inertia;
 
 class AppConfigController extends Controller
 {
-  public function index()
-  {
-    $configs = AppConfig::get();
-    return Inertia::render('admin/app-configs/index', [
-      'data' => $configs,
-    ]);
-  }
+    public function index()
+    {
+        $configs = AppConfig::get();
 
-  public function store(StoreAppConfigRequest $request)
-  {
-    $data = $request->validated();
+        return Inertia::render('admin/app-configs/index', [
+            'data' => $configs,
+        ]);
+    }
 
-    AppConfig::create($data);
+    public function store(StoreAppConfigRequest $request)
+    {
+        $data = $request->validated();
 
-    return redirect()->back()->with('success', 'App Config created successfully.');
-  }
+        AppConfig::create($data);
 
-  public function update(UpdateAppConfigRequest $request, AppConfig $appConfig)
-  {
-    $validated = $request->validated();
+        return redirect()->back()->with('success', 'App Config created successfully.');
+    }
 
-    $appConfig->update($validated);
+    public function update(UpdateAppConfigRequest $request, AppConfig $appConfig)
+    {
+        $validated = $request->validated();
 
-    return redirect()->back()->with('success', 'App Config updated successfully.');
-  }
+        $appConfig->update($validated);
 
-  public function destroy(AppConfig $appConfig)
-  {
-    $appConfig->delete();
+        return redirect()->back()->with('success', 'App Config updated successfully.');
+    }
 
-    return redirect()->back()->with('success', 'App Config deleted successfully.');
-  }
+    public function destroy(AppConfig $appConfig)
+    {
+        $appConfig->delete();
+
+        return redirect()->back()->with('success', 'App Config deleted successfully.');
+    }
 }

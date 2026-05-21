@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\PaymentStatus;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
@@ -44,5 +45,26 @@ class Payment extends Model
     public function payable(): MorphTo
     {
         return $this->morphTo();
+    }
+
+    public function scopeWhereOwnerIn(
+        Builder $query,
+        array $owners
+    ): Builder {
+        $grouped = [];
+
+        foreach ($owners as [$type, $id]) {
+            $grouped[$type][] = $id;
+        }
+
+        return $query->where(function (Builder $query) use ($grouped) {
+            foreach ($grouped as $type => $ids) {
+                $query->orWhere(function (Builder $query) use ($type, $ids) {
+                    $query
+                        ->whereMorphedTo('owner', $type)
+                        ->whereIn('owner_id', $ids);
+                });
+            }
+        });
     }
 }

@@ -2,86 +2,85 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Enums\CompanyType;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\IndexAgentRequest;
 use App\Http\Requests\Admin\StorePermissionRequest;
 use App\Http\Requests\Admin\UpdatePermissionRequest;
-use App\Models\Company;
 use App\Models\Permission;
-use Illuminate\Http\Request;
 use Inertia\Inertia;
-use Laravolt\Indonesia\Http\Requests\Provinsi\Update;
 
 class PermissionController extends Controller
 {
-  /**
-   * Display a listing of the resource.
-   */
-  public function index(IndexAgentRequest $request)
-  {
-    $validated = $request->validated();
-    $data = Permission::query()
-      ->when($validated['name'] ?? null, function ($query, $name) {
-        $query->where('name', 'like', "%$name%");
-      })
-      ->paginate();
+    /**
+     * Display a listing of the resource.
+     */
+    public function index(IndexAgentRequest $request)
+    {
+        $validated = $request->validated();
+        $data = Permission::query()
+            ->when($validated['name'] ?? null, function ($query, $name) {
+                $query->where('name', 'like', "%$name%");
+            })
+            ->paginate();
 
-    return Inertia::render('admin/database/permissions/index', [
-      'data' => $data,
-    ]);
-  }
+        return Inertia::render('admin/database/permissions/index', [
+            'data' => $data,
+        ]);
+    }
 
-  /**
-   * Show the form for creating a new resource.
-   */
-  public function create()
-  {
-    //
-  }
+    /**
+     * Show the form for creating a new resource.
+     */
+    public function create()
+    {
+        //
+    }
 
-  /**
-   * Store a newly created resource in storage.
-   */
-  public function store(StorePermissionRequest $request)
-  {
-    $validated = $request->validated();
-    Permission::create($validated);
-    return redirect()->back()->with('success', 'Permission created successfully');
-  }
+    /**
+     * Store a newly created resource in storage.
+     */
+    public function store(StorePermissionRequest $request)
+    {
+        $validated = $request->validated();
+        Permission::create($validated);
 
-  /**
-   * Display the specified resource.
-   */
-  public function show(string $id)
-  {
-    //
-  }
+        return redirect()->back()->with('success', 'Permission created successfully');
+    }
 
-  /**
-   * Show the form for editing the specified resource.
-   */
-  public function edit(string $id)
-  {
-    //
-  }
+    /**
+     * Display the specified resource.
+     */
+    public function show(string $id)
+    {
+        //
+    }
 
-  /**
-   * Update the specified resource in storage.
-   */
-  public function update(UpdatePermissionRequest $request, Permission $permission)
-  {
-    $validated = $request->validated();
-    $permission->update($validated);
-    return redirect()->back()->with('success', 'Permission updated successfully');
-  }
+    /**
+     * Show the form for editing the specified resource.
+     */
+    public function edit(string $id)
+    {
+        //
+    }
 
-  /**
-   * Remove the specified resource from storage.
-   */
-  public function destroy(Permission $permission)
-  {
-    $permission->delete();
-    return redirect()->back()->with('success', 'Permission deleted successfully');
-  }
+    /**
+     * Update the specified resource in storage.
+     */
+    public function update(UpdatePermissionRequest $request, Permission $permission)
+    {
+        $validated = $request->validated();
+        $permission->update($validated);
+
+        return redirect()->back()->with('success', 'Permission updated successfully');
+    }
+
+    /**
+     * Remove the specified resource from storage.
+     */
+    public function destroy(Permission $permission)
+    {
+        $permission->delete();
+
+        return redirect()->back()->with('success', 'Permission deleted successfully');
+    }
 }
