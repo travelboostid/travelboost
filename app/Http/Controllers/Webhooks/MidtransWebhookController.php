@@ -51,6 +51,14 @@ class MidtransWebhookController extends Controller
         $newStatus = $this->mapMidtransStatus($payload['transaction_status'] ?? 'pending');
 
         DB::transaction(function () use ($payment, $payload, $newStatus): void {
+            if ($newStatus === PaymentStatus::PAID && $payment->payable_type === Booking::class) {
+                $booking = $payment->payable;
+                if ($booking instanceof Booking) {
+                    app(FinalizeBookingPaymentAction::class)
+                        ->assertCanFinalizeIncomingPaidPayment($booking->fresh(), $payment->fresh());
+                }
+            }
+
             $payment->update([
                 'status' => $newStatus,
                 'payload' => array_merge($payment->payload ?? [], $payload),
@@ -137,7 +145,7 @@ class MidtransWebhookController extends Controller
             'payment_mode' => 'online',
         ]);
 
-        app(FinalizeBookingPaymentAction::class)->execute($booking->fresh());
+        app(FinalizeBookingPaymentAction::class)->execute($booking->fresh(), $payment);
     }
 
     private function processAgentSubscription(Payment $payment): void
