@@ -20,6 +20,17 @@ class PaymentController extends Controller
                 $statuses = explode(',', $status);
                 $query->whereIn('status', $statuses);
             })
+            ->when($validated['owner'] ?? null, function ($query, $owners) {
+                $owners = collect($owners)
+                    ->map(function ($owner) {
+                        [$type, $id] = explode(':', $owner, 2);
+
+                        return [$type, (int) $id];
+                    })
+                    ->all();
+
+                $query->whereOwnerIn($owners);
+            })
             ->when($validated['created_at'] ?? null, function ($query, $created_at) {
                 $range = explode(',', $created_at);
 

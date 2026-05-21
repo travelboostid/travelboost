@@ -4,8 +4,6 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\IndexWalletRequest;
-use App\Models\Company;
-use App\Models\User;
 use App\Models\Wallet;
 use Illuminate\Support\Carbon;
 use Inertia\Inertia;
@@ -16,28 +14,18 @@ class WalletController extends Controller
     {
         $validated = $request->validated();
 
-        $holderTypes = [
-            'user' => User::class,
-            'company' => Company::class,
-        ];
-
         $data = Wallet::query()
             ->with(['holder'])
-            ->when($validated['holder'] ?? null, function ($query, $holders) use ($holderTypes) {
+            ->when($validated['holder'] ?? null, function ($query, $owners) {
+                $owners = collect($owners)
+                    ->map(function ($owner) {
+                        [$type, $id] = explode(':', $owner, 2);
 
-                foreach ($holders as $holder) {
-                    [$type, $id] = explode(':', $holder);
+                        return [$type, (int) $id];
+                    })
+                    ->all();
 
-                    if (! isset($holderTypes[$type])) {
-                        continue;
-                    }
-
-                    $query->orWhere(
-                        fn ($query) => $query
-                            ->whereMorphedTo('holder', $holderTypes[$type])
-                            ->where('holder_id', $id)
-                    );
-                }
+                $query->whereHolderIn($owners);
             })
             ->when($validated['created_at'] ?? null, function ($query, $created_at) {
                 $range = explode(',', $created_at);
