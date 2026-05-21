@@ -353,6 +353,12 @@ export default function Page() {
     )
         ? (requestedReturnTab as 'current' | 'history' | 'favorites')
         : 'current';
+    const resumedBookingReturnUrl =
+        isResuming && bookingNumber
+            ? `/mybookings?tab=${returnTab}&booking_number=${encodeURIComponent(
+                  String(bookingNumber),
+              )}`
+            : null;
 
     // ─── Wizard state ───────────────────────────────────────────────────
     const [currentStep, setCurrentStep] = useState<WizardStepId>(
@@ -1825,7 +1831,11 @@ export default function Page() {
                                     variant="outline"
                                     onClick={() =>
                                         requestIntentionalExit(
-                                            { historyBack: true },
+                                            resumedBookingReturnUrl
+                                                ? {
+                                                      href: resumedBookingReturnUrl,
+                                                  }
+                                                : { historyBack: true },
                                             { releaseHold: true },
                                         )
                                     }

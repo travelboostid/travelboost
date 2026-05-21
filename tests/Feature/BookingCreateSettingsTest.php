@@ -2097,6 +2097,93 @@ test('expired future booking can be reset through reorder endpoint with the same
         ->where('existingBooking.rooms.0.bed_layout.0.guestId', 'adult-0'));
 });
 
+test('stale reorder click on awaiting payment booking redirects to continue booking', function () {
+    ['user' => $user, 'company' => $company, 'tour' => $tour, 'schedule' => $schedule] = createBookingCreateScenario('awaitingreordervendor');
+
+    $booking = Booking::factory()->create([
+        'booking_number' => 'BKG-STALE-AWAITING',
+        'user_id' => $user->id,
+        'vendor_id' => $company->id,
+        'tour_id' => $tour->id,
+        'departure_date' => $schedule->departure_date,
+        'status' => BookingStatus::AWAITING_PAYMENT,
+        'reserved_type' => 'system',
+        'reserved_expires_at' => null,
+    ]);
+
+    $this->actingAs($user)
+        ->post("/bookings/{$booking->id}/reorder")
+        ->assertRedirect(route('bookings.create', [
+            'username' => 'awaitingreordervendor',
+            'tour' => $tour,
+            'date' => $schedule->departure_date,
+            'booking_number' => 'BKG-STALE-AWAITING',
+        ]));
+
+    $this->assertDatabaseHas('bookings', [
+        'id' => $booking->id,
+        'status' => BookingStatus::AWAITING_PAYMENT->value,
+        'reserved_expires_at' => null,
+    ]);
+});
+
+test('stale reorder click on active booking reserved redirects without resetting hold', function () {
+    ['user' => $user, 'company' => $company, 'tour' => $tour, 'schedule' => $schedule] = createBookingCreateScenario('reservedreordervendor');
+    $reservedExpiresAt = now()->addMinutes(8)->startOfSecond();
+
+    $booking = Booking::factory()->create([
+        'booking_number' => 'BKG-STALE-RESERVED',
+        'user_id' => $user->id,
+        'vendor_id' => $company->id,
+        'tour_id' => $tour->id,
+        'departure_date' => $schedule->departure_date,
+        'status' => BookingStatus::BOOKING_RESERVED,
+        'reserved_type' => 'system',
+        'reserved_expires_at' => $reservedExpiresAt,
+    ]);
+
+    $this->actingAs($user)
+        ->post("/bookings/{$booking->id}/reorder")
+        ->assertRedirect(route('bookings.create', [
+            'username' => 'reservedreordervendor',
+            'tour' => $tour,
+            'date' => $schedule->departure_date,
+            'booking_number' => 'BKG-STALE-RESERVED',
+        ]));
+
+    $booking->refresh();
+
+    expect($booking->status)->toBe(BookingStatus::BOOKING_RESERVED)
+        ->and($booking->reserved_expires_at?->toDateTimeString())->toBe($reservedExpiresAt->toDateTimeString());
+});
+
+test('reorder endpoint still rejects payment in progress or paid bookings', function () {
+    ['user' => $user, 'company' => $company, 'tour' => $tour, 'schedule' => $schedule] = createBookingCreateScenario('invalidreorderstatusvendor');
+
+    foreach ([
+        BookingStatus::WAITING_PAYMENT_APPROVAL,
+        BookingStatus::DOWN_PAYMENT,
+        BookingStatus::FULL_PAYMENT,
+    ] as $status) {
+        $booking = Booking::factory()->create([
+            'booking_number' => 'BKG-INVALID-'.strtoupper(str_replace(' ', '-', $status->value)),
+            'user_id' => $user->id,
+            'vendor_id' => $company->id,
+            'tour_id' => $tour->id,
+            'departure_date' => $schedule->departure_date,
+            'status' => $status,
+            'reserved_type' => 'system',
+            'reserved_expires_at' => null,
+        ]);
+
+        $this->actingAs($user)
+            ->post("/bookings/{$booking->id}/reorder")
+            ->assertStatus(422);
+
+        expect($booking->fresh()->status)->toBe($status);
+    }
+});
+
 test('reorder endpoint rejects expired bookings after the vendor booking deadline', function () {
     $user = User::factory()->create();
     $company = Company::factory()->create([

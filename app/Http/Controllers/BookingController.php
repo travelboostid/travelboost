@@ -604,7 +604,13 @@ class BookingController extends Controller
         $booking = app(ExpireBookingReservationsAction::class)->expireIfDue($booking);
         $booking->loadMissing(['agent', 'vendor', 'tour']);
 
-        abort_unless($booking->status === BookingStatus::EXPIRED, 422);
+        $status = $booking->status;
+
+        abort_unless(in_array($status, [
+            BookingStatus::EXPIRED,
+            BookingStatus::AWAITING_PAYMENT,
+            BookingStatus::BOOKING_RESERVED,
+        ], true), 422);
         abort_unless($booking->departure_date?->isToday() || $booking->departure_date?->isFuture(), 422);
         abort_unless(
             $booking->tour && $this->resolveBookableSchedule(
@@ -615,15 +621,17 @@ class BookingController extends Controller
             422
         );
 
-        DB::transaction(function () use ($booking): void {
-            $booking->update([
-                'status' => BookingStatus::AWAITING_PAYMENT,
-                'reserved_type' => 'system',
-                'reserved_expires_at' => null,
-            ]);
-        });
+        if ($status === BookingStatus::EXPIRED) {
+            DB::transaction(function () use ($booking): void {
+                $booking->update([
+                    'status' => BookingStatus::AWAITING_PAYMENT,
+                    'reserved_type' => 'system',
+                    'reserved_expires_at' => null,
+                ]);
+            });
 
-        app(SyncAvailabilityAction::class)->executeForBooking($booking->fresh());
+            app(SyncAvailabilityAction::class)->executeForBooking($booking->fresh());
+        }
 
         $tenantUsername = $booking->agent?->username ?? $booking->vendor?->username;
         abort_unless($tenantUsername && $booking->tour, 422);
