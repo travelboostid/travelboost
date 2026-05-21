@@ -59,6 +59,8 @@ const DEFAULT_TNC = `1. The price shown is valid only for the selected departure
 5. Changes to guest details or departure dates are subject to administrative fees.
 6. In the event of tour cancellation by the organizer, a full refund will be provided.`;
 const CONTACT_GUEST_ID = 'booking-contact-guest';
+const DEFAULT_PAYMENT_UNAVAILABLE_MESSAGE =
+    'Payment is temporarily unavailable. Please try again later or contact customer support.';
 
 function formatCountdown(seconds: number) {
     const minutes = Math.floor(seconds / 60);
@@ -193,6 +195,29 @@ function normalizePaymentValue(value: string | null | undefined): string {
     return normalized;
 }
 
+function firstErrorMessage(value: unknown): string | null {
+    if (typeof value === 'string') {
+        return value;
+    }
+
+    if (Array.isArray(value) && typeof value[0] === 'string') {
+        return value[0];
+    }
+
+    return null;
+}
+
+function paymentErrorMessageFromResponse(error: unknown): string | null {
+    const responseData = (error as { response?: { data?: unknown } })?.response
+        ?.data as { errors?: Record<string, unknown>; message?: unknown };
+
+    return (
+        firstErrorMessage(responseData?.errors?.payment) ??
+        firstErrorMessage(responseData?.errors?.payment_type) ??
+        firstErrorMessage(responseData?.message)
+    );
+}
+
 function toBookingInfoStatus(value: string): BookingStatusCode {
     if (value === 'down payment') {
         return 'down_payment';
@@ -265,6 +290,7 @@ export default function Page() {
         bookingTimeLimitMinutes,
         minimumDownPaymentPct,
         minimumVatPct,
+        platformFeePerPax,
         vendorBankInfo,
         termConditions,
         isResumingExistingBooking,
@@ -272,6 +298,9 @@ export default function Page() {
         remainingHoldSeconds,
         paidAmount,
         remainingBalance,
+        downPaymentAvailable = true,
+        fullPaymentAvailable = true,
+        paymentUnavailableReason = null,
         bookingConflict,
         savedPassengers,
         flash,
@@ -293,6 +322,9 @@ export default function Page() {
         useState<BookingPaymentResultData | null>(
             () => flash?.bookingPaymentResult ?? null,
         );
+    const [paymentErrorMessage, setPaymentErrorMessage] = useState<
+        string | null
+    >(null);
     const [isRefreshingPaymentResult, setIsRefreshingPaymentResult] =
         useState(false);
 
@@ -582,10 +614,11 @@ export default function Page() {
         () =>
             calculateBookingPricing(
                 guests,
-                vendor?.commission ?? 0,
+                0,
                 minimumVatPct ?? 11,
+                platformFeePerPax ?? 25_000,
             ),
-        [guests, vendor, minimumVatPct],
+        [guests, minimumVatPct, platformFeePerPax],
     );
     const [selectedAddOns, setSelectedAddOns] = useState<AddOnItem[]>(
         () => addOns ?? [],
@@ -1038,7 +1071,8 @@ export default function Page() {
         (enabled: boolean) => {
             if (enabled) {
                 const contactNameParts = splitContactName(contact.name);
-                const canAddNewAdult = adults + children < maxSeatTakingGuests;
+                const canAddNewAdult =
+                    adults + children + infants < maxSeatTakingGuests;
 
                 if (!contactNameParts || contactGuestId || !canAddNewAdult) {
                     return;
@@ -1070,14 +1104,21 @@ export default function Page() {
                 setContactGuestId(null);
             }
         },
-        [adults, children, contact.name, contactGuestId, maxSeatTakingGuests],
+        [
+            adults,
+            children,
+            contact.name,
+            contactGuestId,
+            infants,
+            maxSeatTakingGuests,
+        ],
     );
 
     // ─── Validation ─────────────────────────────────────────────────────
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const phoneRegex = /^\+?\d+$/;
 
-    const paxTakingSeats = adults + children;
+    const paxTakingSeats = adults + children + infants;
     const isAvailabilityExceeded =
         bookingSeatLimitValue !== null &&
         paxTakingSeats > bookingSeatLimitValue;
@@ -1336,7 +1377,15 @@ export default function Page() {
 
                 openSnapPayment(snapToken, bookingId, paymentId, pendingResult);
             })
-            .catch(() => setIsSubmitting(false));
+            .catch((error) => {
+                const message = paymentErrorMessageFromResponse(error);
+
+                if (message) {
+                    setPaymentErrorMessage(message);
+                }
+
+                setIsSubmitting(false);
+            });
     };
 
     const submitManualPayment = (
@@ -1386,7 +1435,15 @@ export default function Page() {
                         }),
                 );
             },
-            onError: () => {
+            onError: (errors) => {
+                const message =
+                    firstErrorMessage(errors.payment) ??
+                    firstErrorMessage(errors.payment_type);
+
+                if (message) {
+                    setPaymentErrorMessage(message);
+                }
+
                 if (manualSubmitTimerWasRunning.current) {
                     setTimerStarted(true);
                 }
@@ -1512,6 +1569,23 @@ export default function Page() {
         manualData?: ManualPaymentData,
     ) => {
         setIsSubmitting(true);
+        setPaymentErrorMessage(null);
+
+        if (!fullPaymentAvailable && paymentType === 'full_payment') {
+            setPaymentErrorMessage(
+                paymentUnavailableReason ?? DEFAULT_PAYMENT_UNAVAILABLE_MESSAGE,
+            );
+            setIsSubmitting(false);
+            return;
+        }
+
+        if (!downPaymentAvailable && paymentType === 'down_payment') {
+            setPaymentErrorMessage(
+                'Down payment is unavailable for this tour. Please complete full payment.',
+            );
+            setIsSubmitting(false);
+            return;
+        }
 
         if (isBalancePayment && existingBooking?.id) {
             if (paymentMethod === 'midtrans') {
@@ -1632,7 +1706,15 @@ export default function Page() {
                     manualData,
                 );
             },
-            onError: () => {
+            onError: (errors) => {
+                const message =
+                    firstErrorMessage(errors.payment) ??
+                    firstErrorMessage(errors.payment_type);
+
+                if (message) {
+                    setPaymentErrorMessage(message);
+                }
+
                 setIsSubmitting(false);
             },
             onFinish: () => {
@@ -1944,6 +2026,18 @@ export default function Page() {
                                                 }
                                                 vendorBankInfo={vendorBankInfo}
                                                 readOnly={isReviewMode}
+                                                downPaymentAvailable={
+                                                    downPaymentAvailable
+                                                }
+                                                fullPaymentAvailable={
+                                                    fullPaymentAvailable
+                                                }
+                                                paymentUnavailableReason={
+                                                    paymentUnavailableReason
+                                                }
+                                                paymentErrorMessage={
+                                                    paymentErrorMessage
+                                                }
                                             />
                                         )}
                                     </motion.div>
@@ -1977,8 +2071,7 @@ export default function Page() {
                                                     Not enough availability.
                                                     This booking can include up
                                                     to {maxSeatTakingGuests}{' '}
-                                                    seat-taking guests for this
-                                                    schedule.
+                                                    guests for this schedule.
                                                 </span>
                                             )}
                                         {currentStep === 1 &&

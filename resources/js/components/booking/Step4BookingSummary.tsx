@@ -65,7 +65,7 @@ type Step4Props = {
     isSubmitting?: boolean;
     initialAddOns?: AddOnItem[];
     onAddOnsChange?: (addOns: AddOnItem[]) => void;
-    minimumDownPaymentPct?: number;
+    minimumDownPaymentPct?: number | null;
     minimumVatPct?: number;
     paidAmount?: number;
     remainingBalance?: number;
@@ -76,11 +76,18 @@ type Step4Props = {
         accountNumber: string;
     };
     readOnly?: boolean;
+    downPaymentAvailable?: boolean;
+    fullPaymentAvailable?: boolean;
+    paymentUnavailableReason?: string | null;
+    paymentErrorMessage?: string | null;
 };
 
 // ─── Constants ───────────────────────────────────────────────────────────────────
 
 // ─── Component ───────────────────────────────────────────────────────────────────
+
+const PAYMENT_UNAVAILABLE_MESSAGE =
+    'Payment is temporarily unavailable. Please try again later or contact customer support.';
 
 export default function Step4BookingSummary({
     contact,
@@ -97,6 +104,10 @@ export default function Step4BookingSummary({
     forceBalancePayment = false,
     vendorBankInfo,
     readOnly = false,
+    downPaymentAvailable = true,
+    fullPaymentAvailable = true,
+    paymentUnavailableReason = null,
+    paymentErrorMessage = null,
 }: Step4Props) {
     // ─── Add-ons state ──────────────────────────────────────────────────
     const [addOns, setAddOns] = useState<AddOnItem[]>(initialAddOns ?? []);
@@ -118,7 +129,11 @@ export default function Step4BookingSummary({
     }, [displayAddOns, onAddOnsChange, readOnly]);
 
     // ─── Payment state ─────────────────────────────────────────────────
-    const [paymentType, setPaymentType] = useState<PaymentType>('full_payment');
+    const [paymentType, setPaymentType] = useState<PaymentType>(
+        fullPaymentAvailable || !downPaymentAvailable
+            ? 'full_payment'
+            : 'down_payment',
+    );
     const [paymentPopoverOpen, setPaymentPopoverOpen] = useState(false);
     const [manualDialogOpen, setManualDialogOpen] = useState(false);
 
@@ -156,9 +171,11 @@ export default function Step4BookingSummary({
 
     const vatPct = minimumVatPct ?? 11;
     const grandTotal = pricing.totalPrice + addOnsTotal;
-    const dpPct = minimumDownPaymentPct ?? 50;
+    const dpPct = minimumDownPaymentPct ?? 0;
     const dpRate = dpPct / 100;
-    const dpLabel = `Down Payment (${dpPct}%)`;
+    const dpLabel = downPaymentAvailable
+        ? `Down Payment (${dpPct}%)`
+        : 'Down Payment';
     const effectivePaymentType: PaymentType = forceBalancePayment
         ? 'full_payment'
         : paymentType;
@@ -167,6 +184,15 @@ export default function Step4BookingSummary({
         : paymentType === 'down_payment'
           ? Math.round(grandTotal * dpRate)
           : grandTotal;
+    const isFullPaymentUnavailable =
+        !fullPaymentAvailable || paymentErrorMessage !== null;
+    const isCurrentPaymentUnavailable =
+        isFullPaymentUnavailable && effectivePaymentType === 'full_payment';
+    const paymentNotice =
+        paymentErrorMessage ??
+        (isCurrentPaymentUnavailable
+            ? (paymentUnavailableReason ?? PAYMENT_UNAVAILABLE_MESSAGE)
+            : null);
 
     // ─── Add-on qty handler ────────────────────────────────────────────
     const updateAddOnQty = useCallback(
@@ -193,7 +219,7 @@ export default function Step4BookingSummary({
     );
 
     const handlePaymentMethodSelect = (method: PaymentMethod) => {
-        if (readOnly) {
+        if (readOnly || isCurrentPaymentUnavailable) {
             return;
         }
 
@@ -207,7 +233,7 @@ export default function Step4BookingSummary({
     };
 
     const handleManualSubmit = (data: ManualPaymentData) => {
-        if (readOnly) {
+        if (readOnly || isCurrentPaymentUnavailable) {
             return;
         }
 
@@ -329,16 +355,6 @@ export default function Step4BookingSummary({
                                                 {formatCurrency(pricing.ppn)}
                                             </span>
                                         </div>
-                                        {pricing.agentCommission > 0 && (
-                                            <div className="flex justify-between text-muted-foreground">
-                                                <span>Agent Commission</span>
-                                                <span className="font-medium text-foreground">
-                                                    {formatCurrency(
-                                                        pricing.agentCommission,
-                                                    )}
-                                                </span>
-                                            </div>
-                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -487,10 +503,17 @@ export default function Step4BookingSummary({
                                                 paymentType === 'down_payment'
                                                     ? 'bg-primary text-primary-foreground shadow-sm'
                                                     : 'text-muted-foreground hover:text-foreground',
+                                                !downPaymentAvailable &&
+                                                    'cursor-not-allowed opacity-50',
                                             )}
-                                            onClick={() =>
-                                                setPaymentType('down_payment')
-                                            }
+                                            onClick={() => {
+                                                if (downPaymentAvailable) {
+                                                    setPaymentType(
+                                                        'down_payment',
+                                                    );
+                                                }
+                                            }}
+                                            disabled={!downPaymentAvailable}
                                         >
                                             {dpLabel}
                                         </button>
@@ -500,11 +523,18 @@ export default function Step4BookingSummary({
                                                 'rounded-md px-3 py-1.5 text-xs font-medium transition-all',
                                                 paymentType === 'full_payment'
                                                     ? 'bg-primary text-primary-foreground shadow-sm'
-                                                    : 'text-muted-foreground opacity-50 hover:text-foreground',
+                                                    : 'text-muted-foreground hover:text-foreground',
+                                                isFullPaymentUnavailable &&
+                                                    'cursor-not-allowed opacity-50',
                                             )}
-                                            onClick={() =>
-                                                setPaymentType('full_payment')
-                                            }
+                                            onClick={() => {
+                                                if (!isFullPaymentUnavailable) {
+                                                    setPaymentType(
+                                                        'full_payment',
+                                                    );
+                                                }
+                                            }}
+                                            disabled={isFullPaymentUnavailable}
                                         >
                                             Full Payment
                                         </button>
@@ -543,6 +573,11 @@ export default function Step4BookingSummary({
                                             {formatCurrency(remainingBalance)}
                                         </span>
                                     </div>
+                                </div>
+                            )}
+                            {paymentNotice && (
+                                <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">
+                                    {paymentNotice}
                                 </div>
                             )}
                         </div>
@@ -609,13 +644,20 @@ export default function Step4BookingSummary({
                             {!readOnly && (
                                 <Popover
                                     open={paymentPopoverOpen}
-                                    onOpenChange={setPaymentPopoverOpen}
+                                    onOpenChange={(open) => {
+                                        if (!isCurrentPaymentUnavailable) {
+                                            setPaymentPopoverOpen(open);
+                                        }
+                                    }}
                                 >
                                     <PopoverTrigger asChild>
                                         <Button
                                             type="button"
                                             size="lg"
-                                            disabled={isSubmitting}
+                                            disabled={
+                                                isSubmitting ||
+                                                isCurrentPaymentUnavailable
+                                            }
                                             className="gap-2 bg-[#1ebe5d] px-6 text-white shadow-lg hover:bg-[#19a34f]"
                                         >
                                             {isSubmitting
