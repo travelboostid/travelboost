@@ -678,15 +678,15 @@ function BookingCard({
             wrap: 'normal' as const,
         },
         {
-            caption: 'Destination',
-            label: booking.tour?.destination ?? 'Destination pending',
-            wrap: 'normal' as const,
-        },
-        {
             caption: 'Duration',
             label: booking.tour?.duration_days
                 ? `${booking.tour.duration_days} days`
                 : 'Trip details',
+            wrap: 'normal' as const,
+        },
+        {
+            caption: 'Destination',
+            label: booking.tour?.destination ?? 'Destination pending',
             wrap: 'normal' as const,
         },
     ];
