@@ -15,6 +15,8 @@ use App\Models\Company;
 use App\Models\Payment;
 use App\Models\TourPrice;
 use App\Models\TourSchedule;
+use App\Services\BookingPaymentReceiverService;
+use App\Services\BookingPricingService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -65,7 +67,9 @@ class BookingIndexController extends Controller
             ->with([
                 'tour:id,name,code',
                 'vendor:id,name',
+                'vendor.companySetting',
                 'agent:id,name',
+                'agent.companySetting',
                 'user:id,name',
                 'passengers:id,booking_id,price_category',
                 'payments',
@@ -75,13 +79,17 @@ class BookingIndexController extends Controller
             }], 'amount')
             ->paginate();
 
-        $bookings->getCollection()->transform(function ($booking) {
+        $paymentReceiverService = app(BookingPaymentReceiverService::class);
+
+        $bookings->getCollection()->transform(function ($booking) use ($company, $paymentReceiverService) {
             $booking->commission_amount = $this->resolveCommissionAmount($booking);
 
             $paidAmount = (float) ($booking->paid_amount ?? 0);
             $booking->paid_amount = $paidAmount;
             $booking->remaining_balance = max(0, (float) $booking->grand_total - $paidAmount);
             $booking->manual_payment = $this->resolvePendingManualPayment($booking);
+            $booking->can_review_manual_payment = $booking->manual_payment !== null
+                && $paymentReceiverService->companyCanReviewManualPayment($company, $booking);
 
             return $booking;
         });
@@ -110,6 +118,17 @@ class BookingIndexController extends Controller
         $validated = $request->validated();
 
         DB::transaction(function () use ($booking, $validated): void {
+            $booking->loadMissing('tour.company.companySetting');
+            $quote = app(BookingPricingService::class)->quoteForBookingData(
+                $booking->tour,
+                $booking->departure_date,
+                $validated['passengers'],
+                $validated['addons'] ?? [],
+                (float) ($booking->vendor?->companySetting?->minimum_vat ?? $booking->tour?->company?->companySetting?->minimum_vat ?? 11),
+                $booking->agent_id !== null,
+            );
+            $totals = app(BookingPricingService::class)->bookingTotalsFromQuote($quote);
+
             $booking->update([
                 'contact_name' => $validated['contact_name'],
                 'contact_email' => $validated['contact_email'],
@@ -118,14 +137,14 @@ class BookingIndexController extends Controller
                 'pax_adult' => $validated['pax_adult'],
                 'pax_child' => $validated['pax_child'],
                 'pax_infant' => $validated['pax_infant'],
-                'total_price' => $validated['total_price'],
-                'tax_amount' => $validated['tax_amount'],
-                'platform_fee' => $validated['platform_fee'],
-                'commission_amount' => $validated['commission_amount'],
-                'grand_total' => $validated['grand_total'],
+                'total_price' => $totals['total_price'],
+                'tax_amount' => $totals['tax_amount'],
+                'platform_fee' => $totals['platform_fee'],
+                'commission_amount' => $totals['commission_amount'],
+                'grand_total' => $totals['grand_total'],
             ]);
 
-            $retainedPassengerIds = collect($validated['passengers'])
+            $retainedPassengerIds = collect($quote['passengers'])
                 ->pluck('id')
                 ->filter()
                 ->map(fn ($id) => (int) $id)
@@ -139,7 +158,7 @@ class BookingIndexController extends Controller
                 $booking->passengers()->delete();
             }
 
-            foreach ($validated['passengers'] as $passengerData) {
+            foreach ($quote['passengers'] as $passengerData) {
                 $payload = [
                     'title' => $passengerData['title'] ?? null,
                     'first_name' => $passengerData['first_name'],
@@ -178,7 +197,7 @@ class BookingIndexController extends Controller
 
             if (array_key_exists('addons', $validated)) {
                 $booking->addons()->delete();
-                $booking->addons()->createMany($validated['addons'] ?? []);
+                $booking->addons()->createMany($quote['addons'] ?? []);
             }
         });
 
@@ -190,6 +209,9 @@ class BookingIndexController extends Controller
         $this->assertPaymentReviewable($company, $booking, $payment);
 
         DB::transaction(function () use ($booking, $payment): void {
+            app(FinalizeBookingPaymentAction::class)
+                ->assertCanFinalizeIncomingPaidPayment($booking->fresh(), $payment->fresh());
+
             $payment->update([
                 'status' => PaymentStatus::PAID,
                 'paid_at' => now(),
@@ -199,7 +221,7 @@ class BookingIndexController extends Controller
                 'payment_mode' => 'manual',
             ]);
 
-            app(FinalizeBookingPaymentAction::class)->execute($booking->fresh());
+            app(FinalizeBookingPaymentAction::class)->execute($booking->fresh(), $payment->fresh());
         });
 
         return back()->with('success', 'Manual payment accepted.');
@@ -370,6 +392,10 @@ class BookingIndexController extends Controller
         abort_unless($belongsToCompany, 404);
         abort_unless($payment->payable_type === Booking::class, 404);
         abort_unless((int) $payment->payable_id === (int) $booking->id, 404);
+        abort_unless(
+            app(BookingPaymentReceiverService::class)->companyCanReviewManualPayment($company, $booking),
+            403
+        );
         abort_unless($payment->provider === 'manual', 422);
         abort_unless($payment->payment_method === 'bank_transfer', 422);
         abort_unless($payment->status === PaymentStatus::PENDING, 422);
