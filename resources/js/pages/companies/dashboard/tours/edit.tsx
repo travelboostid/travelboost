@@ -425,7 +425,6 @@ export default function Page({ tour }: Props) {
 
     const addSchedule = () => {
         setSchedules([
-            ...schedules,
             {
                 id: null,
                 departure_date: '',
@@ -442,6 +441,7 @@ export default function Page({ tour }: Props) {
                 //promotion: { type: 'percent', value: '' },
                 //commission: { type: 'percent', value: '' },
             },
+            ...schedules,
         ]);
     };
 

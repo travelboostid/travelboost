@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\AgentController;
 use App\Http\Controllers\Admin\AiUsageLogController;
+use App\Http\Controllers\Admin\AppConfigAdminController;
 use App\Http\Controllers\Admin\AppConfigController;
 use App\Http\Controllers\Admin\BankAccountController;
 use App\Http\Controllers\Admin\HomeController;
@@ -26,6 +27,17 @@ Route::get('/admin', [IndexController::class, 'show'])->name('admin.show');
 Route::prefix('admin')->middleware(['auth', EnsureHasAdminAccess::class])->name('admin.')->group(function () {
     //
     Route::resource('app-configs', AppConfigController::class)->names('app-configs');
+
+    Route::get(
+        'settings/app-config-admin',
+        [AppConfigAdminController::class, 'index']
+    )->name('app-config-admin.index');
+
+    Route::put(
+        'settings/app-config-admin',
+        [AppConfigAdminController::class, 'update']
+    )->name('app-config-admin.update');
+
     // 2. Dashboard
     Route::get('/dashboard', [HomeController::class, 'show'])->name('dashboard');
 
