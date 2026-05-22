@@ -197,7 +197,7 @@ export default function SeatAvailabilityIndex({
 
                         <input
                             type="text"
-                            placeholder="Search by tour name..."
+                            placeholder="Search by tour name or tour code ..."
                             value={search}
                             onChange={(e) => handleSearch(e.target.value)}
                             className="w-full rounded-xl border px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-primary"
@@ -237,7 +237,10 @@ export default function SeatAvailabilityIndex({
                                 >
                                     <div className="text-left">
                                         <h2 className="text-lg font-semibold">
-                                            {item.tour.name}
+                                            {item.tour.code} {item.tour.name}{' '}
+                                            {'('}
+                                            {item.tour.duration_days} {'days'}{' '}
+                                            {')'}
                                         </h2>
 
                                         <p className="text-sm text-muted-foreground">

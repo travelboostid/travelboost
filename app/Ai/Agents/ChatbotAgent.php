@@ -84,20 +84,20 @@ class ChatbotAgent implements Agent, Conversational
     public function instructions(): Stringable|string
     {
         return <<<'PROMPT'
-      You are a helpful professional chatbot that answers user questions.
+        You are a helpful professional chatbot that answers user questions.
 
-      Rules:
-      - Answer like in a casual conversation.
-      - Use ONLY the provided context to answer.
-      - If the answer is not in the context, say you don't know. 
-      - Don't say "context not provided" or similar phrases.
-      - Do not guess or make up information.
-      - Keep answers short, clear, and helpful.
-      - If unclear, ask for clarification.
-      - Do not mention internal systems or processes.
+        Rules:
+        - Answer like in a casual conversation.
+        - Use ONLY the provided context to answer.
+        - If the answer is not in the context, say you don't know. 
+        - Don't say "context not provided" or similar phrases.
+        - Do not guess or make up information.
+        - Keep answers short, clear, and helpful.
+        - If unclear, ask for clarification.
+        - Do not mention internal systems or processes.
 
-      You MUST detect the language of the user's message and reply in that EXACT same language.
-      PROMPT;
+        You MUST detect the language of the user's message and reply in that EXACT same language.
+        PROMPT;
     }
 
     public function messages(): array
@@ -144,13 +144,13 @@ class ChatbotAgent implements Agent, Conversational
             ];
         }
         $prompt = <<<'PROMPT'
-      Analyze the user messages and detect intent:
-      - tour_detail(tour_id): looking for specific tour information.
-      - tour_query(...args): looking for tours based on criteria.
-      - booking_query(): looking for their own bookings.
-      - booking_detail(booking_id): looking for specific booking information.
-      - general(): general travel questions.
-      PROMPT;
+        Analyze the user messages and detect intent:
+        - tour_detail(tour_id): looking for specific tour information.
+        - tour_query(...args): looking for tours based on criteria.
+        - booking_query(): looking for their own bookings.
+        - booking_detail(booking_id): looking for specific booking information.
+        - general(): general travel questions.
+        PROMPT;
 
         $response = agent(
             instructions: "You are an assistant that retrieves relevant context from recent chat messages to help understand the user's current message.",
@@ -222,11 +222,11 @@ class ChatbotAgent implements Agent, Conversational
         })->implode("\n");
 
         return <<<CONTEXT
-      Based on the search criteria, here are some relevant tours from the system:
-      | id | code | name | duration_days | destination | country_name | price |
-      |----|------|------|---------------|-------------|--------------|-------|
-      {$rows}
-      CONTEXT;
+        Based on the search criteria, here are some relevant tours from the system:
+        | id | code | name | duration_days | destination | country_name | price |
+        |----|------|------|---------------|-------------|--------------|-------|
+        {$rows}
+        CONTEXT;
     }
 
     private function retrieveGeneralContext(array $args)
@@ -300,13 +300,13 @@ class ChatbotAgent implements Agent, Conversational
         $relevantKnowledges = $documentRows ? "Relevant information about the tour has been retrieved from the system:\n{$documentRows}" : '';
 
         return <<<CONTEXT
-      Tour details retrieved from system:
-      | id | code | name | duration_days | destination | country_name | price |
-      |----|------|------|---------------|-------------|--------------|-------|
-      | {$tour->id} | {$tour->code} | {$tour->name} | {$tour->duration_days} | {$tour->destination} | {$tour->country_name} | {$tour->showprice} |
-      
-      {$relevantKnowledges}
-      CONTEXT;
+        Tour details retrieved from system:
+        | id | code | name | duration_days | destination | country_name | price |
+        |----|------|------|---------------|-------------|--------------|-------|
+        | {$tour->id} | {$tour->code} | {$tour->name} | {$tour->duration_days} | {$tour->destination} | {$tour->country_name} | {$tour->showprice} |
+        
+        {$relevantKnowledges}
+        CONTEXT;
     }
 
     private function retrieveMyBookingsContext(array $args)
@@ -326,11 +326,11 @@ class ChatbotAgent implements Agent, Conversational
         })->implode("\n");
 
         return <<<CONTEXT
-      Here are bookings from the system for context:
-      | id | booking_number | tour_name | departure_date | status | total_price |
-      |----|----------------|-----------|----------------|--------|-------------|
-      {$rows}
-      CONTEXT;
+        Here are bookings from the system for context:
+        | id | booking_number | tour_name | departure_date | status | total_price |
+        |----|----------------|-----------|----------------|--------|-------------|
+        {$rows}
+        CONTEXT;
     }
 
     private function retrieveBookingDetailContext(array $args)
@@ -348,11 +348,11 @@ class ChatbotAgent implements Agent, Conversational
         }
 
         return <<<CONTEXT
-      Booking details retrieved from system:
-      | id | booking_number | tour_name | departure_date | status | total_price | pax_adult | pax_child | pax_infant | contact_name | contact_email |
-      |----|----------------|-----------|----------------|--------|-------------|-----------|-----------|-----------|--------------|----------------|
-      | {$booking->id} | {$booking->booking_number} | {$booking->tour->name} | {$booking->departure_date} | {$booking->status} | {$booking->total_price} | {$booking->pax_adult} | {$booking->pax_child} | {$booking->pax_infant} | {$booking->contact_name} | {$booking->contact_email} |
-      CONTEXT;
+        Booking details retrieved from system:
+        | id | booking_number | tour_name | departure_date | status | total_price | pax_adult | pax_child | pax_infant | contact_name | contact_email |
+        |----|----------------|-----------|----------------|--------|-------------|-----------|-----------|-----------|--------------|----------------|
+        | {$booking->id} | {$booking->booking_number} | {$booking->tour->name} | {$booking->departure_date} | {$booking->status} | {$booking->total_price} | {$booking->pax_adult} | {$booking->pax_child} | {$booking->pax_infant} | {$booking->contact_name} | {$booking->contact_email} |
+        CONTEXT;
     }
 
     private function saveBotMessage(string $message, array $additionalData = []): void

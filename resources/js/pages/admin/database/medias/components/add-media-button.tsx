@@ -1,15 +1,16 @@
 import type { MediaResource } from '@/api/model';
 import { ImageMediaUploader } from '@/components/media/image-media-uploader';
 import { RawMediaUploader } from '@/components/media/raw-media-uploader';
-import { Button } from '@/components/ui/button';
 import {
-    Dialog,
-    DialogClose,
-    DialogContent,
-    DialogFooter,
-    DialogTrigger,
-} from '@/components/ui/dialog';
+    AlertDialog,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogFooter,
+    AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import { Button } from '@/components/ui/button';
 import { Field, FieldLabel } from '@/components/ui/field';
+import { Progress } from '@/components/ui/progress';
 import {
     Select,
     SelectContent,
@@ -19,6 +20,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import { cn } from '@/lib/utils';
 import { UploadCloudIcon } from 'lucide-react';
 import { useState } from 'react';
 import MediaOwnerSelector from './media-owner-selector';
@@ -46,13 +48,13 @@ export function AddMediaButton({
     };
 
     return (
-        <Dialog onOpenChange={setOpen} open={open}>
-            <DialogTrigger>
+        <AlertDialog onOpenChange={setOpen} open={open}>
+            <AlertDialogTrigger>
                 <Button className="w-fit cursor-pointer" type="button">
                     Add Media
                 </Button>
-            </DialogTrigger>
-            <DialogContent className="w-full max-w-200">
+            </AlertDialogTrigger>
+            <AlertDialogContent className="w-full max-w-200">
                 <Field>
                     <FieldLabel>Owner</FieldLabel>
                     <MediaOwnerSelector value={owner} onChange={setOwner} />
@@ -153,28 +155,48 @@ export function AddMediaButton({
                             type: 'document',
                             subtype: 'general-knowledge-base-document',
                         }}
-                        trigger={({ open, progress }) => {
+                        trigger={({ open, progress, status }) => {
                             return (
                                 <div
-                                    className="rounded-md border-2 border-dashed p-4 text-left flex flex-row gap-2 items-center"
+                                    className={cn(
+                                        'rounded-md border-2 border-dashed p-4 text-left cursor-pointer space-y-4',
+                                        status == 'pending' &&
+                                            'pointer-events-none opacity-70 cursor-not-allowed',
+                                    )}
                                     onClick={open}
                                 >
-                                    <UploadCloudIcon className="inline-block" />
-                                    <div className="flex-1">
-                                        <div className="inline-block font-semibold">
-                                            Upload General Knowledge Base
-                                            Document
-                                        </div>
-                                        <div className="text-sm text-muted-foreground">
-                                            Select a document that contains
-                                            general knowledge about your tours,
-                                            such as FAQs, policies, or
-                                            guidelines. This document will be
-                                            used to provide accurate and
-                                            consistent information to customers
-                                            and support staff.
+                                    <div className="flex flex-row gap-2 items-center">
+                                        <UploadCloudIcon className="inline-block" />
+                                        <div className="flex-1">
+                                            <div className="inline-block font-semibold">
+                                                Upload General Knowledge Base
+                                                Document
+                                            </div>
+                                            <div className="text-sm text-muted-foreground">
+                                                Select a document that contains
+                                                general knowledge about your
+                                                tours, such as FAQs, policies,
+                                                or guidelines. This document
+                                                will be used to provide accurate
+                                                and consistent information to
+                                                customers and support staff.
+                                            </div>
                                         </div>
                                     </div>
+                                    {status !== 'idle' && (
+                                        <Field className="w-full">
+                                            <FieldLabel htmlFor="progress-upload">
+                                                <span>Upload progress</span>
+                                                <span className="ml-auto">
+                                                    {progress.percentage}%
+                                                </span>
+                                            </FieldLabel>
+                                            <Progress
+                                                value={progress.percentage}
+                                                id="progress-upload"
+                                            />
+                                        </Field>
+                                    )}
                                 </div>
                             );
                         }}
@@ -190,34 +212,52 @@ export function AddMediaButton({
                             type: 'document',
                             subtype: 'identity-card',
                         }}
-                        trigger={({ open, progress }) => {
+                        trigger={({ open, progress, status }) => {
                             return (
                                 <div
-                                    className="rounded-md border-2 border-dashed p-4 text-left flex flex-row gap-2 items-center"
+                                    className={cn(
+                                        'rounded-md border-2 border-dashed p-4 text-left cursor-pointer space-y-4',
+                                        status == 'pending' &&
+                                            'pointer-events-none opacity-70 cursor-not-allowed',
+                                    )}
                                     onClick={open}
                                 >
-                                    <UploadCloudIcon className="inline-block" />
-                                    <div className="flex-1">
-                                        <div className="inline-block font-semibold">
-                                            Upload Identity Card
-                                        </div>
-                                        <div className="text-sm text-muted-foreground">
-                                            Please upload a clear image or scan
-                                            of your identity card for
-                                            verification purposes.
+                                    <div className="flex flex-row gap-2 items-center">
+                                        <UploadCloudIcon className="inline-block" />
+                                        <div className="flex-1">
+                                            <div className="inline-block font-semibold">
+                                                Upload Identity Card
+                                            </div>
+                                            <div className="text-sm text-muted-foreground">
+                                                Please upload a clear image or
+                                                scan of your identity card for
+                                                verification purposes.
+                                            </div>
                                         </div>
                                     </div>
+                                    {status !== 'idle' && (
+                                        <Field className="w-full">
+                                            <FieldLabel htmlFor="progress-upload">
+                                                <span>Upload progress</span>
+                                                <span className="ml-auto">
+                                                    {progress.percentage}%
+                                                </span>
+                                            </FieldLabel>
+                                            <Progress
+                                                value={progress.percentage}
+                                                id="progress-upload"
+                                            />
+                                        </Field>
+                                    )}
                                 </div>
                             );
                         }}
                     />
                 )}
-                <DialogFooter>
-                    <DialogClose>
-                        <Button type="button">Cancel</Button>
-                    </DialogClose>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
+                <AlertDialogFooter>
+                    <AlertDialogCancel type="button">Cancel</AlertDialogCancel>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
     );
 }

@@ -4,9 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\IndexMediaRequest;
-use App\Models\Company;
 use App\Models\Media;
-use App\Models\User;
 use Carbon\Carbon;
 use Inertia\Inertia;
 
@@ -18,10 +16,6 @@ class MediaController extends Controller
     public function index(IndexMediaRequest $request)
     {
         $validated = $request->validated();
-        $ownerTypes = [
-            'user' => User::class,
-            'company' => Company::class,
-        ];
 
         $data = Media::query()
             ->with(['owner'])
@@ -34,21 +28,16 @@ class MediaController extends Controller
             ->when($validated['subtype'] ?? null, function ($query, $status) {
                 $query->whereIn('subtype', $status);
             })
-            ->when($validated['owner'] ?? null, function ($query, $owners) use ($ownerTypes) {
+            ->when($validated['owner'] ?? null, function ($query, $owners) {
+                $owners = collect($owners)
+                    ->map(function ($owner) {
+                        [$type, $id] = explode(':', $owner, 2);
 
-                foreach ($owners as $owner) {
-                    [$type, $id] = explode(':', $owner);
+                        return [$type, (int) $id];
+                    })
+                    ->all();
 
-                    if (! isset($ownerTypes[$type])) {
-                        continue;
-                    }
-
-                    $query->orWhere(
-                        fn ($query) => $query
-                            ->whereMorphedTo('owner', $ownerTypes[$type])
-                            ->where('owner_id', $id)
-                    );
-                }
+                $query->whereOwnerIn($owners);
             })
             ->when($validated['created_at'] ?? null, function ($query, $created_at) {
                 $range = explode(',', $created_at);

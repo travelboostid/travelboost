@@ -7,21 +7,12 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useDataTable } from '@/hooks/use-data-table';
 import type { ColumnDef } from '@tanstack/react-table';
 import dayjs from 'dayjs';
-import relativeTime from 'dayjs/plugin/relativeTime';
 import { CalendarIcon, CircleDashedIcon } from 'lucide-react';
 import { useMemo } from 'react';
-import ApproveButton from './components/approve-button';
-import { EmptyBankAccounts } from './components/empty-bank-accounts';
-import RejectButton from './components/reject-button';
-dayjs.extend(relativeTime);
+import { EmptyLogs } from './components/empty-logs';
+import Summary from './components/summary';
 
-const STATUS_OPTIONS = [
-    { label: 'Pending', value: 'pending' },
-    { label: 'Verified', value: 'verified' },
-    { label: 'Rejected', value: 'rejected' },
-];
-
-export type BankAccountsPageProps = {
+export type AiUsageLogsPageProps = {
     data: {
         data: any[];
         total: number;
@@ -29,13 +20,14 @@ export type BankAccountsPageProps = {
         current_page: number;
         last_page: number;
     };
-    bankAccountProviders: { code: string; name: string }[];
+    summary: {
+        total_user_cost: number;
+        total_usage_cost: number;
+        total_profit: number;
+    };
 };
 
-export default function BankAccountsPage({
-    data,
-    bankAccountProviders,
-}: BankAccountsPageProps) {
+export default function AiUsageLogsPage({ data }: AiUsageLogsPageProps) {
     const columns = useMemo<ColumnDef<any>[]>(
         () => [
             {
@@ -65,113 +57,111 @@ export default function BankAccountsPage({
                 enableHiding: false,
             },
             {
-                id: 'owner',
-                accessorKey: 'owner',
+                id: 'company',
+                accessorKey: 'company',
                 header: ({ column }) => (
-                    <DataTableColumnHeader column={column} label="Owner" />
+                    <DataTableColumnHeader column={column} label="Company" />
                 ),
-                cell: ({ row }) => <div>{row.original.owner?.name ?? '-'}</div>,
+                cell: ({ row }) => (
+                    <div>{row.original.company?.name ?? '-'}</div>
+                ),
                 meta: {
-                    label: 'Owner',
+                    label: 'Company',
                     variant: 'multiSelect',
                     options: async (query, currentValues) => {
                         const response = await adminSearchResourceOwners({
-                            types: 'company,user',
+                            types: 'company',
                             keyword: query,
-                            include_ids: Array.from(currentValues).join(','),
+                            include_ids: Array.from(currentValues)
+                                .map((id) => `company:${id}`)
+                                .join(','),
                         } as any);
 
                         const companies = response.data.companies as any[];
-                        const users = response.data.users as any[];
+
                         const companyOptions = companies.map((c) => ({
                             label: c.name,
-                            value: `company:${c.id}`,
+                            value: c.id,
                         }));
-                        const userOptions = users.map((c) => ({
-                            label: c.name,
-                            value: `user:${c.id}`,
-                        }));
-                        return [...companyOptions, ...userOptions];
+                        return companyOptions;
                     },
                     icon: CircleDashedIcon,
                 },
                 enableColumnFilter: true,
                 enableSorting: false,
             },
+
             {
-                id: 'provider',
-                accessorKey: 'provider',
-                header: ({ column }) => (
-                    <DataTableColumnHeader column={column} label="Provider" />
-                ),
-                cell: ({ row }) => <div>{row.original.provider ?? '-'}</div>,
-                meta: {
-                    label: 'Provider',
-                    placeholder: 'Search provider...',
-                    variant: 'multiSelect',
-                    options: bankAccountProviders.map((provider) => ({
-                        label: provider.name,
-                        value: provider.code,
-                    })),
-                    icon: CircleDashedIcon,
-                },
-                enableColumnFilter: true,
-            },
-            {
-                id: 'branch',
-                header: ({ column }) => (
-                    <DataTableColumnHeader column={column} label="Branch" />
-                ),
-                cell: ({ row }) => <div>{row.original.branch ?? '-'}</div>,
-            },
-            {
-                id: 'account_name',
+                id: 'embedding_tokens',
+                accessorKey: 'embedding_tokens',
                 header: ({ column }) => (
                     <DataTableColumnHeader
                         column={column}
-                        label="Account Holder Name"
+                        label="Embedding Tokens"
                     />
-                ),
-                cell: ({ row }) => (
-                    <div>{row.original.account_name ?? '-'}</div>
-                ),
-            },
-            {
-                id: 'account_number',
-                header: ({ column }) => (
-                    <DataTableColumnHeader
-                        column={column}
-                        label="Account Number"
-                    />
-                ),
-                cell: ({ row }) => (
-                    <div>{row.original.account_number ?? '-'}</div>
-                ),
-            },
-            {
-                id: 'status',
-                accessorKey: 'status',
-                header: ({ column }) => (
-                    <DataTableColumnHeader column={column} label="Status" />
                 ),
                 cell: ({ cell }) => <div>{cell.getValue<any>()}</div>,
-                meta: {
-                    label: 'Status',
-                    placeholder: 'Search status...',
-                    variant: 'multiSelect',
-                    options: STATUS_OPTIONS,
-                    icon: CircleDashedIcon,
-                },
-                enableColumnFilter: true,
+                enableSorting: true,
+            },
+            {
+                id: 'prompt_tokens',
+                accessorKey: 'prompt_tokens',
+                header: ({ column }) => (
+                    <DataTableColumnHeader
+                        column={column}
+                        label="Prompt Tokens"
+                    />
+                ),
+                cell: ({ cell }) => (
+                    <div className="text-right">
+                        {cell.getValue<number>() || 0}
+                    </div>
+                ),
+                enableSorting: true,
+            },
+            {
+                id: 'completion_tokens',
+                accessorKey: 'completion_tokens',
+                header: ({ column }) => (
+                    <DataTableColumnHeader
+                        column={column}
+                        label="Completion Tokens"
+                    />
+                ),
+                cell: ({ cell }) => (
+                    <div className="text-right">
+                        {cell.getValue<number>() || 0}
+                    </div>
+                ),
+                enableSorting: true,
+            },
+            {
+                id: 'usage_cost',
+                accessorKey: 'usage_cost',
+                header: ({ column }) => (
+                    <DataTableColumnHeader column={column} label="Usage Cost" />
+                ),
+                cell: ({ cell }) => (
+                    <div className="text-right">{cell.getValue<any>()}</div>
+                ),
+                enableSorting: true,
+            },
+            {
+                id: 'user_cost',
+                accessorKey: 'user_cost',
+                header: ({ column }) => (
+                    <DataTableColumnHeader column={column} label="User Cost" />
+                ),
+                cell: ({ cell }) => (
+                    <div className="text-right">{cell.getValue<any>()}</div>
+                ),
+                enableSorting: true,
             },
             {
                 id: 'created_at',
                 accessorKey: 'created_at',
                 header: ({ column }) => (
-                    <DataTableColumnHeader
-                        column={column}
-                        label="Created Date"
-                    />
+                    <DataTableColumnHeader column={column} label="Created at" />
                 ),
                 cell: ({ cell }) => {
                     const createdAt = cell.getValue<any>();
@@ -183,27 +173,15 @@ export default function BankAccountsPage({
                     );
                 },
                 meta: {
-                    label: 'Created date',
+                    label: 'Created Date',
                     placeholder: 'Search created date...',
                     variant: 'dateRange',
                     icon: CalendarIcon,
                 },
                 enableColumnFilter: true,
             },
-            {
-                id: 'actions',
-                cell: ({ row }) => {
-                    return (
-                        <div className="flex gap-2">
-                            <ApproveButton data={row.original} />
-                            <RejectButton data={row.original} />
-                        </div>
-                    );
-                },
-                size: 32,
-            },
         ],
-        [bankAccountProviders],
+        [],
     );
 
     const { table } = useDataTable({
@@ -226,12 +204,13 @@ export default function BankAccountsPage({
     return (
         <AdminDashboardLayout
             containerClassName="p-4"
-            activeMenuIds={['funds', 'funds.bank-accounts']}
-            openMenuIds={['funds']}
-            breadcrumb={[{ title: 'Funds' }, { title: 'Bank Accounts' }]}
+            activeMenuIds={['database', 'database.ai-usage-logs']}
+            openMenuIds={['database']}
+            breadcrumb={[{ title: 'Database' }, { title: 'AI Usage Logs' }]}
         >
-            <DataTable table={table} renderEmptyState={<EmptyBankAccounts />}>
+            <DataTable table={table} renderEmptyState={<EmptyLogs />}>
                 <DataTableToolbar table={table} />
+                <Summary />
             </DataTable>
         </AdminDashboardLayout>
     );

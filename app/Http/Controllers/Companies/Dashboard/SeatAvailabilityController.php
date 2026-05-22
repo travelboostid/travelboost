@@ -75,11 +75,10 @@ class SeatAvailabilityController extends Controller
             })
 
             ->when($request->search, function ($q) use ($request) {
-                $q->where(
-                    'name',
-                    'ilike',
-                    '%'.$request->search.'%'
-                );
+                $q->where(function ($query) use ($request) {
+                    $query->where('name', 'ilike', '%'.$request->search.'%')
+                        ->orWhere('code', 'ilike', '%'.$request->search.'%');
+                });
             })
 
             ->orderBy('name')
@@ -93,6 +92,8 @@ class SeatAvailabilityController extends Controller
                 'tour' => [
                     'id' => $tour->id,
                     'name' => $tour->name,
+                    'code' => $tour->code,
+                    'duration_days' => $tour->duration_days,
                 ],
 
                 'schedules' => $tour->availabilities

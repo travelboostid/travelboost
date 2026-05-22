@@ -81,7 +81,7 @@ export default function MediasPage({ data }: MediasPageProps) {
                         const response = await adminSearchResourceOwners({
                             types: 'company,user',
                             keyword: query,
-                            include_ids: Array.from(currentValues),
+                            include_ids: Array.from(currentValues).join(','),
                         } as any);
 
                         const companies = response.data.companies as any[];
