@@ -28,7 +28,7 @@ class BookingObserver
      *
      * @var list<string>
      */
-    private const SYNC_FIELDS = ['status', 'pax_adult', 'pax_child', 'departure_date', 'tour_id', 'vendor_id'];
+    private const SYNC_FIELDS = ['status', 'pax_adult', 'pax_child', 'pax_infant', 'departure_date', 'tour_id', 'vendor_id'];
 
     public function created(Booking $booking): void
     {

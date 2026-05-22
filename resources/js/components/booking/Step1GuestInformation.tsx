@@ -741,7 +741,7 @@ export default function Step1GuestInformation({
         setContactAsGuestAdded(true);
     };
 
-    const hasSeatForContactGuest = adults + children < maxGuests;
+    const hasSeatForContactGuest = adults + children + infants < maxGuests;
     const canAddContactAsGuest =
         showAddAsGuest &&
         !readOnly &&
@@ -929,7 +929,7 @@ export default function Step1GuestInformation({
                         icon={UserIcon}
                         value={adults}
                         min={0}
-                        max={maxGuests}
+                        max={Math.max(0, maxGuests - children - infants)}
                         onChange={onAdultsChange}
                         disabled={readOnly}
                     />
@@ -939,7 +939,7 @@ export default function Step1GuestInformation({
                         icon={UserMinusIcon}
                         value={children}
                         min={0}
-                        max={Math.max(0, maxGuests - adults)}
+                        max={Math.max(0, maxGuests - adults - infants)}
                         onChange={onChildrenChange}
                         disabled={readOnly}
                     />

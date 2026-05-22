@@ -268,6 +268,63 @@ test('my bookings hides continue and reorder actions after the vendor booking de
         ->where('bookings.data.1.action_unavailable_reason', 'Booking window closed'));
 });
 
+test('my bookings shows reordered expired booking as awaiting payment continue action', function () {
+    $user = User::factory()->create(['status' => UserStatus::ACTIVE]);
+    $vendor = Company::factory()->create([
+        'username' => 'freshreordervendor',
+        'type' => 'vendor',
+    ]);
+    Domain::create([
+        'subdomain' => 'freshreordervendor',
+        'owner_type' => Company::class,
+        'owner_id' => $vendor->id,
+        'domain_enabled' => true,
+        'subdomain_enabled' => true,
+    ]);
+    $tour = Tour::factory()->create(['company_id' => $vendor->id]);
+    $schedule = TourSchedule::create([
+        'tour_id' => $tour->id,
+        'tour_code' => $tour->code,
+        'company_id' => $vendor->id,
+        'departure_date' => now()->addDays(20)->toDateString(),
+        'return_date' => now()->addDays(25)->toDateString(),
+        'is_active' => true,
+    ]);
+    TourAvailability::create([
+        'company_id' => $vendor->id,
+        'tour_id' => $tour->id,
+        'schedule_id' => $schedule->id,
+        'max_pax' => 10,
+        'available' => 10,
+    ]);
+    $booking = Booking::factory()->create([
+        'user_id' => $user->id,
+        'vendor_id' => $vendor->id,
+        'tour_id' => $tour->id,
+        'status' => BookingStatus::EXPIRED,
+        'booking_number' => 'BKG-FRESH-REORDER',
+        'departure_date' => $schedule->departure_date,
+        'reserved_type' => 'system',
+        'reserved_expires_at' => null,
+    ]);
+
+    $this->actingAs($user)
+        ->post("/bookings/{$booking->id}/reorder")
+        ->assertRedirect();
+
+    $response = $this->actingAs($user)->get('/mybookings?tab=current&booking_number=BKG-FRESH-REORDER');
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->where('activeTab', 'current')
+        ->where('selectedBookingNumber', 'BKG-FRESH-REORDER')
+        ->has('bookings.data', 1)
+        ->where('bookings.data.0.booking_number', 'BKG-FRESH-REORDER')
+        ->where('bookings.data.0.status', BookingStatus::AWAITING_PAYMENT->value)
+        ->where('bookings.data.0.can_continue_booking', true)
+        ->where('bookings.data.0.can_reorder', false));
+});
+
 test('vendor schedule date updates sync active booking departure dates shown in my bookings', function () {
     $customer = User::factory()->create(['status' => UserStatus::ACTIVE]);
     $vendorUser = User::factory()->create(['status' => UserStatus::ACTIVE]);
@@ -312,6 +369,7 @@ test('vendor schedule date updates sync active booking departure dates shown in 
         'departure_date' => $oldDate,
         'pax_adult' => 2,
         'pax_child' => 0,
+        'pax_infant' => 0,
     ]);
     $refundedBooking = Booking::factory()->create([
         'user_id' => $customer->id,

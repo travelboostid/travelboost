@@ -2,6 +2,7 @@
 
 use App\Enums\BookingStatus;
 use App\Enums\CompanyTeamStatus;
+use App\Enums\VendorAgentPartnerStatus;
 use App\Models\Booking;
 use App\Models\BookingAddon;
 use App\Models\BookingPassenger;
@@ -15,6 +16,7 @@ use App\Models\TourAvailability;
 use App\Models\TourPrice;
 use App\Models\TourSchedule;
 use App\Models\User;
+use App\Models\VendorAgentPartner;
 use Database\Seeders\Common\RolePermissionSeeder;
 use Illuminate\Support\Facades\DB;
 
@@ -312,6 +314,83 @@ test('booking index filters waiting payment approval and exposes manual payment 
         ->where('data.data.0.manual_payment.proof_path', 'payment-proofs/proof.jpg'));
 });
 
+test('booking index exposes manual payment review permission only for the payment receiver', function () {
+    $vendorUser = User::factory()->create();
+    $agentUser = User::factory()->create();
+    $vendor = Company::factory()->create([
+        'username' => 'reviewmodevendor',
+        'type' => 'vendor',
+    ]);
+    $agent = Company::factory()->create([
+        'username' => 'reviewmodeagent',
+        'type' => 'agent',
+    ]);
+
+    CompanyTeam::create([
+        'company_id' => $vendor->id,
+        'user_id' => $vendorUser->id,
+        'status' => CompanyTeamStatus::ACTIVE,
+        'is_owner' => true,
+        'accepted_at' => now(),
+    ]);
+    CompanyTeam::create([
+        'company_id' => $agent->id,
+        'user_id' => $agentUser->id,
+        'status' => CompanyTeamStatus::ACTIVE,
+        'is_owner' => true,
+        'accepted_at' => now(),
+    ]);
+    VendorAgentPartner::create([
+        'vendor_id' => $vendor->id,
+        'agent_id' => $agent->id,
+        'status' => VendorAgentPartnerStatus::ACTIVE,
+        'accepted_at' => now(),
+        'payment_mode' => 'agent',
+    ]);
+
+    $tour = Tour::factory()->create(['company_id' => $vendor->id]);
+    $booking = Booking::factory()->create([
+        'vendor_id' => $vendor->id,
+        'agent_id' => $agent->id,
+        'tour_id' => $tour->id,
+        'status' => 'waiting payment approval',
+        'payment_mode' => 'manual',
+    ]);
+
+    Payment::create([
+        'owner_type' => User::class,
+        'owner_id' => $this->user->id,
+        'payable_type' => Booking::class,
+        'payable_id' => $booking->id,
+        'provider' => 'manual',
+        'payment_method' => 'bank_transfer',
+        'amount' => 500_000,
+        'status' => 'pending',
+        'payload' => [
+            'payment_type' => 'down_payment',
+            'sender_bank' => 'BCA',
+            'sender_account' => '1234567890',
+            'proof_path' => 'payment-proofs/proof.jpg',
+        ],
+    ]);
+
+    $vendorResponse = $this->actingAs($vendorUser)
+        ->get("/companies/{$vendor->username}/dashboard/bookings?status=waiting%20payment%20approval");
+
+    $vendorResponse->assertOk();
+    $vendorResponse->assertInertia(fn ($page) => $page
+        ->has('data.data', 1)
+        ->where('data.data.0.can_review_manual_payment', false));
+
+    $agentResponse = $this->actingAs($agentUser)
+        ->get("/companies/{$agent->username}/dashboard/bookings?status=waiting%20payment%20approval");
+
+    $agentResponse->assertOk();
+    $agentResponse->assertInertia(fn ($page) => $page
+        ->has('data.data', 1)
+        ->where('data.data.0.can_review_manual_payment', true));
+});
+
 test('availability save preserves manual reserved and recomputes booking reserved from bookings', function () {
     $vendor = Company::factory()->create(['type' => 'vendor']);
 
@@ -532,7 +611,8 @@ test('vendor can update booking wizard data dynamically', function () {
 
     expect($booking->contact_name)->toBe('Updated Customer')
         ->and($booking->pax_adult)->toBe(2)
-        ->and((float) $booking->grand_total)->toBe(2_370_000.0)
+        ->and((float) $booking->grand_total)->toBe(2_770_000.0)
+        ->and((float) $booking->commission_amount)->toBe(0.0)
         ->and($booking->passengers)->toHaveCount(2)
         ->and($booking->rooms)->toHaveCount(1)
         ->and($booking->addons)->toHaveCount(1)

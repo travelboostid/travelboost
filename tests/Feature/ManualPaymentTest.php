@@ -2,6 +2,7 @@
 
 use App\Enums\BookingStatus;
 use App\Enums\CompanyTeamStatus;
+use App\Enums\VendorAgentPartnerStatus;
 use App\Models\Booking;
 use App\Models\Company;
 use App\Models\CompanyTeam;
@@ -10,6 +11,7 @@ use App\Models\Tour;
 use App\Models\TourAvailability;
 use App\Models\TourSchedule;
 use App\Models\User;
+use App\Models\VendorAgentPartner;
 use Database\Seeders\Common\RolePermissionSeeder;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -29,6 +31,9 @@ test('customer can submit a manual payment proof for a booking', function () {
 
     $user = User::factory()->create();
     $vendor = Company::factory()->create(['type' => 'vendor']);
+    $vendor->companySetting()->updateOrCreate([], [
+        'minimum_down_payment' => 30,
+    ]);
     $tour = Tour::factory()->create(['company_id' => $vendor->id]);
     $booking = Booking::factory()->create([
         'user_id' => $user->id,
@@ -72,9 +77,100 @@ test('customer can submit a manual payment proof for a booking', function () {
         'file_name' => 'proof.jpg',
     ]);
 
+    $manualPayment = $booking->fresh()->payments()->latest()->first();
+
     expect($booking->fresh()->status->value)->toBe('waiting payment approval');
     expect($booking->fresh()->payment_mode)->toBe('manual');
-    expect($booking->fresh()->payments()->latest()->first()->payload['payment_type'])->toBe('down_payment');
+    expect($manualPayment->payload)->toMatchArray([
+        'payment_type' => 'down_payment',
+        'payment_receiver_type' => 'vendor',
+        'payment_receiver_company_id' => $vendor->id,
+        'partnership_payment_mode' => 'vendor',
+    ]);
+});
+
+test('customer cannot submit down payment proof when vendor minimum down payment is not configured', function () {
+    Storage::fake('public');
+
+    $user = User::factory()->create();
+    $vendor = Company::factory()->create(['type' => 'vendor']);
+    $vendor->companySetting()->updateOrCreate([], [
+        'minimum_down_payment' => 0,
+    ]);
+    $tour = Tour::factory()->create(['company_id' => $vendor->id]);
+    $booking = Booking::factory()->create([
+        'user_id' => $user->id,
+        'vendor_id' => $vendor->id,
+        'tour_id' => $tour->id,
+        'status' => 'reserved',
+        'grand_total' => 1_000_000,
+    ]);
+
+    $response = $this->actingAs($user)
+        ->from("/bookings/{$booking->id}/manual-payment")
+        ->post("/bookings/{$booking->id}/manual-payment", [
+            'sender_bank_name' => 'BCA',
+            'sender_account_number' => '1234567890',
+            'transfer_amount' => 500_000,
+            'payment_type' => 'down_payment',
+            'proof' => UploadedFile::fake()->image('proof.jpg'),
+        ]);
+
+    $response->assertSessionHasErrors('payment_type');
+
+    expect($booking->payments()->count())->toBe(0)
+        ->and(Storage::disk('public')->allFiles('payment-proofs'))->toBe([]);
+});
+
+test('agent payment mode records agent receiver context on manual payment proof', function () {
+    Storage::fake('public');
+
+    $user = User::factory()->create();
+    $vendor = Company::factory()->create([
+        'username' => 'proofmodevendor',
+        'type' => 'vendor',
+    ]);
+    $vendor->companySetting()->updateOrCreate([], [
+        'minimum_down_payment' => 30,
+    ]);
+    $agent = Company::factory()->create([
+        'username' => 'proofmodeagent',
+        'type' => 'agent',
+    ]);
+    VendorAgentPartner::create([
+        'vendor_id' => $vendor->id,
+        'agent_id' => $agent->id,
+        'status' => VendorAgentPartnerStatus::ACTIVE,
+        'accepted_at' => now(),
+        'payment_mode' => 'agent',
+    ]);
+
+    $tour = Tour::factory()->create(['company_id' => $vendor->id]);
+    $booking = Booking::factory()->create([
+        'user_id' => $user->id,
+        'vendor_id' => $vendor->id,
+        'agent_id' => $agent->id,
+        'tour_id' => $tour->id,
+        'status' => 'reserved',
+        'grand_total' => 1_000_000,
+    ]);
+
+    $this->actingAs($user)->post("/bookings/{$booking->id}/manual-payment", [
+        'sender_bank_name' => 'BCA',
+        'sender_account_number' => '1234567890',
+        'transfer_amount' => 500_000,
+        'payment_type' => 'down_payment',
+        'proof' => UploadedFile::fake()->image('proof.jpg'),
+    ])->assertRedirect();
+
+    $manualPayment = $booking->fresh()->payments()->latest()->first();
+
+    expect($manualPayment->payload)->toMatchArray([
+        'payment_type' => 'down_payment',
+        'payment_receiver_type' => 'agent',
+        'payment_receiver_company_id' => $agent->id,
+        'partnership_payment_mode' => 'agent',
+    ]);
 });
 
 test('manual payment proof requires payment type', function () {
@@ -82,6 +178,9 @@ test('manual payment proof requires payment type', function () {
 
     $user = User::factory()->create();
     $vendor = Company::factory()->create(['type' => 'vendor']);
+    $vendor->companySetting()->updateOrCreate([], [
+        'minimum_down_payment' => 30,
+    ]);
     $tour = Tour::factory()->create(['company_id' => $vendor->id]);
     $booking = Booking::factory()->create([
         'user_id' => $user->id,
@@ -183,6 +282,9 @@ test('manual payment sender account number must contain digits only', function (
 test('customer can create an online booking payment with midtrans snap token', function () {
     $user = User::factory()->create();
     $vendor = Company::factory()->create(['type' => 'vendor']);
+    $vendor->companySetting()->updateOrCreate([], [
+        'minimum_down_payment' => 30,
+    ]);
     $tour = Tour::factory()->create(['company_id' => $vendor->id]);
     $booking = Booking::factory()->create([
         'user_id' => $user->id,
@@ -431,6 +533,142 @@ test('manual payment approval uses verified paid total instead of payload status
     $response->assertRedirect();
 
     expect($booking->fresh()->status->value)->toBe('down payment');
+    expect($payment->fresh()->status->value)->toBe('paid');
+});
+
+test('vendor payment mode lets only vendor review manual transfer proof', function () {
+    $user = User::factory()->create();
+    $vendorUser = User::factory()->create();
+    $agentUser = User::factory()->create();
+    $vendor = Company::factory()->create([
+        'username' => 'manualmodevendor',
+        'type' => 'vendor',
+    ]);
+    $agent = Company::factory()->create([
+        'username' => 'manualmodeagent',
+        'type' => 'agent',
+    ]);
+
+    CompanyTeam::create([
+        'company_id' => $vendor->id,
+        'user_id' => $vendorUser->id,
+        'status' => CompanyTeamStatus::ACTIVE,
+        'is_owner' => true,
+        'accepted_at' => now(),
+    ]);
+    CompanyTeam::create([
+        'company_id' => $agent->id,
+        'user_id' => $agentUser->id,
+        'status' => CompanyTeamStatus::ACTIVE,
+        'is_owner' => true,
+        'accepted_at' => now(),
+    ]);
+    VendorAgentPartner::create([
+        'vendor_id' => $vendor->id,
+        'agent_id' => $agent->id,
+        'status' => VendorAgentPartnerStatus::ACTIVE,
+        'accepted_at' => now(),
+        'payment_mode' => 'vendor',
+    ]);
+
+    $tour = Tour::factory()->create(['company_id' => $vendor->id]);
+    $booking = Booking::factory()->create([
+        'user_id' => $user->id,
+        'vendor_id' => $vendor->id,
+        'agent_id' => $agent->id,
+        'tour_id' => $tour->id,
+        'status' => BookingStatus::WAITING_PAYMENT_APPROVAL,
+        'payment_mode' => 'manual',
+        'grand_total' => 1_000_000,
+    ]);
+
+    $payment = $booking->payments()->create([
+        'owner_type' => User::class,
+        'owner_id' => $user->id,
+        'provider' => 'manual',
+        'payment_method' => 'bank_transfer',
+        'amount' => 200_000,
+        'status' => 'pending',
+        'payload' => ['payment_type' => 'down_payment'],
+    ]);
+
+    $this->actingAs($agentUser)
+        ->post("/companies/{$agent->username}/dashboard/bookings/{$booking->id}/manual-payments/{$payment->id}/decline")
+        ->assertForbidden();
+
+    $this->actingAs($vendorUser)
+        ->post("/companies/{$vendor->username}/dashboard/bookings/{$booking->id}/manual-payments/{$payment->id}/accept")
+        ->assertRedirect();
+
+    expect($booking->fresh()->status->value)->toBe('down payment');
+    expect($payment->fresh()->status->value)->toBe('paid');
+});
+
+test('agent payment mode lets only agent review manual transfer proof', function () {
+    $user = User::factory()->create();
+    $vendorUser = User::factory()->create();
+    $agentUser = User::factory()->create();
+    $vendor = Company::factory()->create([
+        'username' => 'agentmanualmodevendor',
+        'type' => 'vendor',
+    ]);
+    $agent = Company::factory()->create([
+        'username' => 'agentmanualmodeagent',
+        'type' => 'agent',
+    ]);
+
+    CompanyTeam::create([
+        'company_id' => $vendor->id,
+        'user_id' => $vendorUser->id,
+        'status' => CompanyTeamStatus::ACTIVE,
+        'is_owner' => true,
+        'accepted_at' => now(),
+    ]);
+    CompanyTeam::create([
+        'company_id' => $agent->id,
+        'user_id' => $agentUser->id,
+        'status' => CompanyTeamStatus::ACTIVE,
+        'is_owner' => true,
+        'accepted_at' => now(),
+    ]);
+    VendorAgentPartner::create([
+        'vendor_id' => $vendor->id,
+        'agent_id' => $agent->id,
+        'status' => VendorAgentPartnerStatus::ACTIVE,
+        'accepted_at' => now(),
+        'payment_mode' => 'agent',
+    ]);
+
+    $tour = Tour::factory()->create(['company_id' => $vendor->id]);
+    $booking = Booking::factory()->create([
+        'user_id' => $user->id,
+        'vendor_id' => $vendor->id,
+        'agent_id' => $agent->id,
+        'tour_id' => $tour->id,
+        'status' => BookingStatus::WAITING_PAYMENT_APPROVAL,
+        'payment_mode' => 'manual',
+        'grand_total' => 1_000_000,
+    ]);
+
+    $payment = $booking->payments()->create([
+        'owner_type' => User::class,
+        'owner_id' => $user->id,
+        'provider' => 'manual',
+        'payment_method' => 'bank_transfer',
+        'amount' => 1_000_000,
+        'status' => 'pending',
+        'payload' => ['payment_type' => 'full_payment'],
+    ]);
+
+    $this->actingAs($vendorUser)
+        ->post("/companies/{$vendor->username}/dashboard/bookings/{$booking->id}/manual-payments/{$payment->id}/decline")
+        ->assertForbidden();
+
+    $this->actingAs($agentUser)
+        ->post("/companies/{$agent->username}/dashboard/bookings/{$booking->id}/manual-payments/{$payment->id}/accept")
+        ->assertRedirect();
+
+    expect($booking->fresh()->status->value)->toBe('full payment');
     expect($payment->fresh()->status->value)->toBe('paid');
 });
 

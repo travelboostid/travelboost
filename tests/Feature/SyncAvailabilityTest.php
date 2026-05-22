@@ -62,6 +62,7 @@ test('creating a booking dispatches the sync job', function () {
         'status' => BookingStatus::RESERVED,
         'pax_adult' => 2,
         'pax_child' => 1,
+        'pax_infant' => 0,
     ]);
 
     Queue::assertPushed(SyncTourAvailabilityJob::class, function ($job) {
@@ -98,6 +99,26 @@ test('updating booking status dispatches the sync job', function () {
     Queue::fake();
 
     $booking->update(['status' => BookingStatus::CANCELLED]);
+
+    Queue::assertPushed(SyncTourAvailabilityJob::class);
+});
+
+test('updating booking infant count dispatches the sync job', function () {
+    $booking = Booking::withoutEvents(function () {
+        return Booking::factory()->create([
+            'tour_id' => $this->tour->id,
+            'departure_date' => $this->departureDate,
+            'vendor_id' => $this->company->id,
+            'status' => BookingStatus::RESERVED,
+            'pax_adult' => 1,
+            'pax_child' => 0,
+            'pax_infant' => 0,
+        ]);
+    });
+
+    Queue::fake();
+
+    $booking->update(['pax_infant' => 2]);
 
     Queue::assertPushed(SyncTourAvailabilityJob::class);
 });
@@ -150,6 +171,7 @@ test('SyncAvailabilityAction correctly computes snapshot columns and available',
             'status' => BookingStatus::RESERVED,
             'pax_adult' => 2,
             'pax_child' => 1,
+            'pax_infant' => 0,
         ]);
 
         Booking::factory()->create([
@@ -159,6 +181,7 @@ test('SyncAvailabilityAction correctly computes snapshot columns and available',
             'status' => BookingStatus::AWAITING_PAYMENT,
             'pax_adult' => 4,
             'pax_child' => 0,
+            'pax_infant' => 0,
         ]);
 
         Booking::factory()->create([
@@ -168,6 +191,7 @@ test('SyncAvailabilityAction correctly computes snapshot columns and available',
             'status' => 'waiting payment approval',
             'pax_adult' => 3,
             'pax_child' => 0,
+            'pax_infant' => 0,
         ]);
 
         Booking::factory()->create([
@@ -177,6 +201,7 @@ test('SyncAvailabilityAction correctly computes snapshot columns and available',
             'status' => 'booking reserved',
             'pax_adult' => 1,
             'pax_child' => 1,
+            'pax_infant' => 0,
         ]);
 
         Booking::factory()->create([
@@ -186,6 +211,7 @@ test('SyncAvailabilityAction correctly computes snapshot columns and available',
             'status' => 'manual reserved',
             'pax_adult' => 4,
             'pax_child' => 0,
+            'pax_infant' => 0,
         ]);
 
         Booking::factory()->create([
@@ -195,6 +221,7 @@ test('SyncAvailabilityAction correctly computes snapshot columns and available',
             'status' => BookingStatus::DOWN_PAYMENT,
             'pax_adult' => 2,
             'pax_child' => 0,
+            'pax_infant' => 0,
         ]);
 
         Booking::factory()->create([
@@ -204,6 +231,7 @@ test('SyncAvailabilityAction correctly computes snapshot columns and available',
             'status' => BookingStatus::FULL_PAYMENT,
             'pax_adult' => 1,
             'pax_child' => 0,
+            'pax_infant' => 0,
         ]);
 
         Booking::factory()->create([
@@ -213,6 +241,7 @@ test('SyncAvailabilityAction correctly computes snapshot columns and available',
             'status' => BookingStatus::CANCELLED,
             'pax_adult' => 1,
             'pax_child' => 0,
+            'pax_infant' => 0,
         ]);
 
         Booking::factory()->create([
@@ -222,6 +251,7 @@ test('SyncAvailabilityAction correctly computes snapshot columns and available',
             'status' => BookingStatus::REFUNDED,
             'pax_adult' => 2,
             'pax_child' => 0,
+            'pax_infant' => 0,
         ]);
 
         Booking::factory()->create([
@@ -231,6 +261,7 @@ test('SyncAvailabilityAction correctly computes snapshot columns and available',
             'status' => BookingStatus::EXPIRED,
             'pax_adult' => 1,
             'pax_child' => 0,
+            'pax_infant' => 0,
         ]);
 
         Booking::factory()->create([
@@ -240,6 +271,7 @@ test('SyncAvailabilityAction correctly computes snapshot columns and available',
             'status' => BookingStatus::WAITING_LIST,
             'pax_adult' => 1,
             'pax_child' => 1,
+            'pax_infant' => 0,
         ]);
     });
 
@@ -261,6 +293,32 @@ test('SyncAvailabilityAction correctly computes snapshot columns and available',
         ->and((float) $this->availability->available)->toBe(18.0);
 });
 
+test('infants reduce availability with other booking guests', function () {
+    $this->availability->update(['RS' => 1]);
+
+    Booking::withoutEvents(function () {
+        Booking::factory()->create([
+            'tour_id' => $this->tour->id,
+            'departure_date' => $this->departureDate,
+            'vendor_id' => $this->company->id,
+            'status' => BookingStatus::BOOKING_RESERVED,
+            'reserved_type' => 'system',
+            'reserved_expires_at' => now()->addMinutes(10),
+            'pax_adult' => 1,
+            'pax_child' => 1,
+            'pax_infant' => 2,
+        ]);
+    });
+
+    app(SyncAvailabilityAction::class)->execute($this->tour->id, $this->departureDate, $this->company->id);
+
+    $this->availability->refresh();
+
+    expect((int) $this->availability->RS)->toBe(1)
+        ->and((int) $this->availability->BRS)->toBe(4)
+        ->and((float) $this->availability->available)->toBe(25.0);
+});
+
 test('booking reserved expires without changing manual reserved holds', function () {
     $this->availability->update([
         'RS' => 1,
@@ -277,6 +335,7 @@ test('booking reserved expires without changing manual reserved holds', function
             'reserved_expires_at' => now()->subSecond(),
             'pax_adult' => 2,
             'pax_child' => 1,
+            'pax_infant' => 0,
         ]);
     });
 
@@ -302,6 +361,7 @@ test('booking reserved does not expire before server hold deadline', function ()
             'reserved_expires_at' => now()->addMinute(),
             'pax_adult' => 2,
             'pax_child' => 1,
+            'pax_infant' => 0,
         ]);
     });
 
@@ -323,6 +383,7 @@ test('booking reserved holds reduce availability without changing manual reserve
             'reserved_expires_at' => now()->addMinutes(10),
             'pax_adult' => 2,
             'pax_child' => 1,
+            'pax_infant' => 0,
         ]);
     });
 
@@ -346,6 +407,7 @@ test('SyncAvailabilityAction floors available to zero on oversell', function () 
             'status' => BookingStatus::RESERVED,
             'pax_adult' => 3,
             'pax_child' => 2,
+            'pax_infant' => 0,
         ]);
     });
 
