@@ -3,7 +3,7 @@ import { EmptyTours } from '@/pages/companies/dashboard/vendor-tours/empty-tours
 import { MessageCircle, SearchIcon } from 'lucide-react';
 import { useState } from 'react';
 
-import PublicCatalogLayout from '@/layouts/PublicCatalogLayout';
+import PublicCatalogLayout from '@/layouts/public-catalog-layout';
 //
 type Props = {
     username: string;

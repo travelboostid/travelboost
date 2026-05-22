@@ -7,7 +7,7 @@ import { useAnonymousUserContext } from '@/components/anonymous-user-context-pro
 import FloatingChatWidget from '@/components/chat/floating-chat-widget';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { useMemo } from 'react';
-import type { PublicCatalogLayoutProps } from './PublicCatalogLayout';
+import type { PublicCatalogLayoutProps } from './public-catalog-layout';
 
 export default function PublicCatalogLayoutInner({
     children,

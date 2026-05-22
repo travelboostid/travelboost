@@ -45,7 +45,7 @@ export default function Page({
             );
         }, 500);
         return () => clearTimeout(timeout);
-    }, [company.username, filters.category, search, vendor.username]);
+    }, [company, filters, search, vendor]);
 
     const isAgent = company.type === 'agent';
     const isOwnCatalog = company.username === vendor?.username;
@@ -94,7 +94,7 @@ export default function Page({
         }
 
         return filtered;
-    }, [data, showInactive, isAgent, isOwnCatalog, company?.id]);
+    }, [data, showInactive, isAgent, isOwnCatalog, company]);
 
     return (
         <CompanyDashboardLayout

@@ -34,6 +34,7 @@ type PageProps = {
 };
 
 export default function Page({ data }: PageProps) {
+    const { company } = usePageSharedDataProps();
     const columns = useMemo<ColumnDef<any>[]>(
         () => [
             {
@@ -133,7 +134,6 @@ export default function Page({ data }: PageProps) {
                 ),
                 cell: ({ row }) => {
                     const registration = row.original;
-                    const { company } = usePageSharedDataProps();
 
                     const handleUpdate = (val: string) => {
                         router.put(
@@ -199,7 +199,7 @@ export default function Page({ data }: PageProps) {
                 size: 32,
             },
         ],
-        [],
+        [company.username],
     );
 
     const { table } = useDataTable({

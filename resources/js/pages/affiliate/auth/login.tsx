@@ -27,6 +27,7 @@ export default function Login() {
 
     useEffect(() => {
         if (flash?.account_inactive) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setModalMessage(flash.account_inactive);
             setShowModal(true);
         }

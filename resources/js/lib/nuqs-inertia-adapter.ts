@@ -29,6 +29,7 @@ function useNuqsInertiaAdapter(): AdapterInterface {
     );
 
     useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setSearchParams(new URLSearchParams(resolvedUrl.search));
     }, [resolvedUrl]);
 

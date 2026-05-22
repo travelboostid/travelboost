@@ -321,7 +321,7 @@ export default function NotificationsPage({ data }: NotificationsPageProps) {
                 enableSorting: false,
             },
         ],
-        [company.username],
+        [markAsRead, deleteNotification],
     );
 
     const { table } = useDataTable({

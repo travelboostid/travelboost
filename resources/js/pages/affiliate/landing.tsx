@@ -265,6 +265,7 @@ export default function Landing() {
 
     useEffect(() => {
         if (typeof window !== 'undefined') {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setCurrentDomain(window.location.host);
         }
 

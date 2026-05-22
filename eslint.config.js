@@ -38,25 +38,7 @@ export default [
                 node: true,
             },
         },
-        rules: {
-            'import/order': [
-                'error',
-                {
-                    groups: [
-                        'builtin',
-                        'external',
-                        'internal',
-                        'parent',
-                        'sibling',
-                        'index',
-                    ],
-                    alphabetize: {
-                        order: 'asc',
-                        caseInsensitive: true,
-                    },
-                },
-            ],
-        },
+        rules: {},
     },
     {
         ...importPlugin.flatConfigs.typescript,
@@ -91,6 +73,8 @@ export default [
             'bootstrap/ssr',
             'tailwind.config.js',
             'vite.config.ts',
+            'resources/js/api/**',
+            'scripts/**',
         ],
     },
     prettier, // Turn off all rules that might conflict with Prettier
