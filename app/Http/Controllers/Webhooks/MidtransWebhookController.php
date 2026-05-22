@@ -190,7 +190,7 @@ class MidtransWebhookController extends Controller
         $appConfig = AppConfig::where('key', 'admin')->first();
         $adminConfig = $appConfig ? $appConfig->value : [];
 
-        $freeAiAfterSub = isset($adminConfig['free_AI_after_subscription']) ? (float) $adminConfig['free_AI_after_subscription'] : 0;
+        $freeAiAfterSub = isset($adminConfig['free_ai_after_subscription']) ? (float) $adminConfig['free_ai_after_subscription'] : 0;
 
         if ($freeAiAfterSub > 0) {
             $aiCredit = $owner->aiCredit()->first();

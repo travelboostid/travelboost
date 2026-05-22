@@ -27,6 +27,7 @@ export default function SubscriptionAlert() {
 
     useEffect(() => {
         if (availablePackages.length > 0 && !packageId) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setPackageId(availablePackages[0].id.toString());
         }
     }, [availablePackages, packageId]);

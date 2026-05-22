@@ -1,3 +1,7 @@
+import GeoCitySelector from '@/components/geo-city-selector';
+import GeoDistrictSelector from '@/components/geo-district-selector';
+import GeoProvinceSelector from '@/components/geo-province-selector';
+import GeoVillageSelector from '@/components/geo-village-selector';
 import InputError from '@/components/input-error';
 import { IdentityCardPicker } from '@/components/media/identity-card-picker';
 import { PhotoPicker } from '@/components/media/photo-picker';
@@ -15,9 +19,8 @@ import { Textarea } from '@/components/ui/textarea';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { createCompany } from '@/routes/me/onboarding';
 import { Head, useForm } from '@inertiajs/react';
-import axios from 'axios';
 import { Building, CreditCard, MapPin, Save, ShieldCheck } from 'lucide-react';
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { FormattedMessage } from 'react-intl';
 
 interface Props {
@@ -30,11 +33,6 @@ interface Props {
 
 export default function RegisterAgentAccount({ affiliate }: Props) {
     const { auth } = usePageSharedDataProps();
-
-    const [provinces, setProvinces] = useState<any[]>([]);
-    const [cities, setCities] = useState<any[]>([]);
-    const [districts, setDistricts] = useState<any[]>([]);
-    const [villages, setVillages] = useState<any[]>([]);
     const [identityMedia, setIdentityMedia] = useState<any>(null);
 
     const form = useForm({
@@ -44,55 +42,16 @@ export default function RegisterAgentAccount({ affiliate }: Props) {
         phone: (auth.user.phone || '') as string,
         customer_service_phone: '',
         address: '',
-        province: '',
-        city: '',
-        district: '',
-        village: '',
+        province_id: 0,
+        city_id: 0,
+        district_id: 0,
+        village_id: 0,
         postal_code: '',
         subdomain: auth.user.username || '',
         photo_id: undefined as number | undefined,
         identity_number: '',
         identity_card_id: undefined as number | undefined,
     });
-
-    useEffect(() => {
-        axios
-            .get('/api/regions/provinces')
-            .then((res) => setProvinces(res.data));
-    }, []);
-
-    useEffect(() => {
-        const p = provinces.find((x) => x.name === form.data.province);
-        if (p) {
-            axios
-                .get(`/api/regions/cities/${p.code}`)
-                .then((res) => setCities(res.data));
-        } else {
-            setCities([]);
-        }
-    }, [form.data.province, provinces]);
-
-    useEffect(() => {
-        const c = cities.find((x) => x.name === form.data.city);
-        if (c) {
-            axios
-                .get(`/api/regions/districts/${c.code}`)
-                .then((res) => setDistricts(res.data));
-        } else {
-            setDistricts([]);
-        }
-    }, [form.data.city, cities]);
-
-    useEffect(() => {
-        const d = districts.find((x) => x.name === form.data.district);
-        if (d) {
-            axios
-                .get(`/api/regions/villages/${d.code}`)
-                .then((res) => setVillages(res.data));
-        } else {
-            setVillages([]);
-        }
-    }, [form.data.district, districts]);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -356,28 +315,13 @@ export default function RegisterAgentAccount({ affiliate }: Props) {
                                     <FormattedMessage defaultMessage="Province" />{' '}
                                     <span className="text-destructive">*</span>
                                 </Label>
-                                <select
-                                    required
-                                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                                    value={form.data.province}
-                                    onChange={(e) => {
-                                        form.setData(
-                                            'province',
-                                            e.target.value,
-                                        );
-                                        form.setData('city', '');
-                                        form.setData('district', '');
-                                        form.setData('village', '');
-                                    }}
-                                >
-                                    <option value="">Select Province</option>
-                                    {provinces.map((p: any) => (
-                                        <option key={p.code} value={p.name}>
-                                            {p.name}
-                                        </option>
-                                    ))}
-                                </select>
-                                <InputError message={form.errors.province} />
+                                <GeoProvinceSelector
+                                    value={String(form.data.province_id)}
+                                    onValueChange={(v) =>
+                                        form.setData('province_id', Number(v))
+                                    }
+                                />
+                                <InputError message={form.errors.province_id} />
                             </div>
 
                             <div className="space-y-2">
@@ -385,25 +329,14 @@ export default function RegisterAgentAccount({ affiliate }: Props) {
                                     <FormattedMessage defaultMessage="City" />{' '}
                                     <span className="text-destructive">*</span>
                                 </Label>
-                                <select
-                                    required
-                                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-50"
-                                    value={form.data.city}
-                                    onChange={(e) => {
-                                        form.setData('city', e.target.value);
-                                        form.setData('district', '');
-                                        form.setData('village', '');
-                                    }}
-                                    disabled={!form.data.province}
-                                >
-                                    <option value="">Select City</option>
-                                    {cities.map((c: any) => (
-                                        <option key={c.code} value={c.name}>
-                                            {c.name}
-                                        </option>
-                                    ))}
-                                </select>
-                                <InputError message={form.errors.city} />
+                                <GeoCitySelector
+                                    provinceId={form.data.province_id}
+                                    value={String(form.data.city_id)}
+                                    onValueChange={(v) =>
+                                        form.setData('city_id', Number(v))
+                                    }
+                                />
+                                <InputError message={form.errors.city_id} />
                             </div>
 
                             <div className="space-y-2">
@@ -411,27 +344,14 @@ export default function RegisterAgentAccount({ affiliate }: Props) {
                                     <FormattedMessage defaultMessage="District (Kecamatan)" />{' '}
                                     <span className="text-destructive">*</span>
                                 </Label>
-                                <select
-                                    required
-                                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-50"
-                                    value={form.data.district}
-                                    onChange={(e) => {
-                                        form.setData(
-                                            'district',
-                                            e.target.value,
-                                        );
-                                        form.setData('village', '');
-                                    }}
-                                    disabled={!form.data.city}
-                                >
-                                    <option value="">Select District</option>
-                                    {districts.map((d: any) => (
-                                        <option key={d.code} value={d.name}>
-                                            {d.name}
-                                        </option>
-                                    ))}
-                                </select>
-                                <InputError message={form.errors.district} />
+                                <GeoDistrictSelector
+                                    cityId={form.data.city_id}
+                                    value={String(form.data.district_id)}
+                                    onValueChange={(v) =>
+                                        form.setData('district_id', Number(v))
+                                    }
+                                />
+                                <InputError message={form.errors.district_id} />
                             </div>
 
                             <div className="space-y-2">
@@ -439,23 +359,14 @@ export default function RegisterAgentAccount({ affiliate }: Props) {
                                     <FormattedMessage defaultMessage="Village (Kelurahan)" />{' '}
                                     <span className="text-destructive">*</span>
                                 </Label>
-                                <select
-                                    required
-                                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-50"
-                                    value={form.data.village}
-                                    onChange={(e) =>
-                                        form.setData('village', e.target.value)
+                                <GeoVillageSelector
+                                    districtId={form.data.district_id}
+                                    value={String(form.data.village_id)}
+                                    onValueChange={(v) =>
+                                        form.setData('village_id', Number(v))
                                     }
-                                    disabled={!form.data.district}
-                                >
-                                    <option value="">Select Village</option>
-                                    {villages.map((v: any) => (
-                                        <option key={v.code} value={v.name}>
-                                            {v.name}
-                                        </option>
-                                    ))}
-                                </select>
-                                <InputError message={form.errors.village} />
+                                />
+                                <InputError message={form.errors.village_id} />
                             </div>
 
                             <div className="space-y-2 md:col-span-2">

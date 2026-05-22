@@ -7,6 +7,7 @@ use App\Enums\CompanyTeamStatus;
 use App\Enums\CompanyType;
 use App\Enums\UserStatus;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Me\CreateCompanyRequest;
 use App\Models\AffiliateProfile;
 use App\Models\AgentSubscription;
 use App\Models\AgentSubscriptionPackage;
@@ -15,7 +16,6 @@ use App\Models\Company;
 use App\Models\CompanyTeam;
 use App\Notifications\AgentJoinedAffiliateNetworkNotification;
 use App\Notifications\AgentOnboardingWelcomeNotification;
-use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Context;
@@ -49,27 +49,11 @@ class OnboardingController extends Controller
         ]);
     }
 
-    public function createCompany(Request $request)
+    public function createCompany(CreateCompanyRequest $request)
     {
         $user = Auth::user();
 
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|email|max:255',
-            'username' => 'required|string|max:255|unique:companies,username',
-            'subdomain' => 'required|string|max:255|unique:domains,subdomain',
-            'phone' => 'required|string|max:255',
-            'customer_service_phone' => 'required|string|max:255',
-            'address' => 'required|string',
-            'province' => 'required|string',
-            'city' => 'required|string',
-            'district' => 'required|string',
-            'village' => 'required|string',
-            'postal_code' => 'nullable|string',
-            'identity_number' => 'required|string|size:16',
-            'identity_card_id' => 'required|integer|exists:medias,id',
-            'photo_id' => 'nullable|integer|exists:medias,id',
-        ]);
+        $validated = $request->validated();
 
         $validatedCompanyDto = Arr::except($validated, ['subdomain']);
         $validatedCompanyDto['type'] = CompanyType::AGENT;
@@ -83,13 +67,13 @@ class OnboardingController extends Controller
 
         $company->domain()->create([
             'subdomain' => $validated['subdomain'],
-            'domain_enabled' => true,
-            'subdomain_enabled' => false,
+            'domain_enabled' => false,
+            'subdomain_enabled' => true,
         ]);
 
         $appConfig = AppConfig::where('key', 'admin')->first();
         $adminConfig = $appConfig ? $appConfig->value : [];
-        $freeAiCredit = isset($adminConfig['free_AI_credit']) ? (float) $adminConfig['free_AI_credit'] : 0;
+        $freeAiCredit = isset($adminConfig['free_ai_credit']) ? (float) $adminConfig['free_ai_credit'] : 0;
 
         $company->aiCredit()->update([
             'balance' => $freeAiCredit,

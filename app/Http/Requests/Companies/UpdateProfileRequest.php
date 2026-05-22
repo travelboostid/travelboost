@@ -5,7 +5,6 @@ namespace App\Http\Requests\Companies;
 use App\Models\Company;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
-use Illuminate\Validation\Validator;
 
 class UpdateProfileRequest extends FormRequest
 {
@@ -42,63 +41,66 @@ class UpdateProfileRequest extends FormRequest
                     ),
             ],
             'domain_enabled' => [
-            'sometimes',
-            'boolean',
-        ],
+                'sometimes',
+                'boolean',
+            ],
             'domain' => [
-            Rule::requiredIf(fn () => $this->boolean('domain_enabled')),
-            'nullable',
-            'string',
-            'max:255',
-            'regex:/^(?=.{1,253}$)(?!-)(?:[a-zA-Z0-9-]{1,63}\.)+[a-zA-Z]{2,63}$/',
-            Rule::unique('domains', 'domain')
+                Rule::requiredIf(fn () => $this->boolean('domain_enabled')),
+                'nullable',
+                'string',
+                'max:255',
+                'regex:/^(?=.{1,253}$)(?!-)(?:[a-zA-Z0-9-]{1,63}\.)+[a-zA-Z]{2,63}$/',
+                Rule::unique('domains', 'domain')
                     ->where(
                         fn ($q) => $q->where('owner_type', Company::class)
                             ->where('owner_id', $this->company?->id)
                     ),
-        ],
+            ],
             'name' => [
-            'required',
-            'string',
-            'max:255',
-        ],
+                'required',
+                'string',
+                'max:255',
+            ],
             'phone' => [
-            'nullable',
-            'string',
-            'max:20',
-        ],
+                'required',
+                'string',
+                'max:20',
+            ],
             'customer_service_phone' => [
-            'nullable',
-            'string',
-            'max:20',
-        ],
+                'required',
+                'string',
+                'max:20',
+            ],
             'address' => [
-            'nullable',
-            'string',
-            'max:255',
-        ],
+                'required',
+                'string',
+                'max:255',
+            ],
             'photo_id' => [
-            'nullable',
-            'exists:medias,id',
-        ],
+                'required',
+                'exists:medias,id',
+            ],
             'province_id' => [
-            'nullable',
-            'exists:'.config('laravolt.indonesia.table_prefix').'provinces,id',
-        ],
+                'required',
+                'exists:'.config('laravolt.indonesia.table_prefix').'provinces,id',
+            ],
             'city_id' => [
-            'nullable',
-            'exists:'.config('laravolt.indonesia.table_prefix').'cities,id',
-        ],
+                'required',
+                'exists:'.config('laravolt.indonesia.table_prefix').'cities,id',
+            ],
             'district_id' => [
-            'nullable',
-            'exists:'.config('laravolt.indonesia.table_prefix').'districts,id',
-        ],
+                'required',
+                'exists:'.config('laravolt.indonesia.table_prefix').'districts,id',
+            ],
             'village_id' => [
-            'nullable',
-            'exists:'.config('laravolt.indonesia.table_prefix').'villages,id',
-        ],
-            'identity_card_id' => ['nullable', 'exists:medias,id'],
-            'postal_code' => 'nullable|string',
+                'required',
+                'exists:'.config('laravolt.indonesia.table_prefix').'villages,id',
+            ],
+            'identity_card_id' => ['required', 'exists:medias,id'],
+            'postal_code' => [
+                'required',
+                'string',
+                'max:20', ],
             'identity_number' => 'required|string|size:16',
         ];
     }

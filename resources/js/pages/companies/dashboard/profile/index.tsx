@@ -1,7 +1,7 @@
-import { useGetGeoCities } from '@/api/geo-city/geo-city';
-import { useGetGeoDistricts } from '@/api/geo-district/geo-district';
-import { useGetGeoProvinces } from '@/api/geo-province/geo-province';
-import { useGetGeoVillages } from '@/api/geo-village/geo-village';
+import GeoCitySelector from '@/components/geo-city-selector';
+import GeoDistrictSelector from '@/components/geo-district-selector';
+import GeoProvinceSelector from '@/components/geo-province-selector';
+import GeoVillageSelector from '@/components/geo-village-selector';
 import InputError from '@/components/input-error';
 import CompanyDashboardLayout from '@/components/layouts/company-dashboard';
 import { IdentityCardPicker } from '@/components/media/identity-card-picker';
@@ -42,13 +42,13 @@ export default function Profile({ profile, account_status }: ProfilePageProps) {
         name: profile.name || '',
         email: profile.email || '',
         username: profile.username || '',
-        phone: (profile.phone || '') as string,
+        phone: profile.phone || '',
         customer_service_phone: profile.customer_service_phone || '',
         address: profile.address || '',
-        province_id: profile.province_id || '',
-        city_id: profile.city_id || '',
-        district_id: profile.district_id || '',
-        village_id: profile.village_id || '',
+        province_id: profile.province_id || 0,
+        city_id: profile.city_id || 0,
+        district_id: profile.district_id || 0,
+        village_id: profile.village_id || 0,
         postal_code: profile.postal_code || '',
         subdomain: profile.domain?.subdomain || '',
         domain_enabled: Boolean(profile.domain?.domain),
@@ -58,45 +58,9 @@ export default function Profile({ profile, account_status }: ProfilePageProps) {
         identity_card_id: profile.identity_card_id || undefined,
     });
 
-    const { data: provincesData } = useGetGeoProvinces({
-        query: { queryKey: ['geo-provinces'] },
-    });
-    const { data: citiesData } = useGetGeoCities(
-        { province_id: form.data.province_id },
-        {
-            query: {
-                enabled: !!form.data.province_id,
-                queryKey: ['geo-cities', form.data.province_id],
-            },
-        },
-    );
-    const { data: districtsData } = useGetGeoDistricts(
-        { city_id: form.data.city_id },
-        {
-            query: {
-                enabled: !!form.data.city_id,
-                queryKey: ['geo-districts', form.data.city_id],
-            },
-        },
-    );
-    const { data: villagesData } = useGetGeoVillages(
-        { district_id: form.data.district_id },
-        {
-            query: {
-                enabled: !!form.data.district_id,
-                queryKey: ['geo-villages', form.data.district_id],
-            },
-        },
-    );
-
-    const provinces = provincesData?.data || [];
-    const cities = citiesData?.data || [];
-    const districts = districtsData?.data || [];
-    const villages = villagesData?.data || [];
-
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        form.put(update({ company: profile.username }).url, {
+        form.put(update({ username: profile.username }).url, {
             preserveScroll: true,
             onSuccess: () => {
                 toast.success(
@@ -412,26 +376,13 @@ export default function Profile({ profile, account_status }: ProfilePageProps) {
                                     <FormattedMessage defaultMessage="Province" />{' '}
                                     <span className="text-destructive">*</span>
                                 </Label>
-                                <select
-                                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-primary"
-                                    value={form.data.province_id}
-                                    onChange={(e) => {
-                                        form.setData(
-                                            'province_id',
-                                            e.target.value,
-                                        );
-                                        form.setData('city_id', '');
-                                        form.setData('district_id', '');
-                                        form.setData('village_id', '');
-                                    }}
-                                >
-                                    <option value="">Select Province</option>
-                                    {provinces.map((p: any) => (
-                                        <option key={p.id} value={p.id}>
-                                            {p.name}
-                                        </option>
-                                    ))}
-                                </select>
+                                <GeoProvinceSelector
+                                    value={String(form.data.province_id)}
+                                    onValueChange={(v) =>
+                                        form.setData('province_id', Number(v))
+                                    }
+                                />
+                                <InputError message={form.errors.province_id} />
                             </div>
 
                             <div className="space-y-2">
@@ -439,23 +390,14 @@ export default function Profile({ profile, account_status }: ProfilePageProps) {
                                     <FormattedMessage defaultMessage="City" />{' '}
                                     <span className="text-destructive">*</span>
                                 </Label>
-                                <select
-                                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-primary"
-                                    value={form.data.city_id}
-                                    onChange={(e) => {
-                                        form.setData('city_id', e.target.value);
-                                        form.setData('district_id', '');
-                                        form.setData('village_id', '');
-                                    }}
-                                    disabled={!form.data.province_id}
-                                >
-                                    <option value="">Select City</option>
-                                    {cities.map((c: any) => (
-                                        <option key={c.id} value={c.id}>
-                                            {c.name}
-                                        </option>
-                                    ))}
-                                </select>
+                                <GeoCitySelector
+                                    provinceId={form.data.province_id}
+                                    value={String(form.data.city_id)}
+                                    onValueChange={(v) =>
+                                        form.setData('city_id', Number(v))
+                                    }
+                                />
+                                <InputError message={form.errors.city_id} />
                             </div>
 
                             <div className="space-y-2">
@@ -463,25 +405,14 @@ export default function Profile({ profile, account_status }: ProfilePageProps) {
                                     <FormattedMessage defaultMessage="District (Kecamatan)" />{' '}
                                     <span className="text-destructive">*</span>
                                 </Label>
-                                <select
-                                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-primary"
-                                    value={form.data.district_id}
-                                    onChange={(e) => {
-                                        form.setData(
-                                            'district_id',
-                                            e.target.value,
-                                        );
-                                        form.setData('village_id', '');
-                                    }}
-                                    disabled={!form.data.city_id}
-                                >
-                                    <option value="">Select District</option>
-                                    {districts.map((d: any) => (
-                                        <option key={d.id} value={d.id}>
-                                            {d.name}
-                                        </option>
-                                    ))}
-                                </select>
+                                <GeoDistrictSelector
+                                    cityId={form.data.city_id}
+                                    value={String(form.data.district_id)}
+                                    onValueChange={(v) =>
+                                        form.setData('district_id', Number(v))
+                                    }
+                                />
+                                <InputError message={form.errors.district_id} />
                             </div>
 
                             <div className="space-y-2">
@@ -489,24 +420,14 @@ export default function Profile({ profile, account_status }: ProfilePageProps) {
                                     <FormattedMessage defaultMessage="Village (Kelurahan)" />{' '}
                                     <span className="text-destructive">*</span>
                                 </Label>
-                                <select
-                                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-primary"
-                                    value={form.data.village_id}
-                                    onChange={(e) =>
-                                        form.setData(
-                                            'village_id',
-                                            e.target.value,
-                                        )
+                                <GeoVillageSelector
+                                    districtId={form.data.district_id}
+                                    value={String(form.data.village_id)}
+                                    onValueChange={(v) =>
+                                        form.setData('village_id', Number(v))
                                     }
-                                    disabled={!form.data.district_id}
-                                >
-                                    <option value="">Select Village</option>
-                                    {villages.map((v: any) => (
-                                        <option key={v.id} value={v.id}>
-                                            {v.name}
-                                        </option>
-                                    ))}
-                                </select>
+                                />
+                                <InputError message={form.errors.village_id} />
                             </div>
 
                             <div className="space-y-2">

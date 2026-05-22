@@ -1,3 +1,7 @@
+import GeoCitySelector from '@/components/geo-city-selector';
+import GeoDistrictSelector from '@/components/geo-district-selector';
+import GeoProvinceSelector from '@/components/geo-province-selector';
+import GeoVillageSelector from '@/components/geo-village-selector';
 import InputError from '@/components/input-error';
 import AffiliateDashboardLayout from '@/components/layouts/affiliate-dashboard';
 import { IdentityCardPicker } from '@/components/media/identity-card-picker';
@@ -14,9 +18,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Head, useForm, usePage } from '@inertiajs/react';
-import axios from 'axios';
 import { LinkIcon, Save, ShieldCheck, User as UserIcon } from 'lucide-react';
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
+import { FormattedMessage } from 'react-intl';
 
 export default function AffiliateProfileEdit() {
     const { user } = usePage().props as any;
@@ -31,55 +35,16 @@ export default function AffiliateProfileEdit() {
             name: user.name || '',
             phone: profile.phone || '',
             address: profile.address || '',
-            province: profile.province || '',
-            city: profile.city || '',
-            district: profile.district || '',
-            village: profile.village || '',
+            province_id: profile.province_id || 0,
+            city_id: profile.city_id || 0,
+            district_id: profile.district_id || 0,
+            village_id: profile.village_id || 0,
             postal_code: profile.postal_code || '',
             identity_number: profile.identity_number || '',
             identity_card_id: profile.identity_card_id || undefined,
             photo_id: profile.photo_id || undefined,
             _method: 'POST',
         });
-
-    const [provinces, setProvinces] = useState<any[]>([]);
-    const [cities, setCities] = useState<any[]>([]);
-    const [districts, setDistricts] = useState<any[]>([]);
-    const [villages, setVillages] = useState<any[]>([]);
-
-    useEffect(() => {
-        axios
-            .get('/api/regions/provinces')
-            .then((res) => setProvinces(res.data));
-    }, []);
-
-    useEffect(() => {
-        const p = provinces.find((x) => x.name === data.province);
-        if (p)
-            axios
-                .get(`/api/regions/cities/${p.code}`)
-                .then((res) => setCities(res.data));
-        else setCities([]);
-    }, [data.province, provinces]);
-
-    useEffect(() => {
-        const c = cities.find((x) => x.name === data.city);
-        if (c)
-            axios
-                .get(`/api/regions/districts/${c.code}`)
-                .then((res) => setDistricts(res.data));
-        else setDistricts([]);
-    }, [data.city, cities]);
-
-    useEffect(() => {
-        const d = districts.find((x) => x.name === data.district);
-        if (d)
-            axios
-                .get(`/api/regions/villages/${d.code}`)
-                .then((res) => setVillages(res.data));
-        else setVillages([]);
-    }, [data.district, districts]);
-
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
         post('/affiliate/dashboard/setup/profile', { preserveScroll: true });
@@ -290,97 +255,70 @@ export default function AffiliateProfileEdit() {
 
                             <div className="grid gap-4 md:grid-cols-2">
                                 <div className="space-y-2">
-                                    <Label htmlFor="province">Province</Label>
-                                    <select
-                                        id="province"
-                                        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                                        value={data.province}
-                                        onChange={(e) => {
-                                            setData('province', e.target.value);
-                                            setData('city', '');
-                                            setData('district', '');
-                                            setData('village', '');
-                                        }}
-                                    >
-                                        <option value="">
-                                            Select Province
-                                        </option>
-                                        {provinces.map((p) => (
-                                            <option key={p.code} value={p.name}>
-                                                {p.name}
-                                            </option>
-                                        ))}
-                                    </select>
-                                    <InputError message={errors.province} />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="city">City / Regency</Label>
-                                    <select
-                                        id="city"
-                                        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                                        value={data.city}
-                                        onChange={(e) => {
-                                            setData('city', e.target.value);
-                                            setData('district', '');
-                                            setData('village', '');
-                                        }}
-                                        disabled={!data.province}
-                                    >
-                                        <option value="">Select City</option>
-                                        {cities.map((c) => (
-                                            <option key={c.code} value={c.name}>
-                                                {c.name}
-                                            </option>
-                                        ))}
-                                    </select>
-                                    <InputError message={errors.city} />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="district">
-                                        District (Kecamatan)
+                                    <Label>
+                                        <FormattedMessage defaultMessage="Province" />{' '}
+                                        <span className="text-destructive">
+                                            *
+                                        </span>
                                     </Label>
-                                    <select
-                                        id="district"
-                                        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                                        value={data.district}
-                                        onChange={(e) => {
-                                            setData('district', e.target.value);
-                                            setData('village', '');
-                                        }}
-                                        disabled={!data.city}
-                                    >
-                                        <option value="">
-                                            Select District
-                                        </option>
-                                        {districts.map((d) => (
-                                            <option key={d.code} value={d.name}>
-                                                {d.name}
-                                            </option>
-                                        ))}
-                                    </select>
-                                    <InputError message={errors.district} />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="village">
-                                        Village (Kelurahan)
-                                    </Label>
-                                    <select
-                                        id="village"
-                                        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                                        value={data.village}
-                                        onChange={(e) =>
-                                            setData('village', e.target.value)
+                                    <GeoProvinceSelector
+                                        value={String(data.province_id)}
+                                        onValueChange={(v) =>
+                                            setData('province_id', Number(v))
                                         }
-                                        disabled={!data.district}
-                                    >
-                                        <option value="">Select Village</option>
-                                        {villages.map((v) => (
-                                            <option key={v.code} value={v.name}>
-                                                {v.name}
-                                            </option>
-                                        ))}
-                                    </select>
-                                    <InputError message={errors.village} />
+                                    />
+                                    <InputError message={errors.province_id} />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label>
+                                        <FormattedMessage defaultMessage="City" />{' '}
+                                        <span className="text-destructive">
+                                            *
+                                        </span>
+                                    </Label>
+                                    <GeoCitySelector
+                                        provinceId={data.province_id}
+                                        value={String(data.city_id)}
+                                        onValueChange={(v) =>
+                                            setData('city_id', Number(v))
+                                        }
+                                    />
+                                    <InputError message={errors.city_id} />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label>
+                                        <FormattedMessage defaultMessage="District (Kecamatan)" />{' '}
+                                        <span className="text-destructive">
+                                            *
+                                        </span>
+                                    </Label>
+                                    <GeoDistrictSelector
+                                        cityId={data.city_id}
+                                        value={String(data.district_id)}
+                                        onValueChange={(v) =>
+                                            setData('district_id', Number(v))
+                                        }
+                                    />
+                                    <InputError message={errors.district_id} />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label>
+                                        <FormattedMessage defaultMessage="Village (Kelurahan)" />{' '}
+                                        <span className="text-destructive">
+                                            *
+                                        </span>
+                                    </Label>
+                                    <GeoVillageSelector
+                                        districtId={data.district_id}
+                                        value={String(data.village_id)}
+                                        onValueChange={(v) =>
+                                            setData('village_id', Number(v))
+                                        }
+                                    />
+                                    <InputError message={errors.village_id} />
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="postal_code">

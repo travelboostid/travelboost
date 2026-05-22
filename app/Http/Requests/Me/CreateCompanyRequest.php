@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Me;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class CreateCompanyRequest extends FormRequest
 {
@@ -34,14 +35,70 @@ class CreateCompanyRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => ['required', 'string', 'max:255'],
-            'username' => ['required', 'string', 'max:255', 'regex:/^[a-z][a-z0-9-]*$/', 'unique:companies,username'],
-            'email' => ['required', 'string', 'email', 'max:255', 'unique:companies,email'],
-            'photo_id' => ['nullable', 'integer', 'exists:media,id'],
-            'phone' => ['nullable', 'string', 'max:255'],
-            'customer_service_phone' => ['nullable', 'string', 'max:255'],
-            'address' => ['nullable', 'string', 'max:255'],
-            'subdomain' => ['required', 'string', 'max:255', 'regex:/^[a-z0-9]+$/', 'unique:domains,subdomain'],
+            'username' => [
+                'nullable',
+                'string',
+                'max:255',
+                Rule::unique('companies', 'username'),
+            ],
+            'email' => [
+                'required',
+                'email',
+                'max:255',
+                Rule::unique('companies', 'email'),
+            ],
+            'subdomain' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('domains', 'subdomain'),
+            ],
+            'name' => [
+                'required',
+                'string',
+                'max:255',
+            ],
+            'phone' => [
+                'required',
+                'string',
+                'max:20',
+            ],
+            'customer_service_phone' => [
+                'required',
+                'string',
+                'max:20',
+            ],
+            'address' => [
+                'required',
+                'string',
+                'max:255',
+            ],
+            'photo_id' => [
+                'required',
+                'exists:medias,id',
+            ],
+            'province_id' => [
+                'required',
+                'exists:'.config('laravolt.indonesia.table_prefix').'provinces,id',
+            ],
+            'city_id' => [
+                'required',
+                'exists:'.config('laravolt.indonesia.table_prefix').'cities,id',
+            ],
+            'district_id' => [
+                'required',
+                'exists:'.config('laravolt.indonesia.table_prefix').'districts,id',
+            ],
+            'village_id' => [
+                'required',
+                'exists:'.config('laravolt.indonesia.table_prefix').'villages,id',
+            ],
+            'identity_card_id' => ['required', 'exists:medias,id'],
+            'postal_code' => [
+                'required',
+                'string',
+                'max:20', ],
+            'identity_number' => 'required|string|size:16',
         ];
     }
 }
