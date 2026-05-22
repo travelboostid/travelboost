@@ -163,6 +163,33 @@ test('booking pricing service calculates server authoritative totals and commiss
         ->and($quote['passengers'][3]['price_amount'])->toBe(0.0);
 });
 
+test('booking pricing service calculates travelboost commission from admin tier parameters', function () {
+    ['tour' => $tour, 'schedule' => $schedule] = createPricingScenario();
+
+    AppConfig::updateOrCreate(['key' => 'admin'], [
+        'description' => 'Admin Parameter configuration',
+        'value' => [
+            'platform_fee' => '30000',
+            'commission_min' => '40000',
+            'commission_mid' => '60000',
+            'commission_max' => '90000',
+        ],
+    ]);
+
+    $quote = app(BookingPricingService::class)->quoteForBookingData($tour, $schedule->departure_date, [
+        ['first_name' => 'Low', 'price_category' => 'Custom Low', 'price_amount' => 9_000_000],
+        ['first_name' => 'Boundary', 'price_category' => 'Custom Boundary', 'price_amount' => 10_000_000],
+        ['first_name' => 'Mid', 'price_category' => 'Custom Mid', 'price_amount' => 20_000_000],
+        ['first_name' => 'High', 'price_category' => 'Custom High', 'price_amount' => 21_000_000],
+        ['first_name' => 'Free', 'price_category' => 'Custom Free', 'price_amount' => 0],
+    ]);
+
+    expect($quote['platform_fee'])->toBe(150_000.0)
+        ->and($quote['platform_fee_per_pax'])->toBe(30_000.0)
+        ->and($quote['travelboost_commission'])->toBe(250_000.0)
+        ->and($quote['travelboost_commission_breakdown'])->toHaveCount(4);
+});
+
 test('booking pricing service reads admin platform fee fallback', function () {
     ['tour' => $tour, 'schedule' => $schedule] = createPricingScenario();
 
@@ -172,5 +199,7 @@ test('booking pricing service reads admin platform fee fallback', function () {
         ['first_name' => 'Adult', 'price_category' => 'Adult Single'],
     ]);
 
-    expect($quote['platform_fee'])->toBe(25_000.0);
+    expect($quote['platform_fee'])->toBe(25_000.0)
+        ->and($quote['platform_fee_per_pax'])->toBe(25_000.0)
+        ->and($quote['travelboost_commission'])->toBe(75_000.0);
 });

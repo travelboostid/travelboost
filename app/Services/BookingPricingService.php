@@ -17,6 +17,12 @@ class BookingPricingService
 {
     public const DEFAULT_PLATFORM_FEE_PER_PAX = 25_000;
 
+    public const DEFAULT_TRAVELBOOST_COMMISSION_MIN = 50_000;
+
+    public const DEFAULT_TRAVELBOOST_COMMISSION_MID = 75_000;
+
+    public const DEFAULT_TRAVELBOOST_COMMISSION_MAX = 100_000;
+
     public const DEFAULT_PPN_RATE = 11;
 
     /**
@@ -48,9 +54,7 @@ class BookingPricingService
     {
         $value = data_get($this->adminConfig(), 'platform_fee');
 
-        return is_numeric($value) && (float) $value >= 0
-            ? (float) $value
-            : (float) self::DEFAULT_PLATFORM_FEE_PER_PAX;
+        return $this->numericConfigValue($value, self::DEFAULT_PLATFORM_FEE_PER_PAX);
     }
 
     /**
@@ -277,9 +281,9 @@ class BookingPricingService
         }
 
         $config = $this->adminConfig();
-        $min = (float) (data_get($config, 'commission_min') ?? 50_000);
-        $mid = (float) (data_get($config, 'commission_mid') ?? 75_000);
-        $max = (float) (data_get($config, 'commission_max') ?? 100_000);
+        $min = $this->numericConfigValue(data_get($config, 'commission_min'), self::DEFAULT_TRAVELBOOST_COMMISSION_MIN);
+        $mid = $this->numericConfigValue(data_get($config, 'commission_mid'), self::DEFAULT_TRAVELBOOST_COMMISSION_MID);
+        $max = $this->numericConfigValue(data_get($config, 'commission_max'), self::DEFAULT_TRAVELBOOST_COMMISSION_MAX);
 
         if ($priceAmount < 10_000_000) {
             return $min;
@@ -290,6 +294,13 @@ class BookingPricingService
         }
 
         return $max;
+    }
+
+    private function numericConfigValue(mixed $value, float $fallback): float
+    {
+        return is_numeric($value) && (float) $value >= 0
+            ? (float) $value
+            : $fallback;
     }
 
     /**
