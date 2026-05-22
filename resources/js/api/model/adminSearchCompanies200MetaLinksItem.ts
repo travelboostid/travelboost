@@ -7,7 +7,7 @@
 import type { AdminSearchCompanies200MetaLinksItemUrl } from './adminSearchCompanies200MetaLinksItemUrl';
 
 export type AdminSearchCompanies200MetaLinksItem = {
-  url: AdminSearchCompanies200MetaLinksItemUrl;
-  label: string;
-  active: boolean;
+    url: AdminSearchCompanies200MetaLinksItemUrl;
+    label: string;
+    active: boolean;
 };

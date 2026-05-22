@@ -6,6 +6,6 @@
  */
 
 export type AuthenticationExceptionResponse = {
-  /** Error overview. */
-  message: string;
+    /** Error overview. */
+    message: string;
 };

@@ -6,6 +6,6 @@
  */
 
 export type ModelNotFoundExceptionResponse = {
-  /** Error overview. */
-  message: string;
+    /** Error overview. */
+    message: string;
 };

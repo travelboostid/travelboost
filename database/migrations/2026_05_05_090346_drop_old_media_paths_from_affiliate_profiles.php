@@ -6,18 +6,18 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-  public function up(): void
-  {
-    Schema::table('affiliate_profiles', function (Blueprint $table) {
-      $table->dropColumn(['profile_photo_path', 'identity_photo_path']);
-    });
-  }
+    public function up(): void
+    {
+        Schema::table('affiliate_profiles', function (Blueprint $table) {
+            $table->dropColumn(['profile_photo_path', 'identity_photo_path']);
+        });
+    }
 
-  public function down(): void
-  {
-    Schema::table('affiliate_profiles', function (Blueprint $table) {
-      $table->string('profile_photo_path')->nullable();
-      $table->string('identity_photo_path')->nullable();
-    });
-  }
+    public function down(): void
+    {
+        Schema::table('affiliate_profiles', function (Blueprint $table) {
+            $table->string('profile_photo_path')->nullable();
+            $table->string('identity_photo_path')->nullable();
+        });
+    }
 };

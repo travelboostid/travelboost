@@ -7,7 +7,7 @@
 import type { GetPayments200MetaLinksItemUrl } from './getPayments200MetaLinksItemUrl';
 
 export type GetPayments200MetaLinksItem = {
-  url: GetPayments200MetaLinksItemUrl;
-  label: string;
-  active: boolean;
+    url: GetPayments200MetaLinksItemUrl;
+    label: string;
+    active: boolean;
 };

@@ -4,14 +4,14 @@
  * Travelboost
  * OpenAPI spec version: 0.0.1
  */
-import type { CreateMediaBodyName } from './createMediaBodyName';
 import type { CreateMediaBodyDescription } from './createMediaBodyDescription';
+import type { CreateMediaBodyName } from './createMediaBodyName';
 import type { CreateMediaBodyType } from './createMediaBodyType';
 
 export type CreateMediaBody = {
-  /** @maxLength 255 */
-  name?: CreateMediaBodyName;
-  description?: CreateMediaBodyDescription;
-  type: CreateMediaBodyType;
-  data: Blob;
+    /** @maxLength 255 */
+    name?: CreateMediaBodyName;
+    description?: CreateMediaBodyDescription;
+    type: CreateMediaBodyType;
+    data: Blob;
 };

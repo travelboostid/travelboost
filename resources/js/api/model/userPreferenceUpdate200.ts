@@ -7,5 +7,5 @@
 import type { UserPreferenceResource } from './userPreferenceResource';
 
 export type UserPreferenceUpdate200 = {
-  data: UserPreferenceResource;
+    data: UserPreferenceResource;
 };

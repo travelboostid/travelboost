@@ -4,18 +4,18 @@
  * Travelboost
  * OpenAPI spec version: 0.0.1
  */
-import type { ChatRoomResourceLastMessageMessage } from './chatRoomResourceLastMessageMessage';
-import type { ChatRoomResourceLastMessageUserId } from './chatRoomResourceLastMessageUserId';
-import type { ChatRoomResourceLastMessageCreatedAt } from './chatRoomResourceLastMessageCreatedAt';
 import type { ChatRoomResourceLastMessageAttachmentData } from './chatRoomResourceLastMessageAttachmentData';
 import type { ChatRoomResourceLastMessageAttachmentType } from './chatRoomResourceLastMessageAttachmentType';
+import type { ChatRoomResourceLastMessageCreatedAt } from './chatRoomResourceLastMessageCreatedAt';
+import type { ChatRoomResourceLastMessageMessage } from './chatRoomResourceLastMessageMessage';
+import type { ChatRoomResourceLastMessageUserId } from './chatRoomResourceLastMessageUserId';
 
 export type ChatRoomResourceLastMessage = {
-  id: number;
-  message: ChatRoomResourceLastMessageMessage;
-  user_id: ChatRoomResourceLastMessageUserId;
-  created_at: ChatRoomResourceLastMessageCreatedAt;
-  is_bot: boolean;
-  attachment_data: ChatRoomResourceLastMessageAttachmentData;
-  attachment_type: ChatRoomResourceLastMessageAttachmentType;
+    id: number;
+    message: ChatRoomResourceLastMessageMessage;
+    user_id: ChatRoomResourceLastMessageUserId;
+    created_at: ChatRoomResourceLastMessageCreatedAt;
+    is_bot: boolean;
+    attachment_data: ChatRoomResourceLastMessageAttachmentData;
+    attachment_type: ChatRoomResourceLastMessageAttachmentType;
 };

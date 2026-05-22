@@ -6,12 +6,12 @@
  */
 import type { GetChatRooms200LinksFirst } from './getChatRooms200LinksFirst';
 import type { GetChatRooms200LinksLast } from './getChatRooms200LinksLast';
-import type { GetChatRooms200LinksPrev } from './getChatRooms200LinksPrev';
 import type { GetChatRooms200LinksNext } from './getChatRooms200LinksNext';
+import type { GetChatRooms200LinksPrev } from './getChatRooms200LinksPrev';
 
 export type GetChatRooms200Links = {
-  first: GetChatRooms200LinksFirst;
-  last: GetChatRooms200LinksLast;
-  prev: GetChatRooms200LinksPrev;
-  next: GetChatRooms200LinksNext;
+    first: GetChatRooms200LinksFirst;
+    last: GetChatRooms200LinksLast;
+    prev: GetChatRooms200LinksPrev;
+    next: GetChatRooms200LinksNext;
 };

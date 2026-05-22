@@ -7,5 +7,5 @@
 import type { GeoVillageResource } from './geoVillageResource';
 
 export type GetGeoVillages200 = {
-  data: GeoVillageResource[];
+    data: GeoVillageResource[];
 };

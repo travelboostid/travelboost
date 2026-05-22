@@ -14,162 +14,163 @@ use Inertia\Response;
 
 class DashboardController extends Controller
 {
-  public function index(Request $request): Response
-  {
-    /** @var \App\Models\User $user */
-    $user = Auth::user();
+    public function index(Request $request): Response
+    {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
 
-    $profile = $user->affiliateProfile;
-    $tier = $profile ? $profile->tier : 'affiliate';
+        $profile = $user->affiliateProfile;
+        $tier = $profile ? $profile->tier : 'affiliate';
 
-    $wallet = $user->wallet;
-    $walletBalance = $wallet ? $wallet->balance : 0;
+        $wallet = $user->wallet;
+        $walletBalance = $wallet ? $wallet->balance : 0;
 
-    $totalCommission = $wallet ? $wallet->transactions()->where('amount', '>', 0)->sum('amount') : 0;
+        $totalCommission = $wallet ? $wallet->transactions()->where('amount', '>', 0)->sum('amount') : 0;
 
-    $unreadNotificationsCount = $user->unreadNotifications()->count();
-    $recentNotifications = $user->notifications()->latest()->take(3)->get();
+        $unreadNotificationsCount = $user->unreadNotifications()->count();
+        $recentNotifications = $user->notifications()->latest()->take(3)->get();
 
-    $stats = [];
-    $allNetworkIds = [$user->id];
+        $stats = [];
+        $allNetworkIds = [$user->id];
 
-    if ($tier === 'partner') {
-      $maIds = AffiliateProfile::where('upline_id', $user->id)
-        ->whereIn('tier', ['master_affiliate', 'master-affiliate'])
-        ->pluck('user_id');
+        if ($tier === 'partner') {
+            $maIds = AffiliateProfile::where('upline_id', $user->id)
+                ->whereIn('tier', ['master_affiliate', 'master-affiliate'])
+                ->pluck('user_id');
 
-      $affiliateIds = AffiliateProfile::whereIn('upline_id', $maIds)
-        ->where('tier', 'affiliate')
-        ->pluck('user_id');
+            $affiliateIds = AffiliateProfile::whereIn('upline_id', $maIds)
+                ->where('tier', 'affiliate')
+                ->pluck('user_id');
 
-      $allNetworkIds = collect([$user->id])->merge($maIds)->merge($affiliateIds)->toArray();
+            $allNetworkIds = collect([$user->id])->merge($maIds)->merge($affiliateIds)->toArray();
 
-      $stats = [
-        'total_ma' => AffiliateProfile::where('upline_id', $user->id)->whereIn('tier', ['master_affiliate', 'master-affiliate'])->where('status', 'approved')->count(),
-        'total_affiliate' => AffiliateProfile::whereIn('upline_id', $maIds)->where('tier', 'affiliate')->where('status', 'approved')->count(),
-        'total_agent' => Company::where('type', 'agent')->whereIn('referred_by', $allNetworkIds)->count(),
-        'total_commission' => $totalCommission,
-      ];
-    } elseif (in_array($tier, ['master_affiliate', 'master-affiliate'])) {
-      $affiliateIds = AffiliateProfile::where('upline_id', $user->id)
-        ->where('tier', 'affiliate')
-        ->pluck('user_id');
+            $stats = [
+                'total_ma' => AffiliateProfile::where('upline_id', $user->id)->whereIn('tier', ['master_affiliate', 'master-affiliate'])->where('status', 'approved')->count(),
+                'total_affiliate' => AffiliateProfile::whereIn('upline_id', $maIds)->where('tier', 'affiliate')->where('status', 'approved')->count(),
+                'total_agent' => Company::where('type', 'agent')->whereIn('referred_by', $allNetworkIds)->count(),
+                'total_commission' => $totalCommission,
+            ];
+        } elseif (in_array($tier, ['master_affiliate', 'master-affiliate'])) {
+            $affiliateIds = AffiliateProfile::where('upline_id', $user->id)
+                ->where('tier', 'affiliate')
+                ->pluck('user_id');
 
-      $allNetworkIds = collect([$user->id])->merge($affiliateIds)->toArray();
+            $allNetworkIds = collect([$user->id])->merge($affiliateIds)->toArray();
 
-      $stats = [
-        'total_agent' => Company::where('type', 'agent')->whereIn('referred_by', $allNetworkIds)->count(),
-        'total_affiliate_approved' => AffiliateProfile::where('upline_id', $user->id)->where('tier', 'affiliate')->where('status', 'approved')->count(),
-        'total_affiliate_pending' => AffiliateProfile::where('upline_id', $user->id)->where('tier', 'affiliate')->where('status', 'pending')->count(),
-        'total_commission' => $totalCommission,
-      ];
-    } else {
-      $stats = [
-        'total_agent_pending' => Company::where('type', 'agent')
-          ->where('referred_by', $user->id)
-          ->whereDoesntHave('agentSubscription', function ($q) {
-            $q->where('ended_at', '>', now());
-          })->count(),
-        'total_agent_subscribed' => Company::where('type', 'agent')
-          ->where('referred_by', $user->id)
-          ->whereHas('agentSubscription', function ($q) {
-            $q->where('ended_at', '>', now());
-          })->count(),
-        'total_commission' => $totalCommission,
-      ];
+            $stats = [
+                'total_agent' => Company::where('type', 'agent')->whereIn('referred_by', $allNetworkIds)->count(),
+                'total_affiliate_approved' => AffiliateProfile::where('upline_id', $user->id)->where('tier', 'affiliate')->where('status', 'approved')->count(),
+                'total_affiliate_pending' => AffiliateProfile::where('upline_id', $user->id)->where('tier', 'affiliate')->where('status', 'pending')->count(),
+                'total_commission' => $totalCommission,
+            ];
+        } else {
+            $stats = [
+                'total_agent_pending' => Company::where('type', 'agent')
+                    ->where('referred_by', $user->id)
+                    ->whereDoesntHave('agentSubscription', function ($q) {
+                        $q->where('ended_at', '>', now());
+                    })->count(),
+                'total_agent_subscribed' => Company::where('type', 'agent')
+                    ->where('referred_by', $user->id)
+                    ->whereHas('agentSubscription', function ($q) {
+                        $q->where('ended_at', '>', now());
+                    })->count(),
+                'total_commission' => $totalCommission,
+            ];
+        }
+
+        $recentAgents = Company::where('type', 'agent')
+            ->whereIn('referred_by', $allNetworkIds)
+            ->with('agentSubscription.package')
+            ->latest()
+            ->take(5)
+            ->get()
+            ->map(function ($agent) {
+                $sub = $agent->agentSubscription;
+                $isPaid = $sub && $sub->ended_at > now();
+
+                return [
+                    'id' => $agent->username ?? $agent->id,
+                    'name' => $agent->name,
+                    'package' => $sub && $sub->package ? $sub->package->name : 'Basic',
+                    'status' => $isPaid ? 'Paid' : 'Pending',
+                ];
+            });
+
+        $networkPerformance = $this->buildNetworkPerformance($user);
+
+        return Inertia::render('affiliate/dashboard/index', [
+            'wallet_balance' => (int) $walletBalance,
+            'tier' => $tier,
+            'stats' => $stats,
+            'unreadNotificationsCount' => $unreadNotificationsCount,
+            'recentNotifications' => $recentNotifications,
+            'recentAgents' => $recentAgents,
+            'networkPerformance' => $networkPerformance,
+        ]);
     }
 
-    $recentAgents = Company::where('type', 'agent')
-      ->whereIn('referred_by', $allNetworkIds)
-      ->with('agentSubscription.package')
-      ->latest()
-      ->take(5)
-      ->get()
-      ->map(function ($agent) {
-        $sub = $agent->agentSubscription;
-        $isPaid = $sub && $sub->ended_at > now();
-        return [
-          'id' => $agent->username ?? $agent->id,
-          'name' => $agent->name,
-          'package' => $sub && $sub->package ? $sub->package->name : 'Basic',
-          'status' => $isPaid ? 'Paid' : 'Pending',
-        ];
-      });
+    protected function buildNetworkPerformance(User $user): Collection
+    {
+        return AffiliateProfile::query()
+            ->where('upline_id', $user->id)
+            ->with('user')
+            ->get()
+            ->map(function (AffiliateProfile $profile): array {
+                $referrerIds = $this->resolveReferrerIds($profile);
 
-    $networkPerformance = $this->buildNetworkPerformance($user);
+                $totalAgents = Company::query()
+                    ->where('type', 'agent')
+                    ->whereIn('referred_by', $referrerIds)
+                    ->count();
 
-    return Inertia::render('affiliate/dashboard/index', [
-      'wallet_balance' => (int) $walletBalance,
-      'tier' => $tier,
-      'stats' => $stats,
-      'unreadNotificationsCount' => $unreadNotificationsCount,
-      'recentNotifications' => $recentNotifications,
-      'recentAgents' => $recentAgents,
-      'networkPerformance' => $networkPerformance,
-    ]);
-  }
+                $subscribedAgents = Company::query()
+                    ->where('type', 'agent')
+                    ->whereIn('referred_by', $referrerIds)
+                    ->whereHas('agentSubscription', function ($query): void {
+                        $query->whereNotNull('package_id')->where('package_id', '!=', 1);
+                    })
+                    ->count();
 
-  protected function buildNetworkPerformance(User $user): Collection
-  {
-    return AffiliateProfile::query()
-      ->where('upline_id', $user->id)
-      ->with('user')
-      ->get()
-      ->map(function (AffiliateProfile $profile): array {
-        $referrerIds = $this->resolveReferrerIds($profile);
+                $tierName = in_array(
+                    $profile->tier,
+                    ['master_affiliate', 'master-affiliate'],
+                    true,
+                ) ? 'MA' : 'Affiliate';
 
-        $totalAgents = Company::query()
-          ->where('type', 'agent')
-          ->whereIn('referred_by', $referrerIds)
-          ->count();
-
-        $subscribedAgents = Company::query()
-          ->where('type', 'agent')
-          ->whereIn('referred_by', $referrerIds)
-          ->whereHas('agentSubscription', function ($query): void {
-            $query->whereNotNull('package_id')->where('package_id', '!=', 1);
-          })
-          ->count();
-
-        $tierName = in_array(
-          $profile->tier,
-          ['master_affiliate', 'master-affiliate'],
-          true,
-        ) ? 'MA' : 'Affiliate';
-
-        return [
-          'name' => ($profile->user->name ?? 'Unknown') . ' (' . $tierName . ')',
-          'total_agents' => $totalAgents,
-          'subscribed_agents' => $subscribedAgents,
-          'conversion' => $totalAgents > 0
-            ? round(($subscribedAgents / $totalAgents) * 100, 2)
-            : 0,
-          'status' => ucfirst($profile->status),
-        ];
-      })
-      ->sort(function (array $left, array $right): int {
-        return [$right['subscribed_agents'], $right['conversion']]
-          <=> [$left['subscribed_agents'], $left['conversion']];
-      })
-      ->take(5)
-      ->values();
-  }
-
-  protected function resolveReferrerIds(AffiliateProfile $profile): array
-  {
-    $referrerIds = [$profile->user_id];
-
-    if (in_array($profile->tier, ['master_affiliate', 'master-affiliate'], true)) {
-      $downlineAffiliateIds = AffiliateProfile::query()
-        ->where('upline_id', $profile->user_id)
-        ->where('tier', 'affiliate')
-        ->where('status', 'approved')
-        ->pluck('user_id')
-        ->all();
-
-      $referrerIds = [...$referrerIds, ...$downlineAffiliateIds];
+                return [
+                    'name' => ($profile->user->name ?? 'Unknown').' ('.$tierName.')',
+                    'total_agents' => $totalAgents,
+                    'subscribed_agents' => $subscribedAgents,
+                    'conversion' => $totalAgents > 0
+                      ? round(($subscribedAgents / $totalAgents) * 100, 2)
+                      : 0,
+                    'status' => ucfirst($profile->status),
+                ];
+            })
+            ->sort(function (array $left, array $right): int {
+                return [$right['subscribed_agents'], $right['conversion']]
+                  <=> [$left['subscribed_agents'], $left['conversion']];
+            })
+            ->take(5)
+            ->values();
     }
 
-    return $referrerIds;
-  }
+    protected function resolveReferrerIds(AffiliateProfile $profile): array
+    {
+        $referrerIds = [$profile->user_id];
+
+        if (in_array($profile->tier, ['master_affiliate', 'master-affiliate'], true)) {
+            $downlineAffiliateIds = AffiliateProfile::query()
+                ->where('upline_id', $profile->user_id)
+                ->where('tier', 'affiliate')
+                ->where('status', 'approved')
+                ->pluck('user_id')
+                ->all();
+
+            $referrerIds = [...$referrerIds, ...$downlineAffiliateIds];
+        }
+
+        return $referrerIds;
+    }
 }

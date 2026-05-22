@@ -10,7 +10,7 @@ import type { ChatMessageResourceSenderAnyOfPhotoUrl } from './chatMessageResour
  * Relationships
  */
 export type ChatMessageResourceSenderAnyOf = {
-  id: number;
-  name: string;
-  photo_url: ChatMessageResourceSenderAnyOfPhotoUrl;
+    id: number;
+    name: string;
+    photo_url: ChatMessageResourceSenderAnyOfPhotoUrl;
 };

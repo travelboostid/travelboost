@@ -6,15 +6,15 @@
  */
 
 export type GetCountriesParams = {
-continent_id?: number | null;
-region_id?: number | null;
-/**
- * @minimum 1
- * @maximum 100
- */
-per_page?: number | null;
-/**
- * @minimum 1
- */
-page?: number | null;
+    continent_id?: number | null;
+    region_id?: number | null;
+    /**
+     * @minimum 1
+     * @maximum 100
+     */
+    per_page?: number | null;
+    /**
+     * @minimum 1
+     */
+    page?: number | null;
 };

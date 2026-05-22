@@ -7,7 +7,7 @@
 import type { GetUsers200MetaLinksItemUrl } from './getUsers200MetaLinksItemUrl';
 
 export type GetUsers200MetaLinksItem = {
-  url: GetUsers200MetaLinksItemUrl;
-  label: string;
-  active: boolean;
+    url: GetUsers200MetaLinksItemUrl;
+    label: string;
+    active: boolean;
 };

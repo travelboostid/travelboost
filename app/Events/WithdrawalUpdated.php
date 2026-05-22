@@ -8,10 +8,10 @@ use Illuminate\Queue\SerializesModels;
 
 class WithdrawalUpdated
 {
-  use Dispatchable, SerializesModels;
+    use Dispatchable, SerializesModels;
 
-  /**
-   * Create a new event instance.
-   */
-  public function __construct(public Withdrawal $withdrawal) {}
+    /**
+     * Create a new event instance.
+     */
+    public function __construct(public Withdrawal $withdrawal) {}
 }

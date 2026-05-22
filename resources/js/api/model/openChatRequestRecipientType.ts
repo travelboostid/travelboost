@@ -5,12 +5,11 @@
  * OpenAPI spec version: 0.0.1
  */
 
-export type OpenChatRequestRecipientType = typeof OpenChatRequestRecipientType[keyof typeof OpenChatRequestRecipientType];
+export type OpenChatRequestRecipientType =
+    (typeof OpenChatRequestRecipientType)[keyof typeof OpenChatRequestRecipientType];
 
-
-// eslint-disable-next-line @typescript-eslint/no-redeclare
 export const OpenChatRequestRecipientType = {
-  user: 'user',
-  company: 'company',
-  'anonymous-user': 'anonymous-user',
+    user: 'user',
+    company: 'company',
+    'anonymous-user': 'anonymous-user',
 } as const;

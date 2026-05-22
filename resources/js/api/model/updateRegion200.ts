@@ -7,5 +7,5 @@
 import type { RegionResource } from './regionResource';
 
 export type UpdateRegion200 = {
-  data: RegionResource;
+    data: RegionResource;
 };

@@ -6,6 +6,6 @@
  */
 
 export type UserPreferenceUpdate403 = {
-  /** Error overview. */
-  message: string;
+    /** Error overview. */
+    message: string;
 };

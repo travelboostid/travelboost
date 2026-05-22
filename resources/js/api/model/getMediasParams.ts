@@ -7,23 +7,23 @@
 import type { MediaType } from './mediaType';
 
 export type GetMediasParams = {
-/**
- * @minimum 1
- */
-page?: number;
-/**
- * @minimum 1
- * @maximum 100
- */
-page_size?: number;
-type?: MediaType;
-/**
- * @maxLength 50
- */
-subtype?: string;
-/**
- * @minimum 1
- */
-owner_id?: number;
-owner_type?: string;
+    /**
+     * @minimum 1
+     */
+    page?: number;
+    /**
+     * @minimum 1
+     * @maximum 100
+     */
+    page_size?: number;
+    type?: MediaType;
+    /**
+     * @maxLength 50
+     */
+    subtype?: string;
+    /**
+     * @minimum 1
+     */
+    owner_id?: number;
+    owner_type?: string;
 };

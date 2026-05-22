@@ -6,15 +6,15 @@
  */
 
 export type GetChatRoomsParams = {
-member_type?: 'user' | 'company' | 'anonymous-user' | null;
-/**
- * Make sure these match your actual types
- */
-member_id?: number | null;
-cursor?: string | null;
-/**
- * @minimum 1
- * @maximum 100
- */
-per_page?: number | null;
+    member_type?: 'user' | 'company' | 'anonymous-user' | null;
+    /**
+     * Make sure these match your actual types
+     */
+    member_id?: number | null;
+    cursor?: string | null;
+    /**
+     * @minimum 1
+     * @maximum 100
+     */
+    per_page?: number | null;
 };

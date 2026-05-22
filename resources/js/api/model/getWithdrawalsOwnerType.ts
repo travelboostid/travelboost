@@ -5,11 +5,10 @@
  * OpenAPI spec version: 0.0.1
  */
 
-export type GetWithdrawalsOwnerType = typeof GetWithdrawalsOwnerType[keyof typeof GetWithdrawalsOwnerType];
+export type GetWithdrawalsOwnerType =
+    (typeof GetWithdrawalsOwnerType)[keyof typeof GetWithdrawalsOwnerType];
 
-
-// eslint-disable-next-line @typescript-eslint/no-redeclare
 export const GetWithdrawalsOwnerType = {
-  user: 'user',
-  company: 'company',
+    user: 'user',
+    company: 'company',
 } as const;

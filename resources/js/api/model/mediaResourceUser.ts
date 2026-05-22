@@ -9,6 +9,6 @@
  * kalau perlu user info
  */
 export type MediaResourceUser = {
-  id: string;
-  name: string;
+    id: string;
+    name: string;
 };

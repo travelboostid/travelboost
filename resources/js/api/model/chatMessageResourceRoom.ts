@@ -7,6 +7,6 @@
 import type { ChatMessageResourceRoomName } from './chatMessageResourceRoomName';
 
 export type ChatMessageResourceRoom = {
-  id: number;
-  name: ChatMessageResourceRoomName;
+    id: number;
+    name: ChatMessageResourceRoomName;
 };

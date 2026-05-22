@@ -5,12 +5,11 @@
  * OpenAPI spec version: 0.0.1
  */
 
-export type GetPaymentsStatus = typeof GetPaymentsStatus[keyof typeof GetPaymentsStatus];
+export type GetPaymentsStatus =
+    (typeof GetPaymentsStatus)[keyof typeof GetPaymentsStatus];
 
-
-// eslint-disable-next-line @typescript-eslint/no-redeclare
 export const GetPaymentsStatus = {
-  pending: 'pending',
-  paid: 'paid',
-  failed: 'failed',
+    pending: 'pending',
+    paid: 'paid',
+    failed: 'failed',
 } as const;

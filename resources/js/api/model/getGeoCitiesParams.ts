@@ -6,5 +6,5 @@
  */
 
 export type GetGeoCitiesParams = {
-province_id: number;
+    province_id: number;
 };

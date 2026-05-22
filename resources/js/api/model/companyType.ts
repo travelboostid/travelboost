@@ -5,11 +5,9 @@
  * OpenAPI spec version: 0.0.1
  */
 
-export type CompanyType = typeof CompanyType[keyof typeof CompanyType];
+export type CompanyType = (typeof CompanyType)[keyof typeof CompanyType];
 
-
-// eslint-disable-next-line @typescript-eslint/no-redeclare
 export const CompanyType = {
-  agent: 'agent',
-  vendor: 'vendor',
+    agent: 'agent',
+    vendor: 'vendor',
 } as const;

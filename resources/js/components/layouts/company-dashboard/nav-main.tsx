@@ -5,22 +5,22 @@ import { SidebarMenuRenderer } from '../components/sidebar-menu-renderer';
 import { useCompanyDashboardNavMainMenu } from './use-company-dashboard-nav-main-menu';
 
 export function NavMain({
-  activeMenuIds,
-  openMenuIds,
+    activeMenuIds,
+    openMenuIds,
 }: CompanyDashboardLayoutProps) {
-  const { company } = usePageSharedDataProps();
-  const menus = useCompanyDashboardNavMainMenu();
+    const { company } = usePageSharedDataProps();
+    const menus = useCompanyDashboardNavMainMenu();
 
-  return (
-    <SidebarGroup>
-      <SidebarGroupLabel>
-        {company.type === 'vendor' ? 'Vendor Menu' : 'Agent Menu'}
-      </SidebarGroupLabel>
-      <SidebarMenuRenderer
-        menu={menus as any}
-        activeMenuIds={activeMenuIds || []}
-        openMenuIds={openMenuIds || []}
-      />
-    </SidebarGroup>
-  );
+    return (
+        <SidebarGroup>
+            <SidebarGroupLabel>
+                {company.type === 'vendor' ? 'Vendor Menu' : 'Agent Menu'}
+            </SidebarGroupLabel>
+            <SidebarMenuRenderer
+                menu={menus as any}
+                activeMenuIds={activeMenuIds || []}
+                openMenuIds={openMenuIds || []}
+            />
+        </SidebarGroup>
+    );
 }

@@ -7,7 +7,7 @@
 import type { GetMedias200MetaLinksItemUrl } from './getMedias200MetaLinksItemUrl';
 
 export type GetMedias200MetaLinksItem = {
-  url: GetMedias200MetaLinksItemUrl;
-  label: string;
-  active: boolean;
+    url: GetMedias200MetaLinksItemUrl;
+    label: string;
+    active: boolean;
 };

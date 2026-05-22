@@ -2,7 +2,7 @@
 
 return [
 
-  /*
+    /*
     |--------------------------------------------------------------------------
     | Cross-Origin Resource Sharing (CORS) Configuration
     |--------------------------------------------------------------------------
@@ -15,23 +15,23 @@ return [
     |
     */
 
-  'paths' => ['api/*', 'webapi/*', 'sanctum/csrf-cookie'],
+    'paths' => ['api/*', 'webapi/*', 'sanctum/csrf-cookie'],
 
-  'allowed_methods' => ['*'],
+    'allowed_methods' => ['*'],
 
-  'allowed_origins' => ['http://127.0.0.1:8000', 'http://localhost:8000'],
+    'allowed_origins' => ['http://127.0.0.1:8000', 'http://localhost:8000'],
 
-  'allowed_origins_patterns' => [
-    '/^https:\/\/.*\.travelboost\.co\.id$/',
-    '/^https:\/\/.*\.lvh.me$/',
-  ],
+    'allowed_origins_patterns' => [
+        '/^https:\/\/.*\.travelboost\.co\.id$/',
+        '/^https:\/\/.*\.lvh.me$/',
+    ],
 
-  'allowed_headers' => ['*'],
+    'allowed_headers' => ['*'],
 
-  'exposed_headers' => [],
+    'exposed_headers' => [],
 
-  'max_age' => 0,
+    'max_age' => 0,
 
-  'supports_credentials' => true,
+    'supports_credentials' => true,
 
 ];

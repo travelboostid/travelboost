@@ -7,5 +7,5 @@
 import type { GeoDistrictResource } from './geoDistrictResource';
 
 export type GetGeoDistricts200 = {
-  data: GeoDistrictResource[];
+    data: GeoDistrictResource[];
 };

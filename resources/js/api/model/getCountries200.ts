@@ -7,5 +7,5 @@
 import type { CountryResource } from './countryResource';
 
 export type GetCountries200 = {
-  data: CountryResource[];
+    data: CountryResource[];
 };

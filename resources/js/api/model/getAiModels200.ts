@@ -7,5 +7,5 @@
 import type { AiModelResource } from './aiModelResource';
 
 export type GetAiModels200 = {
-  data: AiModelResource[];
+    data: AiModelResource[];
 };

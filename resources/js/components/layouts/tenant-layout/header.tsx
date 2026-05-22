@@ -10,227 +10,233 @@ import { useEffect, useState } from 'react';
 import { NavUser } from './nav-user';
 
 export function Header({
-  onNavigateAway,
+    onNavigateAway,
 }: {
-  onNavigateAway?: (href: string) => void;
+    onNavigateAway?: (href: string) => void;
 }) {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-  const { auth, company, tenant } = usePageSharedDataProps();
-  const { url } = usePage();
-  const tenantCompany = tenant ?? company;
+    const { auth, company, tenant } = usePageSharedDataProps();
+    const { url } = usePage();
+    const tenantCompany = tenant ?? company;
 
-  let brandName = tenantCompany?.name ?? 'Travel';
-  try {
-    const rawData = JSON.parse(
-      tenantCompany?.settings?.landing_page_data || '{}',
-    );
-    if (rawData?.root?.props?.title) {
-      brandName = rawData.root.props.title;
-    }
-  } catch {
-    // ignore parse error if any
-  }
-
-  useEffect(() => {
-    if (auth?.user) {
-      const pendingStr = sessionStorage.getItem('pendingTourAction');
-      if (pendingStr) {
-        try {
-          const stored = JSON.parse(pendingStr);
-          if (
-            stored.returnUrl &&
-            window.location.pathname + window.location.search !==
-              stored.returnUrl
-          ) {
-            router.visit(stored.returnUrl);
-          }
-        } catch (e) {
-          console.error('Error parsing pendingTourAction:', e);
+    let brandName = tenantCompany?.name ?? 'Travel';
+    try {
+        const rawData = JSON.parse(
+            tenantCompany?.settings?.landing_page_data || '{}',
+        );
+        if (rawData?.root?.props?.title) {
+            brandName = rawData.root.props.title;
         }
-      }
+    } catch {
+        // ignore parse error if any
     }
-  }, [auth?.user]);
 
-  const handleNavigate =
-    (href: string) => (event: MouseEvent) => {
-      if (!onNavigateAway) {
+    useEffect(() => {
+        if (auth?.user) {
+            const pendingStr = sessionStorage.getItem('pendingTourAction');
+            if (pendingStr) {
+                try {
+                    const stored = JSON.parse(pendingStr);
+                    if (
+                        stored.returnUrl &&
+                        window.location.pathname + window.location.search !==
+                            stored.returnUrl
+                    ) {
+                        router.visit(stored.returnUrl);
+                    }
+                } catch (e) {
+                    console.error('Error parsing pendingTourAction:', e);
+                }
+            }
+        }
+    }, [auth?.user]);
+
+    const handleNavigate = (href: string) => (event: MouseEvent) => {
+        if (!onNavigateAway) {
+            setIsMenuOpen(false);
+            return;
+        }
+
+        event.preventDefault();
         setIsMenuOpen(false);
-        return;
-      }
-
-      event.preventDefault();
-      setIsMenuOpen(false);
-      onNavigateAway(href);
+        onNavigateAway(href);
     };
 
-  return (
-    <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-sm">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
-          {/* LOGO */}
-          <Link
-            href="/"
-            className="flex items-center gap-2"
-            onClick={handleNavigate('/')}
-          >
-            {tenantCompany?.photo_url ? (
-              <img
-                src={tenantCompany.photo_url}
-                alt={brandName}
-                className="w-9 h-9 rounded-full object-cover"
-              />
-            ) : (
-              <AppLogoIcon className="w-9 h-9 text-primary-foreground" />
-            )}
-            <span className="text-xl font-bold text-foreground">
-              {brandName}
-            </span>
-          </Link>
-
-          {/* DESKTOP MENU - CENTERED */}
-          <nav className="hidden md:flex items-center gap-8 absolute left-1/2 -translate-x-1/2">
-            <Link
-              href="/"
-              onClick={handleNavigate('/')}
-              className={`transition-colors font-medium ${
-                url === '/'
-                  ? 'text-primary'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              Home
-            </Link>
-            <Link
-              href="/tours"
-              onClick={handleNavigate('/tours')}
-              className={`transition-colors font-medium ${
-                url.startsWith('/tours')
-                  ? 'text-primary'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              Tours
-            </Link>
-            <Link
-              href="/mybookings"
-              onClick={handleNavigate('/mybookings')}
-              className={`transition-colors font-medium ${
-                url.startsWith('/mybookings')
-                  ? 'text-primary'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              My Bookings
-            </Link>
-            <Link
-              href="/#about-us"
-              onClick={handleNavigate('/#about-us')}
-              className="transition-colors font-medium text-muted-foreground hover:text-foreground"
-            >
-              About Us
-            </Link>
-          </nav>
-
-          {/* DESKTOP BUTTON - RIGHT ALIGNED */}
-          <div className="hidden md:flex items-center justify-end gap-4">
-            {auth?.user ? (
-              <NavUser onNavigateAway={onNavigateAway} />
-            ) : (
-              <>
-                <Button asChild variant="ghost">
-                  <Link href={showLogin()}>Masuk</Link>
-                </Button>
-                <Button asChild>
-                  <Link href={showRegister()}>Daftar</Link>
-                </Button>
-              </>
-            )}
-          </div>
-
-          {/* MOBILE TOGGLE */}
-          <div className="flex md:hidden items-center gap-2">
-            <button
-              type="button"
-              className="p-2 text-foreground"
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-            >
-              {isMenuOpen ? (
-                <XIcon className="w-6 h-6" />
-              ) : (
-                <MenuIcon className="w-6 h-6" />
-              )}
-            </button>
-          </div>
-        </div>
-
-        {/* MOBILE MENU */}
-        {isMenuOpen && (
-          <div className="md:hidden py-4 border-t border-border animate-in slide-in-from-top-2">
-            <nav className="flex flex-col gap-4">
-              <Link
-                href="/"
-                onClick={handleNavigate('/')}
-                className={`transition-colors font-bold ${
-                  url === '/'
-                    ? 'text-primary'
-                    : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                Home
-              </Link>
-              <Link
-                href="/tours"
-                onClick={handleNavigate('/tours')}
-                className={`transition-colors font-bold ${
-                  url.startsWith('/tours')
-                    ? 'text-primary'
-                    : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                Tours
-              </Link>
-              <Link
-                href="/mybookings"
-                onClick={handleNavigate('/mybookings')}
-                className={`transition-colors font-bold ${
-                  url.startsWith('/mybookings')
-                    ? 'text-primary'
-                    : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                My Bookings
-              </Link>
-              <Link
-                href="/#about-us"
-                onClick={handleNavigate('/#about-us')}
-                className="transition-colors font-bold text-muted-foreground hover:text-foreground"
-              >
-                About Us
-              </Link>
-
-              <div className="flex flex-col gap-2 pt-4 border-t border-border mt-2">
-                {auth?.user ? (
-                  <NavUser onNavigateAway={onNavigateAway} />
-                ) : (
-                  <>
-                    <Button
-                      asChild
-                      variant="ghost"
-                      className="w-full justify-start"
+    return (
+        <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-sm">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div className="flex items-center justify-between h-16">
+                    {/* LOGO */}
+                    <Link
+                        href="/"
+                        className="flex items-center gap-2"
+                        onClick={handleNavigate('/')}
                     >
-                      <Link href={showLogin()}>Masuk</Link>
-                    </Button>
-                    <Button asChild className="w-full justify-start">
-                      <Link href={showRegister()}>Daftar</Link>
-                    </Button>
-                  </>
+                        {tenantCompany?.photo_url ? (
+                            <img
+                                src={tenantCompany.photo_url}
+                                alt={brandName}
+                                className="w-9 h-9 rounded-full object-cover"
+                            />
+                        ) : (
+                            <AppLogoIcon className="w-9 h-9 text-primary-foreground" />
+                        )}
+                        <span className="text-xl font-bold text-foreground">
+                            {brandName}
+                        </span>
+                    </Link>
+
+                    {/* DESKTOP MENU - CENTERED */}
+                    <nav className="hidden md:flex items-center gap-8 absolute left-1/2 -translate-x-1/2">
+                        <Link
+                            href="/"
+                            onClick={handleNavigate('/')}
+                            className={`transition-colors font-medium ${
+                                url === '/'
+                                    ? 'text-primary'
+                                    : 'text-muted-foreground hover:text-foreground'
+                            }`}
+                        >
+                            Home
+                        </Link>
+                        <Link
+                            href="/tours"
+                            onClick={handleNavigate('/tours')}
+                            className={`transition-colors font-medium ${
+                                url.startsWith('/tours')
+                                    ? 'text-primary'
+                                    : 'text-muted-foreground hover:text-foreground'
+                            }`}
+                        >
+                            Tours
+                        </Link>
+                        <Link
+                            href="/mybookings"
+                            onClick={handleNavigate('/mybookings')}
+                            className={`transition-colors font-medium ${
+                                url.startsWith('/mybookings')
+                                    ? 'text-primary'
+                                    : 'text-muted-foreground hover:text-foreground'
+                            }`}
+                        >
+                            My Bookings
+                        </Link>
+                        <Link
+                            href="/#about-us"
+                            onClick={handleNavigate('/#about-us')}
+                            className="transition-colors font-medium text-muted-foreground hover:text-foreground"
+                        >
+                            About Us
+                        </Link>
+                    </nav>
+
+                    {/* DESKTOP BUTTON - RIGHT ALIGNED */}
+                    <div className="hidden md:flex items-center justify-end gap-4">
+                        {auth?.user ? (
+                            <NavUser onNavigateAway={onNavigateAway} />
+                        ) : (
+                            <>
+                                <Button asChild variant="ghost">
+                                    <Link href={showLogin()}>Masuk</Link>
+                                </Button>
+                                <Button asChild>
+                                    <Link href={showRegister()}>Daftar</Link>
+                                </Button>
+                            </>
+                        )}
+                    </div>
+
+                    {/* MOBILE TOGGLE */}
+                    <div className="flex md:hidden items-center gap-2">
+                        <button
+                            type="button"
+                            className="p-2 text-foreground"
+                            onClick={() => setIsMenuOpen(!isMenuOpen)}
+                        >
+                            {isMenuOpen ? (
+                                <XIcon className="w-6 h-6" />
+                            ) : (
+                                <MenuIcon className="w-6 h-6" />
+                            )}
+                        </button>
+                    </div>
+                </div>
+
+                {/* MOBILE MENU */}
+                {isMenuOpen && (
+                    <div className="md:hidden py-4 border-t border-border animate-in slide-in-from-top-2">
+                        <nav className="flex flex-col gap-4">
+                            <Link
+                                href="/"
+                                onClick={handleNavigate('/')}
+                                className={`transition-colors font-bold ${
+                                    url === '/'
+                                        ? 'text-primary'
+                                        : 'text-muted-foreground hover:text-foreground'
+                                }`}
+                            >
+                                Home
+                            </Link>
+                            <Link
+                                href="/tours"
+                                onClick={handleNavigate('/tours')}
+                                className={`transition-colors font-bold ${
+                                    url.startsWith('/tours')
+                                        ? 'text-primary'
+                                        : 'text-muted-foreground hover:text-foreground'
+                                }`}
+                            >
+                                Tours
+                            </Link>
+                            <Link
+                                href="/mybookings"
+                                onClick={handleNavigate('/mybookings')}
+                                className={`transition-colors font-bold ${
+                                    url.startsWith('/mybookings')
+                                        ? 'text-primary'
+                                        : 'text-muted-foreground hover:text-foreground'
+                                }`}
+                            >
+                                My Bookings
+                            </Link>
+                            <Link
+                                href="/#about-us"
+                                onClick={handleNavigate('/#about-us')}
+                                className="transition-colors font-bold text-muted-foreground hover:text-foreground"
+                            >
+                                About Us
+                            </Link>
+
+                            <div className="flex flex-col gap-2 pt-4 border-t border-border mt-2">
+                                {auth?.user ? (
+                                    <NavUser onNavigateAway={onNavigateAway} />
+                                ) : (
+                                    <>
+                                        <Button
+                                            asChild
+                                            variant="ghost"
+                                            className="w-full justify-start"
+                                        >
+                                            <Link href={showLogin()}>
+                                                Masuk
+                                            </Link>
+                                        </Button>
+                                        <Button
+                                            asChild
+                                            className="w-full justify-start"
+                                        >
+                                            <Link href={showRegister()}>
+                                                Daftar
+                                            </Link>
+                                        </Button>
+                                    </>
+                                )}
+                            </div>
+                        </nav>
+                    </div>
                 )}
-              </div>
-            </nav>
-          </div>
-        )}
-      </div>
-    </header>
-  );
+            </div>
+        </header>
+    );
 }

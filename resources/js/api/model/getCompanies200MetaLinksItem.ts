@@ -7,7 +7,7 @@
 import type { GetCompanies200MetaLinksItemUrl } from './getCompanies200MetaLinksItemUrl';
 
 export type GetCompanies200MetaLinksItem = {
-  url: GetCompanies200MetaLinksItemUrl;
-  label: string;
-  active: boolean;
+    url: GetCompanies200MetaLinksItemUrl;
+    label: string;
+    active: boolean;
 };

@@ -6,14 +6,14 @@
  */
 
 export type CategoriesIndexParams = {
-user_id?: number | null;
-/**
- * @minimum 1
- * @maximum 100
- */
-per_page?: number | null;
-/**
- * @minimum 1
- */
-page?: number | null;
+    user_id?: number | null;
+    /**
+     * @minimum 1
+     * @maximum 100
+     */
+    per_page?: number | null;
+    /**
+     * @minimum 1
+     */
+    page?: number | null;
 };

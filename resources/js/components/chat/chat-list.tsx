@@ -5,96 +5,97 @@ import { IconUsersGroup } from '@tabler/icons-react';
 import { UserIcon } from 'lucide-react';
 import { useEffect } from 'react';
 import {
-  Avatar,
-  AvatarFallback,
-  AvatarGroupCount,
-  AvatarImage,
+    Avatar,
+    AvatarFallback,
+    AvatarGroupCount,
+    AvatarImage,
 } from '../ui/avatar';
 import EmptyChat from './empty-chat';
 import {
-  useChatContext,
-  useChatRooms,
-  useFloatingChatWidgetContext,
-  useLoadRooms,
+    useChatContext,
+    useChatRooms,
+    useFloatingChatWidgetContext,
+    useLoadRooms,
 } from './state';
 
 function PrivateRoomItem({ room }: { room: ChatRoomResource }) {
-  const { actor } = useChatContext();
-  const { setRoomId } = useFloatingChatWidgetContext();
-  const partner = room?.members?.find(
-    (member) =>
-      member?.member_type !== actor?.type || member?.member_id !== actor?.id,
-  ) as any;
-  const partnerPhoto = partner?.member?.photo_url || DEFAULT_PHOTO;
-  return (
-    <div className="flex gap-2 p-4" onClick={() => setRoomId(room.id)}>
-      <div className="flex-none">
-        <Avatar>
-          <AvatarImage src={partnerPhoto} alt="@shadcn" />
-          <AvatarFallback>
-            <UserIcon />
-          </AvatarFallback>
-        </Avatar>
-      </div>
-      <div className="flex-1">
-        <div>{partner?.member?.name || 'User'}</div>
-        <div className="text-xs text-muted-foreground line-clamp-1">
-          {room.last_message?.message || ''}
+    const { actor } = useChatContext();
+    const { setRoomId } = useFloatingChatWidgetContext();
+    const partner = room?.members?.find(
+        (member) =>
+            member?.member_type !== actor?.type ||
+            member?.member_id !== actor?.id,
+    ) as any;
+    const partnerPhoto = partner?.member?.photo_url || DEFAULT_PHOTO;
+    return (
+        <div className="flex gap-2 p-4" onClick={() => setRoomId(room.id)}>
+            <div className="flex-none">
+                <Avatar>
+                    <AvatarImage src={partnerPhoto} alt="@shadcn" />
+                    <AvatarFallback>
+                        <UserIcon />
+                    </AvatarFallback>
+                </Avatar>
+            </div>
+            <div className="flex-1">
+                <div>{partner?.member?.name || 'User'}</div>
+                <div className="text-xs text-muted-foreground line-clamp-1">
+                    {room.last_message?.message || ''}
+                </div>
+            </div>
         </div>
-      </div>
-    </div>
-  );
+    );
 }
 
 function GroupRoomItem({ room }: { room: ChatRoomResource }) {
-  const { setRoomId } = useFloatingChatWidgetContext();
-  return (
-    <div className="flex gap-2 p-4" onClick={() => setRoomId(room.id)}>
-      <div className="flex-none">
-        <AvatarGroupCount>
-          <IconUsersGroup />
-        </AvatarGroupCount>
-      </div>
-      <div className="flex-1">
-        <div>{room.name}</div>
-        <div className="text-xs text-muted-foreground line-clamp-1">
-          {room.last_message?.message || ''}
+    const { setRoomId } = useFloatingChatWidgetContext();
+    return (
+        <div className="flex gap-2 p-4" onClick={() => setRoomId(room.id)}>
+            <div className="flex-none">
+                <AvatarGroupCount>
+                    <IconUsersGroup />
+                </AvatarGroupCount>
+            </div>
+            <div className="flex-1">
+                <div>{room.name}</div>
+                <div className="text-xs text-muted-foreground line-clamp-1">
+                    {room.last_message?.message || ''}
+                </div>
+            </div>
         </div>
-      </div>
-    </div>
-  );
+    );
 }
 
 function RoomItem({ room }: { room: ChatRoomResource }) {
-  return room.type === 'private' ? (
-    <PrivateRoomItem room={room} />
-  ) : (
-    <GroupRoomItem room={room} />
-  );
+    return room.type === 'private' ? (
+        <PrivateRoomItem room={room} />
+    ) : (
+        <GroupRoomItem room={room} />
+    );
 }
 
 export default function ChatList({ className }: { className?: string }) {
-  const { actor } = useChatContext();
-  const loadRooms = useLoadRooms();
-  const rooms = useChatRooms();
-  useEffect(() => {
-    loadRooms({
-      per_page: 100,
-      member_type: actor?.type || 'user',
-      member_id: actor?.id || 0,
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [actor]);
+    const { actor } = useChatContext();
+    const loadRooms = useLoadRooms();
+    const rooms = useChatRooms();
+    useEffect(() => {
+        loadRooms({
+            per_page: 100,
+            member_type: actor?.type || 'user',
+            member_id: actor?.id || 0,
+        });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [actor]);
 
-  if (!rooms.length) {
-    return <EmptyChat />;
-  }
+    if (!rooms.length) {
+        return <EmptyChat />;
+    }
 
-  return (
-    <div className={cn('divide-y overflow-y-auto', className)}>
-      {rooms.map((room) => (
-        <RoomItem room={room} />
-      ))}
-    </div>
-  );
+    return (
+        <div className={cn('divide-y overflow-y-auto', className)}>
+            {rooms.map((room) => (
+                <RoomItem room={room} />
+            ))}
+        </div>
+    );
 }

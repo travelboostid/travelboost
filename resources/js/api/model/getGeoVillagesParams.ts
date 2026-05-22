@@ -6,5 +6,5 @@
  */
 
 export type GetGeoVillagesParams = {
-district_id: number;
+    district_id: number;
 };

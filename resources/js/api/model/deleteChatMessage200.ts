@@ -7,5 +7,5 @@
 import type { DeleteChatMessage200Message } from './deleteChatMessage200Message';
 
 export type DeleteChatMessage200 = {
-  message: DeleteChatMessage200Message;
+    message: DeleteChatMessage200Message;
 };

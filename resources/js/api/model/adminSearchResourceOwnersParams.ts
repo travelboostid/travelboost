@@ -7,17 +7,17 @@
 import type { AdminSearchResourceOwnersTypesItem } from './adminSearchResourceOwnersTypesItem';
 
 export type AdminSearchResourceOwnersParams = {
-'types[]'?: AdminSearchResourceOwnersTypesItem[];
-'include_user_ids[]'?: string[] | null;
-'include_company_ids[]'?: string[] | null;
-'include_affiliate_ids[]'?: string[] | null;
-/**
- * @maxLength 100
- */
-keyword?: string | null;
-/**
- * @minimum 1
- * @maximum 100
- */
-limit?: number | null;
+    'types[]'?: AdminSearchResourceOwnersTypesItem[];
+    'include_user_ids[]'?: string[] | null;
+    'include_company_ids[]'?: string[] | null;
+    'include_affiliate_ids[]'?: string[] | null;
+    /**
+     * @maxLength 100
+     */
+    keyword?: string | null;
+    /**
+     * @minimum 1
+     * @maximum 100
+     */
+    limit?: number | null;
 };

@@ -10,7 +10,7 @@ import type { Payment } from './payment';
  * polymorphic relation
  */
 export type PaymentResourcePayable = {
-  type: string;
-  id: number;
-  data?: Payment;
+    type: string;
+    id: number;
+    data?: Payment;
 };

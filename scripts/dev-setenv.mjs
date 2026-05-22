@@ -9,37 +9,37 @@ const cwd = process.cwd();
 const files = fs.readdirSync(cwd).filter((f) => f.startsWith('.env.preset.'));
 
 if (files.length === 0) {
-  console.error('No .env.preset.* files found');
-  process.exit(1);
+    console.error('No .env.preset.* files found');
+    process.exit(1);
 }
 
 // 2. Extract top comment as description
 function getDescription(filePath) {
-  const content = fs.readFileSync(filePath, 'utf-8');
-  const firstLine = content.split('\n')[0]?.trim();
+    const content = fs.readFileSync(filePath, 'utf-8');
+    const firstLine = content.split('\n')[0]?.trim();
 
-  if (firstLine?.startsWith('#')) {
-    return firstLine.replace(/^#\s*/, '');
-  }
+    if (firstLine?.startsWith('#')) {
+        return firstLine.replace(/^#\s*/, '');
+    }
 
-  return 'No description';
+    return 'No description';
 }
 
 const choices = files.map((file) => {
-  const fullPath = path.join(cwd, file);
-  const desc = getDescription(fullPath);
+    const fullPath = path.join(cwd, file);
+    const desc = getDescription(fullPath);
 
-  return {
-    name: `${file}\n    ${desc}`,
-    value: file,
-  };
+    return {
+        name: `${file}\n    ${desc}`,
+        value: file,
+    };
 });
 
 // 3. Ask user to select
 const selected = await select({
-  message: 'Select env preset:',
-  pageSize: 10,
-  choices,
+    message: 'Select env preset:',
+    pageSize: 10,
+    choices,
 });
 
 const selectedPath = path.join(cwd, selected);

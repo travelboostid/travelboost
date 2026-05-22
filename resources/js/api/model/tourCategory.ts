@@ -4,16 +4,16 @@
  * Travelboost
  * OpenAPI spec version: 0.0.1
  */
-import type { TourCategoryDescription } from './tourCategoryDescription';
 import type { TourCategoryCreatedAt } from './tourCategoryCreatedAt';
+import type { TourCategoryDescription } from './tourCategoryDescription';
 import type { TourCategoryUpdatedAt } from './tourCategoryUpdatedAt';
 
 export interface TourCategory {
-  id: number;
-  name: string;
-  description: TourCategoryDescription;
-  position_no: number;
-  company_id: number;
-  created_at: TourCategoryCreatedAt;
-  updated_at: TourCategoryUpdatedAt;
+    id: number;
+    name: string;
+    description: TourCategoryDescription;
+    position_no: number;
+    company_id: number;
+    created_at: TourCategoryCreatedAt;
+    updated_at: TourCategoryUpdatedAt;
 }

@@ -7,5 +7,5 @@
 import type { TourResource } from './tourResource';
 
 export type GetTour200 = {
-  data: TourResource;
+    data: TourResource;
 };

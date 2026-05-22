@@ -4,125 +4,191 @@
  * Travelboost
  * OpenAPI spec version: 0.0.1
  */
-import {
-  useQuery
-} from '@tanstack/react-query';
 import type {
-  DataTag,
-  DefinedInitialDataOptions,
-  DefinedUseQueryResult,
-  QueryClient,
-  QueryFunction,
-  QueryKey,
-  UndefinedInitialDataOptions,
-  UseQueryOptions,
-  UseQueryResult
+    DataTag,
+    DefinedInitialDataOptions,
+    DefinedUseQueryResult,
+    QueryClient,
+    QueryFunction,
+    QueryKey,
+    UndefinedInitialDataOptions,
+    UseQueryOptions,
+    UseQueryResult,
 } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 
 import type {
-  AuthenticationExceptionResponse,
-  GetGeoVillages200,
-  GetGeoVillagesParams,
-  ValidationExceptionResponse
+    AuthenticationExceptionResponse,
+    GetGeoVillages200,
+    GetGeoVillagesParams,
+    ValidationExceptionResponse,
 } from '.././model';
 
 import { apiInstance } from '.././api-instance';
 
-
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
-
-
 
 /**
  * @summary Display a listing of the resource
  */
 export const getGeoVillages = (
     params: GetGeoVillagesParams,
- options?: SecondParameter<typeof apiInstance>,signal?: AbortSignal
+    options?: SecondParameter<typeof apiInstance>,
+    signal?: AbortSignal,
 ) => {
-      
-      
-      return apiInstance<GetGeoVillages200>(
-      {url: `/geo/villages`, method: 'GET',
-        params, signal
+    return apiInstance<GetGeoVillages200>(
+        { url: `/geo/villages`, method: 'GET', params, signal },
+        options,
+    );
+};
+
+export const getGetGeoVillagesQueryKey = (params?: GetGeoVillagesParams) => {
+    return [`/geo/villages`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetGeoVillagesQueryOptions = <
+    TData = Awaited<ReturnType<typeof getGeoVillages>>,
+    TError = AuthenticationExceptionResponse | ValidationExceptionResponse,
+>(
+    params: GetGeoVillagesParams,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof getGeoVillages>>,
+                TError,
+                TData
+            >
+        >;
+        request?: SecondParameter<typeof apiInstance>;
     },
-      options);
-    }
-  
-
-
-
-export const getGetGeoVillagesQueryKey = (params?: GetGeoVillagesParams,) => {
-    return [
-    `/geo/villages`, ...(params ? [params]: [])
-    ] as const;
-    }
-
-    
-export const getGetGeoVillagesQueryOptions = <TData = Awaited<ReturnType<typeof getGeoVillages>>, TError = AuthenticationExceptionResponse | ValidationExceptionResponse>(params: GetGeoVillagesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getGeoVillages>>, TError, TData>>, request?: SecondParameter<typeof apiInstance>}
 ) => {
+    const { query: queryOptions, request: requestOptions } = options ?? {};
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+    const queryKey =
+        queryOptions?.queryKey ?? getGetGeoVillagesQueryKey(params);
 
-  const queryKey =  queryOptions?.queryKey ?? getGetGeoVillagesQueryKey(params);
+    const queryFn: QueryFunction<
+        Awaited<ReturnType<typeof getGeoVillages>>
+    > = ({ signal }) => getGeoVillages(params, requestOptions, signal);
 
-  
+    return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+        Awaited<ReturnType<typeof getGeoVillages>>,
+        TError,
+        TData
+    > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getGeoVillages>>> = ({ signal }) => getGeoVillages(params, requestOptions, signal);
+export type GetGeoVillagesQueryResult = NonNullable<
+    Awaited<ReturnType<typeof getGeoVillages>>
+>;
+export type GetGeoVillagesQueryError =
+    | AuthenticationExceptionResponse
+    | ValidationExceptionResponse;
 
-      
-
-      
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getGeoVillages>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type GetGeoVillagesQueryResult = NonNullable<Awaited<ReturnType<typeof getGeoVillages>>>
-export type GetGeoVillagesQueryError = AuthenticationExceptionResponse | ValidationExceptionResponse
-
-
-export function useGetGeoVillages<TData = Awaited<ReturnType<typeof getGeoVillages>>, TError = AuthenticationExceptionResponse | ValidationExceptionResponse>(
- params: GetGeoVillagesParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getGeoVillages>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getGeoVillages>>,
-          TError,
-          Awaited<ReturnType<typeof getGeoVillages>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof apiInstance>}
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetGeoVillages<TData = Awaited<ReturnType<typeof getGeoVillages>>, TError = AuthenticationExceptionResponse | ValidationExceptionResponse>(
- params: GetGeoVillagesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getGeoVillages>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getGeoVillages>>,
-          TError,
-          Awaited<ReturnType<typeof getGeoVillages>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof apiInstance>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetGeoVillages<TData = Awaited<ReturnType<typeof getGeoVillages>>, TError = AuthenticationExceptionResponse | ValidationExceptionResponse>(
- params: GetGeoVillagesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getGeoVillages>>, TError, TData>>, request?: SecondParameter<typeof apiInstance>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetGeoVillages<
+    TData = Awaited<ReturnType<typeof getGeoVillages>>,
+    TError = AuthenticationExceptionResponse | ValidationExceptionResponse,
+>(
+    params: GetGeoVillagesParams,
+    options: {
+        query: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof getGeoVillages>>,
+                TError,
+                TData
+            >
+        > &
+            Pick<
+                DefinedInitialDataOptions<
+                    Awaited<ReturnType<typeof getGeoVillages>>,
+                    TError,
+                    Awaited<ReturnType<typeof getGeoVillages>>
+                >,
+                'initialData'
+            >;
+        request?: SecondParameter<typeof apiInstance>;
+    },
+    queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetGeoVillages<
+    TData = Awaited<ReturnType<typeof getGeoVillages>>,
+    TError = AuthenticationExceptionResponse | ValidationExceptionResponse,
+>(
+    params: GetGeoVillagesParams,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof getGeoVillages>>,
+                TError,
+                TData
+            >
+        > &
+            Pick<
+                UndefinedInitialDataOptions<
+                    Awaited<ReturnType<typeof getGeoVillages>>,
+                    TError,
+                    Awaited<ReturnType<typeof getGeoVillages>>
+                >,
+                'initialData'
+            >;
+        request?: SecondParameter<typeof apiInstance>;
+    },
+    queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetGeoVillages<
+    TData = Awaited<ReturnType<typeof getGeoVillages>>,
+    TError = AuthenticationExceptionResponse | ValidationExceptionResponse,
+>(
+    params: GetGeoVillagesParams,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof getGeoVillages>>,
+                TError,
+                TData
+            >
+        >;
+        request?: SecondParameter<typeof apiInstance>;
+    },
+    queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+};
 /**
  * @summary Display a listing of the resource
  */
 
-export function useGetGeoVillages<TData = Awaited<ReturnType<typeof getGeoVillages>>, TError = AuthenticationExceptionResponse | ValidationExceptionResponse>(
- params: GetGeoVillagesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getGeoVillages>>, TError, TData>>, request?: SecondParameter<typeof apiInstance>}
- , queryClient?: QueryClient 
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+export function useGetGeoVillages<
+    TData = Awaited<ReturnType<typeof getGeoVillages>>,
+    TError = AuthenticationExceptionResponse | ValidationExceptionResponse,
+>(
+    params: GetGeoVillagesParams,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof getGeoVillages>>,
+                TError,
+                TData
+            >
+        >;
+        request?: SecondParameter<typeof apiInstance>;
+    },
+    queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+} {
+    const queryOptions = getGetGeoVillagesQueryOptions(params, options);
 
-  const queryOptions = getGetGeoVillagesQueryOptions(params,options)
+    const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+        TData,
+        TError
+    > & { queryKey: DataTag<QueryKey, TData, TError> };
 
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+    query.queryKey = queryOptions.queryKey;
 
-  query.queryKey = queryOptions.queryKey ;
-
-  return query;
+    return query;
 }
-
-
-
-

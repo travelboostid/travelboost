@@ -4,13 +4,13 @@
  * Travelboost
  * OpenAPI spec version: 0.0.1
  */
+import type { UpdateUserPreferenceRequestLandingPageTemplateData } from './updateUserPreferenceRequestLandingPageTemplateData';
 import type { UpdateUserPreferenceRequestMetaPixelId } from './updateUserPreferenceRequestMetaPixelId';
 import type { UpdateUserPreferenceRequestUseChatbot } from './updateUserPreferenceRequestUseChatbot';
-import type { UpdateUserPreferenceRequestLandingPageTemplateData } from './updateUserPreferenceRequestLandingPageTemplateData';
 
 export interface UpdateUserPreferenceRequest {
-  /** @maxLength 100 */
-  meta_pixel_id?: UpdateUserPreferenceRequestMetaPixelId;
-  use_chatbot?: UpdateUserPreferenceRequestUseChatbot;
-  landing_page_template_data?: UpdateUserPreferenceRequestLandingPageTemplateData;
+    /** @maxLength 100 */
+    meta_pixel_id?: UpdateUserPreferenceRequestMetaPixelId;
+    use_chatbot?: UpdateUserPreferenceRequestUseChatbot;
+    landing_page_template_data?: UpdateUserPreferenceRequestLandingPageTemplateData;
 }

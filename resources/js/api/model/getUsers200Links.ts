@@ -6,12 +6,12 @@
  */
 import type { GetUsers200LinksFirst } from './getUsers200LinksFirst';
 import type { GetUsers200LinksLast } from './getUsers200LinksLast';
-import type { GetUsers200LinksPrev } from './getUsers200LinksPrev';
 import type { GetUsers200LinksNext } from './getUsers200LinksNext';
+import type { GetUsers200LinksPrev } from './getUsers200LinksPrev';
 
 export type GetUsers200Links = {
-  first: GetUsers200LinksFirst;
-  last: GetUsers200LinksLast;
-  prev: GetUsers200LinksPrev;
-  next: GetUsers200LinksNext;
+    first: GetUsers200LinksFirst;
+    last: GetUsers200LinksLast;
+    prev: GetUsers200LinksPrev;
+    next: GetUsers200LinksNext;
 };

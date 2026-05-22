@@ -4,23 +4,23 @@
  * Travelboost
  * OpenAPI spec version: 0.0.1
  */
+import type { PaymentResourcePayable } from './paymentResourcePayable';
+import type { PaymentResourcePayload } from './paymentResourcePayload';
 import type { PaymentResourcePaymentMethod } from './paymentResourcePaymentMethod';
 import type { PaymentStatus } from './paymentStatus';
-import type { PaymentResourcePayload } from './paymentResourcePayload';
-import type { PaymentResourcePayable } from './paymentResourcePayable';
 
 export interface PaymentResource {
-  id: number;
-  user_id: string;
-  provider: string;
-  payment_method: PaymentResourcePaymentMethod;
-  amount: number;
-  status: PaymentStatus;
-  /** Important: include payload (contains snap_token, etc) */
-  payload: PaymentResourcePayload;
-  paid_at: string;
-  created_at: string;
-  updated_at: string;
-  /** polymorphic relation */
-  payable: PaymentResourcePayable;
+    id: number;
+    user_id: string;
+    provider: string;
+    payment_method: PaymentResourcePaymentMethod;
+    amount: number;
+    status: PaymentStatus;
+    /** Important: include payload (contains snap_token, etc) */
+    payload: PaymentResourcePayload;
+    paid_at: string;
+    created_at: string;
+    updated_at: string;
+    /** polymorphic relation */
+    payable: PaymentResourcePayable;
 }

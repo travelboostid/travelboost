@@ -6,5 +6,5 @@
  */
 
 export type SetupAnonymousUser200AnyOf = {
-  data: string[];
+    data: string[];
 };

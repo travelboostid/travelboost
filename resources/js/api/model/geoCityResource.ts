@@ -5,4 +5,6 @@
  * OpenAPI spec version: 0.0.1
  */
 
-export interface GeoCityResource {[key: string]: unknown}
+export interface GeoCityResource {
+    [key: string]: unknown;
+}

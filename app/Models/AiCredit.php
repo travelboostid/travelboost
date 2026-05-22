@@ -7,20 +7,20 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class AiCredit extends Model
 {
-  protected $fillable = [
-    'company_id',
-    'balance',
-  ];
-
-  protected function casts(): array
-  {
-    return [
-      'balance' => 'decimal:8',
+    protected $fillable = [
+        'company_id',
+        'balance',
     ];
-  }
 
-  public function company(): BelongsTo
-  {
-    return $this->belongsTo(Company::class);
-  }
+    protected function casts(): array
+    {
+        return [
+            'balance' => 'decimal:8',
+        ];
+    }
+
+    public function company(): BelongsTo
+    {
+        return $this->belongsTo(Company::class);
+    }
 }

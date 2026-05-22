@@ -6,17 +6,17 @@
  */
 
 export type GetVendorsParams = {
-/**
- * @maxLength 100
- */
-search?: string | null;
-/**
- * @minimum 1
- */
-page?: number | null;
-/**
- * @minimum 1
- * @maximum 100
- */
-per_page?: number | null;
+    /**
+     * @maxLength 100
+     */
+    search?: string | null;
+    /**
+     * @minimum 1
+     */
+    page?: number | null;
+    /**
+     * @minimum 1
+     * @maximum 100
+     */
+    per_page?: number | null;
 };

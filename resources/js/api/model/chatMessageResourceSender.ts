@@ -9,7 +9,7 @@
  * Relationships
  */
 export type ChatMessageResourceSender = {
-  id: number;
-  name: string;
-  photo_url: string;
+    id: number;
+    name: string;
+    photo_url: string;
 };

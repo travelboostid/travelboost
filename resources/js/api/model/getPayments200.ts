@@ -4,12 +4,12 @@
  * Travelboost
  * OpenAPI spec version: 0.0.1
  */
-import type { PaymentResource } from './paymentResource';
 import type { GetPayments200Links } from './getPayments200Links';
 import type { GetPayments200Meta } from './getPayments200Meta';
+import type { PaymentResource } from './paymentResource';
 
 export type GetPayments200 = {
-  data: PaymentResource[];
-  links: GetPayments200Links;
-  meta: GetPayments200Meta;
+    data: PaymentResource[];
+    links: GetPayments200Links;
+    meta: GetPayments200Meta;
 };

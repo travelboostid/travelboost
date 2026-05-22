@@ -8,30 +8,33 @@ import SubscriptionAlert from './components/subscription-alert';
 dayjs.extend(relativeTime);
 
 export type AgentSubscriptionPageProps = {
-  agentSubscription: any | null;
-  agentSubscriptionPackages: any[];
+    agentSubscription: any | null;
+    agentSubscriptionPackages: any[];
 };
 
 export default function Page({
-  agentSubscription,
+    agentSubscription,
 }: AgentSubscriptionPageProps) {
-  return (
-    <CompanyDashboardLayout
-      openMenuIds={['settings']}
-      activeMenuIds={['settings.agent-subscriptions']}
-      containerClassName="mx-auto max-w-4xl w-full space-y-8 p-4"
-      breadcrumb={[{ title: 'Settings' }, { title: 'Agent Subscriptions' }]}
-    >
-      {agentSubscription ? (
-        <>
-          {/* Current Subscription Section */}
-          <CurrentSubscription />
-          {/* Payment History Section */}
-          <ExtendSubscriptionCard />
-        </>
-      ) : (
-        <SubscriptionAlert />
-      )}
-    </CompanyDashboardLayout>
-  );
+    return (
+        <CompanyDashboardLayout
+            openMenuIds={['settings']}
+            activeMenuIds={['settings.agent-subscriptions']}
+            containerClassName="mx-auto max-w-4xl w-full space-y-8 p-4"
+            breadcrumb={[
+                { title: 'Settings' },
+                { title: 'Agent Subscriptions' },
+            ]}
+        >
+            {agentSubscription ? (
+                <>
+                    {/* Current Subscription Section */}
+                    <CurrentSubscription />
+                    {/* Payment History Section */}
+                    <ExtendSubscriptionCard />
+                </>
+            ) : (
+                <SubscriptionAlert />
+            )}
+        </CompanyDashboardLayout>
+    );
 }

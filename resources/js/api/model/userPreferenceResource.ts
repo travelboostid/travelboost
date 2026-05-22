@@ -6,9 +6,9 @@
  */
 
 export interface UserPreferenceResource {
-  id: string;
-  meta_pixel_id: string;
-  use_chatbot: string;
-  landing_page_template_data: string;
-  updated_at: string;
+    id: string;
+    meta_pixel_id: string;
+    use_chatbot: string;
+    landing_page_template_data: string;
+    updated_at: string;
 }

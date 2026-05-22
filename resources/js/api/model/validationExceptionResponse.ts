@@ -7,8 +7,8 @@
 import type { ValidationExceptionResponseErrors } from './validationExceptionResponseErrors';
 
 export type ValidationExceptionResponse = {
-  /** Errors overview. */
-  message: string;
-  /** A detailed description of each field that failed validation. */
-  errors: ValidationExceptionResponseErrors;
+    /** Errors overview. */
+    message: string;
+    /** A detailed description of each field that failed validation. */
+    errors: ValidationExceptionResponseErrors;
 };

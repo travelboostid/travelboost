@@ -4,24 +4,24 @@
  * Travelboost
  * OpenAPI spec version: 0.0.1
  */
-import type { UserEmailVerifiedAt } from './userEmailVerifiedAt';
 import type { UserCreatedAt } from './userCreatedAt';
-import type { UserUpdatedAt } from './userUpdatedAt';
-import type { UserTwoFactorConfirmedAt } from './userTwoFactorConfirmedAt';
+import type { UserEmailVerifiedAt } from './userEmailVerifiedAt';
 import type { UserPhotoId } from './userPhotoId';
+import type { UserTwoFactorConfirmedAt } from './userTwoFactorConfirmedAt';
+import type { UserUpdatedAt } from './userUpdatedAt';
 
 export interface User {
-  id: number;
-  name: string;
-  email: string;
-  email_verified_at: UserEmailVerifiedAt;
-  username: string;
-  address: string;
-  phone: string;
-  type: string;
-  created_at: UserCreatedAt;
-  updated_at: UserUpdatedAt;
-  two_factor_confirmed_at: UserTwoFactorConfirmedAt;
-  photo_id: UserPhotoId;
-  photo_url: string;
+    id: number;
+    name: string;
+    email: string;
+    email_verified_at: UserEmailVerifiedAt;
+    username: string;
+    address: string;
+    phone: string;
+    type: string;
+    created_at: UserCreatedAt;
+    updated_at: UserUpdatedAt;
+    two_factor_confirmed_at: UserTwoFactorConfirmedAt;
+    photo_id: UserPhotoId;
+    photo_url: string;
 }

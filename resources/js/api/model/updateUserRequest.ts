@@ -7,22 +7,22 @@
 import type { UpdateUserRequestPhotoId } from './updateUserRequestPhotoId';
 
 export interface UpdateUserRequest {
-  /** @maxLength 255 */
-  name?: string;
-  /** @maxLength 255 */
-  username?: string;
-  /** @maxLength 255 */
-  email?: string;
-  /** @maxLength 50 */
-  phone?: string;
-  /** @maxLength 500 */
-  address?: string;
-  photo_id?: UpdateUserRequestPhotoId;
-  /**
-   * Optional password update
-   * @minLength 8
-   */
-  password?: string;
-  /** @minLength 8 */
-  password_confirmation?: string;
+    /** @maxLength 255 */
+    name?: string;
+    /** @maxLength 255 */
+    username?: string;
+    /** @maxLength 255 */
+    email?: string;
+    /** @maxLength 50 */
+    phone?: string;
+    /** @maxLength 500 */
+    address?: string;
+    photo_id?: UpdateUserRequestPhotoId;
+    /**
+     * Optional password update
+     * @minLength 8
+     */
+    password?: string;
+    /** @minLength 8 */
+    password_confirmation?: string;
 }

@@ -7,5 +7,5 @@
 import type { GeoCityResource } from './geoCityResource';
 
 export type GetGeoCities200 = {
-  data: GeoCityResource[];
+    data: GeoCityResource[];
 };

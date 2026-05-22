@@ -6,7 +6,7 @@
  */
 
 export interface RegionResource {
-  id: number;
-  name: string;
-  continent_id: number;
+    id: number;
+    name: string;
+    continent_id: number;
 }

@@ -7,27 +7,28 @@ use Illuminate\Notifications\Notification;
 
 class NewReferralNotification extends Notification
 {
-  use Queueable;
+    use Queueable;
 
-  public $title;
-  public $message;
+    public $title;
 
-  public function __construct($title, $message)
-  {
-    $this->title = $title;
-    $this->message = $message;
-  }
+    public $message;
 
-  public function via($notifiable)
-  {
-    return ['database'];
-  }
+    public function __construct($title, $message)
+    {
+        $this->title = $title;
+        $this->message = $message;
+    }
 
-  public function toDatabase($notifiable)
-  {
-    return [
-      'title' => $this->title,
-      'message' => $this->message,
-    ];
-  }
+    public function via($notifiable)
+    {
+        return ['database'];
+    }
+
+    public function toDatabase($notifiable)
+    {
+        return [
+            'title' => $this->title,
+            'message' => $this->message,
+        ];
+    }
 }

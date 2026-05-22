@@ -7,7 +7,7 @@
 import type { StoreChatRoomRequestType } from './storeChatRoomRequestType';
 
 export interface StoreChatRoomRequest {
-  /** @maxLength 255 */
-  name: string;
-  type?: StoreChatRoomRequestType;
+    /** @maxLength 255 */
+    name: string;
+    type?: StoreChatRoomRequestType;
 }

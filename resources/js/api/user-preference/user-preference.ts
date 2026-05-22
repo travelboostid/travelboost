@@ -4,31 +4,26 @@
  * Travelboost
  * OpenAPI spec version: 0.0.1
  */
-import {
-  useMutation
-} from '@tanstack/react-query';
 import type {
-  MutationFunction,
-  QueryClient,
-  UseMutationOptions,
-  UseMutationResult
+    MutationFunction,
+    QueryClient,
+    UseMutationOptions,
+    UseMutationResult,
 } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 
 import type {
-  AuthenticationExceptionResponse,
-  AuthorizationExceptionResponse,
-  ModelNotFoundExceptionResponse,
-  UpdateUserPreference200,
-  UpdateUserPreferenceRequest,
-  ValidationExceptionResponse
+    AuthenticationExceptionResponse,
+    AuthorizationExceptionResponse,
+    ModelNotFoundExceptionResponse,
+    UpdateUserPreference200,
+    UpdateUserPreferenceRequest,
+    ValidationExceptionResponse,
 } from '.././model';
 
 import { apiInstance } from '.././api-instance';
 
-
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
-
-
 
 /**
  * @summary Update user preference
@@ -36,62 +31,99 @@ type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 export const updateUserPreference = (
     user: number,
     updateUserPreferenceRequest: UpdateUserPreferenceRequest,
- options?: SecondParameter<typeof apiInstance>,) => {
-      
-      
-      return apiInstance<UpdateUserPreference200>(
-      {url: `/users/${user}/preference`, method: 'PUT',
-      headers: {'Content-Type': 'application/json', },
-      data: updateUserPreferenceRequest
-    },
-      options);
-    }
-  
+    options?: SecondParameter<typeof apiInstance>,
+) => {
+    return apiInstance<UpdateUserPreference200>(
+        {
+            url: `/users/${user}/preference`,
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            data: updateUserPreferenceRequest,
+        },
+        options,
+    );
+};
 
-
-export const getUpdateUserPreferenceMutationOptions = <TError = AuthenticationExceptionResponse | AuthorizationExceptionResponse | ModelNotFoundExceptionResponse | ValidationExceptionResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateUserPreference>>, TError,{user: number;data: UpdateUserPreferenceRequest}, TContext>, request?: SecondParameter<typeof apiInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof updateUserPreference>>, TError,{user: number;data: UpdateUserPreferenceRequest}, TContext> => {
-
-const mutationKey = ['updateUserPreference'];
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-      
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateUserPreference>>, {user: number;data: UpdateUserPreferenceRequest}> = (props) => {
-          const {user,data} = props ?? {};
-
-          return  updateUserPreference(user,data,requestOptions)
-        }
-
-        
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type UpdateUserPreferenceMutationResult = NonNullable<Awaited<ReturnType<typeof updateUserPreference>>>
-    export type UpdateUserPreferenceMutationBody = UpdateUserPreferenceRequest
-    export type UpdateUserPreferenceMutationError = AuthenticationExceptionResponse | AuthorizationExceptionResponse | ModelNotFoundExceptionResponse | ValidationExceptionResponse
-
-    /**
- * @summary Update user preference
- */
-export const useUpdateUserPreference = <TError = AuthenticationExceptionResponse | AuthorizationExceptionResponse | ModelNotFoundExceptionResponse | ValidationExceptionResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateUserPreference>>, TError,{user: number;data: UpdateUserPreferenceRequest}, TContext>, request?: SecondParameter<typeof apiInstance>}
- , queryClient?: QueryClient): UseMutationResult<
+export const getUpdateUserPreferenceMutationOptions = <
+    TError =
+        | AuthenticationExceptionResponse
+        | AuthorizationExceptionResponse
+        | ModelNotFoundExceptionResponse
+        | ValidationExceptionResponse,
+    TContext = unknown,
+>(options?: {
+    mutation?: UseMutationOptions<
         Awaited<ReturnType<typeof updateUserPreference>>,
         TError,
-        {user: number;data: UpdateUserPreferenceRequest},
+        { user: number; data: UpdateUserPreferenceRequest },
         TContext
-      > => {
+    >;
+    request?: SecondParameter<typeof apiInstance>;
+}): UseMutationOptions<
+    Awaited<ReturnType<typeof updateUserPreference>>,
+    TError,
+    { user: number; data: UpdateUserPreferenceRequest },
+    TContext
+> => {
+    const mutationKey = ['updateUserPreference'];
+    const { mutation: mutationOptions, request: requestOptions } = options
+        ? options.mutation &&
+          'mutationKey' in options.mutation &&
+          options.mutation.mutationKey
+            ? options
+            : { ...options, mutation: { ...options.mutation, mutationKey } }
+        : { mutation: { mutationKey }, request: undefined };
 
-      const mutationOptions = getUpdateUserPreferenceMutationOptions(options);
+    const mutationFn: MutationFunction<
+        Awaited<ReturnType<typeof updateUserPreference>>,
+        { user: number; data: UpdateUserPreferenceRequest }
+    > = (props) => {
+        const { user, data } = props ?? {};
 
-      return useMutation(mutationOptions, queryClient);
-    }
-    
+        return updateUserPreference(user, data, requestOptions);
+    };
+
+    return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateUserPreferenceMutationResult = NonNullable<
+    Awaited<ReturnType<typeof updateUserPreference>>
+>;
+export type UpdateUserPreferenceMutationBody = UpdateUserPreferenceRequest;
+export type UpdateUserPreferenceMutationError =
+    | AuthenticationExceptionResponse
+    | AuthorizationExceptionResponse
+    | ModelNotFoundExceptionResponse
+    | ValidationExceptionResponse;
+
+/**
+ * @summary Update user preference
+ */
+export const useUpdateUserPreference = <
+    TError =
+        | AuthenticationExceptionResponse
+        | AuthorizationExceptionResponse
+        | ModelNotFoundExceptionResponse
+        | ValidationExceptionResponse,
+    TContext = unknown,
+>(
+    options?: {
+        mutation?: UseMutationOptions<
+            Awaited<ReturnType<typeof updateUserPreference>>,
+            TError,
+            { user: number; data: UpdateUserPreferenceRequest },
+            TContext
+        >;
+        request?: SecondParameter<typeof apiInstance>;
+    },
+    queryClient?: QueryClient,
+): UseMutationResult<
+    Awaited<ReturnType<typeof updateUserPreference>>,
+    TError,
+    { user: number; data: UpdateUserPreferenceRequest },
+    TContext
+> => {
+    const mutationOptions = getUpdateUserPreferenceMutationOptions(options);
+
+    return useMutation(mutationOptions, queryClient);
+};

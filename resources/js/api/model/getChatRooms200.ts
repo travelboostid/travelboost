@@ -9,7 +9,7 @@ import type { GetChatRooms200Links } from './getChatRooms200Links';
 import type { GetChatRooms200Meta } from './getChatRooms200Meta';
 
 export type GetChatRooms200 = {
-  data: ChatRoomResource[];
-  links: GetChatRooms200Links;
-  meta: GetChatRooms200Meta;
+    data: ChatRoomResource[];
+    links: GetChatRooms200Links;
+    meta: GetChatRooms200Meta;
 };

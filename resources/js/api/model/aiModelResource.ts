@@ -8,11 +8,11 @@ import type { AiModelResourceCreatedAt } from './aiModelResourceCreatedAt';
 import type { AiModelResourceUpdatedAt } from './aiModelResourceUpdatedAt';
 
 export interface AiModelResource {
-  id: number;
-  code: string;
-  input_token_rate: string;
-  output_token_rate: string;
-  flat_rate: string;
-  created_at: AiModelResourceCreatedAt;
-  updated_at: AiModelResourceUpdatedAt;
+    id: number;
+    code: string;
+    input_token_rate: string;
+    output_token_rate: string;
+    flat_rate: string;
+    created_at: AiModelResourceCreatedAt;
+    updated_at: AiModelResourceUpdatedAt;
 }

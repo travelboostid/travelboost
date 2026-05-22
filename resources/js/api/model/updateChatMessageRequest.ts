@@ -8,10 +8,10 @@ import type { UpdateChatMessageRequestAttachmentData } from './updateChatMessage
 import type { UpdateChatMessageRequestAttachmentType } from './updateChatMessageRequestAttachmentType';
 
 export interface UpdateChatMessageRequest {
-  /** @maxLength 2000 */
-  message?: string;
-  /** @maxLength 2000 */
-  attachment_data?: UpdateChatMessageRequestAttachmentData;
-  /** @maxLength 50 */
-  attachment_type?: UpdateChatMessageRequestAttachmentType;
+    /** @maxLength 2000 */
+    message?: string;
+    /** @maxLength 2000 */
+    attachment_data?: UpdateChatMessageRequestAttachmentData;
+    /** @maxLength 50 */
+    attachment_type?: UpdateChatMessageRequestAttachmentType;
 }

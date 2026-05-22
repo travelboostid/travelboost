@@ -6,6 +6,6 @@
  */
 
 export type CreateContinentBody = {
-  /** @maxLength 255 */
-  name: string;
+    /** @maxLength 255 */
+    name: string;
 };

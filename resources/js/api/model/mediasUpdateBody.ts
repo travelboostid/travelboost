@@ -7,7 +7,7 @@
 import type { MediasUpdateBodyDescription } from './mediasUpdateBodyDescription';
 
 export type MediasUpdateBody = {
-  /** @maxLength 255 */
-  name?: string;
-  description?: MediasUpdateBodyDescription;
+    /** @maxLength 255 */
+    name?: string;
+    description?: MediasUpdateBodyDescription;
 };

@@ -7,7 +7,7 @@
 import type { UpdateCompanySettingsRequestLandingPageData } from './updateCompanySettingsRequestLandingPageData';
 
 export interface UpdateCompanySettingsRequest {
-  enable_chatbot?: boolean;
-  /** @maxLength 200000 */
-  landing_page_data?: UpdateCompanySettingsRequestLandingPageData;
+    enable_chatbot?: boolean;
+    /** @maxLength 200000 */
+    landing_page_data?: UpdateCompanySettingsRequestLandingPageData;
 }

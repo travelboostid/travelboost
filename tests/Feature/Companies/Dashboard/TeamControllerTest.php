@@ -5,7 +5,6 @@ use App\Enums\CompanyType;
 use App\Enums\UserStatus;
 use App\Models\Company;
 use App\Models\CompanyTeam;
-use App\Models\Role;
 use App\Models\User;
 use App\Notifications\TeamAccountNotification;
 use Database\Seeders\Common\RolePermissionSeeder;

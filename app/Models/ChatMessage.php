@@ -9,52 +9,52 @@ use Illuminate\Notifications\Notifiable;
 
 class ChatMessage extends Model
 {
-  use HasFactory, Notifiable;
+    use HasFactory, Notifiable;
 
-  protected $fillable = [
-    'room_id',
-    'sender_type',
-    'sender_id',
-    'user_id',
-    'message',
-    'meta',
-    'attachment_data',
-    'attachment_type',
-    'is_bot',
-    'reply_to',
-  ];
+    protected $fillable = [
+        'room_id',
+        'sender_type',
+        'sender_id',
+        'user_id',
+        'message',
+        'meta',
+        'attachment_data',
+        'attachment_type',
+        'is_bot',
+        'reply_to',
+    ];
 
-  protected $with = [
-    'sender',
-    'replyTo'
-  ];
+    protected $with = [
+        'sender',
+        'replyTo',
+    ];
 
-  protected $dispatchesEvents = [
-    'created' => ChatMessageCreated::class,
-  ];
+    protected $dispatchesEvents = [
+        'created' => ChatMessageCreated::class,
+    ];
 
-  protected $casts = [
-    'meta' => 'array',
-    'is_bot' => 'boolean',
-  ];
+    protected $casts = [
+        'meta' => 'array',
+        'is_bot' => 'boolean',
+    ];
 
-  public function room()
-  {
-    return $this->belongsTo(ChatRoom::class, 'room_id');
-  }
+    public function room()
+    {
+        return $this->belongsTo(ChatRoom::class, 'room_id');
+    }
 
-  public function sender()
-  {
-    return $this->morphTo();
-  }
+    public function sender()
+    {
+        return $this->morphTo();
+    }
 
-  public function replyTo()
-  {
-    return $this->belongsTo(ChatMessage::class, 'reply_to');
-  }
+    public function replyTo()
+    {
+        return $this->belongsTo(ChatMessage::class, 'reply_to');
+    }
 
-  public function replies()
-  {
-    return $this->hasMany(ChatMessage::class, 'reply_to');
-  }
+    public function replies()
+    {
+        return $this->hasMany(ChatMessage::class, 'reply_to');
+    }
 }

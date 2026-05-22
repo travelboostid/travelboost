@@ -5,12 +5,11 @@
  * OpenAPI spec version: 0.0.1
  */
 
-export type AdminSearchResourceOwnersTypesItem = typeof AdminSearchResourceOwnersTypesItem[keyof typeof AdminSearchResourceOwnersTypesItem];
+export type AdminSearchResourceOwnersTypesItem =
+    (typeof AdminSearchResourceOwnersTypesItem)[keyof typeof AdminSearchResourceOwnersTypesItem];
 
-
-// eslint-disable-next-line @typescript-eslint/no-redeclare
 export const AdminSearchResourceOwnersTypesItem = {
-  user: 'user',
-  company: 'company',
-  affiliate: 'affiliate',
+    user: 'user',
+    company: 'company',
+    affiliate: 'affiliate',
 } as const;

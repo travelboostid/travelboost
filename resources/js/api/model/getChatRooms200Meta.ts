@@ -4,20 +4,20 @@
  * Travelboost
  * OpenAPI spec version: 0.0.1
  */
-import type { GetChatRooms200MetaPath } from './getChatRooms200MetaPath';
 import type { GetChatRooms200MetaNextCursor } from './getChatRooms200MetaNextCursor';
+import type { GetChatRooms200MetaPath } from './getChatRooms200MetaPath';
 import type { GetChatRooms200MetaPrevCursor } from './getChatRooms200MetaPrevCursor';
 
 export type GetChatRooms200Meta = {
-  /** Base path for paginator generated URLs. */
-  path: GetChatRooms200MetaPath;
-  /**
-   * Number of items shown per page.
-   * @minimum 0
-   */
-  per_page: number;
-  /** The "cursor" that points to the next set of items. */
-  next_cursor: GetChatRooms200MetaNextCursor;
-  /** The "cursor" that points to the previous set of items. */
-  prev_cursor: GetChatRooms200MetaPrevCursor;
+    /** Base path for paginator generated URLs. */
+    path: GetChatRooms200MetaPath;
+    /**
+     * Number of items shown per page.
+     * @minimum 0
+     */
+    per_page: number;
+    /** The "cursor" that points to the next set of items. */
+    next_cursor: GetChatRooms200MetaNextCursor;
+    /** The "cursor" that points to the previous set of items. */
+    prev_cursor: GetChatRooms200MetaPrevCursor;
 };

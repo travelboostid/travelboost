@@ -8,35 +8,35 @@ import WalletSummary from './components/wallet-summary';
 dayjs.extend(relativeTime);
 
 export type WalletPageProps = {
-  balance: number;
-  income: {
-    this_month: number;
-    last_month: number;
-  };
-  expenses: {
-    this_month: number;
-    last_month: number;
-  };
-  net_change: {
-    growth_pct: number;
-  };
-  transactions: any[];
-  wallet: any;
+    balance: number;
+    income: {
+        this_month: number;
+        last_month: number;
+    };
+    expenses: {
+        this_month: number;
+        last_month: number;
+    };
+    net_change: {
+        growth_pct: number;
+    };
+    transactions: any[];
+    wallet: any;
 };
 
 export default function WalletPage() {
-  return (
-    <CompanyDashboardLayout
-      activeMenuIds={[`funds.wallets`]}
-      openMenuIds={['funds']}
-      breadcrumb={[{ title: 'Funds' }, { title: 'Wallet' }]}
-    >
-      <Head title="Wallet" />
-      <div className="max-w-6xl mx-auto grid gap-4 p-4">
-        <WalletSummary />
-        <PendingTopup />
-        <RecentTransactions />
-      </div>
-    </CompanyDashboardLayout>
-  );
+    return (
+        <CompanyDashboardLayout
+            activeMenuIds={[`funds.wallets`]}
+            openMenuIds={['funds']}
+            breadcrumb={[{ title: 'Funds' }, { title: 'Wallet' }]}
+        >
+            <Head title="Wallet" />
+            <div className="max-w-6xl mx-auto grid gap-4 p-4">
+                <WalletSummary />
+                <PendingTopup />
+                <RecentTransactions />
+            </div>
+        </CompanyDashboardLayout>
+    );
 }

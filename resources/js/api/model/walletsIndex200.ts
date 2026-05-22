@@ -9,7 +9,7 @@ import type { WalletsIndex200Links } from './walletsIndex200Links';
 import type { WalletsIndex200Meta } from './walletsIndex200Meta';
 
 export type WalletsIndex200 = {
-  data: WalletResource[];
-  links: WalletsIndex200Links;
-  meta: WalletsIndex200Meta;
+    data: WalletResource[];
+    links: WalletsIndex200Links;
+    meta: WalletsIndex200Meta;
 };

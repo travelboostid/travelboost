@@ -5,11 +5,10 @@
  * OpenAPI spec version: 0.0.1
  */
 
-export type GetPaymentsOwnerType = typeof GetPaymentsOwnerType[keyof typeof GetPaymentsOwnerType];
+export type GetPaymentsOwnerType =
+    (typeof GetPaymentsOwnerType)[keyof typeof GetPaymentsOwnerType];
 
-
-// eslint-disable-next-line @typescript-eslint/no-redeclare
 export const GetPaymentsOwnerType = {
-  user: 'user',
-  company: 'company',
+    user: 'user',
+    company: 'company',
 } as const;

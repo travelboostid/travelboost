@@ -6,5 +6,5 @@
  */
 
 export type GetGeoDistrictsParams = {
-city_id: number;
+    city_id: number;
 };

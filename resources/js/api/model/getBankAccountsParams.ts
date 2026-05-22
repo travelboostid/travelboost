@@ -6,6 +6,6 @@
  */
 
 export type GetBankAccountsParams = {
-owner_type?: 'user' | 'vendor' | 'agent' | null;
-owner_id?: number | null;
+    owner_type?: 'user' | 'vendor' | 'agent' | null;
+    owner_id?: number | null;
 };

@@ -4,19 +4,19 @@ import type { AffiliateDashboardLayoutProps } from './index';
 import { useAffiliateDashboardNavMainMenu } from './use-affiliate-dashboard-nav-main-menu';
 
 export function NavMain({
-  activeMenuIds,
-  openMenuIds,
+    activeMenuIds,
+    openMenuIds,
 }: AffiliateDashboardLayoutProps) {
-  const menus = useAffiliateDashboardNavMainMenu();
+    const menus = useAffiliateDashboardNavMainMenu();
 
-  return (
-    <SidebarGroup>
-      <SidebarGroupLabel>Main Menu</SidebarGroupLabel>
-      <SidebarMenuRenderer
-        menu={menus}
-        activeMenuIds={activeMenuIds || []}
-        openMenuIds={openMenuIds || []}
-      />
-    </SidebarGroup>
-  );
+    return (
+        <SidebarGroup>
+            <SidebarGroupLabel>Main Menu</SidebarGroupLabel>
+            <SidebarMenuRenderer
+                menu={menus}
+                activeMenuIds={activeMenuIds || []}
+                openMenuIds={openMenuIds || []}
+            />
+        </SidebarGroup>
+    );
 }

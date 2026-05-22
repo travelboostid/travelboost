@@ -10,29 +10,29 @@ import type { GetVendors200MetaPath } from './getVendors200MetaPath';
 import type { GetVendors200MetaTo } from './getVendors200MetaTo';
 
 export type GetVendors200Meta = {
-  /** @minimum 1 */
-  current_page: number;
-  /** @minimum 1 */
-  from: GetVendors200MetaFrom;
-  /** @minimum 1 */
-  last_page: number;
-  /** Generated paginator links. */
-  links: GetVendors200MetaLinksItem[];
-  /** Base path for paginator generated URLs. */
-  path: GetVendors200MetaPath;
-  /**
-   * Number of items shown per page.
-   * @minimum 0
-   */
-  per_page: number;
-  /**
-   * Number of the last item in the slice.
-   * @minimum 1
-   */
-  to: GetVendors200MetaTo;
-  /**
-   * Total number of items being paginated.
-   * @minimum 0
-   */
-  total: number;
+    /** @minimum 1 */
+    current_page: number;
+    /** @minimum 1 */
+    from: GetVendors200MetaFrom;
+    /** @minimum 1 */
+    last_page: number;
+    /** Generated paginator links. */
+    links: GetVendors200MetaLinksItem[];
+    /** Base path for paginator generated URLs. */
+    path: GetVendors200MetaPath;
+    /**
+     * Number of items shown per page.
+     * @minimum 0
+     */
+    per_page: number;
+    /**
+     * Number of the last item in the slice.
+     * @minimum 1
+     */
+    to: GetVendors200MetaTo;
+    /**
+     * Total number of items being paginated.
+     * @minimum 0
+     */
+    total: number;
 };

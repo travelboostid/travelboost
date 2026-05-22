@@ -6,12 +6,12 @@
  */
 import type { GetMedias200LinksFirst } from './getMedias200LinksFirst';
 import type { GetMedias200LinksLast } from './getMedias200LinksLast';
-import type { GetMedias200LinksPrev } from './getMedias200LinksPrev';
 import type { GetMedias200LinksNext } from './getMedias200LinksNext';
+import type { GetMedias200LinksPrev } from './getMedias200LinksPrev';
 
 export type GetMedias200Links = {
-  first: GetMedias200LinksFirst;
-  last: GetMedias200LinksLast;
-  prev: GetMedias200LinksPrev;
-  next: GetMedias200LinksNext;
+    first: GetMedias200LinksFirst;
+    last: GetMedias200LinksLast;
+    prev: GetMedias200LinksPrev;
+    next: GetMedias200LinksNext;
 };

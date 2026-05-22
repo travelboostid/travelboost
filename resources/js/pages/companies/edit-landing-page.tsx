@@ -7,58 +7,58 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import type { BasePuckProps } from './templates/base/base.puck.config';
 import DefaultThemePuckConfig from './templates/default/default.puck.config';
-import SelectTemplate from './templates/select-template';
 import { ensureAboutUsBlock } from './templates/default/utils';
+import SelectTemplate from './templates/select-template';
 
 type Props = {
-  company: any;
+    company: any;
 };
 
 export default function PageDesigner({ company }: Props) {
-  const [data, setData] = useState(() => {
-    if (!company.settings.landing_page_data) {
-      return null;
+    const [data, setData] = useState(() => {
+        if (!company.settings.landing_page_data) {
+            return null;
+        }
+        const rawData = JSON.parse(company.settings.landing_page_data);
+        return ensureAboutUsBlock(rawData);
+    });
+    const updater = useCompanyUpdateSettings();
+
+    const handlePublish = (data: Data<BasePuckProps, any>) => {
+        updater.mutate(
+            {
+                company: company.id,
+                data: {
+                    landing_page_data: JSON.stringify(data),
+                },
+            },
+            {
+                onSuccess: () => {
+                    toast.success('Success', {
+                        position: 'top-center',
+                        description: 'Your changes have been saved.',
+                    });
+                },
+            },
+        );
+    };
+
+    if (!data) {
+        return <SelectTemplate onSelected={setData} />;
     }
-    const rawData = JSON.parse(company.settings.landing_page_data);
-    return ensureAboutUsBlock(rawData);
-  });
-  const updater = useCompanyUpdateSettings();
-
-  const handlePublish = (data: Data<BasePuckProps, any>) => {
-    updater.mutate(
-      {
-        company: company.id,
-        data: {
-          landing_page_data: JSON.stringify(data),
-        },
-      },
-      {
-        onSuccess: () => {
-          toast.success('Success', {
-            position: 'top-center',
-            description: 'Your changes have been saved.',
-          });
-        },
-      },
+    return (
+        <ThemeProvider
+            forcedTheme="light"
+            attribute="class"
+            enableSystem={false}
+            disableTransitionOnChange
+        >
+            <Puck
+                config={DefaultThemePuckConfig}
+                data={data}
+                onChange={setData}
+                onPublish={handlePublish as any}
+            />
+        </ThemeProvider>
     );
-  };
-
-  if (!data) {
-    return <SelectTemplate onSelected={setData} />;
-  }
-  return (
-    <ThemeProvider
-      forcedTheme="light"
-      attribute="class"
-      enableSystem={false}
-      disableTransitionOnChange
-    >
-      <Puck
-        config={DefaultThemePuckConfig}
-        data={data}
-        onChange={setData}
-        onPublish={handlePublish as any}
-      />
-    </ThemeProvider>
-  );
 }

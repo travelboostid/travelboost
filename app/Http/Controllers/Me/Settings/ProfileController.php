@@ -14,49 +14,49 @@ use Inertia\Response;
 
 class ProfileController extends Controller
 {
-  /**
-   * Show the user's profile settings page.
-   */
-  public function edit(Request $request): Response
-  {
-    return Inertia::render('me/settings/profile', [
-      'mustVerifyEmail' => $request->user() instanceof MustVerifyEmail,
-      'status' => $request->session()->get('status'),
-    ]);
-  }
-
-  /**
-   * Update the user's profile information.
-   */
-  public function update(ProfileUpdateRequest $request): RedirectResponse
-  {
-    $validated = $request->validated();
-    $validated['phone'] = $validated['phone'] ?? '';
-    $request->user()->fill($validated);
-
-    if ($request->user()->isDirty('email')) {
-      $request->user()->email_verified_at = null;
+    /**
+     * Show the user's profile settings page.
+     */
+    public function edit(Request $request): Response
+    {
+        return Inertia::render('me/settings/profile', [
+            'mustVerifyEmail' => $request->user() instanceof MustVerifyEmail,
+            'status' => $request->session()->get('status'),
+        ]);
     }
 
-    $request->user()->save();
+    /**
+     * Update the user's profile information.
+     */
+    public function update(ProfileUpdateRequest $request): RedirectResponse
+    {
+        $validated = $request->validated();
+        $validated['phone'] = $validated['phone'] ?? '';
+        $request->user()->fill($validated);
 
-    return to_route('me.profile.edit');
-  }
+        if ($request->user()->isDirty('email')) {
+            $request->user()->email_verified_at = null;
+        }
 
-  /**
-   * Delete the user's profile.
-   */
-  public function destroy(ProfileDeleteRequest $request): RedirectResponse
-  {
-    $user = $request->user();
+        $request->user()->save();
 
-    Auth::logout();
+        return to_route('me.profile.edit');
+    }
 
-    $user->delete();
+    /**
+     * Delete the user's profile.
+     */
+    public function destroy(ProfileDeleteRequest $request): RedirectResponse
+    {
+        $user = $request->user();
 
-    $request->session()->invalidate();
-    $request->session()->regenerateToken();
+        Auth::logout();
 
-    return redirect('/');
-  }
+        $user->delete();
+
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
+        return redirect('/');
+    }
 }

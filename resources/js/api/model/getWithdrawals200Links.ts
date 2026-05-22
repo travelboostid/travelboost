@@ -6,12 +6,12 @@
  */
 import type { GetWithdrawals200LinksFirst } from './getWithdrawals200LinksFirst';
 import type { GetWithdrawals200LinksLast } from './getWithdrawals200LinksLast';
-import type { GetWithdrawals200LinksPrev } from './getWithdrawals200LinksPrev';
 import type { GetWithdrawals200LinksNext } from './getWithdrawals200LinksNext';
+import type { GetWithdrawals200LinksPrev } from './getWithdrawals200LinksPrev';
 
 export type GetWithdrawals200Links = {
-  first: GetWithdrawals200LinksFirst;
-  last: GetWithdrawals200LinksLast;
-  prev: GetWithdrawals200LinksPrev;
-  next: GetWithdrawals200LinksNext;
+    first: GetWithdrawals200LinksFirst;
+    last: GetWithdrawals200LinksLast;
+    prev: GetWithdrawals200LinksPrev;
+    next: GetWithdrawals200LinksNext;
 };

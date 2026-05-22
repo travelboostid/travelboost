@@ -7,7 +7,7 @@
 import type { GetWithdrawals200MetaLinksItemUrl } from './getWithdrawals200MetaLinksItemUrl';
 
 export type GetWithdrawals200MetaLinksItem = {
-  url: GetWithdrawals200MetaLinksItemUrl;
-  label: string;
-  active: boolean;
+    url: GetWithdrawals200MetaLinksItemUrl;
+    label: string;
+    active: boolean;
 };

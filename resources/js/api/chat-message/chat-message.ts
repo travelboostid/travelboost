@@ -4,44 +4,38 @@
  * Travelboost
  * OpenAPI spec version: 0.0.1
  */
-import {
-  useMutation,
-  useQuery
-} from '@tanstack/react-query';
 import type {
-  DataTag,
-  DefinedInitialDataOptions,
-  DefinedUseQueryResult,
-  MutationFunction,
-  QueryClient,
-  QueryFunction,
-  QueryKey,
-  UndefinedInitialDataOptions,
-  UseMutationOptions,
-  UseMutationResult,
-  UseQueryOptions,
-  UseQueryResult
+    DataTag,
+    DefinedInitialDataOptions,
+    DefinedUseQueryResult,
+    MutationFunction,
+    QueryClient,
+    QueryFunction,
+    QueryKey,
+    UndefinedInitialDataOptions,
+    UseMutationOptions,
+    UseMutationResult,
+    UseQueryOptions,
+    UseQueryResult,
 } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 
 import type {
-  CreateChatMessage200,
-  DeleteChatMessage200,
-  GetChatMessage200,
-  GetChatMessages200,
-  GetChatMessagesParams,
-  ModelNotFoundExceptionResponse,
-  StoreChatMessageRequest,
-  UpdateChatMessage200,
-  UpdateChatMessageRequest,
-  ValidationExceptionResponse
+    CreateChatMessage200,
+    DeleteChatMessage200,
+    GetChatMessage200,
+    GetChatMessages200,
+    GetChatMessagesParams,
+    ModelNotFoundExceptionResponse,
+    StoreChatMessageRequest,
+    UpdateChatMessage200,
+    UpdateChatMessageRequest,
+    ValidationExceptionResponse,
 } from '.././model';
 
 import { apiInstance } from '.././api-instance';
 
-
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
-
-
 
 /**
  * @summary List messages in a chat room with cursor pagination
@@ -49,99 +43,188 @@ type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 export const getChatMessages = (
     roomId: string,
     params?: GetChatMessagesParams,
- options?: SecondParameter<typeof apiInstance>,signal?: AbortSignal
+    options?: SecondParameter<typeof apiInstance>,
+    signal?: AbortSignal,
 ) => {
-      
-      
-      return apiInstance<GetChatMessages200>(
-      {url: `/chat/rooms/${roomId}/messages`, method: 'GET',
-        params, signal
-    },
-      options);
-    }
-  
+    return apiInstance<GetChatMessages200>(
+        {
+            url: `/chat/rooms/${roomId}/messages`,
+            method: 'GET',
+            params,
+            signal,
+        },
+        options,
+    );
+};
 
-
-
-export const getGetChatMessagesQueryKey = (roomId?: string,
-    params?: GetChatMessagesParams,) => {
+export const getGetChatMessagesQueryKey = (
+    roomId?: string,
+    params?: GetChatMessagesParams,
+) => {
     return [
-    `/chat/rooms/${roomId}/messages`, ...(params ? [params]: [])
+        `/chat/rooms/${roomId}/messages`,
+        ...(params ? [params] : []),
     ] as const;
-    }
+};
 
-    
-export const getGetChatMessagesQueryOptions = <TData = Awaited<ReturnType<typeof getChatMessages>>, TError = ValidationExceptionResponse>(roomId: string,
-    params?: GetChatMessagesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getChatMessages>>, TError, TData>>, request?: SecondParameter<typeof apiInstance>}
+export const getGetChatMessagesQueryOptions = <
+    TData = Awaited<ReturnType<typeof getChatMessages>>,
+    TError = ValidationExceptionResponse,
+>(
+    roomId: string,
+    params?: GetChatMessagesParams,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof getChatMessages>>,
+                TError,
+                TData
+            >
+        >;
+        request?: SecondParameter<typeof apiInstance>;
+    },
 ) => {
+    const { query: queryOptions, request: requestOptions } = options ?? {};
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+    const queryKey =
+        queryOptions?.queryKey ?? getGetChatMessagesQueryKey(roomId, params);
 
-  const queryKey =  queryOptions?.queryKey ?? getGetChatMessagesQueryKey(roomId,params);
+    const queryFn: QueryFunction<
+        Awaited<ReturnType<typeof getChatMessages>>
+    > = ({ signal }) => getChatMessages(roomId, params, requestOptions, signal);
 
-  
+    return {
+        queryKey,
+        queryFn,
+        enabled: !!roomId,
+        ...queryOptions,
+    } as UseQueryOptions<
+        Awaited<ReturnType<typeof getChatMessages>>,
+        TError,
+        TData
+    > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getChatMessages>>> = ({ signal }) => getChatMessages(roomId,params, requestOptions, signal);
+export type GetChatMessagesQueryResult = NonNullable<
+    Awaited<ReturnType<typeof getChatMessages>>
+>;
+export type GetChatMessagesQueryError = ValidationExceptionResponse;
 
-      
-
-      
-
-   return  { queryKey, queryFn, enabled: !!(roomId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getChatMessages>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type GetChatMessagesQueryResult = NonNullable<Awaited<ReturnType<typeof getChatMessages>>>
-export type GetChatMessagesQueryError = ValidationExceptionResponse
-
-
-export function useGetChatMessages<TData = Awaited<ReturnType<typeof getChatMessages>>, TError = ValidationExceptionResponse>(
- roomId: string,
-    params: undefined |  GetChatMessagesParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getChatMessages>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getChatMessages>>,
-          TError,
-          Awaited<ReturnType<typeof getChatMessages>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof apiInstance>}
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetChatMessages<TData = Awaited<ReturnType<typeof getChatMessages>>, TError = ValidationExceptionResponse>(
- roomId: string,
-    params?: GetChatMessagesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getChatMessages>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getChatMessages>>,
-          TError,
-          Awaited<ReturnType<typeof getChatMessages>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof apiInstance>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetChatMessages<TData = Awaited<ReturnType<typeof getChatMessages>>, TError = ValidationExceptionResponse>(
- roomId: string,
-    params?: GetChatMessagesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getChatMessages>>, TError, TData>>, request?: SecondParameter<typeof apiInstance>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetChatMessages<
+    TData = Awaited<ReturnType<typeof getChatMessages>>,
+    TError = ValidationExceptionResponse,
+>(
+    roomId: string,
+    params: undefined | GetChatMessagesParams,
+    options: {
+        query: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof getChatMessages>>,
+                TError,
+                TData
+            >
+        > &
+            Pick<
+                DefinedInitialDataOptions<
+                    Awaited<ReturnType<typeof getChatMessages>>,
+                    TError,
+                    Awaited<ReturnType<typeof getChatMessages>>
+                >,
+                'initialData'
+            >;
+        request?: SecondParameter<typeof apiInstance>;
+    },
+    queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetChatMessages<
+    TData = Awaited<ReturnType<typeof getChatMessages>>,
+    TError = ValidationExceptionResponse,
+>(
+    roomId: string,
+    params?: GetChatMessagesParams,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof getChatMessages>>,
+                TError,
+                TData
+            >
+        > &
+            Pick<
+                UndefinedInitialDataOptions<
+                    Awaited<ReturnType<typeof getChatMessages>>,
+                    TError,
+                    Awaited<ReturnType<typeof getChatMessages>>
+                >,
+                'initialData'
+            >;
+        request?: SecondParameter<typeof apiInstance>;
+    },
+    queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetChatMessages<
+    TData = Awaited<ReturnType<typeof getChatMessages>>,
+    TError = ValidationExceptionResponse,
+>(
+    roomId: string,
+    params?: GetChatMessagesParams,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof getChatMessages>>,
+                TError,
+                TData
+            >
+        >;
+        request?: SecondParameter<typeof apiInstance>;
+    },
+    queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+};
 /**
  * @summary List messages in a chat room with cursor pagination
  */
 
-export function useGetChatMessages<TData = Awaited<ReturnType<typeof getChatMessages>>, TError = ValidationExceptionResponse>(
- roomId: string,
-    params?: GetChatMessagesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getChatMessages>>, TError, TData>>, request?: SecondParameter<typeof apiInstance>}
- , queryClient?: QueryClient 
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+export function useGetChatMessages<
+    TData = Awaited<ReturnType<typeof getChatMessages>>,
+    TError = ValidationExceptionResponse,
+>(
+    roomId: string,
+    params?: GetChatMessagesParams,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof getChatMessages>>,
+                TError,
+                TData
+            >
+        >;
+        request?: SecondParameter<typeof apiInstance>;
+    },
+    queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+} {
+    const queryOptions = getGetChatMessagesQueryOptions(
+        roomId,
+        params,
+        options,
+    );
 
-  const queryOptions = getGetChatMessagesQueryOptions(roomId,params,options)
+    const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+        TData,
+        TError
+    > & { queryKey: DataTag<QueryKey, TData, TError> };
 
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+    query.queryKey = queryOptions.queryKey;
 
-  query.queryKey = queryOptions.queryKey ;
-
-  return query;
+    return query;
 }
-
-
-
 
 /**
  * @summary Store a new message in a chat room
@@ -149,156 +232,259 @@ export function useGetChatMessages<TData = Awaited<ReturnType<typeof getChatMess
 export const createChatMessage = (
     roomId: string,
     storeChatMessageRequest: StoreChatMessageRequest,
- options?: SecondParameter<typeof apiInstance>,signal?: AbortSignal
+    options?: SecondParameter<typeof apiInstance>,
+    signal?: AbortSignal,
 ) => {
-      
-      
-      return apiInstance<CreateChatMessage200>(
-      {url: `/chat/rooms/${roomId}/messages`, method: 'POST',
-      headers: {'Content-Type': 'application/json', },
-      data: storeChatMessageRequest, signal
-    },
-      options);
-    }
-  
+    return apiInstance<CreateChatMessage200>(
+        {
+            url: `/chat/rooms/${roomId}/messages`,
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            data: storeChatMessageRequest,
+            signal,
+        },
+        options,
+    );
+};
 
-
-export const getCreateChatMessageMutationOptions = <TError = ValidationExceptionResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createChatMessage>>, TError,{roomId: string;data: StoreChatMessageRequest}, TContext>, request?: SecondParameter<typeof apiInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof createChatMessage>>, TError,{roomId: string;data: StoreChatMessageRequest}, TContext> => {
-
-const mutationKey = ['createChatMessage'];
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-      
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createChatMessage>>, {roomId: string;data: StoreChatMessageRequest}> = (props) => {
-          const {roomId,data} = props ?? {};
-
-          return  createChatMessage(roomId,data,requestOptions)
-        }
-
-        
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type CreateChatMessageMutationResult = NonNullable<Awaited<ReturnType<typeof createChatMessage>>>
-    export type CreateChatMessageMutationBody = StoreChatMessageRequest
-    export type CreateChatMessageMutationError = ValidationExceptionResponse
-
-    /**
- * @summary Store a new message in a chat room
- */
-export const useCreateChatMessage = <TError = ValidationExceptionResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createChatMessage>>, TError,{roomId: string;data: StoreChatMessageRequest}, TContext>, request?: SecondParameter<typeof apiInstance>}
- , queryClient?: QueryClient): UseMutationResult<
+export const getCreateChatMessageMutationOptions = <
+    TError = ValidationExceptionResponse,
+    TContext = unknown,
+>(options?: {
+    mutation?: UseMutationOptions<
         Awaited<ReturnType<typeof createChatMessage>>,
         TError,
-        {roomId: string;data: StoreChatMessageRequest},
+        { roomId: string; data: StoreChatMessageRequest },
         TContext
-      > => {
+    >;
+    request?: SecondParameter<typeof apiInstance>;
+}): UseMutationOptions<
+    Awaited<ReturnType<typeof createChatMessage>>,
+    TError,
+    { roomId: string; data: StoreChatMessageRequest },
+    TContext
+> => {
+    const mutationKey = ['createChatMessage'];
+    const { mutation: mutationOptions, request: requestOptions } = options
+        ? options.mutation &&
+          'mutationKey' in options.mutation &&
+          options.mutation.mutationKey
+            ? options
+            : { ...options, mutation: { ...options.mutation, mutationKey } }
+        : { mutation: { mutationKey }, request: undefined };
 
-      const mutationOptions = getCreateChatMessageMutationOptions(options);
+    const mutationFn: MutationFunction<
+        Awaited<ReturnType<typeof createChatMessage>>,
+        { roomId: string; data: StoreChatMessageRequest }
+    > = (props) => {
+        const { roomId, data } = props ?? {};
 
-      return useMutation(mutationOptions, queryClient);
-    }
-    /**
+        return createChatMessage(roomId, data, requestOptions);
+    };
+
+    return { mutationFn, ...mutationOptions };
+};
+
+export type CreateChatMessageMutationResult = NonNullable<
+    Awaited<ReturnType<typeof createChatMessage>>
+>;
+export type CreateChatMessageMutationBody = StoreChatMessageRequest;
+export type CreateChatMessageMutationError = ValidationExceptionResponse;
+
+/**
+ * @summary Store a new message in a chat room
+ */
+export const useCreateChatMessage = <
+    TError = ValidationExceptionResponse,
+    TContext = unknown,
+>(
+    options?: {
+        mutation?: UseMutationOptions<
+            Awaited<ReturnType<typeof createChatMessage>>,
+            TError,
+            { roomId: string; data: StoreChatMessageRequest },
+            TContext
+        >;
+        request?: SecondParameter<typeof apiInstance>;
+    },
+    queryClient?: QueryClient,
+): UseMutationResult<
+    Awaited<ReturnType<typeof createChatMessage>>,
+    TError,
+    { roomId: string; data: StoreChatMessageRequest },
+    TContext
+> => {
+    const mutationOptions = getCreateChatMessageMutationOptions(options);
+
+    return useMutation(mutationOptions, queryClient);
+};
+/**
  * @summary Show a single message (shallow route)
  */
 export const getChatMessage = (
     message: number,
- options?: SecondParameter<typeof apiInstance>,signal?: AbortSignal
+    options?: SecondParameter<typeof apiInstance>,
+    signal?: AbortSignal,
 ) => {
-      
-      
-      return apiInstance<GetChatMessage200>(
-      {url: `/chat/messages/${message}`, method: 'GET', signal
+    return apiInstance<GetChatMessage200>(
+        { url: `/chat/messages/${message}`, method: 'GET', signal },
+        options,
+    );
+};
+
+export const getGetChatMessageQueryKey = (message?: number) => {
+    return [`/chat/messages/${message}`] as const;
+};
+
+export const getGetChatMessageQueryOptions = <
+    TData = Awaited<ReturnType<typeof getChatMessage>>,
+    TError = ModelNotFoundExceptionResponse,
+>(
+    message: number,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof getChatMessage>>,
+                TError,
+                TData
+            >
+        >;
+        request?: SecondParameter<typeof apiInstance>;
     },
-      options);
-    }
-  
-
-
-
-export const getGetChatMessageQueryKey = (message?: number,) => {
-    return [
-    `/chat/messages/${message}`
-    ] as const;
-    }
-
-    
-export const getGetChatMessageQueryOptions = <TData = Awaited<ReturnType<typeof getChatMessage>>, TError = ModelNotFoundExceptionResponse>(message: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getChatMessage>>, TError, TData>>, request?: SecondParameter<typeof apiInstance>}
 ) => {
+    const { query: queryOptions, request: requestOptions } = options ?? {};
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+    const queryKey =
+        queryOptions?.queryKey ?? getGetChatMessageQueryKey(message);
 
-  const queryKey =  queryOptions?.queryKey ?? getGetChatMessageQueryKey(message);
+    const queryFn: QueryFunction<
+        Awaited<ReturnType<typeof getChatMessage>>
+    > = ({ signal }) => getChatMessage(message, requestOptions, signal);
 
-  
+    return {
+        queryKey,
+        queryFn,
+        enabled: !!message,
+        ...queryOptions,
+    } as UseQueryOptions<
+        Awaited<ReturnType<typeof getChatMessage>>,
+        TError,
+        TData
+    > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getChatMessage>>> = ({ signal }) => getChatMessage(message, requestOptions, signal);
+export type GetChatMessageQueryResult = NonNullable<
+    Awaited<ReturnType<typeof getChatMessage>>
+>;
+export type GetChatMessageQueryError = ModelNotFoundExceptionResponse;
 
-      
-
-      
-
-   return  { queryKey, queryFn, enabled: !!(message), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getChatMessage>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type GetChatMessageQueryResult = NonNullable<Awaited<ReturnType<typeof getChatMessage>>>
-export type GetChatMessageQueryError = ModelNotFoundExceptionResponse
-
-
-export function useGetChatMessage<TData = Awaited<ReturnType<typeof getChatMessage>>, TError = ModelNotFoundExceptionResponse>(
- message: number, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getChatMessage>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getChatMessage>>,
-          TError,
-          Awaited<ReturnType<typeof getChatMessage>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof apiInstance>}
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetChatMessage<TData = Awaited<ReturnType<typeof getChatMessage>>, TError = ModelNotFoundExceptionResponse>(
- message: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getChatMessage>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getChatMessage>>,
-          TError,
-          Awaited<ReturnType<typeof getChatMessage>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof apiInstance>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetChatMessage<TData = Awaited<ReturnType<typeof getChatMessage>>, TError = ModelNotFoundExceptionResponse>(
- message: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getChatMessage>>, TError, TData>>, request?: SecondParameter<typeof apiInstance>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetChatMessage<
+    TData = Awaited<ReturnType<typeof getChatMessage>>,
+    TError = ModelNotFoundExceptionResponse,
+>(
+    message: number,
+    options: {
+        query: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof getChatMessage>>,
+                TError,
+                TData
+            >
+        > &
+            Pick<
+                DefinedInitialDataOptions<
+                    Awaited<ReturnType<typeof getChatMessage>>,
+                    TError,
+                    Awaited<ReturnType<typeof getChatMessage>>
+                >,
+                'initialData'
+            >;
+        request?: SecondParameter<typeof apiInstance>;
+    },
+    queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetChatMessage<
+    TData = Awaited<ReturnType<typeof getChatMessage>>,
+    TError = ModelNotFoundExceptionResponse,
+>(
+    message: number,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof getChatMessage>>,
+                TError,
+                TData
+            >
+        > &
+            Pick<
+                UndefinedInitialDataOptions<
+                    Awaited<ReturnType<typeof getChatMessage>>,
+                    TError,
+                    Awaited<ReturnType<typeof getChatMessage>>
+                >,
+                'initialData'
+            >;
+        request?: SecondParameter<typeof apiInstance>;
+    },
+    queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetChatMessage<
+    TData = Awaited<ReturnType<typeof getChatMessage>>,
+    TError = ModelNotFoundExceptionResponse,
+>(
+    message: number,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof getChatMessage>>,
+                TError,
+                TData
+            >
+        >;
+        request?: SecondParameter<typeof apiInstance>;
+    },
+    queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+};
 /**
  * @summary Show a single message (shallow route)
  */
 
-export function useGetChatMessage<TData = Awaited<ReturnType<typeof getChatMessage>>, TError = ModelNotFoundExceptionResponse>(
- message: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getChatMessage>>, TError, TData>>, request?: SecondParameter<typeof apiInstance>}
- , queryClient?: QueryClient 
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+export function useGetChatMessage<
+    TData = Awaited<ReturnType<typeof getChatMessage>>,
+    TError = ModelNotFoundExceptionResponse,
+>(
+    message: number,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof getChatMessage>>,
+                TError,
+                TData
+            >
+        >;
+        request?: SecondParameter<typeof apiInstance>;
+    },
+    queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+} {
+    const queryOptions = getGetChatMessageQueryOptions(message, options);
 
-  const queryOptions = getGetChatMessageQueryOptions(message,options)
+    const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+        TData,
+        TError
+    > & { queryKey: DataTag<QueryKey, TData, TError> };
 
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+    query.queryKey = queryOptions.queryKey;
 
-  query.queryKey = queryOptions.queryKey ;
-
-  return query;
+    return query;
 }
-
-
-
 
 /**
  * @summary Update a message
@@ -306,123 +492,173 @@ export function useGetChatMessage<TData = Awaited<ReturnType<typeof getChatMessa
 export const updateChatMessage = (
     message: number,
     updateChatMessageRequest: UpdateChatMessageRequest,
- options?: SecondParameter<typeof apiInstance>,) => {
-      
-      
-      return apiInstance<UpdateChatMessage200>(
-      {url: `/chat/messages/${message}`, method: 'PUT',
-      headers: {'Content-Type': 'application/json', },
-      data: updateChatMessageRequest
-    },
-      options);
-    }
-  
+    options?: SecondParameter<typeof apiInstance>,
+) => {
+    return apiInstance<UpdateChatMessage200>(
+        {
+            url: `/chat/messages/${message}`,
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            data: updateChatMessageRequest,
+        },
+        options,
+    );
+};
 
-
-export const getUpdateChatMessageMutationOptions = <TError = ModelNotFoundExceptionResponse | ValidationExceptionResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateChatMessage>>, TError,{message: number;data: UpdateChatMessageRequest}, TContext>, request?: SecondParameter<typeof apiInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof updateChatMessage>>, TError,{message: number;data: UpdateChatMessageRequest}, TContext> => {
-
-const mutationKey = ['updateChatMessage'];
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-      
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateChatMessage>>, {message: number;data: UpdateChatMessageRequest}> = (props) => {
-          const {message,data} = props ?? {};
-
-          return  updateChatMessage(message,data,requestOptions)
-        }
-
-        
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type UpdateChatMessageMutationResult = NonNullable<Awaited<ReturnType<typeof updateChatMessage>>>
-    export type UpdateChatMessageMutationBody = UpdateChatMessageRequest
-    export type UpdateChatMessageMutationError = ModelNotFoundExceptionResponse | ValidationExceptionResponse
-
-    /**
- * @summary Update a message
- */
-export const useUpdateChatMessage = <TError = ModelNotFoundExceptionResponse | ValidationExceptionResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateChatMessage>>, TError,{message: number;data: UpdateChatMessageRequest}, TContext>, request?: SecondParameter<typeof apiInstance>}
- , queryClient?: QueryClient): UseMutationResult<
+export const getUpdateChatMessageMutationOptions = <
+    TError = ModelNotFoundExceptionResponse | ValidationExceptionResponse,
+    TContext = unknown,
+>(options?: {
+    mutation?: UseMutationOptions<
         Awaited<ReturnType<typeof updateChatMessage>>,
         TError,
-        {message: number;data: UpdateChatMessageRequest},
+        { message: number; data: UpdateChatMessageRequest },
         TContext
-      > => {
+    >;
+    request?: SecondParameter<typeof apiInstance>;
+}): UseMutationOptions<
+    Awaited<ReturnType<typeof updateChatMessage>>,
+    TError,
+    { message: number; data: UpdateChatMessageRequest },
+    TContext
+> => {
+    const mutationKey = ['updateChatMessage'];
+    const { mutation: mutationOptions, request: requestOptions } = options
+        ? options.mutation &&
+          'mutationKey' in options.mutation &&
+          options.mutation.mutationKey
+            ? options
+            : { ...options, mutation: { ...options.mutation, mutationKey } }
+        : { mutation: { mutationKey }, request: undefined };
 
-      const mutationOptions = getUpdateChatMessageMutationOptions(options);
+    const mutationFn: MutationFunction<
+        Awaited<ReturnType<typeof updateChatMessage>>,
+        { message: number; data: UpdateChatMessageRequest }
+    > = (props) => {
+        const { message, data } = props ?? {};
 
-      return useMutation(mutationOptions, queryClient);
-    }
-    /**
+        return updateChatMessage(message, data, requestOptions);
+    };
+
+    return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateChatMessageMutationResult = NonNullable<
+    Awaited<ReturnType<typeof updateChatMessage>>
+>;
+export type UpdateChatMessageMutationBody = UpdateChatMessageRequest;
+export type UpdateChatMessageMutationError =
+    | ModelNotFoundExceptionResponse
+    | ValidationExceptionResponse;
+
+/**
+ * @summary Update a message
+ */
+export const useUpdateChatMessage = <
+    TError = ModelNotFoundExceptionResponse | ValidationExceptionResponse,
+    TContext = unknown,
+>(
+    options?: {
+        mutation?: UseMutationOptions<
+            Awaited<ReturnType<typeof updateChatMessage>>,
+            TError,
+            { message: number; data: UpdateChatMessageRequest },
+            TContext
+        >;
+        request?: SecondParameter<typeof apiInstance>;
+    },
+    queryClient?: QueryClient,
+): UseMutationResult<
+    Awaited<ReturnType<typeof updateChatMessage>>,
+    TError,
+    { message: number; data: UpdateChatMessageRequest },
+    TContext
+> => {
+    const mutationOptions = getUpdateChatMessageMutationOptions(options);
+
+    return useMutation(mutationOptions, queryClient);
+};
+/**
  * @summary Delete a message
  */
 export const deleteChatMessage = (
     message: number,
- options?: SecondParameter<typeof apiInstance>,) => {
-      
-      
-      return apiInstance<DeleteChatMessage200>(
-      {url: `/chat/messages/${message}`, method: 'DELETE'
-    },
-      options);
-    }
-  
+    options?: SecondParameter<typeof apiInstance>,
+) => {
+    return apiInstance<DeleteChatMessage200>(
+        { url: `/chat/messages/${message}`, method: 'DELETE' },
+        options,
+    );
+};
 
-
-export const getDeleteChatMessageMutationOptions = <TError = ModelNotFoundExceptionResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteChatMessage>>, TError,{message: number}, TContext>, request?: SecondParameter<typeof apiInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof deleteChatMessage>>, TError,{message: number}, TContext> => {
-
-const mutationKey = ['deleteChatMessage'];
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-      
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteChatMessage>>, {message: number}> = (props) => {
-          const {message} = props ?? {};
-
-          return  deleteChatMessage(message,requestOptions)
-        }
-
-        
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type DeleteChatMessageMutationResult = NonNullable<Awaited<ReturnType<typeof deleteChatMessage>>>
-    
-    export type DeleteChatMessageMutationError = ModelNotFoundExceptionResponse
-
-    /**
- * @summary Delete a message
- */
-export const useDeleteChatMessage = <TError = ModelNotFoundExceptionResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteChatMessage>>, TError,{message: number}, TContext>, request?: SecondParameter<typeof apiInstance>}
- , queryClient?: QueryClient): UseMutationResult<
+export const getDeleteChatMessageMutationOptions = <
+    TError = ModelNotFoundExceptionResponse,
+    TContext = unknown,
+>(options?: {
+    mutation?: UseMutationOptions<
         Awaited<ReturnType<typeof deleteChatMessage>>,
         TError,
-        {message: number},
+        { message: number },
         TContext
-      > => {
+    >;
+    request?: SecondParameter<typeof apiInstance>;
+}): UseMutationOptions<
+    Awaited<ReturnType<typeof deleteChatMessage>>,
+    TError,
+    { message: number },
+    TContext
+> => {
+    const mutationKey = ['deleteChatMessage'];
+    const { mutation: mutationOptions, request: requestOptions } = options
+        ? options.mutation &&
+          'mutationKey' in options.mutation &&
+          options.mutation.mutationKey
+            ? options
+            : { ...options, mutation: { ...options.mutation, mutationKey } }
+        : { mutation: { mutationKey }, request: undefined };
 
-      const mutationOptions = getDeleteChatMessageMutationOptions(options);
+    const mutationFn: MutationFunction<
+        Awaited<ReturnType<typeof deleteChatMessage>>,
+        { message: number }
+    > = (props) => {
+        const { message } = props ?? {};
 
-      return useMutation(mutationOptions, queryClient);
-    }
-    
+        return deleteChatMessage(message, requestOptions);
+    };
+
+    return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteChatMessageMutationResult = NonNullable<
+    Awaited<ReturnType<typeof deleteChatMessage>>
+>;
+
+export type DeleteChatMessageMutationError = ModelNotFoundExceptionResponse;
+
+/**
+ * @summary Delete a message
+ */
+export const useDeleteChatMessage = <
+    TError = ModelNotFoundExceptionResponse,
+    TContext = unknown,
+>(
+    options?: {
+        mutation?: UseMutationOptions<
+            Awaited<ReturnType<typeof deleteChatMessage>>,
+            TError,
+            { message: number },
+            TContext
+        >;
+        request?: SecondParameter<typeof apiInstance>;
+    },
+    queryClient?: QueryClient,
+): UseMutationResult<
+    Awaited<ReturnType<typeof deleteChatMessage>>,
+    TError,
+    { message: number },
+    TContext
+> => {
+    const mutationOptions = getDeleteChatMessageMutationOptions(options);
+
+    return useMutation(mutationOptions, queryClient);
+};

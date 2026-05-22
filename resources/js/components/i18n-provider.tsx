@@ -4,26 +4,27 @@ import { IntlProvider } from 'react-intl';
 import { useLocale } from './locale-context';
 
 const messagesMap = {
-  en,
-  id,
+    en,
+    id,
 };
 
 export default function I18nProvider({
-  children,
+    children,
 }: {
-  children: React.ReactNode;
+    children: React.ReactNode;
 }) {
-  const { locale } = useLocale();
-  console.log('Current locale:', locale);
+    const { locale } = useLocale();
+    console.log('Current locale:', locale);
 
-  return (
-    <IntlProvider
-      locale={locale}
-      messages={
-        messagesMap[locale as keyof typeof messagesMap] || messagesMap['en']
-      }
-    >
-      {children}
-    </IntlProvider>
-  );
+    return (
+        <IntlProvider
+            locale={locale}
+            messages={
+                messagesMap[locale as keyof typeof messagesMap] ||
+                messagesMap['en']
+            }
+        >
+            {children}
+        </IntlProvider>
+    );
 }

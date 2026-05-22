@@ -1,9 +1,9 @@
 ---
 name: pest-testing
-description: "Tests applications using the Pest 3 PHP framework. Activates when writing tests, creating unit or feature tests, adding assertions, testing Livewire components, architecture testing, debugging test failures, working with datasets or mocking; or when the user mentions test, spec, TDD, expects, assertion, coverage, or needs to verify functionality works."
+description: 'Tests applications using the Pest 3 PHP framework. Activates when writing tests, creating unit or feature tests, adding assertions, testing Livewire components, architecture testing, debugging test failures, working with datasets or mocking; or when the user mentions test, spec, TDD, expects, assertion, coverage, or needs to verify functionality works.'
 license: MIT
 metadata:
-  author: laravel
+    author: laravel
 ---
 
 # Pest Testing 3
@@ -11,6 +11,7 @@ metadata:
 ## When to Apply
 
 Activate this skill when:
+
 - Creating new tests (unit or feature)
 - Modifying existing tests
 - Debugging test failures
@@ -36,6 +37,7 @@ All tests must be written using Pest. Use `php artisan make:test --pest {name}`.
 ### Basic Test Structure
 
 <!-- Basic Pest Test Example -->
+
 ```php
 it('is true', function () {
     expect(true)->toBeTrue();
@@ -53,17 +55,18 @@ it('is true', function () {
 Use specific assertions (`assertSuccessful()`, `assertNotFound()`) instead of `assertStatus()`:
 
 <!-- Pest Response Assertion -->
+
 ```php
 it('returns all', function () {
     $this->postJson('/api/docs', [])->assertSuccessful();
 });
 ```
 
-| Use | Instead of |
-|-----|------------|
+| Use                  | Instead of          |
+| -------------------- | ------------------- |
 | `assertSuccessful()` | `assertStatus(200)` |
-| `assertNotFound()` | `assertStatus(404)` |
-| `assertForbidden()` | `assertStatus(403)` |
+| `assertNotFound()`   | `assertStatus(404)` |
+| `assertForbidden()`  | `assertStatus(403)` |
 
 ## Mocking
 
@@ -74,6 +77,7 @@ Import mock function before use: `use function Pest\Laravel\mock;`
 Use datasets for repetitive tests (validation rules, etc.):
 
 <!-- Pest Dataset Example -->
+
 ```php
 it('has emails', function (string $email) {
     expect($email)->not->toBeEmpty();
@@ -90,6 +94,7 @@ it('has emails', function (string $email) {
 Pest 3 includes architecture testing to enforce code conventions:
 
 <!-- Architecture Test Example -->
+
 ```php
 arch('controllers')
     ->expect('App\Http\Controllers')

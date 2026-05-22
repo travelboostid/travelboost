@@ -10,29 +10,29 @@ import type { GetPayments200MetaPath } from './getPayments200MetaPath';
 import type { GetPayments200MetaTo } from './getPayments200MetaTo';
 
 export type GetPayments200Meta = {
-  /** @minimum 1 */
-  current_page: number;
-  /** @minimum 1 */
-  from: GetPayments200MetaFrom;
-  /** @minimum 1 */
-  last_page: number;
-  /** Generated paginator links. */
-  links: GetPayments200MetaLinksItem[];
-  /** Base path for paginator generated URLs. */
-  path: GetPayments200MetaPath;
-  /**
-   * Number of items shown per page.
-   * @minimum 0
-   */
-  per_page: number;
-  /**
-   * Number of the last item in the slice.
-   * @minimum 1
-   */
-  to: GetPayments200MetaTo;
-  /**
-   * Total number of items being paginated.
-   * @minimum 0
-   */
-  total: number;
+    /** @minimum 1 */
+    current_page: number;
+    /** @minimum 1 */
+    from: GetPayments200MetaFrom;
+    /** @minimum 1 */
+    last_page: number;
+    /** Generated paginator links. */
+    links: GetPayments200MetaLinksItem[];
+    /** Base path for paginator generated URLs. */
+    path: GetPayments200MetaPath;
+    /**
+     * Number of items shown per page.
+     * @minimum 0
+     */
+    per_page: number;
+    /**
+     * Number of the last item in the slice.
+     * @minimum 1
+     */
+    to: GetPayments200MetaTo;
+    /**
+     * Total number of items being paginated.
+     * @minimum 0
+     */
+    total: number;
 };

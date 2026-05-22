@@ -6,19 +6,19 @@
  */
 
 export type AdminSearchCompaniesParams = {
-include_ids?: string | null;
-/**
- * comma-separated list of IDs
- * @maxLength 100
- */
-search_name?: string | null;
-/**
- * @minimum 1
- */
-page?: number | null;
-/**
- * @minimum 1
- * @maximum 100
- */
-per_page?: number | null;
+    include_ids?: string | null;
+    /**
+     * comma-separated list of IDs
+     * @maxLength 100
+     */
+    search_name?: string | null;
+    /**
+     * @minimum 1
+     */
+    page?: number | null;
+    /**
+     * @minimum 1
+     * @maximum 100
+     */
+    per_page?: number | null;
 };

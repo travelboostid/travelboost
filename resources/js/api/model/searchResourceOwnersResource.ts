@@ -4,12 +4,12 @@
  * Travelboost
  * OpenAPI spec version: 0.0.1
  */
-import type { SearchResourceOwnersResourceUsers } from './searchResourceOwnersResourceUsers';
-import type { SearchResourceOwnersResourceCompanies } from './searchResourceOwnersResourceCompanies';
 import type { SearchResourceOwnersResourceAffiliates } from './searchResourceOwnersResourceAffiliates';
+import type { SearchResourceOwnersResourceCompanies } from './searchResourceOwnersResourceCompanies';
+import type { SearchResourceOwnersResourceUsers } from './searchResourceOwnersResourceUsers';
 
 export interface SearchResourceOwnersResource {
-  users: SearchResourceOwnersResourceUsers;
-  companies: SearchResourceOwnersResourceCompanies;
-  affiliates: SearchResourceOwnersResourceAffiliates;
+    users: SearchResourceOwnersResourceUsers;
+    companies: SearchResourceOwnersResourceCompanies;
+    affiliates: SearchResourceOwnersResourceAffiliates;
 }

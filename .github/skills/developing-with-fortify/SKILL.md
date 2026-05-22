@@ -100,7 +100,7 @@ Configure via `fortify.limiters.login` in config. Default configuration throttle
 ## Key Endpoints
 
 | Feature                | Method   | Endpoint                                    |
-|------------------------|----------|---------------------------------------------|
+| ---------------------- | -------- | ------------------------------------------- |
 | Login                  | POST     | `/login`                                    |
 | Logout                 | POST     | `/logout`                                   |
 | Register               | POST     | `/register`                                 |

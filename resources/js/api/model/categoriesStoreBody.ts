@@ -8,9 +8,9 @@ import type { CategoriesStoreBodyDescription } from './categoriesStoreBodyDescri
 import type { CategoriesStoreBodyUserId } from './categoriesStoreBodyUserId';
 
 export type CategoriesStoreBody = {
-  /** @maxLength 255 */
-  name: string;
-  description?: CategoriesStoreBodyDescription;
-  position_no: string;
-  user_id?: CategoriesStoreBodyUserId;
+    /** @maxLength 255 */
+    name: string;
+    description?: CategoriesStoreBodyDescription;
+    position_no: string;
+    user_id?: CategoriesStoreBodyUserId;
 };
