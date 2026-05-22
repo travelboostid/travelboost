@@ -129,11 +129,7 @@ export default function Step4BookingSummary({
     }, [displayAddOns, onAddOnsChange, readOnly]);
 
     // ─── Payment state ─────────────────────────────────────────────────
-    const [paymentType, setPaymentType] = useState<PaymentType>(
-        fullPaymentAvailable || !downPaymentAvailable
-            ? 'full_payment'
-            : 'down_payment',
-    );
+    const [paymentType, setPaymentType] = useState<PaymentType | null>(null);
     const [paymentPopoverOpen, setPaymentPopoverOpen] = useState(false);
     const [manualDialogOpen, setManualDialogOpen] = useState(false);
 
@@ -176,18 +172,35 @@ export default function Step4BookingSummary({
     const dpLabel = downPaymentAvailable
         ? `Down Payment (${dpPct}%)`
         : 'Down Payment';
-    const effectivePaymentType: PaymentType = forceBalancePayment
+    const effectivePaymentType: PaymentType | null = forceBalancePayment
         ? 'full_payment'
         : paymentType;
-    const payAmount = forceBalancePayment
-        ? remainingBalance
-        : paymentType === 'down_payment'
-          ? Math.round(grandTotal * dpRate)
-          : grandTotal;
-    const isFullPaymentUnavailable =
-        !fullPaymentAvailable || paymentErrorMessage !== null;
+    const downPaymentAmount = Math.round(grandTotal * dpRate);
+    const fullPaymentAmount = grandTotal;
+    const payAmount =
+        effectivePaymentType === 'full_payment'
+            ? forceBalancePayment
+                ? remainingBalance
+                : fullPaymentAmount
+            : effectivePaymentType === 'down_payment'
+              ? downPaymentAmount
+              : null;
+    const displayPaidAmount = Math.max(0, paidAmount);
+    const displayRemainingBalance =
+        forceBalancePayment || displayPaidAmount > 0 || remainingBalance > 0
+            ? Math.max(0, remainingBalance)
+            : Math.max(0, grandTotal - displayPaidAmount);
+    const isFullPaymentUnavailable = !fullPaymentAvailable;
     const isCurrentPaymentUnavailable =
         isFullPaymentUnavailable && effectivePaymentType === 'full_payment';
+    const isPaymentSelectionMissing = !effectivePaymentType;
+    const activePaymentAmountLabel = forceBalancePayment
+        ? 'Remaining Balance'
+        : effectivePaymentType === 'down_payment'
+          ? 'DP Amount'
+          : effectivePaymentType === 'full_payment'
+            ? 'Full Payment Amount'
+            : 'Payment Amount';
     const paymentNotice =
         paymentErrorMessage ??
         (isCurrentPaymentUnavailable
@@ -219,7 +232,14 @@ export default function Step4BookingSummary({
     );
 
     const handlePaymentMethodSelect = (method: PaymentMethod) => {
-        if (readOnly || isCurrentPaymentUnavailable) {
+        const selectedPaymentType = effectivePaymentType;
+
+        if (
+            readOnly ||
+            isCurrentPaymentUnavailable ||
+            !selectedPaymentType ||
+            payAmount === null
+        ) {
             return;
         }
 
@@ -229,16 +249,23 @@ export default function Step4BookingSummary({
             return;
         }
 
-        onPayNow(effectivePaymentType, method, displayAddOns, payAmount);
+        onPayNow(selectedPaymentType, method, displayAddOns, payAmount);
     };
 
     const handleManualSubmit = (data: ManualPaymentData) => {
-        if (readOnly || isCurrentPaymentUnavailable) {
+        const selectedPaymentType = effectivePaymentType;
+
+        if (
+            readOnly ||
+            isCurrentPaymentUnavailable ||
+            !selectedPaymentType ||
+            payAmount === null
+        ) {
             return;
         }
 
         onPayNow(
-            effectivePaymentType,
+            selectedPaymentType,
             'manual_transfer',
             displayAddOns,
             payAmount,
@@ -488,93 +515,122 @@ export default function Step4BookingSummary({
                                 Payment Option
                             </p>
 
-                            {/* Two-button toggle */}
-                            <div className="flex items-center justify-between rounded-lg border bg-muted/20 p-2">
-                                {forceBalancePayment ? (
-                                    <div className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground shadow-sm">
-                                        Balance Payment
-                                    </div>
-                                ) : (
-                                    <div className="flex items-center gap-1 rounded-md bg-muted/40 p-0.5">
-                                        <button
-                                            type="button"
-                                            className={cn(
-                                                'rounded-md px-3 py-1.5 text-xs font-medium transition-all',
-                                                paymentType === 'down_payment'
-                                                    ? 'bg-primary text-primary-foreground shadow-sm'
-                                                    : 'text-muted-foreground hover:text-foreground',
-                                                !downPaymentAvailable &&
-                                                    'cursor-not-allowed opacity-50',
-                                            )}
-                                            onClick={() => {
-                                                if (downPaymentAvailable) {
-                                                    setPaymentType(
-                                                        'down_payment',
-                                                    );
+                            <div className="grid gap-3 rounded-lg border bg-muted/20 p-3 lg:grid-cols-[minmax(0,1fr)_minmax(210px,250px)] lg:items-start">
+                                <div>
+                                    {forceBalancePayment ? (
+                                        <div className="inline-flex rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground shadow-sm">
+                                            Balance Payment
+                                        </div>
+                                    ) : (
+                                        <div className="inline-flex items-center gap-1 rounded-md bg-muted/40 p-0.5">
+                                            <button
+                                                type="button"
+                                                className={cn(
+                                                    'rounded-md px-3 py-1.5 text-xs font-medium transition-all',
+                                                    paymentType ===
+                                                        'down_payment'
+                                                        ? 'bg-primary text-primary-foreground shadow-sm'
+                                                        : 'text-muted-foreground hover:text-foreground',
+                                                    !downPaymentAvailable &&
+                                                        'cursor-not-allowed opacity-50',
+                                                )}
+                                                onClick={() => {
+                                                    if (downPaymentAvailable) {
+                                                        setPaymentType(
+                                                            'down_payment',
+                                                        );
+                                                    }
+                                                }}
+                                                disabled={!downPaymentAvailable}
+                                            >
+                                                {dpLabel}
+                                            </button>
+                                            <button
+                                                type="button"
+                                                className={cn(
+                                                    'rounded-md px-3 py-1.5 text-xs font-medium transition-all',
+                                                    paymentType ===
+                                                        'full_payment'
+                                                        ? 'bg-primary text-primary-foreground shadow-sm'
+                                                        : 'text-muted-foreground hover:text-foreground',
+                                                    isFullPaymentUnavailable &&
+                                                        'cursor-not-allowed opacity-50',
+                                                )}
+                                                onClick={() => {
+                                                    if (
+                                                        !isFullPaymentUnavailable
+                                                    ) {
+                                                        setPaymentType(
+                                                            'full_payment',
+                                                        );
+                                                    }
+                                                }}
+                                                disabled={
+                                                    isFullPaymentUnavailable
                                                 }
-                                            }}
-                                            disabled={!downPaymentAvailable}
-                                        >
-                                            {dpLabel}
-                                        </button>
-                                        <button
-                                            type="button"
-                                            className={cn(
-                                                'rounded-md px-3 py-1.5 text-xs font-medium transition-all',
-                                                paymentType === 'full_payment'
-                                                    ? 'bg-primary text-primary-foreground shadow-sm'
-                                                    : 'text-muted-foreground hover:text-foreground',
-                                                isFullPaymentUnavailable &&
-                                                    'cursor-not-allowed opacity-50',
-                                            )}
-                                            onClick={() => {
-                                                if (!isFullPaymentUnavailable) {
-                                                    setPaymentType(
-                                                        'full_payment',
-                                                    );
-                                                }
-                                            }}
-                                            disabled={isFullPaymentUnavailable}
-                                        >
-                                            Full Payment
-                                        </button>
-                                    </div>
-                                )}
+                                            >
+                                                Full Payment
+                                            </button>
+                                        </div>
+                                    )}
 
-                                <div className="text-right">
-                                    <p className="text-[10px] text-muted-foreground">
-                                        {forceBalancePayment
-                                            ? 'Remaining Balance'
-                                            : paymentType === 'down_payment'
-                                              ? 'DP Amount'
-                                              : 'Full Payment Amount'}
-                                    </p>
-                                    <motion.p
-                                        key={payAmount}
-                                        initial={{ opacity: 0, y: -5 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        className="text-sm font-bold text-primary"
-                                    >
-                                        {formatCurrency(payAmount)}
-                                    </motion.p>
+                                    <div className="ml-1 mt-5 max-w-xs">
+                                        <p className="text-[10px] font-semibold uppercase text-muted-foreground">
+                                            {activePaymentAmountLabel}
+                                        </p>
+                                        <p
+                                            className={cn(
+                                                'text-sm font-bold',
+                                                payAmount === null
+                                                    ? 'text-muted-foreground'
+                                                    : 'text-primary',
+                                            )}
+                                        >
+                                            {payAmount === null
+                                                ? 'Select payment option'
+                                                : formatCurrency(payAmount)}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-1.5 lg:text-right">
+                                    <div>
+                                        <p className="text-[10px] font-semibold uppercase text-muted-foreground">
+                                            Grand Total
+                                        </p>
+                                        <motion.p
+                                            key={grandTotal}
+                                            initial={{ scale: 0.98 }}
+                                            animate={{ scale: 1 }}
+                                            className="text-xl font-bold text-foreground"
+                                        >
+                                            {formatCurrency(grandTotal)}
+                                        </motion.p>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-3 border-t border-border/60 pt-1.5">
+                                        <div>
+                                            <p className="text-[10px] font-semibold uppercase text-muted-foreground">
+                                                Remaining Balance
+                                            </p>
+                                            <p className="text-sm font-bold text-red-600">
+                                                {formatCurrency(
+                                                    displayRemainingBalance,
+                                                )}
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <p className="text-[10px] font-semibold uppercase text-muted-foreground">
+                                                Paid
+                                            </p>
+                                            <p className="text-sm font-bold text-emerald-600">
+                                                {formatCurrency(
+                                                    displayPaidAmount,
+                                                )}
+                                            </p>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                            {forceBalancePayment && (
-                                <div className="mt-3 grid gap-2 text-xs text-muted-foreground sm:grid-cols-2">
-                                    <div className="rounded-lg bg-muted/40 px-3 py-2">
-                                        Paid amount:{' '}
-                                        <span className="font-semibold text-foreground">
-                                            {formatCurrency(paidAmount)}
-                                        </span>
-                                    </div>
-                                    <div className="rounded-lg bg-muted/40 px-3 py-2">
-                                        Remaining:{' '}
-                                        <span className="font-semibold text-primary">
-                                            {formatCurrency(remainingBalance)}
-                                        </span>
-                                    </div>
-                                </div>
-                            )}
                             {paymentNotice && (
                                 <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">
                                     {paymentNotice}
@@ -583,69 +639,17 @@ export default function Step4BookingSummary({
                         </div>
                     )}
 
-                    {/* ─── Grand Total + Pay Now ──────────────────────────────────── */}
-                    {readOnly && (
+                    {/* ─── Pay Now ────────────────────────────────────────────────── */}
+                    {!readOnly && (
                         <div className="p-4">
-                            <p className="mb-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                                Payment Summary
-                            </p>
-                            <div className="grid gap-2 text-xs text-muted-foreground sm:grid-cols-2">
-                                <div className="rounded-lg bg-muted/40 px-3 py-2">
-                                    Paid amount:{' '}
-                                    <span className="font-semibold text-foreground">
-                                        {formatCurrency(paidAmount)}
-                                    </span>
-                                </div>
-                                <div className="rounded-lg bg-muted/40 px-3 py-2">
-                                    Remaining:{' '}
-                                    <span className="font-semibold text-primary">
-                                        {formatCurrency(remainingBalance)}
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    <div className="p-4">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-xs text-muted-foreground">
-                                    Grand Total
-                                </p>
-                                <motion.p
-                                    key={grandTotal}
-                                    initial={{ scale: 0.9 }}
-                                    animate={{ scale: 1 }}
-                                    className="text-2xl font-bold text-foreground"
-                                >
-                                    {formatCurrency(grandTotal)}
-                                </motion.p>
-                                {!readOnly && forceBalancePayment ? (
-                                    <p className="mt-0.5 text-xs text-muted-foreground">
-                                        Pay remaining balance:{' '}
-                                        <span className="font-bold text-primary">
-                                            {formatCurrency(payAmount)}
-                                        </span>
-                                    </p>
-                                ) : (
-                                    !readOnly &&
-                                    paymentType === 'down_payment' && (
-                                        <p className="mt-0.5 text-xs text-muted-foreground">
-                                            Pay now:{' '}
-                                            <span className="font-bold text-primary">
-                                                {formatCurrency(payAmount)}
-                                            </span>{' '}
-                                            ({dpPct}%)
-                                        </p>
-                                    )
-                                )}
-                            </div>
-
-                            {!readOnly && (
+                            <div className="flex justify-end">
                                 <Popover
                                     open={paymentPopoverOpen}
                                     onOpenChange={(open) => {
-                                        if (!isCurrentPaymentUnavailable) {
+                                        if (
+                                            !isCurrentPaymentUnavailable &&
+                                            !isPaymentSelectionMissing
+                                        ) {
                                             setPaymentPopoverOpen(open);
                                         }
                                     }}
@@ -656,13 +660,16 @@ export default function Step4BookingSummary({
                                             size="lg"
                                             disabled={
                                                 isSubmitting ||
-                                                isCurrentPaymentUnavailable
+                                                isCurrentPaymentUnavailable ||
+                                                isPaymentSelectionMissing
                                             }
                                             className="gap-2 bg-[#1ebe5d] px-6 text-white shadow-lg hover:bg-[#19a34f]"
                                         >
                                             {isSubmitting
                                                 ? 'Processing...'
-                                                : 'Pay Now!'}
+                                                : isPaymentSelectionMissing
+                                                  ? 'Select Payment Option'
+                                                  : 'Pay Now!'}
                                         </Button>
                                     </PopoverTrigger>
                                     <PopoverContent
@@ -716,9 +723,9 @@ export default function Step4BookingSummary({
                                         </div>
                                     </PopoverContent>
                                 </Popover>
-                            )}
+                            </div>
                         </div>
-                    </div>
+                    )}
                 </div>
                 <ManualPaymentDialog
                     open={manualDialogOpen}
@@ -732,7 +739,7 @@ export default function Step4BookingSummary({
                             accountNumber: '',
                         }
                     }
-                    amount={payAmount}
+                    amount={payAmount ?? 0}
                 />
             </motion.div>
         </TooltipProvider>
