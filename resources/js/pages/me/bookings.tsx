@@ -701,7 +701,7 @@ function BookingCard({
                     'border-primary/50 ring-2 ring-primary/25 shadow-md shadow-primary/10',
             )}
         >
-            <div className="grid items-stretch gap-0 md:min-h-[18rem] md:grid-cols-[240px_minmax(0,1fr)] lg:grid-cols-[300px_minmax(0,1fr)_320px] 2xl:grid-cols-[320px_minmax(0,1fr)_320px]">
+            <div className="grid items-stretch gap-0 md:min-h-[16rem] md:grid-cols-[220px_minmax(0,1fr)] lg:grid-cols-[280px_minmax(0,1fr)_320px] 2xl:grid-cols-[300px_minmax(0,1fr)_320px]">
                 <TourImage
                     image={image}
                     label={booking.tour?.name ?? 'Tour'}
@@ -792,7 +792,7 @@ function BookingCard({
                     </div>
                     <div
                         className={cn(
-                            'mt-auto grid min-w-0 grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:justify-end',
+                            'grid min-w-0 grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:justify-end',
                             actionCount === 0 && 'hidden',
                         )}
                     >
@@ -1046,11 +1046,11 @@ function TourImage({
     landscape?: boolean;
 }) {
     const frameClassName = landscape
-        ? 'h-48 w-full overflow-hidden bg-muted md:h-full md:min-h-48'
+        ? 'h-40 w-full overflow-hidden bg-muted md:h-full md:min-h-40'
         : 'h-36 overflow-hidden bg-muted md:h-full md:min-h-40';
 
     const placeholderClassName = landscape
-        ? 'flex h-48 w-full items-center justify-center overflow-hidden bg-primary/10 px-3 text-center text-2xl font-bold text-primary md:h-full md:min-h-48'
+        ? 'flex h-40 w-full items-center justify-center overflow-hidden bg-primary/10 px-3 text-center text-2xl font-bold text-primary md:h-full md:min-h-40'
         : 'flex h-36 items-center justify-center overflow-hidden bg-primary/10 px-3 text-center text-2xl font-bold text-primary md:h-full md:min-h-40';
 
     if (hasImage && image) {
