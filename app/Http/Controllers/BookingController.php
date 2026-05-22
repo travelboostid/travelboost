@@ -756,6 +756,7 @@ class BookingController extends Controller
                     'finish' => url('/mybookings'),
                 ],
             ];
+            $orderId = $params['transaction_details']['order_id'];
 
             try {
                 $snapToken = Snap::getSnapToken($params);
@@ -763,6 +764,9 @@ class BookingController extends Controller
                 Log::warning('Midtrans Snap token request failed', [
                     'booking_id' => $booking->id,
                     'payment_id' => $payment->id,
+                    'payment_type' => $validated['payment_type'],
+                    'amount' => (float) $payment->amount,
+                    'midtrans_environment' => $this->midtransEnvironment(),
                     'message' => $exception->getMessage(),
                 ]);
 
@@ -771,16 +775,22 @@ class BookingController extends Controller
                 ]);
             }
 
-            $orderId = $params['transaction_details']['order_id'];
+            $payload = [
+                'payment_type' => $validated['payment_type'],
+                'order_id' => $orderId,
+                'snap_token' => $snapToken,
+                'request' => $params,
+            ];
+
+            if (! $snapToken) {
+                throw ValidationException::withMessages([
+                    'payment' => self::ONLINE_PAYMENT_UNAVAILABLE_MESSAGE,
+                ]);
+            }
 
             $payment->update([
                 'status' => 'pending',
-                'payload' => [
-                    'payment_type' => $validated['payment_type'],
-                    'order_id' => $orderId,
-                    'snap_token' => $snapToken,
-                    'request' => $params,
-                ],
+                'payload' => $payload,
             ]);
 
             $booking->update([
@@ -1010,6 +1020,11 @@ class BookingController extends Controller
                 'payment' => self::CUSTOMER_PAYMENT_UNAVAILABLE_MESSAGE,
             ]);
         }
+    }
+
+    private function midtransEnvironment(): string
+    {
+        return (bool) config('midtrans.is_production') ? 'production' : 'sandbox';
     }
 
     private function assertPaymentTypeAllowedForTour(Tour $tour, string $paymentType): void

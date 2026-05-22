@@ -472,6 +472,48 @@ test('customer online payment returns validation error when midtrans snap token 
         ->and($booking->fresh()->status)->toBe(BookingStatus::BOOKING_RESERVED);
 });
 
+test('customer can submit manual payment after online provider is unavailable', function () {
+    Storage::fake('public');
+
+    ['customer' => $customer, 'booking' => $booking] = createSettlementScenario(vendorBalance: 100_000);
+
+    \Mockery::mock('alias:Midtrans\Snap')
+        ->shouldReceive('getSnapToken')
+        ->once()
+        ->andThrow(new RuntimeException('CURL Error: Failed to connect to app.sandbox.midtrans.com'));
+
+    $booking->update([
+        'status' => BookingStatus::BOOKING_RESERVED,
+    ]);
+
+    $onlineResponse = $this->actingAs($customer)
+        ->postJson("/bookings/{$booking->id}/online-payment", [
+            'payment_type' => 'down_payment',
+            'amount' => 1_000_000,
+        ]);
+
+    $onlineResponse->assertUnprocessable()
+        ->assertJsonValidationErrors('payment');
+
+    expect($booking->payments()->count())->toBe(0)
+        ->and($booking->fresh()->status)->toBe(BookingStatus::BOOKING_RESERVED);
+
+    $manualResponse = $this->actingAs($customer)
+        ->post("/bookings/{$booking->id}/manual-payment", [
+            'sender_bank_name' => 'BCA',
+            'sender_account_number' => '1234567890',
+            'transfer_amount' => 1_000_000,
+            'payment_type' => 'down_payment',
+            'proof' => UploadedFile::fake()->image('proof.jpg'),
+        ]);
+
+    $manualResponse->assertRedirect()
+        ->assertSessionHas('bookingPaymentResult.bookingStatus', 'waiting payment approval');
+
+    expect($booking->payments()->count())->toBe(1)
+        ->and($booking->fresh()->status)->toBe(BookingStatus::WAITING_PAYMENT_APPROVAL);
+});
+
 test('customer down payment remains available when vendor wallet cannot settle full payment commissions', function () {
     Storage::fake('public');
 
