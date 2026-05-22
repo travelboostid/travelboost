@@ -55,17 +55,15 @@ export function TourImagePicker({
         <Dialog onOpenChange={setOpen} open={open}>
             <DialogTrigger>
                 <div className="flex flex-col items-center justify-items-center gap-2 cursor-pointer">
-                    <div className="mx-auto w-full max-w-xl overflow-hidden rounded-2xl border bg-muted shadow-sm">
-                        <img
-                            className="aspect-video w-full object-cover"
-                            src={
-                                typeof internalValue === 'string'
-                                    ? internalValue
-                                    : src
-                            }
-                            srcSet={srcSet || undefined}
-                        />
-                    </div>
+                    <img
+                        className="aspect-video max-w-90 rounded object-cover shadow"
+                        src={
+                            typeof internalValue === 'string'
+                                ? internalValue
+                                : src
+                        }
+                        srcSet={srcSet || undefined}
+                    />
                     <Button className="w-fit cursor-pointer" type="button">
                         <CameraIcon />
                         Change

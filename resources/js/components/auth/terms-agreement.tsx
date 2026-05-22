@@ -620,6 +620,7 @@ export function TermsAgreement({
                                                                                 {
                                                                                     item.label
                                                                                 }
+
                                                                                 :{' '}
                                                                             </span>
                                                                         )}

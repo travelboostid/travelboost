@@ -2,11 +2,17 @@ import {
     index,
     store,
 } from '@/actions/App/Http/Controllers/Companies/Dashboard/TourController';
-import type { MediaResource } from '@/api/model';
 import InputError from '@/components/input-error';
 import CompanyDashboardLayout from '@/components/layouts/company-dashboard';
+import { MediaPicker } from '@/components/media-picker';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import {
+    Item,
+    ItemActions,
+    ItemContent,
+    ItemTitle,
+} from '@/components/ui/item';
 import { Label } from '@/components/ui/label';
 import {
     Select,
@@ -31,7 +37,7 @@ import SelectRegion from './components/select-region';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 import { TourDocumentPicker } from '@/components/media/tour-document-picker';
-import { TourImagePicker } from '@/components/media/tour-image-picker';
+import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import {
     Tooltip,
     TooltipContent,
@@ -386,8 +392,8 @@ export default function Page() {
                                             catalog
                                         </p>
                                     </div>
-                                    <div className="flex flex-col items-center p-6">
-                                        <TourImagePicker
+                                    <div className="p-6">
+                                        <TourDocumentPicker
                                             owner={{
                                                 id: company.id,
                                                 type: 'company',
@@ -396,12 +402,10 @@ export default function Page() {
                                                 const mediaId =
                                                     typeof media === 'object' &&
                                                     media
-                                                        ? (
-                                                              media as MediaResource
-                                                          ).id
+                                                        ? media.id
                                                         : null;
 
-                                                setData('image_id', mediaId);
+                                                setData('document_id', mediaId);
                                             }}
                                         />
                                         <InputError message={errors.media_id} />
@@ -674,24 +678,104 @@ export default function Page() {
                                             <Label htmlFor="name">
                                                 Document Itinerary
                                             </Label>
-                                            <TourDocumentPicker
-                                                owner={{
-                                                    id: company.id,
-                                                    type: 'company',
+                                            <MediaPicker
+                                                type="document"
+                                                params={{
+                                                    owner_type: 'company',
+                                                    owner_id: company.id,
                                                 }}
-                                                onChange={(media) => {
-                                                    const mediaId =
-                                                        typeof media ===
-                                                            'object' && media
-                                                            ? media.id
-                                                            : null;
+                                                uploadParams={{
+                                                    owner_type: 'company',
+                                                    owner_id: company.id,
+                                                }}
+                                            >
+                                                {(media, change) => {
+                                                    const mediaId = (
+                                                        media as any
+                                                    )?.id;
+                                                    const url =
+                                                        (media as any)?.url ||
+                                                        (media as any)?.data
+                                                            ?.url;
 
-                                                    setData(
-                                                        'document_id',
-                                                        mediaId,
+                                                    // 🔥 sync ke inertia
+                                                    if (
+                                                        mediaId &&
+                                                        data.document_id !==
+                                                            mediaId
+                                                    ) {
+                                                        setData(
+                                                            'document_id',
+                                                            mediaId,
+                                                        );
+                                                    }
+
+                                                    return (
+                                                        <Item
+                                                            variant="outline"
+                                                            className="space-y-2"
+                                                        >
+                                                            <ItemContent className="space-y-2">
+                                                                {url ? (
+                                                                    <div className="rounded border p-4 bg-muted/20">
+                                                                        <p className="text-sm font-medium">
+                                                                            {(
+                                                                                media as any
+                                                                            )
+                                                                                ?.name ||
+                                                                                'Document uploaded'}
+                                                                        </p>
+
+                                                                        <Dialog>
+                                                                            <DialogTrigger
+                                                                                asChild
+                                                                            >
+                                                                                <Button
+                                                                                    type="button"
+                                                                                    variant="outline"
+                                                                                    size="sm"
+                                                                                >
+                                                                                    View
+                                                                                    PDF
+                                                                                </Button>
+                                                                            </DialogTrigger>
+
+                                                                            <DialogContent className="max-w-5xl h-[90vh]">
+                                                                                <iframe
+                                                                                    src={
+                                                                                        url
+                                                                                    }
+                                                                                    className="h-full w-full rounded-md border"
+                                                                                    title="PDF Preview"
+                                                                                />
+                                                                            </DialogContent>
+                                                                        </Dialog>
+                                                                    </div>
+                                                                ) : (
+                                                                    <ItemTitle>
+                                                                        No
+                                                                        document
+                                                                        selected
+                                                                    </ItemTitle>
+                                                                )}
+                                                            </ItemContent>
+
+                                                            <ItemActions>
+                                                                <Button
+                                                                    variant="outline"
+                                                                    size="sm"
+                                                                    onClick={
+                                                                        change
+                                                                    }
+                                                                    type="button"
+                                                                >
+                                                                    Change
+                                                                </Button>
+                                                            </ItemActions>
+                                                        </Item>
                                                     );
                                                 }}
-                                            />
+                                            </MediaPicker>
                                             <InputError
                                                 message={errors.document_id}
                                             />
@@ -939,34 +1023,22 @@ export default function Page() {
 
                                 <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2">
                                     {/* LEFT */}
-                                    <div className="flex flex-wrap items-center gap-3">
+                                    <div className="flex items-center gap-2">
                                         <span className="text-sm text-muted-foreground">
-                                            Departure Date
+                                            Search by departure date
                                         </span>
 
-                                        {/* FROM */}
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-xs text-muted-foreground">
-                                                From
-                                            </span>
-
-                                            <input
-                                                type="date"
-                                                className="rounded-lg border px-3 py-2 text-sm"
-                                            />
-                                        </div>
-
-                                        {/* TO */}
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-xs text-muted-foreground">
-                                                To
-                                            </span>
-
-                                            <input
-                                                type="date"
-                                                className="rounded-lg border px-3 py-2 text-sm"
-                                            />
-                                        </div>
+                                        <input
+                                            type="date"
+                                            value={searchDepartureTab2}
+                                            onChange={(e) => {
+                                                setSearchDepartureTab2(
+                                                    e.target.value,
+                                                );
+                                                setCurrentSchedulePage(1);
+                                            }}
+                                            className="rounded-lg border px-3 py-2 text-sm"
+                                        />
                                     </div>
 
                                     {/* RIGHT */}
@@ -1844,34 +1916,22 @@ export default function Page() {
                             <div className="space-y-4">
                                 <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2">
                                     {/* LEFT */}
-                                    <div className="flex flex-wrap items-center gap-3">
+                                    <div className="flex items-center gap-2">
                                         <span className="text-sm text-muted-foreground">
-                                            Departure Date
+                                            Search by departure date
                                         </span>
 
-                                        {/* FROM */}
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-xs text-muted-foreground">
-                                                From
-                                            </span>
-
-                                            <input
-                                                type="date"
-                                                className="rounded-lg border px-3 py-2 text-sm"
-                                            />
-                                        </div>
-
-                                        {/* TO */}
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-xs text-muted-foreground">
-                                                To
-                                            </span>
-
-                                            <input
-                                                type="date"
-                                                className="rounded-lg border px-3 py-2 text-sm"
-                                            />
-                                        </div>
+                                        <input
+                                            type="date"
+                                            value={searchDeparture}
+                                            onChange={(e) => {
+                                                setSearchDeparture(
+                                                    e.target.value,
+                                                );
+                                                setCurrentPage(1);
+                                            }}
+                                            className="rounded-lg border px-3 py-2 text-sm"
+                                        />
                                     </div>
 
                                     {/* RIGHT */}
@@ -2079,34 +2139,16 @@ export default function Page() {
                         <TabsContent value="addons">
                             <div className="space-y-4">
                                 <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2">
-                                    <div className="flex flex-wrap items-center gap-2">
+                                    <div className="flex items-center gap-2">
                                         <span className="text-sm text-muted-foreground">
-                                            Departure Date
+                                            Search by departure date
                                         </span>
 
-                                        {/* FROM */}
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-xs text-muted-foreground">
-                                                From
-                                            </span>
-
-                                            <input
-                                                type="date"
-                                                className="rounded-lg border px-3 py-2 text-sm"
-                                            />
-                                        </div>
-
-                                        {/* TO */}
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-xs text-muted-foreground">
-                                                To
-                                            </span>
-
-                                            <input
-                                                type="date"
-                                                className="rounded-lg border px-3 py-2 text-sm"
-                                            />
-                                        </div>
+                                        <input
+                                            type="date"
+                                            value=""
+                                            className="rounded-lg border px-3 py-2 text-sm"
+                                        />
                                     </div>
                                     <div className="rounded-lg border bg-muted/40 px-3 py-2 text-sm font-medium">
                                         Currency:

@@ -2,7 +2,6 @@ import { update } from '@/actions/App/Http/Controllers/Companies/Dashboard/TourC
 import type { MediaResource } from '@/api/model';
 import InputError from '@/components/input-error';
 import CompanyDashboardLayout from '@/components/layouts/company-dashboard';
-import { MediaPicker } from '@/components/media-picker';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -18,7 +17,6 @@ import {
 import { Spinner } from '@/components/ui/spinner';
 import { Textarea } from '@/components/ui/textarea';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
-import { extractImageSrc } from '@/lib/utils';
 import { router, useForm, usePage } from '@inertiajs/react';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
@@ -35,6 +33,7 @@ import MoneyInput from '@/components/ui/money-input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Copy, InfoIcon, MoreVertical, Save, Trash2 } from 'lucide-react';
 
+import { TourImagePicker } from '@/components/media/tour-image-picker';
 import {
     Accordion,
     AccordionContent,
@@ -182,9 +181,6 @@ export default function Page({ tour }: Props) {
     const [countryId, setCountryId] = useState<number | null>(
         tour.country_id ?? null,
     );
-    const [categoryId, setCategoryId] = useState<number | null>(
-        tour.category_id ?? null,
-    );
 
     const [selectedDocument, setSelectedDocument] = useState<any>(
         tour.document || null,
@@ -200,6 +196,7 @@ export default function Page({ tour }: Props) {
 
     const [displayPrice, setDisplayPrice] = useState('');
     const [rawPrice, setRawPrice] = useState('');
+
     const [displayPrice1, setDisplayPrice1] = useState('0');
     const [rawPrice1, setRawPrice1] = useState('0');
 
@@ -228,62 +225,6 @@ export default function Page({ tour }: Props) {
 
         schedules: [], // nanti inject
     });
-
-    const handlePriceChange = (value: string) => {
-        const numeric = value.replace(/\D/g, '');
-        setRawPrice(numeric);
-        setData('showprice', numeric);
-
-        const formatted = new Intl.NumberFormat('id-ID').format(
-            Number(numeric),
-        );
-        setDisplayPrice(formatted);
-    };
-
-    useEffect(() => {
-        const numeric = tour.showprice != null ? String(tour.showprice) : '0';
-
-        setRawPrice(numeric);
-
-        const formatted = new Intl.NumberFormat('id-ID').format(
-            Number(numeric),
-        );
-        setDisplayPrice(formatted);
-
-        // 🔥 WAJIB
-        setData('showprice', numeric);
-    }, [tour.showprice]);
-    //
-
-    const handlePriceChange1 = (value: string) => {
-        let numeric1 = value.replace(/\D/g, '');
-
-        if (numeric1 === '') numeric1 = '0'; // 🔥 default 0
-
-        setRawPrice1(numeric1);
-        setData('promote_price', numeric1);
-
-        const formatted1 = new Intl.NumberFormat('id-ID').format(
-            Number(numeric1),
-        );
-        setDisplayPrice1(formatted1);
-    };
-
-    useEffect(() => {
-        const numeric =
-            tour.promote_price != null ? String(tour.promote_price) : '0';
-
-        setRawPrice1(numeric);
-
-        const formatted = new Intl.NumberFormat('id-ID').format(
-            Number(numeric),
-        );
-        setDisplayPrice1(formatted);
-
-        // 🔥 WAJIB
-        setData('promote_price', numeric);
-    }, [tour.promote_price]);
-    //
 
     const { priceCategories } = usePage<{
         priceCategories: PriceCategory[];
@@ -368,6 +309,62 @@ export default function Page({ tour }: Props) {
             })),
         })),
     );
+
+    const handlePriceChange = (value: string) => {
+        const numeric = value.replace(/\D/g, '');
+        setRawPrice(numeric);
+        setData('showprice', numeric);
+
+        const formatted = new Intl.NumberFormat('id-ID').format(
+            Number(numeric),
+        );
+        setDisplayPrice(formatted);
+    };
+
+    useEffect(() => {
+        const numeric = tour.showprice != null ? String(tour.showprice) : '0';
+
+        setRawPrice(numeric);
+
+        const formatted = new Intl.NumberFormat('id-ID').format(
+            Number(numeric),
+        );
+        setDisplayPrice(formatted);
+
+        // 🔥 WAJIB
+        setData('showprice', numeric);
+    }, [tour.showprice, setData]);
+    //
+
+    const handlePriceChange1 = (value: string) => {
+        let numeric1 = value.replace(/\D/g, '');
+
+        if (numeric1 === '') numeric1 = '0'; // 🔥 default 0
+
+        setRawPrice1(numeric1);
+        setData('promote_price', numeric1);
+
+        const formatted1 = new Intl.NumberFormat('id-ID').format(
+            Number(numeric1),
+        );
+        setDisplayPrice1(formatted1);
+    };
+
+    useEffect(() => {
+        const numeric =
+            tour.promote_price != null ? String(tour.promote_price) : '0';
+
+        setRawPrice1(numeric);
+
+        const formatted = new Intl.NumberFormat('id-ID').format(
+            Number(numeric),
+        );
+        setDisplayPrice1(formatted);
+
+        // 🔥 WAJIB
+        setData('promote_price', numeric);
+    }, [tour.promote_price, setData]);
+    //
 
     // 🔥 TAMBAHKAN DI SINI 17042026
     /*useEffect(() => {
@@ -1480,59 +1477,25 @@ export default function Page({ tour }: Props) {
                                     </div>
 
                                     <div className="p-6">
-                                        <MediaPicker
-                                            type="image"
-                                            defaultValue={tour.image}
-                                            params={{
-                                                owner_type: 'company',
-                                                owner_id: company.id,
-                                            }}
-                                            uploadParams={{
-                                                owner_type: 'company',
-                                                owner_id: company.id,
-                                            }}
-                                        >
-                                            {(media, change) => {
-                                                const mediaId = (
-                                                    media as MediaResource
-                                                )?.id;
+                                        <div className="flex justify-center">
+                                            <TourImagePicker
+                                                defaultValue={tour.image}
+                                                owner={{
+                                                    type: 'company',
+                                                    id: company.id,
+                                                }}
+                                                onChange={(media) => {
+                                                    const mediaId = (
+                                                        media as MediaResource
+                                                    )?.id;
 
-                                                if (
-                                                    mediaId &&
-                                                    data.image_id !== mediaId
-                                                ) {
                                                     setData(
                                                         'image_id',
-                                                        mediaId,
+                                                        mediaId || '',
                                                     );
-                                                }
-
-                                                return (
-                                                    <div className="flex flex-col items-center gap-5">
-                                                        <div className="mx-auto w-full max-w-xl overflow-hidden rounded-2xl border bg-muted shadow-sm">
-                                                            <img
-                                                                className="aspect-video w-full object-cover transition duration-300 group-hover:scale-[1.02]"
-                                                                src={
-                                                                    typeof media ===
-                                                                    'string'
-                                                                        ? media
-                                                                        : extractImageSrc(
-                                                                              media as any,
-                                                                          ).src
-                                                                }
-                                                            />
-                                                        </div>
-
-                                                        <Button
-                                                            type="button"
-                                                            onClick={change}
-                                                        >
-                                                            Change Image
-                                                        </Button>
-                                                    </div>
-                                                );
-                                            }}
-                                        </MediaPicker>
+                                                }}
+                                            />
+                                        </div>
                                     </div>
                                 </div>
 

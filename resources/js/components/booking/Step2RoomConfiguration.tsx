@@ -1076,6 +1076,7 @@ function BedArrangementModal({
                                                                                                 Guest{' '}
                                                                                                 {gi +
                                                                                                     1}
+
                                                                                                 :{' '}
                                                                                                 {[
                                                                                                     g.firstName,
