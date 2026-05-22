@@ -2,8 +2,8 @@ import { useAnonymousUserContext } from '@/components/anonymous-user-context-pro
 import FloatingChatWidget from '@/components/chat/floating-chat-widget';
 import type { ChatActor } from '@/components/chat/state';
 import {
-  ChatContextProvider,
-  FloatingChatWidgetContextProvider,
+    ChatContextProvider,
+    FloatingChatWidgetContextProvider,
 } from '@/components/chat/state';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { usePage } from '@inertiajs/react';
@@ -15,62 +15,68 @@ import { Header } from './header';
 const TENANT_THEME_CLASSES = ['light', 'dark', 'greenie', 'calmie', 'warmie'];
 
 export default function Inner({ children, onNavigateAway }: TenantLayoutProps) {
-  const { auth, company, tenant } = usePageSharedDataProps();
-  const { url } = usePage();
-  const showFooter =
-    !url.startsWith('/tours') &&
-    !url.startsWith('/mybookings') &&
-    !url.startsWith('/bookings');
-  const anonymousUser = useAnonymousUserContext();
-  const tenantCompany = tenant ?? company;
-  const theme = useMemo(() => {
-    try {
-      const rawData = JSON.parse(
-        tenantCompany?.settings?.landing_page_data || '{}',
-      );
+    const { auth, company, tenant } = usePageSharedDataProps();
+    const { url } = usePage();
+    const showFooter =
+        !url.startsWith('/tours') &&
+        !url.startsWith('/mybookings') &&
+        !url.startsWith('/bookings');
+    const anonymousUser = useAnonymousUserContext();
+    const tenantCompany = tenant ?? company;
+    const theme = useMemo(() => {
+        try {
+            const rawData = JSON.parse(
+                tenantCompany?.settings?.landing_page_data || '{}',
+            );
 
-      return rawData?.root?.props?.theme ?? '';
-    } catch {
-      return '';
-    }
-  }, [tenantCompany]);
+            return rawData?.root?.props?.theme ?? '';
+        } catch {
+            return '';
+        }
+    }, [tenantCompany]);
 
-  useEffect(() => {
-    const themeClasses = theme
-      .split(/\s+/)
-      .filter((className: string) => TENANT_THEME_CLASSES.includes(className));
+    useEffect(() => {
+        const themeClasses = theme
+            .split(/\s+/)
+            .filter((className: string) =>
+                TENANT_THEME_CLASSES.includes(className),
+            );
 
-    document.body.classList.remove(...TENANT_THEME_CLASSES);
+        document.body.classList.remove(...TENANT_THEME_CLASSES);
 
-    if (themeClasses.length > 0) {
-      document.body.classList.add(...themeClasses);
-    }
+        if (themeClasses.length > 0) {
+            document.body.classList.add(...themeClasses);
+        }
 
-    return () => {
-      document.body.classList.remove(...themeClasses);
-    };
-  }, [theme]);
-  const actor = useMemo<ChatActor>(() => {
-    if (auth?.user) {
-      return { type: 'user', id: auth.user.id };
-    }
-    return { type: 'anonymous-user', id: anonymousUser.id || 0 };
-  }, [auth, anonymousUser]);
+        return () => {
+            document.body.classList.remove(...themeClasses);
+        };
+    }, [theme]);
+    const actor = useMemo<ChatActor>(() => {
+        if (auth?.user) {
+            return { type: 'user', id: auth.user.id };
+        }
+        return { type: 'anonymous-user', id: anonymousUser.id || 0 };
+    }, [auth, anonymousUser]);
 
-  return (
-    <ChatContextProvider actor={actor}>
-      <FloatingChatWidgetContextProvider>
-        <div
-          className={`${theme} bg-background text-foreground transition-colors duration-300`}
-        >
-          <div className="min-h-screen ">
-            <Header onNavigateAway={onNavigateAway} />
-            <main>{children}</main>
-          </div>
-          {showFooter && <Footer />}
-        </div>
-        <FloatingChatWidget />
-      </FloatingChatWidgetContextProvider>
-    </ChatContextProvider>
-  );
+    return (
+        <ChatContextProvider actor={actor}>
+            <FloatingChatWidgetContextProvider>
+                <div
+                    className={`${theme} bg-background text-foreground transition-colors duration-300`}
+                >
+                    <div className="min-h-screen ">
+                        <Header onNavigateAway={onNavigateAway} />
+                        <main>{children}</main>
+                    </div>
+                    {showFooter && <Footer />}
+                </div>
+                <FloatingChatWidget
+                    defaultLiveChatRecipient={{
+                        actor: { type: 'company', id: tenant.id },
+                    }}
+                />
+            </FloatingChatWidgetContextProvider>
+        </ChatContextProvider>
+    );
 }
