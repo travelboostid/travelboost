@@ -76,8 +76,8 @@ try {
             `cd ${remotePath} && ` +
                 `git pull origin ${branch} && ` +
                 `composer install --no-dev --optimize-autoloader && ` +
-                `php artisan optimize:clear && ` +
                 `php artisan migrate --force && ` +
+                `php artisan optimize:clear && ` +
                 `sudo supervisorctl restart all`,
         ),
     );
