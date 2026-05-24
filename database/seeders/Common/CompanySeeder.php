@@ -35,7 +35,7 @@ class CompanySeeder extends Seeder
         ];
 
         foreach ($packages as $package) {
-            AgentSubscriptionPackage::factory()->create($package);
+            AgentSubscriptionPackage::create($package);
         }
 
         $companies = [
