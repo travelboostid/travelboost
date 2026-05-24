@@ -78,7 +78,7 @@ try {
                 `composer install --no-dev --optimize-autoloader && ` +
                 `php artisan migrate --force && ` +
                 `php artisan optimize:clear && ` +
-                `sudo supervisorctl restart`,
+                `sudo supervisorctl restart travelboost-dev-worker travelboost-dev-scheduler travelboost-dev-reverb`,
         ),
     );
 
