@@ -78,7 +78,9 @@ try {
                 `composer install --no-dev --optimize-autoloader && ` +
                 `php artisan migrate --force && ` +
                 `php artisan optimize:clear && ` +
-                `sudo supervisorctl restart all`,
+                `sudo ln -sf /infra/supervisor/travelboost-dev.conf /etc/supervisor/conf.d/travelboost-dev.conf &&` +
+                `sudo ln -sf /infra/nginx/travelboost-dev.conf /etc/nginx/sites-enabled/travelboost-dev.conf &&` +
+                `sudo supervisorctl reread && sudo supervisorctl update && sudo supervisorctl restart all && sudo systemctl reload nginx`,
         ),
     );
 
