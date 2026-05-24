@@ -1,17 +1,20 @@
 {
     "agents": ["copilot"],
+    "cloud": false,
     "guidelines": true,
     "herd_mcp": false,
     "mcp": true,
-    "packages": ["laravel/ai", "laravel/fortify"],
     "sail": false,
     "skills": [
+        "ai-sdk-development",
+        "fortify-development",
+        "laravel-best-practices",
         "pennant-development",
         "wayfinder-development",
         "pest-testing",
         "inertia-react-development",
         "tailwindcss-development",
-        "ai-sdk-development",
-        "developing-with-fortify"
+        "echo-react-development",
+        "echo-development"
     ]
 }
