@@ -44,6 +44,7 @@ sudo apt update && sudo apt upgrade -y
 echo "📦 Installing packages..."
 sudo apt install -y \
 nginx \
+nodejs \
 composer \
 supervisor \
 php \
