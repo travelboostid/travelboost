@@ -45,6 +45,7 @@ echo "📦 Installing packages..."
 sudo apt install -y \
 nginx \
 nodejs \
+npm \
 composer \
 supervisor \
 php \
