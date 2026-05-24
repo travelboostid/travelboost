@@ -11,10 +11,10 @@
     "require": {
         "php": "^8.5",
         "barryvdh/laravel-dompdf": "^3.1",
-        "bavix/laravel-wallet": "*",
+        "bavix/laravel-wallet": "^12.0",
         "dedoc/scramble": "*",
         "inertiajs/inertia-laravel": "^2.0",
-        "intervention/image": "*",
+        "intervention/image": "^4.0",
         "laravel/ai": "*",
         "laravel/fortify": "^1.30",
         "laravel/framework": "^13.0",
@@ -27,8 +27,6 @@
         "maatwebsite/excel": "4.x-dev",
         "midtrans/midtrans-php": "*",
         "santigarcor/laratrust": "^8.5",
-        "spatie/laravel-query-builder": "*",
-        "theodo-group/llphant": "*",
         "tpetry/laravel-postgresql-enhanced": "*"
     },
     "require-dev": {
