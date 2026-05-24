@@ -21,7 +21,6 @@
         "i18n:merge": "node scripts/i18n-merge.mjs",
         "dev:deploy": "node scripts/dev-deploy.mjs",
         "dev:setenv": "node scripts/dev-setenv.mjs",
-        "dev:bootstrap": "bash scripts/dev-bootstrap.sh",
         "dev": "node scripts/dev.mjs",
         "prepare": "husky"
     },
