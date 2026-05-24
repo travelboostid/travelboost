@@ -12,12 +12,12 @@ class CompanyFactory extends Factory
     public function definition()
     {
         return [
-            'username' => $this->faker->userName(),
-            'type' => $this->faker->randomElement(['agent', 'vendor']),
-            'name' => $this->faker->company(),
-            'email' => $this->faker->unique()->companyEmail,
-            'address' => $this->faker->address,
-            'phone' => $this->faker->phoneNumber,
+            'username' => fake()->userName(),
+            'type' => fake()->randomElement(['agent', 'vendor']),
+            'name' => fake()->company(),
+            'email' => fake()->unique()->companyEmail,
+            'address' => fake()->address,
+            'phone' => fake()->phoneNumber,
         ];
     }
 }

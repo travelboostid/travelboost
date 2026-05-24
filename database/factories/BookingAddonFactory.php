@@ -20,8 +20,8 @@ class BookingAddonFactory extends Factory
     {
         return [
             'booking_id' => Booking::factory(),
-            'name' => $this->faker->randomElement(['Extra Baggage', 'Travel Insurance', 'Airport Transfer', 'VIP Welcome']),
-            'price' => $this->faker->randomFloat(2, 50, 500),
+            'name' => fake()->randomElement(['Extra Baggage', 'Travel Insurance', 'Airport Transfer', 'VIP Welcome']),
+            'price' => fake()->randomFloat(2, 50, 500),
         ];
     }
 }

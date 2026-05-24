@@ -16,8 +16,8 @@ class TourCategoryFactory extends Factory
     public function definition(): array
     {
         return [
-            'name' => $this->faker->unique()->words(2, true),
-            'description' => $this->faker->sentence(),
+            'name' => fake()->unique()->words(2, true),
+            'description' => fake()->sentence(),
         ];
     }
 
