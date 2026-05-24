@@ -17,9 +17,6 @@ class EnsureHasAdminAccess
     {
         $user = $request->user();
 
-        if (! $user) {
-            return redirect()->route('admin.login.show');
-        }
         if (! $user->hasRole('user:admin')) {
             abort(403, 'Unauthorized: required admin privileges to access this resource.');
         }
