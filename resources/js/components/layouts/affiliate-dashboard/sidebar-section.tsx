@@ -5,6 +5,7 @@ import {
     SidebarMenu,
     SidebarMenuButton,
     SidebarMenuItem,
+    SidebarRail,
 } from '@/components/ui/sidebar';
 import type { AffiliateDashboardLayoutProps } from './index';
 import { NavMain } from './nav-main';
@@ -12,25 +13,39 @@ import { NavSecondary } from './nav-secondary';
 
 export function SidebarSection(props: AffiliateDashboardLayoutProps) {
     return (
-        <Sidebar variant="inset" {...props}>
-            <SidebarHeader>
+        <Sidebar
+            variant="floating"
+            collapsible="icon"
+            className="p-3 [&_[data-slot=sidebar-inner]]:rounded-[1.75rem] [&_[data-slot=sidebar-inner]]:border [&_[data-slot=sidebar-inner]]:border-slate-200/80 [&_[data-slot=sidebar-inner]]:bg-white/95 [&_[data-slot=sidebar-inner]]:shadow-xl [&_[data-slot=sidebar-inner]]:shadow-slate-950/5 dark:[&_[data-slot=sidebar-inner]]:border-slate-800 dark:[&_[data-slot=sidebar-inner]]:bg-slate-950/95 dark:[&_[data-slot=sidebar-inner]]:shadow-black/20"
+            {...props}
+        >
+            <SidebarHeader className="px-3 pt-4 pb-3">
                 <SidebarMenu>
                     <SidebarMenuItem>
-                        <SidebarMenuButton size="lg" asChild>
+                        <SidebarMenuButton
+                            size="lg"
+                            className="h-14 rounded-2xl px-3 transition-all hover:bg-slate-50 hover:shadow-sm dark:hover:bg-slate-900"
+                            asChild
+                        >
                             <a
                                 href="/affiliate/dashboard"
-                                className="flex items-center"
+                                className="flex items-center justify-center group-data-[collapsible=icon]:px-0"
                             >
                                 <img
                                     src="/images/logo/hori.png"
                                     alt="Travelboost Logo"
-                                    className="h-11 w-auto block dark:hidden drop-shadow-sm"
+                                    className="block h-11 w-auto drop-shadow-sm dark:hidden group-data-[collapsible=icon]:hidden"
                                 />
 
                                 <img
                                     src="/images/logo/hori-wt.png"
                                     alt="Travelboost Logo"
-                                    className="h-11 w-auto hidden dark:block drop-shadow-sm"
+                                    className="hidden h-11 w-auto drop-shadow-sm dark:block group-data-[collapsible=icon]:hidden"
+                                />
+                                <img
+                                    src="/images/logo/logo-square/android-chrome-192x192.png"
+                                    alt="Travelboost Logo"
+                                    className="hidden size-8 rounded-xl group-data-[collapsible=icon]:block"
                                 />
                             </a>
                         </SidebarMenuButton>
@@ -38,10 +53,11 @@ export function SidebarSection(props: AffiliateDashboardLayoutProps) {
                 </SidebarMenu>
             </SidebarHeader>
 
-            <SidebarContent>
+            <SidebarContent className="gap-3 px-3 pb-4">
                 <NavMain {...props} />
                 <NavSecondary />
             </SidebarContent>
+            <SidebarRail />
         </Sidebar>
     );
 }

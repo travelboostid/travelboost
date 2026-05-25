@@ -6,6 +6,7 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
+import { cn } from '@/lib/utils';
 import { ExternalLink, Globe, HelpCircle, Share2 } from 'lucide-react';
 import React from 'react';
 
@@ -14,12 +15,17 @@ export function NavSecondary({
     ...props
 }: React.ComponentPropsWithoutRef<typeof SidebarGroup>) {
     return (
-        <SidebarGroup className={className} {...props}>
-            <SidebarGroupLabel>Others</SidebarGroupLabel>
+        <SidebarGroup className={cn('gap-1.5 px-2', className)} {...props}>
+            <SidebarGroupLabel className="px-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+                Others
+            </SidebarGroupLabel>
             <SidebarGroupContent>
                 <SidebarMenu>
                     <SidebarMenuItem>
-                        <SidebarMenuButton asChild>
+                        <SidebarMenuButton
+                            className="h-10 rounded-xl px-3 text-[0.92rem] font-medium transition-all hover:bg-white hover:shadow-sm dark:hover:bg-slate-900"
+                            asChild
+                        >
                             <a
                                 href="https://wa.me/6289654401230"
                                 target="_blank"
@@ -35,7 +41,10 @@ export function NavSecondary({
                         </SidebarMenuButton>
                     </SidebarMenuItem>
                     <SidebarMenuItem>
-                        <SidebarMenuButton asChild>
+                        <SidebarMenuButton
+                            className="h-10 rounded-xl px-3 text-[0.92rem] font-medium transition-all hover:bg-white hover:shadow-sm dark:hover:bg-slate-900"
+                            asChild
+                        >
                             <a
                                 href="#"
                                 target="_blank"
@@ -51,7 +60,10 @@ export function NavSecondary({
                         </SidebarMenuButton>
                     </SidebarMenuItem>
                     <SidebarMenuItem>
-                        <SidebarMenuButton asChild>
+                        <SidebarMenuButton
+                            className="h-10 rounded-xl px-3 text-[0.92rem] font-medium transition-all hover:bg-white hover:shadow-sm dark:hover:bg-slate-900"
+                            asChild
+                        >
                             <a
                                 href="#"
                                 target="_blank"

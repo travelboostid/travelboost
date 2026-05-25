@@ -71,8 +71,10 @@ export function NavSecondary() {
         ] as MenuItem[];
     }, [resolvedTheme, setTheme, localeInfo, setLocale]);
     return (
-        <SidebarGroup className="group-data-[collapsible=icon]:hidden">
-            <SidebarGroupLabel>Other</SidebarGroupLabel>
+        <SidebarGroup className="gap-1.5 px-2 group-data-[collapsible=icon]:hidden">
+            <SidebarGroupLabel className="px-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+                Other
+            </SidebarGroupLabel>
             <SidebarMenuRenderer
                 menu={menus}
                 activeMenuIds={[]}

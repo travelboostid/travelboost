@@ -1,5 +1,5 @@
 import { cn } from '@/lib/utils';
-import { MessageSquareIcon } from 'lucide-react';
+import { MessageCircleIcon, XIcon } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import ChatSheet from './chat-sheet';
 import StartLiveChatButton from './start-live-chat-button';
@@ -43,28 +43,28 @@ export default function FloatingChatWidget({
     return (
         <>
             <style>{`
-        @keyframes custom-pulse {
-          0%, 100% { opacity: 1; transform: scale(1); }
-          50% { opacity: 0.85; transform: scale(1.05); }
+        @keyframes floating-chat-glow {
+          0%, 100% { box-shadow: 0 18px 42px rgba(219, 39, 119, 0.24), 0 0 0 0 rgba(219, 39, 119, 0.18); }
+          50% { box-shadow: 0 22px 54px rgba(219, 39, 119, 0.32), 0 0 0 10px rgba(219, 39, 119, 0); }
         }
-        .custom-pulse {
-          animation: custom-pulse 1.8s infinite;
+        .floating-chat-glow {
+          animation: floating-chat-glow 2.6s infinite;
         }
       `}</style>
 
             <div
                 ref={containerRef}
                 className={cn(
-                    'pointer-events-none fixed right-0 bottom-4 z-50 flex flex-col items-end gap-3',
+                    'pointer-events-none fixed right-3 bottom-4 z-50 flex flex-col items-end gap-3 sm:right-5 sm:bottom-5',
                     open && 'hidden',
                 )}
             >
                 <div
                     className={cn(
-                        'origin-bottom-right flex flex-col gap-2.5 transition-all duration-300 ease-out',
+                        'origin-bottom-right flex flex-col gap-2.5 rounded-[1.75rem] border border-white/70 bg-white/80 p-2 shadow-xl shadow-slate-950/10 backdrop-blur-xl transition-all duration-300 ease-out dark:border-slate-700/70 dark:bg-slate-950/80',
                         isExpanded
                             ? 'pointer-events-auto translate-y-0 scale-100 opacity-100'
-                            : 'pointer-events-none translate-y-8 scale-75 opacity-0',
+                            : 'pointer-events-none translate-y-8 scale-90 opacity-0',
                     )}
                 >
                     <StartWhatsappChatButton />
@@ -74,21 +74,20 @@ export default function FloatingChatWidget({
                 <button
                     onClick={() => setIsExpanded(!isExpanded)}
                     className={cn(
-                        'pointer-events-auto group z-50 flex h-16 w-14 items-center justify-center rounded-l-xl shadow-[0_0_25px_rgba(225,29,72,0.4)] transition-all duration-300',
+                        'pointer-events-auto group relative z-50 flex h-14 w-14 items-center justify-center rounded-2xl border border-white/70 text-white transition-all duration-300 sm:h-[3.75rem] sm:w-[3.75rem]',
                         isExpanded
-                            ? 'bg-slate-800 text-white shadow-none'
-                            : 'custom-pulse bg-linear-to-l from-primary to-rose-500 text-white hover:w-16',
+                            ? 'bg-slate-950 shadow-lg shadow-slate-950/20 dark:bg-slate-800'
+                            : 'floating-chat-glow bg-linear-to-br from-primary via-pink-500 to-rose-500 hover:-translate-y-1 hover:shadow-2xl hover:shadow-pink-500/30',
                     )}
+                    aria-label={
+                        isExpanded ? 'Close chat options' : 'Open chat options'
+                    }
                 >
-                    <MessageSquareIcon
-                        className={cn(
-                            'transition-transform duration-300',
-                            isExpanded
-                                ? '-rotate-12 scale-110'
-                                : 'group-hover:scale-110',
-                        )}
-                        size={24}
-                    />
+                    {isExpanded ? (
+                        <XIcon className="h-5 w-5 transition-transform duration-300 group-hover:rotate-90" />
+                    ) : (
+                        <MessageCircleIcon className="h-6 w-6 transition-transform duration-300 group-hover:scale-110" />
+                    )}
                 </button>
             </div>
             <ChatSheet />

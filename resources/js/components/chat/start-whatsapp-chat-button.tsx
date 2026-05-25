@@ -21,14 +21,14 @@ export default function StartWhatsappChatButton() {
             <TooltipTrigger asChild>
                 <Button
                     asChild
-                    className="mr-1 h-14 w-14 rounded-full bg-[#25D366] text-white shadow-[0_4px_20px_rgba(37,211,102,0.4)] transition-transform hover:scale-110 hover:bg-[#1ebe5d]"
+                    className="h-[3.25rem] w-[3.25rem] rounded-2xl border border-emerald-200/70 bg-[#25D366] text-white shadow-sm shadow-emerald-500/20 transition-all hover:-translate-y-0.5 hover:bg-[#1ebe5d] hover:shadow-lg hover:shadow-emerald-500/25"
                 >
                     <a
                         href={whatsappUrl}
                         target="_blank"
                         rel="noopener noreferrer"
                     >
-                        <IconBrandWhatsapp className="size-7" />
+                        <IconBrandWhatsapp className="size-6" />
                     </a>
                 </Button>
             </TooltipTrigger>
