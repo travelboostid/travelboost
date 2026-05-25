@@ -50,7 +50,7 @@ const terms: Record<'affiliate' | 'agent', Record<TermsLanguage, TermsCopy>> = {
             intro: 'Welcome to the TravelBoost platform. These Terms and Conditions are a legal agreement between PT. Erasoft Teknologi Indonesia, as the platform provider, together with the related Master Affiliate, and you as an Affiliate. By registering and using your Affiliate account, you declare that you are bound by and agree to all provisions below.',
             sections: [
                 {
-                    title: '1. Operational Definitions',
+                    title: 'Operational Definitions',
                     items: [
                         {
                             label: 'Company',
@@ -71,7 +71,7 @@ const terms: Record<'affiliate' | 'agent', Record<TermsLanguage, TermsCopy>> = {
                     ],
                 },
                 {
-                    title: '2. Scope of Accreditation and Marketing',
+                    title: 'Scope of Accreditation and Marketing',
                     items: [
                         {
                             label: 'Marketing Rights',
@@ -84,7 +84,7 @@ const terms: Record<'affiliate' | 'agent', Record<TermsLanguage, TermsCopy>> = {
                     ],
                 },
                 {
-                    title: '3. Affiliate Commission Scheme (Financial)',
+                    title: 'Affiliate Commission Scheme (Financial)',
                     items: [
                         {
                             label: 'Commission Amount',
@@ -108,7 +108,7 @@ const terms: Record<'affiliate' | 'agent', Record<TermsLanguage, TermsCopy>> = {
                     ],
                 },
                 {
-                    title: '4. Affiliate Rights and Obligations',
+                    title: 'Affiliate Rights and Obligations',
                     items: [
                         {
                             label: 'Travel Agent Acquisition',
@@ -125,7 +125,7 @@ const terms: Record<'affiliate' | 'agent', Record<TermsLanguage, TermsCopy>> = {
                     ],
                 },
                 {
-                    title: '5. Transaction System and Account Security',
+                    title: 'Transaction System and Account Security',
                     items: [
                         {
                             label: 'Payment Gateway',
@@ -138,7 +138,7 @@ const terms: Record<'affiliate' | 'agent', Record<TermsLanguage, TermsCopy>> = {
                     ],
                 },
                 {
-                    title: '6. Data Protection and Privacy',
+                    title: 'Data Protection and Privacy',
                     items: [
                         {
                             label: 'Confidentiality',
@@ -151,7 +151,7 @@ const terms: Record<'affiliate' | 'agent', Record<TermsLanguage, TermsCopy>> = {
                     ],
                 },
                 {
-                    title: '7. Term and Dispute Resolution',
+                    title: 'Term and Dispute Resolution',
                     items: [
                         {
                             label: 'Validity Period',
@@ -174,7 +174,7 @@ const terms: Record<'affiliate' | 'agent', Record<TermsLanguage, TermsCopy>> = {
             intro: 'Selamat datang di platform TravelBoost. Syarat dan Ketentuan ini merupakan kesepakatan hukum antara PT. Erasoft Teknologi Indonesia (selaku penyedia platform) bersama dengan Master Afiliator terkait, dengan Anda selaku Afiliator. Dengan mendaftar dan menggunakan akun Afiliator Anda, Anda menyatakan tunduk dan menyetujui seluruh ketentuan di bawah ini.',
             sections: [
                 {
-                    title: '1. Definisi Operasional',
+                    title: 'Definisi Operasional',
                     items: [
                         {
                             label: 'Perusahaan',
@@ -195,7 +195,7 @@ const terms: Record<'affiliate' | 'agent', Record<TermsLanguage, TermsCopy>> = {
                     ],
                 },
                 {
-                    title: '2. Ruang Lingkup Akreditasi & Pemasaran',
+                    title: 'Ruang Lingkup Akreditasi & Pemasaran',
                     items: [
                         {
                             label: 'Hak Pemasaran',
@@ -208,7 +208,7 @@ const terms: Record<'affiliate' | 'agent', Record<TermsLanguage, TermsCopy>> = {
                     ],
                 },
                 {
-                    title: '3. Skema Komisi Afiliator (Finansial)',
+                    title: 'Skema Komisi Afiliator (Finansial)',
                     items: [
                         {
                             label: 'Besaran Komisi',
@@ -232,7 +232,7 @@ const terms: Record<'affiliate' | 'agent', Record<TermsLanguage, TermsCopy>> = {
                     ],
                 },
                 {
-                    title: '4. Hak dan Kewajiban Afiliator',
+                    title: 'Hak dan Kewajiban Afiliator',
                     items: [
                         {
                             label: 'Akuisisi Travel Agen',
@@ -249,7 +249,7 @@ const terms: Record<'affiliate' | 'agent', Record<TermsLanguage, TermsCopy>> = {
                     ],
                 },
                 {
-                    title: '5. Sistem Transaksi dan Keamanan Akun',
+                    title: 'Sistem Transaksi dan Keamanan Akun',
                     items: [
                         {
                             label: 'Gerbang Pembayaran',
@@ -262,7 +262,7 @@ const terms: Record<'affiliate' | 'agent', Record<TermsLanguage, TermsCopy>> = {
                     ],
                 },
                 {
-                    title: '6. Perlindungan Data & Privasi',
+                    title: 'Perlindungan Data & Privasi',
                     items: [
                         {
                             label: 'Kerahasiaan',
@@ -275,7 +275,7 @@ const terms: Record<'affiliate' | 'agent', Record<TermsLanguage, TermsCopy>> = {
                     ],
                 },
                 {
-                    title: '7. Jangka Waktu & Penyelesaian Sengketa',
+                    title: 'Jangka Waktu & Penyelesaian Sengketa',
                     items: [
                         {
                             label: 'Masa Berlaku',
@@ -301,7 +301,7 @@ const terms: Record<'affiliate' | 'agent', Record<TermsLanguage, TermsCopy>> = {
             intro: 'Welcome to TravelBoost. By registering as a Travel Agent on our platform, you, hereinafter referred to as the Partner, declare that you have read, understood, and agreed to all contents of these Terms and Conditions.',
             sections: [
                 {
-                    title: '1. Registration Requirements',
+                    title: 'Registration Requirements',
                     items: [
                         {
                             label: 'Legality',
@@ -318,11 +318,11 @@ const terms: Record<'affiliate' | 'agent', Record<TermsLanguage, TermsCopy>> = {
                     ],
                 },
                 {
-                    title: '2. Employment Relationship Status',
+                    title: 'Employment Relationship Status',
                     lead: "The relationship between TravelBoost and the Partner is an independent business partner relationship. These Terms and Conditions do not create an employment relationship (employer-employee), joint venture, or exclusive agency relationship that legally binds TravelBoost for the Partner's personal actions.",
                 },
                 {
-                    title: '3. Service Scope & Partner Obligations',
+                    title: 'Service Scope & Partner Obligations',
                     items: [
                         {
                             label: 'Information Presentation',
@@ -339,7 +339,7 @@ const terms: Record<'affiliate' | 'agent', Record<TermsLanguage, TermsCopy>> = {
                     ],
                 },
                 {
-                    title: '4. Commission and Payment System',
+                    title: 'Commission and Payment System',
                     items: [
                         {
                             label: 'Commission Scheme',
@@ -356,7 +356,7 @@ const terms: Record<'affiliate' | 'agent', Record<TermsLanguage, TermsCopy>> = {
                     ],
                 },
                 {
-                    title: '5. Cancellation and Refund Policy',
+                    title: 'Cancellation and Refund Policy',
                     items: [
                         {
                             text: 'Every transaction cancellation by customers will follow the cancellation policy from the vendor providing the Tour Package.',
@@ -367,7 +367,7 @@ const terms: Record<'affiliate' | 'agent', Record<TermsLanguage, TermsCopy>> = {
                     ],
                 },
                 {
-                    title: '6. Security and Data Protection',
+                    title: 'Security and Data Protection',
                     items: [
                         {
                             text: 'TravelBoost will protect Partner personal data in accordance with our privacy policy.',
@@ -378,7 +378,7 @@ const terms: Record<'affiliate' | 'agent', Record<TermsLanguage, TermsCopy>> = {
                     ],
                 },
                 {
-                    title: '7. Partnership Termination',
+                    title: 'Partnership Termination',
                     lead: 'TravelBoost has the right to unilaterally deactivate Partner accounts if the following are found:',
                     items: [
                         {
@@ -393,11 +393,11 @@ const terms: Record<'affiliate' | 'agent', Record<TermsLanguage, TermsCopy>> = {
                     ],
                 },
                 {
-                    title: '8. Changes to Terms',
+                    title: 'Changes to Terms',
                     lead: 'TravelBoost may change these Terms and Conditions at any time. Changes will be informed through notifications in the application or email. Continued use of the platform after changes is deemed as approval of the new terms.',
                 },
                 {
-                    title: '9. Governing Law',
+                    title: 'Governing Law',
                     lead: 'These Terms and Conditions are governed and interpreted in accordance with the laws of the Republic of Indonesia. Any disputes that arise will be resolved through deliberation for consensus, or through legal channels in the agreed legal jurisdiction.',
                 },
             ],
@@ -408,7 +408,7 @@ const terms: Record<'affiliate' | 'agent', Record<TermsLanguage, TermsCopy>> = {
             intro: 'Selamat datang di TravelBoost. Dengan mendaftar sebagai Agen Perjalanan di platform kami, Anda (selanjutnya disebut sebagai "Mitra") menyatakan bahwa Anda telah membaca, memahami, dan menyetujui seluruh isi dalam Syarat dan Ketentuan ini.',
             sections: [
                 {
-                    title: '1. Persyaratan Pendaftaran',
+                    title: 'Persyaratan Pendaftaran',
                     items: [
                         {
                             label: 'Legalitas',
@@ -425,11 +425,11 @@ const terms: Record<'affiliate' | 'agent', Record<TermsLanguage, TermsCopy>> = {
                     ],
                 },
                 {
-                    title: '2. Status Hubungan Kerja',
+                    title: 'Status Hubungan Kerja',
                     lead: 'Hubungan antara TravelBoost dan Mitra adalah sebagai mitra bisnis independen. Syarat dan Ketentuan ini tidak menciptakan hubungan kerja (majikan-karyawan), kemitraan bersama (joint venture), atau hubungan keagenan eksklusif yang mengikat TravelBoost secara hukum atas tindakan pribadi Mitra.',
                 },
                 {
-                    title: '3. Lingkup Layanan & Kewajiban Mitra',
+                    title: 'Lingkup Layanan & Kewajiban Mitra',
                     items: [
                         {
                             label: 'Penyajian Informasi',
@@ -446,7 +446,7 @@ const terms: Record<'affiliate' | 'agent', Record<TermsLanguage, TermsCopy>> = {
                     ],
                 },
                 {
-                    title: '4. Sistem Komisi dan Pembayaran',
+                    title: 'Sistem Komisi dan Pembayaran',
                     items: [
                         {
                             label: 'Skema Komisi',
@@ -463,7 +463,7 @@ const terms: Record<'affiliate' | 'agent', Record<TermsLanguage, TermsCopy>> = {
                     ],
                 },
                 {
-                    title: '5. Kebijakan Pembatalan dan Pengembalian (Refund)',
+                    title: 'Kebijakan Pembatalan dan Pengembalian (Refund)',
                     items: [
                         {
                             text: 'Setiap pembatalan transaksi oleh pelanggan akan mengikuti kebijakan pembatalan dari vendor penyedia Paket Wisata.',
@@ -474,7 +474,7 @@ const terms: Record<'affiliate' | 'agent', Record<TermsLanguage, TermsCopy>> = {
                     ],
                 },
                 {
-                    title: '6. Keamanan dan Perlindungan Data',
+                    title: 'Keamanan dan Perlindungan Data',
                     items: [
                         {
                             text: 'TravelBoost akan melindungi data pribadi Mitra sesuai dengan kebijakan privasi kami.',
@@ -485,7 +485,7 @@ const terms: Record<'affiliate' | 'agent', Record<TermsLanguage, TermsCopy>> = {
                     ],
                 },
                 {
-                    title: '7. Pemutusan Kemitraan',
+                    title: 'Pemutusan Kemitraan',
                     lead: 'TravelBoost berhak menonaktifkan akun Mitra secara sepihak jika ditemukan:',
                     items: [
                         {
@@ -500,11 +500,11 @@ const terms: Record<'affiliate' | 'agent', Record<TermsLanguage, TermsCopy>> = {
                     ],
                 },
                 {
-                    title: '8. Perubahan Ketentuan',
+                    title: 'Perubahan Ketentuan',
                     lead: 'TravelBoost dapat mengubah Syarat dan Ketentuan ini sewaktu-waktu. Perubahan akan diinformasikan melalui notifikasi di aplikasi atau email. Penggunaan platform secara berkelanjutan setelah perubahan dianggap sebagai persetujuan terhadap ketentuan baru.',
                 },
                 {
-                    title: '9. Hukum yang Berlaku',
+                    title: 'Hukum yang Berlaku',
                     lead: 'Syarat dan Ketentuan ini diatur dan ditafsirkan sesuai dengan hukum Negara Republik Indonesia. Segala perselisihan yang timbul akan diselesaikan melalui musyawarah untuk mufakat, atau melalui jalur hukum di wilayah hukum yang disepakati.',
                 },
             ],
