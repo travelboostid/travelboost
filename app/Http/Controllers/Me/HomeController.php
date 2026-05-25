@@ -188,6 +188,7 @@ class HomeController extends Controller
             : BookingStatus::tryFrom((string) $booking->status);
         $isDownPayment = $status === BookingStatus::DOWN_PAYMENT;
         $needsTravelDocuments = in_array($status, [
+            BookingStatus::WAITING_PAYMENT_APPROVAL,
             BookingStatus::DOWN_PAYMENT,
             BookingStatus::FULL_PAYMENT,
         ], true) && $this->bookingNeedsTravelDocuments($booking);

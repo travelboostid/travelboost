@@ -28,7 +28,10 @@ export default function AgentMyTourCard({
             ? {
                   ...tour,
                   schedules: tour.schedules.map((schedule: any) => {
-                      if (Number.isFinite(Number(schedule?.price))) {
+                      if (
+                          Number.isFinite(Number(schedule?.price)) &&
+                          Number(schedule.price) > 0
+                      ) {
                           return schedule;
                       }
 

@@ -52,18 +52,49 @@ import {
 } from '@tanstack/react-table';
 import dayjs from 'dayjs';
 import {
+    AlertTriangleIcon,
+    CalendarClockIcon,
     ChevronDown,
+    CircleSlashIcon,
+    CreditCardIcon,
     EditIcon,
     EyeIcon,
+    FileCheckIcon,
     FileTextIcon,
     MoreHorizontal,
     Search,
+    Undo2Icon,
 } from 'lucide-react';
 import * as React from 'react';
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
+
+type FollowupPayload = {
+    state:
+        | 'completed'
+        | 'due'
+        | 'overdue'
+        | 'pending_approval'
+        | 'incomplete'
+        | 'not_applicable';
+    label: string;
+    amount_due?: number | null;
+    missing_count?: number | null;
+    deadline: string | null;
+    days_remaining: number | null;
+    is_overdue: boolean;
+    action_url: string | null;
+    action_label: string | null;
+};
+
+type FollowupSummary = {
+    payment_overdue: number;
+    payment_due_soon: number;
+    documents_incomplete: number;
+    documents_due_soon: number;
+};
 
 type BookingResource = {
     id: number;
@@ -79,6 +110,17 @@ type BookingResource = {
     remaining_balance: number;
     commission_amount: string | null;
     payment_mode: string | null;
+    payment_receiver_type?: 'vendor' | 'agent' | null;
+    payment_receiver_company_id?: number | null;
+    payment_followup: FollowupPayload;
+    document_followup: FollowupPayload;
+    pending_action_request?: {
+        id: number;
+        target_action: 'cancel' | 'refund';
+        status: string;
+    } | null;
+    can_cancel?: boolean;
+    can_refund?: boolean;
     departure_date: string | null;
     created_at: string;
     tour: { id: number; name: string } | null;
@@ -105,6 +147,7 @@ type PageProps = {
         last_page: number;
         links: { url: string | null; label: string; active: boolean }[];
     };
+    followupSummary: FollowupSummary;
 };
 
 const STATUS_TABS = [
@@ -201,9 +244,138 @@ function formatCommission(value: number | string | null | undefined): string {
     return formatIDR(num);
 }
 
+function followupBadgeClass(followup: FollowupPayload): string {
+    if (followup.is_overdue || followup.state === 'overdue') {
+        return 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300';
+    }
+
+    if (followup.state === 'completed' || followup.state === 'not_applicable') {
+        return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300';
+    }
+
+    if (followup.state === 'pending_approval') {
+        return 'bg-sky-100 text-sky-800 dark:bg-sky-900/40 dark:text-sky-300';
+    }
+
+    return 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300';
+}
+
+function followupDeadlineText(followup: FollowupPayload): string | null {
+    if (!followup.deadline) {
+        return null;
+    }
+
+    const date = dayjs(followup.deadline).format('DD MMM YYYY');
+
+    if (followup.days_remaining === null) {
+        return date;
+    }
+
+    if (followup.days_remaining < 0) {
+        return `Overdue ${Math.abs(followup.days_remaining)}d · ${date}`;
+    }
+
+    if (followup.days_remaining === 0) {
+        return `Due today · ${date}`;
+    }
+
+    return `${followup.days_remaining}d left · ${date}`;
+}
+
 // ---------------------------------------------------------------------------
 // Sub-components
 // ---------------------------------------------------------------------------
+
+function FollowupCell({
+    followup,
+    details,
+}: {
+    followup: FollowupPayload;
+    details?: string | null;
+}) {
+    const deadlineText = followupDeadlineText(followup);
+
+    return (
+        <div className="min-w-[150px]">
+            <Badge
+                variant="secondary"
+                className={cn(
+                    'text-[10px] font-bold uppercase tracking-wider',
+                    followupBadgeClass(followup),
+                )}
+            >
+                {followup.label}
+            </Badge>
+            {details && (
+                <p className="mt-1 text-xs font-medium text-slate-700">
+                    {details}
+                </p>
+            )}
+            {deadlineText && (
+                <p className="mt-0.5 text-[11px] text-slate-500">
+                    {deadlineText}
+                </p>
+            )}
+        </div>
+    );
+}
+
+function FollowupSummaryCards({ summary }: { summary: FollowupSummary }) {
+    const items = [
+        {
+            label: 'Payment overdue',
+            value: summary.payment_overdue,
+            icon: AlertTriangleIcon,
+            className: 'border-red-100 bg-red-50 text-red-600',
+        },
+        {
+            label: 'Payment due soon',
+            value: summary.payment_due_soon,
+            icon: CreditCardIcon,
+            className: 'border-amber-100 bg-amber-50 text-amber-700',
+        },
+        {
+            label: 'Docs incomplete',
+            value: summary.documents_incomplete,
+            icon: FileCheckIcon,
+            className: 'border-slate-200 bg-white text-slate-700',
+        },
+        {
+            label: 'Docs due soon',
+            value: summary.documents_due_soon,
+            icon: CalendarClockIcon,
+            className: 'border-sky-100 bg-sky-50 text-sky-700',
+        },
+    ];
+
+    return (
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            {items.map((item) => {
+                const Icon = item.icon;
+
+                return (
+                    <div
+                        key={item.label}
+                        className={cn(
+                            'flex items-center justify-between rounded-lg border px-3 py-2.5 shadow-sm',
+                            item.className,
+                        )}
+                    >
+                        <div>
+                            <p className="text-[10px] font-bold uppercase tracking-wider">
+                                {item.label}
+                            </p>
+                            <p className="mt-1 text-xl font-bold tabular-nums">
+                                {item.value}
+                            </p>
+                        </div>
+                        <Icon className="size-5 opacity-80" />
+                    </div>
+                );
+            })}
+        </div>
+    );
+}
 
 function PaxCell({
     adult,
@@ -241,25 +413,49 @@ function RowActions({
     companyUsername: string;
 }) {
     const [reviewOpen, setReviewOpen] = React.useState(false);
+    const [actionDialog, setActionDialog] = React.useState<
+        'cancel' | 'refund' | null
+    >(null);
+    const [actionReason, setActionReason] = React.useState('');
     const [processingAction, setProcessingAction] = React.useState<
-        'accept' | 'decline' | null
+        'accept' | 'cancel' | 'refund' | null
     >(null);
     const canReviewManualPayment =
         booking.status === 'waiting payment approval' &&
         Boolean(booking.manual_payment) &&
         Boolean(booking.can_review_manual_payment);
+    const hasPendingActionRequest = Boolean(booking.pending_action_request);
+    const canCancel = Boolean(booking.can_cancel) && !hasPendingActionRequest;
+    const canRefund = Boolean(booking.can_refund) && !hasPendingActionRequest;
     const canViewInvoice = booking.status === 'full payment';
 
-    const submitManualPaymentDecision = (decision: 'accept' | 'decline') => {
+    const submitManualPaymentDecision = () => {
         if (!booking.manual_payment) return;
 
-        setProcessingAction(decision);
+        setProcessingAction('accept');
         router.post(
-            `/companies/${companyUsername}/dashboard/bookings/${booking.id}/manual-payments/${booking.manual_payment.id}/${decision}`,
+            `/companies/${companyUsername}/dashboard/bookings/${booking.id}/manual-payments/${booking.manual_payment.id}/accept`,
             {},
             {
                 preserveScroll: true,
                 onSuccess: () => setReviewOpen(false),
+                onFinish: () => setProcessingAction(null),
+            },
+        );
+    };
+    const submitBookingAction = () => {
+        if (!actionDialog) return;
+
+        setProcessingAction(actionDialog);
+        router.post(
+            `/companies/${companyUsername}/dashboard/bookings/${booking.id}/${actionDialog}`,
+            { reason: actionReason },
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    setActionDialog(null);
+                    setActionReason('');
+                },
                 onFinish: () => setProcessingAction(null),
             },
         );
@@ -293,6 +489,28 @@ function RowActions({
                             <DropdownMenuSeparator />
                         </>
                     )}
+                    {booking.payment_followup?.action_url && (
+                        <DropdownMenuItem asChild>
+                            <Link href={booking.payment_followup.action_url}>
+                                <CreditCardIcon className="mr-2 h-4 w-4" />
+                                {booking.payment_followup.action_label ??
+                                    'Complete Payment'}
+                            </Link>
+                        </DropdownMenuItem>
+                    )}
+                    {booking.document_followup?.action_url && (
+                        <DropdownMenuItem asChild>
+                            <Link href={booking.document_followup.action_url}>
+                                <FileCheckIcon className="mr-2 h-4 w-4" />
+                                {booking.document_followup.action_label ??
+                                    'Complete Documents'}
+                            </Link>
+                        </DropdownMenuItem>
+                    )}
+                    {(booking.payment_followup?.action_url ||
+                        booking.document_followup?.action_url) && (
+                        <DropdownMenuSeparator />
+                    )}
                     <DropdownMenuItem asChild>
                         <Link
                             href={`/companies/${companyUsername}/dashboard/bookings/${booking.id}`}
@@ -322,6 +540,41 @@ function RowActions({
                             Edit
                         </Link>
                     </DropdownMenuItem>
+                    {(canCancel || canRefund || hasPendingActionRequest) && (
+                        <>
+                            <DropdownMenuSeparator />
+                            {canCancel && (
+                                <DropdownMenuItem
+                                    onSelect={(event) => {
+                                        event.preventDefault();
+                                        setActionDialog('cancel');
+                                    }}
+                                >
+                                    <CircleSlashIcon className="mr-2 h-4 w-4" />
+                                    Cancel
+                                </DropdownMenuItem>
+                            )}
+                            {canRefund && (
+                                <DropdownMenuItem
+                                    onSelect={(event) => {
+                                        event.preventDefault();
+                                        setActionDialog('refund');
+                                    }}
+                                >
+                                    <Undo2Icon className="mr-2 h-4 w-4" />
+                                    Refund
+                                </DropdownMenuItem>
+                            )}
+                            {hasPendingActionRequest && (
+                                <DropdownMenuItem disabled>
+                                    Pending{' '}
+                                    {booking.pending_action_request
+                                        ?.target_action ?? 'action'}{' '}
+                                    request
+                                </DropdownMenuItem>
+                            )}
+                        </>
+                    )}
                 </DropdownMenuContent>
             </DropdownMenu>
 
@@ -330,8 +583,8 @@ function RowActions({
                     <DialogHeader>
                         <DialogTitle>Review Manual Payment</DialogTitle>
                         <DialogDescription>
-                            Verify the payment receipt before approving or
-                            declining this booking payment.
+                            Verify the payment receipt before approving this
+                            booking payment.
                         </DialogDescription>
                     </DialogHeader>
 
@@ -404,26 +657,68 @@ function RowActions({
                     <DialogFooter>
                         <Button
                             type="button"
-                            variant="outline"
                             disabled={processingAction !== null}
-                            onClick={() =>
-                                submitManualPaymentDecision('decline')
-                            }
-                        >
-                            {processingAction === 'decline'
-                                ? 'Declining...'
-                                : 'Decline'}
-                        </Button>
-                        <Button
-                            type="button"
-                            disabled={processingAction !== null}
-                            onClick={() =>
-                                submitManualPaymentDecision('accept')
-                            }
+                            onClick={submitManualPaymentDecision}
                         >
                             {processingAction === 'accept'
                                 ? 'Accepting...'
                                 : 'Accept'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog
+                open={actionDialog !== null}
+                onOpenChange={(open) => {
+                    if (!open) {
+                        setActionDialog(null);
+                        setActionReason('');
+                    }
+                }}
+            >
+                <DialogContent className="w-full max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="capitalize">
+                            {actionDialog} booking
+                        </DialogTitle>
+                        <DialogDescription>
+                            Are you sure you want to {actionDialog} this
+                            booking?
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-2">
+                        <Input
+                            value={actionReason}
+                            onChange={(event) =>
+                                setActionReason(event.target.value)
+                            }
+                            placeholder="Reason (optional)"
+                        />
+                    </div>
+                    <DialogFooter>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            disabled={processingAction !== null}
+                            onClick={() => setActionDialog(null)}
+                        >
+                            Keep Booking
+                        </Button>
+                        <Button
+                            type="button"
+                            variant={
+                                actionDialog === 'refund'
+                                    ? 'default'
+                                    : 'destructive'
+                            }
+                            disabled={processingAction !== null}
+                            onClick={submitBookingAction}
+                            className="capitalize"
+                        >
+                            {processingAction === actionDialog
+                                ? 'Processing...'
+                                : actionDialog}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
@@ -612,6 +907,44 @@ function buildColumns(
             },
         },
         {
+            id: 'payment_followup',
+            header: 'Payment Follow-up',
+            cell: ({ row }) => {
+                const followup = row.original.payment_followup;
+                const amountDue = Number(followup.amount_due ?? 0);
+
+                return (
+                    <FollowupCell
+                        followup={followup}
+                        details={
+                            amountDue > 0 ? formatIDR(amountDue) : undefined
+                        }
+                    />
+                );
+            },
+            enableSorting: false,
+        },
+        {
+            id: 'document_followup',
+            header: 'Documents',
+            cell: ({ row }) => {
+                const followup = row.original.document_followup;
+                const missingCount = Number(followup.missing_count ?? 0);
+
+                return (
+                    <FollowupCell
+                        followup={followup}
+                        details={
+                            missingCount > 0
+                                ? `${missingCount} passenger${missingCount === 1 ? '' : 's'} missing`
+                                : undefined
+                        }
+                    />
+                );
+            },
+            enableSorting: false,
+        },
+        {
             id: 'payment_mode',
             accessorKey: 'payment_mode',
             header: 'Payment Mode',
@@ -627,13 +960,18 @@ function buildColumns(
 
                 if (!mode) return <span className="text-slate-400">—</span>;
 
-                const label =
-                    mode === 'manual' ? 'Manual Payment' : 'Online Payment';
+                const paymentLabel =
+                    mode === 'manual' ? 'Manual payment' : 'Online payment';
+                const receiverLabel =
+                    row.original.payment_receiver_type === 'agent'
+                        ? 'agent'
+                        : 'vendor';
+                const label = `${paymentLabel} to ${receiverLabel}`;
 
                 return (
                     <span
                         className={cn(
-                            'inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider',
+                            'inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-bold tracking-wide',
                             mode === 'online'
                                 ? 'bg-primary/10 text-primary'
                                 : 'bg-slate-100 text-slate-500',
@@ -658,10 +996,12 @@ function buildColumns(
             id: 'actions',
             header: 'Actions',
             cell: ({ row }) => (
-                <RowActions
-                    booking={row.original}
-                    companyUsername={companyUsername}
-                />
+                <div className="flex justify-end">
+                    <RowActions
+                        booking={row.original}
+                        companyUsername={companyUsername}
+                    />
+                </div>
             ),
             enableHiding: false,
             enableSorting: false,
@@ -673,7 +1013,7 @@ function buildColumns(
 // Page
 // ---------------------------------------------------------------------------
 
-export default function Page({ data }: PageProps) {
+export default function Page({ data, followupSummary }: PageProps) {
     const { company } = usePageSharedDataProps();
     const isAgent = company.type === 'agent';
 
@@ -799,6 +1139,8 @@ export default function Page({ data }: PageProps) {
                     })}
                 </div>
 
+                <FollowupSummaryCards summary={followupSummary} />
+
                 {/* ── Toolbar: search + view-columns ──────────────────── */}
                 <div className="order-first flex flex-col sm:flex-row items-center gap-3 justify-between bg-slate-50/50 p-1 rounded-lg">
                     <div className="relative w-full sm:max-w-sm">
@@ -857,7 +1199,12 @@ export default function Page({ data }: PageProps) {
                                         {headerGroup.headers.map((header) => (
                                             <TableHead
                                                 key={header.id}
-                                                className="bg-slate-50 dark:bg-slate-900/90 text-primary font-bold h-12 px-3 whitespace-nowrap"
+                                                className={cn(
+                                                    'bg-slate-50 dark:bg-slate-900/90 text-primary font-bold h-12 px-3 whitespace-nowrap',
+                                                    header.column.id ===
+                                                        'actions' &&
+                                                        'sticky right-0 z-30 w-20 min-w-20 text-right shadow-[-12px_0_16px_-16px_rgba(15,23,42,0.55)]',
+                                                )}
                                             >
                                                 {header.isPlaceholder
                                                     ? null
@@ -887,7 +1234,12 @@ export default function Page({ data }: PageProps) {
                                                 .map((cell) => (
                                                     <TableCell
                                                         key={cell.id}
-                                                        className="py-3 px-3"
+                                                        className={cn(
+                                                            'py-3 px-3',
+                                                            cell.column.id ===
+                                                                'actions' &&
+                                                                'sticky right-0 z-20 w-20 min-w-20 bg-card text-right shadow-[-12px_0_16px_-16px_rgba(15,23,42,0.55)]',
+                                                        )}
                                                     >
                                                         {flexRender(
                                                             cell.column

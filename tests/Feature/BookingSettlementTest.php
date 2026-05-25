@@ -202,6 +202,28 @@ test('full payment settles agent commission travelboost commission and platform 
         ->and(Transaction::where('meta->type', 'booking-travelboost-commission')->where('meta->booking_id', $booking->id)->count())->toBe(2)
         ->and(Transaction::where('meta->type', 'booking-platform-fee')->where('meta->booking_id', $booking->id)->count())->toBe(2);
 
+    foreach ([
+        'booking-agent-commission',
+        'booking-travelboost-commission',
+        'booking-platform-fee',
+    ] as $type) {
+        $description = data_get(
+            Transaction::query()
+                ->where('meta->type', $type)
+                ->where('meta->booking_id', $booking->id)
+                ->where('amount', '>', 0)
+                ->firstOrFail()
+                ->meta,
+            'description'
+        );
+
+        expect($description)
+            ->toContain($booking->contact_name)
+            ->toContain('2 pax')
+            ->toContain($booking->booking_number)
+            ->not->toContain('full payment');
+    }
+
     app(FinalizeBookingPaymentAction::class)->execute($booking->fresh());
 
     expect((int) $vendor->wallet->fresh()->balance)->toBe(5_000_000 - $requiredSettlement)

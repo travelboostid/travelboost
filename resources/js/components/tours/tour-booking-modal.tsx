@@ -8,6 +8,7 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 
+import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { extractImageSrc } from '@/lib/utils';
 import { router } from '@inertiajs/react';
 import {
@@ -30,8 +31,8 @@ export type TourSchedule = {
     departure_date: string;
     return_date: string | null;
     quota: number;
-    price: number;
-    agent_price: number;
+    price: number | string | null;
+    agent_price: number | string | null;
     cutoff_date: string;
     is_active: boolean;
     note: string | null;
@@ -40,6 +41,11 @@ export type TourSchedule = {
         available: number | string;
         max_pax: number | string;
     };
+    prices?: Array<{
+        price?: number | string | null;
+        promotion?: number | string | null;
+        promotion_rate?: number | string | null;
+    }>;
 };
 
 type TourBookingModalProps = {
@@ -47,6 +53,7 @@ type TourBookingModalProps = {
     onClose: () => void;
     tour: TourResource & { schedules?: TourSchedule[] };
     onRequireLogin?: () => void;
+    bookingUrlResolver?: (tour: TourResource, schedule: TourSchedule) => string;
 };
 
 const formatCurrency = (value: number) =>
@@ -63,14 +70,76 @@ const getAvailabilityInfo = (quota: number) => {
     return { label: `Availability: ${quota}`, variant: 'secondary' as const };
 };
 
+const getDashboardCompanyUsernameFromPath = (pathname: string) => {
+    const match = pathname.match(/^\/companies\/([^/]+)\/dashboard(?:\/|$)/);
+
+    return match?.[1] ? decodeURIComponent(match[1]) : null;
+};
+
+const positiveNumberOrNull = (value: unknown) => {
+    const parsed = Number(value);
+
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+};
+
+const getDiscountedPrice = (
+    price: NonNullable<TourSchedule['prices']>[number],
+) => {
+    const basePrice = positiveNumberOrNull(price.price);
+
+    if (basePrice === null) {
+        return null;
+    }
+
+    const promotionRate = positiveNumberOrNull(price.promotion_rate);
+    const promotion = positiveNumberOrNull(price.promotion);
+
+    if (promotionRate !== null) {
+        return Math.max(
+            0,
+            Math.round(basePrice - (basePrice * promotionRate) / 100),
+        );
+    }
+
+    if (promotion !== null) {
+        return Math.max(0, Math.round(basePrice - promotion));
+    }
+
+    return basePrice;
+};
+
+const getScheduleDisplayPrice = (schedule: TourSchedule) => {
+    const directPrice = positiveNumberOrNull(schedule.price);
+
+    if (directPrice !== null) {
+        return directPrice;
+    }
+
+    const prices = Array.isArray(schedule.prices)
+        ? schedule.prices
+              .map(getDiscountedPrice)
+              .filter((price): price is number => price !== null && price > 0)
+        : [];
+
+    return prices.length > 0 ? Math.min(...prices) : 0;
+};
+
+const bookingUrlFor = (path: string, departureDate: string) =>
+    `${path}?date=${encodeURIComponent(departureDate)}`;
+
 export default function TourBookingModal({
     isOpen,
     onClose,
     tour,
     onRequireLogin,
+    bookingUrlResolver,
 }: TourBookingModalProps) {
+    const { company } = usePageSharedDataProps();
     const schedules = tour.schedules ?? [];
     const tourImage = extractImageSrc(tour.image as any);
+    const isDashboardRoute =
+        typeof window !== 'undefined' &&
+        window.location.pathname.includes('/dashboard');
     const activeSchedules = schedules
         .filter((s) => {
             if (!s.is_active) return false;
@@ -115,8 +184,26 @@ export default function TourBookingModal({
         }
 
         onClose();
+        const dashboardCompanyUsername =
+            company?.username ??
+            (typeof window !== 'undefined'
+                ? getDashboardCompanyUsernameFromPath(window.location.pathname)
+                : null);
+        const fallbackUrl =
+            isDashboardRoute && dashboardCompanyUsername
+                ? bookingUrlFor(
+                      `/companies/${encodeURIComponent(dashboardCompanyUsername)}/dashboard/bookings/create/${tour.id}`,
+                      schedule.departure_date,
+                  )
+                : bookingUrlFor(
+                      `/bookings/${tour.id}/create`,
+                      schedule.departure_date,
+                  );
+
         router.visit(
-            `/bookings/${tour.id}/create?date=${schedule.departure_date}`,
+            bookingUrlResolver
+                ? bookingUrlResolver(tour, schedule)
+                : fallbackUrl,
         );
     };
 
@@ -200,6 +287,8 @@ export default function TourBookingModal({
                                     const availability =
                                         getAvailabilityInfo(availableCount);
                                     const isSoldOut = availableCount <= 0;
+                                    const displayPrice =
+                                        getScheduleDisplayPrice(schedule);
 
                                     return (
                                         <motion.button
@@ -231,7 +320,7 @@ export default function TourBookingModal({
                                             <div className="flex shrink-0 flex-col items-end justify-center gap-2 sm:min-w-[15rem] sm:flex-row sm:items-center sm:justify-end sm:gap-3">
                                                 <span className="whitespace-nowrap text-sm font-bold text-primary sm:text-base md:text-lg">
                                                     {formatCurrency(
-                                                        schedule.price,
+                                                        displayPrice,
                                                     )}
                                                 </span>
                                                 <Badge

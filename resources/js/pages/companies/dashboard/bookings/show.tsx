@@ -81,8 +81,11 @@ type PageProps = {
     booking: BookingData;
     tourPrices: TourPrice[];
     addOns: AddOnItem[];
-    minimumDownPaymentPct: number;
+    minimumDownPaymentPct: number | null;
     minimumVatPct: number;
+    platformFeePerPax?: number;
+    paidAmount?: number;
+    remainingBalance?: number;
 };
 
 // ---------------------------------------------------------------------------
@@ -180,6 +183,9 @@ export default function Page({
     addOns,
     minimumDownPaymentPct,
     minimumVatPct,
+    platformFeePerPax = 25_000,
+    paidAmount = 0,
+    remainingBalance = 0,
 }: PageProps) {
     const { company } = usePageSharedDataProps();
     const isAgent = company.type === 'agent';
@@ -191,6 +197,9 @@ export default function Page({
             addOns={addOns}
             minimumDownPaymentPct={minimumDownPaymentPct}
             minimumVatPct={minimumVatPct}
+            platformFeePerPax={platformFeePerPax}
+            paidAmount={paidAmount}
+            remainingBalance={remainingBalance}
             company={company}
             isAgent={isAgent}
         />
@@ -207,14 +216,20 @@ function ReadOnlyWizard({
     addOns: initialAddOns,
     minimumDownPaymentPct,
     minimumVatPct,
+    platformFeePerPax,
+    paidAmount,
+    remainingBalance,
     company,
     isAgent,
 }: {
     booking: BookingData;
     tourPrices: TourPrice[];
     addOns: AddOnItem[];
-    minimumDownPaymentPct: number;
+    minimumDownPaymentPct: number | null;
     minimumVatPct: number;
+    platformFeePerPax: number;
+    paidAmount: number;
+    remainingBalance: number;
     company: any;
     isAgent: boolean;
 }) {
@@ -254,20 +269,26 @@ function ReadOnlyWizard({
     );
 
     // ── Pricing ────────────────────────────────────────────────────────
-    const vendor: VendorInfo = booking.vendor ?? {
-        id: 0,
-        name: 'Unknown',
-        payment_mode: 'vendor',
-        commission: 0,
-    };
+    const vendor: VendorInfo = useMemo(
+        () =>
+            booking.vendor ?? {
+                id: 0,
+                name: 'Unknown',
+                payment_mode: 'vendor',
+                commission: 0,
+            },
+        [booking.vendor],
+    );
     const pricing = useMemo(
         () =>
             calculateBookingPricing(
                 guests,
                 vendor.commission ?? 0,
                 minimumVatPct,
+                platformFeePerPax,
+                tourPrices,
             ),
-        [guests, vendor, minimumVatPct],
+        [guests, vendor, minimumVatPct, platformFeePerPax, tourPrices],
     );
     const displayAddOns = useMemo(
         () =>
@@ -286,6 +307,11 @@ function ReadOnlyWizard({
             ),
         [displayAddOns],
     );
+    const bookingGrandTotal = Number(booking.grand_total ?? 0);
+    const displayGrandTotal =
+        bookingGrandTotal > 0
+            ? bookingGrandTotal
+            : pricing.totalPrice + addOnsTotal;
 
     // ── Navigation ─────────────────────────────────────────────────────
     const goToStep = (step: WizardStepId) => {
@@ -366,7 +392,7 @@ function ReadOnlyWizard({
                                 </div>
 
                                 {/* Step Indicator */}
-                                <div className="pb-4">
+                                <div className="sticky top-0 z-20 mb-5 rounded-xl border bg-background/95 px-3 py-2 shadow-sm backdrop-blur">
                                     <WizardStepIndicator
                                         currentStep={currentStep}
                                         onStepClick={goToStep}
@@ -386,9 +412,15 @@ function ReadOnlyWizard({
                                     contactEmail={contact.email}
                                     contactPhone={contact.phone}
                                     pricing={pricing}
+                                    agentCommissionAmount={Number(
+                                        booking.commission_amount ?? 0,
+                                    )}
+                                    showAgentCommission={Boolean(booking.agent)}
+                                    totalPaid={paidAmount}
+                                    remainingBalance={remainingBalance}
                                     displayTotalPrice={
                                         currentStep === 4
-                                            ? pricing.totalPrice + addOnsTotal
+                                            ? displayGrandTotal
                                             : undefined
                                     }
                                     timeLeftSeconds={0}
@@ -467,6 +499,15 @@ function ReadOnlyWizard({
                                                     minimumDownPaymentPct
                                                 }
                                                 minimumVatPct={minimumVatPct}
+                                                paidAmount={paidAmount}
+                                                remainingBalance={
+                                                    remainingBalance
+                                                }
+                                                grandTotalOverride={
+                                                    displayGrandTotal
+                                                }
+                                                readOnly
+                                                hidePaymentControls
                                             />
                                         )}
                                     </motion.div>

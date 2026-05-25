@@ -128,7 +128,7 @@ class BookingPricingService
         $quotedAddons = $this->quoteAddons($tour, $schedule, $addons);
         $addonsTotal = (float) collect($quotedAddons)->sum('price');
         $promotionDiscount = max(0.0, $subtotalGuests - $discountedSubtotal);
-        $taxAmount = (float) round($subtotalGuests * ($vatRate / 100));
+        $taxAmount = (float) round($discountedSubtotal * ($vatRate / 100));
         $grandTotal = $discountedSubtotal + $taxAmount + $platformFee + $addonsTotal;
 
         if (! $includeAgentCommission) {

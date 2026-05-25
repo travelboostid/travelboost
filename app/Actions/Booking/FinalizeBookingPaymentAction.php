@@ -48,6 +48,14 @@ class FinalizeBookingPaymentAction
                 'reserved_expires_at' => null,
             ]);
 
+            app(NotifyBookingPaymentEventAction::class)->execute(
+                $lockedBooking->fresh(),
+                $targetStatus === BookingStatus::FULL_PAYMENT
+                    ? 'booking_full_payment'
+                    : 'booking_down_payment',
+                $payment
+            );
+
             return $lockedBooking;
         });
 

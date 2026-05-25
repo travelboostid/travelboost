@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Webhooks;
 
 use App\Actions\Booking\FinalizeBookingPaymentAction;
+use App\Actions\Booking\NotifyBookingPaymentEventAction;
 use App\Enums\AgentSubscriptionStatus;
 use App\Enums\PaymentStatus;
 use App\Http\Controllers\Controller;
@@ -67,6 +68,8 @@ class MidtransWebhookController extends Controller
 
             if ($newStatus === PaymentStatus::PAID) {
                 $this->processPayment($payment->fresh());
+            } elseif ($payment->payable_type === Booking::class) {
+                $this->notifyBookingPaymentEvent($payment->fresh(), $newStatus);
             }
         });
 
@@ -146,6 +149,26 @@ class MidtransWebhookController extends Controller
         ]);
 
         app(FinalizeBookingPaymentAction::class)->execute($booking->fresh(), $payment);
+        $this->notifyBookingPaymentEvent($payment->fresh(), PaymentStatus::PAID);
+    }
+
+    private function notifyBookingPaymentEvent(Payment $payment, PaymentStatus $status): void
+    {
+        $payment->load('payable');
+
+        if (! $payment->payable instanceof Booking) {
+            return;
+        }
+
+        app(NotifyBookingPaymentEventAction::class)->execute(
+            $payment->payable->fresh(),
+            match ($status) {
+                PaymentStatus::PAID => 'online_payment_confirmed',
+                PaymentStatus::FAILED => 'online_payment_failed',
+                default => 'online_payment_pending',
+            },
+            $payment->fresh()
+        );
     }
 
     private function processAgentSubscription(Payment $payment): void

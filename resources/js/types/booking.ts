@@ -135,3 +135,10 @@ export interface BookingContact {
     phone: string;
     notes: string;
 }
+
+export interface DashboardCustomerOption {
+    id: number;
+    name: string;
+    email: string;
+    phone: string | null;
+}

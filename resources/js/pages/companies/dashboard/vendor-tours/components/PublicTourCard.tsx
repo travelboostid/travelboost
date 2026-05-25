@@ -82,7 +82,7 @@ export default function PublicTourCard({
                             if (onLike) onLike();
                             else handleLike();
                         } else if (stored.action === 'book') {
-                            if (onBook) onBook();
+                            if (onBook) onBook(tour);
                             else setIsBookingOpen(true);
                         }
                     }
@@ -91,7 +91,7 @@ export default function PublicTourCard({
                 }
             }
         }
-    }, [auth?.user, tour.id, onLike, onBook, handleLike]);
+    }, [auth?.user, tour, tour.id, onLike, onBook, handleLike]);
 
     const handleLikeClick = () => {
         if (onLike) {
@@ -138,7 +138,7 @@ export default function PublicTourCard({
     };
 
     const handleBookClick = () => {
-        if (onBook) onBook();
+        if (onBook) onBook(tour);
         else setIsBookingOpen(true);
     };
 

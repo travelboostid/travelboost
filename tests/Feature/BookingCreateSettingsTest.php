@@ -10,6 +10,7 @@ use App\Models\Domain;
 use App\Models\PriceCategory;
 use App\Models\SavedPassenger;
 use App\Models\Tour;
+use App\Models\TourAddOn;
 use App\Models\TourAvailability;
 use App\Models\TourPrice;
 use App\Models\TourSchedule;
@@ -734,6 +735,28 @@ test('customer cannot release another users booking hold', function () {
     expect($booking->fresh()->status)->toBe(BookingStatus::BOOKING_RESERVED);
 });
 
+test('release hold leaves awaiting payment booking unchanged before timer starts', function () {
+    ['user' => $user, 'company' => $company, 'tour' => $tour, 'schedule' => $schedule] = createBookingCreateScenario('releaseawaitingvendor');
+
+    $booking = Booking::factory()->create([
+        'booking_number' => 'BKG-RELEASE-AWAITING',
+        'user_id' => $user->id,
+        'vendor_id' => $company->id,
+        'tour_id' => $tour->id,
+        'departure_date' => $schedule->departure_date,
+        'status' => BookingStatus::AWAITING_PAYMENT,
+        'reserved_type' => 'system',
+        'reserved_expires_at' => null,
+    ]);
+
+    $this->actingAs($user)
+        ->post("/bookings/{$booking->id}/release-hold")
+        ->assertRedirect();
+
+    expect($booking->fresh()->status)->toBe(BookingStatus::AWAITING_PAYMENT)
+        ->and($booking->fresh()->reserved_expires_at)->toBeNull();
+});
+
 test('customer can release their active booking reserved hold from tenant subdomain route', function () {
     ['user' => $user, 'company' => $company, 'tour' => $tour, 'schedule' => $schedule] = createBookingCreateScenario('tenantreleaseholdvendor');
 
@@ -1254,7 +1277,16 @@ test('store recalculates booking totals from schedule prices and ignores tampere
         'price_category_id' => $adultTwin->id,
         'currency' => 'IDR',
         'price' => 1_000_000,
+        'promotion' => 100_000,
         'commission' => 250_000,
+    ]);
+    $addOn = TourAddOn::create([
+        'company_id' => $company->id,
+        'tour_id' => $tour->id,
+        'schedule_id' => $schedule->id,
+        'description' => 'Airport transfer',
+        'price' => 200_000,
+        'edit_status' => false,
     ]);
 
     $this->actingAs($user)
@@ -1288,17 +1320,23 @@ test('store recalculates booking totals from schedule prices and ignores tampere
             'platform_fee' => 1,
             'commission_amount' => 999_999,
             'grand_total' => 1,
+            'addons' => [
+                ['name' => 'Airport transfer', 'price' => 1],
+            ],
         ])
         ->assertRedirect();
 
     $booking = Booking::where('booking_number', 'BKG-AUTHORITATIVE-TOTALS')->firstOrFail();
 
     expect((float) $booking->total_price)->toBe(1_000_000.0)
-        ->and((float) $booking->tax_amount)->toBe(110_000.0)
+        ->and((float) $booking->tax_amount)->toBe(99_000.0)
         ->and((float) $booking->platform_fee)->toBe(30_000.0)
         ->and((float) $booking->commission_amount)->toBe(0.0)
-        ->and((float) $booking->grand_total)->toBe(1_140_000.0)
-        ->and((float) $booking->passengers()->firstOrFail()->price_amount)->toBe(1_000_000.0);
+        ->and((float) $booking->grand_total)->toBe(1_229_000.0)
+        ->and((float) $booking->passengers()->firstOrFail()->price_amount)->toBe(900_000.0)
+        ->and($booking->addons)->toHaveCount(1)
+        ->and($booking->addons()->first()->name)->toBe('Airport transfer')
+        ->and((float) $booking->addons()->first()->price)->toBe((float) $addOn->price);
 });
 
 test('reserve recalculates booking totals from schedule prices and ignores tampered frontend totals', function () {
@@ -1321,6 +1359,7 @@ test('reserve recalculates booking totals from schedule prices and ignores tampe
         'price_category_id' => $adultTwin->id,
         'currency' => 'IDR',
         'price' => 1_000_000,
+        'promotion' => 100_000,
         'commission' => 250_000,
     ]);
 
@@ -1364,11 +1403,11 @@ test('reserve recalculates booking totals from schedule prices and ignores tampe
     $booking = Booking::where('booking_number', 'BKG-AUTHORITATIVE-RESERVE')->firstOrFail();
 
     expect((float) $booking->total_price)->toBe(1_000_000.0)
-        ->and((float) $booking->tax_amount)->toBe(110_000.0)
+        ->and((float) $booking->tax_amount)->toBe(99_000.0)
         ->and((float) $booking->platform_fee)->toBe(30_000.0)
         ->and((float) $booking->commission_amount)->toBe(0.0)
-        ->and((float) $booking->grand_total)->toBe(1_140_000.0)
-        ->and((float) $booking->passengers()->firstOrFail()->price_amount)->toBe(1_000_000.0);
+        ->and((float) $booking->grand_total)->toBe(1_029_000.0)
+        ->and((float) $booking->passengers()->firstOrFail()->price_amount)->toBe(900_000.0);
 });
 
 test('store persists room arrangement and travel document data', function () {
@@ -1618,7 +1657,7 @@ test('store reuses saved passenger document paths without requiring new uploads'
         ->and($savedPassenger->visa_file_path)->toBe('travel-documents/visas/reused-visa.pdf');
 });
 
-test('auto created booking for a selected schedule does not skip terms gate as a resume', function () {
+test('selected schedule draft does not skip terms gate as a resume or persist empty booking', function () {
     $user = User::factory()->create();
     $company = Company::factory()->create([
         'username' => 'tncvendor',
@@ -1666,11 +1705,12 @@ test('auto created booking for a selected schedule does not skip terms gate as a
     $response->assertOk();
     $response->assertInertia(fn ($page) => $page
         ->component('tours/bookings/create')
-        ->has('existingBooking')
-        ->where('isResumingExistingBooking', false)
-        ->where('existingBooking.pax_adult', 0)
-        ->where('existingBooking.pax_child', 0)
-        ->where('existingBooking.pax_infant', 0));
+        ->where('existingBooking', null)
+        ->where('isResumingExistingBooking', false));
+    expect(Booking::where('user_id', $user->id)
+        ->where('tour_id', $tour->id)
+        ->whereDate('departure_date', $schedule->departure_date)
+        ->exists())->toBeFalse();
 });
 
 test('booking create exposes paid and remaining balances for down payment bookings', function () {
@@ -1816,6 +1856,50 @@ test('booking create exposes paid booking room payload without hold timer', func
         ->where('remainingHoldSeconds', null));
 });
 
+test('booking review mode exposes snapshot totals for waiting payment approval booking', function () {
+    ['user' => $user, 'company' => $company, 'tour' => $tour, 'schedule' => $schedule] = createBookingCreateScenario('wpareviewtotalsvendor');
+
+    $booking = Booking::factory()->create([
+        'booking_number' => 'BKG-WPA-REVIEW-TOTALS',
+        'user_id' => $user->id,
+        'vendor_id' => $company->id,
+        'tour_id' => $tour->id,
+        'departure_date' => $schedule->departure_date,
+        'status' => BookingStatus::WAITING_PAYMENT_APPROVAL,
+        'payment_mode' => 'manual',
+        'total_price' => 800_000,
+        'tax_amount' => 88_000,
+        'platform_fee' => 25_000,
+        'commission_amount' => 0,
+        'grand_total' => 913_000,
+    ]);
+    $booking->payments()->create([
+        'owner_type' => User::class,
+        'owner_id' => $user->id,
+        'provider' => 'manual',
+        'payment_method' => 'bank_transfer',
+        'amount' => 250_000,
+        'status' => PaymentStatus::PAID,
+    ]);
+
+    $response = $this->actingAs($user)->get(route('bookings.create', [
+        'username' => $company->username,
+        'tour' => $tour,
+        'date' => $schedule->departure_date,
+        'booking_number' => $booking->booking_number,
+        'mode' => 'review',
+    ]));
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->component('tours/bookings/create')
+        ->where('isResumingExistingBooking', true)
+        ->where('existingBooking.booking_number', 'BKG-WPA-REVIEW-TOTALS')
+        ->where('existingBooking.grand_total', '913000.00')
+        ->where('paidAmount', 250000)
+        ->where('remainingBalance', 663000));
+});
+
 test('same schedule waiting payment approval booking blocks silent reuse', function () {
     ['user' => $user, 'company' => $company, 'tour' => $tour, 'schedule' => $schedule] = createBookingCreateScenario('wpaconflictvendor');
 
@@ -1895,6 +1979,160 @@ test('same schedule down payment booking blocks silent reuse and exposes balance
         ->count())->toBe($bookingCount);
 });
 
+test('opening customer booking create does not persist an empty booking row', function () {
+    ['user' => $user, 'company' => $company, 'tour' => $tour, 'schedule' => $schedule] = createBookingCreateScenario('draftlesscreatevendor');
+
+    $response = $this->actingAs($user)->get(
+        route('bookings.create', [
+            'username' => $company->username,
+            'tour' => $tour,
+            'date' => $schedule->departure_date,
+        ])
+    );
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->component('tours/bookings/create')
+        ->where('existingBooking', null)
+        ->where('isResumingExistingBooking', false));
+    expect(Booking::where('user_id', $user->id)
+        ->where('tour_id', $tour->id)
+        ->whereDate('departure_date', $schedule->departure_date)
+        ->exists())->toBeFalse();
+});
+
+test('force new booking does not persist an empty booking when same schedule has only down payment booking', function () {
+    ['user' => $user, 'company' => $company, 'tour' => $tour, 'schedule' => $schedule] = createBookingCreateScenario('forcenewdpvendor');
+
+    Booking::factory()->create([
+        'booking_number' => 'BKG-FORCE-DP',
+        'user_id' => $user->id,
+        'vendor_id' => $company->id,
+        'tour_id' => $tour->id,
+        'departure_date' => $schedule->departure_date,
+        'status' => BookingStatus::DOWN_PAYMENT,
+    ]);
+
+    $response = $this->actingAs($user)->get(
+        route('bookings.create', [
+            'username' => $company->username,
+            'tour' => $tour,
+            'date' => $schedule->departure_date,
+            'force_new' => 1,
+        ])
+    );
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->component('tours/bookings/create')
+        ->where('bookingConflict', null)
+        ->where('existingBooking', null)
+        ->where('isResumingExistingBooking', false)
+        ->whereNot('bookingNumber', 'BKG-FORCE-DP'));
+    expect(Booking::where('user_id', $user->id)
+        ->where('tour_id', $tour->id)
+        ->whereDate('departure_date', $schedule->departure_date)
+        ->count())->toBe(1);
+});
+
+test('force new booking reuses existing same schedule draft booking instead of creating another booking number', function () {
+    ['user' => $user, 'company' => $company, 'tour' => $tour, 'schedule' => $schedule] = createBookingCreateScenario('forcenewdraftvendor');
+
+    Booking::factory()->create([
+        'booking_number' => 'BKG-FORCE-DP-EXISTING',
+        'user_id' => $user->id,
+        'vendor_id' => $company->id,
+        'tour_id' => $tour->id,
+        'departure_date' => $schedule->departure_date,
+        'status' => BookingStatus::DOWN_PAYMENT,
+    ]);
+    Booking::factory()->create([
+        'booking_number' => 'BKG-FORCE-DRAFT',
+        'user_id' => $user->id,
+        'vendor_id' => $company->id,
+        'tour_id' => $tour->id,
+        'departure_date' => $schedule->departure_date,
+        'status' => BookingStatus::BOOKING_RESERVED,
+        'reserved_type' => 'system',
+        'reserved_expires_at' => now()->addMinutes(8),
+        'grand_total' => 1_000_000,
+    ]);
+    $bookingCount = Booking::where('user_id', $user->id)
+        ->where('tour_id', $tour->id)
+        ->whereDate('departure_date', $schedule->departure_date)
+        ->count();
+
+    $response = $this->actingAs($user)->get(
+        route('bookings.create', [
+            'username' => $company->username,
+            'tour' => $tour,
+            'date' => $schedule->departure_date,
+            'force_new' => 1,
+        ])
+    );
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->component('tours/bookings/create')
+        ->where('bookingNumber', 'BKG-FORCE-DRAFT')
+        ->where('existingBooking.booking_number', 'BKG-FORCE-DRAFT')
+        ->where('isResumingExistingBooking', true));
+    expect(Booking::where('user_id', $user->id)
+        ->where('tour_id', $tour->id)
+        ->whereDate('departure_date', $schedule->departure_date)
+        ->count())->toBe($bookingCount);
+});
+
+test('force new booking restores same schedule expired draft booking as awaiting payment', function () {
+    ['user' => $user, 'company' => $company, 'tour' => $tour, 'schedule' => $schedule] = createBookingCreateScenario('forcenewexpireddraftvendor');
+
+    Booking::factory()->create([
+        'booking_number' => 'BKG-FORCE-DP-ACTIVE',
+        'user_id' => $user->id,
+        'vendor_id' => $company->id,
+        'tour_id' => $tour->id,
+        'departure_date' => $schedule->departure_date,
+        'status' => BookingStatus::DOWN_PAYMENT,
+    ]);
+    $expiredDraft = Booking::factory()->create([
+        'booking_number' => 'BKG-FORCE-EXPIRED-DRAFT',
+        'user_id' => $user->id,
+        'vendor_id' => $company->id,
+        'tour_id' => $tour->id,
+        'departure_date' => $schedule->departure_date,
+        'status' => BookingStatus::EXPIRED,
+        'reserved_type' => 'system',
+        'reserved_expires_at' => null,
+        'grand_total' => 1_000_000,
+    ]);
+    $bookingCount = Booking::where('user_id', $user->id)
+        ->where('tour_id', $tour->id)
+        ->whereDate('departure_date', $schedule->departure_date)
+        ->count();
+
+    $response = $this->actingAs($user)->get(
+        route('bookings.create', [
+            'username' => $company->username,
+            'tour' => $tour,
+            'date' => $schedule->departure_date,
+            'force_new' => 1,
+        ])
+    );
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->component('tours/bookings/create')
+        ->where('bookingNumber', 'BKG-FORCE-EXPIRED-DRAFT')
+        ->where('existingBooking.booking_number', 'BKG-FORCE-EXPIRED-DRAFT')
+        ->where('existingBooking.status', BookingStatus::AWAITING_PAYMENT->value)
+        ->where('isResumingExistingBooking', true));
+    expect(Booking::where('user_id', $user->id)
+        ->where('tour_id', $tour->id)
+        ->whereDate('departure_date', $schedule->departure_date)
+        ->count())->toBe($bookingCount)
+        ->and($expiredDraft->fresh()->status)->toBe(BookingStatus::AWAITING_PAYMENT);
+});
+
 test('same schedule conflict can be bypassed only with force new booking', function () {
     ['user' => $user, 'company' => $company, 'tour' => $tour, 'schedule' => $schedule] = createBookingCreateScenario('forcenewvendor');
 
@@ -1920,12 +2158,13 @@ test('same schedule conflict can be bypassed only with force new booking', funct
     $response->assertInertia(fn ($page) => $page
         ->component('tours/bookings/create')
         ->where('bookingConflict', null)
+        ->where('existingBooking', null)
         ->where('isResumingExistingBooking', false)
         ->whereNot('bookingNumber', 'BKG-FORCE-WPA'));
     expect(Booking::where('user_id', $user->id)
         ->where('tour_id', $tour->id)
         ->whereDate('departure_date', $schedule->departure_date)
-        ->count())->toBe(2);
+        ->count())->toBe(1);
 });
 
 test('expired future booking can be reordered with the same booking number', function () {
@@ -2303,11 +2542,13 @@ test('selecting the same schedule reuses a future expired booking number without
         ->component('tours/bookings/create')
         ->where('bookingNumber', 'BKG-SAME-SCHEDULE')
         ->where('existingBooking.booking_number', 'BKG-SAME-SCHEDULE')
+        ->where('existingBooking.status', BookingStatus::AWAITING_PAYMENT->value)
         ->where('isResumingExistingBooking', true));
     expect(Booking::where('user_id', $user->id)
         ->where('tour_id', $tour->id)
         ->whereDate('departure_date', $schedule->departure_date)
-        ->count())->toBe(1);
+        ->count())->toBe(1)
+        ->and(Booking::where('booking_number', 'BKG-SAME-SCHEDULE')->firstOrFail()->status)->toBe(BookingStatus::AWAITING_PAYMENT);
 });
 
 test('expired past booking number is not reused for reorder', function () {

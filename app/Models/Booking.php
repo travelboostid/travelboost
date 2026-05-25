@@ -97,4 +97,9 @@ class Booking extends Model
     {
         return $this->morphMany(Payment::class, 'payable');
     }
+
+    public function actionRequests(): HasMany
+    {
+        return $this->hasMany(BookingActionRequest::class);
+    }
 }

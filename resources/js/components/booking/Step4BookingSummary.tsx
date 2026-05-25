@@ -69,6 +69,7 @@ type Step4Props = {
     minimumVatPct?: number;
     paidAmount?: number;
     remainingBalance?: number;
+    grandTotalOverride?: number | null;
     forceBalancePayment?: boolean;
     vendorBankInfo?: {
         bankName: string;
@@ -76,6 +77,8 @@ type Step4Props = {
         accountNumber: string;
     };
     readOnly?: boolean;
+    hidePaymentControls?: boolean;
+    addOnsReadOnly?: boolean;
     downPaymentAvailable?: boolean;
     fullPaymentAvailable?: boolean;
     paymentUnavailableReason?: string | null;
@@ -101,14 +104,19 @@ export default function Step4BookingSummary({
     minimumVatPct,
     paidAmount = 0,
     remainingBalance = 0,
+    grandTotalOverride = null,
     forceBalancePayment = false,
     vendorBankInfo,
     readOnly = false,
+    hidePaymentControls = false,
+    addOnsReadOnly = false,
     downPaymentAvailable = true,
     fullPaymentAvailable = true,
     paymentUnavailableReason = null,
     paymentErrorMessage = null,
 }: Step4Props) {
+    const addOnsLocked = readOnly || addOnsReadOnly;
+
     // ─── Add-ons state ──────────────────────────────────────────────────
     const [addOns, setAddOns] = useState<AddOnItem[]>(initialAddOns ?? []);
 
@@ -123,10 +131,10 @@ export default function Step4BookingSummary({
     );
 
     useEffect(() => {
-        if (!readOnly) {
+        if (!addOnsLocked) {
             onAddOnsChange?.(displayAddOns);
         }
-    }, [displayAddOns, onAddOnsChange, readOnly]);
+    }, [addOnsLocked, displayAddOns, onAddOnsChange]);
 
     // ─── Payment state ─────────────────────────────────────────────────
     const [paymentType, setPaymentType] = useState<PaymentType | null>(null);
@@ -166,7 +174,11 @@ export default function Step4BookingSummary({
     );
 
     const vatPct = minimumVatPct ?? 11;
-    const grandTotal = pricing.totalPrice + addOnsTotal;
+    const hasGrandTotalOverride =
+        grandTotalOverride !== null && grandTotalOverride !== undefined;
+    const grandTotal = hasGrandTotalOverride
+        ? grandTotalOverride
+        : pricing.totalPrice + addOnsTotal;
     const dpPct = minimumDownPaymentPct ?? 0;
     const dpRate = dpPct / 100;
     const dpLabel = downPaymentAvailable
@@ -187,13 +199,14 @@ export default function Step4BookingSummary({
               : null;
     const displayPaidAmount = Math.max(0, paidAmount);
     const displayRemainingBalance =
-        forceBalancePayment || displayPaidAmount > 0 || remainingBalance > 0
+        forceBalancePayment || hasGrandTotalOverride
             ? Math.max(0, remainingBalance)
             : Math.max(0, grandTotal - displayPaidAmount);
     const isFullPaymentUnavailable = !fullPaymentAvailable;
     const isCurrentPaymentUnavailable =
         isFullPaymentUnavailable && effectivePaymentType === 'full_payment';
     const isPaymentSelectionMissing = !effectivePaymentType;
+    const paymentControlsHidden = readOnly || hidePaymentControls;
     const activePaymentAmountLabel = forceBalancePayment
         ? 'Remaining Balance'
         : effectivePaymentType === 'down_payment'
@@ -206,11 +219,46 @@ export default function Step4BookingSummary({
         (isCurrentPaymentUnavailable
             ? (paymentUnavailableReason ?? PAYMENT_UNAVAILABLE_MESSAGE)
             : null);
+    const paymentSummaryStack = (
+        <div className="space-y-1.5 lg:text-right">
+            <div>
+                <p className="text-[10px] font-semibold uppercase text-muted-foreground">
+                    Grand Total
+                </p>
+                <motion.p
+                    key={grandTotal}
+                    initial={{ scale: 0.98 }}
+                    animate={{ scale: 1 }}
+                    className="text-xl font-bold text-foreground"
+                >
+                    {formatCurrency(grandTotal)}
+                </motion.p>
+            </div>
+            <div className="grid grid-cols-2 gap-3 border-t border-border/60 pt-1.5">
+                <div>
+                    <p className="text-[10px] font-semibold uppercase text-muted-foreground">
+                        Remaining Balance
+                    </p>
+                    <p className="text-sm font-bold text-red-600">
+                        {formatCurrency(displayRemainingBalance)}
+                    </p>
+                </div>
+                <div>
+                    <p className="text-[10px] font-semibold uppercase text-muted-foreground">
+                        Paid
+                    </p>
+                    <p className="text-sm font-bold text-emerald-600">
+                        {formatCurrency(displayPaidAmount)}
+                    </p>
+                </div>
+            </div>
+        </div>
+    );
 
     // ─── Add-on qty handler ────────────────────────────────────────────
     const updateAddOnQty = useCallback(
         (key: string, delta: number) => {
-            if (readOnly) {
+            if (addOnsLocked) {
                 return;
             }
 
@@ -228,14 +276,14 @@ export default function Step4BookingSummary({
                 ),
             );
         },
-        [guests.length, readOnly],
+        [addOnsLocked, guests.length],
     );
 
     const handlePaymentMethodSelect = (method: PaymentMethod) => {
         const selectedPaymentType = effectivePaymentType;
 
         if (
-            readOnly ||
+            paymentControlsHidden ||
             isCurrentPaymentUnavailable ||
             !selectedPaymentType ||
             payAmount === null
@@ -256,7 +304,7 @@ export default function Step4BookingSummary({
         const selectedPaymentType = effectivePaymentType;
 
         if (
-            readOnly ||
+            paymentControlsHidden ||
             isCurrentPaymentUnavailable ||
             !selectedPaymentType ||
             payAmount === null
@@ -455,7 +503,7 @@ export default function Step4BookingSummary({
                                                         )
                                                     }
                                                     disabled={
-                                                        readOnly ||
+                                                        addOnsLocked ||
                                                         addon.qty === 0
                                                     }
                                                 >
@@ -476,7 +524,7 @@ export default function Step4BookingSummary({
                                                         )
                                                     }
                                                     disabled={
-                                                        readOnly ||
+                                                        addOnsLocked ||
                                                         addon.qty >=
                                                             guests.length
                                                     }
@@ -509,7 +557,19 @@ export default function Step4BookingSummary({
                     </div>
 
                     {/* ─── Payment Selection ──────────────────────────────────────── */}
-                    {!readOnly && (
+                    {paymentControlsHidden && (
+                        <div className="p-4">
+                            <p className="mb-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                                Payment Summary
+                            </p>
+                            <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(210px,250px)]">
+                                <div className="hidden lg:block" />
+                                {paymentSummaryStack}
+                            </div>
+                        </div>
+                    )}
+
+                    {!paymentControlsHidden && (
                         <div className="p-4">
                             <p className="mb-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">
                                 Payment Option
@@ -593,43 +653,7 @@ export default function Step4BookingSummary({
                                     </div>
                                 </div>
 
-                                <div className="space-y-1.5 lg:text-right">
-                                    <div>
-                                        <p className="text-[10px] font-semibold uppercase text-muted-foreground">
-                                            Grand Total
-                                        </p>
-                                        <motion.p
-                                            key={grandTotal}
-                                            initial={{ scale: 0.98 }}
-                                            animate={{ scale: 1 }}
-                                            className="text-xl font-bold text-foreground"
-                                        >
-                                            {formatCurrency(grandTotal)}
-                                        </motion.p>
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-3 border-t border-border/60 pt-1.5">
-                                        <div>
-                                            <p className="text-[10px] font-semibold uppercase text-muted-foreground">
-                                                Remaining Balance
-                                            </p>
-                                            <p className="text-sm font-bold text-red-600">
-                                                {formatCurrency(
-                                                    displayRemainingBalance,
-                                                )}
-                                            </p>
-                                        </div>
-                                        <div>
-                                            <p className="text-[10px] font-semibold uppercase text-muted-foreground">
-                                                Paid
-                                            </p>
-                                            <p className="text-sm font-bold text-emerald-600">
-                                                {formatCurrency(
-                                                    displayPaidAmount,
-                                                )}
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
+                                {paymentSummaryStack}
                             </div>
                             {paymentNotice && (
                                 <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">
@@ -640,7 +664,7 @@ export default function Step4BookingSummary({
                     )}
 
                     {/* ─── Pay Now ────────────────────────────────────────────────── */}
-                    {!readOnly && (
+                    {!paymentControlsHidden && (
                         <div className="p-4">
                             <div className="flex justify-end">
                                 <Popover

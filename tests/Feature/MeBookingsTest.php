@@ -508,88 +508,52 @@ test('my bookings exposes paid balance deadlines document completeness and broch
         ->where('bookings.data.0.document_url', "/brochure/{$vendor->username}/{$tour->id}"));
 });
 
-test('authenticated users can preview paid booking invoice as pdf', function () {
+test('my bookings exposes waiting payment approval deadlines and document need', function () {
     $user = User::factory()->create(['status' => UserStatus::ACTIVE]);
-    $agent = Company::factory()->create([
-        'type' => 'agent',
-        'name' => 'John Company',
-    ]);
-    $vendor = Company::factory()->create(['type' => 'vendor']);
-    $tour = Tour::factory()->create([
+    $vendor = Company::factory()->create(['type' => 'vendor', 'username' => 'wpadeadlinevendor']);
+    $vendor->settings()->updateOrCreate([
         'company_id' => $vendor->id,
-        'code' => 'CHN-006',
-        'name' => 'Zhangjiajie Avatar Mountain Trek',
-        'destination' => 'Zhangjiajie',
+    ], [
+        'full_payment_deadline' => 7,
+        'document_completed_deadline' => 5,
     ]);
-    $schedule = TourSchedule::create([
-        'tour_id' => $tour->id,
-        'tour_code' => $tour->code,
-        'company_id' => $vendor->id,
-        'departure_date' => now()->addDays(40)->toDateString(),
-        'return_date' => now()->addDays(45)->toDateString(),
-        'is_active' => true,
-    ]);
-    $adultSingle = PriceCategory::create([
-        'company_id' => $vendor->id,
-        'name' => 'Adult Single',
-        'room_type' => 'Single',
-    ]);
-    $adultDouble = PriceCategory::create([
-        'company_id' => $vendor->id,
-        'name' => 'Adult Double',
-        'room_type' => 'Double',
-    ]);
-
-    TourPrice::create([
-        'company_id' => $vendor->id,
-        'tour_code' => $tour->code,
-        'schedule_id' => $schedule->id,
-        'price_category_id' => $adultSingle->id,
-        'currency' => 'IDR',
-        'price' => 8_500_000,
-    ]);
-    TourPrice::create([
-        'company_id' => $vendor->id,
-        'tour_code' => $tour->code,
-        'schedule_id' => $schedule->id,
-        'price_category_id' => $adultDouble->id,
-        'currency' => 'IDR',
-        'price' => 8_800_000,
-    ]);
-
+    $departureDate = now()->addDays(20)->toDateString();
+    $tour = Tour::factory()->create(['company_id' => $vendor->id]);
     $booking = Booking::factory()->create([
         'user_id' => $user->id,
-        'agent_id' => $agent->id,
         'vendor_id' => $vendor->id,
         'tour_id' => $tour->id,
-        'status' => BookingStatus::FULL_PAYMENT,
-        'booking_number' => '0002-202605-84PTL4',
-        'departure_date' => $schedule->departure_date,
-        'total_price' => 8_500_000,
-        'tax_amount' => 25_000,
-        'platform_fee' => 25_000,
-        'grand_total' => 8_550_000,
-    ]);
-    $booking->passengers()->create([
-        'first_name' => 'Test',
-        'last_name' => 'Customer',
-        'price_category' => 'Adult Single',
-        'price_amount' => 8_500_000,
+        'status' => BookingStatus::WAITING_PAYMENT_APPROVAL,
+        'booking_number' => 'BKG-WPA-DEADLINES',
+        'departure_date' => $departureDate,
+        'grand_total' => 1_000_000,
     ]);
     $booking->payments()->create([
         'owner_type' => User::class,
         'owner_id' => $user->id,
         'provider' => 'manual',
         'payment_method' => 'bank_transfer',
-        'amount' => 8_550_000,
-        'status' => PaymentStatus::PAID,
-        'paid_at' => now(),
+        'amount' => 300_000,
+        'status' => PaymentStatus::PENDING,
+    ]);
+    $booking->passengers()->create([
+        'first_name' => 'Waiting',
+        'last_name' => 'Docs',
+        'pob' => 'Jakarta',
+        'price_category' => 'Adult Twin',
+        'price_amount' => 1_000_000,
+        'passport_number' => 'P1234567',
     ]);
 
-    $response = $this->actingAs($user)->get("/mybookings/{$booking->id}/invoice");
+    $response = $this->actingAs($user)->get('/mybookings?tab=current');
 
     $response->assertOk();
-    $response->assertHeader('content-type', 'application/pdf');
+    $response->assertInertia(fn ($page) => $page
+        ->where('bookings.data.0.booking_number', 'BKG-WPA-DEADLINES')
+        ->where('bookings.data.0.status', BookingStatus::WAITING_PAYMENT_APPROVAL->value)
+        ->where('bookings.data.0.needs_travel_documents', true)
+        ->where('bookings.data.0.payment_deadline.date', now()->addDays(13)->toDateString())
+        ->where('bookings.data.0.document_deadline.date', now()->addDays(15)->toDateString()));
 });
 
 test('my bookings lazily expires stale booking reserved rows before rendering', function () {
