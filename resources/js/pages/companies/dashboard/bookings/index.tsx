@@ -427,6 +427,7 @@ function RowActions({
     const hasPendingActionRequest = Boolean(booking.pending_action_request);
     const canCancel = Boolean(booking.can_cancel) && !hasPendingActionRequest;
     const canRefund = Boolean(booking.can_refund) && !hasPendingActionRequest;
+    const canViewInvoice = booking.status === 'full payment';
 
     const submitManualPaymentDecision = () => {
         if (!booking.manual_payment) return;
@@ -518,6 +519,18 @@ function RowActions({
                             View Detail
                         </Link>
                     </DropdownMenuItem>
+                    {canViewInvoice && (
+                        <DropdownMenuItem asChild>
+                            <a
+                                href={`/companies/${companyUsername}/dashboard/bookings/${booking.id}/invoice`}
+                                target="_blank"
+                                rel="noreferrer"
+                            >
+                                <FileTextIcon className="mr-2 h-4 w-4" />
+                                View Invoice
+                            </a>
+                        </DropdownMenuItem>
+                    )}
                     <DropdownMenuSeparator />
                     <DropdownMenuItem asChild>
                         <Link

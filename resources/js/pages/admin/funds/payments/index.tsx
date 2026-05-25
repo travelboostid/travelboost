@@ -8,11 +8,9 @@ import { useDataTable } from '@/hooks/use-data-table';
 import { formatIDR } from '@/lib/utils';
 import type { ColumnDef } from '@tanstack/react-table';
 import dayjs from 'dayjs';
-import relativeTime from 'dayjs/plugin/relativeTime';
 import { CalendarIcon, CircleDashedIcon } from 'lucide-react';
 import { useMemo } from 'react';
 import { EmptyPayments } from './components/empty-payments';
-dayjs.extend(relativeTime);
 
 const STATUS_OPTIONS = [
     { label: 'Unpaid', value: 'unpaid' },
@@ -138,7 +136,7 @@ export default function PaymentsPage({ data }: PaymentsPageProps) {
 
                     return (
                         <div className="flex items-center gap-1">
-                            {dayjs(createdAt).fromNow()}
+                            {dayjs(createdAt).format('DD MMM YYYY')}
                         </div>
                     );
                 },

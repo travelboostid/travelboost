@@ -17,7 +17,6 @@ import { Link, router } from '@inertiajs/react';
 import {
     BellIcon,
     ChevronDownIcon,
-    KeyRoundIcon,
     LogOutIcon,
     UserCogIcon,
     UserIcon,
@@ -79,16 +78,16 @@ export function NavUser({
                     <DropdownMenuItem asChild>
                         <Link
                             className="w-full cursor-pointer"
-                            href="/me/profile"
+                            href="/customers/profile"
                         >
                             <UserCogIcon />
                             Profile
                         </Link>
                     </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
+                    {/* <DropdownMenuItem asChild>
                         <Link
                             className="w-full cursor-pointer"
-                            href="/me/password"
+                            href="/customers/profile?change_password=1"
                         >
                             <KeyRoundIcon />
                             Change Password

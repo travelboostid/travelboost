@@ -1,12 +1,15 @@
 <?php
 
+use App\Http\Controllers\Companies\Dashboard\AgentCommissionHistoryController;
 use App\Http\Controllers\Companies\Dashboard\AgentRegistrationController;
 use App\Http\Controllers\Companies\Dashboard\AgentSubscriptionController;
 use App\Http\Controllers\Companies\Dashboard\AgentTourController;
 use App\Http\Controllers\Companies\Dashboard\BankAccountController;
 use App\Http\Controllers\Companies\Dashboard\BookingIndexController;
+use App\Http\Controllers\Companies\Dashboard\BookingReportController;
 use App\Http\Controllers\Companies\Dashboard\CategoryController;
 use App\Http\Controllers\Companies\Dashboard\ChatbotController;
+use App\Http\Controllers\Companies\Dashboard\CommissionReportController;
 use App\Http\Controllers\Companies\Dashboard\CustomerController;
 use App\Http\Controllers\Companies\Dashboard\DashboardBookingController;
 use App\Http\Controllers\Companies\Dashboard\HomeController;
@@ -19,6 +22,7 @@ use App\Http\Controllers\Companies\Dashboard\PriceCategoryController;
 use App\Http\Controllers\Companies\Dashboard\ProfileController;
 use App\Http\Controllers\Companies\Dashboard\RoleController;
 use App\Http\Controllers\Companies\Dashboard\RoomListingController;
+use App\Http\Controllers\Companies\Dashboard\SalesReportController;
 use App\Http\Controllers\Companies\Dashboard\SeatAvailabilityController;
 use App\Http\Controllers\Companies\Dashboard\TeamController;
 use App\Http\Controllers\Companies\Dashboard\TourAddOnController;
@@ -47,6 +51,12 @@ Route::prefix('companies/{company:username}/dashboard')->middleware(['auth', 'co
     Route::get('reports/room-listings/export/excel', [RoomListingController::class, 'exportExcel'])->name('reports.room-listings.export.excel');
     Route::get('reports/room-listings/export/pdf', [RoomListingController::class, 'exportPdf'])->name('reports.room-listings.export.pdf');
     Route::get('reports/seat-availabilities', [SeatAvailabilityController::class, 'index'])->name('reports.seat-availabilities.index');
+    Route::get('reports/sales', [SalesReportController::class, 'index'])->name('reports.sales.index');
+    Route::get('reports/sales/export/excel', [SalesReportController::class, 'exportExcel'])->name('reports.sales.export.excel');
+    Route::get('reports/commissions', [CommissionReportController::class, 'index'])->name('reports.commissions.index');
+    Route::get('reports/commissions/export/excel', [CommissionReportController::class, 'exportExcel'])->name('reports.commissions.export.excel');
+    Route::get('reports/bookings', [BookingReportController::class, 'index'])->name('reports.bookings.index');
+    Route::get('reports/bookings/export/excel', [BookingReportController::class, 'exportExcel'])->name('reports.bookings.export.excel');
     Route::group(['prefix' => 'vendors/{vendor}', 'as' => 'vendor.'], function () {
         Route::get('/tours', [VendorTourCatalogController::class, 'index'])->name('tours.index');
         Route::middleware(['agent.subscription.active'])->post('/tours/{tour}/copy', [VendorTourCatalogController::class, 'copy'])->name('tour.copy');
@@ -63,7 +73,7 @@ Route::prefix('companies/{company:username}/dashboard')->middleware(['auth', 'co
     Route::delete(
         '/tours/{tour}/prices/{price}',
         [TourPriceController::class, 'destroy']
-    )->name('companies.dashboard.tours.prices.destroy');
+    )->name('tours.prices.destroy');
 
     Route::post('/tours/{tour}/schedules', [TourScheduleController::class, 'store'])
         ->name('tours.schedules.store');
@@ -83,6 +93,7 @@ Route::prefix('companies/{company:username}/dashboard')->middleware(['auth', 'co
     Route::resource('price-categories', PriceCategoryController::class);
     Route::resource('wallets', WalletController::class);
     Route::resource('payments', PaymentController::class);
+    Route::get('commission-history', [AgentCommissionHistoryController::class, 'index'])->name('commission-history.index');
     Route::post('payments/{payment}/cancel', [PaymentController::class, 'cancel'])->name('payments.cancel');
     Route::resource('bank-accounts', BankAccountController::class);
     Route::get('wallet-transactions', [WalletTransactionsController::class, 'index'])->name('wallet-transaction.index');
@@ -130,6 +141,7 @@ Route::prefix('companies/{company:username}/dashboard')->middleware(['auth', 'co
     Route::post('booking-action-requests/{bookingActionRequest}/reject', [BookingIndexController::class, 'rejectActionRequest'])->name('booking-action-requests.reject');
     Route::post('bookings/{booking}/cancel', [BookingIndexController::class, 'cancel'])->name('bookings.cancel');
     Route::post('bookings/{booking}/refund', [BookingIndexController::class, 'refund'])->name('bookings.refund');
+    Route::get('bookings/{booking}/invoice', [BookingIndexController::class, 'invoice'])->name('bookings.invoice');
     Route::get('bookings/{booking}', [BookingIndexController::class, 'show'])->name('bookings.show');
     Route::get('bookings/{booking}/edit', [BookingIndexController::class, 'edit'])->name('bookings.edit');
     Route::put('bookings/{booking}', [BookingIndexController::class, 'update'])->name('bookings.update');

@@ -2,6 +2,7 @@ import { useGetCompanies } from '@/api/company/company';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import type { LucideIcon } from 'lucide-react';
 import {
+    BarChart3Icon,
     BoltIcon,
     BookUserIcon,
     FolderSearchIcon,
@@ -227,6 +228,15 @@ export function useCompanyDashboardNavMainMenu() {
                         permissions.includes('wallet-transaction.query'),
                 },
                 {
+                    id: 'funds.commission-history',
+                    title: (
+                        <FormattedMessage defaultMessage="Commission History" />
+                    ),
+                    urlOrAction: `/companies/${company.username}/dashboard/commission-history`,
+                    shouldDisplay: (roles, _permissions) =>
+                        roles.includes('user:agent'),
+                },
+                {
                     id: 'funds.bank-accounts',
                     title: <FormattedMessage defaultMessage="Bank Accounts" />,
                     urlOrAction: `/companies/${company.username}/dashboard/bank-accounts`,
@@ -314,8 +324,34 @@ export function useCompanyDashboardNavMainMenu() {
             id: 'reports',
             title: <FormattedMessage defaultMessage="Reports" />,
             urlOrAction: '#',
-            icon: BoltIcon,
+            icon: BarChart3Icon,
             items: [
+                {
+                    id: 'reports.sales',
+                    title: <FormattedMessage defaultMessage="Sales Report" />,
+                    urlOrAction: `/companies/${company.username}/dashboard/reports/sales`,
+                    shouldDisplay: (roles, _permissions) =>
+                        roles.includes('user:agent') ||
+                        roles.includes('user:vendor'),
+                },
+                {
+                    id: 'reports.commissions',
+                    title: (
+                        <FormattedMessage defaultMessage="Commission Report" />
+                    ),
+                    urlOrAction: `/companies/${company.username}/dashboard/reports/commissions`,
+                    shouldDisplay: (roles, _permissions) =>
+                        roles.includes('user:agent') ||
+                        roles.includes('user:vendor'),
+                },
+                {
+                    id: 'reports.bookings',
+                    title: <FormattedMessage defaultMessage="Booking List" />,
+                    urlOrAction: `/companies/${company.username}/dashboard/reports/bookings`,
+                    shouldDisplay: (roles, _permissions) =>
+                        roles.includes('user:agent') ||
+                        roles.includes('user:vendor'),
+                },
                 {
                     id: 'reports.room-listings',
                     title: <FormattedMessage defaultMessage="Room Listings" />,

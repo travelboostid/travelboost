@@ -7,13 +7,11 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useDataTable } from '@/hooks/use-data-table';
 import type { ColumnDef } from '@tanstack/react-table';
 import dayjs from 'dayjs';
-import relativeTime from 'dayjs/plugin/relativeTime';
 import { CalendarIcon, CircleDashedIcon } from 'lucide-react';
 import { useMemo } from 'react';
 import ApproveButton from './components/approve-button';
 import { EmptyBankAccounts } from './components/empty-bank-accounts';
 import RejectButton from './components/reject-button';
-dayjs.extend(relativeTime);
 
 const STATUS_OPTIONS = [
     { label: 'Pending', value: 'pending' },
@@ -178,7 +176,7 @@ export default function BankAccountsPage({
 
                     return (
                         <div className="flex items-center gap-1">
-                            {dayjs(createdAt).fromNow()}
+                            {dayjs(createdAt).format('DD MMM YYYY')}
                         </div>
                     );
                 },

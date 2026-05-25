@@ -314,7 +314,12 @@ function getBookingAction(
         return {
             label: 'Invoice',
             icon: FileTextIcon,
-            onClick: () => window.print(),
+            onClick: () =>
+                window.open(
+                    `/mybookings/${booking.id}/invoice`,
+                    '_blank',
+                    'noopener,noreferrer',
+                ),
         };
     }
 
