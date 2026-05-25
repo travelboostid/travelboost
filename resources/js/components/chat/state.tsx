@@ -360,7 +360,7 @@ export function FloatingChatWidgetContextProvider({
         recepient: ChatActor,
         attachment?: Attachment | undefined | null,
     ) => {
-        setAttachment(attachment);
+        if (attachment) setAttachment(attachment);
         const result = await openChatRoom.mutateAsync({
             data: {
                 sender_id: actor?.id || auth?.user?.id || 0,

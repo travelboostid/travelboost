@@ -185,14 +185,16 @@ export default function TourCard({
     const handleChat = async (targetId: number) => {
         try {
             setStartingChat(true);
-            floatingChat?.setAttachment({
-                type: 'tour',
-                data: tour.id.toString(),
-            });
-            await floatingChat?.startPrivateChat({
-                type: 'company',
-                id: targetId,
-            });
+            await floatingChat?.startPrivateChat(
+                {
+                    type: 'company',
+                    id: targetId,
+                },
+                {
+                    type: 'tour',
+                    data: tour.id.toString(),
+                },
+            );
         } finally {
             setStartingChat(false);
         }
