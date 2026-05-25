@@ -69,12 +69,17 @@ export function SidebarMenuRenderer({
         () => (activeMenuIds || []).reduce((a, c) => ({ ...a, [c]: true }), {}),
         [activeMenuIds],
     );
+    const isItemActive = (item: MenuItem): boolean =>
+        Boolean(
+            activeState[item.id] ||
+            item.items?.some((child) => isItemActive(child)),
+        );
     const menuButtonClassName =
-        'h-9 rounded-2xl px-2.5 text-[0.84rem] font-medium text-slate-600 transition-all hover:bg-slate-50 hover:text-slate-950 hover:shadow-sm data-[active=true]:bg-primary/10 data-[active=true]:font-semibold data-[active=true]:text-primary data-[active=true]:shadow-sm data-[active=true]:shadow-primary/10 data-[active=true]:[&>svg]:text-primary dark:text-slate-300 dark:hover:bg-slate-900 dark:hover:text-white dark:data-[active=true]:bg-primary/20 dark:data-[active=true]:text-primary';
+        'h-9 rounded-2xl px-2 text-[0.9rem] font-medium text-slate-600 transition-all hover:bg-slate-50 hover:text-slate-950 hover:shadow-sm data-[active=true]:bg-primary/10 data-[active=true]:font-semibold data-[active=true]:text-primary data-[active=true]:shadow-sm data-[active=true]:shadow-primary/10 data-[active=true]:[&>svg]:text-primary dark:text-slate-300 dark:hover:bg-slate-900 dark:hover:text-white dark:data-[active=true]:bg-primary/20 dark:data-[active=true]:text-primary [&>svg]:size-[1.12rem] group-data-[collapsible=icon]:[&>svg]:size-5';
     const submenuButtonClassName =
-        'h-8.5 rounded-xl pl-3 text-[0.8rem] font-medium shadow-none data-[active=true]:shadow-sm';
+        'h-8.5 rounded-xl pl-3 text-[0.85rem] font-medium shadow-none data-[active=true]:shadow-sm';
     const disabledButtonClassName =
-        'h-9 rounded-2xl px-2.5 text-[0.84rem] font-medium text-slate-600 transition-all dark:text-slate-300';
+        'h-9 rounded-2xl px-2 text-[0.9rem] font-medium text-slate-600 transition-all dark:text-slate-300';
 
     const renderLink = (item: MenuItem, isSub = false) => {
         const Button = isSub ? SidebarMenuSubButton : SidebarMenuButton;
@@ -103,7 +108,7 @@ export function SidebarMenuRenderer({
             return (
                 <Button
                     asChild
-                    isActive={activeState[item.id]}
+                    isActive={isItemActive(item)}
                     className={cn(
                         menuButtonClassName,
                         isSub && submenuButtonClassName,
@@ -126,7 +131,7 @@ export function SidebarMenuRenderer({
         return (
             <Button
                 asChild
-                isActive={activeState[item.id]}
+                isActive={isItemActive(item)}
                 className={cn(
                     menuButtonClassName,
                     isSub && submenuButtonClassName,
@@ -147,7 +152,7 @@ export function SidebarMenuRenderer({
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
                 <SidebarMenuButton
-                    isActive={activeState[item.id]}
+                    isActive={isItemActive(item)}
                     className={menuButtonClassName}
                 >
                     {item.icon && (
@@ -173,7 +178,11 @@ export function SidebarMenuRenderer({
                                 ? sub.urlOrAction
                                 : undefined
                         }
-                        className="min-h-9 rounded-xl px-3 text-[0.86rem] font-medium text-slate-600 focus:bg-slate-100 focus:text-slate-950 dark:text-slate-300 dark:focus:bg-slate-900 dark:focus:text-white"
+                        className={cn(
+                            'min-h-9 rounded-xl px-3 text-[0.88rem] font-medium text-slate-600 focus:bg-slate-100 focus:text-slate-950 dark:text-slate-300 dark:focus:bg-slate-900 dark:focus:text-white',
+                            isItemActive(sub) &&
+                                'bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary',
+                        )}
                     >
                         {typeof sub.urlOrAction === 'string' ? (
                             <a
@@ -274,7 +283,10 @@ export function SidebarMenuRenderer({
                         <Collapsible
                             key={item.id}
                             asChild
-                            defaultOpen={openState[item.id]}
+                            open={isItemActive(item) ? true : undefined}
+                            defaultOpen={
+                                openState[item.id] || isItemActive(item)
+                            }
                             className="group/collapsible"
                         >
                             <SidebarMenuItem>

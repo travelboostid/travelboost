@@ -59,6 +59,10 @@ export default function Page({
     const isAgent = company.type === 'agent';
     const isOwnCatalog = company.username === vendor?.username;
     const canCopy = isOwnCatalog || partnership?.status === 'active';
+    const activeMenuIds = isOwnCatalog
+        ? [isAgent ? 'tours.cats' : 'tours.preview']
+        : [`vendor-tours.${username}`];
+    const openMenuIds = isOwnCatalog ? ['tours'] : ['vendor-tours'];
 
     const displayedTours = useMemo(() => {
         const filtered = data.filter((t: any) => {
@@ -107,8 +111,8 @@ export default function Page({
 
     return (
         <CompanyDashboardLayout
-            openMenuIds={['vendor-tours']}
-            activeMenuIds={[`vendor-tours.${username}`]}
+            openMenuIds={openMenuIds}
+            activeMenuIds={activeMenuIds}
             breadcrumb={[{ title: 'Tour Catalogs' }, { title: username }]}
             containerClassName="bg-slate-50/30 dark:bg-slate-950 min-h-screen pb-20"
             applet={

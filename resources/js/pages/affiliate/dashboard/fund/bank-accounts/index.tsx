@@ -145,7 +145,7 @@ export default function BankAccountsPage({ bank_accounts }: any) {
     return (
         <AffiliateDashboardLayout
             openMenuIds={['fund']}
-            activeMenuIds={['fund.bank-accounts']}
+            activeMenuIds={['fund.bank']}
             breadcrumb={[
                 { title: 'Fund', url: '#' },
                 {

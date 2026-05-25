@@ -16,10 +16,10 @@ export function SidebarSection(props: AffiliateDashboardLayoutProps) {
         <Sidebar
             variant="floating"
             collapsible="icon"
-            className="p-3 [&_[data-slot=sidebar-inner]]:rounded-[1.75rem] [&_[data-slot=sidebar-inner]]:border [&_[data-slot=sidebar-inner]]:border-slate-200/80 [&_[data-slot=sidebar-inner]]:bg-white/95 [&_[data-slot=sidebar-inner]]:shadow-xl [&_[data-slot=sidebar-inner]]:shadow-slate-950/5 dark:[&_[data-slot=sidebar-inner]]:border-slate-800 dark:[&_[data-slot=sidebar-inner]]:bg-slate-950/95 dark:[&_[data-slot=sidebar-inner]]:shadow-black/20"
+            className="p-1.5 group-data-[collapsible=icon]:p-2 [&_[data-slot=sidebar-inner]]:rounded-[1.75rem] [&_[data-slot=sidebar-inner]]:border [&_[data-slot=sidebar-inner]]:border-slate-200/80 [&_[data-slot=sidebar-inner]]:bg-white/95 [&_[data-slot=sidebar-inner]]:shadow-xl [&_[data-slot=sidebar-inner]]:shadow-slate-950/5 dark:[&_[data-slot=sidebar-inner]]:border-slate-800 dark:[&_[data-slot=sidebar-inner]]:bg-slate-950/95 dark:[&_[data-slot=sidebar-inner]]:shadow-black/20"
             {...props}
         >
-            <SidebarHeader className="px-3 pt-4 pb-3">
+            <SidebarHeader className="px-1.5 pt-4 pb-2 group-data-[collapsible=icon]:px-0">
                 <SidebarMenu>
                     <SidebarMenuItem>
                         <SidebarMenuButton
@@ -53,7 +53,7 @@ export function SidebarSection(props: AffiliateDashboardLayoutProps) {
                 </SidebarMenu>
             </SidebarHeader>
 
-            <SidebarContent className="gap-3 px-3 pb-4">
+            <SidebarContent className="gap-1.5 px-1.5 pb-4 group-data-[collapsible=icon]:px-0">
                 <NavMain {...props} />
                 <NavSecondary />
             </SidebarContent>

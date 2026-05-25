@@ -318,7 +318,7 @@ function CategoryCell({ row }: { row: any }) {
                 onValueChange={handleChange}
                 disabled={isLoading}
             >
-                <SelectTrigger className="w-[140px] h-9 text-xs border-slate-200 bg-white rounded-lg shadow-sm">
+                <SelectTrigger className="w-[140px] h-9 text-xs border-slate-200 bg-white rounded-lg shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100">
                     <SelectValue placeholder="Select Category" />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl">
@@ -374,8 +374,8 @@ function StatusCell({ row }: { row: any }) {
                 <SelectTrigger
                     className={`w-[120px] h-9 text-xs font-bold uppercase tracking-wider rounded-lg shadow-sm ${
                         isActive
-                            ? 'bg-emerald-50 text-emerald-600 border-emerald-200'
-                            : 'bg-slate-50 text-slate-500 border-slate-200'
+                            ? 'bg-emerald-50 text-emerald-600 border-emerald-200 dark:border-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300'
+                            : 'bg-slate-50 text-slate-500 border-slate-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300'
                     } ${vendorStatus === 'inactive' ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
                     <SelectValue placeholder="Select Status" />
@@ -424,6 +424,11 @@ function SortableHeader({
     );
 }
 
+const getStickyActionColumnClassName = (columnId: string) =>
+    columnId === 'actions'
+        ? 'sticky right-0 z-20 w-16 bg-white/95 shadow-[-12px_0_18px_-18px_rgba(15,23,42,0.7)] backdrop-blur dark:bg-slate-950/95 dark:shadow-[-12px_0_18px_-18px_rgba(0,0,0,0.9)]'
+        : '';
+
 export const columns: ColumnDef<any>[] = [
     // {
     //   id: 'select',
@@ -462,12 +467,12 @@ export const columns: ColumnDef<any>[] = [
         cell: ({ row }) => (
             <div className="flex flex-col gap-1.5 max-w-[250px] xl:max-w-[350px]">
                 <span
-                    className="font-semibold text-slate-900 truncate"
+                    className="font-semibold text-slate-900 truncate dark:text-slate-100"
                     title={row.original.tour?.name}
                 >
                     {row.original.tour?.name || '-'}
                 </span>
-                <span className="uppercase font-mono text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-md w-fit border border-slate-200">
+                <span className="uppercase font-mono text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-md w-fit border border-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
                     {row.original.tour?.code || '-'}
                 </span>
             </div>
@@ -481,7 +486,7 @@ export const columns: ColumnDef<any>[] = [
         ),
         cell: ({ getValue }) => (
             <div
-                className="font-medium text-slate-700 truncate max-w-[150px]"
+                className="font-medium text-slate-700 truncate max-w-[150px] dark:text-slate-200"
                 title={getValue<string>()}
             >
                 {getValue<string>() || '-'}
@@ -496,7 +501,7 @@ export const columns: ColumnDef<any>[] = [
         ),
         cell: ({ getValue }) => (
             <div
-                className="max-w-[150px] xl:max-w-[200px] truncate text-slate-600 font-medium"
+                className="max-w-[150px] xl:max-w-[200px] truncate text-slate-600 font-medium dark:text-slate-300"
                 title={getValue<string>()}
             >
                 {getValue<string>() || '-'}
@@ -567,7 +572,7 @@ export const columns: ColumnDef<any>[] = [
                     <span
                         className={`h-2 w-2 rounded-full ${seats > 0 ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-red-500'}`}
                     />
-                    <span className="text-sm font-semibold text-slate-700">
+                    <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">
                         {seats}
                     </span>
                 </div>
@@ -589,7 +594,7 @@ export const columns: ColumnDef<any>[] = [
             <SortableHeader column={column} title="Added At" />
         ),
         cell: ({ getValue }) => (
-            <div className="text-sm font-medium text-slate-500">
+            <div className="text-sm font-medium text-slate-500 dark:text-slate-300">
                 {dayjs(getValue<string>()).format('DD MMM YYYY')}
             </div>
         ),
@@ -680,30 +685,30 @@ export default function Page({ data }: PageProps) {
     return (
         <CompanyDashboardLayout
             openMenuIds={['tours']}
-            activeMenuIds={['tours.index']}
-            breadcrumb={[{ title: 'My Catalog' }]}
-            containerClassName="w-full flex-1 flex flex-col bg-slate-50/30"
+            activeMenuIds={['agent-tours.index']}
+            breadcrumb={[{ title: 'Products' }]}
+            containerClassName="w-full flex-1 flex flex-col bg-slate-50/30 dark:bg-slate-950"
         >
             <div className="w-full space-y-6 p-4 md:p-8 max-w-[1600px] mx-auto pb-20">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-6">
-                    <div className="relative w-full sm:w-[700px] border border-slate-200 rounded-xl shadow-sm">
+                    <div className="relative w-full sm:w-[700px] border border-slate-200 rounded-xl shadow-sm dark:border-slate-800">
                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                         <Input
                             placeholder="Search tour, vendor, or category..."
                             value={globalFilter ?? ''}
                             onChange={(e) => setGlobalFilter(e.target.value)}
-                            className="pl-11 h-11 w-full bg-slate-50 border-transparent focus-visible:bg-white focus-visible:ring-2 focus-visible:ring-primary/20 rounded-xl transition-all shadow-inner"
+                            className="pl-11 h-11 w-full bg-slate-50 border-transparent focus-visible:bg-white focus-visible:ring-2 focus-visible:ring-primary/20 rounded-xl transition-all shadow-inner dark:bg-slate-900 dark:text-slate-100 dark:focus-visible:bg-slate-900"
                         />
                     </div>
                 </div>
 
-                <div className="flex flex-col lg:flex-row items-start lg:items-center gap-4 justify-between bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
+                <div className="flex flex-col lg:flex-row items-start lg:items-center gap-4 justify-between bg-white p-4 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 dark:bg-slate-900">
                     <Tabs
                         value={activeTab}
                         onValueChange={setActiveTab}
                         className="w-full lg:w-auto"
                     >
-                        <TabsList className="grid grid-cols-3 w-full lg:w-[350px] bg-slate-100/80 p-1 rounded-xl">
+                        <TabsList className="grid grid-cols-3 w-full lg:w-[350px] bg-slate-100/80 p-1 rounded-xl dark:bg-slate-950/70">
                             <TabsTrigger
                                 value="all"
                                 className="rounded-lg data-[state=active]:shadow-sm"
@@ -730,7 +735,7 @@ export default function Page({ data }: PageProps) {
                             <DropdownMenuTrigger asChild>
                                 <Button
                                     variant="outline"
-                                    className="h-11 px-6 rounded-xl border-slate-200 bg-white hover:bg-slate-50 shadow-sm w-full sm:w-auto"
+                                    className="h-11 px-6 rounded-xl border-slate-200 bg-white hover:bg-slate-50 shadow-sm w-full sm:w-auto dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
                                 >
                                     Columns{' '}
                                     <ChevronDown className="ml-2 h-4 w-4 opacity-50" />
@@ -764,10 +769,10 @@ export default function Page({ data }: PageProps) {
                     </div>
                 </div>
 
-                <div className="rounded-2xl border border-slate-200 bg-white shadow-sm w-full overflow-hidden">
+                <div className="rounded-2xl border border-slate-200 bg-white shadow-sm w-full overflow-hidden dark:border-slate-800 dark:bg-slate-950">
                     <div className="w-full overflow-x-auto">
                         <Table className="w-full text-sm">
-                            <TableHeader className="bg-slate-50/80 border-b border-slate-200">
+                            <TableHeader className="bg-slate-50/80 border-b border-slate-200 dark:border-slate-800 dark:bg-slate-900/80">
                                 {table.getHeaderGroups().map((headerGroup) => (
                                     <TableRow
                                         key={headerGroup.id}
@@ -776,7 +781,7 @@ export default function Page({ data }: PageProps) {
                                         {headerGroup.headers.map((header) => (
                                             <TableHead
                                                 key={header.id}
-                                                className="text-slate-600 font-bold h-14 px-2 sm:px-4"
+                                                className={`text-slate-600 font-bold h-14 px-2 sm:px-4 dark:text-slate-300 ${getStickyActionColumnClassName(header.column.id)}`}
                                             >
                                                 {header.isPlaceholder
                                                     ? null
@@ -799,14 +804,14 @@ export default function Page({ data }: PageProps) {
                                                 row.getIsSelected() &&
                                                 'selected'
                                             }
-                                            className="hover:bg-slate-50/80 transition-colors border-b border-slate-100 last:border-none"
+                                            className="hover:bg-slate-50/80 transition-colors border-b border-slate-100 last:border-none dark:border-slate-800 dark:hover:bg-slate-900/70"
                                         >
                                             {row
                                                 .getVisibleCells()
                                                 .map((cell) => (
                                                     <TableCell
                                                         key={cell.id}
-                                                        className="py-4 px-4"
+                                                        className={`py-4 px-4 ${getStickyActionColumnClassName(cell.column.id)}`}
                                                     >
                                                         {flexRender(
                                                             cell.column
@@ -823,11 +828,11 @@ export default function Page({ data }: PageProps) {
                                             colSpan={columns.length}
                                             className="h-[400px] text-center"
                                         >
-                                            <div className="flex flex-col items-center justify-center text-slate-500">
-                                                <div className="h-20 w-20 bg-slate-100 rounded-full flex items-center justify-center mb-4">
-                                                    <Search className="h-8 w-8 text-slate-400" />
+                                            <div className="flex flex-col items-center justify-center text-slate-500 dark:text-slate-400">
+                                                <div className="h-20 w-20 bg-slate-100 rounded-full flex items-center justify-center mb-4 dark:bg-slate-900">
+                                                    <Search className="h-8 w-8 text-slate-400 dark:text-slate-500" />
                                                 </div>
-                                                <p className="text-lg font-medium text-slate-900 mb-1">
+                                                <p className="text-lg font-medium text-slate-900 mb-1 dark:text-slate-100">
                                                     No tours found
                                                 </p>
                                                 <p className="text-sm">
@@ -845,12 +850,12 @@ export default function Page({ data }: PageProps) {
                 </div>
 
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 px-2">
-                    <p className="text-sm font-medium text-slate-500 bg-white px-4 py-2 rounded-xl shadow-sm border border-slate-200">
-                        <span className="text-slate-900">
+                    <p className="text-sm font-medium text-slate-500 bg-white px-4 py-2 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">
+                        <span className="text-slate-900 dark:text-slate-100">
                             {table.getFilteredSelectedRowModel().rows.length}
                         </span>{' '}
                         of{' '}
-                        <span className="text-slate-900">
+                        <span className="text-slate-900 dark:text-slate-100">
                             {table.getFilteredRowModel().rows.length}
                         </span>{' '}
                         row(s) selected.
@@ -860,7 +865,7 @@ export default function Page({ data }: PageProps) {
                             variant="outline"
                             onClick={() => table.previousPage()}
                             disabled={!table.getCanPreviousPage()}
-                            className="rounded-xl border-slate-200 bg-white hover:bg-slate-50 shadow-sm px-6"
+                            className="rounded-xl border-slate-200 bg-white hover:bg-slate-50 shadow-sm px-6 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
                         >
                             Previous
                         </Button>
@@ -868,7 +873,7 @@ export default function Page({ data }: PageProps) {
                             variant="outline"
                             onClick={() => table.nextPage()}
                             disabled={!table.getCanNextPage()}
-                            className="rounded-xl border-slate-200 bg-white hover:bg-slate-50 shadow-sm px-6"
+                            className="rounded-xl border-slate-200 bg-white hover:bg-slate-50 shadow-sm px-6 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
                         >
                             Next
                         </Button>

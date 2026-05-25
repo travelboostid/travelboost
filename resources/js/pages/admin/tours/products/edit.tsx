@@ -98,8 +98,8 @@ export default function Page({ tour }: Props) {
 
     return (
         <AdminDashboardLayout
-            openMenuIds={['tour']}
-            activeMenuIds={['tour', 'tour.products']}
+            openMenuIds={['tours']}
+            activeMenuIds={['tours.products']}
             breadcrumb={[
                 { title: 'Tours' },
                 { title: 'Products', url: '/admin/tours/products' },

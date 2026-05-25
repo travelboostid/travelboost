@@ -77,17 +77,102 @@ const getPriceCategoryName = (price: any) =>
         ? `Category #${price.price_category_id}`
         : 'Category');
 
+const toNumber = (value: any) => {
+    const numericValue = Number(value || 0);
+
+    return Number.isFinite(numericValue) ? numericValue : 0;
+};
+
+const getPromotionalPrice = (price: any) => {
+    const basePrice = toNumber(price.price);
+    const promotionConfig =
+        typeof price.promotion === 'object' && price.promotion !== null
+            ? price.promotion
+            : null;
+    const promotionRate = toNumber(
+        price.promotion_rate ??
+            price.promotionRate ??
+            price.discount_rate ??
+            price.discountRate ??
+            (promotionConfig?.type === 'percent' ? promotionConfig.value : 0),
+    );
+    const promotionAmount = toNumber(
+        (promotionConfig && promotionConfig.type !== 'percent'
+            ? promotionConfig.value
+            : price.promotion) ??
+            price.promotion_amount ??
+            price.promotionAmount ??
+            price.discount ??
+            price.discount_amount ??
+            price.discountAmount,
+    );
+
+    if (promotionRate > 0) {
+        return Math.max(0, basePrice - (basePrice * promotionRate) / 100);
+    }
+
+    if (promotionAmount > 0) {
+        return Math.max(0, basePrice - promotionAmount);
+    }
+
+    return basePrice;
+};
+
+const getPromotionLabel = (price: any, currency = 'IDR') => {
+    const basePrice = toNumber(price.price);
+    const promotionalPrice = getPromotionalPrice(price);
+    const promotionAmount = Math.max(0, basePrice - promotionalPrice);
+
+    if (promotionAmount <= 0) {
+        return null;
+    }
+
+    const promotionConfig =
+        typeof price.promotion === 'object' && price.promotion !== null
+            ? price.promotion
+            : null;
+    const promotionRate = toNumber(
+        price.promotion_rate ??
+            price.promotionRate ??
+            price.discount_rate ??
+            price.discountRate ??
+            (promotionConfig?.type === 'percent' ? promotionConfig.value : 0),
+    );
+
+    if (promotionRate > 0) {
+        return `${formatCurrency(promotionAmount, currency)} (${promotionRate}%)`;
+    }
+
+    return formatCurrency(promotionAmount, currency);
+};
+
 const getCommissionLabel = (price: any, currency = 'IDR') => {
-    if (Number(price.commission_rate || 0) > 0) {
-        const commissionRate = Number(price.commission_rate);
+    const commissionConfig =
+        typeof price.commission === 'object' && price.commission !== null
+            ? price.commission
+            : null;
+    const commissionRate = toNumber(
+        price.commission_rate ??
+            price.commissionRate ??
+            (commissionConfig?.type === 'percent' ? commissionConfig.value : 0),
+    );
+    const commissionAmount = toNumber(
+        (commissionConfig && commissionConfig.type !== 'percent'
+            ? commissionConfig.value
+            : price.commission) ??
+            price.commission_amount ??
+            price.commissionAmount,
+    );
+
+    if (commissionRate > 0) {
         const commissionValue =
-            (Number(price.price || 0) * commissionRate) / 100;
+            (getPromotionalPrice(price) * commissionRate) / 100;
 
         return `${formatCurrency(commissionValue, currency)} (${commissionRate}%)`;
     }
 
-    if (Number(price.commission || 0) > 0) {
-        return formatCurrency(price.commission, currency);
+    if (commissionAmount > 0) {
+        return formatCurrency(commissionAmount, currency);
     }
 
     return '-';
@@ -257,7 +342,7 @@ export default function AgentVendorTourCard({
 
             <Dialog open={isInfoOpen} onOpenChange={setIsInfoOpen}>
                 <DialogContent
-                    className="max-h-[calc(100dvh-2rem)] w-[calc(100%-1.5rem)] max-w-[58rem] overflow-hidden rounded-[1.75rem] border border-slate-200/80 bg-white p-0 shadow-2xl shadow-slate-950/20 dark:border-slate-800 dark:bg-slate-950 sm:max-h-[calc(100dvh-4rem)] sm:w-[calc(100%-3rem)] lg:max-w-[60rem]"
+                    className="max-h-[calc(100dvh-2rem)] w-[calc(100%-1.5rem)] max-w-[58rem] overflow-hidden rounded-[1.75rem] border border-slate-200/80 bg-white p-0 shadow-2xl shadow-slate-950/20 dark:border-slate-800 dark:bg-slate-950 sm:max-h-[calc(100dvh-4rem)] sm:w-[calc(100%-3rem)] lg:max-w-[60rem] [&_[data-slot=dialog-close]]:right-4 [&_[data-slot=dialog-close]]:top-4 [&_[data-slot=dialog-close]]:z-30 [&_[data-slot=dialog-close]]:flex [&_[data-slot=dialog-close]]:h-10 [&_[data-slot=dialog-close]]:w-10 [&_[data-slot=dialog-close]]:items-center [&_[data-slot=dialog-close]]:justify-center [&_[data-slot=dialog-close]]:rounded-2xl [&_[data-slot=dialog-close]]:border [&_[data-slot=dialog-close]]:border-white/25 [&_[data-slot=dialog-close]]:bg-white/15 [&_[data-slot=dialog-close]]:p-0 [&_[data-slot=dialog-close]]:text-white [&_[data-slot=dialog-close]]:opacity-100 [&_[data-slot=dialog-close]]:shadow-lg [&_[data-slot=dialog-close]]:shadow-black/10 [&_[data-slot=dialog-close]]:backdrop-blur-md [&_[data-slot=dialog-close]]:hover:bg-white/25 [&_[data-slot=dialog-close]]:focus:ring-white/40 [&_[data-slot=dialog-close]_svg]:h-5 [&_[data-slot=dialog-close]_svg]:w-5"
                     aria-describedby={undefined}
                 >
                     <DialogHeader className="relative overflow-hidden border-b border-slate-200 bg-slate-950 px-5 py-6 text-left text-white dark:border-slate-800 sm:px-6">
@@ -489,12 +574,26 @@ export default function AgentVendorTourCard({
                                                                                 <p className="text-[10px] font-semibold uppercase text-slate-400 sm:hidden">
                                                                                     Price
                                                                                 </p>
-                                                                                <p className="font-medium text-slate-800 dark:text-slate-100">
-                                                                                    {formatCurrency(
-                                                                                        price.price,
+                                                                                <div className="space-y-1">
+                                                                                    <p className="font-medium text-slate-800 dark:text-slate-100">
+                                                                                        {formatCurrency(
+                                                                                            price.price,
+                                                                                            currency,
+                                                                                        )}
+                                                                                    </p>
+                                                                                    {getPromotionLabel(
+                                                                                        price,
                                                                                         currency,
+                                                                                    ) && (
+                                                                                        <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-300">
+                                                                                            Promo{' '}
+                                                                                            {getPromotionLabel(
+                                                                                                price,
+                                                                                                currency,
+                                                                                            )}
+                                                                                        </p>
                                                                                     )}
-                                                                                </p>
+                                                                                </div>
                                                                             </div>
                                                                             <div>
                                                                                 <p className="text-[10px] font-semibold uppercase text-slate-400 sm:hidden">

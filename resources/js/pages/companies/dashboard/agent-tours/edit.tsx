@@ -44,7 +44,7 @@ export default function Page({ tour }: Props) {
     return (
         <CompanyDashboardLayout
             openMenuIds={['tours']}
-            activeMenuIds={['tours.index']}
+            activeMenuIds={['agent-tours.index']}
             breadcrumb={[
                 { title: 'Tours', url: '/dashboard/tours' },
                 { title: 'Edit' },

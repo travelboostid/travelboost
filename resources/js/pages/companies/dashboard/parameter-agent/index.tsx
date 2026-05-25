@@ -66,8 +66,6 @@ export default function ParameterVendorPage() {
 
     const inputClass =
         'w-full rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-primary sm:px-4 sm:py-2.5';
-    const labelClass =
-        'mb-2 block min-h-[48px] text-sm font-medium text-foreground';
     const labelClassSingleRow =
         'mb-2 block text-sm font-medium text-foreground';
 
@@ -86,7 +84,7 @@ export default function ParameterVendorPage() {
                 },
             ]}
             openMenuIds={['settings']}
-            activeMenuIds={['settings.parameter-vendor']}
+            activeMenuIds={['settings.parameter-agent']}
         >
             <Head
                 title={intl.formatMessage({

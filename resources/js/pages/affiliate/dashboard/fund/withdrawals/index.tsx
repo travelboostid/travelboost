@@ -64,7 +64,7 @@ export default function AffiliateWithdrawalsPage({
 
     return (
         <AffiliateDashboardLayout
-            activeMenuIds={['fund.withdrawals']}
+            activeMenuIds={['fund.withdraw']}
             openMenuIds={['fund']}
             breadcrumb={[
                 { title: 'Fund', url: '#' },

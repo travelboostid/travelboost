@@ -108,7 +108,7 @@ export default function AppConfigsPage({ data }: AppConfigsPageProps) {
     return (
         <AdminDashboardLayout
             containerClassName="p-4"
-            activeMenuIds={['app-configs']}
+            activeMenuIds={['configurations']}
             breadcrumb={[{ title: 'App Configs' }]}
             applet={<CreateButton />}
         >

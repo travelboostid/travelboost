@@ -225,8 +225,8 @@ export default function Page({ data }: PageProps) {
                 { title: 'Settings' },
                 { title: 'Agent Registrations' },
             ]}
-            openMenuIds={['settings']}
-            activeMenuIds={['settings.agent-registrations']}
+            openMenuIds={[]}
+            activeMenuIds={['agent-registrations']}
         >
             <DataTable table={table} renderEmptyState={<EmptyRegistrations />}>
                 <DataTableToolbar table={table} />
