@@ -20,7 +20,10 @@ use Maatwebsite\Excel\Concerns\WithStyles;
 use Maatwebsite\Excel\Events\AfterSheet;
 use Maatwebsite\Excel\Facades\Excel;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Style\Border;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Worksheet\Drawing;
+use PhpOffice\PhpSpreadsheet\Worksheet\PageSetup;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
 class RoomListingController extends Controller
@@ -163,27 +166,62 @@ class RoomListingController extends Controller
 
                 public function styles(Worksheet $sheet): array
                 {
-                    $sheet->getStyle($sheet->calculateWorksheetDimension())
+                    $dimension = $sheet->calculateWorksheetDimension();
+
+                    $sheet->getStyle($dimension)
                         ->getAlignment()
                         ->setWrapText(true);
 
-                    $sheet->getStyle($sheet->calculateWorksheetDimension())
+                    $sheet->getStyle($dimension)
                         ->getAlignment()
                         ->setVertical(Alignment::VERTICAL_CENTER);
 
-                    $sheet->getStyle('A1:O4')->getAlignment()->setHorizontal(
-                        Alignment::HORIZONTAL_LEFT,
-                    );
+                    $sheet->getStyle('A1:O4')->getAlignment()
+                        ->setHorizontal(Alignment::HORIZONTAL_LEFT)
+                        ->setVertical(Alignment::VERTICAL_CENTER);
 
-                    $sheet->getStyle('A6:O6')->getAlignment()->setHorizontal(
-                        Alignment::HORIZONTAL_CENTER,
-                    );
+                    $sheet->getStyle('A6:O6')->getAlignment()
+                        ->setHorizontal(Alignment::HORIZONTAL_CENTER)
+                        ->setVertical(Alignment::VERTICAL_CENTER);
+
+                    $sheet->getStyle('A6:O6')->getFill()
+                        ->setFillType(Fill::FILL_SOLID)
+                        ->getStartColor()
+                        ->setRGB('EAF2FF');
+
+                    $sheet->getStyle('A6:O6')->getBorders()->getAllBorders()
+                        ->setBorderStyle(Border::BORDER_THIN)
+                        ->getColor()
+                        ->setRGB('B8C7D9');
+
+                    $sheet->getStyle('A1:O3')->getFill()
+                        ->setFillType(Fill::FILL_SOLID)
+                        ->getStartColor()
+                        ->setRGB('FFFFFF');
+
+                    $highestRow = max(7, $sheet->getHighestRow());
+
+                    $sheet->getStyle('A7:O'.$highestRow)->getBorders()->getAllBorders()
+                        ->setBorderStyle(Border::BORDER_THIN)
+                        ->getColor()
+                        ->setRGB('D8E1EC');
 
                     $sheet->getDefaultRowDimension()->setRowHeight(-1);
-                    $sheet->getRowDimension(1)->setRowHeight(28);
-                    $sheet->getRowDimension(2)->setRowHeight(26);
+                    $sheet->getRowDimension(1)->setRowHeight(34);
+                    $sheet->getRowDimension(2)->setRowHeight(30);
                     $sheet->getRowDimension(3)->setRowHeight(20);
                     $sheet->getRowDimension(4)->setRowHeight(12);
+                    $sheet->getRowDimension(6)->setRowHeight(24);
+                    $sheet->freezePane('A7');
+                    $sheet->getPageSetup()
+                        ->setOrientation(PageSetup::ORIENTATION_LANDSCAPE)
+                        ->setFitToWidth(1)
+                        ->setFitToHeight(0);
+                    $sheet->getPageMargins()
+                        ->setTop(0.35)
+                        ->setRight(0.25)
+                        ->setLeft(0.25)
+                        ->setBottom(0.35);
 
                     return [];
                 }
@@ -194,6 +232,35 @@ class RoomListingController extends Controller
                         AfterSheet::class => function (AfterSheet $event): void {
                             $worksheet = $event->sheet->getDelegate();
                             $highestRow = $worksheet->getHighestRow();
+
+                            $worksheet->getStyle('C1:I2')->getFont()
+                                ->setBold(true)
+                                ->setSize(18)
+                                ->getColor()
+                                ->setRGB('0F172A');
+
+                            $worksheet->getStyle('J1:K2')->getFont()
+                                ->setBold(true)
+                                ->setSize(8)
+                                ->getColor()
+                                ->setRGB('64748B');
+
+                            $worksheet->getStyle('L1:O2')->getFont()
+                                ->setBold(true)
+                                ->setSize(10)
+                                ->getColor()
+                                ->setRGB('0F172A');
+
+                            $worksheet->getStyle('C3:I3')->getFont()
+                                ->setBold(true)
+                                ->setSize(10)
+                                ->getColor()
+                                ->setRGB('334155');
+
+                            $worksheet->getStyle('A1:O4')->getBorders()->getBottom()
+                                ->setBorderStyle(Border::BORDER_MEDIUM)
+                                ->getColor()
+                                ->setRGB('0F172A');
 
                             for ($row = 6; $row <= $highestRow; $row++) {
                                 $worksheet->getRowDimension($row)->setRowHeight(-1);

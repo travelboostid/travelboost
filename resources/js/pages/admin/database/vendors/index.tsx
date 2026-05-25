@@ -15,11 +15,9 @@ import {
 import { useDataTable } from '@/hooks/use-data-table';
 import type { Column, ColumnDef } from '@tanstack/react-table';
 import dayjs from 'dayjs';
-import relativeTime from 'dayjs/plugin/relativeTime';
 import { MoreHorizontal, Text } from 'lucide-react';
 import { useMemo } from 'react';
 import { EmptyVendors } from './components/empty-vendors';
-dayjs.extend(relativeTime);
 
 type PageProps = {
     data: {
@@ -122,7 +120,7 @@ export default function Page({ data }: PageProps) {
 
                     return (
                         <div className="flex items-center gap-1">
-                            {dayjs(createdAt).fromNow()}
+                            {dayjs(createdAt).format('DD MMM YYYY')}
                         </div>
                     );
                 },
@@ -155,6 +153,7 @@ export default function Page({ data }: PageProps) {
     );
 
     const { table } = useDataTable({
+        enableClientFiltering: true,
         queryKeys: {
             perPage: 'per_page',
             page: 'page',
@@ -177,7 +176,7 @@ export default function Page({ data }: PageProps) {
             breadcrumb={[{ title: 'Database' }, { title: 'Vendor' }]}
         >
             <DataTable table={table} renderEmptyState={<EmptyVendors />}>
-                <DataTableToolbar table={table} />
+                <DataTableToolbar table={table} searchMode="global" />
             </DataTable>
         </AdminDashboardLayout>
     );

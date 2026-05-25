@@ -18,8 +18,9 @@ const normalizeCurrency = (value: string) =>
 const getCurrencyTextClass = (value: string, base = 'text-xl') => {
     const digits = normalizeCurrency(value).replace(/\D/g, '').length;
 
-    if (digits >= 13) return 'text-base';
-    if (digits >= 10) return 'text-lg';
+    if (digits >= 16) return 'text-xs sm:text-sm';
+    if (digits >= 13) return 'text-sm sm:text-base';
+    if (digits >= 10) return 'text-base sm:text-lg';
 
     return base;
 };
@@ -38,10 +39,10 @@ function CurrencyAmount({
     const normalizedValue = normalizeCurrency(value);
 
     return (
-        <div className="flex min-w-0 items-baseline gap-1.5">
+        <div className="flex min-w-0 items-baseline gap-1.5 overflow-hidden">
             <span className={`shrink-0 ${prefixClassName}`}>Rp</span>
             <span
-                className={`min-w-0 whitespace-nowrap leading-tight tabular-nums ${valueClassName} ${getCurrencyTextClass(value, baseSize)}`}
+                className={`min-w-0 break-all leading-tight tabular-nums ${valueClassName} ${getCurrencyTextClass(value, baseSize)}`}
             >
                 {normalizedValue}
             </span>
@@ -133,9 +134,9 @@ export default function Home() {
                                     <Sparkles size={104} />
                                 </div>
                                 <CardContent className="relative p-6 py-2">
-                                    <div className="flex min-w-0 items-start gap-5">
-                                        <div className="shrink-0 rounded-2xl bg-primary/10 p-4 text-primary dark:bg-primary/20">
-                                            <Sparkles size={20} />
+                                    <div className="flex min-w-0 items-start gap-4">
+                                        <div className="shrink-0 rounded-2xl bg-primary/10 p-3 text-primary dark:bg-primary/20">
+                                            <Sparkles size={16} />
                                         </div>
                                         <div className="min-w-0 flex-1">
                                             <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">

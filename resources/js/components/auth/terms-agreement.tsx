@@ -7,6 +7,12 @@ import {
     DialogTrigger,
 } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
+import {
+    BookOpenCheckIcon,
+    CheckCircle2Icon,
+    LanguagesIcon,
+    ShieldCheckIcon,
+} from 'lucide-react';
 import { useState } from 'react';
 
 type TermsLanguage = 'en' | 'id';
@@ -520,8 +526,10 @@ export function TermsAgreement({
         <div className="space-y-2">
             <div
                 className={cn(
-                    'flex items-start gap-3 rounded-xl border bg-card p-4 text-sm shadow-sm',
-                    error ? 'border-destructive/60' : 'border-border',
+                    'flex items-start gap-3 rounded-2xl border bg-white p-4 text-sm shadow-sm transition dark:bg-slate-950',
+                    error
+                        ? 'border-destructive/60 shadow-destructive/10'
+                        : 'border-slate-200 hover:border-primary/40 dark:border-slate-800',
                 )}
             >
                 <Checkbox
@@ -529,7 +537,7 @@ export function TermsAgreement({
                     checked={checked}
                     onCheckedChange={(value) => onCheckedChange(value === true)}
                     tabIndex={tabIndex}
-                    className="mt-0.5"
+                    className="mt-0.5 rounded-md"
                 />
                 <div className="text-sm leading-relaxed text-muted-foreground">
                     <label htmlFor={`${variant}-terms`}>
@@ -545,85 +553,104 @@ export function TermsAgreement({
                             </button>
                         </DialogTrigger>
                         <DialogContent
-                            className="max-h-[calc(100dvh-1.5rem)] w-[calc(100%-1.5rem)] max-w-[56rem] overflow-hidden rounded-2xl p-0 sm:max-h-[calc(100dvh-3rem)] sm:w-[calc(100%-3rem)]"
+                            className="max-h-[calc(100dvh-1.5rem)] w-[calc(100%-1.5rem)] max-w-[39rem] overflow-hidden rounded-[1.5rem] border border-slate-200 bg-white p-0 shadow-2xl shadow-slate-950/18 dark:border-slate-800 dark:bg-slate-950 sm:max-h-[calc(100dvh-3rem)] sm:w-[calc(100%-3rem)] lg:max-w-[42rem]"
                             aria-describedby={undefined}
                         >
-                            <DialogHeader className="border-b bg-muted/20 px-5 py-5 text-left sm:px-7">
-                                <div className="flex flex-col gap-4 pr-8 sm:flex-row sm:items-start sm:justify-between">
-                                    <div className="min-w-0 space-y-2">
-                                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
-                                            TravelBoost Agreement
-                                        </p>
-                                        <DialogTitle className="text-xl font-semibold leading-snug text-foreground sm:text-2xl">
-                                            {copy.title}
-                                        </DialogTitle>
+                            <div className="max-h-[calc(100dvh-1.5rem)] overflow-y-auto bg-slate-50/70 px-5 pt-5 pb-9 dark:bg-slate-950 sm:max-h-[calc(100dvh-3rem)] sm:px-7 sm:pb-10">
+                                <div className="space-y-4 font-sans text-sm leading-7 text-slate-800 dark:text-slate-100">
+                                    <DialogHeader className="space-y-4 pr-8 text-left">
+                                        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                                            <div className="min-w-0 space-y-1.5">
+                                                <DialogTitle className="text-lg font-semibold leading-snug text-slate-950 dark:text-white sm:text-xl">
+                                                    {copy.title}
+                                                </DialogTitle>
+                                                <p className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+                                                    <BookOpenCheckIcon className="h-[1.125rem] w-[1.125rem] shrink-0 text-primary" />
+                                                    Read carefully before
+                                                    registering
+                                                </p>
+                                            </div>
+                                            <div className="inline-flex w-fit shrink-0 items-center gap-1 rounded-full border border-slate-200 bg-white p-1 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                                                <LanguagesIcon className="ml-2 h-4 w-4 text-slate-400" />
+                                                {(
+                                                    [
+                                                        'en',
+                                                        'id',
+                                                    ] as TermsLanguage[]
+                                                ).map((option) => (
+                                                    <button
+                                                        key={option}
+                                                        type="button"
+                                                        className={cn(
+                                                            'rounded-full px-3 py-1.5 text-xs font-semibold transition',
+                                                            language === option
+                                                                ? 'bg-primary text-white shadow-sm'
+                                                                : 'text-slate-500 hover:text-slate-950 dark:text-slate-400 dark:hover:text-white',
+                                                        )}
+                                                        onClick={() =>
+                                                            setLanguage(option)
+                                                        }
+                                                    >
+                                                        {option.toUpperCase()}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
                                         {copy.platform && (
-                                            <p className="text-sm font-medium text-muted-foreground">
-                                                {copy.platform}
-                                            </p>
+                                            <div className="flex items-start gap-2 rounded-2xl bg-primary/5 px-4 py-3 text-sm text-slate-600 ring-1 ring-primary/10 dark:bg-primary/10 dark:text-slate-300 dark:ring-primary/20">
+                                                <ShieldCheckIcon className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                                                <span>{copy.platform}</span>
+                                            </div>
                                         )}
-                                    </div>
-                                    <div className="inline-flex w-fit rounded-full border bg-background p-1 shadow-sm">
-                                        {(['en', 'id'] as TermsLanguage[]).map(
-                                            (option) => (
-                                                <button
-                                                    key={option}
-                                                    type="button"
-                                                    className={cn(
-                                                        'rounded-full px-3 py-1.5 text-xs font-semibold transition',
-                                                        language === option
-                                                            ? 'bg-primary text-primary-foreground shadow-sm'
-                                                            : 'text-muted-foreground hover:text-foreground',
-                                                    )}
-                                                    onClick={() =>
-                                                        setLanguage(option)
-                                                    }
-                                                >
-                                                    {option.toUpperCase()}
-                                                </button>
-                                            ),
-                                        )}
-                                    </div>
-                                </div>
-                            </DialogHeader>
-                            <div className="max-h-[calc(100dvh-13rem)] overflow-y-auto px-5 py-5 sm:max-h-[calc(100dvh-15rem)] sm:px-7">
-                                <div className="space-y-5 font-sans text-sm leading-7 text-foreground">
-                                    <div className="rounded-xl border bg-background p-4 text-muted-foreground shadow-sm">
+                                    </DialogHeader>
+                                    <div className="rounded-2xl border border-slate-200 bg-white p-4 text-slate-600 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">
                                         {copy.intro}
                                     </div>
-                                    <div className="grid gap-4">
-                                        {copy.sections.map((section) => (
+                                    <div className="grid gap-3">
+                                        {copy.sections.map((section, index) => (
                                             <section
                                                 key={section.title}
-                                                className="rounded-xl border bg-background p-4 shadow-sm"
+                                                className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900"
                                             >
-                                                <h3 className="text-base font-semibold leading-6 text-foreground">
-                                                    {section.title}
-                                                </h3>
-                                                {section.lead && (
-                                                    <p className="mt-3 text-muted-foreground">
-                                                        {section.lead}
-                                                    </p>
-                                                )}
+                                                <div className="flex items-start gap-3 border-b border-slate-100 bg-white px-4 py-3.5 dark:border-slate-800 dark:bg-slate-900">
+                                                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-sm font-semibold text-primary">
+                                                        {index + 1}
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <h3 className="text-sm font-semibold leading-6 text-slate-950 dark:text-white sm:text-base">
+                                                            {section.title}
+                                                        </h3>
+                                                        {section.lead && (
+                                                            <p className="mt-2 text-slate-600 dark:text-slate-300">
+                                                                {section.lead}
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                </div>
                                                 {section.items && (
-                                                    <ul className="mt-3 space-y-3">
+                                                    <ul className="space-y-0">
                                                         {section.items.map(
-                                                            (item, index) => (
+                                                            (
+                                                                item,
+                                                                itemIndex,
+                                                            ) => (
                                                                 <li
-                                                                    key={`${section.title}-${index}`}
-                                                                    className="flex gap-3"
+                                                                    key={`${section.title}-${itemIndex}`}
+                                                                    className="flex gap-3 border-b border-slate-100 px-4 py-3 last:border-b-0 dark:border-slate-800"
                                                                 >
-                                                                    <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-primary" />
-                                                                    <span className="min-w-0 text-muted-foreground">
+                                                                    <CheckCircle2Icon className="mt-1 h-4 w-4 shrink-0 text-emerald-500" />
+                                                                    <span className="min-w-0 text-slate-600 dark:text-slate-300">
                                                                         {item.label && (
-                                                                            <span className="font-semibold text-foreground">
+                                                                            <span className="font-semibold text-slate-950 dark:text-white">
                                                                                 {
                                                                                     item.label
                                                                                 }
 
-                                                                                :{' '}
+                                                                                :
                                                                             </span>
                                                                         )}
+                                                                        {item.label &&
+                                                                            ' '}
                                                                         {
                                                                             item.text
                                                                         }

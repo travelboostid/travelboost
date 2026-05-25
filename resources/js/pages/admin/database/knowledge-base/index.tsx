@@ -7,11 +7,9 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useDataTable } from '@/hooks/use-data-table';
 import type { Column, ColumnDef } from '@tanstack/react-table';
 import dayjs from 'dayjs';
-import relativeTime from 'dayjs/plugin/relativeTime';
 import { CalendarIcon } from 'lucide-react';
 import { useMemo } from 'react';
 import { EmptyKnowledgeBases } from './components/empty-knowledge-bases';
-dayjs.extend(relativeTime);
 
 const STATUS_OPTIONS = [
     { label: 'Active', value: 'active' },
@@ -85,7 +83,7 @@ export default function KnowledgeBasePage({ data }: KnowledgeBasePageProps) {
 
                     return (
                         <div className="flex items-center gap-1">
-                            {dayjs(createdAt).fromNow()}
+                            {dayjs(createdAt).format('DD MMM YYYY')}
                         </div>
                     );
                 },

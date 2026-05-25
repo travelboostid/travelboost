@@ -248,6 +248,7 @@ function RowActions({
         booking.status === 'waiting payment approval' &&
         Boolean(booking.manual_payment) &&
         Boolean(booking.can_review_manual_payment);
+    const canViewInvoice = booking.status === 'full payment';
 
     const submitManualPaymentDecision = (decision: 'accept' | 'decline') => {
         if (!booking.manual_payment) return;
@@ -300,6 +301,18 @@ function RowActions({
                             View Detail
                         </Link>
                     </DropdownMenuItem>
+                    {canViewInvoice && (
+                        <DropdownMenuItem asChild>
+                            <a
+                                href={`/companies/${companyUsername}/dashboard/bookings/${booking.id}/invoice`}
+                                target="_blank"
+                                rel="noreferrer"
+                            >
+                                <FileTextIcon className="mr-2 h-4 w-4" />
+                                View Invoice
+                            </a>
+                        </DropdownMenuItem>
+                    )}
                     <DropdownMenuSeparator />
                     <DropdownMenuItem asChild>
                         <Link

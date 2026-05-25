@@ -12,8 +12,8 @@ export function NavMain({
     const menus = useCompanyDashboardNavMainMenu();
 
     return (
-        <SidebarGroup>
-            <SidebarGroupLabel>
+        <SidebarGroup className="gap-1.5 px-2">
+            <SidebarGroupLabel className="px-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
                 {company.type === 'vendor' ? 'Vendor Menu' : 'Agent Menu'}
             </SidebarGroupLabel>
             <SidebarMenuRenderer

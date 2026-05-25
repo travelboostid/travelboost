@@ -22,11 +22,10 @@ export default function StartLiveChatButton({
             return;
         }
 
-        // If actor is defined, start a private chat with the actor, passing the attachment if available
         try {
             setLoading(true);
             await startPrivateChat(recipient.actor, recipient.attachment);
-        } catch (e) {
+        } catch {
             toast.error('Failed to start chat. Please try again.');
         } finally {
             setLoading(false);
@@ -39,14 +38,14 @@ export default function StartLiveChatButton({
                 <Button
                     disabled={loading}
                     onClick={handleClick}
-                    className="h-14 w-14 rounded-full shadow-[0_4px_20px_rgba(0,0,0,0.15)] hover:scale-110 transition-transform bg-primary mr-1"
+                    className="h-[3.25rem] w-[3.25rem] rounded-2xl border border-white/70 bg-white text-slate-900 shadow-sm shadow-slate-950/10 transition-all hover:-translate-y-0.5 hover:bg-slate-50 hover:shadow-lg dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:hover:bg-slate-800"
                 >
-                    <MessageSquareIcon size={24} />
+                    <MessageSquareIcon className="h-5 w-5" />
                 </Button>
             </TooltipTrigger>
 
             <TooltipContent side="left">
-                <p>Live Chat</p>
+                <p>Ask AI</p>
             </TooltipContent>
         </Tooltip>
     );

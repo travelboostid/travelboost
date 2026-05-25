@@ -11,8 +11,10 @@ use App\Models\Company;
 use App\Models\CompanyTeam;
 use App\Models\Domain;
 use App\Models\Media;
+use App\Models\PriceCategory;
 use App\Models\Tour;
 use App\Models\TourAvailability;
+use App\Models\TourPrice;
 use App\Models\TourSchedule;
 use App\Models\User;
 use Database\Seeders\Common\RolePermissionSeeder;
@@ -504,6 +506,90 @@ test('my bookings exposes paid balance deadlines document completeness and broch
         ->where('bookings.data.0.document_deadline.days_remaining', 15)
         ->where('bookings.data.0.tour.document.id', $document->id)
         ->where('bookings.data.0.document_url', "/brochure/{$vendor->username}/{$tour->id}"));
+});
+
+test('authenticated users can preview paid booking invoice as pdf', function () {
+    $user = User::factory()->create(['status' => UserStatus::ACTIVE]);
+    $agent = Company::factory()->create([
+        'type' => 'agent',
+        'name' => 'John Company',
+    ]);
+    $vendor = Company::factory()->create(['type' => 'vendor']);
+    $tour = Tour::factory()->create([
+        'company_id' => $vendor->id,
+        'code' => 'CHN-006',
+        'name' => 'Zhangjiajie Avatar Mountain Trek',
+        'destination' => 'Zhangjiajie',
+    ]);
+    $schedule = TourSchedule::create([
+        'tour_id' => $tour->id,
+        'tour_code' => $tour->code,
+        'company_id' => $vendor->id,
+        'departure_date' => now()->addDays(40)->toDateString(),
+        'return_date' => now()->addDays(45)->toDateString(),
+        'is_active' => true,
+    ]);
+    $adultSingle = PriceCategory::create([
+        'company_id' => $vendor->id,
+        'name' => 'Adult Single',
+        'room_type' => 'Single',
+    ]);
+    $adultDouble = PriceCategory::create([
+        'company_id' => $vendor->id,
+        'name' => 'Adult Double',
+        'room_type' => 'Double',
+    ]);
+
+    TourPrice::create([
+        'company_id' => $vendor->id,
+        'tour_code' => $tour->code,
+        'schedule_id' => $schedule->id,
+        'price_category_id' => $adultSingle->id,
+        'currency' => 'IDR',
+        'price' => 8_500_000,
+    ]);
+    TourPrice::create([
+        'company_id' => $vendor->id,
+        'tour_code' => $tour->code,
+        'schedule_id' => $schedule->id,
+        'price_category_id' => $adultDouble->id,
+        'currency' => 'IDR',
+        'price' => 8_800_000,
+    ]);
+
+    $booking = Booking::factory()->create([
+        'user_id' => $user->id,
+        'agent_id' => $agent->id,
+        'vendor_id' => $vendor->id,
+        'tour_id' => $tour->id,
+        'status' => BookingStatus::FULL_PAYMENT,
+        'booking_number' => '0002-202605-84PTL4',
+        'departure_date' => $schedule->departure_date,
+        'total_price' => 8_500_000,
+        'tax_amount' => 25_000,
+        'platform_fee' => 25_000,
+        'grand_total' => 8_550_000,
+    ]);
+    $booking->passengers()->create([
+        'first_name' => 'Test',
+        'last_name' => 'Customer',
+        'price_category' => 'Adult Single',
+        'price_amount' => 8_500_000,
+    ]);
+    $booking->payments()->create([
+        'owner_type' => User::class,
+        'owner_id' => $user->id,
+        'provider' => 'manual',
+        'payment_method' => 'bank_transfer',
+        'amount' => 8_550_000,
+        'status' => PaymentStatus::PAID,
+        'paid_at' => now(),
+    ]);
+
+    $response = $this->actingAs($user)->get("/mybookings/{$booking->id}/invoice");
+
+    $response->assertOk();
+    $response->assertHeader('content-type', 'application/pdf');
 });
 
 test('my bookings lazily expires stale booking reserved rows before rendering', function () {

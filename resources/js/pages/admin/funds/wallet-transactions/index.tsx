@@ -9,10 +9,8 @@ import { formatIDR } from '@/lib/utils';
 import EmptyWalletTransactions from '@/pages/companies/dashboard/wallet-transactions/empty-wallet-transactions';
 import type { ColumnDef } from '@tanstack/react-table';
 import dayjs from 'dayjs';
-import relativeTime from 'dayjs/plugin/relativeTime';
 import { CalendarIcon, CircleDashedIcon } from 'lucide-react';
 import { useMemo } from 'react';
-dayjs.extend(relativeTime);
 type WalletTransactionsPageProps = {
     data: {
         data: any[];
@@ -131,7 +129,7 @@ export default function WalletTransactionsPage({
 
                     return (
                         <div className="flex items-center gap-1">
-                            {dayjs(createdAt).fromNow()}
+                            {dayjs(createdAt).format('DD MMM YYYY')}
                         </div>
                     );
                 },

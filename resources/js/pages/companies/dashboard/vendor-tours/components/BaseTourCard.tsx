@@ -49,7 +49,7 @@ export default function BaseTourCard({
 
     return (
         <>
-            <Card className="group relative flex flex-col h-full border-none shadow-sm hover:shadow-lg transition-all rounded-2xl overflow-hidden bg-white dark:bg-slate-950 ring-1 ring-slate-100 dark:ring-slate-800">
+            <Card className="group relative flex h-full min-w-0 flex-col gap-0 overflow-hidden rounded-2xl border-none bg-white py-0 shadow-sm ring-1 ring-slate-100 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg dark:bg-slate-950 dark:ring-slate-800">
                 {isVendorInactive && (
                     <div className="absolute top-0 right-0 w-24 h-24 overflow-hidden z-30 pointer-events-none">
                         <div className="absolute top-[16px] right-[-28px] w-[120px] bg-yellow-400 dark:bg-yellow-500 text-black text-[9px] font-black py-0 text-center rotate-45 shadow-md border-b border-yellow-500 dark:border-yellow-600 tracking-tighter">
@@ -57,25 +57,21 @@ export default function BaseTourCard({
                         </div>
                     </div>
                 )}
-                <div className="relative w-full aspect-[3/2] overflow-hidden bg-slate-100 dark:bg-slate-900">
+                <div className="relative aspect-[3/2] w-full shrink-0 overflow-hidden bg-slate-100 dark:bg-slate-900">
                     <img
                         src={src}
                         srcSet={srcSet}
                         alt={tour.name}
-                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        className="h-full w-full cursor-pointer object-cover transition-transform duration-500 group-hover:scale-105"
                         onClick={() => setShowInfo(true)}
                     />
+                    <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/45 via-black/10 to-transparent" />
                     {imageAction}
-                    {/* <div className="absolute top-3 left-3 pointer-events-none">
-            <Badge className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm text-slate-800 dark:text-slate-100 border-none text-[9px] px-1.5 py-0.5 font-bold shadow-sm">
-              {tour.category?.name || 'Tour'}
-            </Badge>
-          </div> */}
                 </div>
 
-                <CardHeader className="px-3.5 pt-0 pb-0 space-y-0.5">
+                <CardHeader className="min-w-0 space-y-2 px-4 pt-4 pb-2 sm:px-5">
                     {isVendorNameVisible && (
-                        <div className="flex items-center gap-1.5 text-slate-400 dark:text-slate-500 text-[10px] font-bold uppercase tracking-wider">
+                        <div className="mb-0 flex min-w-0 items-center gap-1.5 text-[10px] font-bold tracking-wider text-slate-400 uppercase dark:text-slate-500">
                             <Building2
                                 size={10}
                                 className="text-primary shrink-0"
@@ -86,41 +82,43 @@ export default function BaseTourCard({
                         </div>
                     )}
                     <CardTitle
-                        className="text-sm mb-0 pb-0 font-black text-slate-800 dark:text-slate-100 line-clamp-2 leading-tight cursor-pointer hover:text-primary transition-colors"
+                        className="mt-0 mb-0 line-clamp-2 min-h-[2.45rem] cursor-pointer pb-0 text-sm leading-snug font-extrabold break-words text-slate-800 transition-colors hover:text-primary dark:text-slate-100"
                         onClick={() => setShowInfo(true)}
                     >
                         {tour.name}
                     </CardTitle>
                 </CardHeader>
 
-                <CardContent className="px-3.5 pb-0 py-0 pt-0 mt-0 flex-1 flex flex-col justify-end">
-                    <div className="flex flex-col mt-0 pt-0">
+                <CardContent className="mt-0 flex min-w-0 flex-col px-4 pt-0 pb-0 sm:px-5">
+                    <div className="mt-0 flex min-w-0 flex-col gap-1 pt-0">
                         {discountPrice ? (
                             <>
-                                <span className="text-[10px] text-slate-500 dark:text-slate-400 line-through decoration-red-400/60 font-medium leading-none mb-0.5">
+                                <span className="mt-1 mb-0.5 text-[10px] leading-none font-medium text-slate-500 line-through decoration-red-400/60 dark:text-slate-400">
                                     {mainPrice}
                                 </span>
-                                <div className="flex items-center gap-0.5">
-                                    <span className="text-base font-black text-primary leading-none tracking-tight">
+                                <div className="flex min-w-0 flex-wrap items-center gap-x-1 gap-y-1">
+                                    <span className="min-w-0 max-w-full text-[clamp(0.875rem,1.35vw,1rem)] leading-tight font-black break-words text-primary">
                                         {discountPrice}
                                     </span>
-                                    <Badge className="bg-red-500 text-white border-none text-[8px] h-3.5 px-1 font-black leading-none">
+                                    <Badge className="h-3.5 shrink-0 border-none bg-red-500 px-1 text-[8px] leading-none font-black text-white">
                                         PROMO
                                     </Badge>
                                 </div>
                             </>
                         ) : (
-                            <span className="text-base font-black text-primary leading-none tracking-tight mt-0 pt-0">
+                            <span className="mt-0 min-w-0 pt-0 text-[clamp(0.875rem,1.35vw,1rem)] leading-tight font-black break-words text-primary">
                                 {mainPrice}
                             </span>
                         )}
                     </div>
                 </CardContent>
 
-                {statusSection}
-                <CardFooter className="px-3.5 pb-3 pt-1 flex items-center gap-1.5">
-                    {footerSection}
-                </CardFooter>
+                <div className="mt-auto mb-2 pb-1">
+                    <CardFooter className="flex flex-wrap items-center gap-2 px-4 pt-4 pb-0 sm:px-5">
+                        {footerSection}
+                    </CardFooter>
+                    {statusSection}
+                </div>
             </Card>
 
             <Dialog open={showInfo} onOpenChange={setShowInfo}>

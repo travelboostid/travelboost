@@ -12,12 +12,10 @@ import type { Option } from '@/types/data-table';
 import { Link } from '@inertiajs/react';
 import type { ColumnDef } from '@tanstack/react-table';
 import dayjs from 'dayjs';
-import relativeTime from 'dayjs/plugin/relativeTime';
 import { CalendarIcon, CircleDashedIcon, PencilIcon, Text } from 'lucide-react';
 import { useMemo } from 'react';
 import { EmptyUsers } from './components/empty-users';
 import { UsersTableActionBar } from './components/users-table-action-bar';
-dayjs.extend(relativeTime);
 
 const STATUS_OPTIONS = [
     { label: 'Active', value: 'active' },
@@ -193,7 +191,7 @@ export default function UsersPage({ data, userRoles }: UsersPageProps) {
 
                     return (
                         <div className="flex items-center gap-1">
-                            {dayjs(createdAt).fromNow()}
+                            {dayjs(createdAt).format('DD MMM YYYY')}
                         </div>
                     );
                 },

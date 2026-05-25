@@ -14,23 +14,35 @@ import { cn } from '@/lib/utils';
 
 interface DataTableToolbarProps<TData> extends React.ComponentProps<'div'> {
     table: Table<TData>;
+    searchMode?: 'columns' | 'global' | 'none';
+    searchPlaceholder?: string;
 }
 
 export function DataTableToolbar<TData>({
     table,
     children,
     className,
+    searchMode = 'columns',
+    searchPlaceholder = 'Search all columns...',
     ...props
 }: DataTableToolbarProps<TData>) {
-    const isFiltered = table.getState().columnFilters.length > 0;
+    const globalFilter = (table.getState().globalFilter as string) ?? '';
+    const isFiltered =
+        table.getState().columnFilters.length > 0 || globalFilter.length > 0;
 
     const columns = React.useMemo(
-        () => table.getAllColumns().filter((column) => column.getCanFilter()),
-        [table],
+        () =>
+            searchMode === 'columns'
+                ? table
+                      .getAllColumns()
+                      .filter((column) => column.getCanFilter())
+                : [],
+        [table, searchMode],
     );
 
     const onReset = React.useCallback(() => {
         table.resetColumnFilters();
+        table.setGlobalFilter('');
     }, [table]);
 
     return (
@@ -44,9 +56,23 @@ export function DataTableToolbar<TData>({
             {...props}
         >
             <div className="flex flex-1 flex-wrap items-center gap-2">
-                {columns.map((column) => (
-                    <DataTableToolbarFilter key={column.id} column={column} />
-                ))}
+                {searchMode === 'global' ? (
+                    <Input
+                        placeholder={searchPlaceholder}
+                        value={globalFilter}
+                        onChange={(event) =>
+                            table.setGlobalFilter(event.target.value)
+                        }
+                        className="h-8 w-full min-w-56 sm:w-72 lg:w-96"
+                    />
+                ) : (
+                    columns.map((column) => (
+                        <DataTableToolbarFilter
+                            key={column.id}
+                            column={column}
+                        />
+                    ))
+                )}
                 {isFiltered && (
                     <Button
                         aria-label="Reset filters"
