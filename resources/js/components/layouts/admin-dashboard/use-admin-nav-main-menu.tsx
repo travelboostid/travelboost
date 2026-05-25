@@ -153,11 +153,11 @@ export default function useAdminNavMainMenu() {
                             title: 'User Management',
                             urlOrAction: '/admin/database/users',
                         },
-                        {
+                        /*{
                             id: 'settings.app-config-admin',
                             title: 'Parameters',
                             urlOrAction: '/admin/settings/app-config-admin',
-                        },
+                        },*/
                         {
                             id: 'settings.vouchers',
                             title: 'Vouchers',
