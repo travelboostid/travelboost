@@ -92,7 +92,7 @@ export function NavUser({
                             <KeyRoundIcon />
                             Change Password
                         </Link>
-                    </DropdownMenuItem>
+                    </DropdownMenuItem> */}
                     <DropdownMenuItem asChild>
                         <Link
                             className="w-full cursor-pointer"
