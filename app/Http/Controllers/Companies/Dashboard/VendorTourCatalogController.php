@@ -94,6 +94,9 @@ class VendorTourCatalogController extends Controller
             ])
             ->map(function ($tour) use ($copiedTourIds, $company) {
                 $tour->has_copied = $copiedTourIds->contains($tour->id);
+                $tour->schedules?->each(function ($schedule): void {
+                    $schedule->setAttribute('price', $this->lowestDiscountedSchedulePrice($schedule->prices));
+                });
 
                 $tour->agent_status = \Illuminate\Support\Facades\DB::table('agent_tours')
                     ->where('tour_id', $tour->id)
@@ -152,5 +155,27 @@ class VendorTourCatalogController extends Controller
         }
 
         return redirect($url);
+    }
+
+    private function lowestDiscountedSchedulePrice($prices): float
+    {
+        return (float) $prices
+            ->map(function ($price): float {
+                $basePrice = (float) $price->price;
+                $promotionRate = (float) ($price->promotion_rate ?? 0);
+                $promotion = (float) ($price->promotion ?? 0);
+
+                if ($promotionRate > 0) {
+                    return max(0.0, (float) round($basePrice - (($basePrice * $promotionRate) / 100)));
+                }
+
+                if ($promotion > 0) {
+                    return max(0.0, (float) round($basePrice - $promotion));
+                }
+
+                return $basePrice;
+            })
+            ->filter(fn (float $price): bool => $price > 0)
+            ->min();
     }
 }

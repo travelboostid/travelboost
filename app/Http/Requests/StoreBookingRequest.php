@@ -25,7 +25,7 @@ class StoreBookingRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'booking_number' => ['required', 'string'],
+            'booking_number' => [$this->routeIs('companies.dashboard.bookings.create.store') ? 'nullable' : 'required', 'string'],
             'tour_id' => ['required', 'exists:tours,id'],
             'departure_date' => ['required', 'date', 'after_or_equal:today'],
             'pax_adult' => ['required', 'integer', 'min:0'],

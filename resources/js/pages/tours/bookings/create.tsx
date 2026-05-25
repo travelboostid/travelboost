@@ -20,6 +20,7 @@ import Step4BookingSummary, {
     type PaymentType,
 } from '@/components/booking/Step4BookingSummary';
 import WizardStepIndicator from '@/components/booking/WizardStepIndicator';
+import CompanyDashboardLayout from '@/components/layouts/company-dashboard';
 import TenantLayout from '@/components/layouts/tenant-layout';
 import {
     AlertDialog,
@@ -36,6 +37,7 @@ import type { WizardStepId } from '@/constants/booking';
 import type {
     BookingContact,
     BookingStatusCode,
+    DashboardCustomerOption,
     GuestEntry,
     SavedPassengerOption,
     TravelDocumentEntry,
@@ -50,7 +52,14 @@ import {
     ClockIcon,
     FileTextIcon,
 } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+    useCallback,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+    type ReactNode,
+} from 'react';
 
 const DEFAULT_TNC = `1. The price shown is valid only for the selected departure date.
 2. Full payment is required to secure your booking.
@@ -282,6 +291,7 @@ export default function Page() {
         vendor,
         auth,
         tenant,
+        company,
         bookingNumber,
         availability,
         bookingSeatLimit,
@@ -303,8 +313,58 @@ export default function Page() {
         paymentUnavailableReason = null,
         bookingConflict,
         savedPassengers,
+        customerOptions = [],
+        dashboardBookingContext,
         flash,
     } = usePage<any>().props as any;
+    const isDashboardBooking = Boolean(dashboardBookingContext?.isDashboard);
+    const bookingActionBaseUrl =
+        dashboardBookingContext?.bookingActionBaseUrl ?? '/bookings';
+    const reserveUrl =
+        dashboardBookingContext?.reserveUrl ?? `/bookings/${tour.id}/reserve`;
+    const storeUrl =
+        dashboardBookingContext?.storeUrl ?? `/bookings/${tour.id}`;
+    const dashboardReturnUrl =
+        dashboardBookingContext?.returnUrl ??
+        `/companies/${company?.username}/dashboard/bookings`;
+    const bookingActionUrl = useCallback(
+        (bookingId: number | string, action: string) =>
+            `${bookingActionBaseUrl}/${bookingId}/${action}`,
+        [bookingActionBaseUrl],
+    );
+    const renderBookingLayout = useCallback(
+        (children: ReactNode, onNavigateAway?: (href: string) => void) => {
+            if (isDashboardBooking) {
+                return (
+                    <CompanyDashboardLayout
+                        openMenuIds={['tours']}
+                        activeMenuIds={[
+                            company?.type === 'agent'
+                                ? 'tours.bookings'
+                                : 'tours.orders',
+                        ]}
+                        breadcrumb={[
+                            { title: 'Tours' },
+                            {
+                                title: 'Bookings',
+                                url: dashboardReturnUrl,
+                            },
+                            { title: 'Create Booking' },
+                        ]}
+                    >
+                        {children}
+                    </CompanyDashboardLayout>
+                );
+            }
+
+            return (
+                <TenantLayout onNavigateAway={onNavigateAway}>
+                    {children}
+                </TenantLayout>
+            );
+        },
+        [company?.type, dashboardReturnUrl, isDashboardBooking],
+    );
     const user = auth?.user;
     const savedPassengerOptions = (savedPassengers ??
         []) as SavedPassengerOption[];
@@ -341,12 +401,19 @@ export default function Page() {
     const isPaidBookingMode =
         resumedStatusValue === 'down payment' ||
         resumedStatusValue === 'full payment';
+    const canUpdateTravelDocuments =
+        resumedStatusValue === 'waiting payment approval' ||
+        resumedStatusValue === 'down payment' ||
+        resumedStatusValue === 'full payment';
     const isReviewMode = urlParams.get('mode') === 'review' && isResuming;
-    const isReadOnlyBookingMode = isPaidBookingMode || isReviewMode;
     const isDocumentUpdateMode =
-        urlParams.get('step') === 'documents' && isPaidBookingMode;
+        urlParams.get('step') === 'documents' && canUpdateTravelDocuments;
+    const isDashboardPaymentStep =
+        isDashboardBooking && urlParams.get('step') === 'payment' && isResuming;
+    const isReadOnlyBookingMode =
+        isPaidBookingMode || isReviewMode || isDocumentUpdateMode;
     const isTravelDocumentsReadOnly =
-        isReviewMode || (isPaidBookingMode && !isDocumentUpdateMode);
+        isReviewMode || (canUpdateTravelDocuments && !isDocumentUpdateMode);
     const requestedReturnTab = urlParams.get('return_tab') ?? '';
     const returnTab = ['current', 'history', 'favorites'].includes(
         requestedReturnTab,
@@ -362,17 +429,19 @@ export default function Page() {
 
     // ─── Wizard state ───────────────────────────────────────────────────
     const [currentStep, setCurrentStep] = useState<WizardStepId>(
-        isReviewMode
-            ? 1
-            : isDocumentUpdateMode
-              ? 3
-              : resumedStatusValue === 'down payment'
-                ? 4
-                : 1,
+        isDashboardPaymentStep
+            ? 4
+            : isReviewMode
+              ? 4
+              : isDocumentUpdateMode
+                ? 3
+                : resumedStatusValue === 'down payment'
+                  ? 4
+                  : 1,
     );
     const [direction, setDirection] = useState(1); // 1=forward, -1=back
     const [hasAgreedToTnc, setHasAgreedToTnc] = useState(
-        isResuming || isDocumentUpdateMode,
+        isResuming || isDocumentUpdateMode || isDashboardPaymentStep,
     );
     const initialHoldSeconds =
         typeof remainingHoldSeconds === 'number'
@@ -416,13 +485,51 @@ export default function Page() {
             : 'There is already a booking for this trip that is currently waiting for payment approval. Would you like to create a new booking?';
 
     // ─── Contact ────────────────────────────────────────────────────────
+    const dashboardCustomerOptions = Array.isArray(customerOptions)
+        ? (customerOptions as DashboardCustomerOption[])
+        : [];
     const [contact, setContact] = useState<BookingContact>({
-        name: existingBooking?.contact_name || user?.name || '',
-        email: existingBooking?.contact_email || user?.email || '',
-        phone: existingBooking?.contact_phone || user?.phone || '',
+        name:
+            existingBooking?.contact_name ||
+            (isDashboardBooking ? '' : user?.name || ''),
+        email:
+            existingBooking?.contact_email ||
+            (isDashboardBooking ? '' : user?.email || ''),
+        phone:
+            existingBooking?.contact_phone ||
+            (isDashboardBooking ? '' : user?.phone || ''),
         notes: existingBooking?.contact_notes || '',
     });
+    const [customerBookingMode, setCustomerBookingMode] = useState<
+        'existing' | 'guest'
+    >('guest');
+    const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(
+        null,
+    );
     const [contactGuestId, setContactGuestId] = useState<string | null>(null);
+    const handleDashboardCustomerSelect = useCallback(
+        (customer: DashboardCustomerOption | null) => {
+            setSelectedCustomerId(customer?.id ?? null);
+
+            if (!customer) {
+                setContact({
+                    name: '',
+                    email: '',
+                    phone: '',
+                    notes: contact.notes,
+                });
+                return;
+            }
+
+            setContact({
+                name: customer.name,
+                email: customer.email,
+                phone: customer.phone ?? '',
+                notes: contact.notes,
+            });
+        },
+        [contact.notes],
+    );
 
     // ─── Guests ─────────────────────────────────────────────────────────
     const [adults, setAdults] = useState<number>(
@@ -623,8 +730,9 @@ export default function Page() {
                 0,
                 minimumVatPct ?? 11,
                 platformFeePerPax ?? 25_000,
+                tourPrices ?? [],
             ),
-        [guests, minimumVatPct, platformFeePerPax],
+        [guests, minimumVatPct, platformFeePerPax, tourPrices],
     );
     const [selectedAddOns, setSelectedAddOns] = useState<AddOnItem[]>(
         () => addOns ?? [],
@@ -651,10 +759,17 @@ export default function Page() {
         Number(existingBooking?.grand_total ?? 0) > 0
             ? Number(existingBooking.grand_total)
             : computedGrandTotal;
+    const shouldUseSnapshotTotals = isResuming && isReadOnlyBookingMode;
+    const displayGrandTotal = shouldUseSnapshotTotals
+        ? snapshotGrandTotal
+        : computedGrandTotal;
     const snapshotRemainingBalance =
         paidAmountValue > 0 || remainingBalanceValue > 0
             ? remainingBalanceValue
             : Math.max(0, snapshotGrandTotal - paidAmountValue);
+    const displayRemainingBalance = shouldUseSnapshotTotals
+        ? snapshotRemainingBalance
+        : Math.max(0, displayGrandTotal - paidAmountValue);
     const selectedSchedule = useMemo(() => {
         const schedules = Array.isArray(tour?.schedules) ? tour.schedules : [];
 
@@ -703,11 +818,7 @@ export default function Page() {
             grandTotal?: number;
             remainingBalance?: number;
         }): BookingPaymentResultData => {
-            const fallbackGrandTotal =
-                nextGrandTotal ??
-                (Number(existingBooking?.grand_total ?? 0) > 0
-                    ? Number(existingBooking.grand_total)
-                    : pricing.totalPrice + selectedAddOnsTotal);
+            const fallbackGrandTotal = nextGrandTotal ?? displayGrandTotal;
             const fallbackPaidAmount = Number(nextPaidAmount ?? 0);
 
             return {
@@ -737,12 +848,10 @@ export default function Page() {
         [
             bookingNumber,
             existingBooking?.departure_date,
-            existingBooking?.grand_total,
+            displayGrandTotal,
             paidAmountValue,
             paxSummary,
             preselectedDate,
-            pricing.totalPrice,
-            selectedAddOnsTotal,
             selectedSchedule?.returnDate,
             selectedSchedule?.return_date,
             tour?.code,
@@ -822,7 +931,7 @@ export default function Page() {
         setIsReleasingHold(true);
 
         router.post(
-            `/bookings/${existingBooking.id}/release-hold`,
+            bookingActionUrl(existingBooking.id, 'release-hold'),
             {},
             {
                 preserveScroll: true,
@@ -835,7 +944,12 @@ export default function Page() {
                 },
             },
         );
-    }, [existingBooking?.id, navigateToExitTarget, pendingExitTarget]);
+    }, [
+        bookingActionUrl,
+        existingBooking?.id,
+        navigateToExitTarget,
+        pendingExitTarget,
+    ]);
 
     // ─── Navigation ─────────────────────────────────────────────────────
     const goNext = () => {
@@ -881,7 +995,7 @@ export default function Page() {
 
         // Always send the reserve POST to update the booking status and data
         router.post(
-            `/bookings/${tour.id}/reserve`,
+            reserveUrl,
             {
                 tour_id: tour.id,
                 departure_date: preselectedDate,
@@ -1193,9 +1307,14 @@ export default function Page() {
     const showPaymentResult = useCallback(
         (nextResult: BookingPaymentResultData) => {
             stopHoldTimer();
+            if (isDashboardBooking) {
+                router.visit(dashboardReturnUrl);
+                return;
+            }
+
             setPaymentResult(nextResult);
         },
-        [stopHoldTimer],
+        [dashboardReturnUrl, isDashboardBooking, stopHoldTimer],
     );
 
     useEffect(() => {
@@ -1235,7 +1354,7 @@ export default function Page() {
 
             axios
                 .post(
-                    `/bookings/${bookingId}/online-payment/${paymentId}/confirm`,
+                    `${bookingActionUrl(bookingId, 'online-payment')}/${paymentId}/confirm`,
                     {},
                     {
                         withCredentials: true,
@@ -1267,7 +1386,7 @@ export default function Page() {
                     setIsSubmitting(false);
                 });
         },
-        [showPaymentResult],
+        [bookingActionUrl, showPaymentResult],
     );
 
     const openSnapPayment = useCallback(
@@ -1346,7 +1465,7 @@ export default function Page() {
     ) => {
         axios
             .post(
-                `/bookings/${bookingId}/online-payment`,
+                bookingActionUrl(bookingId, 'online-payment'),
                 {
                     payment_type: paymentType,
                     amount: finalAmount,
@@ -1421,7 +1540,7 @@ export default function Page() {
         formData.append('payment_type', paymentType);
         formData.append('proof', manualData.proofFile);
 
-        router.post(`/bookings/${bookingId}/manual-payment`, formData, {
+        router.post(bookingActionUrl(bookingId, 'manual-payment'), formData, {
             forceFormData: true,
             preserveScroll: true,
             onSuccess: (page) => {
@@ -1471,7 +1590,7 @@ export default function Page() {
         setIsRefreshingPaymentResult(true);
         void axios
             .get<{ bookingPaymentResult?: BookingPaymentResultData }>(
-                `/bookings/${paymentResult.bookingId}/payment-result`,
+                bookingActionUrl(paymentResult.bookingId, 'payment-result'),
             )
             .then((response) => {
                 if (response.data.bookingPaymentResult) {
@@ -1479,7 +1598,7 @@ export default function Page() {
                 }
             })
             .finally(() => setIsRefreshingPaymentResult(false));
-    }, [paymentResult]);
+    }, [bookingActionUrl, paymentResult]);
 
     const submitTravelDocumentsOnly = useCallback(() => {
         if (!existingBooking?.id) {
@@ -1550,22 +1669,32 @@ export default function Page() {
         });
 
         router.post(
-            `/bookings/${existingBooking.id}/travel-documents`,
+            bookingActionUrl(existingBooking.id, 'travel-documents'),
             formData,
             {
                 forceFormData: true,
                 preserveScroll: true,
                 onSuccess: () => {
                     router.visit(
-                        `/mybookings?tab=current&booking_number=${encodeURIComponent(
-                            bookingNumber,
-                        )}`,
+                        isDashboardBooking
+                            ? dashboardReturnUrl
+                            : `/mybookings?tab=current&booking_number=${encodeURIComponent(
+                                  bookingNumber,
+                              )}`,
                     );
                 },
                 onFinish: () => setIsSubmitting(false),
             },
         );
-    }, [bookingNumber, existingBooking?.id, guests, travelDocuments]);
+    }, [
+        bookingActionUrl,
+        bookingNumber,
+        dashboardReturnUrl,
+        existingBooking?.id,
+        guests,
+        isDashboardBooking,
+        travelDocuments,
+    ]);
 
     const handlePayNow = (
         paymentType: PaymentType,
@@ -1680,7 +1809,7 @@ export default function Page() {
             payload.rooms = serializeRoomsForBooking(rooms);
         }
 
-        router.post(`/bookings/${tour.id}`, payload as any, {
+        router.post(storeUrl, payload as any, {
             forceFormData: true,
             preserveScroll: true,
             onSuccess: () => {
@@ -1734,20 +1863,20 @@ export default function Page() {
     // ─── Helper ─────────────────────────────────────────────────────────
     // ─── Render ─────────────────────────────────────────────────────────
     if (paymentResult) {
-        return (
-            <TenantLayout>
+        return renderBookingLayout(
+            <>
                 <BookingPaymentResult
                     result={paymentResult}
                     onRefresh={refreshPaymentStatus}
                     isRefreshing={isRefreshingPaymentResult}
                 />
-            </TenantLayout>
+            </>,
         );
     }
 
     if (hasBookingConflict) {
-        return (
-            <TenantLayout>
+        return renderBookingLayout(
+            <>
                 <div className="min-h-screen bg-linear-to-b from-background via-background to-muted/30" />
                 <AlertDialog open>
                     <AlertDialogContent>
@@ -1788,17 +1917,13 @@ export default function Page() {
                         </AlertDialogFooter>
                     </AlertDialogContent>
                 </AlertDialog>
-            </TenantLayout>
+            </>,
         );
     }
 
     if (!hasAgreedToTnc) {
-        return (
-            <TenantLayout
-                onNavigateAway={(href) =>
-                    requestIntentionalExit({ href }, { releaseHold: true })
-                }
-            >
+        return renderBookingLayout(
+            <>
                 <div className="min-h-screen bg-linear-to-b from-background via-background to-muted/30">
                     <motion.div
                         key="tnc"
@@ -1831,11 +1956,13 @@ export default function Page() {
                                     variant="outline"
                                     onClick={() =>
                                         requestIntentionalExit(
-                                            resumedBookingReturnUrl
-                                                ? {
-                                                      href: resumedBookingReturnUrl,
-                                                  }
-                                                : { historyBack: true },
+                                            isDashboardBooking
+                                                ? { href: dashboardReturnUrl }
+                                                : resumedBookingReturnUrl
+                                                  ? {
+                                                        href: resumedBookingReturnUrl,
+                                                    }
+                                                  : { historyBack: true },
                                             { releaseHold: true },
                                         )
                                     }
@@ -1855,16 +1982,13 @@ export default function Page() {
                     </motion.div>
                 </div>
                 {releaseHoldDialog}
-            </TenantLayout>
+            </>,
+            (href) => requestIntentionalExit({ href }, { releaseHold: true }),
         );
     }
 
-    return (
-        <TenantLayout
-            onNavigateAway={(href) =>
-                requestIntentionalExit({ href }, { releaseHold: true })
-            }
-        >
+    return renderBookingLayout(
+        <>
             <div className="min-h-screen bg-linear-to-b from-background via-background to-muted/30">
                 <div className="mx-auto w-full max-w-5xl px-4 pt-4">
                     <div className="flex flex-col md:flex-row md:items-start md:gap-4 lg:gap-6">
@@ -1896,7 +2020,13 @@ export default function Page() {
                             </div>
 
                             {/* Step Indicator */}
-                            <div className="sticky top-[4.25rem] z-30 -mx-4 mb-4 border-b bg-background/95 px-4 py-3 shadow-sm backdrop-blur sm:top-[4.5rem] sm:-mx-0 sm:rounded-xl sm:border">
+                            <div
+                                className={
+                                    isDashboardBooking
+                                        ? 'sticky top-0 z-20 mb-5 rounded-xl border bg-background/95 px-3 py-2 shadow-sm backdrop-blur'
+                                        : 'sticky top-[4.25rem] z-20 -mx-4 mb-5 border-b bg-background/95 px-4 py-3 shadow-sm backdrop-blur sm:top-[4.5rem] sm:-mx-0 sm:rounded-xl sm:border'
+                                }
+                            >
                                 <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                                     <div className="min-w-0 flex-1">
                                         <WizardStepIndicator
@@ -1926,8 +2056,14 @@ export default function Page() {
                                     contactPhone={contact.phone}
                                     pricing={pricing}
                                     totalPaid={paidAmountValue}
-                                    remainingBalance={snapshotRemainingBalance}
-                                    displayTotalPrice={snapshotGrandTotal}
+                                    remainingBalance={displayRemainingBalance}
+                                    displayTotalPrice={displayGrandTotal}
+                                    agentCommissionAmount={
+                                        pricing.agentCommission
+                                    }
+                                    showAgentCommission={
+                                        isDashboardBooking && Boolean(tenant)
+                                    }
                                 />
                             </div>
 
@@ -1983,6 +2119,29 @@ export default function Page() {
                                                 onSavedPassengerSelect={
                                                     handleSavedPassengerSelect
                                                 }
+                                                customerOptions={
+                                                    isDashboardBooking
+                                                        ? dashboardCustomerOptions
+                                                        : undefined
+                                                }
+                                                customerBookingMode={
+                                                    isDashboardBooking
+                                                        ? customerBookingMode
+                                                        : undefined
+                                                }
+                                                onCustomerBookingModeChange={
+                                                    isDashboardBooking
+                                                        ? setCustomerBookingMode
+                                                        : undefined
+                                                }
+                                                selectedCustomerId={
+                                                    selectedCustomerId
+                                                }
+                                                onCustomerSelect={
+                                                    isDashboardBooking
+                                                        ? handleDashboardCustomerSelect
+                                                        : undefined
+                                                }
                                                 readOnly={isReadOnlyBookingMode}
                                             />
                                         )}
@@ -2029,13 +2188,21 @@ export default function Page() {
                                                 minimumVatPct={minimumVatPct}
                                                 paidAmount={paidAmountValue}
                                                 remainingBalance={
-                                                    remainingBalanceValue
+                                                    displayRemainingBalance
+                                                }
+                                                grandTotalOverride={
+                                                    shouldUseSnapshotTotals
+                                                        ? snapshotGrandTotal
+                                                        : null
                                                 }
                                                 forceBalancePayment={
                                                     isBalancePayment
                                                 }
                                                 vendorBankInfo={vendorBankInfo}
                                                 readOnly={isReviewMode}
+                                                addOnsReadOnly={
+                                                    shouldUseSnapshotTotals
+                                                }
                                                 downPaymentAvailable={
                                                     downPaymentAvailable
                                                 }
@@ -2172,6 +2339,7 @@ export default function Page() {
 
                 {releaseHoldDialog}
             </div>
-        </TenantLayout>
+        </>,
+        (href) => requestIntentionalExit({ href }, { releaseHold: true }),
     );
 }

@@ -152,10 +152,11 @@ test('booking pricing service calculates server authoritative totals and commiss
         ->and($quote['discounted_subtotal'])->toBe(41_000_000.0)
         ->and($quote['promotion_discount'])->toBe(1_000_000.0)
         ->and($quote['platform_fee'])->toBe(120_000.0)
-        ->and($quote['tax_amount'])->toBe(4_620_000.0)
+        ->and($quote['tax_amount'])->toBe(4_510_000.0)
+        ->and($quote['addons_total'])->toBe(500_000.0)
         ->and($quote['agent_commission'])->toBe(2_900_000.0)
         ->and($quote['travelboost_commission'])->toBe(200_000.0)
-        ->and($quote['grand_total'])->toBe(46_240_000.0);
+        ->and($quote['grand_total'])->toBe(46_130_000.0);
 
     expect($quote['passengers'][0]['price_amount'])->toBe(12_000_000.0)
         ->and($quote['passengers'][1]['price_amount'])->toBe(9_000_000.0)

@@ -27,6 +27,7 @@ import {
 import { cn } from '@/lib/utils';
 import type {
     BookingContact,
+    DashboardCustomerOption,
     GuestEntry,
     SavedPassengerOption,
     TourPrice,
@@ -649,6 +650,11 @@ type Step1Props = {
         guestId: string,
         savedPassenger: SavedPassengerOption,
     ) => void;
+    customerOptions?: DashboardCustomerOption[];
+    customerBookingMode?: 'existing' | 'guest';
+    onCustomerBookingModeChange?: (mode: 'existing' | 'guest') => void;
+    selectedCustomerId?: number | null;
+    onCustomerSelect?: (customer: DashboardCustomerOption | null) => void;
     readOnly?: boolean;
 };
 
@@ -674,6 +680,11 @@ export default function Step1GuestInformation({
     onContactAsGuestAddedChange,
     savedPassengers = [],
     onSavedPassengerSelect,
+    customerOptions = [],
+    customerBookingMode,
+    onCustomerBookingModeChange,
+    selectedCustomerId = null,
+    onCustomerSelect,
     readOnly = false,
 }: Step1Props) {
     const [
@@ -747,6 +758,11 @@ export default function Step1GuestInformation({
         !readOnly &&
         contact.name.trim() !== '' &&
         hasSeatForContactGuest;
+    const showDashboardCustomerSelector =
+        customerBookingMode !== undefined && onCustomerBookingModeChange;
+    const accountContactFieldsDisabled =
+        readOnly || customerBookingMode === 'existing';
+    const phoneFieldDisabled = readOnly;
 
     return (
         <motion.div
@@ -776,6 +792,95 @@ export default function Step1GuestInformation({
                         </h3>
                     </div>
                 </div>
+                {showDashboardCustomerSelector && (
+                    <div className="mb-4 grid gap-3 rounded-lg border bg-muted/30 p-3 sm:grid-cols-[auto_1fr] sm:items-end">
+                        <div className="grid gap-1.5">
+                            <Label className="text-xs">Customer Type</Label>
+                            <div className="inline-flex rounded-lg border bg-background p-1">
+                                {(['existing', 'guest'] as const).map(
+                                    (mode) => (
+                                        <button
+                                            key={mode}
+                                            type="button"
+                                            disabled={readOnly}
+                                            onClick={() => {
+                                                const isChangingMode =
+                                                    mode !==
+                                                    customerBookingMode;
+                                                onCustomerBookingModeChange?.(
+                                                    mode,
+                                                );
+
+                                                if (isChangingMode) {
+                                                    onCustomerSelect?.(null);
+                                                }
+                                            }}
+                                            className={cn(
+                                                'rounded-md px-3 py-1.5 text-xs font-semibold transition-colors',
+                                                customerBookingMode === mode
+                                                    ? 'bg-primary text-primary-foreground shadow-sm'
+                                                    : 'text-muted-foreground hover:text-foreground',
+                                            )}
+                                        >
+                                            {mode === 'existing'
+                                                ? 'Existing Customer'
+                                                : 'Guest'}
+                                        </button>
+                                    ),
+                                )}
+                            </div>
+                        </div>
+                        {customerBookingMode === 'existing' && (
+                            <div className="grid gap-1.5">
+                                <Label
+                                    htmlFor="dashboard_customer"
+                                    className="text-xs"
+                                >
+                                    Customer Account <RequiredMark />
+                                </Label>
+                                <Select
+                                    value={
+                                        selectedCustomerId
+                                            ? String(selectedCustomerId)
+                                            : ''
+                                    }
+                                    disabled={
+                                        readOnly || customerOptions.length === 0
+                                    }
+                                    onValueChange={(value) => {
+                                        const customer =
+                                            customerOptions.find(
+                                                (option) =>
+                                                    String(option.id) === value,
+                                            ) ?? null;
+
+                                        onCustomerSelect?.(customer);
+                                    }}
+                                >
+                                    <SelectTrigger id="dashboard_customer">
+                                        <SelectValue placeholder="Select customer" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {customerOptions.map((customer) => (
+                                            <SelectItem
+                                                key={customer.id}
+                                                value={String(customer.id)}
+                                            >
+                                                {customer.name} -{' '}
+                                                {customer.email}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                {customerOptions.length === 0 && (
+                                    <span className="text-[10px] text-muted-foreground">
+                                        No customer accounts available.
+                                    </span>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                )}
                 <div className="grid gap-3 sm:grid-cols-3">
                     <div className="grid gap-1.5">
                         <Label htmlFor="contact_name" className="text-xs">
@@ -791,7 +896,7 @@ export default function Step1GuestInformation({
                                     name: e.target.value,
                                 })
                             }
-                            disabled={readOnly}
+                            disabled={accountContactFieldsDisabled}
                         />
                     </div>
                     <div className="grid gap-1.5">
@@ -809,7 +914,7 @@ export default function Step1GuestInformation({
                                     email: e.target.value,
                                 })
                             }
-                            disabled={readOnly}
+                            disabled={accountContactFieldsDisabled}
                             className={
                                 contact.email &&
                                 !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
@@ -847,7 +952,7 @@ export default function Step1GuestInformation({
                                     phone: numericValue,
                                 });
                             }}
-                            disabled={readOnly}
+                            disabled={phoneFieldDisabled}
                         />
                     </div>
                 </div>

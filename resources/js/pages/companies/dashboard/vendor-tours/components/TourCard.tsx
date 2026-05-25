@@ -45,6 +45,18 @@ type TourCardResource = TourResource & {
     agents?: any[];
 };
 
+const getDashboardCompanyUsernameFromPath = () => {
+    if (typeof window === 'undefined') {
+        return null;
+    }
+
+    const match = window.location.pathname.match(
+        /^\/companies\/([^/]+)\/dashboard(?:\/|$)/,
+    );
+
+    return match?.[1] ? decodeURIComponent(match[1]) : null;
+};
+
 export default function TourCard({
     tour,
     type = 'agent',
@@ -185,16 +197,14 @@ export default function TourCard({
     const handleChat = async (targetId: number) => {
         try {
             setStartingChat(true);
-            await floatingChat?.startPrivateChat(
-                {
-                    type: 'company',
-                    id: targetId,
-                },
-                {
-                    type: 'tour',
-                    data: tour.id.toString(),
-                },
-            );
+            floatingChat?.setAttachment({
+                type: 'tour',
+                data: tour.id.toString(),
+            });
+            await floatingChat?.startPrivateChat({
+                type: 'company',
+                id: targetId,
+            });
         } finally {
             setStartingChat(false);
         }
@@ -253,6 +263,9 @@ export default function TourCard({
     const canCopy = partnership?.status === 'active';
     const hasCopied = Boolean(tour.has_copied);
     const bookingTour = selectedBookingTour ?? tour;
+    const dashboardCompanyUsername = fromLogin
+        ? (company?.username ?? getDashboardCompanyUsernameFromPath())
+        : null;
 
     return (
         <>
@@ -359,6 +372,11 @@ export default function TourCard({
                     setSelectedBookingTour(null);
                 }}
                 tour={bookingTour}
+                bookingUrlResolver={(_, schedule) =>
+                    dashboardCompanyUsername
+                        ? `/companies/${encodeURIComponent(dashboardCompanyUsername)}/dashboard/bookings/create/${bookingTour.id}?date=${encodeURIComponent(schedule.departure_date)}`
+                        : `/bookings/${bookingTour.id}/create?date=${encodeURIComponent(schedule.departure_date)}`
+                }
                 onRequireLogin={
                     !auth?.user ? () => setPendingAction('book') : undefined
                 }

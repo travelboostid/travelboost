@@ -93,8 +93,22 @@ type PageProps = {
     booking: BookingData;
     tourPrices: TourPrice[];
     addOns: AddOnItem[];
-    minimumDownPaymentPct: number;
+    minimumDownPaymentPct: number | null;
     minimumVatPct: number;
+    platformFeePerPax?: number;
+    downPaymentAvailable?: boolean;
+    fullPaymentAvailable?: boolean;
+    paymentUnavailableReason?: string | null;
+    paidAmount?: number;
+    remainingBalance?: number;
+    bookingSeatLimit?: number;
+    vendorBankInfo?: {
+        bankName: string;
+        accountName: string;
+        accountNumber: string;
+    };
+    editMode?: 'full' | 'documents' | 'readonly';
+    canEditDocuments?: boolean;
 };
 
 type EditableGuestEntry = GuestEntry & {
@@ -249,18 +263,23 @@ export default function Page({
     addOns,
     minimumDownPaymentPct,
     minimumVatPct,
+    platformFeePerPax = 25_000,
+    downPaymentAvailable = true,
+    fullPaymentAvailable = true,
+    paymentUnavailableReason = null,
+    paidAmount = 0,
+    remainingBalance = 0,
+    bookingSeatLimit = 99,
+    vendorBankInfo,
+    editMode = 'readonly',
+    canEditDocuments = false,
 }: PageProps) {
     const { company } = usePageSharedDataProps();
     const isAgent = company.type === 'agent';
-    const canEdit = [
-        'reserved',
-        'booking reserved',
-        'awaiting payment',
-        'waiting payment approval',
-    ].includes(booking.status);
+    const canOpenWizard = editMode === 'full' || editMode === 'documents';
 
     // ── Non-editable guard ───────────────────────────────────────────
-    if (!canEdit) {
+    if (!canOpenWizard) {
         return (
             <CompanyDashboardLayout
                 openMenuIds={['tours']}
@@ -313,6 +332,16 @@ export default function Page({
             addOns={addOns}
             minimumDownPaymentPct={minimumDownPaymentPct}
             minimumVatPct={minimumVatPct}
+            platformFeePerPax={platformFeePerPax}
+            downPaymentAvailable={downPaymentAvailable}
+            fullPaymentAvailable={fullPaymentAvailable}
+            paymentUnavailableReason={paymentUnavailableReason}
+            paidAmount={paidAmount}
+            remainingBalance={remainingBalance}
+            bookingSeatLimit={bookingSeatLimit}
+            vendorBankInfo={vendorBankInfo}
+            editMode={editMode}
+            canEditDocuments={canEditDocuments}
             company={company}
             isAgent={isAgent}
         />
@@ -329,21 +358,52 @@ function EditableWizard({
     addOns: initialAddOns,
     minimumDownPaymentPct,
     minimumVatPct,
+    platformFeePerPax,
+    downPaymentAvailable,
+    fullPaymentAvailable,
+    paymentUnavailableReason,
+    paidAmount,
+    remainingBalance,
+    bookingSeatLimit,
+    vendorBankInfo,
+    editMode,
+    canEditDocuments,
     company,
     isAgent,
 }: {
     booking: BookingData;
     tourPrices: TourPrice[];
     addOns: AddOnItem[];
-    minimumDownPaymentPct: number;
+    minimumDownPaymentPct: number | null;
     minimumVatPct: number;
+    platformFeePerPax: number;
+    downPaymentAvailable: boolean;
+    fullPaymentAvailable: boolean;
+    paymentUnavailableReason: string | null;
+    paidAmount: number;
+    remainingBalance: number;
+    bookingSeatLimit: number;
+    vendorBankInfo?: {
+        bankName: string;
+        accountName: string;
+        accountNumber: string;
+    };
+    editMode: 'full' | 'documents' | 'readonly';
+    canEditDocuments: boolean;
     company: any;
     isAgent: boolean;
 }) {
     const departureDate = booking.departure_date?.split('T')[0] ?? '';
 
     // ── Wizard step state ──────────────────────────────────────────────
-    const [currentStep, setCurrentStep] = useState<WizardStepId>(1);
+    const isDocumentOnlyMode = editMode === 'documents' && canEditDocuments;
+    const requestedStep =
+        typeof window !== 'undefined'
+            ? new URLSearchParams(window.location.search).get('step')
+            : null;
+    const [currentStep, setCurrentStep] = useState<WizardStepId>(
+        requestedStep === 'documents' ? 3 : isDocumentOnlyMode ? 3 : 1,
+    );
     const [direction, setDirection] = useState(1);
 
     // ── Contact ────────────────────────────────────────────────────────
@@ -491,9 +551,17 @@ function EditableWizard({
                 guests,
                 vendor.commission ?? 0,
                 minimumVatPct,
+                platformFeePerPax,
+                tourPrices,
             ),
-        [guests, vendor, minimumVatPct],
+        [guests, vendor, minimumVatPct, platformFeePerPax, tourPrices],
     );
+    const liveGrandTotal = pricing.totalPrice + selectedAddOnsTotal;
+    const bookingGrandTotal = Number(booking.grand_total ?? 0);
+    const displayGrandTotal =
+        isDocumentOnlyMode && bookingGrandTotal > 0
+            ? bookingGrandTotal
+            : liveGrandTotal;
 
     // ── Navigation ─────────────────────────────────────────────────────
     const goNext = () => {
@@ -729,6 +797,87 @@ function EditableWizard({
         );
     };
 
+    const handleSaveDocumentsOnly = () => {
+        setIsSubmitting(true);
+
+        const formData = new FormData();
+        let rowIndex = 0;
+
+        guests.forEach((guest) => {
+            const passengerId = (guest as EditableGuestEntry).passengerId;
+
+            if (!passengerId) {
+                return;
+            }
+
+            const doc = travelDocuments.find(
+                (item) => item.guestId === guest.id,
+            );
+
+            if (!doc) {
+                return;
+            }
+
+            formData.append(`passengers[${rowIndex}][id]`, String(passengerId));
+            formData.append(
+                `passengers[${rowIndex}][passport_number]`,
+                doc.passportNumber,
+            );
+            formData.append(
+                `passengers[${rowIndex}][passport_issue_date]`,
+                doc.passportIssueDate,
+            );
+            formData.append(
+                `passengers[${rowIndex}][passport_expiry_date]`,
+                doc.passportExpiryDate,
+            );
+            formData.append(
+                `passengers[${rowIndex}][visa_number]`,
+                doc.visaNumber,
+            );
+
+            if (doc.passportFile) {
+                formData.append(
+                    `passengers[${rowIndex}][passport_file]`,
+                    doc.passportFile,
+                );
+            } else if (doc.passportFilePath) {
+                formData.append(
+                    `passengers[${rowIndex}][passport_file_path]`,
+                    doc.passportFilePath,
+                );
+            }
+
+            if (doc.visaFile) {
+                formData.append(
+                    `passengers[${rowIndex}][visa_file]`,
+                    doc.visaFile,
+                );
+            } else if (doc.visaFilePath) {
+                formData.append(
+                    `passengers[${rowIndex}][visa_file_path]`,
+                    doc.visaFilePath,
+                );
+            }
+
+            rowIndex += 1;
+        });
+
+        router.post(
+            `/companies/${company.username}/dashboard/bookings/${booking.id}/travel-documents`,
+            formData,
+            {
+                forceFormData: true,
+                preserveScroll: true,
+                onSuccess: () =>
+                    toast.success('Travel documents updated successfully.'),
+                onError: () =>
+                    toast.error('Failed to update travel documents.'),
+                onFinish: () => setIsSubmitting(false),
+            },
+        );
+    };
+
     return (
         <CompanyDashboardLayout
             openMenuIds={['tours']}
@@ -778,7 +927,7 @@ function EditableWizard({
                                 </div>
 
                                 {/* Step Indicator */}
-                                <div className="pb-4">
+                                <div className="sticky top-0 z-20 mb-5 rounded-xl border bg-background/95 px-3 py-2 shadow-sm backdrop-blur">
                                     <WizardStepIndicator
                                         currentStep={currentStep}
                                         onStepClick={goToStep}
@@ -798,10 +947,13 @@ function EditableWizard({
                                     contactEmail={contact.email}
                                     contactPhone={contact.phone}
                                     pricing={pricing}
+                                    agentCommissionAmount={Number(
+                                        booking.commission_amount ?? 0,
+                                    )}
+                                    showAgentCommission={Boolean(booking.agent)}
                                     displayTotalPrice={
                                         currentStep === 4
-                                            ? pricing.totalPrice +
-                                              selectedAddOnsTotal
+                                            ? displayGrandTotal
                                             : undefined
                                     }
                                     timeLeftSeconds={0}
@@ -845,7 +997,6 @@ function EditableWizard({
                                                     handleGuestRemove
                                                 }
                                                 tourPrices={tourPrices}
-                                                maxGuests={99}
                                                 departureDate={departureDate}
                                                 contactGuestId={contactGuestId}
                                                 onContactGuestToggle={
@@ -854,6 +1005,8 @@ function EditableWizard({
                                                 contactAsGuestAdded={
                                                     contactGuestId !== null
                                                 }
+                                                maxGuests={bookingSeatLimit}
+                                                readOnly={isDocumentOnlyMode}
                                             />
                                         )}
                                         {currentStep === 2 && (
@@ -861,6 +1014,7 @@ function EditableWizard({
                                                 guests={guests}
                                                 rooms={rooms}
                                                 onRoomsChange={setRooms}
+                                                readOnly={isDocumentOnlyMode}
                                             />
                                         )}
                                         {currentStep === 3 && (
@@ -873,6 +1027,7 @@ function EditableWizard({
                                                     setTravelDocuments
                                                 }
                                                 departureDate={departureDate}
+                                                readOnly={false}
                                             />
                                         )}
                                         {currentStep === 4 && (
@@ -899,6 +1054,28 @@ function EditableWizard({
                                                     minimumDownPaymentPct
                                                 }
                                                 minimumVatPct={minimumVatPct}
+                                                paidAmount={paidAmount}
+                                                remainingBalance={
+                                                    remainingBalance
+                                                }
+                                                grandTotalOverride={
+                                                    isDocumentOnlyMode &&
+                                                    bookingGrandTotal > 0
+                                                        ? bookingGrandTotal
+                                                        : null
+                                                }
+                                                vendorBankInfo={vendorBankInfo}
+                                                readOnly={isDocumentOnlyMode}
+                                                hidePaymentControls
+                                                downPaymentAvailable={
+                                                    downPaymentAvailable
+                                                }
+                                                fullPaymentAvailable={
+                                                    fullPaymentAvailable
+                                                }
+                                                paymentUnavailableReason={
+                                                    paymentUnavailableReason
+                                                }
                                             />
                                         )}
                                     </motion.div>
@@ -924,15 +1101,29 @@ function EditableWizard({
                                     <Button
                                         type="button"
                                         disabled={
+                                            (isDocumentOnlyMode &&
+                                                currentStep !== 3) ||
+                                            (isDocumentOnlyMode &&
+                                                currentStep === 3 &&
+                                                isSubmitting) ||
                                             (currentStep === 1 &&
                                                 !canProceedStep1) ||
                                             (currentStep === 2 &&
                                                 !canProceedStep2)
                                         }
-                                        onClick={goNext}
+                                        onClick={
+                                            isDocumentOnlyMode &&
+                                            currentStep === 3
+                                                ? handleSaveDocumentsOnly
+                                                : goNext
+                                        }
                                         className="gap-2"
                                     >
-                                        Next
+                                        {isDocumentOnlyMode && currentStep === 3
+                                            ? isSubmitting
+                                                ? 'Saving...'
+                                                : 'Save Documents'
+                                            : 'Next'}
                                         <ArrowRightIcon className="size-4" />
                                     </Button>
                                 </div>
@@ -951,7 +1142,9 @@ function EditableWizard({
                                     <Button
                                         type="button"
                                         onClick={() => handleSave()}
-                                        disabled={isSubmitting}
+                                        disabled={
+                                            isSubmitting || isDocumentOnlyMode
+                                        }
                                         className="gap-2"
                                     >
                                         {isSubmitting ? (

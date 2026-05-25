@@ -134,6 +134,13 @@ export function useCompanyDashboardNavMainMenu() {
                     urlOrAction: `/companies/${company.username}/dashboard/bookings`,
                 },
                 {
+                    id: 'tours.cancelation-refund',
+                    title: (
+                        <FormattedMessage defaultMessage="Cancelation and Refund" />
+                    ),
+                    urlOrAction: `/companies/${company.username}/dashboard/booking-action-requests`,
+                },
+                {
                     id: 'tours.categories',
                     title: (
                         <FormattedMessage defaultMessage="Product Categories" />

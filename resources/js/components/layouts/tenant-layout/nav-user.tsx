@@ -24,11 +24,12 @@ import {
 } from 'lucide-react';
 
 export function NavUser({
-    onNavigateAway,
+    onNavigateAway: _onNavigateAway,
 }: {
     onNavigateAway?: (href: string) => void;
 }) {
-    const { auth } = usePageSharedDataProps();
+    const { auth, customerUnreadNotificationsCount } =
+        usePageSharedDataProps() as any;
 
     const handleLogout = () => {
         router.post('/logout');
@@ -93,9 +94,19 @@ export function NavUser({
                             Change Password
                         </Link>
                     </DropdownMenuItem>
-                    <DropdownMenuItem disabled>
-                        <BellIcon />
-                        Notifications
+                    <DropdownMenuItem asChild>
+                        <Link
+                            className="w-full cursor-pointer"
+                            href="/me/notifications"
+                        >
+                            <BellIcon />
+                            <span className="flex-1">Notifications</span>
+                            {customerUnreadNotificationsCount > 0 && (
+                                <span className="rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-bold text-primary-foreground">
+                                    {customerUnreadNotificationsCount}
+                                </span>
+                            )}
+                        </Link>
                     </DropdownMenuItem>
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />

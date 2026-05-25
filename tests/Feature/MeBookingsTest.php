@@ -506,6 +506,54 @@ test('my bookings exposes paid balance deadlines document completeness and broch
         ->where('bookings.data.0.document_url', "/brochure/{$vendor->username}/{$tour->id}"));
 });
 
+test('my bookings exposes waiting payment approval deadlines and document need', function () {
+    $user = User::factory()->create(['status' => UserStatus::ACTIVE]);
+    $vendor = Company::factory()->create(['type' => 'vendor', 'username' => 'wpadeadlinevendor']);
+    $vendor->settings()->updateOrCreate([
+        'company_id' => $vendor->id,
+    ], [
+        'full_payment_deadline' => 7,
+        'document_completed_deadline' => 5,
+    ]);
+    $departureDate = now()->addDays(20)->toDateString();
+    $tour = Tour::factory()->create(['company_id' => $vendor->id]);
+    $booking = Booking::factory()->create([
+        'user_id' => $user->id,
+        'vendor_id' => $vendor->id,
+        'tour_id' => $tour->id,
+        'status' => BookingStatus::WAITING_PAYMENT_APPROVAL,
+        'booking_number' => 'BKG-WPA-DEADLINES',
+        'departure_date' => $departureDate,
+        'grand_total' => 1_000_000,
+    ]);
+    $booking->payments()->create([
+        'owner_type' => User::class,
+        'owner_id' => $user->id,
+        'provider' => 'manual',
+        'payment_method' => 'bank_transfer',
+        'amount' => 300_000,
+        'status' => PaymentStatus::PENDING,
+    ]);
+    $booking->passengers()->create([
+        'first_name' => 'Waiting',
+        'last_name' => 'Docs',
+        'pob' => 'Jakarta',
+        'price_category' => 'Adult Twin',
+        'price_amount' => 1_000_000,
+        'passport_number' => 'P1234567',
+    ]);
+
+    $response = $this->actingAs($user)->get('/mybookings?tab=current');
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->where('bookings.data.0.booking_number', 'BKG-WPA-DEADLINES')
+        ->where('bookings.data.0.status', BookingStatus::WAITING_PAYMENT_APPROVAL->value)
+        ->where('bookings.data.0.needs_travel_documents', true)
+        ->where('bookings.data.0.payment_deadline.date', now()->addDays(13)->toDateString())
+        ->where('bookings.data.0.document_deadline.date', now()->addDays(15)->toDateString()));
+});
+
 test('my bookings lazily expires stale booking reserved rows before rendering', function () {
     $user = User::factory()->create(['status' => UserStatus::ACTIVE]);
     $vendor = Company::factory()->create(['type' => 'vendor']);
