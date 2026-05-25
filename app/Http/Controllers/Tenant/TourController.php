@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Tenant;
 
 use App\Http\Controllers\Controller;
+use App\Models\Company;
 use App\Models\TourAvailability;
 use App\Models\TourCategory;
 use App\Models\VendorAgentPartner;
@@ -13,6 +14,8 @@ class TourController extends Controller
     public function index()
     {
         $tenant = request()->attributes->get('tenant');
+
+        abort_unless($tenant instanceof Company, 404);
 
         $tenant->load([
             'agentTours' => function ($query) {

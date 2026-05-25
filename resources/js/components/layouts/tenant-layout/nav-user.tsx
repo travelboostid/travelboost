@@ -17,14 +17,13 @@ import { Link, router } from '@inertiajs/react';
 import {
     BellIcon,
     ChevronDownIcon,
-    KeyRoundIcon,
     LogOutIcon,
     UserCogIcon,
     UserIcon,
 } from 'lucide-react';
 
 export function NavUser({
-    onNavigateAway,
+    onNavigateAway: _onNavigateAway,
 }: {
     onNavigateAway?: (href: string) => void;
 }) {
@@ -78,22 +77,22 @@ export function NavUser({
                     <DropdownMenuItem asChild>
                         <Link
                             className="w-full cursor-pointer"
-                            href="/me/profile"
+                            href="/customers/profile"
                         >
                             <UserCogIcon />
                             Profile
                         </Link>
                     </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
+                    {/* <DropdownMenuItem asChild>
                         <Link
                             className="w-full cursor-pointer"
-                            href="/me/password"
+                            href="/customers/profile?change_password=1"
                         >
                             <KeyRoundIcon />
                             Change Password
                         </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem disabled>
+                    </DropdownMenuItem> */}
+                    <DropdownMenuItem>
                         <BellIcon />
                         Notifications
                     </DropdownMenuItem>

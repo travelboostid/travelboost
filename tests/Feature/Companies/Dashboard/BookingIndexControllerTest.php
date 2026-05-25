@@ -101,6 +101,98 @@ test('agent can see their own bookings', function () {
         ->has('data.data', 2));
 });
 
+test('agent can preview vendor invoice for full payment booking as pdf', function () {
+    $agent = Company::factory()->create([
+        'type' => 'agent',
+        'name' => 'John Company',
+        'address' => 'Jakarta',
+    ]);
+    $vendor = Company::factory()->create([
+        'type' => 'vendor',
+        'name' => 'Vendor Company',
+        'address' => 'Shanghai',
+    ]);
+
+    CompanyTeam::create([
+        'company_id' => $agent->id,
+        'user_id' => $this->user->id,
+        'status' => CompanyTeamStatus::ACTIVE,
+        'is_owner' => true,
+        'accepted_at' => now(),
+    ]);
+    VendorAgentPartner::create([
+        'vendor_id' => $vendor->id,
+        'agent_id' => $agent->id,
+        'status' => VendorAgentPartnerStatus::ACTIVE,
+        'applied_at' => now(),
+        'accepted_at' => now(),
+        'payment_mode' => 'agent',
+    ]);
+
+    $tour = Tour::factory()->create([
+        'company_id' => $vendor->id,
+        'code' => 'CHN-006',
+        'name' => 'Zhangjiajie Avatar Mountain Trek',
+    ]);
+    $schedule = TourSchedule::create([
+        'tour_id' => $tour->id,
+        'tour_code' => $tour->code,
+        'company_id' => $vendor->id,
+        'departure_date' => now()->addMonth()->toDateString(),
+        'return_date' => now()->addMonth()->addDays(5)->toDateString(),
+        'is_active' => true,
+    ]);
+    $category = PriceCategory::create([
+        'company_id' => $vendor->id,
+        'name' => 'Adult Double',
+        'room_type' => 'Double',
+    ]);
+
+    TourPrice::create([
+        'company_id' => $vendor->id,
+        'tour_code' => $tour->code,
+        'schedule_id' => $schedule->id,
+        'price_category_id' => $category->id,
+        'currency' => 'IDR',
+        'price' => 8_800_000,
+    ]);
+
+    $booking = Booking::factory()->create([
+        'user_id' => $this->user->id,
+        'agent_id' => $agent->id,
+        'vendor_id' => $vendor->id,
+        'tour_id' => $tour->id,
+        'status' => BookingStatus::FULL_PAYMENT,
+        'booking_number' => '0002-202605-84PTL4',
+        'departure_date' => $schedule->departure_date,
+        'total_price' => 8_800_000,
+        'tax_amount' => 88_000,
+        'platform_fee' => 25_000,
+        'grand_total' => 8_913_000,
+    ]);
+    $booking->passengers()->create([
+        'first_name' => 'Test',
+        'last_name' => 'Customer',
+        'price_category' => 'Adult Double',
+        'price_amount' => 8_800_000,
+    ]);
+    $booking->payments()->create([
+        'owner_type' => User::class,
+        'owner_id' => $this->user->id,
+        'provider' => 'manual',
+        'payment_method' => 'bank_transfer',
+        'amount' => 8_913_000,
+        'status' => 'paid',
+        'paid_at' => now(),
+    ]);
+
+    $response = $this->actingAs($this->user)
+        ->get("/companies/{$agent->username}/dashboard/bookings/{$booking->id}/invoice");
+
+    $response->assertOk();
+    $response->assertHeader('content-type', 'application/pdf');
+});
+
 test('unauthenticated users are redirected from bookings page', function () {
     $vendor = Company::factory()->create(['type' => 'vendor']);
 

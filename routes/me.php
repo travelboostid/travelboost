@@ -10,6 +10,9 @@ use Illuminate\Support\Facades\Route;
 
 Route::name('me.')->group(function () {
     Route::get('/mybookings', [HomeController::class, 'bookings'])->name('bookings');
+    Route::get('/mybookings/{booking}/invoice', [HomeController::class, 'bookingInvoice'])
+        ->middleware('auth')
+        ->name('bookings.invoice');
 });
 
 Route::middleware(['auth', 'check.user.status'])->prefix('me')->name('me.')->group(function () {
