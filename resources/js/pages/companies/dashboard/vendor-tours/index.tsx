@@ -1,7 +1,6 @@
 import { index } from '@/actions/App/Http/Controllers/Companies/Dashboard/VendorTourCatalogController';
 import type { TourCategoryResource, TourResource } from '@/api/model';
 import CompanyDashboardLayout from '@/components/layouts/company-dashboard';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
@@ -34,18 +33,28 @@ export default function Page({
     const { company } = usePageSharedDataProps();
 
     useEffect(() => {
+        if ((filters.search ?? '') === search) {
+            return;
+        }
+
         const timeout = setTimeout(() => {
             const params: any = {};
             if (filters.category) params.category = filters.category;
-            if (search) params.search = search;
+            if (search.trim()) params.search = search.trim();
             router.get(
                 index({ company: company.username, vendor: vendor.username }),
                 params,
-                { preserveState: true, replace: true },
+                { preserveState: true, preserveScroll: true, replace: true },
             );
         }, 500);
         return () => clearTimeout(timeout);
-    }, [company, filters, search, vendor]);
+    }, [
+        company.username,
+        filters.category,
+        filters.search,
+        search,
+        vendor.username,
+    ]);
 
     const isAgent = company.type === 'agent';
     const isOwnCatalog = company.username === vendor?.username;
@@ -94,7 +103,7 @@ export default function Page({
         }
 
         return filtered;
-    }, [data, showInactive, isAgent, isOwnCatalog, company]);
+    }, [data, showInactive, isAgent, isOwnCatalog, company.id]);
 
     return (
         <CompanyDashboardLayout
@@ -114,23 +123,26 @@ export default function Page({
             <div className="max-w-[1600px] mx-auto space-y-4 pt-4">
                 {isAgent && !isOwnCatalog && !canCopy && (
                     <div className="px-6">
-                        <Alert
-                            variant="destructive"
-                            className="bg-white dark:bg-slate-900 border-red-100 dark:border-red-900/50 rounded-2xl shadow-sm"
-                        >
-                            <AlertCircle className="h-5 w-5 text-red-500" />
-                            <AlertTitle className="text-red-600 dark:text-red-500 font-bold">
-                                Partnership Required
-                            </AlertTitle>
-                            <AlertDescription className="text-slate-500 dark:text-slate-400 text-sm">
-                                Active partnership is required to copy tours.
-                                Your status:{' '}
-                                <span className="font-semibold">
-                                    {partnership?.status || 'unregistered'}
+                        <div className="rounded-2xl border border-red-100 bg-white px-5 py-4 shadow-sm dark:border-red-900/50 dark:bg-slate-900">
+                            <div className="flex flex-col gap-3 text-sm sm:flex-row sm:items-center">
+                                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-red-50 text-red-500 dark:bg-red-950/40">
+                                    <AlertCircle className="h-4 w-4" />
                                 </span>
-                                .
-                            </AlertDescription>
-                        </Alert>
+                                <div className="flex min-w-0 flex-1 flex-col gap-1 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-2">
+                                    <span className="font-semibold text-red-600 dark:text-red-400">
+                                        Partnership Required
+                                    </span>
+                                    <span className="text-slate-600 dark:text-slate-300">
+                                        Active partnership is required to copy
+                                        tours.
+                                    </span>
+                                    <span className="inline-flex w-fit items-center rounded-full bg-red-50 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-red-600 dark:bg-red-950/40 dark:text-red-300">
+                                        Status:{' '}
+                                        {partnership?.status || 'unregistered'}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 )}
 
