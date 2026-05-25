@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\AffiliateController;
 use App\Http\Controllers\Admin\AgentController;
 use App\Http\Controllers\Admin\AiUsageLogController;
 use App\Http\Controllers\Admin\AppConfigController;
@@ -7,6 +8,7 @@ use App\Http\Controllers\Admin\BankAccountController;
 use App\Http\Controllers\Admin\HomeController;
 use App\Http\Controllers\Admin\IndexController;
 use App\Http\Controllers\Admin\KnowledgeBaseController;
+use App\Http\Controllers\Admin\MasterAffiliateController;
 use App\Http\Controllers\Admin\MediaController;
 use App\Http\Controllers\Admin\PaymentController;
 use App\Http\Controllers\Admin\PermissionController;
@@ -33,9 +35,8 @@ Route::prefix('admin')->middleware(['auth', EnsureHasAdminAccess::class])->name(
     Route::prefix('database')->name('database.')->group(function () {
         Route::resource('vendors', VendorController::class)->names('vendors');
         Route::resource('agents', AgentController::class)->names('agents');
-        Route::get('affiliates', function () {
-            return inertia('admin/database/affiliates/index');
-        })->name('affiliates');
+        Route::get('affiliates', [AffiliateController::class, 'index'])->name('affiliates');
+        Route::get('master-affiliates', [MasterAffiliateController::class, 'index'])->name('master-affiliates');
 
         Route::put('users/bulk-update', [UserController::class, 'bulkUpdate'])->name('users.bulk-update');
         Route::get('users/export-csv', [UserController::class, 'exportAsCsv'])->name('users.export-csv');

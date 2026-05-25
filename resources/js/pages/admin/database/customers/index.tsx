@@ -15,10 +15,8 @@ import { useDataTable } from '@/hooks/use-data-table';
 import { Head } from '@inertiajs/react';
 import type { Column, ColumnDef } from '@tanstack/react-table';
 import dayjs from 'dayjs';
-import relativeTime from 'dayjs/plugin/relativeTime';
 import { MoreHorizontal, Text } from 'lucide-react';
 import { useMemo } from 'react';
-dayjs.extend(relativeTime);
 
 type PageProps = {
     data: {
@@ -130,7 +128,7 @@ export default function CustomersPage({ data }: PageProps) {
                     const createdAt = cell.getValue<string>();
                     return (
                         <div className="text-muted-foreground">
-                            {dayjs(createdAt).fromNow()}
+                            {dayjs(createdAt).format('DD MMM YYYY')}
                         </div>
                     );
                 },

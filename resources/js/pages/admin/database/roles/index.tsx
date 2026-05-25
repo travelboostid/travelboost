@@ -12,15 +12,12 @@ import {
 } from '@/components/ui/tooltip';
 import { useDataTable } from '@/hooks/use-data-table';
 import type { Column, ColumnDef } from '@tanstack/react-table';
-import dayjs from 'dayjs';
-import relativeTime from 'dayjs/plugin/relativeTime';
 import { Text } from 'lucide-react';
 import { useMemo } from 'react';
 import CreateButton from './components/create-button';
 import DeleteButton from './components/delete-button';
 import EditButton from './components/edit-button';
 import { EmptyRoles } from './components/empty-roles';
-dayjs.extend(relativeTime);
 
 function RolePermissions({ role }: { role: any }) {
     const permissionsToDisplay = role.permissions.slice(0, 3);

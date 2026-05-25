@@ -14,11 +14,9 @@ import {
 import { useDataTable } from '@/hooks/use-data-table';
 import type { Column, ColumnDef } from '@tanstack/react-table';
 import dayjs from 'dayjs';
-import relativeTime from 'dayjs/plugin/relativeTime';
 import { MoreHorizontal, Text } from 'lucide-react';
 import { useMemo } from 'react';
 import { EmptyOrders } from './components/empty-orders';
-dayjs.extend(relativeTime);
 
 type OrderResource = {
     id: number;
@@ -169,7 +167,7 @@ export default function Page({ data }: PageProps) {
                 ),
                 cell: ({ cell }) => (
                     <div className="text-muted-foreground">
-                        {dayjs(cell.getValue<string>()).fromNow()}
+                        {dayjs(cell.getValue<string>()).format('DD MMM YYYY')}
                     </div>
                 ),
             },
