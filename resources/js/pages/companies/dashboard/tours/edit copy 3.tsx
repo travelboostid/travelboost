@@ -40,7 +40,6 @@ import {
     AccordionItem,
     AccordionTrigger,
 } from '@/components/ui/accordion';
-import { Badge } from '@/components/ui/badge';
 import { Calendar } from '@/components/ui/calendar';
 import {
     Dialog,
@@ -1405,16 +1404,16 @@ export default function Page({ tour }: Props) {
                         value={activeTab}
                         onValueChange={(val) => setActiveTab(val as any)}
                     >
-                        <TabsList className="mb-4 flex h-auto flex-wrap gap-2 bg-transparent p-0">
+                        <TabsList className="mb-4 flex h-auto gap-3 bg-transparent p-0">
                             <TabsTrigger
                                 value="tour"
                                 className="
-            rounded-full px-4 py-2 text-xs sm:px-6 sm:py-2 sm:text-sm
-            bg-slate-100 text-slate-900
-            data-[state=active]:bg-primary
-            data-[state=active]:text-white
-            shadow-none
-        "
+                  rounded-full px-8 py-3 text-sm font-medium
+                  bg-slate-100 text-slate-900
+                  data-[state=active]:bg-primary
+                  data-[state=active]:text-white
+                  shadow-none
+                "
                             >
                                 Master
                             </TabsTrigger>
@@ -1422,25 +1421,25 @@ export default function Page({ tour }: Props) {
                             <TabsTrigger
                                 value="schedule"
                                 className="
-            rounded-full px-4 py-2 text-xs sm:px-6 sm:py-2 sm:text-sm
-            bg-slate-100 text-slate-900
-            data-[state=active]:bg-primary
-            data-[state=active]:text-white
-            shadow-none
-        "
+                  rounded-full px-8 py-3 text-sm font-medium
+                  bg-slate-100 text-slate-900
+                  data-[state=active]:bg-primary
+                  data-[state=active]:text-white
+                  shadow-none
+                "
                             >
-                                Schedule & Price
+                                Schedule and Price
                             </TabsTrigger>
 
                             <TabsTrigger
                                 value="availability"
                                 className="
-            rounded-full px-4 py-2 text-xs sm:px-6 sm:py-2 sm:text-sm
-            bg-slate-100 text-slate-900
-            data-[state=active]:bg-primary
-            data-[state=active]:text-white
-            shadow-none
-        "
+                  rounded-full px-8 py-3 text-sm font-medium
+                  bg-slate-100 text-slate-900
+                  data-[state=active]:bg-primary
+                  data-[state=active]:text-white
+                  shadow-none
+                "
                             >
                                 Availability
                             </TabsTrigger>
@@ -1448,14 +1447,14 @@ export default function Page({ tour }: Props) {
                             <TabsTrigger
                                 value="addons"
                                 className="
-            rounded-full px-4 py-2 text-xs sm:px-6 sm:py-2 sm:text-sm
-            bg-slate-100 text-slate-900
-            data-[state=active]:bg-primary
-            data-[state=active]:text-white
-            shadow-none
-        "
+                  rounded-full px-8 py-3 text-sm font-medium
+                  bg-slate-100 text-slate-900
+                  data-[state=active]:bg-primary
+                  data-[state=active]:text-white
+                  shadow-none
+                "
                             >
-                                Add Ons
+                                Adds On
                             </TabsTrigger>
                         </TabsList>
 
@@ -2069,8 +2068,8 @@ export default function Page({ tour }: Props) {
                                 </div>
 
                                 {/* DESKTOP TABLE */}
-                                <div className="overflow-hidden rounded-lg border">
-                                    <table className="w-full border-collapse text-sm">
+                                <div className="rounded-lg border overflow-hidden hidden md:block">
+                                    <table className="w-full text-sm">
                                         {/* ================= HEADER ================= */}
                                         <thead className="bg-muted">
                                             <tr>
@@ -2124,12 +2123,7 @@ export default function Page({ tour }: Props) {
                                                     return (
                                                         <tr
                                                             key={index}
-                                                            className="
-                                                                border-t
-                                                                align-top
-                                                                hover:bg-muted/20
-                                                                transition-colors
-                                                            "
+                                                            className="align-top border-t"
                                                         >
                                                             {/* DATE */}
                                                             <td className="p-2">
@@ -2189,413 +2183,371 @@ export default function Page({ tour }: Props) {
                                                                 colSpan={4}
                                                                 className="p-2"
                                                             >
-                                                                <Accordion
-                                                                    type="single"
-                                                                    collapsible
-                                                                    className="w-full"
-                                                                >
-                                                                    <AccordionItem
-                                                                        value={`prices-${index}`}
-                                                                        className="
-                                                                        rounded-xl
-                                                                        border
-                                                                        bg-background
-                                                                        shadow-sm
-                                                                        overflow-hidden
-                                                                        "
-                                                                    >
-                                                                        <AccordionTrigger className="px-4 py-3 hover:no-underline">
-                                                                            <div className="flex w-full items-center justify-between pr-4">
-                                                                                <div className="flex items-center gap-2">
-                                                                                    <span className="font-medium">
-                                                                                        Categories
-                                                                                        &
-                                                                                        Pricing
-                                                                                    </span>
-
-                                                                                    <Badge variant="secondary">
-                                                                                        {item
-                                                                                            .prices
-                                                                                            ?.length ??
-                                                                                            0}
-                                                                                    </Badge>
-                                                                                </div>
-
-                                                                                <span className="text-xs text-muted-foreground">
-                                                                                    Click
-                                                                                    to
-                                                                                    manage
-                                                                                    categories
-                                                                                </span>
-                                                                            </div>
-                                                                        </AccordionTrigger>
-
-                                                                        <AccordionContent className="border-t px-4 py-4">
-                                                                            <div className="rounded-md border p-3">
-                                                                                {(
-                                                                                    item.prices ||
-                                                                                    []
-                                                                                ).map(
-                                                                                    (
-                                                                                        room,
-                                                                                        rIndex,
-                                                                                    ) => (
-                                                                                        <div
-                                                                                            key={
-                                                                                                rIndex
-                                                                                            }
-                                                                                            className="rounded-lg border bg-muted/20 p-3"
-                                                                                        >
-                                                                                            <div className="grid grid-cols-4 gap-3 items-start">
-                                                                                                {/* ROOM */}
-                                                                                                <select
-                                                                                                    className="border rounded px-2 h-9 text-sm w-full bg-background"
-                                                                                                    value={
-                                                                                                        room.room_type_id ??
-                                                                                                        ''
-                                                                                                    }
-                                                                                                    onChange={(
-                                                                                                        e,
-                                                                                                    ) =>
-                                                                                                        updateRoom(
-                                                                                                            index,
-                                                                                                            rIndex,
-                                                                                                            'room_type_id',
-                                                                                                            Number(
-                                                                                                                e
-                                                                                                                    .target
-                                                                                                                    .value,
-                                                                                                            ),
-                                                                                                        )
-                                                                                                    }
-                                                                                                >
-                                                                                                    <option value="">
-                                                                                                        Select
-                                                                                                        Category
-                                                                                                    </option>
-
-                                                                                                    {(
-                                                                                                        priceCategories ||
-                                                                                                        []
-                                                                                                    )
-                                                                                                        .sort(
-                                                                                                            (
-                                                                                                                a,
-                                                                                                                b,
-                                                                                                            ) =>
-                                                                                                                a.id -
-                                                                                                                b.id,
-                                                                                                        )
-                                                                                                        .filter(
-                                                                                                            (
-                                                                                                                cat,
-                                                                                                            ) => {
-                                                                                                                const selectedIds =
-                                                                                                                    (
-                                                                                                                        item.prices ||
-                                                                                                                        []
-                                                                                                                    )
-                                                                                                                        .map(
-                                                                                                                            (
-                                                                                                                                p,
-                                                                                                                                i,
-                                                                                                                            ) =>
-                                                                                                                                i !==
-                                                                                                                                rIndex
-                                                                                                                                    ? p.room_type_id
-                                                                                                                                    : null,
-                                                                                                                        )
-                                                                                                                        .filter(
-                                                                                                                            Boolean,
-                                                                                                                        );
-
-                                                                                                                return !selectedIds.includes(
-                                                                                                                    cat.id,
-                                                                                                                );
-                                                                                                            },
-                                                                                                        )
-                                                                                                        .map(
-                                                                                                            (
-                                                                                                                cat,
-                                                                                                            ) => (
-                                                                                                                <option
-                                                                                                                    key={
-                                                                                                                        cat.id
-                                                                                                                    }
-                                                                                                                    value={
-                                                                                                                        cat.id
-                                                                                                                    }
-                                                                                                                >
-                                                                                                                    {
-                                                                                                                        cat.name
-                                                                                                                    }
-                                                                                                                </option>
-                                                                                                            ),
-                                                                                                        )}
-                                                                                                </select>
-
-                                                                                                {/* PRICE */}
-                                                                                                <MoneyInput
-                                                                                                    value={
-                                                                                                        room.price
-                                                                                                    }
-                                                                                                    placeholder="Price"
-                                                                                                    onChange={(
-                                                                                                        val,
-                                                                                                    ) =>
-                                                                                                        updateRoom(
-                                                                                                            index,
-                                                                                                            rIndex,
-                                                                                                            'price',
-                                                                                                            val,
-                                                                                                        )
-                                                                                                    }
-                                                                                                />
-
-                                                                                                {/* PROMOTION */}
-                                                                                                <div className="space-y-1">
-                                                                                                    <div className="relative">
-                                                                                                        <input
-                                                                                                            type="text"
-                                                                                                            inputMode="decimal"
-                                                                                                            className="w-full pr-8 border rounded px-2 h-9 text-sm"
-                                                                                                            value={
-                                                                                                                room
-                                                                                                                    .promotion
-                                                                                                                    .type ===
-                                                                                                                'percent'
-                                                                                                                    ? room
-                                                                                                                          .promotion
-                                                                                                                          .value
-                                                                                                                    : ''
-                                                                                                            }
-                                                                                                            placeholder="Promotion %"
-                                                                                                            onChange={(
-                                                                                                                e,
-                                                                                                            ) => {
-                                                                                                                let raw =
-                                                                                                                    e.target.value
-                                                                                                                        .replace(
-                                                                                                                            /[^0-9.,]/g,
-                                                                                                                            '',
-                                                                                                                        )
-                                                                                                                        .replace(
-                                                                                                                            ',',
-                                                                                                                            '.',
-                                                                                                                        );
-
-                                                                                                                if (
-                                                                                                                    Number(
-                                                                                                                        raw,
-                                                                                                                    ) >
-                                                                                                                    100
-                                                                                                                )
-                                                                                                                    raw =
-                                                                                                                        '100';
-
-                                                                                                                updateRoomAdjustment(
-                                                                                                                    index,
-                                                                                                                    rIndex,
-                                                                                                                    'promotion',
-                                                                                                                    'type',
-                                                                                                                    'percent',
-                                                                                                                );
-
-                                                                                                                updateRoomAdjustment(
-                                                                                                                    index,
-                                                                                                                    rIndex,
-                                                                                                                    'promotion',
-                                                                                                                    'value',
-                                                                                                                    raw,
-                                                                                                                );
-                                                                                                            }}
-                                                                                                        />
-
-                                                                                                        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs">
-                                                                                                            %
-                                                                                                        </span>
-                                                                                                    </div>
-
-                                                                                                    <MoneyInput
-                                                                                                        value={
-                                                                                                            room
-                                                                                                                .promotion
-                                                                                                                .type ===
-                                                                                                            'value'
-                                                                                                                ? room
-                                                                                                                      .promotion
-                                                                                                                      .value
-                                                                                                                : ''
-                                                                                                        }
-                                                                                                        placeholder="Promotion Value"
-                                                                                                        onChange={(
-                                                                                                            val,
-                                                                                                        ) => {
-                                                                                                            updateRoomAdjustment(
-                                                                                                                index,
-                                                                                                                rIndex,
-                                                                                                                'promotion',
-                                                                                                                'type',
-                                                                                                                'value',
-                                                                                                            );
-
-                                                                                                            updateRoomAdjustment(
-                                                                                                                index,
-                                                                                                                rIndex,
-                                                                                                                'promotion',
-                                                                                                                'value',
-                                                                                                                val,
-                                                                                                            );
-                                                                                                        }}
-                                                                                                    />
-                                                                                                </div>
-
-                                                                                                {/* COMMISSION */}
-                                                                                                <div className="space-y-1">
-                                                                                                    <div className="relative">
-                                                                                                        <input
-                                                                                                            type="text"
-                                                                                                            inputMode="decimal"
-                                                                                                            className="w-full pr-8 border rounded px-2 h-9 text-sm"
-                                                                                                            value={
-                                                                                                                room
-                                                                                                                    .commission
-                                                                                                                    .type ===
-                                                                                                                'percent'
-                                                                                                                    ? room
-                                                                                                                          .commission
-                                                                                                                          .value
-                                                                                                                    : ''
-                                                                                                            }
-                                                                                                            placeholder="Commission %"
-                                                                                                            onChange={(
-                                                                                                                e,
-                                                                                                            ) => {
-                                                                                                                const raw =
-                                                                                                                    e.target.value
-                                                                                                                        .replace(
-                                                                                                                            /[^0-9.,]/g,
-                                                                                                                            '',
-                                                                                                                        )
-                                                                                                                        .replace(
-                                                                                                                            ',',
-                                                                                                                            '.',
-                                                                                                                        );
-
-                                                                                                                updateRoomAdjustment(
-                                                                                                                    index,
-                                                                                                                    rIndex,
-                                                                                                                    'commission',
-                                                                                                                    'type',
-                                                                                                                    'percent',
-                                                                                                                );
-
-                                                                                                                updateRoomAdjustment(
-                                                                                                                    index,
-                                                                                                                    rIndex,
-                                                                                                                    'commission',
-                                                                                                                    'value',
-                                                                                                                    raw,
-                                                                                                                );
-                                                                                                            }}
-                                                                                                        />
-
-                                                                                                        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs">
-                                                                                                            %
-                                                                                                        </span>
-                                                                                                    </div>
-
-                                                                                                    <MoneyInput
-                                                                                                        value={
-                                                                                                            room
-                                                                                                                .commission
-                                                                                                                .type ===
-                                                                                                            'value'
-                                                                                                                ? room
-                                                                                                                      .commission
-                                                                                                                      .value
-                                                                                                                : ''
-                                                                                                        }
-                                                                                                        placeholder="Commission Value"
-                                                                                                        onChange={(
-                                                                                                            val,
-                                                                                                        ) => {
-                                                                                                            updateRoomAdjustment(
-                                                                                                                index,
-                                                                                                                rIndex,
-                                                                                                                'commission',
-                                                                                                                'type',
-                                                                                                                'value',
-                                                                                                            );
-
-                                                                                                            updateRoomAdjustment(
-                                                                                                                index,
-                                                                                                                rIndex,
-                                                                                                                'commission',
-                                                                                                                'value',
-                                                                                                                val,
-                                                                                                            );
-                                                                                                        }}
-                                                                                                    />
-                                                                                                </div>
-                                                                                            </div>
-
-                                                                                            <div className="mt-3 flex justify-end">
-                                                                                                <Button
-                                                                                                    type="button"
-                                                                                                    size="sm"
-                                                                                                    variant="ghost"
-                                                                                                    className="text-red-500"
-                                                                                                    onClick={() =>
-                                                                                                        removeRoom(
-                                                                                                            index,
-                                                                                                            rIndex,
-                                                                                                        )
-                                                                                                    }
-                                                                                                >
-                                                                                                    Delete
-                                                                                                    Category
-                                                                                                </Button>
-                                                                                            </div>
-                                                                                        </div>
-                                                                                    ),
-                                                                                )}
-
-                                                                                <Button
-                                                                                    type="button"
-                                                                                    size="sm"
-                                                                                    variant="outline"
-                                                                                    onClick={() =>
-                                                                                        addRoom(
-                                                                                            index,
-                                                                                        )
+                                                                <div className="space-y-3">
+                                                                    {(
+                                                                        item.prices ||
+                                                                        []
+                                                                    ).map(
+                                                                        (
+                                                                            room,
+                                                                            rIndex,
+                                                                        ) => (
+                                                                            <div
+                                                                                key={
+                                                                                    rIndex
+                                                                                }
+                                                                                className="grid grid-cols-4 gap-2 items-start p-2 border rounded-md"
+                                                                            >
+                                                                                {/* ROOM */}
+                                                                                <select
+                                                                                    className="border rounded px-2 h-9 text-sm w-full"
+                                                                                    value={
+                                                                                        room.room_type_id ??
+                                                                                        ''
                                                                                     }
-                                                                                    disabled={
-                                                                                        (
-                                                                                            item.prices ||
-                                                                                            []
-                                                                                        ).filter(
-                                                                                            (
-                                                                                                p,
-                                                                                            ) =>
-                                                                                                p.room_type_id,
+                                                                                    onChange={(
+                                                                                        e,
+                                                                                    ) =>
+                                                                                        updateRoom(
+                                                                                            index,
+                                                                                            rIndex,
+                                                                                            'room_type_id',
+                                                                                            Number(
+                                                                                                e
+                                                                                                    .target
+                                                                                                    .value,
+                                                                                            ),
                                                                                         )
-                                                                                            .length >=
-                                                                                        (
-                                                                                            priceCategories ||
-                                                                                            []
-                                                                                        )
-                                                                                            .length
                                                                                     }
                                                                                 >
-                                                                                    +
-                                                                                    Add
-                                                                                    Category
-                                                                                </Button>
+                                                                                    <option value="">
+                                                                                        Select
+                                                                                        Category
+                                                                                    </option>
+
+                                                                                    {(
+                                                                                        priceCategories ||
+                                                                                        []
+                                                                                    )
+                                                                                        .sort(
+                                                                                            (
+                                                                                                a,
+                                                                                                b,
+                                                                                            ) =>
+                                                                                                a.id -
+                                                                                                b.id,
+                                                                                        )
+                                                                                        .filter(
+                                                                                            (
+                                                                                                cat,
+                                                                                            ) => {
+                                                                                                const selectedIds =
+                                                                                                    (
+                                                                                                        item.prices ||
+                                                                                                        []
+                                                                                                    )
+                                                                                                        .map(
+                                                                                                            (
+                                                                                                                p,
+                                                                                                                i,
+                                                                                                            ) =>
+                                                                                                                i !==
+                                                                                                                rIndex
+                                                                                                                    ? p.room_type_id
+                                                                                                                    : null,
+                                                                                                        )
+                                                                                                        .filter(
+                                                                                                            Boolean,
+                                                                                                        );
+
+                                                                                                return !selectedIds.includes(
+                                                                                                    cat.id,
+                                                                                                );
+                                                                                            },
+                                                                                        )
+                                                                                        .map(
+                                                                                            (
+                                                                                                cat,
+                                                                                            ) => (
+                                                                                                <option
+                                                                                                    key={
+                                                                                                        cat.id
+                                                                                                    }
+                                                                                                    value={
+                                                                                                        cat.id
+                                                                                                    }
+                                                                                                >
+                                                                                                    {
+                                                                                                        cat.name
+                                                                                                    }
+                                                                                                </option>
+                                                                                            ),
+                                                                                        )}
+                                                                                </select>
+
+                                                                                {/* PRICE */}
+                                                                                <MoneyInput
+                                                                                    value={
+                                                                                        room.price
+                                                                                    }
+                                                                                    placeholder="Price"
+                                                                                    onChange={(
+                                                                                        val,
+                                                                                    ) =>
+                                                                                        updateRoom(
+                                                                                            index,
+                                                                                            rIndex,
+                                                                                            'price',
+                                                                                            val,
+                                                                                        )
+                                                                                    }
+                                                                                />
+
+                                                                                {/* PROMOTION */}
+                                                                                <div className="space-y-1">
+                                                                                    {/* PERCENT */}
+                                                                                    <div className="relative">
+                                                                                        <input
+                                                                                            type="text"
+                                                                                            inputMode="decimal"
+                                                                                            className="w-full pr-8 border rounded px-2 h-9 text-sm"
+                                                                                            value={
+                                                                                                room
+                                                                                                    .promotion
+                                                                                                    .type ===
+                                                                                                'percent'
+                                                                                                    ? room
+                                                                                                          .promotion
+                                                                                                          .value
+                                                                                                    : ''
+                                                                                            }
+                                                                                            placeholder="0"
+                                                                                            onChange={(
+                                                                                                e,
+                                                                                            ) => {
+                                                                                                let raw =
+                                                                                                    e.target.value
+                                                                                                        .replace(
+                                                                                                            /[^0-9.,]/g,
+                                                                                                            '',
+                                                                                                        )
+                                                                                                        .replace(
+                                                                                                            ',',
+                                                                                                            '.',
+                                                                                                        );
+
+                                                                                                if (
+                                                                                                    Number(
+                                                                                                        raw,
+                                                                                                    ) >
+                                                                                                    100
+                                                                                                )
+                                                                                                    raw =
+                                                                                                        '100';
+
+                                                                                                updateRoomAdjustment(
+                                                                                                    index,
+                                                                                                    rIndex,
+                                                                                                    'promotion',
+                                                                                                    'type',
+                                                                                                    'percent',
+                                                                                                );
+                                                                                                updateRoomAdjustment(
+                                                                                                    index,
+                                                                                                    rIndex,
+                                                                                                    'promotion',
+                                                                                                    'value',
+                                                                                                    raw,
+                                                                                                );
+                                                                                            }}
+                                                                                        />
+                                                                                        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs">
+                                                                                            %
+                                                                                        </span>
+                                                                                    </div>
+
+                                                                                    {/* VALUE */}
+                                                                                    <MoneyInput
+                                                                                        value={
+                                                                                            room
+                                                                                                .promotion
+                                                                                                .type ===
+                                                                                            'value'
+                                                                                                ? room
+                                                                                                      .promotion
+                                                                                                      .value
+                                                                                                : ''
+                                                                                        }
+                                                                                        placeholder="Value"
+                                                                                        className="w-full"
+                                                                                        onChange={(
+                                                                                            val,
+                                                                                        ) => {
+                                                                                            updateRoomAdjustment(
+                                                                                                index,
+                                                                                                rIndex,
+                                                                                                'promotion',
+                                                                                                'type',
+                                                                                                'value',
+                                                                                            );
+                                                                                            updateRoomAdjustment(
+                                                                                                index,
+                                                                                                rIndex,
+                                                                                                'promotion',
+                                                                                                'value',
+                                                                                                val,
+                                                                                            );
+                                                                                        }}
+                                                                                    />
+                                                                                </div>
+
+                                                                                {/* COMMISSION */}
+                                                                                <div className="space-y-1">
+                                                                                    {/* PERCENT */}
+                                                                                    <div className="relative">
+                                                                                        <input
+                                                                                            type="text"
+                                                                                            inputMode="decimal"
+                                                                                            className="w-full pr-8 border rounded px-2 h-9 text-sm"
+                                                                                            value={
+                                                                                                room
+                                                                                                    .commission
+                                                                                                    .type ===
+                                                                                                'percent'
+                                                                                                    ? room
+                                                                                                          .commission
+                                                                                                          .value
+                                                                                                    : ''
+                                                                                            }
+                                                                                            placeholder="0"
+                                                                                            onChange={(
+                                                                                                e,
+                                                                                            ) => {
+                                                                                                const raw =
+                                                                                                    e.target.value
+                                                                                                        .replace(
+                                                                                                            /[^0-9.,]/g,
+                                                                                                            '',
+                                                                                                        )
+                                                                                                        .replace(
+                                                                                                            ',',
+                                                                                                            '.',
+                                                                                                        );
+
+                                                                                                updateRoomAdjustment(
+                                                                                                    index,
+                                                                                                    rIndex,
+                                                                                                    'commission',
+                                                                                                    'type',
+                                                                                                    'percent',
+                                                                                                );
+                                                                                                updateRoomAdjustment(
+                                                                                                    index,
+                                                                                                    rIndex,
+                                                                                                    'commission',
+                                                                                                    'value',
+                                                                                                    raw,
+                                                                                                );
+                                                                                            }}
+                                                                                        />
+                                                                                        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs">
+                                                                                            %
+                                                                                        </span>
+                                                                                    </div>
+
+                                                                                    {/* VALUE */}
+                                                                                    <MoneyInput
+                                                                                        value={
+                                                                                            room
+                                                                                                .commission
+                                                                                                .type ===
+                                                                                            'value'
+                                                                                                ? room
+                                                                                                      .commission
+                                                                                                      .value
+                                                                                                : ''
+                                                                                        }
+                                                                                        placeholder="Value"
+                                                                                        className="w-full"
+                                                                                        onChange={(
+                                                                                            val,
+                                                                                        ) => {
+                                                                                            updateRoomAdjustment(
+                                                                                                index,
+                                                                                                rIndex,
+                                                                                                'commission',
+                                                                                                'type',
+                                                                                                'value',
+                                                                                            );
+                                                                                            updateRoomAdjustment(
+                                                                                                index,
+                                                                                                rIndex,
+                                                                                                'commission',
+                                                                                                'value',
+                                                                                                val,
+                                                                                            );
+                                                                                        }}
+                                                                                    />
+                                                                                </div>
+
+                                                                                {/* REMOVE ROOM */}
+                                                                                <div className="col-span-4 flex justify-end">
+                                                                                    <Button
+                                                                                        type="button"
+                                                                                        size="sm"
+                                                                                        variant="ghost"
+                                                                                        className="text-red-500"
+                                                                                        onClick={() =>
+                                                                                            removeRoom(
+                                                                                                index,
+                                                                                                rIndex,
+                                                                                            )
+                                                                                        }
+                                                                                    >
+                                                                                        x
+                                                                                        Delete
+                                                                                        Category
+                                                                                    </Button>
+                                                                                </div>
                                                                             </div>
-                                                                        </AccordionContent>
-                                                                    </AccordionItem>
-                                                                </Accordion>
+                                                                        ),
+                                                                    )}
+
+                                                                    {/* ADD ROOM */}
+                                                                    <div>
+                                                                        <Button
+                                                                            type="button"
+                                                                            size="sm"
+                                                                            variant="outline"
+                                                                            onClick={() =>
+                                                                                addRoom(
+                                                                                    index,
+                                                                                )
+                                                                            }
+                                                                            disabled={
+                                                                                (
+                                                                                    item.prices ||
+                                                                                    []
+                                                                                ).filter(
+                                                                                    (
+                                                                                        p,
+                                                                                    ) =>
+                                                                                        p.room_type_id,
+                                                                                )
+                                                                                    .length >=
+                                                                                (
+                                                                                    priceCategories ||
+                                                                                    []
+                                                                                )
+                                                                                    .length
+                                                                            }
+                                                                        >
+                                                                            +
+                                                                            Add
+                                                                            Category
+                                                                        </Button>
+                                                                    </div>
+                                                                </div>
                                                             </td>
 
                                                             {/* ACTION */}
