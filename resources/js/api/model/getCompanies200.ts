@@ -9,7 +9,7 @@ import type { GetCompanies200Links } from './getCompanies200Links';
 import type { GetCompanies200Meta } from './getCompanies200Meta';
 
 export type GetCompanies200 = {
-  data: CompanyResource[];
-  links: GetCompanies200Links;
-  meta: GetCompanies200Meta;
+    data: CompanyResource[];
+    links: GetCompanies200Links;
+    meta: GetCompanies200Meta;
 };

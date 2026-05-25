@@ -1,212 +1,220 @@
 import type { LucideIcon } from 'lucide-react';
 import {
-  ChevronRight,
-  ExternalLinkIcon,
-  MoreHorizontalIcon,
+    ChevronRight,
+    ExternalLinkIcon,
+    MoreHorizontalIcon,
 } from 'lucide-react';
 
 import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
+    Collapsible,
+    CollapsibleContent,
+    CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
 import {
-  SidebarMenu,
-  SidebarMenuAction,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarMenuSub,
-  SidebarMenuSubButton,
-  SidebarMenuSubItem,
+    SidebarMenu,
+    SidebarMenuAction,
+    SidebarMenuButton,
+    SidebarMenuItem,
+    SidebarMenuSub,
+    SidebarMenuSubButton,
+    SidebarMenuSubItem,
 } from '@/components/ui/sidebar';
 
 import { useIsMobile } from '@/hooks/use-mobile';
 import React, { useMemo, type HTMLAttributeAnchorTarget } from 'react';
 
 export type MenuItemBase = {
-  id: string;
-  title: string | React.ReactNode;
-  urlOrAction: string | (() => void);
-  target?: HTMLAttributeAnchorTarget;
-  icon?: LucideIcon;
-  disabled?: boolean;
+    id: string;
+    title: string | React.ReactNode;
+    urlOrAction: string | (() => void);
+    target?: HTMLAttributeAnchorTarget;
+    icon?: LucideIcon;
+    disabled?: boolean;
 };
 
 export type MenuItem =
-  | (MenuItemBase & { items?: MenuItem[]; actions?: never })
-  | (MenuItemBase & { items?: never; actions?: MenuItem[] })
-  | (MenuItemBase & { items?: never; actions?: never });
+    | (MenuItemBase & { items?: MenuItem[]; actions?: never })
+    | (MenuItemBase & { items?: never; actions?: MenuItem[] })
+    | (MenuItemBase & { items?: never; actions?: never });
 
 type Props = {
-  menu: MenuItem[];
-  activeMenuIds: string[];
-  openMenuIds: string[];
+    menu: MenuItem[];
+    activeMenuIds: string[];
+    openMenuIds: string[];
 };
 
 export function SidebarMenuRenderer({
-  menu,
-  activeMenuIds = [],
-  openMenuIds = [],
+    menu,
+    activeMenuIds = [],
+    openMenuIds = [],
 }: Props) {
-  const isMobile = useIsMobile();
-  const openState = useMemo<Record<string, boolean>>(
-    () => (openMenuIds || []).reduce((a, c) => ({ ...a, [c]: true }), {}),
-    [openMenuIds],
-  );
-  const activeState = useMemo<Record<string, boolean>>(
-    () => (activeMenuIds || []).reduce((a, c) => ({ ...a, [c]: true }), {}),
-    [activeMenuIds],
-  );
-
-  const renderLink = (item: MenuItem, isSub = false) => {
-    const Button = isSub ? SidebarMenuSubButton : SidebarMenuButton;
-
-    if (item.disabled) {
-      return (
-        <Button
-          isActive={false}
-          tooltip={typeof item.title === 'string' ? item.title : undefined}
-        >
-          <div className="flex w-full items-center opacity-50 cursor-not-allowed pointer-events-none">
-            {item.icon && <item.icon />}
-            <span className="flex-1">{item.title}</span>
-          </div>
-        </Button>
-      );
-    }
-
-    if (typeof item.urlOrAction === 'string') {
-      return (
-        <Button asChild isActive={activeState[item.id]}>
-          <a href={item.urlOrAction} target={item.target}>
-            {item.icon && <item.icon />}
-            <span className="flex-1">{item.title}</span>
-
-            {item.target === '_blank' && (
-              <ExternalLinkIcon className="size-3 text-muted-foreground" />
-            )}
-          </a>
-        </Button>
-      );
-    }
-
-    return (
-      <Button asChild isActive={activeState[item.id]}>
-        <button
-          onClick={item.urlOrAction}
-          className="w-full flex items-center text-left"
-        >
-          {item.icon && <item.icon />}
-          <span className="flex-1">{item.title}</span>
-        </button>
-      </Button>
+    const isMobile = useIsMobile();
+    const openState = useMemo<Record<string, boolean>>(
+        () => (openMenuIds || []).reduce((a, c) => ({ ...a, [c]: true }), {}),
+        [openMenuIds],
     );
-  };
-
-  function renderActions(actions?: MenuItem[]) {
-    if (!actions?.length) return null;
-
-    return (
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <SidebarMenuAction showOnHover>
-            <MoreHorizontalIcon />
-            <span className="sr-only">More</span>
-          </SidebarMenuAction>
-        </DropdownMenuTrigger>
-
-        <DropdownMenuContent
-          className="w-48 rounded-lg"
-          side={isMobile ? 'bottom' : 'right'}
-          align={isMobile ? 'end' : 'start'}
-        >
-          {actions.map((action) => (
-            <DropdownMenuItem
-              key={action.id}
-              asChild
-              onClick={
-                typeof action.urlOrAction === 'function' && !action.disabled
-                  ? action.urlOrAction
-                  : undefined
-              }
-              disabled={action.disabled}
-            >
-              <a
-                className={`flex items-center gap-2 w-full ${action.disabled ? 'pointer-events-none opacity-50' : ''}`}
-                href={
-                  typeof action.urlOrAction === 'string' && !action.disabled
-                    ? action.urlOrAction
-                    : undefined
-                }
-                target={action.disabled ? undefined : action.target}
-              >
-                {action.icon && (
-                  <action.icon className="text-muted-foreground" />
-                )}
-                {action.title}
-              </a>
-            </DropdownMenuItem>
-          ))}
-        </DropdownMenuContent>
-      </DropdownMenu>
+    const activeState = useMemo<Record<string, boolean>>(
+        () => (activeMenuIds || []).reduce((a, c) => ({ ...a, [c]: true }), {}),
+        [activeMenuIds],
     );
-  }
 
-  return (
-    <SidebarMenu>
-      {menu.map((item) => {
-        if (item.items?.length) {
-          return (
-            <Collapsible
-              key={item.id}
-              asChild
-              defaultOpen={openState[item.id]}
-              className="group/collapsible"
-            >
-              <SidebarMenuItem>
-                <CollapsibleTrigger asChild>
-                  <SidebarMenuButton
+    const renderLink = (item: MenuItem, isSub = false) => {
+        const Button = isSub ? SidebarMenuSubButton : SidebarMenuButton;
+
+        if (item.disabled) {
+            return (
+                <Button
+                    isActive={false}
                     tooltip={
-                      typeof item.title === 'string' ? item.title : undefined
+                        typeof item.title === 'string' ? item.title : undefined
                     }
-                    isActive={activeState[item.id]}
-                  >
-                    {item.icon && <item.icon />}
-                    <span>{item.title}</span>
+                >
+                    <div className="flex w-full items-center opacity-50 cursor-not-allowed pointer-events-none">
+                        {item.icon && <item.icon />}
+                        <span className="flex-1">{item.title}</span>
+                    </div>
+                </Button>
+            );
+        }
 
-                    <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
-                  </SidebarMenuButton>
-                </CollapsibleTrigger>
+        if (typeof item.urlOrAction === 'string') {
+            return (
+                <Button asChild isActive={activeState[item.id]}>
+                    <a href={item.urlOrAction} target={item.target}>
+                        {item.icon && <item.icon />}
+                        <span className="flex-1">{item.title}</span>
 
-                <CollapsibleContent>
-                  <SidebarMenuSub className="pr-0 mr-0">
-                    {item.items.map((sub) => (
-                      <SidebarMenuSubItem key={sub.id}>
-                        {renderLink(sub, true)}
-                        {renderActions(sub.actions)}
-                      </SidebarMenuSubItem>
-                    ))}
-                  </SidebarMenuSub>
-                </CollapsibleContent>
-              </SidebarMenuItem>
-            </Collapsible>
-          );
+                        {item.target === '_blank' && (
+                            <ExternalLinkIcon className="size-3 text-muted-foreground" />
+                        )}
+                    </a>
+                </Button>
+            );
         }
 
         return (
-          <SidebarMenuItem key={item.id}>
-            {renderLink(item)} {renderActions(item.actions)}
-          </SidebarMenuItem>
+            <Button asChild isActive={activeState[item.id]}>
+                <button
+                    onClick={item.urlOrAction}
+                    className="w-full flex items-center text-left"
+                >
+                    {item.icon && <item.icon />}
+                    <span className="flex-1">{item.title}</span>
+                </button>
+            </Button>
         );
-      })}
-    </SidebarMenu>
-  );
+    };
+
+    function renderActions(actions?: MenuItem[]) {
+        if (!actions?.length) return null;
+
+        return (
+            <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                    <SidebarMenuAction showOnHover>
+                        <MoreHorizontalIcon />
+                        <span className="sr-only">More</span>
+                    </SidebarMenuAction>
+                </DropdownMenuTrigger>
+
+                <DropdownMenuContent
+                    className="w-48 rounded-lg"
+                    side={isMobile ? 'bottom' : 'right'}
+                    align={isMobile ? 'end' : 'start'}
+                >
+                    {actions.map((action) => (
+                        <DropdownMenuItem
+                            key={action.id}
+                            asChild
+                            onClick={
+                                typeof action.urlOrAction === 'function' &&
+                                !action.disabled
+                                    ? action.urlOrAction
+                                    : undefined
+                            }
+                            disabled={action.disabled}
+                        >
+                            <a
+                                className={`flex items-center gap-2 w-full ${action.disabled ? 'pointer-events-none opacity-50' : ''}`}
+                                href={
+                                    typeof action.urlOrAction === 'string' &&
+                                    !action.disabled
+                                        ? action.urlOrAction
+                                        : undefined
+                                }
+                                target={
+                                    action.disabled ? undefined : action.target
+                                }
+                            >
+                                {action.icon && (
+                                    <action.icon className="text-muted-foreground" />
+                                )}
+                                {action.title}
+                            </a>
+                        </DropdownMenuItem>
+                    ))}
+                </DropdownMenuContent>
+            </DropdownMenu>
+        );
+    }
+
+    return (
+        <SidebarMenu>
+            {menu.map((item) => {
+                if (item.items?.length) {
+                    return (
+                        <Collapsible
+                            key={item.id}
+                            asChild
+                            defaultOpen={openState[item.id]}
+                            className="group/collapsible"
+                        >
+                            <SidebarMenuItem>
+                                <CollapsibleTrigger asChild>
+                                    <SidebarMenuButton
+                                        tooltip={
+                                            typeof item.title === 'string'
+                                                ? item.title
+                                                : undefined
+                                        }
+                                        isActive={activeState[item.id]}
+                                    >
+                                        {item.icon && <item.icon />}
+                                        <span>{item.title}</span>
+
+                                        <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+                                    </SidebarMenuButton>
+                                </CollapsibleTrigger>
+
+                                <CollapsibleContent>
+                                    <SidebarMenuSub className="pr-0 mr-0">
+                                        {item.items.map((sub) => (
+                                            <SidebarMenuSubItem key={sub.id}>
+                                                {renderLink(sub, true)}
+                                                {renderActions(sub.actions)}
+                                            </SidebarMenuSubItem>
+                                        ))}
+                                    </SidebarMenuSub>
+                                </CollapsibleContent>
+                            </SidebarMenuItem>
+                        </Collapsible>
+                    );
+                }
+
+                return (
+                    <SidebarMenuItem key={item.id}>
+                        {renderLink(item)} {renderActions(item.actions)}
+                    </SidebarMenuItem>
+                );
+            })}
+        </SidebarMenu>
+    );
 }

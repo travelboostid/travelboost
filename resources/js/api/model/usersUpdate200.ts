@@ -7,5 +7,5 @@
 import type { UserResource } from './userResource';
 
 export type UsersUpdate200 = {
-  data: UserResource;
+    data: UserResource;
 };

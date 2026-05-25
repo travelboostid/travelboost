@@ -10,29 +10,29 @@ import type { AdminSearchCompanies200MetaPath } from './adminSearchCompanies200M
 import type { AdminSearchCompanies200MetaTo } from './adminSearchCompanies200MetaTo';
 
 export type AdminSearchCompanies200Meta = {
-  /** @minimum 1 */
-  current_page: number;
-  /** @minimum 1 */
-  from: AdminSearchCompanies200MetaFrom;
-  /** @minimum 1 */
-  last_page: number;
-  /** Generated paginator links. */
-  links: AdminSearchCompanies200MetaLinksItem[];
-  /** Base path for paginator generated URLs. */
-  path: AdminSearchCompanies200MetaPath;
-  /**
-   * Number of items shown per page.
-   * @minimum 0
-   */
-  per_page: number;
-  /**
-   * Number of the last item in the slice.
-   * @minimum 1
-   */
-  to: AdminSearchCompanies200MetaTo;
-  /**
-   * Total number of items being paginated.
-   * @minimum 0
-   */
-  total: number;
+    /** @minimum 1 */
+    current_page: number;
+    /** @minimum 1 */
+    from: AdminSearchCompanies200MetaFrom;
+    /** @minimum 1 */
+    last_page: number;
+    /** Generated paginator links. */
+    links: AdminSearchCompanies200MetaLinksItem[];
+    /** Base path for paginator generated URLs. */
+    path: AdminSearchCompanies200MetaPath;
+    /**
+     * Number of items shown per page.
+     * @minimum 0
+     */
+    per_page: number;
+    /**
+     * Number of the last item in the slice.
+     * @minimum 1
+     */
+    to: AdminSearchCompanies200MetaTo;
+    /**
+     * Total number of items being paginated.
+     * @minimum 0
+     */
+    total: number;
 };

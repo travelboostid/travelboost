@@ -4,125 +4,191 @@
  * Travelboost
  * OpenAPI spec version: 0.0.1
  */
-import {
-  useQuery
-} from '@tanstack/react-query';
 import type {
-  DataTag,
-  DefinedInitialDataOptions,
-  DefinedUseQueryResult,
-  QueryClient,
-  QueryFunction,
-  QueryKey,
-  UndefinedInitialDataOptions,
-  UseQueryOptions,
-  UseQueryResult
+    DataTag,
+    DefinedInitialDataOptions,
+    DefinedUseQueryResult,
+    QueryClient,
+    QueryFunction,
+    QueryKey,
+    UndefinedInitialDataOptions,
+    UseQueryOptions,
+    UseQueryResult,
 } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 
 import type {
-  AuthenticationExceptionResponse,
-  GetGeoDistricts200,
-  GetGeoDistrictsParams,
-  ValidationExceptionResponse
+    AuthenticationExceptionResponse,
+    GetGeoDistricts200,
+    GetGeoDistrictsParams,
+    ValidationExceptionResponse,
 } from '.././model';
 
 import { apiInstance } from '.././api-instance';
 
-
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
-
-
 
 /**
  * @summary Display a listing of the resource
  */
 export const getGeoDistricts = (
     params: GetGeoDistrictsParams,
- options?: SecondParameter<typeof apiInstance>,signal?: AbortSignal
+    options?: SecondParameter<typeof apiInstance>,
+    signal?: AbortSignal,
 ) => {
-      
-      
-      return apiInstance<GetGeoDistricts200>(
-      {url: `/geo/districts`, method: 'GET',
-        params, signal
+    return apiInstance<GetGeoDistricts200>(
+        { url: `/geo/districts`, method: 'GET', params, signal },
+        options,
+    );
+};
+
+export const getGetGeoDistrictsQueryKey = (params?: GetGeoDistrictsParams) => {
+    return [`/geo/districts`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetGeoDistrictsQueryOptions = <
+    TData = Awaited<ReturnType<typeof getGeoDistricts>>,
+    TError = AuthenticationExceptionResponse | ValidationExceptionResponse,
+>(
+    params: GetGeoDistrictsParams,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof getGeoDistricts>>,
+                TError,
+                TData
+            >
+        >;
+        request?: SecondParameter<typeof apiInstance>;
     },
-      options);
-    }
-  
-
-
-
-export const getGetGeoDistrictsQueryKey = (params?: GetGeoDistrictsParams,) => {
-    return [
-    `/geo/districts`, ...(params ? [params]: [])
-    ] as const;
-    }
-
-    
-export const getGetGeoDistrictsQueryOptions = <TData = Awaited<ReturnType<typeof getGeoDistricts>>, TError = AuthenticationExceptionResponse | ValidationExceptionResponse>(params: GetGeoDistrictsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getGeoDistricts>>, TError, TData>>, request?: SecondParameter<typeof apiInstance>}
 ) => {
+    const { query: queryOptions, request: requestOptions } = options ?? {};
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+    const queryKey =
+        queryOptions?.queryKey ?? getGetGeoDistrictsQueryKey(params);
 
-  const queryKey =  queryOptions?.queryKey ?? getGetGeoDistrictsQueryKey(params);
+    const queryFn: QueryFunction<
+        Awaited<ReturnType<typeof getGeoDistricts>>
+    > = ({ signal }) => getGeoDistricts(params, requestOptions, signal);
 
-  
+    return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+        Awaited<ReturnType<typeof getGeoDistricts>>,
+        TError,
+        TData
+    > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getGeoDistricts>>> = ({ signal }) => getGeoDistricts(params, requestOptions, signal);
+export type GetGeoDistrictsQueryResult = NonNullable<
+    Awaited<ReturnType<typeof getGeoDistricts>>
+>;
+export type GetGeoDistrictsQueryError =
+    | AuthenticationExceptionResponse
+    | ValidationExceptionResponse;
 
-      
-
-      
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getGeoDistricts>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type GetGeoDistrictsQueryResult = NonNullable<Awaited<ReturnType<typeof getGeoDistricts>>>
-export type GetGeoDistrictsQueryError = AuthenticationExceptionResponse | ValidationExceptionResponse
-
-
-export function useGetGeoDistricts<TData = Awaited<ReturnType<typeof getGeoDistricts>>, TError = AuthenticationExceptionResponse | ValidationExceptionResponse>(
- params: GetGeoDistrictsParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getGeoDistricts>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getGeoDistricts>>,
-          TError,
-          Awaited<ReturnType<typeof getGeoDistricts>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof apiInstance>}
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetGeoDistricts<TData = Awaited<ReturnType<typeof getGeoDistricts>>, TError = AuthenticationExceptionResponse | ValidationExceptionResponse>(
- params: GetGeoDistrictsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getGeoDistricts>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getGeoDistricts>>,
-          TError,
-          Awaited<ReturnType<typeof getGeoDistricts>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof apiInstance>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetGeoDistricts<TData = Awaited<ReturnType<typeof getGeoDistricts>>, TError = AuthenticationExceptionResponse | ValidationExceptionResponse>(
- params: GetGeoDistrictsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getGeoDistricts>>, TError, TData>>, request?: SecondParameter<typeof apiInstance>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetGeoDistricts<
+    TData = Awaited<ReturnType<typeof getGeoDistricts>>,
+    TError = AuthenticationExceptionResponse | ValidationExceptionResponse,
+>(
+    params: GetGeoDistrictsParams,
+    options: {
+        query: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof getGeoDistricts>>,
+                TError,
+                TData
+            >
+        > &
+            Pick<
+                DefinedInitialDataOptions<
+                    Awaited<ReturnType<typeof getGeoDistricts>>,
+                    TError,
+                    Awaited<ReturnType<typeof getGeoDistricts>>
+                >,
+                'initialData'
+            >;
+        request?: SecondParameter<typeof apiInstance>;
+    },
+    queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetGeoDistricts<
+    TData = Awaited<ReturnType<typeof getGeoDistricts>>,
+    TError = AuthenticationExceptionResponse | ValidationExceptionResponse,
+>(
+    params: GetGeoDistrictsParams,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof getGeoDistricts>>,
+                TError,
+                TData
+            >
+        > &
+            Pick<
+                UndefinedInitialDataOptions<
+                    Awaited<ReturnType<typeof getGeoDistricts>>,
+                    TError,
+                    Awaited<ReturnType<typeof getGeoDistricts>>
+                >,
+                'initialData'
+            >;
+        request?: SecondParameter<typeof apiInstance>;
+    },
+    queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetGeoDistricts<
+    TData = Awaited<ReturnType<typeof getGeoDistricts>>,
+    TError = AuthenticationExceptionResponse | ValidationExceptionResponse,
+>(
+    params: GetGeoDistrictsParams,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof getGeoDistricts>>,
+                TError,
+                TData
+            >
+        >;
+        request?: SecondParameter<typeof apiInstance>;
+    },
+    queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+};
 /**
  * @summary Display a listing of the resource
  */
 
-export function useGetGeoDistricts<TData = Awaited<ReturnType<typeof getGeoDistricts>>, TError = AuthenticationExceptionResponse | ValidationExceptionResponse>(
- params: GetGeoDistrictsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getGeoDistricts>>, TError, TData>>, request?: SecondParameter<typeof apiInstance>}
- , queryClient?: QueryClient 
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+export function useGetGeoDistricts<
+    TData = Awaited<ReturnType<typeof getGeoDistricts>>,
+    TError = AuthenticationExceptionResponse | ValidationExceptionResponse,
+>(
+    params: GetGeoDistrictsParams,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof getGeoDistricts>>,
+                TError,
+                TData
+            >
+        >;
+        request?: SecondParameter<typeof apiInstance>;
+    },
+    queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+} {
+    const queryOptions = getGetGeoDistrictsQueryOptions(params, options);
 
-  const queryOptions = getGetGeoDistrictsQueryOptions(params,options)
+    const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+        TData,
+        TError
+    > & { queryKey: DataTag<QueryKey, TData, TError> };
 
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+    query.queryKey = queryOptions.queryKey;
 
-  query.queryKey = queryOptions.queryKey ;
-
-  return query;
+    return query;
 }
-
-
-
-

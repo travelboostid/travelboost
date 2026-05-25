@@ -6,4 +6,5 @@
  */
 import type { ChatRoomResourceMembersItemUserAnyOf } from './chatRoomResourceMembersItemUserAnyOf';
 
-export type ChatRoomResourceMembersItemUser = ChatRoomResourceMembersItemUserAnyOf | null;
+export type ChatRoomResourceMembersItemUser =
+    ChatRoomResourceMembersItemUserAnyOf | null;

@@ -4,19 +4,19 @@
  * Travelboost
  * OpenAPI spec version: 0.0.1
  */
-import type { ChatRoomResourceName } from './chatRoomResourceName';
-import type { ChatRoomResourceCreatedAt } from './chatRoomResourceCreatedAt';
-import type { ChatRoomResourceUpdatedAt } from './chatRoomResourceUpdatedAt';
-import type { ChatRoomResourceLastMessage } from './chatRoomResourceLastMessage';
 import type { ChatRoomMember } from './chatRoomMember';
+import type { ChatRoomResourceCreatedAt } from './chatRoomResourceCreatedAt';
+import type { ChatRoomResourceLastMessage } from './chatRoomResourceLastMessage';
+import type { ChatRoomResourceName } from './chatRoomResourceName';
+import type { ChatRoomResourceUpdatedAt } from './chatRoomResourceUpdatedAt';
 
 export interface ChatRoomResource {
-  id: number;
-  name: ChatRoomResourceName;
-  type: string;
-  created_by: string;
-  created_at: ChatRoomResourceCreatedAt;
-  updated_at: ChatRoomResourceUpdatedAt;
-  last_message?: ChatRoomResourceLastMessage;
-  members?: ChatRoomMember[];
+    id: number;
+    name: ChatRoomResourceName;
+    type: string;
+    created_by: string;
+    created_at: ChatRoomResourceCreatedAt;
+    updated_at: ChatRoomResourceUpdatedAt;
+    last_message?: ChatRoomResourceLastMessage;
+    members?: ChatRoomMember[];
 }

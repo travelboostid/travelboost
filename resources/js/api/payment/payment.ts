@@ -4,328 +4,480 @@
  * Travelboost
  * OpenAPI spec version: 0.0.1
  */
-import {
-  useMutation,
-  useQuery
-} from '@tanstack/react-query';
 import type {
-  DataTag,
-  DefinedInitialDataOptions,
-  DefinedUseQueryResult,
-  MutationFunction,
-  QueryClient,
-  QueryFunction,
-  QueryKey,
-  UndefinedInitialDataOptions,
-  UseMutationOptions,
-  UseMutationResult,
-  UseQueryOptions,
-  UseQueryResult
+    DataTag,
+    DefinedInitialDataOptions,
+    DefinedUseQueryResult,
+    MutationFunction,
+    QueryClient,
+    QueryFunction,
+    QueryKey,
+    UndefinedInitialDataOptions,
+    UseMutationOptions,
+    UseMutationResult,
+    UseQueryOptions,
+    UseQueryResult,
 } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 
 import type {
-  AuthenticationExceptionResponse,
-  CreateAgentSubscriptionPayment200,
-  CreateAgentSubscriptionPaymentBody,
-  CreateAiCreditTopupPayment200,
-  CreateAiCreditTopupPaymentBody,
-  CreateTopupPayment200,
-  CreateTopupPaymentBody,
-  GetPayments200,
-  GetPaymentsParams,
-  ValidationExceptionResponse
+    AuthenticationExceptionResponse,
+    CreateAgentSubscriptionPayment200,
+    CreateAgentSubscriptionPaymentBody,
+    CreateAiCreditTopupPayment200,
+    CreateAiCreditTopupPaymentBody,
+    CreateTopupPayment200,
+    CreateTopupPaymentBody,
+    GetPayments200,
+    GetPaymentsParams,
+    ValidationExceptionResponse,
 } from '.././model';
 
 import { apiInstance } from '.././api-instance';
 
-
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
-
-
 
 /**
  * @summary get payment list
  */
 export const getPayments = (
     params?: GetPaymentsParams,
- options?: SecondParameter<typeof apiInstance>,signal?: AbortSignal
+    options?: SecondParameter<typeof apiInstance>,
+    signal?: AbortSignal,
 ) => {
-      
-      
-      return apiInstance<GetPayments200>(
-      {url: `/payments`, method: 'GET',
-        params, signal
+    return apiInstance<GetPayments200>(
+        { url: `/payments`, method: 'GET', params, signal },
+        options,
+    );
+};
+
+export const getGetPaymentsQueryKey = (params?: GetPaymentsParams) => {
+    return [`/payments`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetPaymentsQueryOptions = <
+    TData = Awaited<ReturnType<typeof getPayments>>,
+    TError = AuthenticationExceptionResponse | ValidationExceptionResponse,
+>(
+    params?: GetPaymentsParams,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof getPayments>>,
+                TError,
+                TData
+            >
+        >;
+        request?: SecondParameter<typeof apiInstance>;
     },
-      options);
-    }
-  
-
-
-
-export const getGetPaymentsQueryKey = (params?: GetPaymentsParams,) => {
-    return [
-    `/payments`, ...(params ? [params]: [])
-    ] as const;
-    }
-
-    
-export const getGetPaymentsQueryOptions = <TData = Awaited<ReturnType<typeof getPayments>>, TError = AuthenticationExceptionResponse | ValidationExceptionResponse>(params?: GetPaymentsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPayments>>, TError, TData>>, request?: SecondParameter<typeof apiInstance>}
 ) => {
+    const { query: queryOptions, request: requestOptions } = options ?? {};
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+    const queryKey = queryOptions?.queryKey ?? getGetPaymentsQueryKey(params);
 
-  const queryKey =  queryOptions?.queryKey ?? getGetPaymentsQueryKey(params);
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPayments>>> = ({
+        signal,
+    }) => getPayments(params, requestOptions, signal);
 
-  
+    return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+        Awaited<ReturnType<typeof getPayments>>,
+        TError,
+        TData
+    > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPayments>>> = ({ signal }) => getPayments(params, requestOptions, signal);
+export type GetPaymentsQueryResult = NonNullable<
+    Awaited<ReturnType<typeof getPayments>>
+>;
+export type GetPaymentsQueryError =
+    | AuthenticationExceptionResponse
+    | ValidationExceptionResponse;
 
-      
-
-      
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPayments>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type GetPaymentsQueryResult = NonNullable<Awaited<ReturnType<typeof getPayments>>>
-export type GetPaymentsQueryError = AuthenticationExceptionResponse | ValidationExceptionResponse
-
-
-export function useGetPayments<TData = Awaited<ReturnType<typeof getPayments>>, TError = AuthenticationExceptionResponse | ValidationExceptionResponse>(
- params: undefined |  GetPaymentsParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPayments>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getPayments>>,
-          TError,
-          Awaited<ReturnType<typeof getPayments>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof apiInstance>}
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetPayments<TData = Awaited<ReturnType<typeof getPayments>>, TError = AuthenticationExceptionResponse | ValidationExceptionResponse>(
- params?: GetPaymentsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPayments>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getPayments>>,
-          TError,
-          Awaited<ReturnType<typeof getPayments>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof apiInstance>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetPayments<TData = Awaited<ReturnType<typeof getPayments>>, TError = AuthenticationExceptionResponse | ValidationExceptionResponse>(
- params?: GetPaymentsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPayments>>, TError, TData>>, request?: SecondParameter<typeof apiInstance>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetPayments<
+    TData = Awaited<ReturnType<typeof getPayments>>,
+    TError = AuthenticationExceptionResponse | ValidationExceptionResponse,
+>(
+    params: undefined | GetPaymentsParams,
+    options: {
+        query: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof getPayments>>,
+                TError,
+                TData
+            >
+        > &
+            Pick<
+                DefinedInitialDataOptions<
+                    Awaited<ReturnType<typeof getPayments>>,
+                    TError,
+                    Awaited<ReturnType<typeof getPayments>>
+                >,
+                'initialData'
+            >;
+        request?: SecondParameter<typeof apiInstance>;
+    },
+    queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetPayments<
+    TData = Awaited<ReturnType<typeof getPayments>>,
+    TError = AuthenticationExceptionResponse | ValidationExceptionResponse,
+>(
+    params?: GetPaymentsParams,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof getPayments>>,
+                TError,
+                TData
+            >
+        > &
+            Pick<
+                UndefinedInitialDataOptions<
+                    Awaited<ReturnType<typeof getPayments>>,
+                    TError,
+                    Awaited<ReturnType<typeof getPayments>>
+                >,
+                'initialData'
+            >;
+        request?: SecondParameter<typeof apiInstance>;
+    },
+    queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetPayments<
+    TData = Awaited<ReturnType<typeof getPayments>>,
+    TError = AuthenticationExceptionResponse | ValidationExceptionResponse,
+>(
+    params?: GetPaymentsParams,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof getPayments>>,
+                TError,
+                TData
+            >
+        >;
+        request?: SecondParameter<typeof apiInstance>;
+    },
+    queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+};
 /**
  * @summary get payment list
  */
 
-export function useGetPayments<TData = Awaited<ReturnType<typeof getPayments>>, TError = AuthenticationExceptionResponse | ValidationExceptionResponse>(
- params?: GetPaymentsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPayments>>, TError, TData>>, request?: SecondParameter<typeof apiInstance>}
- , queryClient?: QueryClient 
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+export function useGetPayments<
+    TData = Awaited<ReturnType<typeof getPayments>>,
+    TError = AuthenticationExceptionResponse | ValidationExceptionResponse,
+>(
+    params?: GetPaymentsParams,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof getPayments>>,
+                TError,
+                TData
+            >
+        >;
+        request?: SecondParameter<typeof apiInstance>;
+    },
+    queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+} {
+    const queryOptions = getGetPaymentsQueryOptions(params, options);
 
-  const queryOptions = getGetPaymentsQueryOptions(params,options)
+    const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+        TData,
+        TError
+    > & { queryKey: DataTag<QueryKey, TData, TError> };
 
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+    query.queryKey = queryOptions.queryKey;
 
-  query.queryKey = queryOptions.queryKey ;
-
-  return query;
+    return query;
 }
-
-
-
 
 /**
  * @summary Create wallet topup payment (Midtrans Snap)
  */
 export const createTopupPayment = (
     createTopupPaymentBody: CreateTopupPaymentBody,
- options?: SecondParameter<typeof apiInstance>,signal?: AbortSignal
+    options?: SecondParameter<typeof apiInstance>,
+    signal?: AbortSignal,
 ) => {
-      
-      
-      return apiInstance<CreateTopupPayment200>(
-      {url: `/payments/create-topup-payment`, method: 'POST',
-      headers: {'Content-Type': 'application/json', },
-      data: createTopupPaymentBody, signal
-    },
-      options);
-    }
-  
+    return apiInstance<CreateTopupPayment200>(
+        {
+            url: `/payments/create-topup-payment`,
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            data: createTopupPaymentBody,
+            signal,
+        },
+        options,
+    );
+};
 
-
-export const getCreateTopupPaymentMutationOptions = <TError = ValidationExceptionResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createTopupPayment>>, TError,{data: CreateTopupPaymentBody}, TContext>, request?: SecondParameter<typeof apiInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof createTopupPayment>>, TError,{data: CreateTopupPaymentBody}, TContext> => {
-
-const mutationKey = ['createTopupPayment'];
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-      
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createTopupPayment>>, {data: CreateTopupPaymentBody}> = (props) => {
-          const {data} = props ?? {};
-
-          return  createTopupPayment(data,requestOptions)
-        }
-
-        
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type CreateTopupPaymentMutationResult = NonNullable<Awaited<ReturnType<typeof createTopupPayment>>>
-    export type CreateTopupPaymentMutationBody = CreateTopupPaymentBody
-    export type CreateTopupPaymentMutationError = ValidationExceptionResponse
-
-    /**
- * @summary Create wallet topup payment (Midtrans Snap)
- */
-export const useCreateTopupPayment = <TError = ValidationExceptionResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createTopupPayment>>, TError,{data: CreateTopupPaymentBody}, TContext>, request?: SecondParameter<typeof apiInstance>}
- , queryClient?: QueryClient): UseMutationResult<
+export const getCreateTopupPaymentMutationOptions = <
+    TError = ValidationExceptionResponse,
+    TContext = unknown,
+>(options?: {
+    mutation?: UseMutationOptions<
         Awaited<ReturnType<typeof createTopupPayment>>,
         TError,
-        {data: CreateTopupPaymentBody},
+        { data: CreateTopupPaymentBody },
         TContext
-      > => {
+    >;
+    request?: SecondParameter<typeof apiInstance>;
+}): UseMutationOptions<
+    Awaited<ReturnType<typeof createTopupPayment>>,
+    TError,
+    { data: CreateTopupPaymentBody },
+    TContext
+> => {
+    const mutationKey = ['createTopupPayment'];
+    const { mutation: mutationOptions, request: requestOptions } = options
+        ? options.mutation &&
+          'mutationKey' in options.mutation &&
+          options.mutation.mutationKey
+            ? options
+            : { ...options, mutation: { ...options.mutation, mutationKey } }
+        : { mutation: { mutationKey }, request: undefined };
 
-      const mutationOptions = getCreateTopupPaymentMutationOptions(options);
+    const mutationFn: MutationFunction<
+        Awaited<ReturnType<typeof createTopupPayment>>,
+        { data: CreateTopupPaymentBody }
+    > = (props) => {
+        const { data } = props ?? {};
 
-      return useMutation(mutationOptions, queryClient);
-    }
-    /**
+        return createTopupPayment(data, requestOptions);
+    };
+
+    return { mutationFn, ...mutationOptions };
+};
+
+export type CreateTopupPaymentMutationResult = NonNullable<
+    Awaited<ReturnType<typeof createTopupPayment>>
+>;
+export type CreateTopupPaymentMutationBody = CreateTopupPaymentBody;
+export type CreateTopupPaymentMutationError = ValidationExceptionResponse;
+
+/**
+ * @summary Create wallet topup payment (Midtrans Snap)
+ */
+export const useCreateTopupPayment = <
+    TError = ValidationExceptionResponse,
+    TContext = unknown,
+>(
+    options?: {
+        mutation?: UseMutationOptions<
+            Awaited<ReturnType<typeof createTopupPayment>>,
+            TError,
+            { data: CreateTopupPaymentBody },
+            TContext
+        >;
+        request?: SecondParameter<typeof apiInstance>;
+    },
+    queryClient?: QueryClient,
+): UseMutationResult<
+    Awaited<ReturnType<typeof createTopupPayment>>,
+    TError,
+    { data: CreateTopupPaymentBody },
+    TContext
+> => {
+    const mutationOptions = getCreateTopupPaymentMutationOptions(options);
+
+    return useMutation(mutationOptions, queryClient);
+};
+/**
  * @summary Create payment for agent subscription
  */
 export const createAgentSubscriptionPayment = (
     createAgentSubscriptionPaymentBody: CreateAgentSubscriptionPaymentBody,
- options?: SecondParameter<typeof apiInstance>,signal?: AbortSignal
+    options?: SecondParameter<typeof apiInstance>,
+    signal?: AbortSignal,
 ) => {
-      
-      
-      return apiInstance<CreateAgentSubscriptionPayment200>(
-      {url: `/payments/create-agent-subscription-payment`, method: 'POST',
-      headers: {'Content-Type': 'application/json', },
-      data: createAgentSubscriptionPaymentBody, signal
-    },
-      options);
-    }
-  
+    return apiInstance<CreateAgentSubscriptionPayment200>(
+        {
+            url: `/payments/create-agent-subscription-payment`,
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            data: createAgentSubscriptionPaymentBody,
+            signal,
+        },
+        options,
+    );
+};
 
-
-export const getCreateAgentSubscriptionPaymentMutationOptions = <TError = ValidationExceptionResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAgentSubscriptionPayment>>, TError,{data: CreateAgentSubscriptionPaymentBody}, TContext>, request?: SecondParameter<typeof apiInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof createAgentSubscriptionPayment>>, TError,{data: CreateAgentSubscriptionPaymentBody}, TContext> => {
-
-const mutationKey = ['createAgentSubscriptionPayment'];
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-      
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createAgentSubscriptionPayment>>, {data: CreateAgentSubscriptionPaymentBody}> = (props) => {
-          const {data} = props ?? {};
-
-          return  createAgentSubscriptionPayment(data,requestOptions)
-        }
-
-        
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type CreateAgentSubscriptionPaymentMutationResult = NonNullable<Awaited<ReturnType<typeof createAgentSubscriptionPayment>>>
-    export type CreateAgentSubscriptionPaymentMutationBody = CreateAgentSubscriptionPaymentBody
-    export type CreateAgentSubscriptionPaymentMutationError = ValidationExceptionResponse
-
-    /**
- * @summary Create payment for agent subscription
- */
-export const useCreateAgentSubscriptionPayment = <TError = ValidationExceptionResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAgentSubscriptionPayment>>, TError,{data: CreateAgentSubscriptionPaymentBody}, TContext>, request?: SecondParameter<typeof apiInstance>}
- , queryClient?: QueryClient): UseMutationResult<
+export const getCreateAgentSubscriptionPaymentMutationOptions = <
+    TError = ValidationExceptionResponse,
+    TContext = unknown,
+>(options?: {
+    mutation?: UseMutationOptions<
         Awaited<ReturnType<typeof createAgentSubscriptionPayment>>,
         TError,
-        {data: CreateAgentSubscriptionPaymentBody},
+        { data: CreateAgentSubscriptionPaymentBody },
         TContext
-      > => {
+    >;
+    request?: SecondParameter<typeof apiInstance>;
+}): UseMutationOptions<
+    Awaited<ReturnType<typeof createAgentSubscriptionPayment>>,
+    TError,
+    { data: CreateAgentSubscriptionPaymentBody },
+    TContext
+> => {
+    const mutationKey = ['createAgentSubscriptionPayment'];
+    const { mutation: mutationOptions, request: requestOptions } = options
+        ? options.mutation &&
+          'mutationKey' in options.mutation &&
+          options.mutation.mutationKey
+            ? options
+            : { ...options, mutation: { ...options.mutation, mutationKey } }
+        : { mutation: { mutationKey }, request: undefined };
 
-      const mutationOptions = getCreateAgentSubscriptionPaymentMutationOptions(options);
+    const mutationFn: MutationFunction<
+        Awaited<ReturnType<typeof createAgentSubscriptionPayment>>,
+        { data: CreateAgentSubscriptionPaymentBody }
+    > = (props) => {
+        const { data } = props ?? {};
 
-      return useMutation(mutationOptions, queryClient);
-    }
-    /**
+        return createAgentSubscriptionPayment(data, requestOptions);
+    };
+
+    return { mutationFn, ...mutationOptions };
+};
+
+export type CreateAgentSubscriptionPaymentMutationResult = NonNullable<
+    Awaited<ReturnType<typeof createAgentSubscriptionPayment>>
+>;
+export type CreateAgentSubscriptionPaymentMutationBody =
+    CreateAgentSubscriptionPaymentBody;
+export type CreateAgentSubscriptionPaymentMutationError =
+    ValidationExceptionResponse;
+
+/**
+ * @summary Create payment for agent subscription
+ */
+export const useCreateAgentSubscriptionPayment = <
+    TError = ValidationExceptionResponse,
+    TContext = unknown,
+>(
+    options?: {
+        mutation?: UseMutationOptions<
+            Awaited<ReturnType<typeof createAgentSubscriptionPayment>>,
+            TError,
+            { data: CreateAgentSubscriptionPaymentBody },
+            TContext
+        >;
+        request?: SecondParameter<typeof apiInstance>;
+    },
+    queryClient?: QueryClient,
+): UseMutationResult<
+    Awaited<ReturnType<typeof createAgentSubscriptionPayment>>,
+    TError,
+    { data: CreateAgentSubscriptionPaymentBody },
+    TContext
+> => {
+    const mutationOptions =
+        getCreateAgentSubscriptionPaymentMutationOptions(options);
+
+    return useMutation(mutationOptions, queryClient);
+};
+/**
  * @summary Create payment for AI credit topup
  */
 export const createAiCreditTopupPayment = (
     createAiCreditTopupPaymentBody: CreateAiCreditTopupPaymentBody,
- options?: SecondParameter<typeof apiInstance>,signal?: AbortSignal
+    options?: SecondParameter<typeof apiInstance>,
+    signal?: AbortSignal,
 ) => {
-      
-      
-      return apiInstance<CreateAiCreditTopupPayment200>(
-      {url: `/payments/create-ai-credit-topup-payment`, method: 'POST',
-      headers: {'Content-Type': 'application/json', },
-      data: createAiCreditTopupPaymentBody, signal
-    },
-      options);
-    }
-  
+    return apiInstance<CreateAiCreditTopupPayment200>(
+        {
+            url: `/payments/create-ai-credit-topup-payment`,
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            data: createAiCreditTopupPaymentBody,
+            signal,
+        },
+        options,
+    );
+};
 
-
-export const getCreateAiCreditTopupPaymentMutationOptions = <TError = AuthenticationExceptionResponse | ValidationExceptionResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAiCreditTopupPayment>>, TError,{data: CreateAiCreditTopupPaymentBody}, TContext>, request?: SecondParameter<typeof apiInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof createAiCreditTopupPayment>>, TError,{data: CreateAiCreditTopupPaymentBody}, TContext> => {
-
-const mutationKey = ['createAiCreditTopupPayment'];
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-      
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createAiCreditTopupPayment>>, {data: CreateAiCreditTopupPaymentBody}> = (props) => {
-          const {data} = props ?? {};
-
-          return  createAiCreditTopupPayment(data,requestOptions)
-        }
-
-        
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type CreateAiCreditTopupPaymentMutationResult = NonNullable<Awaited<ReturnType<typeof createAiCreditTopupPayment>>>
-    export type CreateAiCreditTopupPaymentMutationBody = CreateAiCreditTopupPaymentBody
-    export type CreateAiCreditTopupPaymentMutationError = AuthenticationExceptionResponse | ValidationExceptionResponse
-
-    /**
- * @summary Create payment for AI credit topup
- */
-export const useCreateAiCreditTopupPayment = <TError = AuthenticationExceptionResponse | ValidationExceptionResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAiCreditTopupPayment>>, TError,{data: CreateAiCreditTopupPaymentBody}, TContext>, request?: SecondParameter<typeof apiInstance>}
- , queryClient?: QueryClient): UseMutationResult<
+export const getCreateAiCreditTopupPaymentMutationOptions = <
+    TError = AuthenticationExceptionResponse | ValidationExceptionResponse,
+    TContext = unknown,
+>(options?: {
+    mutation?: UseMutationOptions<
         Awaited<ReturnType<typeof createAiCreditTopupPayment>>,
         TError,
-        {data: CreateAiCreditTopupPaymentBody},
+        { data: CreateAiCreditTopupPaymentBody },
         TContext
-      > => {
+    >;
+    request?: SecondParameter<typeof apiInstance>;
+}): UseMutationOptions<
+    Awaited<ReturnType<typeof createAiCreditTopupPayment>>,
+    TError,
+    { data: CreateAiCreditTopupPaymentBody },
+    TContext
+> => {
+    const mutationKey = ['createAiCreditTopupPayment'];
+    const { mutation: mutationOptions, request: requestOptions } = options
+        ? options.mutation &&
+          'mutationKey' in options.mutation &&
+          options.mutation.mutationKey
+            ? options
+            : { ...options, mutation: { ...options.mutation, mutationKey } }
+        : { mutation: { mutationKey }, request: undefined };
 
-      const mutationOptions = getCreateAiCreditTopupPaymentMutationOptions(options);
+    const mutationFn: MutationFunction<
+        Awaited<ReturnType<typeof createAiCreditTopupPayment>>,
+        { data: CreateAiCreditTopupPaymentBody }
+    > = (props) => {
+        const { data } = props ?? {};
 
-      return useMutation(mutationOptions, queryClient);
-    }
-    
+        return createAiCreditTopupPayment(data, requestOptions);
+    };
+
+    return { mutationFn, ...mutationOptions };
+};
+
+export type CreateAiCreditTopupPaymentMutationResult = NonNullable<
+    Awaited<ReturnType<typeof createAiCreditTopupPayment>>
+>;
+export type CreateAiCreditTopupPaymentMutationBody =
+    CreateAiCreditTopupPaymentBody;
+export type CreateAiCreditTopupPaymentMutationError =
+    | AuthenticationExceptionResponse
+    | ValidationExceptionResponse;
+
+/**
+ * @summary Create payment for AI credit topup
+ */
+export const useCreateAiCreditTopupPayment = <
+    TError = AuthenticationExceptionResponse | ValidationExceptionResponse,
+    TContext = unknown,
+>(
+    options?: {
+        mutation?: UseMutationOptions<
+            Awaited<ReturnType<typeof createAiCreditTopupPayment>>,
+            TError,
+            { data: CreateAiCreditTopupPaymentBody },
+            TContext
+        >;
+        request?: SecondParameter<typeof apiInstance>;
+    },
+    queryClient?: QueryClient,
+): UseMutationResult<
+    Awaited<ReturnType<typeof createAiCreditTopupPayment>>,
+    TError,
+    { data: CreateAiCreditTopupPaymentBody },
+    TContext
+> => {
+    const mutationOptions =
+        getCreateAiCreditTopupPaymentMutationOptions(options);
+
+    return useMutation(mutationOptions, queryClient);
+};

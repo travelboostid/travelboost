@@ -7,5 +7,5 @@
 import type { TourCategoryResource } from './tourCategoryResource';
 
 export type CategoriesStore201 = {
-  data: TourCategoryResource;
+    data: TourCategoryResource;
 };

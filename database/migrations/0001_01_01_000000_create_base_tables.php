@@ -1,11 +1,7 @@
 <?php
 
 use App\Enums\BookingStatus;
-use App\Enums\CompanyTeamStatus;
-use App\Enums\CompanyType;
 use App\Enums\UserGender;
-use App\Enums\UserStatus;
-use App\Enums\VendorAgentPartnerStatus;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -84,8 +80,8 @@ return new class extends Migration
             $table->string('username'); // ->unique() -> we handle this on separate step below;
             $table->string(column: 'address')->default('');
             $table->string(column: 'phone')->default('');
-            $table->enum('gender', UserGender::cases())->default(UserGender::UNSPECIFIED);
-            $table->enum('status', UserStatus::cases())->default(UserStatus::INACTIVE);
+            $table->enum('gender', ['unspecified', 'male', 'female'])->default('unspecified');
+            $table->enum('status', ['inactive', 'pending', 'active', 'suspended', 'rejected'])->default('inactive');
             $table->string('password');
             $table->text('two_factor_secret')->nullable();
             $table->text('two_factor_recovery_codes')->nullable();
@@ -164,7 +160,7 @@ return new class extends Migration
 
         Schema::create('companies', function (Blueprint $table) {
             $table->id();
-            $table->enum('type', CompanyType::cases());
+            $table->enum('type', ['agent', 'vendor']);
             $table->string('name');
             $table->string('username')->unique();
             $table->string('email')->unique();
@@ -175,10 +171,6 @@ return new class extends Migration
             $table->foreignId('city_id')->nullable()->constrained(config('laravolt.indonesia.table_prefix').'cities')->nullOnDelete();
             $table->foreignId('district_id')->nullable()->constrained(config('laravolt.indonesia.table_prefix').'districts')->nullOnDelete();
             $table->foreignId('village_id')->nullable()->constrained(config('laravolt.indonesia.table_prefix').'villages')->nullOnDelete();
-            $table->string('province')->default(''); // snapshot
-            $table->string('city')->default(''); // snapshot
-            $table->string('district')->nullable(); // snapshot
-            $table->string('village')->nullable(); // snapshot
             $table->string('postal_code')->nullable();
             $table->string('identity_number', 16)->nullable();
 
@@ -294,7 +286,7 @@ return new class extends Migration
             $table->uuid('invite_token')->nullable()->unique();
             $table->timestamp('invited_at')->nullable();
             $table->timestamp('accepted_at')->nullable();
-            $table->enum('status', CompanyTeamStatus::cases())->default(CompanyTeamStatus::PENDING);
+            $table->enum('status', ['pending', 'active', 'rejected', 'suspended'])->default('pending');
             $table->timestamps();
 
             $table->unique(['company_id', 'user_id']);
@@ -304,7 +296,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('vendor_id')->constrained('companies')->cascadeOnDelete();
             $table->foreignId('agent_id')->constrained('companies')->cascadeOnDelete();
-            $table->enum('status', VendorAgentPartnerStatus::cases())->default(VendorAgentPartnerStatus::PENDING);
+            $table->enum('status', ['pending', 'active', 'rejected', 'suspended'])->default('pending');
             $table->timestamp('applied_at')->nullable();
             $table->timestamp('accepted_at')->nullable();
             $table->string('note', 1000)->nullable();
@@ -700,10 +692,10 @@ return new class extends Migration
             $table->enum('status', ['pending', 'approved', 'rejected', 'suspended'])->default('pending');
             $table->string('phone')->nullable()->after('tier');
             $table->text('address')->nullable()->after('phone');
-            $table->string('province')->nullable()->after('address');
-            $table->string('city')->nullable()->after('province');
-            $table->string('district')->nullable()->after('city');
-            $table->string('village')->nullable()->after('district');
+            $table->foreignId('province_id')->nullable()->constrained(config('laravolt.indonesia.table_prefix').'provinces')->nullOnDelete();
+            $table->foreignId('city_id')->nullable()->constrained(config('laravolt.indonesia.table_prefix').'cities')->nullOnDelete();
+            $table->foreignId('district_id')->nullable()->constrained(config('laravolt.indonesia.table_prefix').'districts')->nullOnDelete();
+            $table->foreignId('village_id')->nullable()->constrained(config('laravolt.indonesia.table_prefix').'villages')->nullOnDelete();
             $table->string('postal_code')->nullable()->after('village');
             $table->string('identity_number')->nullable()->after('postal_code'); // KTP/SIM/Paspor
             $table->string('identity_photo_path')->nullable()->after('identity_number'); // Foto KTP

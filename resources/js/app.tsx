@@ -19,64 +19,64 @@ dayjs.extend(relativeTime);
 const queryClient = new QueryClient();
 
 configureEcho({
-  broadcaster: 'reverb',
-  key: import.meta.env.VITE_REVERB_APP_KEY,
-  wsHost: import.meta.env.VITE_REVERB_HOST,
-  wsPort: import.meta.env.VITE_REVERB_PORT ?? 80,
-  wssPort: import.meta.env.VITE_REVERB_PORT ?? 443,
-  forceTLS: (import.meta.env.VITE_REVERB_SCHEME ?? 'https') === 'https',
-  enabledTransports: ['ws', 'wss'],
+    broadcaster: 'reverb',
+    key: import.meta.env.VITE_REVERB_APP_KEY,
+    wsHost: import.meta.env.VITE_REVERB_HOST,
+    wsPort: import.meta.env.VITE_REVERB_PORT ?? 80,
+    wssPort: import.meta.env.VITE_REVERB_PORT ?? 443,
+    forceTLS: (import.meta.env.VITE_REVERB_SCHEME ?? 'https') === 'https',
+    enabledTransports: ['ws', 'wss'],
 });
 
 console.log(
-  'Echo configured with Reverb host:',
-  import.meta.env.VITE_REVERB_HOST,
+    'Echo configured with Reverb host:',
+    import.meta.env.VITE_REVERB_HOST,
 );
 
 const appName = import.meta.env.VITE_APP_NAME || 'Travelboost';
 
 createInertiaApp({
-  title: (title) => (title ? `${title} - ${appName}` : appName),
-  resolve: (name) =>
-    resolvePageComponent(
-      `./pages/${name}.tsx`,
-      import.meta.glob('./pages/**/*.tsx'),
-    ),
-  setup({ el, App, props }) {
-    const root = createRoot(el);
+    title: (title) => (title ? `${title} - ${appName}` : appName),
+    resolve: (name) =>
+        resolvePageComponent(
+            `./pages/${name}.tsx`,
+            import.meta.glob('./pages/**/*.tsx'),
+        ),
+    setup({ el, App, props }) {
+        const root = createRoot(el);
 
-    // work around. need more proper solution
-    const isOnDesignerPage =
-      window.location.pathname.match(/^\/([^/]+)\/design/);
+        // work around. need more proper solution
+        const isOnDesignerPage =
+            window.location.pathname.match(/^\/([^/]+)\/design/);
 
-    root.render(
-      <StrictMode>
-        <LocaleProvider>
-          <I18nProvider>
-            <ThemeProvider
-              attribute="class"
-              defaultTheme="light"
-              forcedTheme={isOnDesignerPage ? 'light' : undefined} // design page must light theme!
-              enableSystem
-              disableTransitionOnChange
-            >
-              <TooltipProvider>
-                <QueryClientProvider client={queryClient}>
-                  <NuqsAdapter>
-                    <App {...props} />
-                  </NuqsAdapter>
-                  <Toaster />
-                </QueryClientProvider>
-              </TooltipProvider>
-            </ThemeProvider>
-          </I18nProvider>
-        </LocaleProvider>
-      </StrictMode>,
-    );
-  },
-  progress: {
-    color: '#4B5563',
-  },
+        root.render(
+            <StrictMode>
+                <LocaleProvider>
+                    <I18nProvider>
+                        <ThemeProvider
+                            attribute="class"
+                            defaultTheme="light"
+                            forcedTheme={isOnDesignerPage ? 'light' : undefined} // design page must light theme!
+                            enableSystem
+                            disableTransitionOnChange
+                        >
+                            <TooltipProvider>
+                                <QueryClientProvider client={queryClient}>
+                                    <NuqsAdapter>
+                                        <App {...props} />
+                                    </NuqsAdapter>
+                                    <Toaster />
+                                </QueryClientProvider>
+                            </TooltipProvider>
+                        </ThemeProvider>
+                    </I18nProvider>
+                </LocaleProvider>
+            </StrictMode>,
+        );
+    },
+    progress: {
+        color: '#4B5563',
+    },
 });
 
 // This will set light / dark mode on load...

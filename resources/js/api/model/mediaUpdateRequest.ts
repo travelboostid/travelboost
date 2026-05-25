@@ -7,7 +7,7 @@
 import type { MediaUpdateRequestDescription } from './mediaUpdateRequestDescription';
 
 export interface MediaUpdateRequest {
-  /** @maxLength 255 */
-  name?: string;
-  description?: MediaUpdateRequestDescription;
+    /** @maxLength 255 */
+    name?: string;
+    description?: MediaUpdateRequestDescription;
 }

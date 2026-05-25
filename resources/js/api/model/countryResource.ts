@@ -6,8 +6,8 @@
  */
 
 export interface CountryResource {
-  id: number;
-  name: string;
-  region_id: number;
-  continent_id: number;
+    id: number;
+    name: string;
+    region_id: number;
+    continent_id: number;
 }

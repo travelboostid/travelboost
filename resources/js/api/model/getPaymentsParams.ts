@@ -8,22 +8,22 @@ import type { GetPaymentsOwnerType } from './getPaymentsOwnerType';
 import type { GetPaymentsStatus } from './getPaymentsStatus';
 
 export type GetPaymentsParams = {
-owner_type?: GetPaymentsOwnerType;
-owner_id?: number | number;
-/**
- * @maxLength 50
- */
-payable_type?: string;
-status?: GetPaymentsStatus;
-/**
- * @maxLength 50
- */
-provider?: string;
-from?: string;
-to?: string;
-/**
- * @minimum 1
- * @maximum 100
- */
-per_page?: number;
+    owner_type?: GetPaymentsOwnerType;
+    owner_id?: number | number;
+    /**
+     * @maxLength 50
+     */
+    payable_type?: string;
+    status?: GetPaymentsStatus;
+    /**
+     * @maxLength 50
+     */
+    provider?: string;
+    from?: string;
+    to?: string;
+    /**
+     * @minimum 1
+     * @maximum 100
+     */
+    per_page?: number;
 };

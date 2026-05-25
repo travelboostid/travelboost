@@ -6,7 +6,7 @@
  */
 
 export type ChatMessageResourceReplyToAnyOf = {
-  id: number;
-  message: string;
-  user_id: number;
+    id: number;
+    message: string;
+    user_id: number;
 };

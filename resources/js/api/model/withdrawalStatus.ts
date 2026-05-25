@@ -5,14 +5,13 @@
  * OpenAPI spec version: 0.0.1
  */
 
-export type WithdrawalStatus = typeof WithdrawalStatus[keyof typeof WithdrawalStatus];
+export type WithdrawalStatus =
+    (typeof WithdrawalStatus)[keyof typeof WithdrawalStatus];
 
-
-// eslint-disable-next-line @typescript-eslint/no-redeclare
 export const WithdrawalStatus = {
-  pending: 'pending',
-  processing: 'processing',
-  rejected: 'rejected',
-  cancelled: 'cancelled',
-  paid: 'paid',
+    pending: 'pending',
+    processing: 'processing',
+    rejected: 'rejected',
+    cancelled: 'cancelled',
+    paid: 'paid',
 } as const;

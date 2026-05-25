@@ -5,12 +5,11 @@
  * OpenAPI spec version: 0.0.1
  */
 
-export type StoreMediaRequestType = typeof StoreMediaRequestType[keyof typeof StoreMediaRequestType];
+export type StoreMediaRequestType =
+    (typeof StoreMediaRequestType)[keyof typeof StoreMediaRequestType];
 
-
-// eslint-disable-next-line @typescript-eslint/no-redeclare
 export const StoreMediaRequestType = {
-  image: 'image',
-  document: 'document',
-  raw: 'raw',
+    image: 'image',
+    document: 'document',
+    raw: 'raw',
 } as const;

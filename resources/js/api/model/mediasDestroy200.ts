@@ -7,5 +7,5 @@
 import type { MediasDestroy200Message } from './mediasDestroy200Message';
 
 export type MediasDestroy200 = {
-  message: MediasDestroy200Message;
+    message: MediasDestroy200Message;
 };

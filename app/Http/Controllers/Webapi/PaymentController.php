@@ -85,7 +85,7 @@ class PaymentController extends Controller
                     Rule::exists('users', 'id'),
                     Rule::exists('companies', 'id')
                 ),
-        ],
+            ],
             'amount' => ['required', 'integer', 'min:100000'],
         ]);
 

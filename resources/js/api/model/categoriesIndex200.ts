@@ -7,5 +7,5 @@
 import type { TourCategoryResource } from './tourCategoryResource';
 
 export type CategoriesIndex200 = {
-  data: TourCategoryResource[];
+    data: TourCategoryResource[];
 };

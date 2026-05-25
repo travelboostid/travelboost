@@ -9,13 +9,14 @@ use Inertia\Inertia;
 
 class AgentSubscriptionController extends Controller
 {
-  public function show(Company $company)
-  {
-    $agentSubscriptionPackages = AgentSubscriptionPackage::all();
-    $agentSubscription = $company->agentSubscription()->with('package')->latest()->first();
-    return Inertia::render('companies/dashboard/agent-subscriptions/index', [
-      'agentSubscription' => $agentSubscription,
-      'agentSubscriptionPackages' => $agentSubscriptionPackages
-    ]);
-  }
+    public function show(Company $company)
+    {
+        $agentSubscriptionPackages = AgentSubscriptionPackage::all();
+        $agentSubscription = $company->agentSubscription()->with('package')->latest()->first();
+
+        return Inertia::render('companies/dashboard/agent-subscriptions/index', [
+            'agentSubscription' => $agentSubscription,
+            'agentSubscriptionPackages' => $agentSubscriptionPackages,
+        ]);
+    }
 }

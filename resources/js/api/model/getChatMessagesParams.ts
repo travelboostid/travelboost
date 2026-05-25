@@ -6,11 +6,11 @@
  */
 
 export type GetChatMessagesParams = {
-cursor?: string | null;
-/**
- * Laravel cursor is always a string
- * @minimum 1
- * @maximum 100
- */
-per_page?: number | null;
+    cursor?: string | null;
+    /**
+     * Laravel cursor is always a string
+     * @minimum 1
+     * @maximum 100
+     */
+    per_page?: number | null;
 };

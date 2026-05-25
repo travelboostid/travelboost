@@ -7,5 +7,5 @@
 import type { CountryResource } from './countryResource';
 
 export type CreateCountry201 = {
-  data: CountryResource;
+    data: CountryResource;
 };

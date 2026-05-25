@@ -5,11 +5,10 @@
  * OpenAPI spec version: 0.0.1
  */
 
-export type CreateTopupPaymentBodyOwnerType = typeof CreateTopupPaymentBodyOwnerType[keyof typeof CreateTopupPaymentBodyOwnerType];
+export type CreateTopupPaymentBodyOwnerType =
+    (typeof CreateTopupPaymentBodyOwnerType)[keyof typeof CreateTopupPaymentBodyOwnerType];
 
-
-// eslint-disable-next-line @typescript-eslint/no-redeclare
 export const CreateTopupPaymentBodyOwnerType = {
-  user: 'user',
-  company: 'company',
+    user: 'user',
+    company: 'company',
 } as const;

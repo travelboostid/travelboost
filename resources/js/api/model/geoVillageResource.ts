@@ -5,4 +5,6 @@
  * OpenAPI spec version: 0.0.1
  */
 
-export interface GeoVillageResource {[key: string]: unknown}
+export interface GeoVillageResource {
+    [key: string]: unknown;
+}

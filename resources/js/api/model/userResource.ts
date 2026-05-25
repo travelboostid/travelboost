@@ -6,15 +6,15 @@
  */
 
 export interface UserResource {
-  id: number;
-  name: string;
-  username: string;
-  email: string;
-  phone: string;
-  address: string;
-  type: string;
-  photo_url: string;
-  roles?: unknown[];
-  permissions?: unknown[];
-  created_at: string;
+    id: number;
+    name: string;
+    username: string;
+    email: string;
+    phone: string;
+    address: string;
+    type: string;
+    photo_url: string;
+    roles?: unknown[];
+    permissions?: unknown[];
+    created_at: string;
 }

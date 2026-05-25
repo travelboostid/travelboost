@@ -11,18 +11,18 @@ import { TestimonialsSection } from './testimonials-section';
 import { VisualsSection } from './visuals-section';
 
 export default function Page() {
-  return (
-    <StdLayout>
-      <HeroSection />
-      <StepsSection />
-      <BenefitsSection />
-      <VisualsSection />
-      <EngagementSection />
-      <TestimonialsSection />
-      <MarketingSection />
-      <IntegrationsSection />
-      <CommunitySection />
-      <CTASection />
-    </StdLayout>
-  );
+    return (
+        <StdLayout>
+            <HeroSection />
+            <StepsSection />
+            <BenefitsSection />
+            <VisualsSection />
+            <EngagementSection />
+            <TestimonialsSection />
+            <MarketingSection />
+            <IntegrationsSection />
+            <CommunitySection />
+            <CTASection />
+        </StdLayout>
+    );
 }

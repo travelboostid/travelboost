@@ -6,7 +6,7 @@
  */
 
 export type CreateAiCreditTopupPaymentBody = {
-  company_id: number;
-  /** @minimum 1000 */
-  amount: number;
+    company_id: number;
+    /** @minimum 1000 */
+    amount: number;
 };

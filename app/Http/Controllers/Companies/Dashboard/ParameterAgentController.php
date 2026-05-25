@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Companies\Dashboard;
 
 use App\Http\Controllers\Controller;
-use App\Models\AgentTour;
 use App\Models\Company;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -34,9 +33,9 @@ class ParameterAgentController extends Controller
     ) {
         $validated = $request->validate([
             'manual_bank_transfer' => [
-              'nullable', 
-              'string', 
-              'max:255'
+                'nullable',
+                'string',
+                'max:255',
             ],
             'manual_bank_transfer_account_name' => [
                 'nullable',

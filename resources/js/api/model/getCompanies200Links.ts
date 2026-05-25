@@ -6,12 +6,12 @@
  */
 import type { GetCompanies200LinksFirst } from './getCompanies200LinksFirst';
 import type { GetCompanies200LinksLast } from './getCompanies200LinksLast';
-import type { GetCompanies200LinksPrev } from './getCompanies200LinksPrev';
 import type { GetCompanies200LinksNext } from './getCompanies200LinksNext';
+import type { GetCompanies200LinksPrev } from './getCompanies200LinksPrev';
 
 export type GetCompanies200Links = {
-  first: GetCompanies200LinksFirst;
-  last: GetCompanies200LinksLast;
-  prev: GetCompanies200LinksPrev;
-  next: GetCompanies200LinksNext;
+    first: GetCompanies200LinksFirst;
+    last: GetCompanies200LinksLast;
+    prev: GetCompanies200LinksPrev;
+    next: GetCompanies200LinksNext;
 };

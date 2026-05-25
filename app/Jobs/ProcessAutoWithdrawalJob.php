@@ -13,47 +13,47 @@ use Illuminate\Queue\SerializesModels;
 
 class ProcessAutoWithdrawalJob implements ShouldQueue
 {
-  use Dispatchable;
-  use InteractsWithQueue;
-  use Queueable;
-  use SerializesModels;
+    use Dispatchable;
+    use InteractsWithQueue;
+    use Queueable;
+    use SerializesModels;
 
-  public function __construct(
-    public Withdrawal $withdrawal,
-  ) {}
+    public function __construct(
+        public Withdrawal $withdrawal,
+    ) {}
 
-  public function handle(): void
-  {
-    $withdrawal = $this->withdrawal->fresh();
+    public function handle(): void
+    {
+        $withdrawal = $this->withdrawal->fresh();
 
-    if (! $withdrawal) {
-      return;
+        if (! $withdrawal) {
+            return;
+        }
+
+        if ($withdrawal->method !== WithdrawalMethod::AUTO) {
+            return;
+        }
+
+        if ($withdrawal->status !== WithdrawalStatus::PROCESSING) {
+            return;
+        }
+
+        $wallet = $withdrawal->loadMissing('wallet')->wallet;
+
+        if (! $wallet) {
+            return;
+        }
+
+        $wallet->withdraw($withdrawal->amount, [
+            'type' => 'withdrawal',
+            'description' => 'Withdrawal',
+        ]);
+
+        // TODO: process payout
+
+        $withdrawal->update([
+            'paid_at' => now(),
+            'status' => WithdrawalStatus::PAID,
+        ]);
     }
-
-    if ($withdrawal->method !== WithdrawalMethod::AUTO) {
-      return;
-    }
-
-    if ($withdrawal->status !== WithdrawalStatus::PROCESSING) {
-      return;
-    }
-
-    $wallet = $withdrawal->loadMissing('wallet')->wallet;
-
-    if (! $wallet) {
-      return;
-    }
-
-    $wallet->withdraw($withdrawal->amount, [
-      'type' => 'withdrawal',
-      'description' => 'Withdrawal',
-    ]);
-
-    // TODO: process payout
-
-    $withdrawal->update([
-      'paid_at' => now(),
-      'status' => WithdrawalStatus::PAID,
-    ]);
-  }
 }

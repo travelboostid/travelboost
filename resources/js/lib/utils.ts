@@ -5,36 +5,36 @@ import { type ClassValue, clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
 export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
+    return twMerge(clsx(inputs));
 }
 
 export function toUrl(url: NonNullable<InertiaLinkProps['href']>): string {
-  return typeof url === 'string' ? url : url.url;
+    return typeof url === 'string' ? url : url.url;
 }
 
 export function extractImageSrc(
-  media: MediaResource,
-  defaultImg: string = DEFAULT_IMAGE,
+    media: MediaResource,
+    defaultImg: string = DEFAULT_IMAGE,
 ) {
-  const files = (media?.data?.files as any[]) || [];
-  const src = files.find((f: any) => f.code === 'small')?.url || defaultImg;
-  const srcSet = files.length
-    ? files
-        .filter((f) => f.width)
-        .map((f) => `${f.url} ${f.width}w`)
-        .join(', ')
-    : '';
-  return { src, srcSet };
+    const files = (media?.data?.files as any[]) || [];
+    const src = files.find((f: any) => f.code === 'small')?.url || defaultImg;
+    const srcSet = files.length
+        ? files
+              .filter((f) => f.width)
+              .map((f) => `${f.url} ${f.width}w`)
+              .join(', ')
+        : '';
+    return { src, srcSet };
 }
 
 export function extractDocumentUrl(media: MediaResource) {
-  const url = (media?.data as any)?.url;
-  return url || '';
+    const url = (media?.data as any)?.url;
+    return url || '';
 }
 
 export const formatIDR = (value: number) =>
-  new Intl.NumberFormat('id-ID', {
-    style: 'currency',
-    currency: 'IDR',
-    minimumFractionDigits: 0,
-  }).format(value);
+    new Intl.NumberFormat('id-ID', {
+        style: 'currency',
+        currency: 'IDR',
+        minimumFractionDigits: 0,
+    }).format(value);

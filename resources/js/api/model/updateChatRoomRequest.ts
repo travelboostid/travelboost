@@ -7,8 +7,8 @@
 import type { UpdateChatRoomRequestType } from './updateChatRoomRequestType';
 
 export interface UpdateChatRoomRequest {
-  /** @maxLength 255 */
-  name?: string;
-  /** allow partial updates */
-  type?: UpdateChatRoomRequestType;
+    /** @maxLength 255 */
+    name?: string;
+    /** allow partial updates */
+    type?: UpdateChatRoomRequestType;
 }

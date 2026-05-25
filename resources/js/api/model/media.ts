@@ -4,21 +4,21 @@
  * Travelboost
  * OpenAPI spec version: 0.0.1
  */
+import type { MediaCreatedAt } from './mediaCreatedAt';
+import type { MediaData } from './mediaData';
 import type { MediaDescription } from './mediaDescription';
 import type { MediaType } from './mediaType';
-import type { MediaData } from './mediaData';
-import type { MediaCreatedAt } from './mediaCreatedAt';
 import type { MediaUpdatedAt } from './mediaUpdatedAt';
 
 export interface Media {
-  id: number;
-  name: string;
-  description: MediaDescription;
-  type: MediaType;
-  subtype: string;
-  data: MediaData;
-  owner_type: string;
-  owner_id: number;
-  created_at: MediaCreatedAt;
-  updated_at: MediaUpdatedAt;
+    id: number;
+    name: string;
+    description: MediaDescription;
+    type: MediaType;
+    subtype: string;
+    data: MediaData;
+    owner_type: string;
+    owner_id: number;
+    created_at: MediaCreatedAt;
+    updated_at: MediaUpdatedAt;
 }

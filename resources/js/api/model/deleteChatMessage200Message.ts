@@ -5,10 +5,9 @@
  * OpenAPI spec version: 0.0.1
  */
 
-export type DeleteChatMessage200Message = typeof DeleteChatMessage200Message[keyof typeof DeleteChatMessage200Message];
+export type DeleteChatMessage200Message =
+    (typeof DeleteChatMessage200Message)[keyof typeof DeleteChatMessage200Message];
 
-
-// eslint-disable-next-line @typescript-eslint/no-redeclare
 export const DeleteChatMessage200Message = {
-  Message_deleted: 'Message deleted',
+    Message_deleted: 'Message deleted',
 } as const;

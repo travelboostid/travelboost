@@ -4,34 +4,34 @@
  * Travelboost
  * OpenAPI spec version: 0.0.1
  */
-import type { ChatMessageResourceSenderType } from './chatMessageResourceSenderType';
-import type { ChatMessageResourceSenderId } from './chatMessageResourceSenderId';
-import type { ChatMessageResourceUserId } from './chatMessageResourceUserId';
-import type { ChatMessageResourceMessage } from './chatMessageResourceMessage';
 import type { ChatMessageResourceAttachmentData } from './chatMessageResourceAttachmentData';
 import type { ChatMessageResourceAttachmentType } from './chatMessageResourceAttachmentType';
-import type { ChatMessageResourceReplyTo } from './chatMessageResourceReplyTo';
 import type { ChatMessageResourceCreatedAt } from './chatMessageResourceCreatedAt';
-import type { ChatMessageResourceUpdatedAt } from './chatMessageResourceUpdatedAt';
-import type { ChatMessageResourceSender } from './chatMessageResourceSender';
-import type { ChatMessageResourceRoom } from './chatMessageResourceRoom';
+import type { ChatMessageResourceMessage } from './chatMessageResourceMessage';
 import type { ChatMessageResourceRepliesCount } from './chatMessageResourceRepliesCount';
+import type { ChatMessageResourceReplyTo } from './chatMessageResourceReplyTo';
+import type { ChatMessageResourceRoom } from './chatMessageResourceRoom';
+import type { ChatMessageResourceSender } from './chatMessageResourceSender';
+import type { ChatMessageResourceSenderId } from './chatMessageResourceSenderId';
+import type { ChatMessageResourceSenderType } from './chatMessageResourceSenderType';
+import type { ChatMessageResourceUpdatedAt } from './chatMessageResourceUpdatedAt';
+import type { ChatMessageResourceUserId } from './chatMessageResourceUserId';
 
 export interface ChatMessageResource {
-  id: number;
-  room_id: number;
-  sender_type: ChatMessageResourceSenderType;
-  sender_id: ChatMessageResourceSenderId;
-  user_id: ChatMessageResourceUserId;
-  message: ChatMessageResourceMessage;
-  attachment_data: ChatMessageResourceAttachmentData;
-  attachment_type: ChatMessageResourceAttachmentType;
-  is_bot: boolean;
-  reply_to: ChatMessageResourceReplyTo;
-  created_at: ChatMessageResourceCreatedAt;
-  updated_at: ChatMessageResourceUpdatedAt;
-  /** Relationships */
-  sender?: ChatMessageResourceSender;
-  room?: ChatMessageResourceRoom;
-  replies_count: ChatMessageResourceRepliesCount;
+    id: number;
+    room_id: number;
+    sender_type: ChatMessageResourceSenderType;
+    sender_id: ChatMessageResourceSenderId;
+    user_id: ChatMessageResourceUserId;
+    message: ChatMessageResourceMessage;
+    attachment_data: ChatMessageResourceAttachmentData;
+    attachment_type: ChatMessageResourceAttachmentType;
+    is_bot: boolean;
+    reply_to: ChatMessageResourceReplyTo;
+    created_at: ChatMessageResourceCreatedAt;
+    updated_at: ChatMessageResourceUpdatedAt;
+    /** Relationships */
+    sender?: ChatMessageResourceSender;
+    room?: ChatMessageResourceRoom;
+    replies_count: ChatMessageResourceRepliesCount;
 }

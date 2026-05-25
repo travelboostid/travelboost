@@ -6,6 +6,6 @@
  */
 
 export type CreateAgentSubscriptionPaymentBody = {
-  company_id: number;
-  package_id: number;
+    company_id: number;
+    package_id: number;
 };

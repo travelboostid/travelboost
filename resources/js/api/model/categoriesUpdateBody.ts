@@ -8,9 +8,9 @@ import type { CategoriesUpdateBodyDescription } from './categoriesUpdateBodyDesc
 import type { CategoriesUpdateBodyUserId } from './categoriesUpdateBodyUserId';
 
 export type CategoriesUpdateBody = {
-  /** @maxLength 255 */
-  name?: string;
-  description?: CategoriesUpdateBodyDescription;
-  position_no?: string;
-  user_id?: CategoriesUpdateBodyUserId;
+    /** @maxLength 255 */
+    name?: string;
+    description?: CategoriesUpdateBodyDescription;
+    position_no?: string;
+    user_id?: CategoriesUpdateBodyUserId;
 };

@@ -7,5 +7,5 @@
 import type { GeoProvinceResource } from './geoProvinceResource';
 
 export type GetGeoProvinces200 = {
-  data: GeoProvinceResource[];
+    data: GeoProvinceResource[];
 };

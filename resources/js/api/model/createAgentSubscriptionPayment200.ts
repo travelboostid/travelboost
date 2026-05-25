@@ -7,5 +7,5 @@
 import type { PaymentResource } from './paymentResource';
 
 export type CreateAgentSubscriptionPayment200 = {
-  data: PaymentResource;
+    data: PaymentResource;
 };

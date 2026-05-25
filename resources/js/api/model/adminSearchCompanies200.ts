@@ -4,12 +4,12 @@
  * Travelboost
  * OpenAPI spec version: 0.0.1
  */
-import type { CompanyResource } from './companyResource';
 import type { AdminSearchCompanies200Links } from './adminSearchCompanies200Links';
 import type { AdminSearchCompanies200Meta } from './adminSearchCompanies200Meta';
+import type { CompanyResource } from './companyResource';
 
 export type AdminSearchCompanies200 = {
-  data: CompanyResource[];
-  links: AdminSearchCompanies200Links;
-  meta: AdminSearchCompanies200Meta;
+    data: CompanyResource[];
+    links: AdminSearchCompanies200Links;
+    meta: AdminSearchCompanies200Meta;
 };

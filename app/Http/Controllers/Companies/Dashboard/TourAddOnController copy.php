@@ -3,10 +3,10 @@
 namespace App\Http\Controllers\Companies\Dashboard;
 
 use App\Http\Controllers\Controller;
+use App\Models\Company;
 use App\Models\TourAddOn;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use App\Models\Company;
 
 class TourAddOnController extends Controller
 {
@@ -26,14 +26,14 @@ class TourAddOnController extends Controller
         $items = collect($data['add_ons'])
             ->map(function ($item) use ($companyId) {
                 return [
-                    'company_id'  => $companyId,
-                    'tour_id'     => $item['tour_id'],
+                    'company_id' => $companyId,
+                    'tour_id' => $item['tour_id'],
                     'schedule_id' => $item['schedule_id'],
                     'description' => $item['description'],
-                    'price'       => $item['price'] ?? 0,
+                    'price' => $item['price'] ?? 0,
                     'edit_status' => $item['edit_status'] ?? false,
-                    'created_at'  => now(),
-                    'updated_at'  => now(),
+                    'created_at' => now(),
+                    'updated_at' => now(),
                 ];
             })
             ->values()
@@ -63,11 +63,11 @@ class TourAddOnController extends Controller
                 TourAddOn::updateOrCreate(
                     ['id' => $item['id'] ?? null],
                     [
-                        'company_id'  => $companyId,
-                        'tour_id'     => $item['tour_id'],
+                        'company_id' => $companyId,
+                        'tour_id' => $item['tour_id'],
                         'schedule_id' => $item['schedule_id'],
                         'description' => $item['description'],
-                        'price'       => $item['price'] ?? 0,
+                        'price' => $item['price'] ?? 0,
                         'edit_status' => $item['edit_status'] ?? false,
                     ]
                 );

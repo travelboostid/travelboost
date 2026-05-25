@@ -35,7 +35,7 @@ class CompanySeeder extends Seeder
         ];
 
         foreach ($packages as $package) {
-            AgentSubscriptionPackage::factory()->create($package);
+            AgentSubscriptionPackage::create($package);
         }
 
         $companies = [
@@ -65,7 +65,7 @@ class CompanySeeder extends Seeder
                 continue;
             }
 
-            $company = Company::factory()->create([
+            $company = Company::create([
                 'username' => $seed['username'],
                 'type' => $seed['company_type'],
                 'name' => ucfirst($seed['username']).' Company',
@@ -118,7 +118,7 @@ class CompanySeeder extends Seeder
             ]);
         }
 
-        $jane = User::factory()->create([
+        $jane = User::create([
             'company_id' => $johnCompany ? $johnCompany->id : 2,
             'name' => 'Jane',
             'email' => 'jane@travelboost.co.id',

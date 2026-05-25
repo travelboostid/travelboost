@@ -8,9 +8,9 @@ import type { OpenChatRequestRecipientType } from './openChatRequestRecipientTyp
 import type { OpenChatRequestSenderType } from './openChatRequestSenderType';
 
 export interface OpenChatRequest {
-  recipient_type: OpenChatRequestRecipientType;
-  /** Make sure these match your actual types */
-  recipient_id: number;
-  sender_type: OpenChatRequestSenderType;
-  sender_id: number;
+    recipient_type: OpenChatRequestRecipientType;
+    /** Make sure these match your actual types */
+    recipient_id: number;
+    sender_type: OpenChatRequestSenderType;
+    sender_id: number;
 }

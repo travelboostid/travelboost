@@ -76,9 +76,9 @@ try {
             `cd ${remotePath} && ` +
                 `git pull origin ${branch} && ` +
                 `composer install --no-dev --optimize-autoloader && ` +
-                `php artisan optimize:clear && ` +
                 `php artisan migrate --force && ` +
-                `sudo supervisorctl restart all`,
+                `php artisan optimize:clear && ` +
+                `sudo supervisorctl restart travelboost-dev-worker:* travelboost-dev-scheduler travelboost-dev-reverb`,
         ),
     );
 

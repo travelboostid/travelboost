@@ -6,12 +6,12 @@
  */
 import type { AdminSearchCompanies200LinksFirst } from './adminSearchCompanies200LinksFirst';
 import type { AdminSearchCompanies200LinksLast } from './adminSearchCompanies200LinksLast';
-import type { AdminSearchCompanies200LinksPrev } from './adminSearchCompanies200LinksPrev';
 import type { AdminSearchCompanies200LinksNext } from './adminSearchCompanies200LinksNext';
+import type { AdminSearchCompanies200LinksPrev } from './adminSearchCompanies200LinksPrev';
 
 export type AdminSearchCompanies200Links = {
-  first: AdminSearchCompanies200LinksFirst;
-  last: AdminSearchCompanies200LinksLast;
-  prev: AdminSearchCompanies200LinksPrev;
-  next: AdminSearchCompanies200LinksNext;
+    first: AdminSearchCompanies200LinksFirst;
+    last: AdminSearchCompanies200LinksLast;
+    prev: AdminSearchCompanies200LinksPrev;
+    next: AdminSearchCompanies200LinksNext;
 };

@@ -7,5 +7,5 @@
 import type { SearchResourceOwnersResource } from './searchResourceOwnersResource';
 
 export type AdminSearchResourceOwners200 = {
-  data: SearchResourceOwnersResource;
+    data: SearchResourceOwnersResource;
 };

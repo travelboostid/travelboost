@@ -5,11 +5,9 @@
  * OpenAPI spec version: 0.0.1
  */
 
-export type TourStatus = typeof TourStatus[keyof typeof TourStatus];
+export type TourStatus = (typeof TourStatus)[keyof typeof TourStatus];
 
-
-// eslint-disable-next-line @typescript-eslint/no-redeclare
 export const TourStatus = {
-  active: 'active',
-  inactive: 'inactive',
+    active: 'active',
+    inactive: 'inactive',
 } as const;

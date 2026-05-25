@@ -7,5 +7,5 @@
 import type { ChatMessageResource } from './chatMessageResource';
 
 export type GetChatMessage200 = {
-  data: ChatMessageResource;
+    data: ChatMessageResource;
 };

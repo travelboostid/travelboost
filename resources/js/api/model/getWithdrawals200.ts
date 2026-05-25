@@ -4,12 +4,12 @@
  * Travelboost
  * OpenAPI spec version: 0.0.1
  */
-import type { WithdrawalResource } from './withdrawalResource';
 import type { GetWithdrawals200Links } from './getWithdrawals200Links';
 import type { GetWithdrawals200Meta } from './getWithdrawals200Meta';
+import type { WithdrawalResource } from './withdrawalResource';
 
 export type GetWithdrawals200 = {
-  data: WithdrawalResource[];
-  links: GetWithdrawals200Links;
-  meta: GetWithdrawals200Meta;
+    data: WithdrawalResource[];
+    links: GetWithdrawals200Links;
+    meta: GetWithdrawals200Meta;
 };

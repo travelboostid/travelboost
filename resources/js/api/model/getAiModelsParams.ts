@@ -6,15 +6,15 @@
  */
 
 export type GetAiModelsParams = {
-/**
- * @minimum 1
- * @maximum 100
- */
-per_page?: number | null;
-/**
- * @minimum 1
- */
-page?: number | null;
-sort_by?: 'name' | 'created_at' | 'updated_at' | null;
-sort_order?: 'asc' | 'desc' | null;
+    /**
+     * @minimum 1
+     * @maximum 100
+     */
+    per_page?: number | null;
+    /**
+     * @minimum 1
+     */
+    page?: number | null;
+    sort_by?: 'name' | 'created_at' | 'updated_at' | null;
+    sort_order?: 'asc' | 'desc' | null;
 };

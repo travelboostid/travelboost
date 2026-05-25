@@ -8,10 +8,10 @@ use Illuminate\Queue\SerializesModels;
 
 class MediaCreated
 {
-  use Dispatchable, SerializesModels;
+    use Dispatchable, SerializesModels;
 
-  /**
-   * Create a new event instance.
-   */
-  public function __construct(public Media $media) {}
+    /**
+     * Create a new event instance.
+     */
+    public function __construct(public Media $media) {}
 }

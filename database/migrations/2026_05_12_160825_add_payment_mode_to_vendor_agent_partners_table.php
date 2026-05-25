@@ -6,17 +6,17 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-  public function up(): void
-  {
-    Schema::table('vendor_agent_partners', function (Blueprint $table) {
-      $table->string('payment_mode')->default('vendor')->after('accepted_at');
-    });
-  }
+    public function up(): void
+    {
+        Schema::table('vendor_agent_partners', function (Blueprint $table) {
+            $table->string('payment_mode')->default('vendor')->after('accepted_at');
+        });
+    }
 
-  public function down(): void
-  {
-    Schema::table('vendor_agent_partners', function (Blueprint $table) {
-      $table->dropColumn('payment_mode');
-    });
-  }
+    public function down(): void
+    {
+        Schema::table('vendor_agent_partners', function (Blueprint $table) {
+            $table->dropColumn('payment_mode');
+        });
+    }
 };

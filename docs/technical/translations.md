@@ -18,7 +18,7 @@ must be rewritten into a translatable format:
 
 ```jsx
 <div>
-  <FormattedMessage defaultMessage="Hello world" />
+    <FormattedMessage defaultMessage="Hello world" />
 </div>
 ```
 
@@ -26,7 +26,7 @@ Alternatively, when translation is needed inside logic or variables, the `intl.f
 
 ```js
 intl.formatMessage({
-  defaultMessage: 'Hello world',
+    defaultMessage: 'Hello world',
 });
 ```
 

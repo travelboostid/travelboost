@@ -1,9 +1,9 @@
 ---
 name: inertia-react-development
-description: "Develops Inertia.js v2 React client-side applications. Activates when creating React pages, forms, or navigation; using <Link>, <Form>, useForm, or router; working with deferred props, prefetching, or polling; or when user mentions React with Inertia, React pages, React forms, or React navigation."
+description: 'Develops Inertia.js v2 React client-side applications. Activates when creating React pages, forms, or navigation; using <Link>, <Form>, useForm, or router; working with deferred props, prefetching, or polling; or when user mentions React with Inertia, React pages, React forms, or React navigation.'
 license: MIT
 metadata:
-  author: laravel
+    author: laravel
 ---
 
 # Inertia React Development
@@ -15,7 +15,7 @@ Activate this skill when:
 - Creating or modifying React page components for Inertia
 - Working with forms in React (using `<Form>` or `useForm`)
 - Implementing client-side navigation with `<Link>` or `router`
-- Using v2 features: deferred props, prefetching, or polling
+- Using v2 features: deferred props, prefetching, WhenVisible, InfiniteScroll, once props, flash data, or polling
 - Building React-specific features with the Inertia protocol
 
 ## Documentation
@@ -31,6 +31,7 @@ React page components should be placed in the `resources/js/pages` directory.
 ### Page Component Structure
 
 <!-- Basic React Page Component -->
+
 ```react
 export default function UsersIndex({ users }) {
     return (
@@ -51,6 +52,7 @@ export default function UsersIndex({ users }) {
 Use `<Link>` for client-side navigation instead of traditional `<a>` tags:
 
 <!-- Inertia React Navigation -->
+
 ```react
 import { Link, router } from '@inertiajs/react'
 
@@ -62,6 +64,7 @@ import { Link, router } from '@inertiajs/react'
 ### Link with Method
 
 <!-- Link with POST Method -->
+
 ```react
 import { Link } from '@inertiajs/react'
 
@@ -75,6 +78,7 @@ import { Link } from '@inertiajs/react'
 Prefetch pages to improve perceived performance:
 
 <!-- Prefetch on Hover -->
+
 ```react
 import { Link } from '@inertiajs/react'
 
@@ -86,6 +90,7 @@ import { Link } from '@inertiajs/react'
 ### Programmatic Navigation
 
 <!-- Router Visit -->
+
 ```react
 import { router } from '@inertiajs/react'
 
@@ -108,6 +113,7 @@ router.visit('/users', {
 The recommended way to build forms is with the `<Form>` component:
 
 <!-- Form Component Example -->
+
 ```react
 import { Form } from '@inertiajs/react'
 
@@ -137,6 +143,7 @@ export default function CreateUser() {
 ### Form Component With All Props
 
 <!-- Form Component Full Example -->
+
 ```react
 import { Form } from '@inertiajs/react'
 
@@ -186,6 +193,7 @@ The `<Form>` component supports automatic resetting:
 Use the `search-docs` tool with a query of `form component resetting` for detailed guidance.
 
 <!-- Form with Reset Props -->
+
 ```react
 import { Form } from '@inertiajs/react'
 
@@ -215,6 +223,7 @@ Forms can also be built using the `useForm` helper for more programmatic control
 For more programmatic control or to follow existing conventions, use the `useForm` hook:
 
 <!-- useForm Hook Example -->
+
 ```react
 import { useForm } from '@inertiajs/react'
 
@@ -270,6 +279,7 @@ export default function CreateUser() {
 Use deferred props to load data after initial page render:
 
 <!-- Deferred Props with Empty State -->
+
 ```react
 export default function UsersIndex({ users }) {
     // users will be undefined initially, then populated
@@ -298,6 +308,7 @@ export default function UsersIndex({ users }) {
 Use the `usePoll` hook to automatically refresh data at intervals. It handles cleanup on unmount and throttles polling when the tab is inactive.
 
 <!-- Basic Polling -->
+
 ```react
 import { usePoll } from '@inertiajs/react'
 
@@ -314,6 +325,7 @@ export default function Dashboard({ stats }) {
 ```
 
 <!-- Polling With Request Options and Manual Control -->
+
 ```react
 import { usePoll } from '@inertiajs/react'
 
@@ -345,32 +357,55 @@ export default function Dashboard({ stats }) {
 - `autoStart` (default `true`) — set to `false` to start polling manually via the returned `start()` function
 - `keepAlive` (default `false`) — set to `true` to prevent throttling when the browser tab is inactive
 
-### WhenVisible (Infinite Scroll)
+### WhenVisible
 
-Load more data when user scrolls to a specific element:
+Lazy-load a prop when an element scrolls into view. Useful for deferring expensive data that sits below the fold:
 
-<!-- Infinite Scroll with WhenVisible -->
+<!-- WhenVisible Example -->
+
 ```react
 import { WhenVisible } from '@inertiajs/react'
 
-export default function UsersList({ users }) {
+export default function Dashboard({ stats }) {
     return (
         <div>
-            {users.data.map(user => (
-                <div key={user.id}>{user.name}</div>
-            ))}
+            <h1>Dashboard</h1>
 
-            {users.next_page_url && (
-                <WhenVisible
-                    data="users"
-                    params={{ page: users.current_page + 1 }}
-                    fallback={<div>Loading more...</div>}
-                />
-            )}
+            <WhenVisible data="stats" buffer={200} fallback={<div className="animate-pulse">Loading stats...</div>}>
+                {({ fetching }) => (
+                    <div>
+                        <p>Total Users: {stats.total_users}</p>
+                        <p>Revenue: {stats.revenue}</p>
+                        {fetching && <span>Refreshing...</span>}
+                    </div>
+                )}
+            </WhenVisible>
         </div>
     )
 }
 ```
+
+### InfiniteScroll
+
+Automatically load additional pages of paginated data as users scroll:
+
+<!-- InfiniteScroll Example -->
+
+```react
+import { InfiniteScroll } from '@inertiajs/react'
+
+export default function Users({ users }) {
+    return (
+        <InfiniteScroll data="users">
+            {users.data.map(user => (
+                <div key={user.id}>{user.name}</div>
+            ))}
+        </InfiniteScroll>
+    )
+}
+```
+
+The server must use `Inertia::scroll()` to configure the paginated data. Use the `search-docs` tool with a query of `infinite scroll` for detailed guidance on buffers, manual loading, reverse mode, and custom trigger elements.
 
 ## Common Pitfalls
 

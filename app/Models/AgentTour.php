@@ -3,41 +3,41 @@
 namespace App\Models;
 
 use App\Enums\TourStatus;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 
 class AgentTour extends Model
 {
-  use HasFactory;
+    use HasFactory;
 
-  protected $fillable = [
-    'category_id',
-    'tour_id',
-    'company_id',
-    'status',
-  ];
+    protected $fillable = [
+        'category_id',
+        'tour_id',
+        'company_id',
+        'status',
+    ];
 
-  protected $casts = [
-    'status' => TourStatus::class,
-  ];
+    protected $casts = [
+        'status' => TourStatus::class,
+    ];
 
-  protected $with = [
-    'tour',
-    'company',
-  ];
+    protected $with = [
+        'tour',
+        'company',
+    ];
 
-  public function company()
-  {
-    return $this->belongsTo(Company::class, 'company_id')->where('type', 'agent');
-  }
+    public function company()
+    {
+        return $this->belongsTo(Company::class, 'company_id')->where('type', 'agent');
+    }
 
-  public function tour()
-  {
-    return $this->belongsTo(Tour::class, 'tour_id');
-  }
+    public function tour()
+    {
+        return $this->belongsTo(Tour::class, 'tour_id');
+    }
 
-  public function category()
-  {
-    return $this->belongsTo(TourCategory::class, 'category_id');
-  }
+    public function category()
+    {
+        return $this->belongsTo(TourCategory::class, 'category_id');
+    }
 }

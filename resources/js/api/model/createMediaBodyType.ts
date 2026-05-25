@@ -5,12 +5,11 @@
  * OpenAPI spec version: 0.0.1
  */
 
-export type CreateMediaBodyType = typeof CreateMediaBodyType[keyof typeof CreateMediaBodyType];
+export type CreateMediaBodyType =
+    (typeof CreateMediaBodyType)[keyof typeof CreateMediaBodyType];
 
-
-// eslint-disable-next-line @typescript-eslint/no-redeclare
 export const CreateMediaBodyType = {
-  image: 'image',
-  photo: 'photo',
-  document: 'document',
+    image: 'image',
+    photo: 'photo',
+    document: 'document',
 } as const;

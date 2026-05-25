@@ -10,29 +10,29 @@ import type { WalletsIndex200MetaPath } from './walletsIndex200MetaPath';
 import type { WalletsIndex200MetaTo } from './walletsIndex200MetaTo';
 
 export type WalletsIndex200Meta = {
-  /** @minimum 1 */
-  current_page: number;
-  /** @minimum 1 */
-  from: WalletsIndex200MetaFrom;
-  /** @minimum 1 */
-  last_page: number;
-  /** Generated paginator links. */
-  links: WalletsIndex200MetaLinksItem[];
-  /** Base path for paginator generated URLs. */
-  path: WalletsIndex200MetaPath;
-  /**
-   * Number of items shown per page.
-   * @minimum 0
-   */
-  per_page: number;
-  /**
-   * Number of the last item in the slice.
-   * @minimum 1
-   */
-  to: WalletsIndex200MetaTo;
-  /**
-   * Total number of items being paginated.
-   * @minimum 0
-   */
-  total: number;
+    /** @minimum 1 */
+    current_page: number;
+    /** @minimum 1 */
+    from: WalletsIndex200MetaFrom;
+    /** @minimum 1 */
+    last_page: number;
+    /** Generated paginator links. */
+    links: WalletsIndex200MetaLinksItem[];
+    /** Base path for paginator generated URLs. */
+    path: WalletsIndex200MetaPath;
+    /**
+     * Number of items shown per page.
+     * @minimum 0
+     */
+    per_page: number;
+    /**
+     * Number of the last item in the slice.
+     * @minimum 1
+     */
+    to: WalletsIndex200MetaTo;
+    /**
+     * Total number of items being paginated.
+     * @minimum 0
+     */
+    total: number;
 };

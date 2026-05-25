@@ -6,6 +6,6 @@
  */
 
 export type UpdateContinentBody = {
-  /** @maxLength 255 */
-  name?: string;
+    /** @maxLength 255 */
+    name?: string;
 };

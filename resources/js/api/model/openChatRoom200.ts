@@ -7,5 +7,5 @@
 import type { ChatRoomResource } from './chatRoomResource';
 
 export type OpenChatRoom200 = {
-  data: ChatRoomResource;
+    data: ChatRoomResource;
 };

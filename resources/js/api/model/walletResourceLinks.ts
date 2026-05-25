@@ -9,7 +9,7 @@
  * Links
  */
 export type WalletResourceLinks = {
-  self: string;
-  transactions: string;
-  balance: string;
+    self: string;
+    transactions: string;
+    balance: string;
 };

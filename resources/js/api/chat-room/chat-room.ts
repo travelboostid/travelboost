@@ -4,289 +4,453 @@
  * Travelboost
  * OpenAPI spec version: 0.0.1
  */
-import {
-  useMutation,
-  useQuery
-} from '@tanstack/react-query';
 import type {
-  DataTag,
-  DefinedInitialDataOptions,
-  DefinedUseQueryResult,
-  MutationFunction,
-  QueryClient,
-  QueryFunction,
-  QueryKey,
-  UndefinedInitialDataOptions,
-  UseMutationOptions,
-  UseMutationResult,
-  UseQueryOptions,
-  UseQueryResult
+    DataTag,
+    DefinedInitialDataOptions,
+    DefinedUseQueryResult,
+    MutationFunction,
+    QueryClient,
+    QueryFunction,
+    QueryKey,
+    UndefinedInitialDataOptions,
+    UseMutationOptions,
+    UseMutationResult,
+    UseQueryOptions,
+    UseQueryResult,
 } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 
 import type {
-  GetChatRoom200,
-  GetChatRooms200,
-  GetChatRoomsParams,
-  ModelNotFoundExceptionResponse,
-  OpenChatRequest,
-  OpenChatRoom200,
-  ValidationExceptionResponse
+    GetChatRoom200,
+    GetChatRooms200,
+    GetChatRoomsParams,
+    ModelNotFoundExceptionResponse,
+    OpenChatRequest,
+    OpenChatRoom200,
+    ValidationExceptionResponse,
 } from '.././model';
 
 import { apiInstance } from '.././api-instance';
 
-
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
-
-
 
 /**
  * @summary Display a paginated list of chat rooms using cursor pagination
  */
 export const getChatRooms = (
     params?: GetChatRoomsParams,
- options?: SecondParameter<typeof apiInstance>,signal?: AbortSignal
+    options?: SecondParameter<typeof apiInstance>,
+    signal?: AbortSignal,
 ) => {
-      
-      
-      return apiInstance<GetChatRooms200>(
-      {url: `/chat/rooms`, method: 'GET',
-        params, signal
+    return apiInstance<GetChatRooms200>(
+        { url: `/chat/rooms`, method: 'GET', params, signal },
+        options,
+    );
+};
+
+export const getGetChatRoomsQueryKey = (params?: GetChatRoomsParams) => {
+    return [`/chat/rooms`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetChatRoomsQueryOptions = <
+    TData = Awaited<ReturnType<typeof getChatRooms>>,
+    TError = ValidationExceptionResponse,
+>(
+    params?: GetChatRoomsParams,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof getChatRooms>>,
+                TError,
+                TData
+            >
+        >;
+        request?: SecondParameter<typeof apiInstance>;
     },
-      options);
-    }
-  
-
-
-
-export const getGetChatRoomsQueryKey = (params?: GetChatRoomsParams,) => {
-    return [
-    `/chat/rooms`, ...(params ? [params]: [])
-    ] as const;
-    }
-
-    
-export const getGetChatRoomsQueryOptions = <TData = Awaited<ReturnType<typeof getChatRooms>>, TError = ValidationExceptionResponse>(params?: GetChatRoomsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getChatRooms>>, TError, TData>>, request?: SecondParameter<typeof apiInstance>}
 ) => {
+    const { query: queryOptions, request: requestOptions } = options ?? {};
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+    const queryKey = queryOptions?.queryKey ?? getGetChatRoomsQueryKey(params);
 
-  const queryKey =  queryOptions?.queryKey ?? getGetChatRoomsQueryKey(params);
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getChatRooms>>> = ({
+        signal,
+    }) => getChatRooms(params, requestOptions, signal);
 
-  
+    return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+        Awaited<ReturnType<typeof getChatRooms>>,
+        TError,
+        TData
+    > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getChatRooms>>> = ({ signal }) => getChatRooms(params, requestOptions, signal);
+export type GetChatRoomsQueryResult = NonNullable<
+    Awaited<ReturnType<typeof getChatRooms>>
+>;
+export type GetChatRoomsQueryError = ValidationExceptionResponse;
 
-      
-
-      
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getChatRooms>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type GetChatRoomsQueryResult = NonNullable<Awaited<ReturnType<typeof getChatRooms>>>
-export type GetChatRoomsQueryError = ValidationExceptionResponse
-
-
-export function useGetChatRooms<TData = Awaited<ReturnType<typeof getChatRooms>>, TError = ValidationExceptionResponse>(
- params: undefined |  GetChatRoomsParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getChatRooms>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getChatRooms>>,
-          TError,
-          Awaited<ReturnType<typeof getChatRooms>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof apiInstance>}
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetChatRooms<TData = Awaited<ReturnType<typeof getChatRooms>>, TError = ValidationExceptionResponse>(
- params?: GetChatRoomsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getChatRooms>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getChatRooms>>,
-          TError,
-          Awaited<ReturnType<typeof getChatRooms>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof apiInstance>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetChatRooms<TData = Awaited<ReturnType<typeof getChatRooms>>, TError = ValidationExceptionResponse>(
- params?: GetChatRoomsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getChatRooms>>, TError, TData>>, request?: SecondParameter<typeof apiInstance>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetChatRooms<
+    TData = Awaited<ReturnType<typeof getChatRooms>>,
+    TError = ValidationExceptionResponse,
+>(
+    params: undefined | GetChatRoomsParams,
+    options: {
+        query: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof getChatRooms>>,
+                TError,
+                TData
+            >
+        > &
+            Pick<
+                DefinedInitialDataOptions<
+                    Awaited<ReturnType<typeof getChatRooms>>,
+                    TError,
+                    Awaited<ReturnType<typeof getChatRooms>>
+                >,
+                'initialData'
+            >;
+        request?: SecondParameter<typeof apiInstance>;
+    },
+    queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetChatRooms<
+    TData = Awaited<ReturnType<typeof getChatRooms>>,
+    TError = ValidationExceptionResponse,
+>(
+    params?: GetChatRoomsParams,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof getChatRooms>>,
+                TError,
+                TData
+            >
+        > &
+            Pick<
+                UndefinedInitialDataOptions<
+                    Awaited<ReturnType<typeof getChatRooms>>,
+                    TError,
+                    Awaited<ReturnType<typeof getChatRooms>>
+                >,
+                'initialData'
+            >;
+        request?: SecondParameter<typeof apiInstance>;
+    },
+    queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetChatRooms<
+    TData = Awaited<ReturnType<typeof getChatRooms>>,
+    TError = ValidationExceptionResponse,
+>(
+    params?: GetChatRoomsParams,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof getChatRooms>>,
+                TError,
+                TData
+            >
+        >;
+        request?: SecondParameter<typeof apiInstance>;
+    },
+    queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+};
 /**
  * @summary Display a paginated list of chat rooms using cursor pagination
  */
 
-export function useGetChatRooms<TData = Awaited<ReturnType<typeof getChatRooms>>, TError = ValidationExceptionResponse>(
- params?: GetChatRoomsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getChatRooms>>, TError, TData>>, request?: SecondParameter<typeof apiInstance>}
- , queryClient?: QueryClient 
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+export function useGetChatRooms<
+    TData = Awaited<ReturnType<typeof getChatRooms>>,
+    TError = ValidationExceptionResponse,
+>(
+    params?: GetChatRoomsParams,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof getChatRooms>>,
+                TError,
+                TData
+            >
+        >;
+        request?: SecondParameter<typeof apiInstance>;
+    },
+    queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+} {
+    const queryOptions = getGetChatRoomsQueryOptions(params, options);
 
-  const queryOptions = getGetChatRoomsQueryOptions(params,options)
+    const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+        TData,
+        TError
+    > & { queryKey: DataTag<QueryKey, TData, TError> };
 
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+    query.queryKey = queryOptions.queryKey;
 
-  query.queryKey = queryOptions.queryKey ;
-
-  return query;
+    return query;
 }
-
-
-
 
 /**
  * @summary Show a single chat room by model
  */
 export const getChatRoom = (
     room: number,
- options?: SecondParameter<typeof apiInstance>,signal?: AbortSignal
+    options?: SecondParameter<typeof apiInstance>,
+    signal?: AbortSignal,
 ) => {
-      
-      
-      return apiInstance<GetChatRoom200>(
-      {url: `/chat/rooms/${room}`, method: 'GET', signal
+    return apiInstance<GetChatRoom200>(
+        { url: `/chat/rooms/${room}`, method: 'GET', signal },
+        options,
+    );
+};
+
+export const getGetChatRoomQueryKey = (room?: number) => {
+    return [`/chat/rooms/${room}`] as const;
+};
+
+export const getGetChatRoomQueryOptions = <
+    TData = Awaited<ReturnType<typeof getChatRoom>>,
+    TError = ModelNotFoundExceptionResponse,
+>(
+    room: number,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof getChatRoom>>,
+                TError,
+                TData
+            >
+        >;
+        request?: SecondParameter<typeof apiInstance>;
     },
-      options);
-    }
-  
-
-
-
-export const getGetChatRoomQueryKey = (room?: number,) => {
-    return [
-    `/chat/rooms/${room}`
-    ] as const;
-    }
-
-    
-export const getGetChatRoomQueryOptions = <TData = Awaited<ReturnType<typeof getChatRoom>>, TError = ModelNotFoundExceptionResponse>(room: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getChatRoom>>, TError, TData>>, request?: SecondParameter<typeof apiInstance>}
 ) => {
+    const { query: queryOptions, request: requestOptions } = options ?? {};
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+    const queryKey = queryOptions?.queryKey ?? getGetChatRoomQueryKey(room);
 
-  const queryKey =  queryOptions?.queryKey ?? getGetChatRoomQueryKey(room);
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getChatRoom>>> = ({
+        signal,
+    }) => getChatRoom(room, requestOptions, signal);
 
-  
+    return {
+        queryKey,
+        queryFn,
+        enabled: !!room,
+        ...queryOptions,
+    } as UseQueryOptions<
+        Awaited<ReturnType<typeof getChatRoom>>,
+        TError,
+        TData
+    > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getChatRoom>>> = ({ signal }) => getChatRoom(room, requestOptions, signal);
+export type GetChatRoomQueryResult = NonNullable<
+    Awaited<ReturnType<typeof getChatRoom>>
+>;
+export type GetChatRoomQueryError = ModelNotFoundExceptionResponse;
 
-      
-
-      
-
-   return  { queryKey, queryFn, enabled: !!(room), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getChatRoom>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type GetChatRoomQueryResult = NonNullable<Awaited<ReturnType<typeof getChatRoom>>>
-export type GetChatRoomQueryError = ModelNotFoundExceptionResponse
-
-
-export function useGetChatRoom<TData = Awaited<ReturnType<typeof getChatRoom>>, TError = ModelNotFoundExceptionResponse>(
- room: number, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getChatRoom>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getChatRoom>>,
-          TError,
-          Awaited<ReturnType<typeof getChatRoom>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof apiInstance>}
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetChatRoom<TData = Awaited<ReturnType<typeof getChatRoom>>, TError = ModelNotFoundExceptionResponse>(
- room: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getChatRoom>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getChatRoom>>,
-          TError,
-          Awaited<ReturnType<typeof getChatRoom>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof apiInstance>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetChatRoom<TData = Awaited<ReturnType<typeof getChatRoom>>, TError = ModelNotFoundExceptionResponse>(
- room: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getChatRoom>>, TError, TData>>, request?: SecondParameter<typeof apiInstance>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetChatRoom<
+    TData = Awaited<ReturnType<typeof getChatRoom>>,
+    TError = ModelNotFoundExceptionResponse,
+>(
+    room: number,
+    options: {
+        query: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof getChatRoom>>,
+                TError,
+                TData
+            >
+        > &
+            Pick<
+                DefinedInitialDataOptions<
+                    Awaited<ReturnType<typeof getChatRoom>>,
+                    TError,
+                    Awaited<ReturnType<typeof getChatRoom>>
+                >,
+                'initialData'
+            >;
+        request?: SecondParameter<typeof apiInstance>;
+    },
+    queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetChatRoom<
+    TData = Awaited<ReturnType<typeof getChatRoom>>,
+    TError = ModelNotFoundExceptionResponse,
+>(
+    room: number,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof getChatRoom>>,
+                TError,
+                TData
+            >
+        > &
+            Pick<
+                UndefinedInitialDataOptions<
+                    Awaited<ReturnType<typeof getChatRoom>>,
+                    TError,
+                    Awaited<ReturnType<typeof getChatRoom>>
+                >,
+                'initialData'
+            >;
+        request?: SecondParameter<typeof apiInstance>;
+    },
+    queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetChatRoom<
+    TData = Awaited<ReturnType<typeof getChatRoom>>,
+    TError = ModelNotFoundExceptionResponse,
+>(
+    room: number,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof getChatRoom>>,
+                TError,
+                TData
+            >
+        >;
+        request?: SecondParameter<typeof apiInstance>;
+    },
+    queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+};
 /**
  * @summary Show a single chat room by model
  */
 
-export function useGetChatRoom<TData = Awaited<ReturnType<typeof getChatRoom>>, TError = ModelNotFoundExceptionResponse>(
- room: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getChatRoom>>, TError, TData>>, request?: SecondParameter<typeof apiInstance>}
- , queryClient?: QueryClient 
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+export function useGetChatRoom<
+    TData = Awaited<ReturnType<typeof getChatRoom>>,
+    TError = ModelNotFoundExceptionResponse,
+>(
+    room: number,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof getChatRoom>>,
+                TError,
+                TData
+            >
+        >;
+        request?: SecondParameter<typeof apiInstance>;
+    },
+    queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+} {
+    const queryOptions = getGetChatRoomQueryOptions(room, options);
 
-  const queryOptions = getGetChatRoomQueryOptions(room,options)
+    const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+        TData,
+        TError
+    > & { queryKey: DataTag<QueryKey, TData, TError> };
 
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+    query.queryKey = queryOptions.queryKey;
 
-  query.queryKey = queryOptions.queryKey ;
-
-  return query;
+    return query;
 }
-
-
-
 
 /**
  * @summary Open a private chat with another user
  */
 export const openChatRoom = (
     openChatRequest: OpenChatRequest,
- options?: SecondParameter<typeof apiInstance>,signal?: AbortSignal
+    options?: SecondParameter<typeof apiInstance>,
+    signal?: AbortSignal,
 ) => {
-      
-      
-      return apiInstance<OpenChatRoom200>(
-      {url: `/chat/rooms/open`, method: 'POST',
-      headers: {'Content-Type': 'application/json', },
-      data: openChatRequest, signal
-    },
-      options);
-    }
-  
+    return apiInstance<OpenChatRoom200>(
+        {
+            url: `/chat/rooms/open`,
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            data: openChatRequest,
+            signal,
+        },
+        options,
+    );
+};
 
-
-export const getOpenChatRoomMutationOptions = <TError = ValidationExceptionResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof openChatRoom>>, TError,{data: OpenChatRequest}, TContext>, request?: SecondParameter<typeof apiInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof openChatRoom>>, TError,{data: OpenChatRequest}, TContext> => {
-
-const mutationKey = ['openChatRoom'];
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-      
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof openChatRoom>>, {data: OpenChatRequest}> = (props) => {
-          const {data} = props ?? {};
-
-          return  openChatRoom(data,requestOptions)
-        }
-
-        
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type OpenChatRoomMutationResult = NonNullable<Awaited<ReturnType<typeof openChatRoom>>>
-    export type OpenChatRoomMutationBody = OpenChatRequest
-    export type OpenChatRoomMutationError = ValidationExceptionResponse
-
-    /**
- * @summary Open a private chat with another user
- */
-export const useOpenChatRoom = <TError = ValidationExceptionResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof openChatRoom>>, TError,{data: OpenChatRequest}, TContext>, request?: SecondParameter<typeof apiInstance>}
- , queryClient?: QueryClient): UseMutationResult<
+export const getOpenChatRoomMutationOptions = <
+    TError = ValidationExceptionResponse,
+    TContext = unknown,
+>(options?: {
+    mutation?: UseMutationOptions<
         Awaited<ReturnType<typeof openChatRoom>>,
         TError,
-        {data: OpenChatRequest},
+        { data: OpenChatRequest },
         TContext
-      > => {
+    >;
+    request?: SecondParameter<typeof apiInstance>;
+}): UseMutationOptions<
+    Awaited<ReturnType<typeof openChatRoom>>,
+    TError,
+    { data: OpenChatRequest },
+    TContext
+> => {
+    const mutationKey = ['openChatRoom'];
+    const { mutation: mutationOptions, request: requestOptions } = options
+        ? options.mutation &&
+          'mutationKey' in options.mutation &&
+          options.mutation.mutationKey
+            ? options
+            : { ...options, mutation: { ...options.mutation, mutationKey } }
+        : { mutation: { mutationKey }, request: undefined };
 
-      const mutationOptions = getOpenChatRoomMutationOptions(options);
+    const mutationFn: MutationFunction<
+        Awaited<ReturnType<typeof openChatRoom>>,
+        { data: OpenChatRequest }
+    > = (props) => {
+        const { data } = props ?? {};
 
-      return useMutation(mutationOptions, queryClient);
-    }
-    
+        return openChatRoom(data, requestOptions);
+    };
+
+    return { mutationFn, ...mutationOptions };
+};
+
+export type OpenChatRoomMutationResult = NonNullable<
+    Awaited<ReturnType<typeof openChatRoom>>
+>;
+export type OpenChatRoomMutationBody = OpenChatRequest;
+export type OpenChatRoomMutationError = ValidationExceptionResponse;
+
+/**
+ * @summary Open a private chat with another user
+ */
+export const useOpenChatRoom = <
+    TError = ValidationExceptionResponse,
+    TContext = unknown,
+>(
+    options?: {
+        mutation?: UseMutationOptions<
+            Awaited<ReturnType<typeof openChatRoom>>,
+            TError,
+            { data: OpenChatRequest },
+            TContext
+        >;
+        request?: SecondParameter<typeof apiInstance>;
+    },
+    queryClient?: QueryClient,
+): UseMutationResult<
+    Awaited<ReturnType<typeof openChatRoom>>,
+    TError,
+    { data: OpenChatRequest },
+    TContext
+> => {
+    const mutationOptions = getOpenChatRoomMutationOptions(options);
+
+    return useMutation(mutationOptions, queryClient);
+};

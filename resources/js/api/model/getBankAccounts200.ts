@@ -7,6 +7,6 @@
 import type { BankAccountResource } from './bankAccountResource';
 
 export type GetBankAccounts200 = {
-  success: boolean;
-  data: BankAccountResource[];
+    success: boolean;
+    data: BankAccountResource[];
 };

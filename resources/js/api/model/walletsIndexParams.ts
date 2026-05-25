@@ -6,5 +6,5 @@
  */
 
 export type WalletsIndexParams = {
-per_page?: number;
+    per_page?: number;
 };

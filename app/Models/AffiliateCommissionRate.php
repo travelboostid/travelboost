@@ -7,18 +7,18 @@ use Illuminate\Database\Eloquent\Model;
 
 class AffiliateCommissionRate extends Model
 {
-  use HasFactory;
+    use HasFactory;
 
-  // Izinkan kolom-kolom ini diisi secara massal (oleh Seeder)
-  protected $fillable = [
-    'tier',
-    'percentage',
-    'is_active',
-  ];
+    // Izinkan kolom-kolom ini diisi secara massal (oleh Seeder)
+    protected $fillable = [
+        'tier',
+        'percentage',
+        'is_active',
+    ];
 
-  // Ubah tipe data percentage menjadi float/desimal saat ditarik dari DB
-  protected $casts = [
-    'percentage' => 'float',
-    'is_active' => 'boolean',
-  ];
+    // Ubah tipe data percentage menjadi float/desimal saat ditarik dari DB
+    protected $casts = [
+        'percentage' => 'float',
+        'is_active' => 'boolean',
+    ];
 }

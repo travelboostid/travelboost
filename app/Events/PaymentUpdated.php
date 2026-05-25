@@ -8,9 +8,9 @@ use Illuminate\Queue\SerializesModels;
 
 class PaymentUpdated
 {
-  use Dispatchable, SerializesModels;
+    use Dispatchable, SerializesModels;
 
-  public function __construct(
-    public Payment $payment
-  ) {}
+    public function __construct(
+        public Payment $payment
+    ) {}
 }

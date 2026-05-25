@@ -217,7 +217,7 @@ In VSCode:
 
 1. Open the **Run and Debug** panel
 2. Select:
-   - `Debug (Backend)`
+    - `Debug (Backend)`
 3. Click the run/play button
 
 This configuration is defined in:
@@ -230,14 +230,14 @@ Example configuration:
 
 ```json
 {
-  "configurations": [
-    {
-      "name": "Debug (Backend)",
-      "type": "php",
-      "request": "launch",
-      "port": 9003
-    }
-  ]
+    "configurations": [
+        {
+            "name": "Debug (Backend)",
+            "type": "php",
+            "request": "launch",
+            "port": 9003
+        }
+    ]
 }
 ```
 

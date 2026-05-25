@@ -22,17 +22,19 @@ class BookingService
     public function createBooking(array $data, User $user): Booking
     {
         $tour = Tour::findOrFail($data['tour_id']);
-
-        $totalPax = (int) $data['pax_adult'] + (int) $data['pax_child'];
-        $derivedBasePrice = $totalPax * (float) ($tour->promote_price ?? 0);
-
-        if ((float) $data['total_price'] < $derivedBasePrice) {
-            throw new \Exception('Price validation failed. Please refresh your booking session and try again.');
-        }
-
         $paymentMode = $this->resolvePaymentMode(data_get($data, 'payment_method'));
 
         return DB::transaction(function () use ($data, $user, $paymentMode, $tour) {
+            $quote = app(BookingPricingService::class)->quoteForBookingData(
+                $tour,
+                (string) data_get($data, 'departure_date'),
+                data_get($data, 'passengers', []),
+                data_get($data, 'addons', []),
+                (float) ($tour->company?->companySetting?->minimum_vat ?? 11),
+                data_get($data, 'agent_id') !== null,
+            );
+            $totals = app(BookingPricingService::class)->bookingTotalsFromQuote($quote);
+
             $booking = Booking::updateOrCreate(
                 [
                     'booking_number' => data_get($data, 'booking_number'),
@@ -46,11 +48,11 @@ class BookingService
                     'pax_adult' => data_get($data, 'pax_adult'),
                     'pax_child' => data_get($data, 'pax_child'),
                     'pax_infant' => data_get($data, 'pax_infant'),
-                    'total_price' => data_get($data, 'total_price'),
-                    'tax_amount' => data_get($data, 'tax_amount'),
-                    'platform_fee' => data_get($data, 'platform_fee'),
-                    'commission_amount' => data_get($data, 'commission_amount'),
-                    'grand_total' => data_get($data, 'grand_total'),
+                    'total_price' => $totals['total_price'],
+                    'tax_amount' => $totals['tax_amount'],
+                    'platform_fee' => $totals['platform_fee'],
+                    'commission_amount' => $totals['commission_amount'],
+                    'grand_total' => $totals['grand_total'],
                     'payment_mode' => $paymentMode,
                     'contact_name' => data_get($data, 'contact_name'),
                     'contact_email' => data_get($data, 'contact_email'),
@@ -73,7 +75,7 @@ class BookingService
             }
 
             if (! empty($data['passengers'])) {
-                $passengerRows = $this->preparePassengerRows($data['passengers']);
+                $passengerRows = $this->preparePassengerRows($quote['passengers']);
 
                 $booking->passengers()->createMany($passengerRows);
                 $this->syncSavedPassengers($user, $passengerRows);
@@ -83,8 +85,8 @@ class BookingService
                 $booking->rooms()->createMany($data['rooms']);
             }
 
-            if (! empty($data['addons'])) {
-                $booking->addons()->createMany($data['addons']);
+            if (! empty($quote['addons'])) {
+                $booking->addons()->createMany($quote['addons']);
             }
 
             Booking::where('user_id', $user->id)

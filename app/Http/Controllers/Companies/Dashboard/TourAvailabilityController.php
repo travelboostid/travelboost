@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers\Companies\Dashboard;
 
-use App\Http\Controllers\Controller;
 use App\Actions\Booking\ExpireBookingReservationsAction;
 use App\Actions\Booking\SyncAvailabilityAction;
+use App\Http\Controllers\Controller;
 use App\Models\Company;
 use App\Models\TourSchedule;
 use Illuminate\Http\Request;
@@ -58,8 +58,8 @@ class TourAvailabilityController extends Controller
 
                 DB::table('tour_availabilities')->updateOrInsert(
                     [
-                        'company_id'  => $company->id,
-                        'tour_id'     => $schedule->tour_id,
+                        'company_id' => $company->id,
+                        'tour_id' => $schedule->tour_id,
                         'schedule_id' => $schedule->id,
                     ],
                     [

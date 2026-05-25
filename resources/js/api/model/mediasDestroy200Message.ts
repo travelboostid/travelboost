@@ -5,10 +5,9 @@
  * OpenAPI spec version: 0.0.1
  */
 
-export type MediasDestroy200Message = typeof MediasDestroy200Message[keyof typeof MediasDestroy200Message];
+export type MediasDestroy200Message =
+    (typeof MediasDestroy200Message)[keyof typeof MediasDestroy200Message];
 
-
-// eslint-disable-next-line @typescript-eslint/no-redeclare
 export const MediasDestroy200Message = {
-  Media_deleted: 'Media deleted',
+    Media_deleted: 'Media deleted',
 } as const;

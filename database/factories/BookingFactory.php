@@ -22,21 +22,21 @@ class BookingFactory extends Factory
     public function definition(): array
     {
         return [
-            'booking_number' => 'BKG-'.strtoupper($this->faker->unique()->bothify('?????-#####')),
+            'booking_number' => 'BKG-'.strtoupper(fake()->unique()->bothify('?????-#####')),
             'user_id' => User::factory(),
             'vendor_id' => Company::factory(),
             'agent_id' => null,
             'tour_id' => Tour::factory(),
-            'departure_date' => $this->faker->dateTimeBetween('+1 week', '+1 month')->format('Y-m-d'),
-            'status' => $this->faker->randomElement(BookingStatus::cases()),
-            'pax_adult' => $this->faker->numberBetween(1, 4),
-            'pax_child' => $this->faker->numberBetween(0, 2),
-            'pax_infant' => $this->faker->numberBetween(0, 1),
-            'total_price' => $this->faker->randomFloat(2, 100, 10000),
-            'tax_amount' => $this->faker->randomFloat(2, 10, 500),
-            'platform_fee' => $this->faker->randomFloat(2, 5, 50),
-            'commission_amount' => $this->faker->randomFloat(2, 5, 200),
-            'grand_total' => $this->faker->randomFloat(2, 150, 11000),
+            'departure_date' => fake()->dateTimeBetween('+1 week', '+1 month')->format('Y-m-d'),
+            'status' => fake()->randomElement(BookingStatus::cases()),
+            'pax_adult' => fake()->numberBetween(1, 4),
+            'pax_child' => fake()->numberBetween(0, 2),
+            'pax_infant' => fake()->numberBetween(0, 1),
+            'total_price' => fake()->randomFloat(2, 100, 10000),
+            'tax_amount' => fake()->randomFloat(2, 10, 500),
+            'platform_fee' => fake()->randomFloat(2, 5, 50),
+            'commission_amount' => fake()->randomFloat(2, 5, 200),
+            'grand_total' => fake()->randomFloat(2, 150, 11000),
         ];
     }
 }

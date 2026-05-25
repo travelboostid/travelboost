@@ -6,6 +6,6 @@
  */
 
 export type AuthorizationExceptionResponse = {
-  /** Error overview. */
-  message: string;
+    /** Error overview. */
+    message: string;
 };

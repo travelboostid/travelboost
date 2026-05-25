@@ -6,26 +6,26 @@
  */
 
 export type GetCompaniesParams = {
-/**
- * @maxLength 50
- */
-type?: string | null;
-/**
- * e.g., 'travel_agency', 'hotel', 'tour_operator'
- */
-ids?: string | null;
-/**
- * comma-separated list of IDs
- * @maxLength 100
- */
-search?: string | null;
-/**
- * @minimum 1
- */
-page?: number | null;
-/**
- * @minimum 1
- * @maximum 100
- */
-per_page?: number | null;
+    /**
+     * @maxLength 50
+     */
+    type?: string | null;
+    /**
+     * e.g., 'travel_agency', 'hotel', 'tour_operator'
+     */
+    ids?: string | null;
+    /**
+     * comma-separated list of IDs
+     * @maxLength 100
+     */
+    search?: string | null;
+    /**
+     * @minimum 1
+     */
+    page?: number | null;
+    /**
+     * @minimum 1
+     * @maximum 100
+     */
+    per_page?: number | null;
 };

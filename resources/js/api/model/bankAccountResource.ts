@@ -8,12 +8,12 @@ import type { BankAccountResourceBranch } from './bankAccountResourceBranch';
 import type { BankAccountResourceCreatedAt } from './bankAccountResourceCreatedAt';
 
 export interface BankAccountResource {
-  id: number;
-  provider: string;
-  account_number: string;
-  account_name: string;
-  branch: BankAccountResourceBranch;
-  status: string;
-  is_default: boolean;
-  created_at: BankAccountResourceCreatedAt;
+    id: number;
+    provider: string;
+    account_number: string;
+    account_name: string;
+    branch: BankAccountResourceBranch;
+    status: string;
+    is_default: boolean;
+    created_at: BankAccountResourceCreatedAt;
 }

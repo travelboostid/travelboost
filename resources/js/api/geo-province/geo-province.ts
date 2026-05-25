@@ -4,122 +4,178 @@
  * Travelboost
  * OpenAPI spec version: 0.0.1
  */
-import {
-  useQuery
-} from '@tanstack/react-query';
 import type {
-  DataTag,
-  DefinedInitialDataOptions,
-  DefinedUseQueryResult,
-  QueryClient,
-  QueryFunction,
-  QueryKey,
-  UndefinedInitialDataOptions,
-  UseQueryOptions,
-  UseQueryResult
+    DataTag,
+    DefinedInitialDataOptions,
+    DefinedUseQueryResult,
+    QueryClient,
+    QueryFunction,
+    QueryKey,
+    UndefinedInitialDataOptions,
+    UseQueryOptions,
+    UseQueryResult,
 } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 
 import type {
-  AuthenticationExceptionResponse,
-  GetGeoProvinces200
+    AuthenticationExceptionResponse,
+    GetGeoProvinces200,
 } from '.././model';
 
 import { apiInstance } from '.././api-instance';
 
-
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
-
-
 
 /**
  * @summary Display a listing of the resource
  */
 export const getGeoProvinces = (
-    
- options?: SecondParameter<typeof apiInstance>,signal?: AbortSignal
+    options?: SecondParameter<typeof apiInstance>,
+    signal?: AbortSignal,
 ) => {
-      
-      
-      return apiInstance<GetGeoProvinces200>(
-      {url: `/geo/provinces`, method: 'GET', signal
-    },
-      options);
-    }
-  
-
-
+    return apiInstance<GetGeoProvinces200>(
+        { url: `/geo/provinces`, method: 'GET', signal },
+        options,
+    );
+};
 
 export const getGetGeoProvincesQueryKey = () => {
-    return [
-    `/geo/provinces`
-    ] as const;
-    }
+    return [`/geo/provinces`] as const;
+};
 
-    
-export const getGetGeoProvincesQueryOptions = <TData = Awaited<ReturnType<typeof getGeoProvinces>>, TError = AuthenticationExceptionResponse>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getGeoProvinces>>, TError, TData>>, request?: SecondParameter<typeof apiInstance>}
-) => {
+export const getGetGeoProvincesQueryOptions = <
+    TData = Awaited<ReturnType<typeof getGeoProvinces>>,
+    TError = AuthenticationExceptionResponse,
+>(options?: {
+    query?: Partial<
+        UseQueryOptions<
+            Awaited<ReturnType<typeof getGeoProvinces>>,
+            TError,
+            TData
+        >
+    >;
+    request?: SecondParameter<typeof apiInstance>;
+}) => {
+    const { query: queryOptions, request: requestOptions } = options ?? {};
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+    const queryKey = queryOptions?.queryKey ?? getGetGeoProvincesQueryKey();
 
-  const queryKey =  queryOptions?.queryKey ?? getGetGeoProvincesQueryKey();
+    const queryFn: QueryFunction<
+        Awaited<ReturnType<typeof getGeoProvinces>>
+    > = ({ signal }) => getGeoProvinces(requestOptions, signal);
 
-  
+    return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+        Awaited<ReturnType<typeof getGeoProvinces>>,
+        TError,
+        TData
+    > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getGeoProvinces>>> = ({ signal }) => getGeoProvinces(requestOptions, signal);
+export type GetGeoProvincesQueryResult = NonNullable<
+    Awaited<ReturnType<typeof getGeoProvinces>>
+>;
+export type GetGeoProvincesQueryError = AuthenticationExceptionResponse;
 
-      
-
-      
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getGeoProvinces>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type GetGeoProvincesQueryResult = NonNullable<Awaited<ReturnType<typeof getGeoProvinces>>>
-export type GetGeoProvincesQueryError = AuthenticationExceptionResponse
-
-
-export function useGetGeoProvinces<TData = Awaited<ReturnType<typeof getGeoProvinces>>, TError = AuthenticationExceptionResponse>(
-  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getGeoProvinces>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getGeoProvinces>>,
-          TError,
-          Awaited<ReturnType<typeof getGeoProvinces>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof apiInstance>}
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetGeoProvinces<TData = Awaited<ReturnType<typeof getGeoProvinces>>, TError = AuthenticationExceptionResponse>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getGeoProvinces>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getGeoProvinces>>,
-          TError,
-          Awaited<ReturnType<typeof getGeoProvinces>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof apiInstance>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetGeoProvinces<TData = Awaited<ReturnType<typeof getGeoProvinces>>, TError = AuthenticationExceptionResponse>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getGeoProvinces>>, TError, TData>>, request?: SecondParameter<typeof apiInstance>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetGeoProvinces<
+    TData = Awaited<ReturnType<typeof getGeoProvinces>>,
+    TError = AuthenticationExceptionResponse,
+>(
+    options: {
+        query: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof getGeoProvinces>>,
+                TError,
+                TData
+            >
+        > &
+            Pick<
+                DefinedInitialDataOptions<
+                    Awaited<ReturnType<typeof getGeoProvinces>>,
+                    TError,
+                    Awaited<ReturnType<typeof getGeoProvinces>>
+                >,
+                'initialData'
+            >;
+        request?: SecondParameter<typeof apiInstance>;
+    },
+    queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetGeoProvinces<
+    TData = Awaited<ReturnType<typeof getGeoProvinces>>,
+    TError = AuthenticationExceptionResponse,
+>(
+    options?: {
+        query?: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof getGeoProvinces>>,
+                TError,
+                TData
+            >
+        > &
+            Pick<
+                UndefinedInitialDataOptions<
+                    Awaited<ReturnType<typeof getGeoProvinces>>,
+                    TError,
+                    Awaited<ReturnType<typeof getGeoProvinces>>
+                >,
+                'initialData'
+            >;
+        request?: SecondParameter<typeof apiInstance>;
+    },
+    queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetGeoProvinces<
+    TData = Awaited<ReturnType<typeof getGeoProvinces>>,
+    TError = AuthenticationExceptionResponse,
+>(
+    options?: {
+        query?: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof getGeoProvinces>>,
+                TError,
+                TData
+            >
+        >;
+        request?: SecondParameter<typeof apiInstance>;
+    },
+    queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+};
 /**
  * @summary Display a listing of the resource
  */
 
-export function useGetGeoProvinces<TData = Awaited<ReturnType<typeof getGeoProvinces>>, TError = AuthenticationExceptionResponse>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getGeoProvinces>>, TError, TData>>, request?: SecondParameter<typeof apiInstance>}
- , queryClient?: QueryClient 
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+export function useGetGeoProvinces<
+    TData = Awaited<ReturnType<typeof getGeoProvinces>>,
+    TError = AuthenticationExceptionResponse,
+>(
+    options?: {
+        query?: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof getGeoProvinces>>,
+                TError,
+                TData
+            >
+        >;
+        request?: SecondParameter<typeof apiInstance>;
+    },
+    queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+} {
+    const queryOptions = getGetGeoProvincesQueryOptions(options);
 
-  const queryOptions = getGetGeoProvincesQueryOptions(options)
+    const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+        TData,
+        TError
+    > & { queryKey: DataTag<QueryKey, TData, TError> };
 
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+    query.queryKey = queryOptions.queryKey;
 
-  query.queryKey = queryOptions.queryKey ;
-
-  return query;
+    return query;
 }
-
-
-
-

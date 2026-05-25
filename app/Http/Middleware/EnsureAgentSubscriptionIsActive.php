@@ -11,37 +11,37 @@ use Symfony\Component\HttpFoundation\Response;
 
 class EnsureAgentSubscriptionIsActive
 {
-  public function handle(Request $request, Closure $next): Response
-  {
-    $company = $request->route('company');
+    public function handle(Request $request, Closure $next): Response
+    {
+        $company = $request->route('company');
 
-    $subscription = AgentSubscription::with('package')
-      ->where('company_id', $company->id)
-      ->latest()
-      ->first();
+        $subscription = AgentSubscription::with('package')
+            ->where('company_id', $company->id)
+            ->latest()
+            ->first();
 
-    $isMarketingDisabled = false;
-    $isSubscriptionExpired = false;
+        $isMarketingDisabled = false;
+        $isSubscriptionExpired = false;
 
-    if (!$subscription) {
-      $isSubscriptionExpired = true;
-    } else {
-      $isFreeTrial = $subscription->package && $subscription->package->price <= 0;
+        if (! $subscription) {
+            $isSubscriptionExpired = true;
+        } else {
+            $isFreeTrial = $subscription->package && $subscription->package->price <= 0;
 
-      if ($subscription->status !== AgentSubscriptionStatus::ACTIVE) {
-        $isSubscriptionExpired = true;
-      }
+            if ($subscription->status !== AgentSubscriptionStatus::ACTIVE) {
+                $isSubscriptionExpired = true;
+            }
 
-      if ($isFreeTrial || $isSubscriptionExpired) {
-        $isMarketingDisabled = true;
-      }
+            if ($isFreeTrial || $isSubscriptionExpired) {
+                $isMarketingDisabled = true;
+            }
+        }
+
+        Inertia::share('subscription_rules', [
+            'isMarketingDisabled' => $isMarketingDisabled,
+            'isExpired' => $isSubscriptionExpired,
+        ]);
+
+        return $next($request);
     }
-
-    Inertia::share('subscription_rules', [
-      'isMarketingDisabled' => $isMarketingDisabled,
-      'isExpired' => $isSubscriptionExpired
-    ]);
-
-    return $next($request);
-  }
 }

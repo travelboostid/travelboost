@@ -3,13 +3,10 @@
 ## System Requirements
 
 - **OS**: Windows, macOS, or Linux
-- **PHP**: 8.4.15
+- **PHP**: ^8.5
 - **Server**: LAMP, WAMP, XAMPP, or equivalent
 - **SSH**: Pre-installed on most systems; install if needed
-
-## Database
-
-- **PostgreSQL** with pgvector extension
+- **PostgreSQL**: v18 with pgvector extension. For windows user: https://github.com/andreiramani/pgvector_pgsql_windows/releases
 
 ## Required Tools
 

@@ -4,410 +4,647 @@
  * Travelboost
  * OpenAPI spec version: 0.0.1
  */
-import {
-  useMutation,
-  useQuery
-} from '@tanstack/react-query';
 import type {
-  DataTag,
-  DefinedInitialDataOptions,
-  DefinedUseQueryResult,
-  MutationFunction,
-  QueryClient,
-  QueryFunction,
-  QueryKey,
-  UndefinedInitialDataOptions,
-  UseMutationOptions,
-  UseMutationResult,
-  UseQueryOptions,
-  UseQueryResult
+    DataTag,
+    DefinedInitialDataOptions,
+    DefinedUseQueryResult,
+    MutationFunction,
+    QueryClient,
+    QueryFunction,
+    QueryKey,
+    UndefinedInitialDataOptions,
+    UseMutationOptions,
+    UseMutationResult,
+    UseQueryOptions,
+    UseQueryResult,
 } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 
 import type {
-  AuthenticationExceptionResponse,
-  GetMedias200,
-  GetMediasParams,
-  MediaResource,
-  MediaUpdateRequest,
-  MediasDestroy200,
-  ModelNotFoundExceptionResponse,
-  StoreMediaRequest,
-  ValidationExceptionResponse
+    AuthenticationExceptionResponse,
+    GetMedias200,
+    GetMediasParams,
+    MediaResource,
+    MediaUpdateRequest,
+    MediasDestroy200,
+    ModelNotFoundExceptionResponse,
+    StoreMediaRequest,
+    ValidationExceptionResponse,
 } from '.././model';
 
 import { apiInstance } from '.././api-instance';
 
-
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
-
-
 
 /**
  * @summary Get medias
  */
 export const getMedias = (
     params?: GetMediasParams,
- options?: SecondParameter<typeof apiInstance>,signal?: AbortSignal
+    options?: SecondParameter<typeof apiInstance>,
+    signal?: AbortSignal,
 ) => {
-      
-      
-      return apiInstance<GetMedias200>(
-      {url: `/medias`, method: 'GET',
-        params, signal
+    return apiInstance<GetMedias200>(
+        { url: `/medias`, method: 'GET', params, signal },
+        options,
+    );
+};
+
+export const getGetMediasQueryKey = (params?: GetMediasParams) => {
+    return [`/medias`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetMediasQueryOptions = <
+    TData = Awaited<ReturnType<typeof getMedias>>,
+    TError = AuthenticationExceptionResponse | ValidationExceptionResponse,
+>(
+    params?: GetMediasParams,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof getMedias>>,
+                TError,
+                TData
+            >
+        >;
+        request?: SecondParameter<typeof apiInstance>;
     },
-      options);
-    }
-  
-
-
-
-export const getGetMediasQueryKey = (params?: GetMediasParams,) => {
-    return [
-    `/medias`, ...(params ? [params]: [])
-    ] as const;
-    }
-
-    
-export const getGetMediasQueryOptions = <TData = Awaited<ReturnType<typeof getMedias>>, TError = AuthenticationExceptionResponse | ValidationExceptionResponse>(params?: GetMediasParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMedias>>, TError, TData>>, request?: SecondParameter<typeof apiInstance>}
 ) => {
+    const { query: queryOptions, request: requestOptions } = options ?? {};
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+    const queryKey = queryOptions?.queryKey ?? getGetMediasQueryKey(params);
 
-  const queryKey =  queryOptions?.queryKey ?? getGetMediasQueryKey(params);
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMedias>>> = ({
+        signal,
+    }) => getMedias(params, requestOptions, signal);
 
-  
+    return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+        Awaited<ReturnType<typeof getMedias>>,
+        TError,
+        TData
+    > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMedias>>> = ({ signal }) => getMedias(params, requestOptions, signal);
+export type GetMediasQueryResult = NonNullable<
+    Awaited<ReturnType<typeof getMedias>>
+>;
+export type GetMediasQueryError =
+    | AuthenticationExceptionResponse
+    | ValidationExceptionResponse;
 
-      
-
-      
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMedias>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type GetMediasQueryResult = NonNullable<Awaited<ReturnType<typeof getMedias>>>
-export type GetMediasQueryError = AuthenticationExceptionResponse | ValidationExceptionResponse
-
-
-export function useGetMedias<TData = Awaited<ReturnType<typeof getMedias>>, TError = AuthenticationExceptionResponse | ValidationExceptionResponse>(
- params: undefined |  GetMediasParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMedias>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getMedias>>,
-          TError,
-          Awaited<ReturnType<typeof getMedias>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof apiInstance>}
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetMedias<TData = Awaited<ReturnType<typeof getMedias>>, TError = AuthenticationExceptionResponse | ValidationExceptionResponse>(
- params?: GetMediasParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMedias>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getMedias>>,
-          TError,
-          Awaited<ReturnType<typeof getMedias>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof apiInstance>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetMedias<TData = Awaited<ReturnType<typeof getMedias>>, TError = AuthenticationExceptionResponse | ValidationExceptionResponse>(
- params?: GetMediasParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMedias>>, TError, TData>>, request?: SecondParameter<typeof apiInstance>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetMedias<
+    TData = Awaited<ReturnType<typeof getMedias>>,
+    TError = AuthenticationExceptionResponse | ValidationExceptionResponse,
+>(
+    params: undefined | GetMediasParams,
+    options: {
+        query: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof getMedias>>,
+                TError,
+                TData
+            >
+        > &
+            Pick<
+                DefinedInitialDataOptions<
+                    Awaited<ReturnType<typeof getMedias>>,
+                    TError,
+                    Awaited<ReturnType<typeof getMedias>>
+                >,
+                'initialData'
+            >;
+        request?: SecondParameter<typeof apiInstance>;
+    },
+    queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetMedias<
+    TData = Awaited<ReturnType<typeof getMedias>>,
+    TError = AuthenticationExceptionResponse | ValidationExceptionResponse,
+>(
+    params?: GetMediasParams,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof getMedias>>,
+                TError,
+                TData
+            >
+        > &
+            Pick<
+                UndefinedInitialDataOptions<
+                    Awaited<ReturnType<typeof getMedias>>,
+                    TError,
+                    Awaited<ReturnType<typeof getMedias>>
+                >,
+                'initialData'
+            >;
+        request?: SecondParameter<typeof apiInstance>;
+    },
+    queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetMedias<
+    TData = Awaited<ReturnType<typeof getMedias>>,
+    TError = AuthenticationExceptionResponse | ValidationExceptionResponse,
+>(
+    params?: GetMediasParams,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof getMedias>>,
+                TError,
+                TData
+            >
+        >;
+        request?: SecondParameter<typeof apiInstance>;
+    },
+    queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+};
 /**
  * @summary Get medias
  */
 
-export function useGetMedias<TData = Awaited<ReturnType<typeof getMedias>>, TError = AuthenticationExceptionResponse | ValidationExceptionResponse>(
- params?: GetMediasParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMedias>>, TError, TData>>, request?: SecondParameter<typeof apiInstance>}
- , queryClient?: QueryClient 
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+export function useGetMedias<
+    TData = Awaited<ReturnType<typeof getMedias>>,
+    TError = AuthenticationExceptionResponse | ValidationExceptionResponse,
+>(
+    params?: GetMediasParams,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof getMedias>>,
+                TError,
+                TData
+            >
+        >;
+        request?: SecondParameter<typeof apiInstance>;
+    },
+    queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+} {
+    const queryOptions = getGetMediasQueryOptions(params, options);
 
-  const queryOptions = getGetMediasQueryOptions(params,options)
+    const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+        TData,
+        TError
+    > & { queryKey: DataTag<QueryKey, TData, TError> };
 
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+    query.queryKey = queryOptions.queryKey;
 
-  query.queryKey = queryOptions.queryKey ;
-
-  return query;
+    return query;
 }
-
-
-
 
 /**
  * @summary Create media
  */
 export const createMedia = (
     storeMediaRequest: StoreMediaRequest,
- options?: SecondParameter<typeof apiInstance>,signal?: AbortSignal
+    options?: SecondParameter<typeof apiInstance>,
+    signal?: AbortSignal,
 ) => {
-      
-      const formData = new FormData();
-formData.append(`owner_id`, storeMediaRequest.owner_id.toString())
-formData.append(`owner_type`, storeMediaRequest.owner_type)
-if(storeMediaRequest.name !== undefined && storeMediaRequest.name !== null) {
- formData.append(`name`, storeMediaRequest.name)
- }
-if(storeMediaRequest.description !== undefined && storeMediaRequest.description !== null) {
- formData.append(`description`, storeMediaRequest.description)
- }
-formData.append(`type`, storeMediaRequest.type)
-formData.append(`subtype`, storeMediaRequest.subtype)
-formData.append(`data`, storeMediaRequest.data)
-
-      return apiInstance<MediaResource>(
-      {url: `/medias`, method: 'POST',
-      headers: {'Content-Type': 'multipart/form-data', },
-       data: formData, signal
-    },
-      options);
+    const formData = new FormData();
+    formData.append(`owner_id`, storeMediaRequest.owner_id.toString());
+    formData.append(`owner_type`, storeMediaRequest.owner_type);
+    if (
+        storeMediaRequest.name !== undefined &&
+        storeMediaRequest.name !== null
+    ) {
+        formData.append(`name`, storeMediaRequest.name);
     }
-  
+    if (
+        storeMediaRequest.description !== undefined &&
+        storeMediaRequest.description !== null
+    ) {
+        formData.append(`description`, storeMediaRequest.description);
+    }
+    formData.append(`type`, storeMediaRequest.type);
+    formData.append(`subtype`, storeMediaRequest.subtype);
+    formData.append(`data`, storeMediaRequest.data);
 
+    return apiInstance<MediaResource>(
+        {
+            url: `/medias`,
+            method: 'POST',
+            headers: { 'Content-Type': 'multipart/form-data' },
+            data: formData,
+            signal,
+        },
+        options,
+    );
+};
 
-export const getCreateMediaMutationOptions = <TError = AuthenticationExceptionResponse | ValidationExceptionResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createMedia>>, TError,{data: StoreMediaRequest}, TContext>, request?: SecondParameter<typeof apiInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof createMedia>>, TError,{data: StoreMediaRequest}, TContext> => {
-
-const mutationKey = ['createMedia'];
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-      
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createMedia>>, {data: StoreMediaRequest}> = (props) => {
-          const {data} = props ?? {};
-
-          return  createMedia(data,requestOptions)
-        }
-
-        
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type CreateMediaMutationResult = NonNullable<Awaited<ReturnType<typeof createMedia>>>
-    export type CreateMediaMutationBody = StoreMediaRequest
-    export type CreateMediaMutationError = AuthenticationExceptionResponse | ValidationExceptionResponse
-
-    /**
- * @summary Create media
- */
-export const useCreateMedia = <TError = AuthenticationExceptionResponse | ValidationExceptionResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createMedia>>, TError,{data: StoreMediaRequest}, TContext>, request?: SecondParameter<typeof apiInstance>}
- , queryClient?: QueryClient): UseMutationResult<
+export const getCreateMediaMutationOptions = <
+    TError = AuthenticationExceptionResponse | ValidationExceptionResponse,
+    TContext = unknown,
+>(options?: {
+    mutation?: UseMutationOptions<
         Awaited<ReturnType<typeof createMedia>>,
         TError,
-        {data: StoreMediaRequest},
+        { data: StoreMediaRequest },
         TContext
-      > => {
+    >;
+    request?: SecondParameter<typeof apiInstance>;
+}): UseMutationOptions<
+    Awaited<ReturnType<typeof createMedia>>,
+    TError,
+    { data: StoreMediaRequest },
+    TContext
+> => {
+    const mutationKey = ['createMedia'];
+    const { mutation: mutationOptions, request: requestOptions } = options
+        ? options.mutation &&
+          'mutationKey' in options.mutation &&
+          options.mutation.mutationKey
+            ? options
+            : { ...options, mutation: { ...options.mutation, mutationKey } }
+        : { mutation: { mutationKey }, request: undefined };
 
-      const mutationOptions = getCreateMediaMutationOptions(options);
+    const mutationFn: MutationFunction<
+        Awaited<ReturnType<typeof createMedia>>,
+        { data: StoreMediaRequest }
+    > = (props) => {
+        const { data } = props ?? {};
 
-      return useMutation(mutationOptions, queryClient);
-    }
-    export const mediasShow = (
-    media: number,
- options?: SecondParameter<typeof apiInstance>,signal?: AbortSignal
-) => {
-      
-      
-      return apiInstance<MediaResource>(
-      {url: `/medias/${media}`, method: 'GET', signal
+        return createMedia(data, requestOptions);
+    };
+
+    return { mutationFn, ...mutationOptions };
+};
+
+export type CreateMediaMutationResult = NonNullable<
+    Awaited<ReturnType<typeof createMedia>>
+>;
+export type CreateMediaMutationBody = StoreMediaRequest;
+export type CreateMediaMutationError =
+    | AuthenticationExceptionResponse
+    | ValidationExceptionResponse;
+
+/**
+ * @summary Create media
+ */
+export const useCreateMedia = <
+    TError = AuthenticationExceptionResponse | ValidationExceptionResponse,
+    TContext = unknown,
+>(
+    options?: {
+        mutation?: UseMutationOptions<
+            Awaited<ReturnType<typeof createMedia>>,
+            TError,
+            { data: StoreMediaRequest },
+            TContext
+        >;
+        request?: SecondParameter<typeof apiInstance>;
     },
-      options);
-    }
-  
+    queryClient?: QueryClient,
+): UseMutationResult<
+    Awaited<ReturnType<typeof createMedia>>,
+    TError,
+    { data: StoreMediaRequest },
+    TContext
+> => {
+    const mutationOptions = getCreateMediaMutationOptions(options);
 
-
-
-export const getMediasShowQueryKey = (media?: number,) => {
-    return [
-    `/medias/${media}`
-    ] as const;
-    }
-
-    
-export const getMediasShowQueryOptions = <TData = Awaited<ReturnType<typeof mediasShow>>, TError = AuthenticationExceptionResponse | ModelNotFoundExceptionResponse>(media: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof mediasShow>>, TError, TData>>, request?: SecondParameter<typeof apiInstance>}
+    return useMutation(mutationOptions, queryClient);
+};
+export const mediasShow = (
+    media: number,
+    options?: SecondParameter<typeof apiInstance>,
+    signal?: AbortSignal,
 ) => {
+    return apiInstance<MediaResource>(
+        { url: `/medias/${media}`, method: 'GET', signal },
+        options,
+    );
+};
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+export const getMediasShowQueryKey = (media?: number) => {
+    return [`/medias/${media}`] as const;
+};
 
-  const queryKey =  queryOptions?.queryKey ?? getMediasShowQueryKey(media);
+export const getMediasShowQueryOptions = <
+    TData = Awaited<ReturnType<typeof mediasShow>>,
+    TError = AuthenticationExceptionResponse | ModelNotFoundExceptionResponse,
+>(
+    media: number,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof mediasShow>>,
+                TError,
+                TData
+            >
+        >;
+        request?: SecondParameter<typeof apiInstance>;
+    },
+) => {
+    const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  
+    const queryKey = queryOptions?.queryKey ?? getMediasShowQueryKey(media);
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof mediasShow>>> = ({ signal }) => mediasShow(media, requestOptions, signal);
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof mediasShow>>> = ({
+        signal,
+    }) => mediasShow(media, requestOptions, signal);
 
-      
+    return {
+        queryKey,
+        queryFn,
+        enabled: !!media,
+        ...queryOptions,
+    } as UseQueryOptions<
+        Awaited<ReturnType<typeof mediasShow>>,
+        TError,
+        TData
+    > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
 
-      
+export type MediasShowQueryResult = NonNullable<
+    Awaited<ReturnType<typeof mediasShow>>
+>;
+export type MediasShowQueryError =
+    | AuthenticationExceptionResponse
+    | ModelNotFoundExceptionResponse;
 
-   return  { queryKey, queryFn, enabled: !!(media), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof mediasShow>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useMediasShow<
+    TData = Awaited<ReturnType<typeof mediasShow>>,
+    TError = AuthenticationExceptionResponse | ModelNotFoundExceptionResponse,
+>(
+    media: number,
+    options: {
+        query: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof mediasShow>>,
+                TError,
+                TData
+            >
+        > &
+            Pick<
+                DefinedInitialDataOptions<
+                    Awaited<ReturnType<typeof mediasShow>>,
+                    TError,
+                    Awaited<ReturnType<typeof mediasShow>>
+                >,
+                'initialData'
+            >;
+        request?: SecondParameter<typeof apiInstance>;
+    },
+    queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useMediasShow<
+    TData = Awaited<ReturnType<typeof mediasShow>>,
+    TError = AuthenticationExceptionResponse | ModelNotFoundExceptionResponse,
+>(
+    media: number,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof mediasShow>>,
+                TError,
+                TData
+            >
+        > &
+            Pick<
+                UndefinedInitialDataOptions<
+                    Awaited<ReturnType<typeof mediasShow>>,
+                    TError,
+                    Awaited<ReturnType<typeof mediasShow>>
+                >,
+                'initialData'
+            >;
+        request?: SecondParameter<typeof apiInstance>;
+    },
+    queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useMediasShow<
+    TData = Awaited<ReturnType<typeof mediasShow>>,
+    TError = AuthenticationExceptionResponse | ModelNotFoundExceptionResponse,
+>(
+    media: number,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof mediasShow>>,
+                TError,
+                TData
+            >
+        >;
+        request?: SecondParameter<typeof apiInstance>;
+    },
+    queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+};
+
+export function useMediasShow<
+    TData = Awaited<ReturnType<typeof mediasShow>>,
+    TError = AuthenticationExceptionResponse | ModelNotFoundExceptionResponse,
+>(
+    media: number,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof mediasShow>>,
+                TError,
+                TData
+            >
+        >;
+        request?: SecondParameter<typeof apiInstance>;
+    },
+    queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+} {
+    const queryOptions = getMediasShowQueryOptions(media, options);
+
+    const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+        TData,
+        TError
+    > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+    query.queryKey = queryOptions.queryKey;
+
+    return query;
 }
-
-export type MediasShowQueryResult = NonNullable<Awaited<ReturnType<typeof mediasShow>>>
-export type MediasShowQueryError = AuthenticationExceptionResponse | ModelNotFoundExceptionResponse
-
-
-export function useMediasShow<TData = Awaited<ReturnType<typeof mediasShow>>, TError = AuthenticationExceptionResponse | ModelNotFoundExceptionResponse>(
- media: number, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof mediasShow>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof mediasShow>>,
-          TError,
-          Awaited<ReturnType<typeof mediasShow>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof apiInstance>}
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useMediasShow<TData = Awaited<ReturnType<typeof mediasShow>>, TError = AuthenticationExceptionResponse | ModelNotFoundExceptionResponse>(
- media: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof mediasShow>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof mediasShow>>,
-          TError,
-          Awaited<ReturnType<typeof mediasShow>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof apiInstance>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useMediasShow<TData = Awaited<ReturnType<typeof mediasShow>>, TError = AuthenticationExceptionResponse | ModelNotFoundExceptionResponse>(
- media: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof mediasShow>>, TError, TData>>, request?: SecondParameter<typeof apiInstance>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
-export function useMediasShow<TData = Awaited<ReturnType<typeof mediasShow>>, TError = AuthenticationExceptionResponse | ModelNotFoundExceptionResponse>(
- media: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof mediasShow>>, TError, TData>>, request?: SecondParameter<typeof apiInstance>}
- , queryClient?: QueryClient 
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getMediasShowQueryOptions(media,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  query.queryKey = queryOptions.queryKey ;
-
-  return query;
-}
-
-
-
 
 export const mediasUpdate = (
     media: number,
     mediaUpdateRequest: MediaUpdateRequest,
- options?: SecondParameter<typeof apiInstance>,) => {
-      
-      
-      return apiInstance<MediaResource>(
-      {url: `/medias/${media}`, method: 'PUT',
-      headers: {'Content-Type': 'application/json', },
-      data: mediaUpdateRequest
-    },
-      options);
-    }
-  
+    options?: SecondParameter<typeof apiInstance>,
+) => {
+    return apiInstance<MediaResource>(
+        {
+            url: `/medias/${media}`,
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            data: mediaUpdateRequest,
+        },
+        options,
+    );
+};
 
-
-export const getMediasUpdateMutationOptions = <TError = AuthenticationExceptionResponse | ModelNotFoundExceptionResponse | ValidationExceptionResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof mediasUpdate>>, TError,{media: number;data: MediaUpdateRequest}, TContext>, request?: SecondParameter<typeof apiInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof mediasUpdate>>, TError,{media: number;data: MediaUpdateRequest}, TContext> => {
-
-const mutationKey = ['mediasUpdate'];
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-      
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof mediasUpdate>>, {media: number;data: MediaUpdateRequest}> = (props) => {
-          const {media,data} = props ?? {};
-
-          return  mediasUpdate(media,data,requestOptions)
-        }
-
-        
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type MediasUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof mediasUpdate>>>
-    export type MediasUpdateMutationBody = MediaUpdateRequest
-    export type MediasUpdateMutationError = AuthenticationExceptionResponse | ModelNotFoundExceptionResponse | ValidationExceptionResponse
-
-    export const useMediasUpdate = <TError = AuthenticationExceptionResponse | ModelNotFoundExceptionResponse | ValidationExceptionResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof mediasUpdate>>, TError,{media: number;data: MediaUpdateRequest}, TContext>, request?: SecondParameter<typeof apiInstance>}
- , queryClient?: QueryClient): UseMutationResult<
+export const getMediasUpdateMutationOptions = <
+    TError =
+        | AuthenticationExceptionResponse
+        | ModelNotFoundExceptionResponse
+        | ValidationExceptionResponse,
+    TContext = unknown,
+>(options?: {
+    mutation?: UseMutationOptions<
         Awaited<ReturnType<typeof mediasUpdate>>,
         TError,
-        {media: number;data: MediaUpdateRequest},
+        { media: number; data: MediaUpdateRequest },
         TContext
-      > => {
+    >;
+    request?: SecondParameter<typeof apiInstance>;
+}): UseMutationOptions<
+    Awaited<ReturnType<typeof mediasUpdate>>,
+    TError,
+    { media: number; data: MediaUpdateRequest },
+    TContext
+> => {
+    const mutationKey = ['mediasUpdate'];
+    const { mutation: mutationOptions, request: requestOptions } = options
+        ? options.mutation &&
+          'mutationKey' in options.mutation &&
+          options.mutation.mutationKey
+            ? options
+            : { ...options, mutation: { ...options.mutation, mutationKey } }
+        : { mutation: { mutationKey }, request: undefined };
 
-      const mutationOptions = getMediasUpdateMutationOptions(options);
+    const mutationFn: MutationFunction<
+        Awaited<ReturnType<typeof mediasUpdate>>,
+        { media: number; data: MediaUpdateRequest }
+    > = (props) => {
+        const { media, data } = props ?? {};
 
-      return useMutation(mutationOptions, queryClient);
-    }
-    export const mediasDestroy = (
-    media: number,
- options?: SecondParameter<typeof apiInstance>,) => {
-      
-      
-      return apiInstance<MediasDestroy200>(
-      {url: `/medias/${media}`, method: 'DELETE'
+        return mediasUpdate(media, data, requestOptions);
+    };
+
+    return { mutationFn, ...mutationOptions };
+};
+
+export type MediasUpdateMutationResult = NonNullable<
+    Awaited<ReturnType<typeof mediasUpdate>>
+>;
+export type MediasUpdateMutationBody = MediaUpdateRequest;
+export type MediasUpdateMutationError =
+    | AuthenticationExceptionResponse
+    | ModelNotFoundExceptionResponse
+    | ValidationExceptionResponse;
+
+export const useMediasUpdate = <
+    TError =
+        | AuthenticationExceptionResponse
+        | ModelNotFoundExceptionResponse
+        | ValidationExceptionResponse,
+    TContext = unknown,
+>(
+    options?: {
+        mutation?: UseMutationOptions<
+            Awaited<ReturnType<typeof mediasUpdate>>,
+            TError,
+            { media: number; data: MediaUpdateRequest },
+            TContext
+        >;
+        request?: SecondParameter<typeof apiInstance>;
     },
-      options);
-    }
-  
+    queryClient?: QueryClient,
+): UseMutationResult<
+    Awaited<ReturnType<typeof mediasUpdate>>,
+    TError,
+    { media: number; data: MediaUpdateRequest },
+    TContext
+> => {
+    const mutationOptions = getMediasUpdateMutationOptions(options);
 
+    return useMutation(mutationOptions, queryClient);
+};
+export const mediasDestroy = (
+    media: number,
+    options?: SecondParameter<typeof apiInstance>,
+) => {
+    return apiInstance<MediasDestroy200>(
+        { url: `/medias/${media}`, method: 'DELETE' },
+        options,
+    );
+};
 
-export const getMediasDestroyMutationOptions = <TError = AuthenticationExceptionResponse | ModelNotFoundExceptionResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof mediasDestroy>>, TError,{media: number}, TContext>, request?: SecondParameter<typeof apiInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof mediasDestroy>>, TError,{media: number}, TContext> => {
-
-const mutationKey = ['mediasDestroy'];
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-      
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof mediasDestroy>>, {media: number}> = (props) => {
-          const {media} = props ?? {};
-
-          return  mediasDestroy(media,requestOptions)
-        }
-
-        
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type MediasDestroyMutationResult = NonNullable<Awaited<ReturnType<typeof mediasDestroy>>>
-    
-    export type MediasDestroyMutationError = AuthenticationExceptionResponse | ModelNotFoundExceptionResponse
-
-    export const useMediasDestroy = <TError = AuthenticationExceptionResponse | ModelNotFoundExceptionResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof mediasDestroy>>, TError,{media: number}, TContext>, request?: SecondParameter<typeof apiInstance>}
- , queryClient?: QueryClient): UseMutationResult<
+export const getMediasDestroyMutationOptions = <
+    TError = AuthenticationExceptionResponse | ModelNotFoundExceptionResponse,
+    TContext = unknown,
+>(options?: {
+    mutation?: UseMutationOptions<
         Awaited<ReturnType<typeof mediasDestroy>>,
         TError,
-        {media: number},
+        { media: number },
         TContext
-      > => {
+    >;
+    request?: SecondParameter<typeof apiInstance>;
+}): UseMutationOptions<
+    Awaited<ReturnType<typeof mediasDestroy>>,
+    TError,
+    { media: number },
+    TContext
+> => {
+    const mutationKey = ['mediasDestroy'];
+    const { mutation: mutationOptions, request: requestOptions } = options
+        ? options.mutation &&
+          'mutationKey' in options.mutation &&
+          options.mutation.mutationKey
+            ? options
+            : { ...options, mutation: { ...options.mutation, mutationKey } }
+        : { mutation: { mutationKey }, request: undefined };
 
-      const mutationOptions = getMediasDestroyMutationOptions(options);
+    const mutationFn: MutationFunction<
+        Awaited<ReturnType<typeof mediasDestroy>>,
+        { media: number }
+    > = (props) => {
+        const { media } = props ?? {};
 
-      return useMutation(mutationOptions, queryClient);
-    }
-    
+        return mediasDestroy(media, requestOptions);
+    };
+
+    return { mutationFn, ...mutationOptions };
+};
+
+export type MediasDestroyMutationResult = NonNullable<
+    Awaited<ReturnType<typeof mediasDestroy>>
+>;
+
+export type MediasDestroyMutationError =
+    | AuthenticationExceptionResponse
+    | ModelNotFoundExceptionResponse;
+
+export const useMediasDestroy = <
+    TError = AuthenticationExceptionResponse | ModelNotFoundExceptionResponse,
+    TContext = unknown,
+>(
+    options?: {
+        mutation?: UseMutationOptions<
+            Awaited<ReturnType<typeof mediasDestroy>>,
+            TError,
+            { media: number },
+            TContext
+        >;
+        request?: SecondParameter<typeof apiInstance>;
+    },
+    queryClient?: QueryClient,
+): UseMutationResult<
+    Awaited<ReturnType<typeof mediasDestroy>>,
+    TError,
+    { media: number },
+    TContext
+> => {
+    const mutationOptions = getMediasDestroyMutationOptions(options);
+
+    return useMutation(mutationOptions, queryClient);
+};

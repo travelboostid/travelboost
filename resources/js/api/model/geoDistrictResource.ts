@@ -5,4 +5,6 @@
  * OpenAPI spec version: 0.0.1
  */
 
-export interface GeoDistrictResource {[key: string]: unknown}
+export interface GeoDistrictResource {
+    [key: string]: unknown;
+}

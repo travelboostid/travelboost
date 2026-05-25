@@ -1,22 +1,22 @@
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
 } from '@/components/ui/dialog';
 import { Field, FieldGroup } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger,
 } from '@/components/ui/tooltip';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { invite } from '@/routes/companies/dashboard/teams';
@@ -26,168 +26,187 @@ import type { ReactNode } from 'react';
 import { useState } from 'react';
 
 export default function InviteTeamButton({
-  roles,
-  children,
+    roles,
+    children,
 }: {
-  roles: any[];
-  children?: ReactNode;
+    roles: any[];
+    children?: ReactNode;
 }) {
-  const [open, setOpen] = useState(false);
-  const { company } = usePageSharedDataProps();
+    const [open, setOpen] = useState(false);
+    const { company } = usePageSharedDataProps();
 
-  const form = useForm({
-    name: '',
-    email: '',
-    username: '',
-    password: '',
-    password_confirmation: '',
-    role: '' as string,
-  });
-
-  const handleSubmit = (event: React.FormEvent) => {
-    event.preventDefault();
-    form.post(invite({ company: company.username }).url, {
-      preserveScroll: true,
-      onError: () => setOpen(true),
-      onSuccess: () => {
-        form.reset();
-        setOpen(false);
-      },
+    const form = useForm({
+        name: '',
+        email: '',
+        username: '',
+        password: '',
+        password_confirmation: '',
+        role: '' as string,
     });
-  };
 
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <DialogTrigger asChild>
-            {children || (
-              <Button>
-                <PlusIcon />
-                Add Team Member
-              </Button>
-            )}
-          </DialogTrigger>
-        </TooltipTrigger>
-        <TooltipContent>Add team member</TooltipContent>
-      </Tooltip>
+    const handleSubmit = (event: React.FormEvent) => {
+        event.preventDefault();
+        form.post(invite({ company: company.username }).url, {
+            preserveScroll: true,
+            onError: () => setOpen(true),
+            onSuccess: () => {
+                form.reset();
+                setOpen(false);
+            },
+        });
+    };
 
-      <DialogContent className="sm:max-w-xl">
-        <form onSubmit={handleSubmit} className="grid gap-4">
-          <DialogHeader>
-            <DialogTitle>Add Team Member</DialogTitle>
-            <DialogDescription>
-              Create a team account that can sign in immediately after it is
-              added.
-            </DialogDescription>
-          </DialogHeader>
+    return (
+        <Dialog open={open} onOpenChange={setOpen}>
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <DialogTrigger asChild>
+                        {children || (
+                            <Button>
+                                <PlusIcon />
+                                Add Team Member
+                            </Button>
+                        )}
+                    </DialogTrigger>
+                </TooltipTrigger>
+                <TooltipContent>Add team member</TooltipContent>
+            </Tooltip>
 
-          <FieldGroup>
-            <div className="grid gap-4 md:grid-cols-2">
-              <Field>
-                <Label htmlFor="name">Full Name</Label>
-                <Input
-                  id="name"
-                  placeholder="Full name"
-                  value={form.data.name}
-                  onChange={(event) => form.setData('name', event.target.value)}
-                />
-                <InputError message={form.errors.name} />
-              </Field>
+            <DialogContent className="sm:max-w-xl">
+                <form onSubmit={handleSubmit} className="grid gap-4">
+                    <DialogHeader>
+                        <DialogTitle>Add Team Member</DialogTitle>
+                        <DialogDescription>
+                            Create a team account that can sign in immediately
+                            after it is added.
+                        </DialogDescription>
+                    </DialogHeader>
 
-              <Field>
-                <Label htmlFor="username">Username</Label>
-                <Input
-                  id="username"
-                  placeholder="Username"
-                  value={form.data.username}
-                  onChange={(event) =>
-                    form.setData('username', event.target.value)
-                  }
-                />
-                <InputError message={form.errors.username} />
-              </Field>
-            </div>
+                    <FieldGroup>
+                        <div className="grid gap-4 md:grid-cols-2">
+                            <Field>
+                                <Label htmlFor="name">Full Name</Label>
+                                <Input
+                                    id="name"
+                                    placeholder="Full name"
+                                    value={form.data.name}
+                                    onChange={(event) =>
+                                        form.setData('name', event.target.value)
+                                    }
+                                />
+                                <InputError message={form.errors.name} />
+                            </Field>
 
-            <Field>
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="email@example.com"
-                value={form.data.email}
-                onChange={(event) => form.setData('email', event.target.value)}
-              />
-              <InputError message={form.errors.email} />
-            </Field>
+                            <Field>
+                                <Label htmlFor="username">Username</Label>
+                                <Input
+                                    id="username"
+                                    placeholder="Username"
+                                    value={form.data.username}
+                                    onChange={(event) =>
+                                        form.setData(
+                                            'username',
+                                            event.target.value,
+                                        )
+                                    }
+                                />
+                                <InputError message={form.errors.username} />
+                            </Field>
+                        </div>
 
-            <div className="grid gap-4 md:grid-cols-2">
-              <Field>
-                <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="Password"
-                  value={form.data.password}
-                  onChange={(event) =>
-                    form.setData('password', event.target.value)
-                  }
-                />
-                <InputError message={form.errors.password} />
-              </Field>
+                        <Field>
+                            <Label htmlFor="email">Email</Label>
+                            <Input
+                                id="email"
+                                type="email"
+                                placeholder="email@example.com"
+                                value={form.data.email}
+                                onChange={(event) =>
+                                    form.setData('email', event.target.value)
+                                }
+                            />
+                            <InputError message={form.errors.email} />
+                        </Field>
 
-              <Field>
-                <Label htmlFor="password_confirmation">Confirm Password</Label>
-                <Input
-                  id="password_confirmation"
-                  type="password"
-                  placeholder="Confirm password"
-                  value={form.data.password_confirmation}
-                  onChange={(event) =>
-                    form.setData('password_confirmation', event.target.value)
-                  }
-                />
-              </Field>
-            </div>
+                        <div className="grid gap-4 md:grid-cols-2">
+                            <Field>
+                                <Label htmlFor="password">Password</Label>
+                                <Input
+                                    id="password"
+                                    type="password"
+                                    placeholder="Password"
+                                    value={form.data.password}
+                                    onChange={(event) =>
+                                        form.setData(
+                                            'password',
+                                            event.target.value,
+                                        )
+                                    }
+                                />
+                                <InputError message={form.errors.password} />
+                            </Field>
 
-            <Field>
-              <Label htmlFor="role">Role</Label>
-              <ToggleGroup
-                type="single"
-                variant="outline"
-                spacing={2}
-                size="lg"
-                className="grid grid-cols-1 gap-2 rounded-xl"
-                value={form.data.role}
-                onValueChange={(value) => form.setData('role', value)}
-              >
-                {roles.map((role) => (
-                  <ToggleGroupItem
-                    name="role"
-                    key={role.name}
-                    value={role.name}
-                    aria-label={role.name}
-                    className="block h-auto w-auto p-4 text-left"
-                  >
-                    <div className="font-bold">{role.display_name}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {role.description}
-                    </div>
-                  </ToggleGroupItem>
-                ))}
-              </ToggleGroup>
+                            <Field>
+                                <Label htmlFor="password_confirmation">
+                                    Confirm Password
+                                </Label>
+                                <Input
+                                    id="password_confirmation"
+                                    type="password"
+                                    placeholder="Confirm password"
+                                    value={form.data.password_confirmation}
+                                    onChange={(event) =>
+                                        form.setData(
+                                            'password_confirmation',
+                                            event.target.value,
+                                        )
+                                    }
+                                />
+                            </Field>
+                        </div>
 
-              <InputError message={form.errors.role} />
-            </Field>
-          </FieldGroup>
+                        <Field>
+                            <Label htmlFor="role">Role</Label>
+                            <ToggleGroup
+                                type="single"
+                                variant="outline"
+                                spacing={2}
+                                size="lg"
+                                className="grid grid-cols-1 gap-2 rounded-xl"
+                                value={form.data.role}
+                                onValueChange={(value) =>
+                                    form.setData('role', value)
+                                }
+                            >
+                                {roles.map((role) => (
+                                    <ToggleGroupItem
+                                        name="role"
+                                        key={role.name}
+                                        value={role.name}
+                                        aria-label={role.name}
+                                        className="block h-auto w-auto p-4 text-left"
+                                    >
+                                        <div className="font-bold">
+                                            {role.display_name}
+                                        </div>
+                                        <div className="text-xs text-muted-foreground">
+                                            {role.description}
+                                        </div>
+                                    </ToggleGroupItem>
+                                ))}
+                            </ToggleGroup>
 
-          <DialogFooter className="mt-4">
-            <Button type="submit" disabled={form.processing}>
-              {form.processing ? 'Creating...' : 'Create Account'}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
-  );
+                            <InputError message={form.errors.role} />
+                        </Field>
+                    </FieldGroup>
+
+                    <DialogFooter className="mt-4">
+                        <Button type="submit" disabled={form.processing}>
+                            {form.processing ? 'Creating...' : 'Create Account'}
+                        </Button>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
+    );
 }

@@ -7,7 +7,7 @@
 import type { WalletsIndex200MetaLinksItemUrl } from './walletsIndex200MetaLinksItemUrl';
 
 export type WalletsIndex200MetaLinksItem = {
-  url: WalletsIndex200MetaLinksItemUrl;
-  label: string;
-  active: boolean;
+    url: WalletsIndex200MetaLinksItemUrl;
+    label: string;
+    active: boolean;
 };

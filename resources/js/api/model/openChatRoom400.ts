@@ -6,6 +6,6 @@
  */
 
 export type OpenChatRoom400 = {
-  /** Error overview. */
-  message: string;
+    /** Error overview. */
+    message: string;
 };

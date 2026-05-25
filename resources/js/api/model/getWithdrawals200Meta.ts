@@ -10,29 +10,29 @@ import type { GetWithdrawals200MetaPath } from './getWithdrawals200MetaPath';
 import type { GetWithdrawals200MetaTo } from './getWithdrawals200MetaTo';
 
 export type GetWithdrawals200Meta = {
-  /** @minimum 1 */
-  current_page: number;
-  /** @minimum 1 */
-  from: GetWithdrawals200MetaFrom;
-  /** @minimum 1 */
-  last_page: number;
-  /** Generated paginator links. */
-  links: GetWithdrawals200MetaLinksItem[];
-  /** Base path for paginator generated URLs. */
-  path: GetWithdrawals200MetaPath;
-  /**
-   * Number of items shown per page.
-   * @minimum 0
-   */
-  per_page: number;
-  /**
-   * Number of the last item in the slice.
-   * @minimum 1
-   */
-  to: GetWithdrawals200MetaTo;
-  /**
-   * Total number of items being paginated.
-   * @minimum 0
-   */
-  total: number;
+    /** @minimum 1 */
+    current_page: number;
+    /** @minimum 1 */
+    from: GetWithdrawals200MetaFrom;
+    /** @minimum 1 */
+    last_page: number;
+    /** Generated paginator links. */
+    links: GetWithdrawals200MetaLinksItem[];
+    /** Base path for paginator generated URLs. */
+    path: GetWithdrawals200MetaPath;
+    /**
+     * Number of items shown per page.
+     * @minimum 0
+     */
+    per_page: number;
+    /**
+     * Number of the last item in the slice.
+     * @minimum 1
+     */
+    to: GetWithdrawals200MetaTo;
+    /**
+     * Total number of items being paginated.
+     * @minimum 0
+     */
+    total: number;
 };

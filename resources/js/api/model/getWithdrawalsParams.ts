@@ -8,22 +8,22 @@ import type { GetWithdrawalsOwnerType } from './getWithdrawalsOwnerType';
 import type { GetWithdrawalsStatus } from './getWithdrawalsStatus';
 
 export type GetWithdrawalsParams = {
-owner_type?: GetWithdrawalsOwnerType;
-owner_id?: number | number;
-/**
- * @maxLength 50
- */
-payable_type?: string;
-status?: GetWithdrawalsStatus;
-/**
- * @maxLength 50
- */
-provider?: string;
-from?: string;
-to?: string;
-/**
- * @minimum 1
- * @maximum 100
- */
-per_page?: number;
+    owner_type?: GetWithdrawalsOwnerType;
+    owner_id?: number | number;
+    /**
+     * @maxLength 50
+     */
+    payable_type?: string;
+    status?: GetWithdrawalsStatus;
+    /**
+     * @maxLength 50
+     */
+    provider?: string;
+    from?: string;
+    to?: string;
+    /**
+     * @minimum 1
+     * @maximum 100
+     */
+    per_page?: number;
 };

@@ -2,13 +2,13 @@ import { store } from '@/actions/App/Http/Controllers/Companies/Dashboard/Catego
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
 import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
+    Dialog,
+    DialogClose,
+    DialogContent,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -19,89 +19,97 @@ import type { ReactNode } from 'react';
 import { useState } from 'react';
 
 type AddCategoryDialogProps = {
-  children: ReactNode;
+    children: ReactNode;
 };
 
 export default function AddCategoryDialog({
-  children,
+    children,
 }: AddCategoryDialogProps) {
-  const { company } = usePageSharedDataProps();
-  const [open, setOpen] = useState(false);
+    const { company } = usePageSharedDataProps();
+    const [open, setOpen] = useState(false);
 
-  const form = useForm({
-    name: '',
-    description: '',
-    position_no: '',
-  });
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-
-    form.post(store({ company: company.username }).url, {
-      preserveScroll: true,
-      onError: () => setOpen(true), // 🔥 keep modal open on validation error
-      onSuccess: () => {
-        form.reset();
-        setOpen(false);
-      },
+    const form = useForm({
+        name: '',
+        description: '',
+        position_no: '',
     });
-  };
 
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>{children}</DialogTrigger>
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
 
-      <DialogContent className="sm:max-w-106.25">
-        <DialogHeader>
-          <DialogTitle>Add Category</DialogTitle>
-        </DialogHeader>
+        form.post(store({ company: company.username }).url, {
+            preserveScroll: true,
+            onError: () => setOpen(true), // 🔥 keep modal open on validation error
+            onSuccess: () => {
+                form.reset();
+                setOpen(false);
+            },
+        });
+    };
 
-        {/* ❗ ONLY ONE submit button, ONLY ONE form */}
-        <form onSubmit={handleSubmit} className="grid gap-6">
-          <div className="grid gap-2">
-            <Label htmlFor="name">Category Name</Label>
-            <Input
-              id="name"
-              value={form.data.name}
-              onChange={(e) => form.setData('name', e.target.value)}
-              placeholder="Category name"
-            />
-            <InputError message={form.errors.name} />
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="description">Category Description</Label>
-            <Input
-              id="description"
-              value={form.data.description}
-              onChange={(e) => form.setData('description', e.target.value)}
-              placeholder="Category Description"
-            />
-            <InputError message={form.errors.description} />
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="name">Position No</Label>
-            <Input
-              id="position_no"
-              value={form.data.position_no}
-              onChange={(e) => form.setData('position_no', e.target.value)}
-              placeholder="Position No"
-            />
-            <InputError message={form.errors.position_no} />
-          </div>
-          <DialogFooter>
-            <DialogClose asChild>
-              <Button type="button" variant="outline">
-                Cancel
-              </Button>
-            </DialogClose>
+    return (
+        <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>{children}</DialogTrigger>
 
-            <Button type="submit" disabled={form.processing}>
-              {form.processing && <Spinner className="mr-2" />}
-              Save
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
-  );
+            <DialogContent className="sm:max-w-106.25">
+                <DialogHeader>
+                    <DialogTitle>Add Category</DialogTitle>
+                </DialogHeader>
+
+                {/* ❗ ONLY ONE submit button, ONLY ONE form */}
+                <form onSubmit={handleSubmit} className="grid gap-6">
+                    <div className="grid gap-2">
+                        <Label htmlFor="name">Category Name</Label>
+                        <Input
+                            id="name"
+                            value={form.data.name}
+                            onChange={(e) =>
+                                form.setData('name', e.target.value)
+                            }
+                            placeholder="Category name"
+                        />
+                        <InputError message={form.errors.name} />
+                    </div>
+                    <div className="grid gap-2">
+                        <Label htmlFor="description">
+                            Category Description
+                        </Label>
+                        <Input
+                            id="description"
+                            value={form.data.description}
+                            onChange={(e) =>
+                                form.setData('description', e.target.value)
+                            }
+                            placeholder="Category Description"
+                        />
+                        <InputError message={form.errors.description} />
+                    </div>
+                    <div className="grid gap-2">
+                        <Label htmlFor="name">Position No</Label>
+                        <Input
+                            id="position_no"
+                            value={form.data.position_no}
+                            onChange={(e) =>
+                                form.setData('position_no', e.target.value)
+                            }
+                            placeholder="Position No"
+                        />
+                        <InputError message={form.errors.position_no} />
+                    </div>
+                    <DialogFooter>
+                        <DialogClose asChild>
+                            <Button type="button" variant="outline">
+                                Cancel
+                            </Button>
+                        </DialogClose>
+
+                        <Button type="submit" disabled={form.processing}>
+                            {form.processing && <Spinner className="mr-2" />}
+                            Save
+                        </Button>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
+    );
 }

@@ -7,5 +7,5 @@
 import type { PaymentResource } from './paymentResource';
 
 export type CreateTopupPayment200 = {
-  data: PaymentResource;
+    data: PaymentResource;
 };

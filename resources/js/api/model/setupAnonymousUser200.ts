@@ -7,5 +7,5 @@
 import type { AnonymousUserResource } from './anonymousUserResource';
 
 export type SetupAnonymousUser200 = {
-  data: AnonymousUserResource;
+    data: AnonymousUserResource;
 };

@@ -6,7 +6,7 @@
  */
 
 export type CreateRegionBody = {
-  continent_id: number;
-  /** @maxLength 255 */
-  name: string;
+    continent_id: number;
+    /** @maxLength 255 */
+    name: string;
 };

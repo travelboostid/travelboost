@@ -9,7 +9,7 @@ import type { GetChatMessages200Links } from './getChatMessages200Links';
 import type { GetChatMessages200Meta } from './getChatMessages200Meta';
 
 export type GetChatMessages200 = {
-  data: ChatMessageResource[];
-  links: GetChatMessages200Links;
-  meta: GetChatMessages200Meta;
+    data: ChatMessageResource[];
+    links: GetChatMessages200Links;
+    meta: GetChatMessages200Meta;
 };

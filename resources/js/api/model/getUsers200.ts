@@ -4,12 +4,12 @@
  * Travelboost
  * OpenAPI spec version: 0.0.1
  */
-import type { UserResource } from './userResource';
 import type { GetUsers200Links } from './getUsers200Links';
 import type { GetUsers200Meta } from './getUsers200Meta';
+import type { UserResource } from './userResource';
 
 export type GetUsers200 = {
-  data: UserResource[];
-  links: GetUsers200Links;
-  meta: GetUsers200Meta;
+    data: UserResource[];
+    links: GetUsers200Links;
+    meta: GetUsers200Meta;
 };

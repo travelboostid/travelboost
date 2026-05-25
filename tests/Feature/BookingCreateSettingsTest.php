@@ -2,6 +2,8 @@
 
 use App\Enums\BookingStatus;
 use App\Enums\PaymentStatus;
+use App\Enums\VendorAgentPartnerStatus;
+use App\Models\AppConfig;
 use App\Models\Booking;
 use App\Models\Company;
 use App\Models\Domain;
@@ -12,6 +14,7 @@ use App\Models\TourAvailability;
 use App\Models\TourPrice;
 use App\Models\TourSchedule;
 use App\Models\User;
+use App\Models\VendorAgentPartner;
 use Database\Seeders\Common\RolePermissionSeeder;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -34,6 +37,9 @@ function createBookingCreateScenario(string $username): array
     $company = Company::factory()->create([
         'username' => $username,
         'type' => 'vendor',
+    ]);
+    $company->companySetting()->updateOrCreate([], [
+        'minimum_down_payment' => 30,
     ]);
 
     Domain::create([
@@ -65,6 +71,22 @@ function createBookingCreateScenario(string $username): array
     ]);
 
     return compact('user', 'company', 'tour', 'schedule');
+}
+
+/**
+ * @return array<int, array<string, mixed>>
+ */
+function bookingPassengers(int $count): array
+{
+    return collect(range(1, $count))
+        ->map(fn (int $index): array => [
+            'first_name' => "Guest {$index}",
+            'last_name' => 'Passenger',
+            'price_category' => 'Adult Twin',
+            'room_type' => 'Twin',
+            'price_amount' => 1_000_000,
+        ])
+        ->all();
 }
 
 test('booking create exposes tour prices in vendor configured row order', function () {
@@ -142,6 +164,10 @@ test('booking create passes vendor settings to the frontend and applies schedule
         'manual_bank_transfer_account_name' => 'Travel Boost Vendor',
         'manual_bank_transfer_account_number' => '1234567890',
     ]);
+    AppConfig::updateOrCreate(['key' => 'admin'], [
+        'description' => 'Admin Parameter configuration',
+        'value' => ['platform_fee' => '35000'],
+    ]);
 
     Domain::create([
         'subdomain' => 'deadlinevendor',
@@ -189,11 +215,170 @@ test('booking create passes vendor settings to the frontend and applies schedule
         ->where('bookingTimeLimitMinutes', 25)
         ->where('minimumDownPaymentPct', 30)
         ->where('minimumVatPct', 12)
+        ->where('platformFeePerPax', 35000)
         ->where('termConditions', 'Vendor specific booking terms.')
         ->where('vendorBankInfo.bankName', 'BCA')
         ->where('vendorBankInfo.accountName', 'Travel Boost Vendor')
         ->where('vendorBankInfo.accountNumber', '1234567890'));
     expect(Booking::where('user_id', $user->id)->exists())->toBeFalse();
+});
+
+test('booking create disables down payment when vendor minimum down payment is not configured', function () {
+    ['user' => $user, 'company' => $company, 'tour' => $tour, 'schedule' => $schedule] = createBookingCreateScenario('nodpvendor');
+
+    $company->companySetting()->updateOrCreate([], [
+        'minimum_down_payment' => 0,
+    ]);
+
+    $response = $this->actingAs($user)->get(route('bookings.create', [
+        'username' => $company->username,
+        'tour' => $tour,
+        'date' => $schedule->departure_date,
+    ]));
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->component('tours/bookings/create')
+        ->where('downPaymentAvailable', false)
+        ->where('minimumDownPaymentPct', null));
+});
+
+test('agent booking uses vendor bank info when partnership payment mode is vendor', function () {
+    $user = User::factory()->create();
+    $vendor = Company::factory()->create([
+        'username' => 'bankmodevendor',
+        'type' => 'vendor',
+    ]);
+    $agent = Company::factory()->create([
+        'username' => 'bankmodeagent',
+        'type' => 'agent',
+    ]);
+    $vendor->companySetting()->updateOrCreate([], [
+        'manual_bank_transfer' => 'Vendor Bank',
+        'manual_bank_transfer_account_name' => 'Vendor Receiver',
+        'manual_bank_transfer_account_number' => '111222333',
+    ]);
+    $agent->companySetting()->updateOrCreate([], [
+        'manual_bank_transfer' => 'Agent Bank',
+        'manual_bank_transfer_account_name' => 'Agent Receiver',
+        'manual_bank_transfer_account_number' => '999888777',
+    ]);
+    Domain::create([
+        'subdomain' => $agent->username,
+        'owner_type' => Company::class,
+        'owner_id' => $agent->id,
+        'domain_enabled' => true,
+        'subdomain_enabled' => true,
+    ]);
+    VendorAgentPartner::create([
+        'vendor_id' => $vendor->id,
+        'agent_id' => $agent->id,
+        'status' => VendorAgentPartnerStatus::ACTIVE,
+        'accepted_at' => now(),
+        'payment_mode' => 'vendor',
+    ]);
+
+    $tour = Tour::factory()->create([
+        'company_id' => $vendor->id,
+        'status' => 'active',
+    ]);
+    $schedule = TourSchedule::create([
+        'tour_id' => $tour->id,
+        'tour_code' => $tour->code,
+        'company_id' => $vendor->id,
+        'departure_date' => now()->addDays(20)->toDateString(),
+        'return_date' => now()->addDays(25)->toDateString(),
+        'is_active' => true,
+    ]);
+    TourAvailability::create([
+        'company_id' => $vendor->id,
+        'tour_id' => $tour->id,
+        'schedule_id' => $schedule->id,
+        'max_pax' => 10,
+        'available' => 10,
+    ]);
+
+    $bookingCreateUrl = route('bookings.create', [
+        'username' => $agent->username,
+        'tour' => $tour,
+        'date' => $schedule->departure_date,
+    ]);
+
+    $response = $this->actingAs($user)->get($bookingCreateUrl);
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->where('vendorBankInfo.bankName', 'Vendor Bank')
+        ->where('vendorBankInfo.accountName', 'Vendor Receiver')
+        ->where('vendorBankInfo.accountNumber', '111222333'));
+});
+
+test('agent booking uses agent bank info when partnership payment mode is agent', function () {
+    $user = User::factory()->create();
+    $vendor = Company::factory()->create([
+        'username' => 'agentbankmodevendor',
+        'type' => 'vendor',
+    ]);
+    $agent = Company::factory()->create([
+        'username' => 'agentbankmodeagent',
+        'type' => 'agent',
+    ]);
+    $vendor->companySetting()->updateOrCreate([], [
+        'manual_bank_transfer' => 'Vendor Bank',
+        'manual_bank_transfer_account_name' => 'Vendor Receiver',
+        'manual_bank_transfer_account_number' => '111222333',
+    ]);
+    $agent->companySetting()->updateOrCreate([], [
+        'manual_bank_transfer' => 'Agent Bank',
+        'manual_bank_transfer_account_name' => 'Agent Receiver',
+        'manual_bank_transfer_account_number' => '999888777',
+    ]);
+    Domain::create([
+        'subdomain' => $agent->username,
+        'owner_type' => Company::class,
+        'owner_id' => $agent->id,
+        'domain_enabled' => true,
+        'subdomain_enabled' => true,
+    ]);
+    VendorAgentPartner::create([
+        'vendor_id' => $vendor->id,
+        'agent_id' => $agent->id,
+        'status' => VendorAgentPartnerStatus::ACTIVE,
+        'accepted_at' => now(),
+        'payment_mode' => 'agent',
+    ]);
+
+    $tour = Tour::factory()->create([
+        'company_id' => $vendor->id,
+        'status' => 'active',
+    ]);
+    $schedule = TourSchedule::create([
+        'tour_id' => $tour->id,
+        'tour_code' => $tour->code,
+        'company_id' => $vendor->id,
+        'departure_date' => now()->addDays(20)->toDateString(),
+        'return_date' => now()->addDays(25)->toDateString(),
+        'is_active' => true,
+    ]);
+    TourAvailability::create([
+        'company_id' => $vendor->id,
+        'tour_id' => $tour->id,
+        'schedule_id' => $schedule->id,
+        'max_pax' => 10,
+        'available' => 10,
+    ]);
+
+    $response = $this->actingAs($user)->get(route('bookings.create', [
+        'username' => $agent->username,
+        'tour' => $tour,
+        'date' => $schedule->departure_date,
+    ]));
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->where('vendorBankInfo.bankName', 'Agent Bank')
+        ->where('vendorBankInfo.accountName', 'Agent Receiver')
+        ->where('vendorBankInfo.accountNumber', '999888777'));
 });
 
 test('booking create exposes saved passengers for the authenticated user only', function () {
@@ -509,6 +694,7 @@ test('customer can intentionally release their active booking reserved hold', fu
         'reserved_expires_at' => now()->addMinutes(8),
         'pax_adult' => 2,
         'pax_child' => 0,
+        'pax_infant' => 0,
     ]);
 
     app(\App\Actions\Booking\SyncAvailabilityAction::class)->executeForBooking($booking);
@@ -562,6 +748,7 @@ test('customer can release their active booking reserved hold from tenant subdom
         'reserved_expires_at' => now()->addMinutes(8),
         'pax_adult' => 1,
         'pax_child' => 0,
+        'pax_infant' => 0,
     ]);
     app(\App\Actions\Booking\SyncAvailabilityAction::class)->executeForBooking($booking);
     $appHost = env('APP_HOST', 'localhost');
@@ -638,6 +825,356 @@ test('booking create returns server remaining hold seconds when resuming reserve
         ->where('remainingHoldSeconds', 420));
 });
 
+test('booking create credits the current hold back into the editable booking seat limit', function () {
+    ['user' => $user, 'company' => $company, 'tour' => $tour, 'schedule' => $schedule] = createBookingCreateScenario('seatlimitvendor');
+
+    $booking = Booking::factory()->create([
+        'booking_number' => 'BKG-SEAT-LIMIT',
+        'user_id' => $user->id,
+        'vendor_id' => $company->id,
+        'tour_id' => $tour->id,
+        'departure_date' => $schedule->departure_date,
+        'status' => BookingStatus::BOOKING_RESERVED,
+        'reserved_type' => 'system',
+        'reserved_expires_at' => now()->addMinutes(8),
+        'pax_adult' => 3,
+        'pax_child' => 0,
+        'pax_infant' => 0,
+    ]);
+
+    app(\App\Actions\Booking\SyncAvailabilityAction::class)->executeForBooking($booking);
+
+    $response = $this->actingAs($user)->get(route('bookings.create', [
+        'username' => $company->username,
+        'tour' => $tour,
+        'date' => $schedule->departure_date,
+        'booking_number' => 'BKG-SEAT-LIMIT',
+    ]));
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->component('tours/bookings/create')
+        ->where('availability', 7)
+        ->where('bookingSeatLimit', 10)
+        ->where('existingBooking.booking_number', 'BKG-SEAT-LIMIT'));
+});
+
+test('booking create counts infants in the current hold seat limit', function () {
+    ['user' => $user, 'company' => $company, 'tour' => $tour, 'schedule' => $schedule] = createBookingCreateScenario('infantseatlimitvendor');
+
+    $booking = Booking::factory()->create([
+        'booking_number' => 'BKG-INFANT-SEAT-LIMIT',
+        'user_id' => $user->id,
+        'vendor_id' => $company->id,
+        'tour_id' => $tour->id,
+        'departure_date' => $schedule->departure_date,
+        'status' => BookingStatus::BOOKING_RESERVED,
+        'reserved_type' => 'system',
+        'reserved_expires_at' => now()->addMinutes(8),
+        'pax_adult' => 1,
+        'pax_child' => 0,
+        'pax_infant' => 2,
+    ]);
+
+    app(\App\Actions\Booking\SyncAvailabilityAction::class)->executeForBooking($booking);
+
+    $response = $this->actingAs($user)->get(route('bookings.create', [
+        'username' => $company->username,
+        'tour' => $tour,
+        'date' => $schedule->departure_date,
+        'booking_number' => 'BKG-INFANT-SEAT-LIMIT',
+    ]));
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->component('tours/bookings/create')
+        ->where('availability', 7)
+        ->where('bookingSeatLimit', 10)
+        ->where('existingBooking.booking_number', 'BKG-INFANT-SEAT-LIMIT'));
+});
+
+test('booking create exposes full payment unavailable for balance payment when vendor wallet cannot settle', function () {
+    ['user' => $user, 'company' => $company, 'tour' => $tour, 'schedule' => $schedule] = createBookingCreateScenario('settlementguardvendor');
+
+    User::factory()->create([
+        'username' => 'root',
+        'email' => 'root@travelboost.co.id',
+    ]);
+    AppConfig::updateOrCreate(['key' => 'admin'], [
+        'description' => 'Admin Parameter configuration',
+        'value' => [
+            'platform_fee' => '30000',
+            'commission_min' => '50000',
+            'commission_mid' => '75000',
+            'commission_max' => '100000',
+        ],
+    ]);
+
+    $adultTwin = PriceCategory::create([
+        'company_id' => $company->id,
+        'name' => 'Adult Twin',
+        'room_type' => 'twin',
+    ]);
+    TourPrice::create([
+        'company_id' => $company->id,
+        'tour_code' => $tour->code,
+        'schedule_id' => $schedule->id,
+        'price_category_id' => $adultTwin->id,
+        'currency' => 'IDR',
+        'price' => 12_000_000,
+        'commission' => 0,
+        'commission_rate' => 0,
+    ]);
+
+    $quote = app(\App\Services\BookingPricingService::class)
+        ->quoteForBookingData($tour, $schedule->departure_date, [
+            ['first_name' => 'Adult', 'price_category' => 'Adult Twin', 'price_amount' => 1],
+        ], includeAgentCommission: false);
+
+    $booking = Booking::factory()->create([
+        'booking_number' => 'BKG-PAYMENT-GUARD',
+        'user_id' => $user->id,
+        'vendor_id' => $company->id,
+        'tour_id' => $tour->id,
+        'departure_date' => $schedule->departure_date,
+        'status' => BookingStatus::DOWN_PAYMENT,
+        'pax_adult' => 1,
+        'pax_child' => 0,
+        'pax_infant' => 0,
+        'total_price' => $quote['subtotal_guests'],
+        'tax_amount' => $quote['tax_amount'],
+        'platform_fee' => $quote['platform_fee'],
+        'commission_amount' => 0,
+        'grand_total' => $quote['grand_total'],
+    ]);
+    $booking->passengers()->createMany($quote['passengers']);
+    $booking->payments()->create([
+        'owner_type' => User::class,
+        'owner_id' => $user->id,
+        'provider' => 'manual',
+        'payment_method' => 'bank_transfer',
+        'amount' => 1_000_000,
+        'status' => PaymentStatus::PAID,
+        'payload' => ['payment_type' => 'down_payment'],
+    ]);
+
+    $response = $this->actingAs($user)->get(route('bookings.create', [
+        'username' => $company->username,
+        'tour' => $tour,
+        'date' => $schedule->departure_date,
+        'booking_number' => 'BKG-PAYMENT-GUARD',
+    ]));
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->component('tours/bookings/create')
+        ->where('fullPaymentAvailable', false)
+        ->where('paymentUnavailableReason', 'Payment is temporarily unavailable. Please try again later or contact customer support.'));
+});
+
+test('booking create leaves full payment available before a booking has pricing snapshots', function () {
+    ['user' => $user, 'company' => $company, 'tour' => $tour, 'schedule' => $schedule] = createBookingCreateScenario('emptyguardvendor');
+
+    Booking::factory()->create([
+        'booking_number' => 'BKG-EMPTY-GUARD',
+        'user_id' => $user->id,
+        'vendor_id' => $company->id,
+        'tour_id' => $tour->id,
+        'departure_date' => $schedule->departure_date,
+        'status' => BookingStatus::BOOKING_RESERVED,
+        'reserved_type' => 'system',
+        'reserved_expires_at' => now()->addMinutes(8),
+        'grand_total' => 0,
+    ]);
+
+    $response = $this->actingAs($user)->get(route('bookings.create', [
+        'username' => $company->username,
+        'tour' => $tour,
+        'date' => $schedule->departure_date,
+        'booking_number' => 'BKG-EMPTY-GUARD',
+    ]));
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->component('tours/bookings/create')
+        ->where('fullPaymentAvailable', true)
+        ->where('paymentUnavailableReason', null));
+});
+
+test('reserve allows the owner to expand within their current held seat limit', function () {
+    ['user' => $user, 'company' => $company, 'tour' => $tour, 'schedule' => $schedule] = createBookingCreateScenario('expandholdvendor');
+
+    $booking = Booking::factory()->create([
+        'booking_number' => 'BKG-EXPAND-HOLD',
+        'user_id' => $user->id,
+        'vendor_id' => $company->id,
+        'tour_id' => $tour->id,
+        'departure_date' => $schedule->departure_date,
+        'status' => BookingStatus::BOOKING_RESERVED,
+        'reserved_type' => 'system',
+        'reserved_expires_at' => now()->addMinutes(8),
+        'pax_adult' => 3,
+        'pax_child' => 0,
+        'pax_infant' => 0,
+    ]);
+    app(\App\Actions\Booking\SyncAvailabilityAction::class)->executeForBooking($booking);
+    expect((int) TourAvailability::where('schedule_id', $schedule->id)->first()->available)->toBe(7);
+
+    $response = $this->actingAs($user)
+        ->from(route('bookings.create', [
+            'username' => $company->username,
+            'tour' => $tour,
+            'date' => $schedule->departure_date,
+            'booking_number' => 'BKG-EXPAND-HOLD',
+        ]))
+        ->post(route('bookings.reserve', [
+            'username' => $company->username,
+            'tour' => $tour,
+        ]), [
+            'tour_id' => $tour->id,
+            'departure_date' => $schedule->departure_date,
+            'pax_adult' => 10,
+            'pax_child' => 0,
+            'pax_infant' => 0,
+            'booking_number' => 'BKG-EXPAND-HOLD',
+            'vendor_id' => $company->id,
+            'passengers' => bookingPassengers(10),
+        ]);
+
+    $response->assertRedirect();
+    $response->assertSessionHasNoErrors();
+
+    expect($booking->fresh()->pax_adult)->toBe(10)
+        ->and((int) TourAvailability::where('schedule_id', $schedule->id)->first()->available)->toBe(0);
+});
+
+test('reserve rejects infants when total guests exceed availability', function () {
+    ['user' => $user, 'company' => $company, 'tour' => $tour, 'schedule' => $schedule] = createBookingCreateScenario('infantavailabilityvendor');
+
+    TourAvailability::where('schedule_id', $schedule->id)->update([
+        'max_pax' => 2,
+        'available' => 2,
+    ]);
+
+    $response = $this->actingAs($user)
+        ->from(route('bookings.create', [
+            'username' => $company->username,
+            'tour' => $tour,
+            'date' => $schedule->departure_date,
+        ]))
+        ->post(route('bookings.reserve', [
+            'username' => $company->username,
+            'tour' => $tour,
+        ]), [
+            'tour_id' => $tour->id,
+            'departure_date' => $schedule->departure_date,
+            'pax_adult' => 1,
+            'pax_child' => 0,
+            'pax_infant' => 2,
+            'booking_number' => 'BKG-INFANT-AVAILABILITY',
+            'vendor_id' => $company->id,
+            'passengers' => bookingPassengers(3),
+        ]);
+
+    $response->assertSessionHasErrors('availability');
+    $this->assertDatabaseMissing('bookings', [
+        'booking_number' => 'BKG-INFANT-AVAILABILITY',
+        'status' => BookingStatus::BOOKING_RESERVED->value,
+    ]);
+});
+
+test('reserve rejects expanding the same booking beyond free seats plus its current hold', function () {
+    ['user' => $user, 'company' => $company, 'tour' => $tour, 'schedule' => $schedule] = createBookingCreateScenario('oversameholdvendor');
+
+    $booking = Booking::factory()->create([
+        'booking_number' => 'BKG-OVER-SAME-HOLD',
+        'user_id' => $user->id,
+        'vendor_id' => $company->id,
+        'tour_id' => $tour->id,
+        'departure_date' => $schedule->departure_date,
+        'status' => BookingStatus::BOOKING_RESERVED,
+        'reserved_type' => 'system',
+        'reserved_expires_at' => now()->addMinutes(8),
+        'pax_adult' => 3,
+        'pax_child' => 0,
+        'pax_infant' => 0,
+    ]);
+    app(\App\Actions\Booking\SyncAvailabilityAction::class)->executeForBooking($booking);
+
+    $response = $this->actingAs($user)
+        ->from(route('bookings.create', [
+            'username' => $company->username,
+            'tour' => $tour,
+            'date' => $schedule->departure_date,
+            'booking_number' => 'BKG-OVER-SAME-HOLD',
+        ]))
+        ->post(route('bookings.reserve', [
+            'username' => $company->username,
+            'tour' => $tour,
+        ]), [
+            'tour_id' => $tour->id,
+            'departure_date' => $schedule->departure_date,
+            'pax_adult' => 11,
+            'pax_child' => 0,
+            'pax_infant' => 0,
+            'booking_number' => 'BKG-OVER-SAME-HOLD',
+            'vendor_id' => $company->id,
+            'passengers' => bookingPassengers(11),
+        ]);
+
+    $response->assertSessionHasErrors('availability');
+
+    expect($booking->fresh()->pax_adult)->toBe(3)
+        ->and((int) TourAvailability::where('schedule_id', $schedule->id)->first()->available)->toBe(7);
+});
+
+test('reserve does not let another customer use seats held by a different booking', function () {
+    ['user' => $owner, 'company' => $company, 'tour' => $tour, 'schedule' => $schedule] = createBookingCreateScenario('otherholdvendor');
+    $otherUser = User::factory()->create();
+
+    $booking = Booking::factory()->create([
+        'booking_number' => 'BKG-OTHER-HOLD',
+        'user_id' => $owner->id,
+        'vendor_id' => $company->id,
+        'tour_id' => $tour->id,
+        'departure_date' => $schedule->departure_date,
+        'status' => BookingStatus::BOOKING_RESERVED,
+        'reserved_type' => 'system',
+        'reserved_expires_at' => now()->addMinutes(8),
+        'pax_adult' => 3,
+        'pax_child' => 0,
+        'pax_infant' => 0,
+    ]);
+    app(\App\Actions\Booking\SyncAvailabilityAction::class)->executeForBooking($booking);
+
+    $response = $this->actingAs($otherUser)
+        ->from(route('bookings.create', [
+            'username' => $company->username,
+            'tour' => $tour,
+            'date' => $schedule->departure_date,
+        ]))
+        ->post(route('bookings.reserve', [
+            'username' => $company->username,
+            'tour' => $tour,
+        ]), [
+            'tour_id' => $tour->id,
+            'departure_date' => $schedule->departure_date,
+            'pax_adult' => 8,
+            'pax_child' => 0,
+            'pax_infant' => 0,
+            'booking_number' => 'BKG-OTHER-CUSTOMER',
+            'vendor_id' => $company->id,
+            'passengers' => bookingPassengers(8),
+        ]);
+
+    $response->assertSessionHasErrors('availability');
+    $this->assertDatabaseMissing('bookings', [
+        'booking_number' => 'BKG-OTHER-CUSTOMER',
+        'status' => BookingStatus::BOOKING_RESERVED->value,
+    ]);
+    expect((int) TourAvailability::where('schedule_id', $schedule->id)->first()->available)->toBe(7);
+});
+
 test('store maps payment method to booking payment mode', function () {
     $user = User::factory()->create();
     $company = Company::factory()->create([
@@ -695,6 +1232,143 @@ test('store maps payment method to booking payment mode', function () {
         'booking_number' => 'BKG-PAYMENT-MODE',
         'payment_mode' => 'manual',
     ]);
+});
+
+test('store recalculates booking totals from schedule prices and ignores tampered frontend totals', function () {
+    ['user' => $user, 'company' => $company, 'tour' => $tour, 'schedule' => $schedule] = createBookingCreateScenario('authoritativevendor');
+    $company->companySetting()->updateOrCreate([], ['minimum_vat' => 11]);
+    AppConfig::updateOrCreate(['key' => 'admin'], [
+        'description' => 'Admin Parameter configuration',
+        'value' => ['platform_fee' => '30000'],
+    ]);
+
+    $adultTwin = PriceCategory::create([
+        'company_id' => $company->id,
+        'name' => 'Adult Twin',
+        'room_type' => 'twin',
+    ]);
+    TourPrice::create([
+        'company_id' => $company->id,
+        'tour_code' => $tour->code,
+        'schedule_id' => $schedule->id,
+        'price_category_id' => $adultTwin->id,
+        'currency' => 'IDR',
+        'price' => 1_000_000,
+        'commission' => 250_000,
+    ]);
+
+    $this->actingAs($user)
+        ->post(route('bookings.store', [
+            'username' => $company->username,
+            'tour' => $tour,
+        ]), [
+            'booking_number' => 'BKG-AUTHORITATIVE-TOTALS',
+            'tour_id' => $tour->id,
+            'departure_date' => $schedule->departure_date,
+            'pax_adult' => 1,
+            'pax_child' => 0,
+            'pax_infant' => 0,
+            'vendor_id' => $company->id,
+            'contact_name' => 'Authoritative Totals',
+            'contact_email' => 'authoritative@example.com',
+            'contact_phone' => '08123456789',
+            'payment_type' => 'full_payment',
+            'payment_method' => 'manual_transfer',
+            'passengers' => [
+                [
+                    'first_name' => 'Authoritative',
+                    'last_name' => 'Guest',
+                    'pob' => 'Jakarta',
+                    'price_category' => 'Adult Twin',
+                    'price_amount' => 1,
+                ],
+            ],
+            'total_price' => 1,
+            'tax_amount' => 1,
+            'platform_fee' => 1,
+            'commission_amount' => 999_999,
+            'grand_total' => 1,
+        ])
+        ->assertRedirect();
+
+    $booking = Booking::where('booking_number', 'BKG-AUTHORITATIVE-TOTALS')->firstOrFail();
+
+    expect((float) $booking->total_price)->toBe(1_000_000.0)
+        ->and((float) $booking->tax_amount)->toBe(110_000.0)
+        ->and((float) $booking->platform_fee)->toBe(30_000.0)
+        ->and((float) $booking->commission_amount)->toBe(0.0)
+        ->and((float) $booking->grand_total)->toBe(1_140_000.0)
+        ->and((float) $booking->passengers()->firstOrFail()->price_amount)->toBe(1_000_000.0);
+});
+
+test('reserve recalculates booking totals from schedule prices and ignores tampered frontend totals', function () {
+    ['user' => $user, 'company' => $company, 'tour' => $tour, 'schedule' => $schedule] = createBookingCreateScenario('authoritativereserve');
+    $company->companySetting()->updateOrCreate([], ['minimum_vat' => 11]);
+    AppConfig::updateOrCreate(['key' => 'admin'], [
+        'description' => 'Admin Parameter configuration',
+        'value' => ['platform_fee' => '30000'],
+    ]);
+
+    $adultTwin = PriceCategory::create([
+        'company_id' => $company->id,
+        'name' => 'Adult Twin',
+        'room_type' => 'twin',
+    ]);
+    TourPrice::create([
+        'company_id' => $company->id,
+        'tour_code' => $tour->code,
+        'schedule_id' => $schedule->id,
+        'price_category_id' => $adultTwin->id,
+        'currency' => 'IDR',
+        'price' => 1_000_000,
+        'commission' => 250_000,
+    ]);
+
+    $this->actingAs($user)
+        ->from(route('bookings.create', [
+            'username' => $company->username,
+            'tour' => $tour,
+            'date' => $schedule->departure_date,
+        ]))
+        ->post(route('bookings.reserve', [
+            'username' => $company->username,
+            'tour' => $tour,
+        ]), [
+            'booking_number' => 'BKG-AUTHORITATIVE-RESERVE',
+            'tour_id' => $tour->id,
+            'departure_date' => $schedule->departure_date,
+            'pax_adult' => 1,
+            'pax_child' => 0,
+            'pax_infant' => 0,
+            'vendor_id' => $company->id,
+            'contact_name' => 'Authoritative Reserve',
+            'contact_email' => 'authoritative-reserve@example.com',
+            'contact_phone' => '08123456789',
+            'passengers' => [
+                [
+                    'first_name' => 'Reserve',
+                    'last_name' => 'Guest',
+                    'pob' => 'Jakarta',
+                    'price_category' => 'Adult Twin',
+                    'price_amount' => 1,
+                ],
+            ],
+            'total_price' => 1,
+            'tax_amount' => 1,
+            'platform_fee' => 1,
+            'commission_amount' => 999_999,
+            'grand_total' => 1,
+        ])
+        ->assertRedirect();
+
+    $booking = Booking::where('booking_number', 'BKG-AUTHORITATIVE-RESERVE')->firstOrFail();
+
+    expect((float) $booking->total_price)->toBe(1_000_000.0)
+        ->and((float) $booking->tax_amount)->toBe(110_000.0)
+        ->and((float) $booking->platform_fee)->toBe(30_000.0)
+        ->and((float) $booking->commission_amount)->toBe(0.0)
+        ->and((float) $booking->grand_total)->toBe(1_140_000.0)
+        ->and((float) $booking->passengers()->firstOrFail()->price_amount)->toBe(1_000_000.0);
 });
 
 test('store persists room arrangement and travel document data', function () {
@@ -1421,6 +2095,93 @@ test('expired future booking can be reset through reorder endpoint with the same
         ->where('existingBooking.rooms.0.room_type', 'twin')
         ->where('existingBooking.rooms.0.room_label', 'Room 1')
         ->where('existingBooking.rooms.0.bed_layout.0.guestId', 'adult-0'));
+});
+
+test('stale reorder click on awaiting payment booking redirects to continue booking', function () {
+    ['user' => $user, 'company' => $company, 'tour' => $tour, 'schedule' => $schedule] = createBookingCreateScenario('awaitingreordervendor');
+
+    $booking = Booking::factory()->create([
+        'booking_number' => 'BKG-STALE-AWAITING',
+        'user_id' => $user->id,
+        'vendor_id' => $company->id,
+        'tour_id' => $tour->id,
+        'departure_date' => $schedule->departure_date,
+        'status' => BookingStatus::AWAITING_PAYMENT,
+        'reserved_type' => 'system',
+        'reserved_expires_at' => null,
+    ]);
+
+    $this->actingAs($user)
+        ->post("/bookings/{$booking->id}/reorder")
+        ->assertRedirect(route('bookings.create', [
+            'username' => 'awaitingreordervendor',
+            'tour' => $tour,
+            'date' => $schedule->departure_date,
+            'booking_number' => 'BKG-STALE-AWAITING',
+        ]));
+
+    $this->assertDatabaseHas('bookings', [
+        'id' => $booking->id,
+        'status' => BookingStatus::AWAITING_PAYMENT->value,
+        'reserved_expires_at' => null,
+    ]);
+});
+
+test('stale reorder click on active booking reserved redirects without resetting hold', function () {
+    ['user' => $user, 'company' => $company, 'tour' => $tour, 'schedule' => $schedule] = createBookingCreateScenario('reservedreordervendor');
+    $reservedExpiresAt = now()->addMinutes(8)->startOfSecond();
+
+    $booking = Booking::factory()->create([
+        'booking_number' => 'BKG-STALE-RESERVED',
+        'user_id' => $user->id,
+        'vendor_id' => $company->id,
+        'tour_id' => $tour->id,
+        'departure_date' => $schedule->departure_date,
+        'status' => BookingStatus::BOOKING_RESERVED,
+        'reserved_type' => 'system',
+        'reserved_expires_at' => $reservedExpiresAt,
+    ]);
+
+    $this->actingAs($user)
+        ->post("/bookings/{$booking->id}/reorder")
+        ->assertRedirect(route('bookings.create', [
+            'username' => 'reservedreordervendor',
+            'tour' => $tour,
+            'date' => $schedule->departure_date,
+            'booking_number' => 'BKG-STALE-RESERVED',
+        ]));
+
+    $booking->refresh();
+
+    expect($booking->status)->toBe(BookingStatus::BOOKING_RESERVED)
+        ->and($booking->reserved_expires_at?->toDateTimeString())->toBe($reservedExpiresAt->toDateTimeString());
+});
+
+test('reorder endpoint still rejects payment in progress or paid bookings', function () {
+    ['user' => $user, 'company' => $company, 'tour' => $tour, 'schedule' => $schedule] = createBookingCreateScenario('invalidreorderstatusvendor');
+
+    foreach ([
+        BookingStatus::WAITING_PAYMENT_APPROVAL,
+        BookingStatus::DOWN_PAYMENT,
+        BookingStatus::FULL_PAYMENT,
+    ] as $status) {
+        $booking = Booking::factory()->create([
+            'booking_number' => 'BKG-INVALID-'.strtoupper(str_replace(' ', '-', $status->value)),
+            'user_id' => $user->id,
+            'vendor_id' => $company->id,
+            'tour_id' => $tour->id,
+            'departure_date' => $schedule->departure_date,
+            'status' => $status,
+            'reserved_type' => 'system',
+            'reserved_expires_at' => null,
+        ]);
+
+        $this->actingAs($user)
+            ->post("/bookings/{$booking->id}/reorder")
+            ->assertStatus(422);
+
+        expect($booking->fresh()->status)->toBe($status);
+    }
 });
 
 test('reorder endpoint rejects expired bookings after the vendor booking deadline', function () {

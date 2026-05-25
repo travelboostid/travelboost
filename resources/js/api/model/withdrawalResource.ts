@@ -4,22 +4,22 @@
  * Travelboost
  * OpenAPI spec version: 0.0.1
  */
-import type { WithdrawalResourceWalletId } from './withdrawalResourceWalletId';
-import type { WithdrawalStatus } from './withdrawalStatus';
+import type { WithdrawalResourceCreatedAt } from './withdrawalResourceCreatedAt';
 import type { WithdrawalResourceNote } from './withdrawalResourceNote';
 import type { WithdrawalResourcePaidAt } from './withdrawalResourcePaidAt';
-import type { WithdrawalResourceCreatedAt } from './withdrawalResourceCreatedAt';
+import type { WithdrawalResourceWalletId } from './withdrawalResourceWalletId';
+import type { WithdrawalStatus } from './withdrawalStatus';
 
 export interface WithdrawalResource {
-  id: number;
-  user_id: string;
-  bank_account_id: number;
-  wallet_id: WithdrawalResourceWalletId;
-  amount: number;
-  status: WithdrawalStatus;
-  note: WithdrawalResourceNote;
-  approved_at: string;
-  processed_at: string;
-  paid_at: WithdrawalResourcePaidAt;
-  created_at: WithdrawalResourceCreatedAt;
+    id: number;
+    user_id: string;
+    bank_account_id: number;
+    wallet_id: WithdrawalResourceWalletId;
+    amount: number;
+    status: WithdrawalStatus;
+    note: WithdrawalResourceNote;
+    approved_at: string;
+    processed_at: string;
+    paid_at: WithdrawalResourcePaidAt;
+    created_at: WithdrawalResourceCreatedAt;
 }

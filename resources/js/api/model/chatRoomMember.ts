@@ -4,20 +4,20 @@
  * Travelboost
  * OpenAPI spec version: 0.0.1
  */
-import type { ChatRoomMemberLastReadAt } from './chatRoomMemberLastReadAt';
-import type { ChatRoomMemberCreatedAt } from './chatRoomMemberCreatedAt';
-import type { ChatRoomMemberUpdatedAt } from './chatRoomMemberUpdatedAt';
 import type { ChatRoomMember as __ChatRoomMember } from './chatRoomMember';
+import type { ChatRoomMemberCreatedAt } from './chatRoomMemberCreatedAt';
+import type { ChatRoomMemberLastReadAt } from './chatRoomMemberLastReadAt';
+import type { ChatRoomMemberUpdatedAt } from './chatRoomMemberUpdatedAt';
 
 export interface ChatRoomMember {
-  id: number;
-  room_id: number;
-  member_type: string;
-  member_id: number;
-  role: string;
-  joined_at: string;
-  last_read_at: ChatRoomMemberLastReadAt;
-  created_at: ChatRoomMemberCreatedAt;
-  updated_at: ChatRoomMemberUpdatedAt;
-  member?: __ChatRoomMember;
+    id: number;
+    room_id: number;
+    member_type: string;
+    member_id: number;
+    role: string;
+    joined_at: string;
+    last_read_at: ChatRoomMemberLastReadAt;
+    created_at: ChatRoomMemberCreatedAt;
+    updated_at: ChatRoomMemberUpdatedAt;
+    member?: __ChatRoomMember;
 }

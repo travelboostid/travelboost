@@ -7,5 +7,5 @@
 import type { ContinentResource } from './continentResource';
 
 export type CreateContinent201 = {
-  data: ContinentResource;
+    data: ContinentResource;
 };

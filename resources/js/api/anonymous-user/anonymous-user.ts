@@ -4,87 +4,96 @@
  * Travelboost
  * OpenAPI spec version: 0.0.1
  */
-import {
-  useMutation
-} from '@tanstack/react-query';
 import type {
-  MutationFunction,
-  QueryClient,
-  UseMutationOptions,
-  UseMutationResult
+    MutationFunction,
+    QueryClient,
+    UseMutationOptions,
+    UseMutationResult,
 } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 
-import type {
-  SetupAnonymousUser200
-} from '.././model';
+import type { SetupAnonymousUser200 } from '.././model';
 
 import { apiInstance } from '.././api-instance';
 
-
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
-
-
 
 /**
  * @summary Display a listing of the users
  */
 export const setupAnonymousUser = (
-    
- options?: SecondParameter<typeof apiInstance>,signal?: AbortSignal
+    options?: SecondParameter<typeof apiInstance>,
+    signal?: AbortSignal,
 ) => {
-      
-      
-      return apiInstance<SetupAnonymousUser200>(
-      {url: `/anonymous-users/setup`, method: 'POST', signal
-    },
-      options);
-    }
-  
+    return apiInstance<SetupAnonymousUser200>(
+        { url: `/anonymous-users/setup`, method: 'POST', signal },
+        options,
+    );
+};
 
-
-export const getSetupAnonymousUserMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setupAnonymousUser>>, TError,void, TContext>, request?: SecondParameter<typeof apiInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof setupAnonymousUser>>, TError,void, TContext> => {
-
-const mutationKey = ['setupAnonymousUser'];
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-      
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof setupAnonymousUser>>, void> = () => {
-          
-
-          return  setupAnonymousUser(requestOptions)
-        }
-
-        
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type SetupAnonymousUserMutationResult = NonNullable<Awaited<ReturnType<typeof setupAnonymousUser>>>
-    
-    export type SetupAnonymousUserMutationError = unknown
-
-    /**
- * @summary Display a listing of the users
- */
-export const useSetupAnonymousUser = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setupAnonymousUser>>, TError,void, TContext>, request?: SecondParameter<typeof apiInstance>}
- , queryClient?: QueryClient): UseMutationResult<
+export const getSetupAnonymousUserMutationOptions = <
+    TError = unknown,
+    TContext = unknown,
+>(options?: {
+    mutation?: UseMutationOptions<
         Awaited<ReturnType<typeof setupAnonymousUser>>,
         TError,
         void,
         TContext
-      > => {
+    >;
+    request?: SecondParameter<typeof apiInstance>;
+}): UseMutationOptions<
+    Awaited<ReturnType<typeof setupAnonymousUser>>,
+    TError,
+    void,
+    TContext
+> => {
+    const mutationKey = ['setupAnonymousUser'];
+    const { mutation: mutationOptions, request: requestOptions } = options
+        ? options.mutation &&
+          'mutationKey' in options.mutation &&
+          options.mutation.mutationKey
+            ? options
+            : { ...options, mutation: { ...options.mutation, mutationKey } }
+        : { mutation: { mutationKey }, request: undefined };
 
-      const mutationOptions = getSetupAnonymousUserMutationOptions(options);
+    const mutationFn: MutationFunction<
+        Awaited<ReturnType<typeof setupAnonymousUser>>,
+        void
+    > = () => {
+        return setupAnonymousUser(requestOptions);
+    };
 
-      return useMutation(mutationOptions, queryClient);
-    }
-    
+    return { mutationFn, ...mutationOptions };
+};
+
+export type SetupAnonymousUserMutationResult = NonNullable<
+    Awaited<ReturnType<typeof setupAnonymousUser>>
+>;
+
+export type SetupAnonymousUserMutationError = unknown;
+
+/**
+ * @summary Display a listing of the users
+ */
+export const useSetupAnonymousUser = <TError = unknown, TContext = unknown>(
+    options?: {
+        mutation?: UseMutationOptions<
+            Awaited<ReturnType<typeof setupAnonymousUser>>,
+            TError,
+            void,
+            TContext
+        >;
+        request?: SecondParameter<typeof apiInstance>;
+    },
+    queryClient?: QueryClient,
+): UseMutationResult<
+    Awaited<ReturnType<typeof setupAnonymousUser>>,
+    TError,
+    void,
+    TContext
+> => {
+    const mutationOptions = getSetupAnonymousUserMutationOptions(options);
+
+    return useMutation(mutationOptions, queryClient);
+};

@@ -4,218 +4,314 @@
  * Travelboost
  * OpenAPI spec version: 0.0.1
  */
-import {
-  useQuery
-} from '@tanstack/react-query';
 import type {
-  DataTag,
-  DefinedInitialDataOptions,
-  DefinedUseQueryResult,
-  QueryClient,
-  QueryFunction,
-  QueryKey,
-  UndefinedInitialDataOptions,
-  UseQueryOptions,
-  UseQueryResult
+    DataTag,
+    DefinedInitialDataOptions,
+    DefinedUseQueryResult,
+    QueryClient,
+    QueryFunction,
+    QueryKey,
+    UndefinedInitialDataOptions,
+    UseQueryOptions,
+    UseQueryResult,
 } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 
 import type {
-  GetTour200,
-  GetTrips200,
-  GetTripsParams,
-  ModelNotFoundExceptionResponse,
-  ValidationExceptionResponse
+    GetTour200,
+    GetTrips200,
+    GetTripsParams,
+    ModelNotFoundExceptionResponse,
+    ValidationExceptionResponse,
 } from '.././model';
 
 import { apiInstance } from '.././api-instance';
 
-
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
-
-
 
 /**
  * @summary Display a listing of the resource
  */
 export const getTrips = (
     params?: GetTripsParams,
- options?: SecondParameter<typeof apiInstance>,signal?: AbortSignal
+    options?: SecondParameter<typeof apiInstance>,
+    signal?: AbortSignal,
 ) => {
-      
-      
-      return apiInstance<GetTrips200>(
-      {url: `/tours`, method: 'GET',
-        params, signal
+    return apiInstance<GetTrips200>(
+        { url: `/tours`, method: 'GET', params, signal },
+        options,
+    );
+};
+
+export const getGetTripsQueryKey = (params?: GetTripsParams) => {
+    return [`/tours`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetTripsQueryOptions = <
+    TData = Awaited<ReturnType<typeof getTrips>>,
+    TError = ValidationExceptionResponse,
+>(
+    params?: GetTripsParams,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<Awaited<ReturnType<typeof getTrips>>, TError, TData>
+        >;
+        request?: SecondParameter<typeof apiInstance>;
     },
-      options);
-    }
-  
-
-
-
-export const getGetTripsQueryKey = (params?: GetTripsParams,) => {
-    return [
-    `/tours`, ...(params ? [params]: [])
-    ] as const;
-    }
-
-    
-export const getGetTripsQueryOptions = <TData = Awaited<ReturnType<typeof getTrips>>, TError = ValidationExceptionResponse>(params?: GetTripsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getTrips>>, TError, TData>>, request?: SecondParameter<typeof apiInstance>}
 ) => {
+    const { query: queryOptions, request: requestOptions } = options ?? {};
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+    const queryKey = queryOptions?.queryKey ?? getGetTripsQueryKey(params);
 
-  const queryKey =  queryOptions?.queryKey ?? getGetTripsQueryKey(params);
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getTrips>>> = ({
+        signal,
+    }) => getTrips(params, requestOptions, signal);
 
-  
+    return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+        Awaited<ReturnType<typeof getTrips>>,
+        TError,
+        TData
+    > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getTrips>>> = ({ signal }) => getTrips(params, requestOptions, signal);
+export type GetTripsQueryResult = NonNullable<
+    Awaited<ReturnType<typeof getTrips>>
+>;
+export type GetTripsQueryError = ValidationExceptionResponse;
 
-      
-
-      
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getTrips>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type GetTripsQueryResult = NonNullable<Awaited<ReturnType<typeof getTrips>>>
-export type GetTripsQueryError = ValidationExceptionResponse
-
-
-export function useGetTrips<TData = Awaited<ReturnType<typeof getTrips>>, TError = ValidationExceptionResponse>(
- params: undefined |  GetTripsParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getTrips>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getTrips>>,
-          TError,
-          Awaited<ReturnType<typeof getTrips>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof apiInstance>}
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetTrips<TData = Awaited<ReturnType<typeof getTrips>>, TError = ValidationExceptionResponse>(
- params?: GetTripsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getTrips>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getTrips>>,
-          TError,
-          Awaited<ReturnType<typeof getTrips>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof apiInstance>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetTrips<TData = Awaited<ReturnType<typeof getTrips>>, TError = ValidationExceptionResponse>(
- params?: GetTripsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getTrips>>, TError, TData>>, request?: SecondParameter<typeof apiInstance>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetTrips<
+    TData = Awaited<ReturnType<typeof getTrips>>,
+    TError = ValidationExceptionResponse,
+>(
+    params: undefined | GetTripsParams,
+    options: {
+        query: Partial<
+            UseQueryOptions<Awaited<ReturnType<typeof getTrips>>, TError, TData>
+        > &
+            Pick<
+                DefinedInitialDataOptions<
+                    Awaited<ReturnType<typeof getTrips>>,
+                    TError,
+                    Awaited<ReturnType<typeof getTrips>>
+                >,
+                'initialData'
+            >;
+        request?: SecondParameter<typeof apiInstance>;
+    },
+    queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetTrips<
+    TData = Awaited<ReturnType<typeof getTrips>>,
+    TError = ValidationExceptionResponse,
+>(
+    params?: GetTripsParams,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<Awaited<ReturnType<typeof getTrips>>, TError, TData>
+        > &
+            Pick<
+                UndefinedInitialDataOptions<
+                    Awaited<ReturnType<typeof getTrips>>,
+                    TError,
+                    Awaited<ReturnType<typeof getTrips>>
+                >,
+                'initialData'
+            >;
+        request?: SecondParameter<typeof apiInstance>;
+    },
+    queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetTrips<
+    TData = Awaited<ReturnType<typeof getTrips>>,
+    TError = ValidationExceptionResponse,
+>(
+    params?: GetTripsParams,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<Awaited<ReturnType<typeof getTrips>>, TError, TData>
+        >;
+        request?: SecondParameter<typeof apiInstance>;
+    },
+    queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+};
 /**
  * @summary Display a listing of the resource
  */
 
-export function useGetTrips<TData = Awaited<ReturnType<typeof getTrips>>, TError = ValidationExceptionResponse>(
- params?: GetTripsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getTrips>>, TError, TData>>, request?: SecondParameter<typeof apiInstance>}
- , queryClient?: QueryClient 
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+export function useGetTrips<
+    TData = Awaited<ReturnType<typeof getTrips>>,
+    TError = ValidationExceptionResponse,
+>(
+    params?: GetTripsParams,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<Awaited<ReturnType<typeof getTrips>>, TError, TData>
+        >;
+        request?: SecondParameter<typeof apiInstance>;
+    },
+    queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+} {
+    const queryOptions = getGetTripsQueryOptions(params, options);
 
-  const queryOptions = getGetTripsQueryOptions(params,options)
+    const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+        TData,
+        TError
+    > & { queryKey: DataTag<QueryKey, TData, TError> };
 
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+    query.queryKey = queryOptions.queryKey;
 
-  query.queryKey = queryOptions.queryKey ;
-
-  return query;
+    return query;
 }
-
-
-
 
 /**
  * @summary Display a item of the resource
  */
 export const getTour = (
     tour: number,
- options?: SecondParameter<typeof apiInstance>,signal?: AbortSignal
+    options?: SecondParameter<typeof apiInstance>,
+    signal?: AbortSignal,
 ) => {
-      
-      
-      return apiInstance<GetTour200>(
-      {url: `/tours/${tour}`, method: 'GET', signal
+    return apiInstance<GetTour200>(
+        { url: `/tours/${tour}`, method: 'GET', signal },
+        options,
+    );
+};
+
+export const getGetTourQueryKey = (tour?: number) => {
+    return [`/tours/${tour}`] as const;
+};
+
+export const getGetTourQueryOptions = <
+    TData = Awaited<ReturnType<typeof getTour>>,
+    TError = ModelNotFoundExceptionResponse,
+>(
+    tour: number,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<Awaited<ReturnType<typeof getTour>>, TError, TData>
+        >;
+        request?: SecondParameter<typeof apiInstance>;
     },
-      options);
-    }
-  
-
-
-
-export const getGetTourQueryKey = (tour?: number,) => {
-    return [
-    `/tours/${tour}`
-    ] as const;
-    }
-
-    
-export const getGetTourQueryOptions = <TData = Awaited<ReturnType<typeof getTour>>, TError = ModelNotFoundExceptionResponse>(tour: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getTour>>, TError, TData>>, request?: SecondParameter<typeof apiInstance>}
 ) => {
+    const { query: queryOptions, request: requestOptions } = options ?? {};
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+    const queryKey = queryOptions?.queryKey ?? getGetTourQueryKey(tour);
 
-  const queryKey =  queryOptions?.queryKey ?? getGetTourQueryKey(tour);
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getTour>>> = ({
+        signal,
+    }) => getTour(tour, requestOptions, signal);
 
-  
+    return {
+        queryKey,
+        queryFn,
+        enabled: !!tour,
+        ...queryOptions,
+    } as UseQueryOptions<Awaited<ReturnType<typeof getTour>>, TError, TData> & {
+        queryKey: DataTag<QueryKey, TData, TError>;
+    };
+};
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getTour>>> = ({ signal }) => getTour(tour, requestOptions, signal);
+export type GetTourQueryResult = NonNullable<
+    Awaited<ReturnType<typeof getTour>>
+>;
+export type GetTourQueryError = ModelNotFoundExceptionResponse;
 
-      
-
-      
-
-   return  { queryKey, queryFn, enabled: !!(tour), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getTour>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type GetTourQueryResult = NonNullable<Awaited<ReturnType<typeof getTour>>>
-export type GetTourQueryError = ModelNotFoundExceptionResponse
-
-
-export function useGetTour<TData = Awaited<ReturnType<typeof getTour>>, TError = ModelNotFoundExceptionResponse>(
- tour: number, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getTour>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getTour>>,
-          TError,
-          Awaited<ReturnType<typeof getTour>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof apiInstance>}
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetTour<TData = Awaited<ReturnType<typeof getTour>>, TError = ModelNotFoundExceptionResponse>(
- tour: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getTour>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getTour>>,
-          TError,
-          Awaited<ReturnType<typeof getTour>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof apiInstance>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetTour<TData = Awaited<ReturnType<typeof getTour>>, TError = ModelNotFoundExceptionResponse>(
- tour: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getTour>>, TError, TData>>, request?: SecondParameter<typeof apiInstance>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetTour<
+    TData = Awaited<ReturnType<typeof getTour>>,
+    TError = ModelNotFoundExceptionResponse,
+>(
+    tour: number,
+    options: {
+        query: Partial<
+            UseQueryOptions<Awaited<ReturnType<typeof getTour>>, TError, TData>
+        > &
+            Pick<
+                DefinedInitialDataOptions<
+                    Awaited<ReturnType<typeof getTour>>,
+                    TError,
+                    Awaited<ReturnType<typeof getTour>>
+                >,
+                'initialData'
+            >;
+        request?: SecondParameter<typeof apiInstance>;
+    },
+    queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetTour<
+    TData = Awaited<ReturnType<typeof getTour>>,
+    TError = ModelNotFoundExceptionResponse,
+>(
+    tour: number,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<Awaited<ReturnType<typeof getTour>>, TError, TData>
+        > &
+            Pick<
+                UndefinedInitialDataOptions<
+                    Awaited<ReturnType<typeof getTour>>,
+                    TError,
+                    Awaited<ReturnType<typeof getTour>>
+                >,
+                'initialData'
+            >;
+        request?: SecondParameter<typeof apiInstance>;
+    },
+    queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetTour<
+    TData = Awaited<ReturnType<typeof getTour>>,
+    TError = ModelNotFoundExceptionResponse,
+>(
+    tour: number,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<Awaited<ReturnType<typeof getTour>>, TError, TData>
+        >;
+        request?: SecondParameter<typeof apiInstance>;
+    },
+    queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+};
 /**
  * @summary Display a item of the resource
  */
 
-export function useGetTour<TData = Awaited<ReturnType<typeof getTour>>, TError = ModelNotFoundExceptionResponse>(
- tour: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getTour>>, TError, TData>>, request?: SecondParameter<typeof apiInstance>}
- , queryClient?: QueryClient 
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+export function useGetTour<
+    TData = Awaited<ReturnType<typeof getTour>>,
+    TError = ModelNotFoundExceptionResponse,
+>(
+    tour: number,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<Awaited<ReturnType<typeof getTour>>, TError, TData>
+        >;
+        request?: SecondParameter<typeof apiInstance>;
+    },
+    queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+} {
+    const queryOptions = getGetTourQueryOptions(tour, options);
 
-  const queryOptions = getGetTourQueryOptions(tour,options)
+    const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+        TData,
+        TError
+    > & { queryKey: DataTag<QueryKey, TData, TError> };
 
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+    query.queryKey = queryOptions.queryKey;
 
-  query.queryKey = queryOptions.queryKey ;
-
-  return query;
+    return query;
 }
-
-
-
-

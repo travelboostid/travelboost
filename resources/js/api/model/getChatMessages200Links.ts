@@ -6,12 +6,12 @@
  */
 import type { GetChatMessages200LinksFirst } from './getChatMessages200LinksFirst';
 import type { GetChatMessages200LinksLast } from './getChatMessages200LinksLast';
-import type { GetChatMessages200LinksPrev } from './getChatMessages200LinksPrev';
 import type { GetChatMessages200LinksNext } from './getChatMessages200LinksNext';
+import type { GetChatMessages200LinksPrev } from './getChatMessages200LinksPrev';
 
 export type GetChatMessages200Links = {
-  first: GetChatMessages200LinksFirst;
-  last: GetChatMessages200LinksLast;
-  prev: GetChatMessages200LinksPrev;
-  next: GetChatMessages200LinksNext;
+    first: GetChatMessages200LinksFirst;
+    last: GetChatMessages200LinksLast;
+    prev: GetChatMessages200LinksPrev;
+    next: GetChatMessages200LinksNext;
 };

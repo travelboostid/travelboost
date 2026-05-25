@@ -8,8 +8,8 @@ import type { AnonymousUserResourceCreatedAt } from './anonymousUserResourceCrea
 import type { AnonymousUserResourceUpdatedAt } from './anonymousUserResourceUpdatedAt';
 
 export interface AnonymousUserResource {
-  id: number;
-  token: string;
-  created_at: AnonymousUserResourceCreatedAt;
-  updated_at: AnonymousUserResourceUpdatedAt;
+    id: number;
+    token: string;
+    created_at: AnonymousUserResourceCreatedAt;
+    updated_at: AnonymousUserResourceUpdatedAt;
 }

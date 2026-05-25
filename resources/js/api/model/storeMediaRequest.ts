@@ -4,19 +4,19 @@
  * Travelboost
  * OpenAPI spec version: 0.0.1
  */
-import type { StoreMediaRequestName } from './storeMediaRequestName';
 import type { StoreMediaRequestDescription } from './storeMediaRequestDescription';
+import type { StoreMediaRequestName } from './storeMediaRequestName';
 import type { StoreMediaRequestType } from './storeMediaRequestType';
 
 export interface StoreMediaRequest {
-  /** @minimum 1 */
-  owner_id: number;
-  owner_type: string;
-  /** @maxLength 255 */
-  name?: StoreMediaRequestName;
-  description?: StoreMediaRequestDescription;
-  type: StoreMediaRequestType;
-  /** @maxLength 50 */
-  subtype: string;
-  data: Blob;
+    /** @minimum 1 */
+    owner_id: number;
+    owner_type: string;
+    /** @maxLength 255 */
+    name?: StoreMediaRequestName;
+    description?: StoreMediaRequestDescription;
+    type: StoreMediaRequestType;
+    /** @maxLength 50 */
+    subtype: string;
+    data: Blob;
 }

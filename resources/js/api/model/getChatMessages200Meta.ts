@@ -4,20 +4,20 @@
  * Travelboost
  * OpenAPI spec version: 0.0.1
  */
-import type { GetChatMessages200MetaPath } from './getChatMessages200MetaPath';
 import type { GetChatMessages200MetaNextCursor } from './getChatMessages200MetaNextCursor';
+import type { GetChatMessages200MetaPath } from './getChatMessages200MetaPath';
 import type { GetChatMessages200MetaPrevCursor } from './getChatMessages200MetaPrevCursor';
 
 export type GetChatMessages200Meta = {
-  /** Base path for paginator generated URLs. */
-  path: GetChatMessages200MetaPath;
-  /**
-   * Number of items shown per page.
-   * @minimum 0
-   */
-  per_page: number;
-  /** The "cursor" that points to the next set of items. */
-  next_cursor: GetChatMessages200MetaNextCursor;
-  /** The "cursor" that points to the previous set of items. */
-  prev_cursor: GetChatMessages200MetaPrevCursor;
+    /** Base path for paginator generated URLs. */
+    path: GetChatMessages200MetaPath;
+    /**
+     * Number of items shown per page.
+     * @minimum 0
+     */
+    per_page: number;
+    /** The "cursor" that points to the next set of items. */
+    next_cursor: GetChatMessages200MetaNextCursor;
+    /** The "cursor" that points to the previous set of items. */
+    prev_cursor: GetChatMessages200MetaPrevCursor;
 };

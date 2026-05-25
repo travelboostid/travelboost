@@ -1,5 +1,8 @@
 import { Input } from '@/components/ui/input'
-import { useState, useEffect } from 'react'
+import type { ChangeEventHandler } from 'react';
+import { useMemo } from 'react'
+
+const formatter = new Intl.NumberFormat('id-ID')
 
 type Props = {
   value: string | number
@@ -18,27 +21,15 @@ export default function MoneyInput({
   className = '',
   name,
 }: Props) {
-  const [display, setDisplay] = useState('')
+    const displayValue = useMemo(() => {
+        const numeric = Number(`${value}`.replace(/\D/g, '')) || 0
+        return formatter.format(numeric)
+    }, [value])
 
-  useEffect(() => {
-    const numeric = String(value ?? '')
-    setDisplay(
-      numeric === ''
-        ? ''
-        : new Intl.NumberFormat('id-ID').format(Number(numeric))
-    )
-  }, [value])
 
-  const handleChange = (val: string) => {
-    const raw = val.replace(/\D/g, '')
-
-    setDisplay(
-      raw === ''
-        ? ''
-        : new Intl.NumberFormat('id-ID').format(Number(raw))
-    )
-
-    onChange(raw)
+  const handleChange: ChangeEventHandler<HTMLInputElement> = (e) => {
+    const rawValue = e.target.value || ''
+    onChange(rawValue.replace(/\D/g, ''))
   }
 
   return (
@@ -46,8 +37,8 @@ export default function MoneyInput({
       type="text"
       className={`no-spinner w-full ${className}`}
       placeholder={placeholder}
-      value={display}
-      onChange={(e) => handleChange(e.target.value)}
+      value={displayValue}
+      onChange={handleChange}
       disabled={disabled}
       name={name}
     />

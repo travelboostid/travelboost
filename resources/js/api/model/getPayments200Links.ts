@@ -6,12 +6,12 @@
  */
 import type { GetPayments200LinksFirst } from './getPayments200LinksFirst';
 import type { GetPayments200LinksLast } from './getPayments200LinksLast';
-import type { GetPayments200LinksPrev } from './getPayments200LinksPrev';
 import type { GetPayments200LinksNext } from './getPayments200LinksNext';
+import type { GetPayments200LinksPrev } from './getPayments200LinksPrev';
 
 export type GetPayments200Links = {
-  first: GetPayments200LinksFirst;
-  last: GetPayments200LinksLast;
-  prev: GetPayments200LinksPrev;
-  next: GetPayments200LinksNext;
+    first: GetPayments200LinksFirst;
+    last: GetPayments200LinksLast;
+    prev: GetPayments200LinksPrev;
+    next: GetPayments200LinksNext;
 };

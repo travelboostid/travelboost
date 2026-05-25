@@ -4,18 +4,18 @@
  * Travelboost
  * OpenAPI spec version: 0.0.1
  */
-import type { VendorRememberToken } from './vendorRememberToken';
 import type { VendorCreatedAt } from './vendorCreatedAt';
+import type { VendorRememberToken } from './vendorRememberToken';
 import type { VendorUpdatedAt } from './vendorUpdatedAt';
 
 export interface Vendor {
-  id: number;
-  name: string;
-  username: string;
-  email: string;
-  address: string;
-  phone: string;
-  remember_token: VendorRememberToken;
-  created_at: VendorCreatedAt;
-  updated_at: VendorUpdatedAt;
+    id: number;
+    name: string;
+    username: string;
+    email: string;
+    address: string;
+    phone: string;
+    remember_token: VendorRememberToken;
+    created_at: VendorCreatedAt;
+    updated_at: VendorUpdatedAt;
 }

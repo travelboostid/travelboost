@@ -6,35 +6,35 @@
  */
 
 export type GetTripsParams = {
-company_id?: number | null;
-/**
- * @maxLength 50
- */
-code?: string | null;
-/**
- * @maxLength 100
- */
-search?: string | null;
-category_id?: number | null;
-/**
- * @minimum 1
- * @maximum 365
- */
-duration_min?: number | null;
-/**
- * @minimum 1
- * @maximum 365
- */
-duration_max?: number | null;
-sort_by?: 'name' | 'duration_days' | 'created_at' | 'updated_at' | null;
-sort_order?: 'asc' | 'desc' | null;
-/**
- * @minimum 1
- * @maximum 100
- */
-per_page?: number | null;
-/**
- * @minimum 1
- */
-page?: number | null;
+    company_id?: number | null;
+    /**
+     * @maxLength 50
+     */
+    code?: string | null;
+    /**
+     * @maxLength 100
+     */
+    search?: string | null;
+    category_id?: number | null;
+    /**
+     * @minimum 1
+     * @maximum 365
+     */
+    duration_min?: number | null;
+    /**
+     * @minimum 1
+     * @maximum 365
+     */
+    duration_max?: number | null;
+    sort_by?: 'name' | 'duration_days' | 'created_at' | 'updated_at' | null;
+    sort_order?: 'asc' | 'desc' | null;
+    /**
+     * @minimum 1
+     * @maximum 100
+     */
+    per_page?: number | null;
+    /**
+     * @minimum 1
+     */
+    page?: number | null;
 };

@@ -7,74 +7,77 @@ import { Input } from '../ui/input';
 import { Spinner } from '../ui/spinner';
 import RenderAttachment from './render-attachment';
 import {
-  useChatContext,
-  useFloatingChatWidgetContext,
-  useSendMessage,
+    useChatContext,
+    useFloatingChatWidgetContext,
+    useSendMessage,
 } from './state';
 
 export default function ChatInput({
-  roomId,
-  className,
+    roomId,
+    className,
 }: {
-  roomId: number;
-  className?: string;
+    roomId: number;
+    className?: string;
 }) {
-  const sendMessage = useSendMessage();
-  const { actor } = useChatContext();
-  const { message, setMessage, attachment, setAttachment } =
-    useFloatingChatWidgetContext();
-  const [sending, setSending] = useState(false);
+    const sendMessage = useSendMessage();
+    const { actor } = useChatContext();
+    const { message, setMessage, attachment, setAttachment } =
+        useFloatingChatWidgetContext();
+    const [sending, setSending] = useState(false);
 
-  const handleSendMessage = async () => {
-    try {
-      setSending(true);
+    const handleSendMessage = async () => {
+        try {
+            setSending(true);
 
-      await sendMessage(roomId, buildMessagePayload());
-      setAttachment(null);
-      setMessage('');
-    } finally {
-      setSending(false);
-    }
-  };
-
-  const buildMessagePayload = () => {
-    const data: StoreChatMessageRequest = {
-      message: message.trim(),
-      sender_type: actor?.type || '',
-      sender_id: actor?.id || 0,
+            await sendMessage(roomId, buildMessagePayload());
+            setAttachment(null);
+            setMessage('');
+        } finally {
+            setSending(false);
+        }
     };
-    if (!attachment) return data;
-    data.attachment_type = attachment.type;
-    data.attachment_data = attachment.data;
 
-    return data;
-  };
-  return (
-    <div className={cn('divide-y flex flex-col min-h-16', className)}>
-      {attachment && (
-        <div className="p-4">
-          <RenderAttachment type={attachment.type} data={attachment.data} />
+    const buildMessagePayload = () => {
+        const data: StoreChatMessageRequest = {
+            message: message.trim(),
+            sender_type: actor?.type || '',
+            sender_id: actor?.id || 0,
+        };
+        if (!attachment) return data;
+        data.attachment_type = attachment.type;
+        data.attachment_data = attachment.data;
+
+        return data;
+    };
+    return (
+        <div className={cn('divide-y flex flex-col min-h-16', className)}>
+            {attachment && (
+                <div className="p-4">
+                    <RenderAttachment
+                        type={attachment.type}
+                        data={attachment.data}
+                    />
+                </div>
+            )}
+            <div className="flex gap-3 p-4">
+                <Input
+                    disabled={sending}
+                    type="text"
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
+                    onKeyUp={(e) => e.key === 'Enter' && handleSendMessage()}
+                    placeholder="Write your message..."
+                    className="flex-1"
+                />
+                <Button
+                    disabled={sending}
+                    onClick={() => handleSendMessage()}
+                    className="flex-none"
+                >
+                    {sending ? <Spinner /> : <Send className="h-4 w-4" />}
+                    <span className="hidden sm:inline">Send</span>
+                </Button>
+            </div>
         </div>
-      )}
-      <div className="flex gap-3 p-4">
-        <Input
-          disabled={sending}
-          type="text"
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          onKeyUp={(e) => e.key === 'Enter' && handleSendMessage()}
-          placeholder="Write your message..."
-          className="flex-1"
-        />
-        <Button
-          disabled={sending}
-          onClick={() => handleSendMessage()}
-          className="flex-none"
-        >
-          {sending ? <Spinner /> : <Send className="h-4 w-4" />}
-          <span className="hidden sm:inline">Send</span>
-        </Button>
-      </div>
-    </div>
-  );
+    );
 }

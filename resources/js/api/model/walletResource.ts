@@ -4,39 +4,39 @@
  * Travelboost
  * OpenAPI spec version: 0.0.1
  */
-import type { WalletResourceHolder } from './walletResourceHolder';
-import type { WalletResourceDescription } from './walletResourceDescription';
-import type { WalletResourceMeta } from './walletResourceMeta';
 import type { WalletResourceCurrency } from './walletResourceCurrency';
+import type { WalletResourceDescription } from './walletResourceDescription';
+import type { WalletResourceHolder } from './walletResourceHolder';
+import type { WalletResourceLinks } from './walletResourceLinks';
+import type { WalletResourceMeta } from './walletResourceMeta';
 import type { WalletResourceStatus } from './walletResourceStatus';
-import type { WalletResourceType } from './walletResourceType';
 import type { WalletResourceTotalWithdrawals } from './walletResourceTotalWithdrawals';
 import type { WalletResourceTransactionCount } from './walletResourceTransactionCount';
-import type { WalletResourceLinks } from './walletResourceLinks';
+import type { WalletResourceType } from './walletResourceType';
 
 export interface WalletResource {
-  id: number;
-  uuid: string;
-  holder?: WalletResourceHolder;
-  holder_id: number;
-  holder_type: string;
-  name: string;
-  slug: string;
-  description: WalletResourceDescription;
-  balance: string;
-  balance_int: string;
-  balance_formatted: string;
-  meta: WalletResourceMeta;
-  currency: WalletResourceCurrency;
-  status: WalletResourceStatus;
-  type: WalletResourceType;
-  total_deposits: unknown;
-  total_withdrawals?: WalletResourceTotalWithdrawals;
-  transaction_count: WalletResourceTransactionCount;
-  /** Dates */
-  created_at: string;
-  updated_at: string;
-  last_transaction_at?: string;
-  /** Links */
-  links: WalletResourceLinks;
+    id: number;
+    uuid: string;
+    holder?: WalletResourceHolder;
+    holder_id: number;
+    holder_type: string;
+    name: string;
+    slug: string;
+    description: WalletResourceDescription;
+    balance: string;
+    balance_int: string;
+    balance_formatted: string;
+    meta: WalletResourceMeta;
+    currency: WalletResourceCurrency;
+    status: WalletResourceStatus;
+    type: WalletResourceType;
+    total_deposits: unknown;
+    total_withdrawals?: WalletResourceTotalWithdrawals;
+    transaction_count: WalletResourceTransactionCount;
+    /** Dates */
+    created_at: string;
+    updated_at: string;
+    last_transaction_at?: string;
+    /** Links */
+    links: WalletResourceLinks;
 }

@@ -85,6 +85,7 @@ type BookingResource = {
     vendor: { id: number; name: string } | null;
     agent: { id: number; name: string } | null;
     user: { id: number; name: string } | null;
+    can_review_manual_payment?: boolean;
     manual_payment: {
         id: number;
         sender_bank_name: string | null;
@@ -245,7 +246,8 @@ function RowActions({
     >(null);
     const canReviewManualPayment =
         booking.status === 'waiting payment approval' &&
-        Boolean(booking.manual_payment);
+        Boolean(booking.manual_payment) &&
+        Boolean(booking.can_review_manual_payment);
 
     const submitManualPaymentDecision = (decision: 'accept' | 'decline') => {
         if (!booking.manual_payment) return;

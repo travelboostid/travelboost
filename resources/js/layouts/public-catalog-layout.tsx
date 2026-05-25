@@ -4,15 +4,15 @@ import AnonymousUserContextProvider from '@/components/anonymous-user-context-pr
 import PublicCatalogLayoutInner from './public-catalog-layout-inner';
 
 export type PublicCatalogLayoutProps = {
-  children: React.ReactNode;
+    children: React.ReactNode;
 };
 
 export default function PublicCatalogLayout(props: PublicCatalogLayoutProps) {
-  return (
-    <TooltipProvider>
-      <AnonymousUserContextProvider>
-        <PublicCatalogLayoutInner {...props} />
-      </AnonymousUserContextProvider>
-    </TooltipProvider>
-  );
+    return (
+        <TooltipProvider>
+            <AnonymousUserContextProvider>
+                <PublicCatalogLayoutInner {...props} />
+            </AnonymousUserContextProvider>
+        </TooltipProvider>
+    );
 }

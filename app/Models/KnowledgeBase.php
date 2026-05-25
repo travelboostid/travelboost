@@ -6,19 +6,19 @@ use Illuminate\Database\Eloquent\Model;
 
 class KnowledgeBase extends Model
 {
-  protected $fillable = [
-    'owner_type',
-    'owner_id',
-    'content',
-    'embedding',
-  ];
+    protected $fillable = [
+        'owner_type',
+        'owner_id',
+        'content',
+        'embedding',
+    ];
 
-  protected $casts = [
-    'embedding' => 'array',
-  ];
+    protected $casts = [
+        'embedding' => 'array',
+    ];
 
-  public function owner()
-  {
-    return $this->morphTo();
-  }
+    public function owner()
+    {
+        return $this->morphTo();
+    }
 }

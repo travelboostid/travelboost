@@ -4,12 +4,12 @@
  * Travelboost
  * OpenAPI spec version: 0.0.1
  */
-import type { MediaResource } from './mediaResource';
 import type { GetMedias200Links } from './getMedias200Links';
 import type { GetMedias200Meta } from './getMedias200Meta';
+import type { MediaResource } from './mediaResource';
 
 export type GetMedias200 = {
-  data: MediaResource[];
-  links: GetMedias200Links;
-  meta: GetMedias200Meta;
+    data: MediaResource[];
+    links: GetMedias200Links;
+    meta: GetMedias200Meta;
 };

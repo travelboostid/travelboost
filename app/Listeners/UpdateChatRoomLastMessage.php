@@ -6,21 +6,21 @@ use App\Events\ChatMessageCreated;
 
 class UpdateChatRoomLastMessage
 {
-  /**
-   * Create the event listener.
-   */
-  public function __construct()
-  {
-    //
-  }
+    /**
+     * Create the event listener.
+     */
+    public function __construct()
+    {
+        //
+    }
 
-  /**
-   * Handle the event.
-   */
-  public function handle(ChatMessageCreated $event): void
-  {
-    $event->message->room()->update([
-      'last_message_id' => $event->message->id,
-    ]);
-  }
+    /**
+     * Handle the event.
+     */
+    public function handle(ChatMessageCreated $event): void
+    {
+        $event->message->room()->update([
+            'last_message_id' => $event->message->id,
+        ]);
+    }
 }

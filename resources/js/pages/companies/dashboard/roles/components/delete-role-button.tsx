@@ -1,19 +1,19 @@
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger,
 } from '@/components/ui/tooltip';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { destroy } from '@/routes/companies/dashboard/roles';
@@ -22,50 +22,55 @@ import { Trash2Icon } from 'lucide-react';
 import { useState } from 'react';
 
 export default function DeleteRoleButton({ role }: { role: any }) {
-  const { company } = usePageSharedDataProps();
-  const [open, setOpen] = useState(false);
-  const form = useForm();
-  const shouldDisabled =
-    role.name.endsWith(':superadmin') || role.users.length > 0;
+    const { company } = usePageSharedDataProps();
+    const [open, setOpen] = useState(false);
+    const form = useForm();
+    const shouldDisabled =
+        role.name.endsWith(':superadmin') || role.users.length > 0;
 
-  const handleDelete = () => {
-    form.delete(destroy({ company: company.username, role: role.id }).url, {
-      preserveScroll: true,
-      onSuccess: () => {
-        setOpen(false);
-      },
-    });
-  };
-  return (
-    <AlertDialog open={open} onOpenChange={setOpen}>
-      <AlertDialogTrigger>
-        <Tooltip>
-          <TooltipTrigger>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="rounded-full text-destructive"
-              disabled={shouldDisabled}
-              aria-label="Delete role"
-            >
-              <Trash2Icon className="size-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Delete role</TooltipContent>
-        </Tooltip>
-      </AlertDialogTrigger>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Delete {role.display_name}?</AlertDialogTitle>
-          <AlertDialogDescription>
-            This will permanently delete the role. This action cannot be undone.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
-  );
+    const handleDelete = () => {
+        form.delete(destroy({ company: company.username, role: role.id }).url, {
+            preserveScroll: true,
+            onSuccess: () => {
+                setOpen(false);
+            },
+        });
+    };
+    return (
+        <AlertDialog open={open} onOpenChange={setOpen}>
+            <AlertDialogTrigger>
+                <Tooltip>
+                    <TooltipTrigger>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="rounded-full text-destructive"
+                            disabled={shouldDisabled}
+                            aria-label="Delete role"
+                        >
+                            <Trash2Icon className="size-4" />
+                        </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Delete role</TooltipContent>
+                </Tooltip>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>
+                        Delete {role.display_name}?
+                    </AlertDialogTitle>
+                    <AlertDialogDescription>
+                        This will permanently delete the role. This action
+                        cannot be undone.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDelete}>
+                        Delete
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+    );
 }

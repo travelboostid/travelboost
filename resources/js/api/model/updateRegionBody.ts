@@ -6,7 +6,7 @@
  */
 
 export type UpdateRegionBody = {
-  continent_id?: number;
-  /** @maxLength 255 */
-  name?: string;
+    continent_id?: number;
+    /** @maxLength 255 */
+    name?: string;
 };

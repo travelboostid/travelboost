@@ -8,8 +8,8 @@ import type { ChatRoomResourceMembersItemRole } from './chatRoomResourceMembersI
 import type { ChatRoomResourceMembersItemUser } from './chatRoomResourceMembersItemUser';
 
 export type ChatRoomResourceMembersItem = {
-  id: number;
-  role: ChatRoomResourceMembersItemRole;
-  joined_at: string;
-  user: ChatRoomResourceMembersItemUser;
+    id: number;
+    role: ChatRoomResourceMembersItemRole;
+    joined_at: string;
+    user: ChatRoomResourceMembersItemUser;
 };

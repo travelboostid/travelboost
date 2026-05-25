@@ -11,28 +11,28 @@ use Illuminate\Database\Eloquent\Factories\Factory;
  */
 class TourFactory extends Factory
 {
-  protected $model = Tour::class;
+    protected $model = Tour::class;
 
-  public function definition(): array
-  {
-    return [
-      'code' => 'TOUR-' . $this->faker->unique()->numberBetween(1000, 9999),
-      'name' => $this->faker->sentence(3),
-      'description' => $this->faker->paragraph(),
+    public function definition(): array
+    {
+        return [
+            'code' => 'TOUR-'.fake()->unique()->numberBetween(1000, 9999),
+            'name' => fake()->sentence(3),
+            'description' => fake()->paragraph(),
 
-      'duration_days' => $this->faker->numberBetween(2, 14),
+            'duration_days' => fake()->numberBetween(2, 14),
 
-      'status' => $this->faker->randomElement([
-        TourStatus::ACTIVE,
-        TourStatus::INACTIVE,
-      ]),
-      'continent_id' => 1,
-      'region_id' => 1,
-      'country_id' => 1,
-      'destination' => $this->faker->city(),
+            'status' => fake()->randomElement([
+                TourStatus::ACTIVE,
+                TourStatus::INACTIVE,
+            ]),
+            'continent_id' => 1,
+            'region_id' => 1,
+            'country_id' => 1,
+            'destination' => fake()->city(),
 
-      'category_id' => null,
-      'company_id' => null,
-    ];
-  }
+            'category_id' => null,
+            'company_id' => null,
+        ];
+    }
 }
