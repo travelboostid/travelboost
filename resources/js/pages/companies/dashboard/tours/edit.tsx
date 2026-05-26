@@ -2069,7 +2069,7 @@ export default function Page({ tour }: Props) {
                                 </div>
 
                                 {/* DESKTOP TABLE */}
-                                <div className="overflow-hidden rounded-lg border">
+                                <div className="hidden lg:block overflow-hidden rounded-lg border">
                                     <table className="w-full border-collapse text-sm">
                                         {/* ================= HEADER ================= */}
                                         <thead className="bg-muted">
@@ -2747,15 +2747,30 @@ export default function Page({ tour }: Props) {
                                         return (
                                             <div
                                                 key={index}
-                                                className="border rounded-lg p-3 space-y-3"
+                                                className="
+        rounded-xl
+        border
+        bg-background
+        p-4
+        shadow-sm
+        space-y-4
+    "
                                             >
                                                 {/* HEADER */}
                                                 <div className="flex justify-between items-start">
-                                                    <p className="font-medium text-sm">
-                                                        Schedule #{index + 1}
-                                                    </p>
+                                                    <div>
+                                                        <p className="font-medium">
+                                                            {item.departure_date ||
+                                                                'New Schedule'}
+                                                        </p>
 
-                                                    <td className="p-2">
+                                                        <p className="text-xs text-muted-foreground">
+                                                            {item.return_date ||
+                                                                '-'}
+                                                        </p>
+                                                    </div>
+
+                                                    <div>
                                                         <DropdownMenu>
                                                             <DropdownMenuTrigger
                                                                 asChild
@@ -2820,11 +2835,11 @@ export default function Page({ tour }: Props) {
                                                                 </DropdownMenuItem>
                                                             </DropdownMenuContent>
                                                         </DropdownMenu>
-                                                    </td>
+                                                    </div>
                                                 </div>
 
                                                 {/* DATES */}
-                                                <div className="grid grid-cols-2 gap-2">
+                                                <div className="grid gap-3 sm:grid-cols-2">
                                                     <div>
                                                         <p className="text-xs text-muted-foreground">
                                                             Departure
@@ -2872,352 +2887,402 @@ export default function Page({ tour }: Props) {
                                                 </div>
 
                                                 {/* ROOMS */}
-                                                <div className="space-y-3">
-                                                    {(item.prices || []).map(
-                                                        (room, rIndex) => (
-                                                            <div
-                                                                key={rIndex}
-                                                                className="border rounded-md p-3 space-y-2"
-                                                            >
-                                                                {/* ROOM HEADER */}
-                                                                <div className="flex justify-between items-center">
-                                                                    <p className="text-xs font-medium text-muted-foreground">
-                                                                        Room #
-                                                                        {rIndex +
-                                                                            1}
-                                                                    </p>
+                                                <Accordion
+                                                    type="single"
+                                                    collapsible
+                                                >
+                                                    <AccordionItem
+                                                        value={`prices-${index}`}
+                                                    >
+                                                        <AccordionTrigger>
+                                                            <div className="flex items-center gap-2">
+                                                                Categories
+                                                                <Badge variant="secondary">
+                                                                    {item.prices
+                                                                        ?.length ??
+                                                                        0}
+                                                                </Badge>
+                                                            </div>
+                                                        </AccordionTrigger>
 
-                                                                    <Button
-                                                                        type="button"
-                                                                        size="sm"
-                                                                        variant="ghost"
-                                                                        className="text-red-500"
-                                                                        onClick={() =>
-                                                                            removeRoom(
-                                                                                index,
-                                                                                rIndex,
-                                                                            )
-                                                                        }
-                                                                    >
-                                                                        x Delete
-                                                                        Category
-                                                                    </Button>
-                                                                </div>
+                                                        <AccordionContent>
+                                                            <div className="space-y-3">
+                                                                {(
+                                                                    item.prices ||
+                                                                    []
+                                                                ).map(
+                                                                    (
+                                                                        room,
+                                                                        rIndex,
+                                                                    ) => (
+                                                                        <div
+                                                                            key={
+                                                                                rIndex
+                                                                            }
+                                                                            className="border rounded-md p-3 space-y-2"
+                                                                        >
+                                                                            {/* ROOM HEADER */}
+                                                                            <div className="flex justify-between items-center">
+                                                                                <p className="text-xs font-medium text-muted-foreground">
+                                                                                    Room
+                                                                                    #
+                                                                                    {rIndex +
+                                                                                        1}
+                                                                                </p>
 
-                                                                {/* ROOM TYPE */}
-                                                                <div className="space-y-1">
-                                                                    <p className="text-xs text-muted-foreground">
-                                                                        Category
-                                                                    </p>
+                                                                                <Button
+                                                                                    type="button"
+                                                                                    size="sm"
+                                                                                    variant="ghost"
+                                                                                    className="text-red-500"
+                                                                                    onClick={() =>
+                                                                                        removeRoom(
+                                                                                            index,
+                                                                                            rIndex,
+                                                                                        )
+                                                                                    }
+                                                                                >
+                                                                                    x
+                                                                                    Delete
+                                                                                    Category
+                                                                                </Button>
+                                                                            </div>
 
-                                                                    <select
-                                                                        className="w-full border rounded-md px-3 h-10 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary"
-                                                                        value={
-                                                                            room.room_type_id ??
-                                                                            ''
-                                                                        }
-                                                                        onChange={(
-                                                                            e,
-                                                                        ) =>
-                                                                            updateRoom(
-                                                                                index,
-                                                                                rIndex,
-                                                                                'room_type_id',
-                                                                                Number(
-                                                                                    e
-                                                                                        .target
-                                                                                        .value,
-                                                                                ),
-                                                                            )
-                                                                        }
-                                                                    >
-                                                                        <option value="">
-                                                                            Select
-                                                                            Category
-                                                                        </option>
+                                                                            {/* ROOM TYPE */}
+                                                                            <div className="space-y-1">
+                                                                                <p className="text-xs text-muted-foreground">
+                                                                                    Category
+                                                                                </p>
 
-                                                                        {(
+                                                                                <select
+                                                                                    className="w-full border rounded-md px-3 h-10 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+                                                                                    value={
+                                                                                        room.room_type_id ??
+                                                                                        ''
+                                                                                    }
+                                                                                    onChange={(
+                                                                                        e,
+                                                                                    ) =>
+                                                                                        updateRoom(
+                                                                                            index,
+                                                                                            rIndex,
+                                                                                            'room_type_id',
+                                                                                            Number(
+                                                                                                e
+                                                                                                    .target
+                                                                                                    .value,
+                                                                                            ),
+                                                                                        )
+                                                                                    }
+                                                                                >
+                                                                                    <option value="">
+                                                                                        Select
+                                                                                        Category
+                                                                                    </option>
+
+                                                                                    {(
+                                                                                        priceCategories ||
+                                                                                        []
+                                                                                    )
+                                                                                        .filter(
+                                                                                            (
+                                                                                                cat,
+                                                                                            ) => {
+                                                                                                const selectedIds =
+                                                                                                    (
+                                                                                                        item.prices ||
+                                                                                                        []
+                                                                                                    )
+                                                                                                        .map(
+                                                                                                            (
+                                                                                                                p,
+                                                                                                                i,
+                                                                                                            ) =>
+                                                                                                                i !==
+                                                                                                                rIndex
+                                                                                                                    ? p.room_type_id
+                                                                                                                    : null,
+                                                                                                        )
+                                                                                                        .filter(
+                                                                                                            Boolean,
+                                                                                                        );
+
+                                                                                                return !selectedIds.includes(
+                                                                                                    cat.id,
+                                                                                                );
+                                                                                            },
+                                                                                        )
+                                                                                        .map(
+                                                                                            (
+                                                                                                cat,
+                                                                                            ) => (
+                                                                                                <option
+                                                                                                    key={
+                                                                                                        cat.id
+                                                                                                    }
+                                                                                                    value={
+                                                                                                        cat.id
+                                                                                                    }
+                                                                                                >
+                                                                                                    {
+                                                                                                        cat.name
+                                                                                                    }
+                                                                                                </option>
+                                                                                            ),
+                                                                                        )}
+                                                                                </select>
+                                                                            </div>
+
+                                                                            {/* PRICE */}
+                                                                            <div>
+                                                                                <p className="text-xs text-muted-foreground">
+                                                                                    Price
+                                                                                </p>
+                                                                                <MoneyInput
+                                                                                    value={
+                                                                                        room.price
+                                                                                    }
+                                                                                    placeholder="Price"
+                                                                                    onChange={(
+                                                                                        val,
+                                                                                    ) =>
+                                                                                        updateRoom(
+                                                                                            index,
+                                                                                            rIndex,
+                                                                                            'price',
+                                                                                            val,
+                                                                                        )
+                                                                                    }
+                                                                                />
+                                                                            </div>
+
+                                                                            {/* PROMOTION */}
+                                                                            <div className="space-y-1">
+                                                                                <p className="text-xs text-muted-foreground">
+                                                                                    Promotion
+                                                                                </p>
+
+                                                                                <div className="grid gap-2 sm:grid-cols-2">
+                                                                                    {/* % */}
+                                                                                    <div className="relative">
+                                                                                        <MoneyInput
+                                                                                            value={
+                                                                                                room
+                                                                                                    .promotion
+                                                                                                    .type ===
+                                                                                                'percent'
+                                                                                                    ? room
+                                                                                                          .promotion
+                                                                                                          .value
+                                                                                                    : ''
+                                                                                            }
+                                                                                            placeholder="0"
+                                                                                            className="pr-8"
+                                                                                            onChange={(
+                                                                                                val,
+                                                                                            ) => {
+                                                                                                updateRoomAdjustment(
+                                                                                                    index,
+                                                                                                    rIndex,
+                                                                                                    'promotion',
+                                                                                                    'type',
+                                                                                                    'percent',
+                                                                                                );
+                                                                                                updateRoomAdjustment(
+                                                                                                    index,
+                                                                                                    rIndex,
+                                                                                                    'promotion',
+                                                                                                    'value',
+                                                                                                    val,
+                                                                                                );
+                                                                                            }}
+                                                                                        />
+
+                                                                                        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                                                                                            %
+                                                                                        </span>
+                                                                                    </div>
+
+                                                                                    {/* VALUE */}
+                                                                                    <MoneyInput
+                                                                                        value={
+                                                                                            room
+                                                                                                .promotion
+                                                                                                .type ===
+                                                                                            'value'
+                                                                                                ? room
+                                                                                                      .promotion
+                                                                                                      .value
+                                                                                                : ''
+                                                                                        }
+                                                                                        placeholder="Value"
+                                                                                        onChange={(
+                                                                                            val,
+                                                                                        ) => {
+                                                                                            updateRoomAdjustment(
+                                                                                                index,
+                                                                                                rIndex,
+                                                                                                'promotion',
+                                                                                                'type',
+                                                                                                'value',
+                                                                                            );
+                                                                                            updateRoomAdjustment(
+                                                                                                index,
+                                                                                                rIndex,
+                                                                                                'promotion',
+                                                                                                'value',
+                                                                                                val,
+                                                                                            );
+                                                                                        }}
+                                                                                    />
+                                                                                </div>
+                                                                            </div>
+
+                                                                            {/* COMMISSION */}
+                                                                            <div className="space-y-1">
+                                                                                <p className="text-xs text-muted-foreground">
+                                                                                    Commission
+                                                                                </p>
+
+                                                                                <div className="grid gap-2 sm:grid-cols-2">
+                                                                                    {/* % */}
+                                                                                    <div className="relative">
+                                                                                        <MoneyInput
+                                                                                            value={
+                                                                                                room
+                                                                                                    .commission
+                                                                                                    .type ===
+                                                                                                'percent'
+                                                                                                    ? room
+                                                                                                          .commission
+                                                                                                          .value
+                                                                                                    : ''
+                                                                                            }
+                                                                                            placeholder="0"
+                                                                                            className="pr-8"
+                                                                                            onChange={(
+                                                                                                val,
+                                                                                            ) => {
+                                                                                                updateRoomAdjustment(
+                                                                                                    index,
+                                                                                                    rIndex,
+                                                                                                    'commission',
+                                                                                                    'type',
+                                                                                                    'percent',
+                                                                                                );
+                                                                                                updateRoomAdjustment(
+                                                                                                    index,
+                                                                                                    rIndex,
+                                                                                                    'commission',
+                                                                                                    'value',
+                                                                                                    val,
+                                                                                                );
+                                                                                            }}
+                                                                                        />
+
+                                                                                        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                                                                                            %
+                                                                                        </span>
+                                                                                    </div>
+
+                                                                                    {/* VALUE */}
+                                                                                    <MoneyInput
+                                                                                        value={
+                                                                                            room
+                                                                                                .commission
+                                                                                                .type ===
+                                                                                            'value'
+                                                                                                ? room
+                                                                                                      .commission
+                                                                                                      .value
+                                                                                                : ''
+                                                                                        }
+                                                                                        placeholder="Value"
+                                                                                        onChange={(
+                                                                                            val,
+                                                                                        ) => {
+                                                                                            updateRoomAdjustment(
+                                                                                                index,
+                                                                                                rIndex,
+                                                                                                'commission',
+                                                                                                'type',
+                                                                                                'value',
+                                                                                            );
+                                                                                            updateRoomAdjustment(
+                                                                                                index,
+                                                                                                rIndex,
+                                                                                                'commission',
+                                                                                                'value',
+                                                                                                val,
+                                                                                            );
+                                                                                        }}
+                                                                                    />
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    ),
+                                                                )}
+
+                                                                {/* ADD ROOM */}
+                                                                <Button
+                                                                    type="button"
+                                                                    size="sm"
+                                                                    variant="outline"
+                                                                    className="w-full"
+                                                                    onClick={() =>
+                                                                        addRoom(
+                                                                            index,
+                                                                        )
+                                                                    }
+                                                                    disabled={
+                                                                        (
+                                                                            item.prices ||
+                                                                            []
+                                                                        ).filter(
+                                                                            (
+                                                                                p,
+                                                                            ) =>
+                                                                                p.room_type_id,
+                                                                        )
+                                                                            .length >=
+                                                                        (
                                                                             priceCategories ||
                                                                             []
-                                                                        )
-                                                                            .filter(
-                                                                                (
-                                                                                    cat,
-                                                                                ) => {
-                                                                                    const selectedIds =
-                                                                                        (
-                                                                                            item.prices ||
-                                                                                            []
-                                                                                        )
-                                                                                            .map(
-                                                                                                (
-                                                                                                    p,
-                                                                                                    i,
-                                                                                                ) =>
-                                                                                                    i !==
-                                                                                                    rIndex
-                                                                                                        ? p.room_type_id
-                                                                                                        : null,
-                                                                                            )
-                                                                                            .filter(
-                                                                                                Boolean,
-                                                                                            );
-
-                                                                                    return !selectedIds.includes(
-                                                                                        cat.id,
-                                                                                    );
-                                                                                },
-                                                                            )
-                                                                            .map(
-                                                                                (
-                                                                                    cat,
-                                                                                ) => (
-                                                                                    <option
-                                                                                        key={
-                                                                                            cat.id
-                                                                                        }
-                                                                                        value={
-                                                                                            cat.id
-                                                                                        }
-                                                                                    >
-                                                                                        {
-                                                                                            cat.name
-                                                                                        }
-                                                                                    </option>
-                                                                                ),
-                                                                            )}
-                                                                    </select>
-                                                                </div>
-
-                                                                {/* PRICE */}
-                                                                <div>
-                                                                    <p className="text-xs text-muted-foreground">
-                                                                        Price
-                                                                    </p>
-                                                                    <MoneyInput
-                                                                        value={
-                                                                            room.price
-                                                                        }
-                                                                        placeholder="Price"
-                                                                        onChange={(
-                                                                            val,
-                                                                        ) =>
-                                                                            updateRoom(
-                                                                                index,
-                                                                                rIndex,
-                                                                                'price',
-                                                                                val,
-                                                                            )
-                                                                        }
-                                                                    />
-                                                                </div>
-
-                                                                {/* PROMOTION */}
-                                                                <div className="space-y-1">
-                                                                    <p className="text-xs text-muted-foreground">
-                                                                        Promotion
-                                                                    </p>
-
-                                                                    <div className="grid grid-cols-2 gap-2">
-                                                                        {/* % */}
-                                                                        <div className="relative">
-                                                                            <MoneyInput
-                                                                                value={
-                                                                                    room
-                                                                                        .promotion
-                                                                                        .type ===
-                                                                                    'percent'
-                                                                                        ? room
-                                                                                              .promotion
-                                                                                              .value
-                                                                                        : ''
-                                                                                }
-                                                                                placeholder="0"
-                                                                                className="pr-8"
-                                                                                onChange={(
-                                                                                    val,
-                                                                                ) => {
-                                                                                    updateRoomAdjustment(
-                                                                                        index,
-                                                                                        rIndex,
-                                                                                        'promotion',
-                                                                                        'type',
-                                                                                        'percent',
-                                                                                    );
-                                                                                    updateRoomAdjustment(
-                                                                                        index,
-                                                                                        rIndex,
-                                                                                        'promotion',
-                                                                                        'value',
-                                                                                        val,
-                                                                                    );
-                                                                                }}
-                                                                            />
-
-                                                                            <span className="absolute right-2 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-                                                                                %
-                                                                            </span>
-                                                                        </div>
-
-                                                                        {/* VALUE */}
-                                                                        <MoneyInput
-                                                                            value={
-                                                                                room
-                                                                                    .promotion
-                                                                                    .type ===
-                                                                                'value'
-                                                                                    ? room
-                                                                                          .promotion
-                                                                                          .value
-                                                                                    : ''
-                                                                            }
-                                                                            placeholder="Value"
-                                                                            onChange={(
-                                                                                val,
-                                                                            ) => {
-                                                                                updateRoomAdjustment(
-                                                                                    index,
-                                                                                    rIndex,
-                                                                                    'promotion',
-                                                                                    'type',
-                                                                                    'value',
-                                                                                );
-                                                                                updateRoomAdjustment(
-                                                                                    index,
-                                                                                    rIndex,
-                                                                                    'promotion',
-                                                                                    'value',
-                                                                                    val,
-                                                                                );
-                                                                            }}
-                                                                        />
-                                                                    </div>
-                                                                </div>
-
-                                                                {/* COMMISSION */}
-                                                                <div className="space-y-1">
-                                                                    <p className="text-xs text-muted-foreground">
-                                                                        Commission
-                                                                    </p>
-
-                                                                    <div className="grid grid-cols-2 gap-2">
-                                                                        {/* % */}
-                                                                        <div className="relative">
-                                                                            <MoneyInput
-                                                                                value={
-                                                                                    room
-                                                                                        .commission
-                                                                                        .type ===
-                                                                                    'percent'
-                                                                                        ? room
-                                                                                              .commission
-                                                                                              .value
-                                                                                        : ''
-                                                                                }
-                                                                                placeholder="0"
-                                                                                className="pr-8"
-                                                                                onChange={(
-                                                                                    val,
-                                                                                ) => {
-                                                                                    updateRoomAdjustment(
-                                                                                        index,
-                                                                                        rIndex,
-                                                                                        'commission',
-                                                                                        'type',
-                                                                                        'percent',
-                                                                                    );
-                                                                                    updateRoomAdjustment(
-                                                                                        index,
-                                                                                        rIndex,
-                                                                                        'commission',
-                                                                                        'value',
-                                                                                        val,
-                                                                                    );
-                                                                                }}
-                                                                            />
-
-                                                                            <span className="absolute right-2 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-                                                                                %
-                                                                            </span>
-                                                                        </div>
-
-                                                                        {/* VALUE */}
-                                                                        <MoneyInput
-                                                                            value={
-                                                                                room
-                                                                                    .commission
-                                                                                    .type ===
-                                                                                'value'
-                                                                                    ? room
-                                                                                          .commission
-                                                                                          .value
-                                                                                    : ''
-                                                                            }
-                                                                            placeholder="Value"
-                                                                            onChange={(
-                                                                                val,
-                                                                            ) => {
-                                                                                updateRoomAdjustment(
-                                                                                    index,
-                                                                                    rIndex,
-                                                                                    'commission',
-                                                                                    'type',
-                                                                                    'value',
-                                                                                );
-                                                                                updateRoomAdjustment(
-                                                                                    index,
-                                                                                    rIndex,
-                                                                                    'commission',
-                                                                                    'value',
-                                                                                    val,
-                                                                                );
-                                                                            }}
-                                                                        />
-                                                                    </div>
-                                                                </div>
+                                                                        ).length
+                                                                    }
+                                                                >
+                                                                    + Add
+                                                                    Category
+                                                                </Button>
                                                             </div>
-                                                        ),
-                                                    )}
-
-                                                    {/* ADD ROOM */}
-                                                    <Button
-                                                        type="button"
-                                                        size="sm"
-                                                        variant="outline"
-                                                        onClick={() =>
-                                                            addRoom(index)
-                                                        }
-                                                        disabled={
-                                                            (
-                                                                item.prices ||
-                                                                []
-                                                            ).filter(
-                                                                (p) =>
-                                                                    p.room_type_id,
-                                                            ).length >=
-                                                            (
-                                                                priceCategories ||
-                                                                []
-                                                            ).length
-                                                        }
-                                                    >
-                                                        + Add Category
-                                                    </Button>
-                                                </div>
+                                                        </AccordionContent>
+                                                    </AccordionItem>
+                                                </Accordion>
                                             </div>
                                         );
                                     })}
-                                    <div className="mt-6 flex items-center justify-between border-t px-4 pt-4">
+                                    <div
+                                        className="
+        mt-6
+        flex flex-col gap-3
+        border-t
+        px-4 pt-4
+        sm:flex-row
+        sm:items-center
+        sm:justify-between
+    "
+                                    >
                                         <div className="text-sm text-muted-foreground">
                                             Page {currentSchedulePage} of{' '}
                                             {totalSchedulePages}
                                         </div>
 
-                                        <div className="flex items-center gap-2">
+                                        <div className="flex w-full gap-2 sm:w-auto">
                                             <Button
                                                 type="button"
                                                 variant="outline"
                                                 size="sm"
+                                                className="flex-1 sm:flex-none"
                                                 disabled={
                                                     currentSchedulePage === 1
                                                 }
@@ -3234,6 +3299,7 @@ export default function Page({ tour }: Props) {
                                                 type="button"
                                                 variant="outline"
                                                 size="sm"
+                                                className="flex-1 sm:flex-none"
                                                 disabled={
                                                     currentSchedulePage ===
                                                     totalSchedulePages
