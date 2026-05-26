@@ -24,7 +24,13 @@ use Illuminate\Support\Facades\Route;
 
 Route::prefix('webapi')->group(function () {
     Route::middleware(['web', 'auth'])->group(function () {
-        Route::apiResource('companies', CompanyController::class);
+        Route::apiResource('companies', CompanyController::class)->names([
+            'index' => 'webapi.companies.index',
+            'store' => 'webapi.companies.store',
+            'show' => 'webapi.companies.show',
+            'update' => 'webapi.companies.update',
+            'destroy' => 'webapi.companies.destroy',
+        ]);
         Route::apiResource('payments', PaymentController::class);
         Route::apiResource('withdrawals', WithdrawalController::class);
         Route::apiResource('bank-accounts', BankAccountController::class);
