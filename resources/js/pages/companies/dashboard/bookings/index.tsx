@@ -307,12 +307,12 @@ function FollowupCell({
                 {followup.label}
             </Badge>
             {details && (
-                <p className="mt-1 text-xs font-medium text-slate-700">
+                <p className="mt-1 text-xs font-medium text-slate-700 dark:text-slate-200">
                     {details}
                 </p>
             )}
             {deadlineText && (
-                <p className="mt-0.5 text-[11px] text-slate-500">
+                <p className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">
                     {deadlineText}
                 </p>
             )}
@@ -326,25 +326,29 @@ function FollowupSummaryCards({ summary }: { summary: FollowupSummary }) {
             label: 'Payment overdue',
             value: summary.payment_overdue,
             icon: AlertTriangleIcon,
-            className: 'border-red-100 bg-red-50 text-red-600',
+            className:
+                'border-red-100 bg-red-50 text-red-600 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300',
         },
         {
             label: 'Payment due soon',
             value: summary.payment_due_soon,
             icon: CreditCardIcon,
-            className: 'border-amber-100 bg-amber-50 text-amber-700',
+            className:
+                'border-amber-100 bg-amber-50 text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-300',
         },
         {
             label: 'Docs incomplete',
             value: summary.documents_incomplete,
             icon: FileCheckIcon,
-            className: 'border-slate-200 bg-white text-slate-700',
+            className:
+                'border-slate-200 bg-white text-slate-700 dark:border-slate-800 dark:bg-slate-950/70 dark:text-slate-200',
         },
         {
             label: 'Docs due soon',
             value: summary.documents_due_soon,
             icon: CalendarClockIcon,
-            className: 'border-sky-100 bg-sky-50 text-sky-700',
+            className:
+                'border-sky-100 bg-sky-50 text-sky-700 dark:border-sky-900/60 dark:bg-sky-950/30 dark:text-sky-300',
         },
     ];
 
@@ -357,7 +361,7 @@ function FollowupSummaryCards({ summary }: { summary: FollowupSummary }) {
                     <div
                         key={item.label}
                         className={cn(
-                            'flex items-center justify-between rounded-lg border px-3 py-2.5 shadow-sm',
+                            'flex items-center justify-between rounded-lg border px-3 py-2.5 shadow-sm dark:shadow-none',
                             item.className,
                         )}
                     >
@@ -391,7 +395,7 @@ function PaxCell({
         <TooltipProvider>
             <Tooltip>
                 <TooltipTrigger asChild>
-                    <span className="font-semibold tabular-nums text-sm text-slate-700">
+                    <span className="font-semibold tabular-nums text-sm text-slate-700 dark:text-slate-200">
                         {total}
                     </span>
                 </TooltipTrigger>
@@ -772,7 +776,7 @@ function buildColumns(
             accessorKey: 'created_at',
             header: 'Booking Date',
             cell: ({ cell }) => (
-                <div className="whitespace-nowrap text-xs text-slate-500">
+                <div className="whitespace-nowrap text-xs text-slate-500 dark:text-slate-300">
                     {dayjs(cell.getValue<string>()).format('DD MMM YYYY')}
                 </div>
             ),
@@ -797,7 +801,7 @@ function buildColumns(
             cell: ({ cell }) => {
                 const val = cell.getValue<string>();
                 return (
-                    <div className="whitespace-nowrap text-xs text-slate-500">
+                    <div className="whitespace-nowrap text-xs text-slate-500 dark:text-slate-300">
                         {val ? dayjs(val).format('DD MMM YYYY') : '—'}
                     </div>
                 );
@@ -808,7 +812,7 @@ function buildColumns(
             accessorKey: 'booking_number',
             header: 'Booking Number',
             cell: ({ cell }) => (
-                <span className="uppercase font-mono text-[11px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded border border-slate-200">
+                <span className="uppercase font-mono text-[11px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded border border-slate-200 dark:bg-slate-900 dark:text-slate-200 dark:border-slate-700">
                     {cell.getValue<string>()}
                 </span>
             ),
@@ -841,7 +845,7 @@ function buildColumns(
             header: isAgent ? 'Vendor' : 'Agent',
             cell: ({ row }) => (
                 <div
-                    className="font-semibold text-slate-700 max-w-[120px] xl:max-w-[150px] truncate"
+                    className="font-semibold text-slate-700 max-w-[120px] xl:max-w-[150px] truncate dark:text-slate-200"
                     title={
                         isAgent
                             ? (row.original.vendor?.name ?? '—')
@@ -859,7 +863,7 @@ function buildColumns(
             accessorKey: 'contact_name',
             header: 'Ordered By',
             cell: ({ cell }) => (
-                <div className="text-slate-600 truncate max-w-[120px]">
+                <div className="text-slate-600 truncate max-w-[120px] dark:text-slate-300">
                     {cell.getValue<string>() || '—'}
                 </div>
             ),
@@ -881,7 +885,7 @@ function buildColumns(
             accessorKey: 'grand_total',
             header: 'Grand Total',
             cell: ({ cell }) => (
-                <div className="font-medium tabular-nums whitespace-nowrap text-slate-700">
+                <div className="font-medium tabular-nums whitespace-nowrap text-slate-700 dark:text-slate-200">
                     {formatIDR(cell.getValue<string>())}
                 </div>
             ),
@@ -973,8 +977,8 @@ function buildColumns(
                         className={cn(
                             'inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-bold tracking-wide',
                             mode === 'online'
-                                ? 'bg-primary/10 text-primary'
-                                : 'bg-slate-100 text-slate-500',
+                                ? 'bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary'
+                                : 'bg-slate-100 text-slate-500 dark:bg-slate-900 dark:text-slate-300',
                         )}
                     >
                         {label}
@@ -987,7 +991,7 @@ function buildColumns(
             accessorKey: 'commission_amount',
             header: 'Commission',
             cell: ({ cell }) => (
-                <div className="tabular-nums whitespace-nowrap text-slate-600">
+                <div className="tabular-nums whitespace-nowrap text-slate-600 dark:text-slate-300">
                     {formatCommission(cell.getValue<string>())}
                 </div>
             ),
@@ -996,7 +1000,7 @@ function buildColumns(
             id: 'actions',
             header: 'Actions',
             cell: ({ row }) => (
-                <div className="flex justify-end">
+                <div className="flex justify-center">
                     <RowActions
                         booking={row.original}
                         companyUsername={companyUsername}
@@ -1073,6 +1077,7 @@ export default function Page({ data, followupSummary }: PageProps) {
             rowSelection,
         },
     });
+    const tableRows = table.getRowModel().rows;
 
     return (
         <CompanyDashboardLayout
@@ -1123,14 +1128,14 @@ export default function Page({ data, followupSummary }: PageProps) {
                                     'px-3 py-1 rounded-full text-[11px] font-semibold uppercase tracking-wider border transition-all',
                                     isActive
                                         ? (tab.style ??
-                                              'bg-primary/10 text-primary border-primary/30')
-                                        : 'bg-white text-muted-foreground border-slate-200 hover:bg-slate-50',
+                                              'bg-primary/10 text-primary border-primary/30 dark:bg-primary/20 dark:text-primary dark:border-primary/40')
+                                        : 'bg-white text-muted-foreground border-slate-200 hover:bg-slate-50 dark:bg-slate-950 dark:text-slate-300 dark:border-slate-800 dark:hover:bg-slate-900',
                                     isActive &&
                                         !tab.style &&
                                         'border-primary/30',
                                     isActive &&
                                         tab.style &&
-                                        'border-current/20',
+                                        'border-current/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100',
                                 )}
                             >
                                 {tab.label}
@@ -1142,7 +1147,7 @@ export default function Page({ data, followupSummary }: PageProps) {
                 <FollowupSummaryCards summary={followupSummary} />
 
                 {/* ── Toolbar: search + view-columns ──────────────────── */}
-                <div className="order-first flex flex-col sm:flex-row items-center gap-3 justify-between bg-slate-50/50 p-1 rounded-lg">
+                <div className="order-first flex flex-col sm:flex-row items-center gap-3 justify-between bg-slate-50/50 p-1 rounded-lg dark:border dark:border-slate-800 dark:bg-slate-950/70">
                     <div className="relative w-full sm:max-w-sm">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <Input
@@ -1151,14 +1156,14 @@ export default function Page({ data, followupSummary }: PageProps) {
                             onChange={(event) =>
                                 setGlobalFilter(event.target.value)
                             }
-                            className="pl-9 w-full focus-visible:ring-primary border-slate-200"
+                            className="pl-9 w-full focus-visible:ring-primary border-slate-200 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:placeholder:text-slate-500"
                         />
                     </div>
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <Button
                                 variant="outline"
-                                className="w-full sm:w-auto ml-auto bg-white border-slate-200"
+                                className="w-full sm:w-auto ml-auto bg-white border-slate-200 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100 dark:hover:bg-slate-900"
                             >
                                 View Columns{' '}
                                 <ChevronDown className="ml-2 h-4 w-4 opacity-50" />
@@ -1187,14 +1192,17 @@ export default function Page({ data, followupSummary }: PageProps) {
                 </div>
 
                 {/* ── Table card ──────────────────────────────────────── */}
-                <div className="rounded-xl border border-border bg-card shadow-sm w-full overflow-hidden">
-                    <div className="w-full max-h-[65vh] overflow-auto relative">
-                        <Table unwrapped className="w-full text-sm">
-                            <TableHeader className="sticky top-0 z-10 bg-slate-50 dark:bg-slate-900/90 shadow-[0_1px_0_0_theme(colors.border)]">
+                <div className="rounded-xl border border-border bg-card shadow-sm w-full overflow-hidden dark:border-slate-800 dark:bg-slate-950/80 dark:shadow-none">
+                    <div className="w-full max-h-[65vh] overflow-auto relative [scrollbar-gutter:stable]">
+                        <Table
+                            unwrapped
+                            className="w-full border-separate border-spacing-0 text-sm"
+                        >
+                            <TableHeader className="sticky top-0 z-40 bg-slate-50 dark:bg-slate-900/90 shadow-[0_1px_0_0_theme(colors.border)]">
                                 {table.getHeaderGroups().map((headerGroup) => (
                                     <TableRow
                                         key={headerGroup.id}
-                                        className="border-none hover:bg-transparent"
+                                        className="border-none bg-slate-50 hover:bg-slate-50 dark:bg-slate-900/90 dark:hover:bg-slate-900/90"
                                     >
                                         {headerGroup.headers.map((header) => (
                                             <TableHead
@@ -1203,7 +1211,7 @@ export default function Page({ data, followupSummary }: PageProps) {
                                                     'bg-slate-50 dark:bg-slate-900/90 text-primary font-bold h-12 px-3 whitespace-nowrap',
                                                     header.column.id ===
                                                         'actions' &&
-                                                        'sticky right-0 z-30 w-20 min-w-20 text-right shadow-[-12px_0_16px_-16px_rgba(15,23,42,0.55)]',
+                                                        'sticky right-0 z-50 w-[3.75rem] min-w-[3.75rem] max-w-[3.75rem] overflow-visible rounded-t-xl border-l border-border/70 px-0 text-center shadow-[-10px_0_14px_-16px_rgba(15,23,42,0.55)]',
                                                 )}
                                             >
                                                 {header.isPlaceholder
@@ -1219,15 +1227,15 @@ export default function Page({ data, followupSummary }: PageProps) {
                                 ))}
                             </TableHeader>
                             <TableBody>
-                                {table.getRowModel().rows.length ? (
-                                    table.getRowModel().rows.map((row) => (
+                                {tableRows.length ? (
+                                    tableRows.map((row, rowIndex) => (
                                         <TableRow
                                             key={row.id}
                                             data-state={
                                                 row.getIsSelected() &&
                                                 'selected'
                                             }
-                                            className="hover:bg-slate-50 transition-colors"
+                                            className="group border-none transition-colors hover:bg-slate-50 dark:hover:bg-slate-900/50"
                                         >
                                             {row
                                                 .getVisibleCells()
@@ -1235,10 +1243,16 @@ export default function Page({ data, followupSummary }: PageProps) {
                                                     <TableCell
                                                         key={cell.id}
                                                         className={cn(
-                                                            'py-3 px-3',
+                                                            'border-b border-border py-3 px-3',
                                                             cell.column.id ===
                                                                 'actions' &&
-                                                                'sticky right-0 z-20 w-20 min-w-20 bg-card text-right shadow-[-12px_0_16px_-16px_rgba(15,23,42,0.55)]',
+                                                                'sticky right-0 z-20 w-[3.75rem] min-w-[3.75rem] max-w-[3.75rem] overflow-visible border-l border-border/70 bg-card px-0 text-center shadow-[-10px_0_14px_-16px_rgba(15,23,42,0.55)] transition-colors group-hover:bg-slate-50 dark:bg-slate-950/95 dark:group-hover:bg-slate-900/50',
+                                                            cell.column.id ===
+                                                                'actions' &&
+                                                                rowIndex ===
+                                                                    tableRows.length -
+                                                                        1 &&
+                                                                'rounded-b-xl',
                                                         )}
                                                     >
                                                         {flexRender(
@@ -1272,7 +1286,7 @@ export default function Page({ data, followupSummary }: PageProps) {
 
                 {/* ── Pagination footer ───────────────────────────────── */}
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2">
-                    <p className="text-sm text-muted-foreground bg-slate-50 px-3 py-1.5 rounded-md border border-slate-100">
+                    <p className="text-sm text-muted-foreground bg-slate-50 px-3 py-1.5 rounded-md border border-slate-100 dark:bg-slate-950 dark:border-slate-800 dark:text-slate-400">
                         <span className="font-semibold text-foreground">
                             {table.getFilteredSelectedRowModel().rows.length}
                         </span>{' '}
