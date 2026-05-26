@@ -12,6 +12,8 @@ use App\Http\Controllers\Companies\Dashboard\ChatbotController;
 use App\Http\Controllers\Companies\Dashboard\CommissionReportController;
 use App\Http\Controllers\Companies\Dashboard\CustomerController;
 use App\Http\Controllers\Companies\Dashboard\DashboardBookingController;
+use App\Http\Controllers\Companies\Dashboard\GoogleAccountController;
+use App\Http\Controllers\Companies\Dashboard\GoogleAnalyticsController;
 use App\Http\Controllers\Companies\Dashboard\HomeController;
 use App\Http\Controllers\Companies\Dashboard\NotificationController;
 use App\Http\Controllers\Companies\Dashboard\PageController;
@@ -157,6 +159,10 @@ Route::prefix('companies/{company:username}/dashboard')->middleware(['auth', 'co
 
     Route::post('notifications/mark-all-as-read', [NotificationController::class, 'markAllAsRead'])->name('notifications.mark-all-read');
     Route::resource('notifications', NotificationController::class)->only(['index', 'update', 'destroy']);
+    Route::get('google-analytics', [GoogleAnalyticsController::class, 'index']);
+    Route::get('google-analytics/select-or-setup-account', [GoogleAnalyticsController::class, 'showAccountSetupOrSelections']);
+    Route::get('google-analytics/setup-account', [GoogleAnalyticsController::class, 'setupAccount']);
+    Route::get('google/connect', [GoogleAccountController::class, 'connect']);
 });
 
 Route::get(

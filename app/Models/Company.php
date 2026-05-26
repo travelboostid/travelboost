@@ -195,4 +195,9 @@ class Company extends Model
     {
         return $this->morphMany(Withdrawal::class, 'owner');
     }
+
+    public function googleAccount()
+    {
+        return $this->hasOne(CompanyGoogleAccount::class);
+    }
 }

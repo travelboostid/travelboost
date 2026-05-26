@@ -5,6 +5,7 @@ use App\Http\Controllers\Affiliate\LandingController as AffiliateHomeController;
 use App\Http\Controllers\BookingController;
 use App\Http\Controllers\Companies\AuthController as CompaniesAuthController;
 use App\Http\Controllers\Customers\AuthController as CustomerAuthController;
+use App\Http\Controllers\Google\GoogleAuthController;
 use App\Http\Controllers\HomeController as BaseHomeController;
 use App\Http\Controllers\TeamInvitationAuthController;
 use App\Http\Controllers\Tenant\HomeController as TenantHomeController;
@@ -88,3 +89,4 @@ Route::prefix('api/regions')->group(function () {
     Route::get('districts/{city}', fn ($city) => response()->json(District::where('city_code', $city)->orderBy('name')->get()));
     Route::get('villages/{district}', fn ($district) => response()->json(Village::where('district_code', $district)->orderBy('name')->get()));
 });
+Route::get('/auth/google/callback', [GoogleAuthController::class, 'callback']);
