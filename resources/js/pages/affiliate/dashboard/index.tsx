@@ -162,7 +162,7 @@ export default function AffiliateDashboardIndex({
 
     return (
         <AffiliateDashboardLayout
-            activeMenuIds={['dashboard']}
+            activeMenuIds={['home']}
             breadcrumb={[{ title: 'Dashboard', url: '/affiliate/dashboard' }]}
             containerClassName="min-h-screen bg-slate-50/60 dark:bg-slate-950"
         >

@@ -39,7 +39,7 @@ export default function Page() {
     return (
         <CompanyDashboardLayout
             openMenuIds={['tours']}
-            activeMenuIds={['tours.index']}
+            activeMenuIds={['agent-tours.index']}
             breadcrumb={[
                 { title: 'Tours', url: '/dashboard/tours' },
                 { title: 'Create' },
