@@ -4,13 +4,10 @@ import { DataTableToolbar } from '@/components/data-table/data-table-toolbar';
 import AdminDashboardLayout from '@/components/layouts/admin-dashboard';
 import { useDataTable } from '@/hooks/use-data-table';
 import type { Column, ColumnDef } from '@tanstack/react-table';
-import dayjs from 'dayjs';
-import relativeTime from 'dayjs/plugin/relativeTime';
 import { useMemo } from 'react';
 import CreateButton from './components/create-button';
 import DeleteButton from './components/delete-button';
 import EditButton from './components/edit-button';
-dayjs.extend(relativeTime);
 
 type AppConfigResource = {
     id: number;
@@ -111,7 +108,7 @@ export default function AppConfigsPage({ data }: AppConfigsPageProps) {
     return (
         <AdminDashboardLayout
             containerClassName="p-4"
-            activeMenuIds={['app-configs']}
+            activeMenuIds={['configurations']}
             breadcrumb={[{ title: 'App Configs' }]}
             applet={<CreateButton />}
         >

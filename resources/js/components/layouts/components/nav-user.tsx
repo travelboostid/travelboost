@@ -37,26 +37,26 @@ export function NavUser() {
                     <DropdownMenuTrigger asChild>
                         <SidebarMenuButton
                             size="lg"
-                            className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+                            className="h-14 rounded-2xl px-2.5 transition-all hover:bg-slate-50 hover:shadow-sm data-[state=open]:bg-slate-50 data-[state=open]:text-sidebar-accent-foreground group-data-[collapsible=icon]:mx-auto group-data-[collapsible=icon]:size-10! group-data-[collapsible=icon]:p-0! dark:hover:bg-slate-900 dark:data-[state=open]:bg-slate-900"
                         >
-                            <Avatar className="h-8 w-8 rounded-lg">
+                            <Avatar className="h-10 w-10 rounded-2xl ring-1 ring-slate-200/80 group-data-[collapsible=icon]:h-9 group-data-[collapsible=icon]:w-9 dark:ring-slate-800">
                                 <AvatarImage
                                     src={auth.user.photo_url || DEFAULT_PHOTO}
                                     alt={auth.user.name}
                                 />
-                                <AvatarFallback>
-                                    <UserIcon />
+                                <AvatarFallback className="rounded-2xl bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-300">
+                                    <UserIcon className="h-5 w-5" />
                                 </AvatarFallback>
                             </Avatar>
-                            <div className="grid flex-1 text-left text-sm leading-tight">
-                                <span className="truncate font-medium">
+                            <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
+                                <span className="truncate font-semibold text-slate-950 dark:text-white">
                                     {auth.user.name}
                                 </span>
-                                <span className="truncate text-xs">
+                                <span className="truncate text-xs text-slate-500 dark:text-slate-400">
                                     {auth.user.email}
                                 </span>
                             </div>
-                            <ChevronsUpDown className="ml-auto size-4" />
+                            <ChevronsUpDown className="ml-auto size-4 text-slate-400 group-data-[collapsible=icon]:hidden" />
                         </SidebarMenuButton>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent

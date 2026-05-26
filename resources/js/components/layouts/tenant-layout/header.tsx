@@ -3,10 +3,10 @@ import { Button } from '@/components/ui/button';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { show as showLogin } from '@/routes/customers/login';
 import { show as showRegister } from '@/routes/customers/register';
-import { Link, router, usePage } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import { MenuIcon, XIcon } from 'lucide-react';
 import type { MouseEvent } from 'react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { NavUser } from './nav-user';
 
 export function Header({
@@ -31,26 +31,6 @@ export function Header({
     } catch {
         // ignore parse error if any
     }
-
-    useEffect(() => {
-        if (auth?.user) {
-            const pendingStr = sessionStorage.getItem('pendingTourAction');
-            if (pendingStr) {
-                try {
-                    const stored = JSON.parse(pendingStr);
-                    if (
-                        stored.returnUrl &&
-                        window.location.pathname + window.location.search !==
-                            stored.returnUrl
-                    ) {
-                        router.visit(stored.returnUrl);
-                    }
-                } catch (e) {
-                    console.error('Error parsing pendingTourAction:', e);
-                }
-            }
-        }
-    }, [auth?.user]);
 
     const handleNavigate = (href: string) => (event: MouseEvent) => {
         if (!onNavigateAway) {

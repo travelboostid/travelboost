@@ -26,9 +26,11 @@ import {
     SidebarMenuSub,
     SidebarMenuSubButton,
     SidebarMenuSubItem,
+    useSidebar,
 } from '@/components/ui/sidebar';
 
 import { useIsMobile } from '@/hooks/use-mobile';
+import { cn } from '@/lib/utils';
 import React, { useMemo, type HTMLAttributeAnchorTarget } from 'react';
 
 export type MenuItemBase = {
@@ -57,6 +59,8 @@ export function SidebarMenuRenderer({
     openMenuIds = [],
 }: Props) {
     const isMobile = useIsMobile();
+    const { state } = useSidebar();
+    const isCollapsed = state === 'collapsed' && !isMobile;
     const openState = useMemo<Record<string, boolean>>(
         () => (openMenuIds || []).reduce((a, c) => ({ ...a, [c]: true }), {}),
         [openMenuIds],
@@ -65,6 +69,17 @@ export function SidebarMenuRenderer({
         () => (activeMenuIds || []).reduce((a, c) => ({ ...a, [c]: true }), {}),
         [activeMenuIds],
     );
+    const isItemActive = (item: MenuItem): boolean =>
+        Boolean(
+            activeState[item.id] ||
+            item.items?.some((child) => isItemActive(child)),
+        );
+    const menuButtonClassName =
+        'h-9 rounded-2xl px-2 text-[0.9rem] font-medium text-slate-600 transition-all hover:bg-slate-50 hover:text-slate-950 hover:shadow-sm data-[active=true]:bg-primary/10 data-[active=true]:font-semibold data-[active=true]:text-primary data-[active=true]:shadow-sm data-[active=true]:shadow-primary/10 data-[active=true]:[&>svg]:text-primary dark:text-slate-300 dark:hover:bg-slate-900 dark:hover:text-white dark:data-[active=true]:bg-primary/20 dark:data-[active=true]:text-primary [&>svg]:size-[1.12rem] group-data-[collapsible=icon]:[&>svg]:size-5';
+    const submenuButtonClassName =
+        'h-8.5 rounded-xl pl-3 text-[0.85rem] font-medium shadow-none data-[active=true]:shadow-sm';
+    const disabledButtonClassName =
+        'h-9 rounded-2xl px-2 text-[0.9rem] font-medium text-slate-600 transition-all dark:text-slate-300';
 
     const renderLink = (item: MenuItem, isSub = false) => {
         const Button = isSub ? SidebarMenuSubButton : SidebarMenuButton;
@@ -73,11 +88,15 @@ export function SidebarMenuRenderer({
             return (
                 <Button
                     isActive={false}
+                    className={cn(
+                        disabledButtonClassName,
+                        isSub && submenuButtonClassName,
+                    )}
                     tooltip={
                         typeof item.title === 'string' ? item.title : undefined
                     }
                 >
-                    <div className="flex w-full items-center opacity-50 cursor-not-allowed pointer-events-none">
+                    <div className="flex w-full items-center gap-2 opacity-50 cursor-not-allowed pointer-events-none">
                         {item.icon && <item.icon />}
                         <span className="flex-1">{item.title}</span>
                     </div>
@@ -87,9 +106,18 @@ export function SidebarMenuRenderer({
 
         if (typeof item.urlOrAction === 'string') {
             return (
-                <Button asChild isActive={activeState[item.id]}>
+                <Button
+                    asChild
+                    isActive={isItemActive(item)}
+                    className={cn(
+                        menuButtonClassName,
+                        isSub && submenuButtonClassName,
+                    )}
+                >
                     <a href={item.urlOrAction} target={item.target}>
-                        {item.icon && <item.icon />}
+                        {item.icon && (
+                            <item.icon className="text-slate-500 transition-colors dark:text-slate-400" />
+                        )}
                         <span className="flex-1">{item.title}</span>
 
                         {item.target === '_blank' && (
@@ -101,17 +129,90 @@ export function SidebarMenuRenderer({
         }
 
         return (
-            <Button asChild isActive={activeState[item.id]}>
+            <Button
+                asChild
+                isActive={isItemActive(item)}
+                className={cn(
+                    menuButtonClassName,
+                    isSub && submenuButtonClassName,
+                )}
+            >
                 <button
                     onClick={item.urlOrAction}
                     className="w-full flex items-center text-left"
                 >
-                    {item.icon && <item.icon />}
+                    {item.icon && <item.icon className="text-slate-500" />}
                     <span className="flex-1">{item.title}</span>
                 </button>
             </Button>
         );
     };
+
+    const renderCollapsedSubmenu = (item: MenuItem) => (
+        <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+                <SidebarMenuButton
+                    isActive={isItemActive(item)}
+                    className={menuButtonClassName}
+                >
+                    {item.icon && (
+                        <item.icon className="text-slate-500 dark:text-slate-400" />
+                    )}
+                    <span>{item.title}</span>
+                </SidebarMenuButton>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+                className="min-w-56 rounded-2xl border-slate-200/80 p-1.5 shadow-xl shadow-slate-950/10 dark:border-slate-800 dark:bg-slate-950"
+                side="right"
+                align="start"
+                sideOffset={12}
+            >
+                {item.items?.map((sub) => (
+                    <DropdownMenuItem
+                        key={sub.id}
+                        asChild={typeof sub.urlOrAction === 'string'}
+                        disabled={sub.disabled}
+                        onClick={
+                            typeof sub.urlOrAction === 'function' &&
+                            !sub.disabled
+                                ? sub.urlOrAction
+                                : undefined
+                        }
+                        className={cn(
+                            'min-h-9 rounded-xl px-3 text-[0.88rem] font-medium text-slate-600 focus:bg-slate-100 focus:text-slate-950 dark:text-slate-300 dark:focus:bg-slate-900 dark:focus:text-white',
+                            isItemActive(sub) &&
+                                'bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary',
+                        )}
+                    >
+                        {typeof sub.urlOrAction === 'string' ? (
+                            <a
+                                className="flex w-full items-center gap-2"
+                                href={
+                                    sub.disabled ? undefined : sub.urlOrAction
+                                }
+                                target={sub.disabled ? undefined : sub.target}
+                            >
+                                {sub.icon && (
+                                    <sub.icon className="size-4 text-slate-500 dark:text-slate-400" />
+                                )}
+                                <span>{sub.title}</span>
+                                {sub.target === '_blank' && (
+                                    <ExternalLinkIcon className="ml-auto size-3 text-muted-foreground" />
+                                )}
+                            </a>
+                        ) : (
+                            <div className="flex w-full items-center gap-2">
+                                {sub.icon && (
+                                    <sub.icon className="size-4 text-slate-500 dark:text-slate-400" />
+                                )}
+                                <span>{sub.title}</span>
+                            </div>
+                        )}
+                    </DropdownMenuItem>
+                ))}
+            </DropdownMenuContent>
+        </DropdownMenu>
+    );
 
     function renderActions(actions?: MenuItem[]) {
         if (!actions?.length) return null;
@@ -170,11 +271,22 @@ export function SidebarMenuRenderer({
         <SidebarMenu>
             {menu.map((item) => {
                 if (item.items?.length) {
+                    if (isCollapsed) {
+                        return (
+                            <SidebarMenuItem key={item.id}>
+                                {renderCollapsedSubmenu(item)}
+                            </SidebarMenuItem>
+                        );
+                    }
+
                     return (
                         <Collapsible
                             key={item.id}
                             asChild
-                            defaultOpen={openState[item.id]}
+                            open={isItemActive(item) ? true : undefined}
+                            defaultOpen={
+                                openState[item.id] || isItemActive(item)
+                            }
                             className="group/collapsible"
                         >
                             <SidebarMenuItem>
@@ -186,8 +298,11 @@ export function SidebarMenuRenderer({
                                                 : undefined
                                         }
                                         isActive={activeState[item.id]}
+                                        className={menuButtonClassName}
                                     >
-                                        {item.icon && <item.icon />}
+                                        {item.icon && (
+                                            <item.icon className="text-slate-500 dark:text-slate-400" />
+                                        )}
                                         <span>{item.title}</span>
 
                                         <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
@@ -195,7 +310,7 @@ export function SidebarMenuRenderer({
                                 </CollapsibleTrigger>
 
                                 <CollapsibleContent>
-                                    <SidebarMenuSub className="pr-0 mr-0">
+                                    <SidebarMenuSub className="mr-0 mt-0.5 border-slate-200/80 pr-0 dark:border-slate-800">
                                         {item.items.map((sub) => (
                                             <SidebarMenuSubItem key={sub.id}>
                                                 {renderLink(sub, true)}

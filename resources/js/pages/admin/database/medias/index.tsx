@@ -160,7 +160,7 @@ export default function MediasPage({ data }: MediasPageProps) {
 
                     return (
                         <div className="flex items-center gap-1">
-                            {dayjs(createdAt).fromNow()}
+                            {dayjs(createdAt).format('DD MMM YYYY')}
                         </div>
                     );
                 },

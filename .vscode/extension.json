@@ -1,0 +1,14 @@
+{
+    "recommendations": [
+        "bmewburn.vscode-intelephense-client",
+        "esbenp.prettier-vscode",
+        "dbaeumer.vscode-eslint",
+        "laravel.vscode-laravel",
+        "DEVSENSE.composer-php-vscode",
+        "DEVSENSE.phptools-vscode",
+        "Continue.continue",
+        "DEVSENSE.intelli-php-vscode",
+        "xdebug.php-debug",
+        "bradlc.vscode-tailwindcss"
+    ]
+}

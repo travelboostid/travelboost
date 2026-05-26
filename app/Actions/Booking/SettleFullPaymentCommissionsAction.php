@@ -7,6 +7,7 @@ use App\Models\Payment;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Services\BookingPricingService;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -70,9 +71,9 @@ class SettleFullPaymentCommissionsAction
 
     /**
      * @param  array<string, mixed>  $quote
-     * @return \Illuminate\Support\Collection<int, array<string, mixed>>
+     * @return Collection<int, array<string, mixed>>
      */
-    private function pendingSettlements(Booking $booking, array $quote): \Illuminate\Support\Collection
+    private function pendingSettlements(Booking $booking, array $quote): Collection
     {
         $root = null;
         $rootWallet = function () use (&$root) {
@@ -84,7 +85,7 @@ class SettleFullPaymentCommissionsAction
         $settlements = [
             [
                 'type' => self::TYPE_AGENT_COMMISSION,
-                'description' => 'Agent commission from full payment booking '.$booking->booking_number,
+                'description' => $this->settlementDescription($booking, 'Agent commission'),
                 'amount' => $booking->agent_id ? (float) $quote['agent_commission'] : 0.0,
                 'receiver' => $booking->agent?->wallet,
                 'breakdown' => $quote['agent_commission_breakdown'] ?? [],
@@ -94,7 +95,7 @@ class SettleFullPaymentCommissionsAction
         if ((float) $quote['travelboost_commission'] > 0) {
             $settlements[] = [
                 'type' => self::TYPE_TRAVELBOOST_COMMISSION,
-                'description' => 'Travelboost commission from full payment booking '.$booking->booking_number,
+                'description' => $this->settlementDescription($booking, 'Travelboost commission'),
                 'amount' => (float) $quote['travelboost_commission'],
                 'receiver' => $rootWallet(),
                 'breakdown' => $quote['travelboost_commission_breakdown'] ?? [],
@@ -104,7 +105,7 @@ class SettleFullPaymentCommissionsAction
         if ((float) $quote['platform_fee'] > 0) {
             $settlements[] = [
                 'type' => self::TYPE_PLATFORM_FEE,
-                'description' => 'Platform fee from full payment booking '.$booking->booking_number,
+                'description' => $this->settlementDescription($booking, 'Platform fee'),
                 'amount' => (float) $quote['platform_fee'],
                 'receiver' => $rootWallet(),
                 'breakdown' => [
@@ -121,6 +122,17 @@ class SettleFullPaymentCommissionsAction
             ->filter(fn (array $settlement): bool => $settlement['receiver'] !== null)
             ->reject(fn (array $settlement): bool => $this->hasSettlement($booking, (string) $settlement['type']))
             ->values();
+    }
+
+    private function settlementDescription(Booking $booking, string $label): string
+    {
+        $contactName = trim((string) $booking->contact_name) ?: 'Booking customer';
+        $totalPax = max(
+            0,
+            (int) $booking->pax_adult + (int) $booking->pax_child + (int) $booking->pax_infant
+        );
+
+        return "{$label} for {$contactName} ({$totalPax} pax) booking {$booking->booking_number}";
     }
 
     private function hasSettlement(Booking $booking, string $type): bool

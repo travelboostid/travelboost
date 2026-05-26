@@ -121,7 +121,7 @@ export default function AffiliatePaymentHistory({
                                     <TableHead className="text-right">
                                         Commission
                                     </TableHead>
-                                    <TableHead>Status</TableHead>
+                                    {/* <TableHead>Status</TableHead> */}
                                     <TableHead className="pr-6 text-right">
                                         Date
                                     </TableHead>
@@ -184,7 +184,7 @@ export default function AffiliatePaymentHistory({
                                                     ),
                                                 )}
                                             </TableCell>
-                                            <TableCell>
+                                            {/* <TableCell>
                                                 <Badge
                                                     variant="outline"
                                                     className={`capitalize ${
@@ -196,7 +196,7 @@ export default function AffiliatePaymentHistory({
                                                 >
                                                     {commission.status}
                                                 </Badge>
-                                            </TableCell>
+                                            </TableCell> */}
                                             <TableCell className="pr-6 text-right text-sm text-slate-600 dark:text-slate-400">
                                                 {dayjs(
                                                     commission.created_at,

@@ -22,7 +22,6 @@ import {
     HeartIcon,
     type LucideIcon,
     RefreshCwIcon,
-    SearchCheckIcon,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
@@ -207,15 +206,6 @@ function bookingCreateHref(
     return `/bookings/${booking.tour.id}/create?${params.toString()}`;
 }
 
-function bookingPaymentStatusHref(booking: BookingItem) {
-    const params = new URLSearchParams({
-        tab: 'current',
-        booking_number: booking.booking_number,
-    });
-
-    return `/mybookings?${params.toString()}`;
-}
-
 function bookingDocumentsHref(booking: BookingItem) {
     const href = bookingCreateHref(booking, {
         reuseBookingNumber: true,
@@ -256,7 +246,10 @@ function deadlineText(label: string, deadline?: DeadlineInfo | null) {
     } (${date})`;
 }
 
-function getBookingAction(booking: BookingItem): BookingAction | null {
+function getBookingAction(
+    booking: BookingItem,
+    activeTab: PageProps['activeTab'],
+): BookingAction | null {
     const status = normalizeStatus(booking.status);
     const href = bookingCreateHref(booking);
 
@@ -321,15 +314,26 @@ function getBookingAction(booking: BookingItem): BookingAction | null {
         return {
             label: 'Invoice',
             icon: FileTextIcon,
-            onClick: () => window.print(),
+            onClick: () =>
+                window.open(
+                    `/mybookings/${booking.id}/invoice`,
+                    '_blank',
+                    'noopener,noreferrer',
+                ),
         };
     }
 
     if (status === 'waiting payment approval') {
+        const reviewHref = bookingReviewHref(booking, activeTab);
+
+        if (!reviewHref) {
+            return null;
+        }
+
         return {
-            label: 'Check Payment Status',
-            icon: SearchCheckIcon,
-            href: bookingPaymentStatusHref(booking),
+            label: 'View Detail',
+            icon: EyeIcon,
+            href: reviewHref,
         };
     }
 
@@ -617,14 +621,18 @@ function BookingCard({
     const imageMedia = booking.tour?.image as any;
     const hasImage = Boolean(imageMedia?.data?.files?.length);
     const image = extractImageSrc(imageMedia).src;
-    const action = getBookingAction(booking);
+    const action = getBookingAction(booking, activeTab);
+    const paidProgressStatuses = [
+        'waiting payment approval',
+        'down payment',
+        'full payment',
+    ];
     const reviewHref =
         status === 'down payment' || status === 'full payment'
             ? bookingReviewHref(booking, activeTab)
             : null;
     const documentHref =
-        booking.needs_travel_documents &&
-        (status === 'down payment' || status === 'full payment')
+        booking.needs_travel_documents && paidProgressStatuses.includes(status)
             ? bookingDocumentsHref(booking)
             : null;
     const paymentDeadline = deadlineText(
@@ -635,8 +643,9 @@ function BookingCard({
         'Travel documents',
         booking.document_deadline,
     );
-    const shouldShowDocumentStatus =
-        status === 'down payment' || status === 'full payment';
+    const shouldShowPaymentDeadline =
+        status === 'waiting payment approval' || status === 'down payment';
+    const shouldShowDocumentStatus = paidProgressStatuses.includes(status);
     const documentStatusLabel = shouldShowDocumentStatus
         ? booking.needs_travel_documents
             ? documentDeadline
@@ -756,10 +765,10 @@ function BookingCard({
                             />
                             <AmountStackItem label="Paid" value={paidAmount} />
                         </div>
-                        {(status === 'down payment' ||
+                        {(shouldShowPaymentDeadline ||
                             shouldShowDocumentStatus) && (
                             <div className="grid max-w-full gap-1.5 justify-items-start lg:justify-items-end">
-                                {status === 'down payment' &&
+                                {shouldShowPaymentDeadline &&
                                     paymentDeadline && (
                                         <DeadlineBadge
                                             tone="payment"

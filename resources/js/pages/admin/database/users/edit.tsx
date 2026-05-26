@@ -13,9 +13,6 @@ import {
 } from '@/components/ui/select';
 import { update } from '@/routes/admin/database/users';
 import { useForm } from '@inertiajs/react';
-import dayjs from 'dayjs';
-import relativeTime from 'dayjs/plugin/relativeTime';
-dayjs.extend(relativeTime);
 
 type EditUserPageProps = {
     user: any;

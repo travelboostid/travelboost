@@ -40,6 +40,26 @@ const ARRAY_SEPARATOR = ',';
 const DEBOUNCE_MS = 300;
 const THROTTLE_MS = 50;
 
+function stringifySearchValue(value: unknown): string {
+    if (value === null || value === undefined) return '';
+
+    if (Array.isArray(value)) {
+        return value.map((item) => stringifySearchValue(item)).join(' ');
+    }
+
+    if (value instanceof Date) {
+        return value.toISOString();
+    }
+
+    if (typeof value === 'object') {
+        return Object.values(value)
+            .map((item) => stringifySearchValue(item))
+            .join(' ');
+    }
+
+    return String(value);
+}
+
 interface UseDataTableProps<TData>
     extends
         Omit<
@@ -61,6 +81,7 @@ interface UseDataTableProps<TData>
     throttleMs?: number;
     clearOnDefault?: boolean;
     enableAdvancedFilter?: boolean;
+    enableClientFiltering?: boolean;
     scroll?: boolean;
     shallow?: boolean;
     startTransition?: React.TransitionStartFunction;
@@ -77,6 +98,7 @@ export function useDataTable<TData>(props: UseDataTableProps<TData>) {
         throttleMs = THROTTLE_MS,
         clearOnDefault = false,
         enableAdvancedFilter = false,
+        enableClientFiltering = false,
         scroll = false,
         shallow = true,
         startTransition,
@@ -116,6 +138,7 @@ export function useDataTable<TData>(props: UseDataTableProps<TData>) {
     );
     const [columnVisibility, setColumnVisibility] =
         React.useState<VisibilityState>(initialState?.columnVisibility ?? {});
+    const [globalFilter, setGlobalFilter] = React.useState('');
 
     const [page, setPage] = useQueryState(
         pageKey,
@@ -258,7 +281,6 @@ export function useDataTable<TData>(props: UseDataTableProps<TData>) {
                     }
                     return acc;
                 }, {});
-
                 for (const prevFilter of prev) {
                     if (!next.some((filter) => filter.id === prevFilter.id)) {
                         filterUpdates[prevFilter.id] = null;
@@ -283,6 +305,7 @@ export function useDataTable<TData>(props: UseDataTableProps<TData>) {
             columnVisibility,
             rowSelection,
             columnFilters,
+            globalFilter,
         },
         defaultColumn: {
             ...tableProps.defaultColumn,
@@ -293,6 +316,7 @@ export function useDataTable<TData>(props: UseDataTableProps<TData>) {
         onPaginationChange,
         onSortingChange,
         onColumnFiltersChange,
+        onGlobalFilterChange: setGlobalFilter,
         onColumnVisibilityChange: setColumnVisibility,
         getCoreRowModel: getCoreRowModel(),
         getFilteredRowModel: getFilteredRowModel(),
@@ -301,9 +325,20 @@ export function useDataTable<TData>(props: UseDataTableProps<TData>) {
         getFacetedRowModel: getFacetedRowModel(),
         getFacetedUniqueValues: getFacetedUniqueValues(),
         getFacetedMinMaxValues: getFacetedMinMaxValues(),
+        globalFilterFn: (row, _columnId, filterValue) => {
+            const query = String(filterValue ?? '')
+                .trim()
+                .toLowerCase();
+
+            if (!query) return true;
+
+            return stringifySearchValue(row.original)
+                .toLowerCase()
+                .includes(query);
+        },
         manualPagination: true,
         manualSorting: true,
-        manualFiltering: true,
+        manualFiltering: !enableClientFiltering,
         meta: {
             ...tableProps.meta,
             queryKeys: {
@@ -315,6 +350,5 @@ export function useDataTable<TData>(props: UseDataTableProps<TData>) {
             },
         },
     });
-
     return { table, shallow, debounceMs, throttleMs };
 }

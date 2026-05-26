@@ -10,8 +10,10 @@ export function NavMain({
     const menus = useAffiliateDashboardNavMainMenu();
 
     return (
-        <SidebarGroup>
-            <SidebarGroupLabel>Main Menu</SidebarGroupLabel>
+        <SidebarGroup className="gap-1.5 px-2">
+            <SidebarGroupLabel className="px-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+                Main Menu
+            </SidebarGroupLabel>
             <SidebarMenuRenderer
                 menu={menus}
                 activeMenuIds={activeMenuIds || []}

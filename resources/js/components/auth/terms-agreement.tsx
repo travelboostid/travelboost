@@ -7,6 +7,12 @@ import {
     DialogTrigger,
 } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
+import {
+    BookOpenCheckIcon,
+    CheckCircle2Icon,
+    LanguagesIcon,
+    ShieldCheckIcon,
+} from 'lucide-react';
 import { useState } from 'react';
 
 type TermsLanguage = 'en' | 'id';
@@ -44,7 +50,7 @@ const terms: Record<'affiliate' | 'agent', Record<TermsLanguage, TermsCopy>> = {
             intro: 'Welcome to the TravelBoost platform. These Terms and Conditions are a legal agreement between PT. Erasoft Teknologi Indonesia, as the platform provider, together with the related Master Affiliate, and you as an Affiliate. By registering and using your Affiliate account, you declare that you are bound by and agree to all provisions below.',
             sections: [
                 {
-                    title: '1. Operational Definitions',
+                    title: 'Operational Definitions',
                     items: [
                         {
                             label: 'Company',
@@ -65,7 +71,7 @@ const terms: Record<'affiliate' | 'agent', Record<TermsLanguage, TermsCopy>> = {
                     ],
                 },
                 {
-                    title: '2. Scope of Accreditation and Marketing',
+                    title: 'Scope of Accreditation and Marketing',
                     items: [
                         {
                             label: 'Marketing Rights',
@@ -78,7 +84,7 @@ const terms: Record<'affiliate' | 'agent', Record<TermsLanguage, TermsCopy>> = {
                     ],
                 },
                 {
-                    title: '3. Affiliate Commission Scheme (Financial)',
+                    title: 'Affiliate Commission Scheme (Financial)',
                     items: [
                         {
                             label: 'Commission Amount',
@@ -102,7 +108,7 @@ const terms: Record<'affiliate' | 'agent', Record<TermsLanguage, TermsCopy>> = {
                     ],
                 },
                 {
-                    title: '4. Affiliate Rights and Obligations',
+                    title: 'Affiliate Rights and Obligations',
                     items: [
                         {
                             label: 'Travel Agent Acquisition',
@@ -119,7 +125,7 @@ const terms: Record<'affiliate' | 'agent', Record<TermsLanguage, TermsCopy>> = {
                     ],
                 },
                 {
-                    title: '5. Transaction System and Account Security',
+                    title: 'Transaction System and Account Security',
                     items: [
                         {
                             label: 'Payment Gateway',
@@ -132,7 +138,7 @@ const terms: Record<'affiliate' | 'agent', Record<TermsLanguage, TermsCopy>> = {
                     ],
                 },
                 {
-                    title: '6. Data Protection and Privacy',
+                    title: 'Data Protection and Privacy',
                     items: [
                         {
                             label: 'Confidentiality',
@@ -145,7 +151,7 @@ const terms: Record<'affiliate' | 'agent', Record<TermsLanguage, TermsCopy>> = {
                     ],
                 },
                 {
-                    title: '7. Term and Dispute Resolution',
+                    title: 'Term and Dispute Resolution',
                     items: [
                         {
                             label: 'Validity Period',
@@ -168,7 +174,7 @@ const terms: Record<'affiliate' | 'agent', Record<TermsLanguage, TermsCopy>> = {
             intro: 'Selamat datang di platform TravelBoost. Syarat dan Ketentuan ini merupakan kesepakatan hukum antara PT. Erasoft Teknologi Indonesia (selaku penyedia platform) bersama dengan Master Afiliator terkait, dengan Anda selaku Afiliator. Dengan mendaftar dan menggunakan akun Afiliator Anda, Anda menyatakan tunduk dan menyetujui seluruh ketentuan di bawah ini.',
             sections: [
                 {
-                    title: '1. Definisi Operasional',
+                    title: 'Definisi Operasional',
                     items: [
                         {
                             label: 'Perusahaan',
@@ -189,7 +195,7 @@ const terms: Record<'affiliate' | 'agent', Record<TermsLanguage, TermsCopy>> = {
                     ],
                 },
                 {
-                    title: '2. Ruang Lingkup Akreditasi & Pemasaran',
+                    title: 'Ruang Lingkup Akreditasi & Pemasaran',
                     items: [
                         {
                             label: 'Hak Pemasaran',
@@ -202,7 +208,7 @@ const terms: Record<'affiliate' | 'agent', Record<TermsLanguage, TermsCopy>> = {
                     ],
                 },
                 {
-                    title: '3. Skema Komisi Afiliator (Finansial)',
+                    title: 'Skema Komisi Afiliator (Finansial)',
                     items: [
                         {
                             label: 'Besaran Komisi',
@@ -226,7 +232,7 @@ const terms: Record<'affiliate' | 'agent', Record<TermsLanguage, TermsCopy>> = {
                     ],
                 },
                 {
-                    title: '4. Hak dan Kewajiban Afiliator',
+                    title: 'Hak dan Kewajiban Afiliator',
                     items: [
                         {
                             label: 'Akuisisi Travel Agen',
@@ -243,7 +249,7 @@ const terms: Record<'affiliate' | 'agent', Record<TermsLanguage, TermsCopy>> = {
                     ],
                 },
                 {
-                    title: '5. Sistem Transaksi dan Keamanan Akun',
+                    title: 'Sistem Transaksi dan Keamanan Akun',
                     items: [
                         {
                             label: 'Gerbang Pembayaran',
@@ -256,7 +262,7 @@ const terms: Record<'affiliate' | 'agent', Record<TermsLanguage, TermsCopy>> = {
                     ],
                 },
                 {
-                    title: '6. Perlindungan Data & Privasi',
+                    title: 'Perlindungan Data & Privasi',
                     items: [
                         {
                             label: 'Kerahasiaan',
@@ -269,7 +275,7 @@ const terms: Record<'affiliate' | 'agent', Record<TermsLanguage, TermsCopy>> = {
                     ],
                 },
                 {
-                    title: '7. Jangka Waktu & Penyelesaian Sengketa',
+                    title: 'Jangka Waktu & Penyelesaian Sengketa',
                     items: [
                         {
                             label: 'Masa Berlaku',
@@ -295,7 +301,7 @@ const terms: Record<'affiliate' | 'agent', Record<TermsLanguage, TermsCopy>> = {
             intro: 'Welcome to TravelBoost. By registering as a Travel Agent on our platform, you, hereinafter referred to as the Partner, declare that you have read, understood, and agreed to all contents of these Terms and Conditions.',
             sections: [
                 {
-                    title: '1. Registration Requirements',
+                    title: 'Registration Requirements',
                     items: [
                         {
                             label: 'Legality',
@@ -312,11 +318,11 @@ const terms: Record<'affiliate' | 'agent', Record<TermsLanguage, TermsCopy>> = {
                     ],
                 },
                 {
-                    title: '2. Employment Relationship Status',
+                    title: 'Employment Relationship Status',
                     lead: "The relationship between TravelBoost and the Partner is an independent business partner relationship. These Terms and Conditions do not create an employment relationship (employer-employee), joint venture, or exclusive agency relationship that legally binds TravelBoost for the Partner's personal actions.",
                 },
                 {
-                    title: '3. Service Scope & Partner Obligations',
+                    title: 'Service Scope & Partner Obligations',
                     items: [
                         {
                             label: 'Information Presentation',
@@ -333,7 +339,7 @@ const terms: Record<'affiliate' | 'agent', Record<TermsLanguage, TermsCopy>> = {
                     ],
                 },
                 {
-                    title: '4. Commission and Payment System',
+                    title: 'Commission and Payment System',
                     items: [
                         {
                             label: 'Commission Scheme',
@@ -350,7 +356,7 @@ const terms: Record<'affiliate' | 'agent', Record<TermsLanguage, TermsCopy>> = {
                     ],
                 },
                 {
-                    title: '5. Cancellation and Refund Policy',
+                    title: 'Cancellation and Refund Policy',
                     items: [
                         {
                             text: 'Every transaction cancellation by customers will follow the cancellation policy from the vendor providing the Tour Package.',
@@ -361,7 +367,7 @@ const terms: Record<'affiliate' | 'agent', Record<TermsLanguage, TermsCopy>> = {
                     ],
                 },
                 {
-                    title: '6. Security and Data Protection',
+                    title: 'Security and Data Protection',
                     items: [
                         {
                             text: 'TravelBoost will protect Partner personal data in accordance with our privacy policy.',
@@ -372,7 +378,7 @@ const terms: Record<'affiliate' | 'agent', Record<TermsLanguage, TermsCopy>> = {
                     ],
                 },
                 {
-                    title: '7. Partnership Termination',
+                    title: 'Partnership Termination',
                     lead: 'TravelBoost has the right to unilaterally deactivate Partner accounts if the following are found:',
                     items: [
                         {
@@ -387,11 +393,11 @@ const terms: Record<'affiliate' | 'agent', Record<TermsLanguage, TermsCopy>> = {
                     ],
                 },
                 {
-                    title: '8. Changes to Terms',
+                    title: 'Changes to Terms',
                     lead: 'TravelBoost may change these Terms and Conditions at any time. Changes will be informed through notifications in the application or email. Continued use of the platform after changes is deemed as approval of the new terms.',
                 },
                 {
-                    title: '9. Governing Law',
+                    title: 'Governing Law',
                     lead: 'These Terms and Conditions are governed and interpreted in accordance with the laws of the Republic of Indonesia. Any disputes that arise will be resolved through deliberation for consensus, or through legal channels in the agreed legal jurisdiction.',
                 },
             ],
@@ -402,7 +408,7 @@ const terms: Record<'affiliate' | 'agent', Record<TermsLanguage, TermsCopy>> = {
             intro: 'Selamat datang di TravelBoost. Dengan mendaftar sebagai Agen Perjalanan di platform kami, Anda (selanjutnya disebut sebagai "Mitra") menyatakan bahwa Anda telah membaca, memahami, dan menyetujui seluruh isi dalam Syarat dan Ketentuan ini.',
             sections: [
                 {
-                    title: '1. Persyaratan Pendaftaran',
+                    title: 'Persyaratan Pendaftaran',
                     items: [
                         {
                             label: 'Legalitas',
@@ -419,11 +425,11 @@ const terms: Record<'affiliate' | 'agent', Record<TermsLanguage, TermsCopy>> = {
                     ],
                 },
                 {
-                    title: '2. Status Hubungan Kerja',
+                    title: 'Status Hubungan Kerja',
                     lead: 'Hubungan antara TravelBoost dan Mitra adalah sebagai mitra bisnis independen. Syarat dan Ketentuan ini tidak menciptakan hubungan kerja (majikan-karyawan), kemitraan bersama (joint venture), atau hubungan keagenan eksklusif yang mengikat TravelBoost secara hukum atas tindakan pribadi Mitra.',
                 },
                 {
-                    title: '3. Lingkup Layanan & Kewajiban Mitra',
+                    title: 'Lingkup Layanan & Kewajiban Mitra',
                     items: [
                         {
                             label: 'Penyajian Informasi',
@@ -440,7 +446,7 @@ const terms: Record<'affiliate' | 'agent', Record<TermsLanguage, TermsCopy>> = {
                     ],
                 },
                 {
-                    title: '4. Sistem Komisi dan Pembayaran',
+                    title: 'Sistem Komisi dan Pembayaran',
                     items: [
                         {
                             label: 'Skema Komisi',
@@ -457,7 +463,7 @@ const terms: Record<'affiliate' | 'agent', Record<TermsLanguage, TermsCopy>> = {
                     ],
                 },
                 {
-                    title: '5. Kebijakan Pembatalan dan Pengembalian (Refund)',
+                    title: 'Kebijakan Pembatalan dan Pengembalian (Refund)',
                     items: [
                         {
                             text: 'Setiap pembatalan transaksi oleh pelanggan akan mengikuti kebijakan pembatalan dari vendor penyedia Paket Wisata.',
@@ -468,7 +474,7 @@ const terms: Record<'affiliate' | 'agent', Record<TermsLanguage, TermsCopy>> = {
                     ],
                 },
                 {
-                    title: '6. Keamanan dan Perlindungan Data',
+                    title: 'Keamanan dan Perlindungan Data',
                     items: [
                         {
                             text: 'TravelBoost akan melindungi data pribadi Mitra sesuai dengan kebijakan privasi kami.',
@@ -479,7 +485,7 @@ const terms: Record<'affiliate' | 'agent', Record<TermsLanguage, TermsCopy>> = {
                     ],
                 },
                 {
-                    title: '7. Pemutusan Kemitraan',
+                    title: 'Pemutusan Kemitraan',
                     lead: 'TravelBoost berhak menonaktifkan akun Mitra secara sepihak jika ditemukan:',
                     items: [
                         {
@@ -494,11 +500,11 @@ const terms: Record<'affiliate' | 'agent', Record<TermsLanguage, TermsCopy>> = {
                     ],
                 },
                 {
-                    title: '8. Perubahan Ketentuan',
+                    title: 'Perubahan Ketentuan',
                     lead: 'TravelBoost dapat mengubah Syarat dan Ketentuan ini sewaktu-waktu. Perubahan akan diinformasikan melalui notifikasi di aplikasi atau email. Penggunaan platform secara berkelanjutan setelah perubahan dianggap sebagai persetujuan terhadap ketentuan baru.',
                 },
                 {
-                    title: '9. Hukum yang Berlaku',
+                    title: 'Hukum yang Berlaku',
                     lead: 'Syarat dan Ketentuan ini diatur dan ditafsirkan sesuai dengan hukum Negara Republik Indonesia. Segala perselisihan yang timbul akan diselesaikan melalui musyawarah untuk mufakat, atau melalui jalur hukum di wilayah hukum yang disepakati.',
                 },
             ],
@@ -520,8 +526,10 @@ export function TermsAgreement({
         <div className="space-y-2">
             <div
                 className={cn(
-                    'flex items-start gap-3 rounded-xl border bg-card p-4 text-sm shadow-sm',
-                    error ? 'border-destructive/60' : 'border-border',
+                    'flex items-start gap-3 rounded-2xl border bg-white p-4 text-sm shadow-sm transition dark:bg-slate-950',
+                    error
+                        ? 'border-destructive/60 shadow-destructive/10'
+                        : 'border-slate-200 hover:border-primary/40 dark:border-slate-800',
                 )}
             >
                 <Checkbox
@@ -529,7 +537,7 @@ export function TermsAgreement({
                     checked={checked}
                     onCheckedChange={(value) => onCheckedChange(value === true)}
                     tabIndex={tabIndex}
-                    className="mt-0.5"
+                    className="mt-0.5 rounded-md"
                 />
                 <div className="text-sm leading-relaxed text-muted-foreground">
                     <label htmlFor={`${variant}-terms`}>
@@ -545,85 +553,104 @@ export function TermsAgreement({
                             </button>
                         </DialogTrigger>
                         <DialogContent
-                            className="max-h-[calc(100dvh-1.5rem)] w-[calc(100%-1.5rem)] max-w-[56rem] overflow-hidden rounded-2xl p-0 sm:max-h-[calc(100dvh-3rem)] sm:w-[calc(100%-3rem)]"
+                            className="max-h-[calc(100dvh-1.5rem)] w-[calc(100%-1.5rem)] max-w-[39rem] overflow-hidden rounded-[1.5rem] border border-slate-200 bg-white p-0 shadow-2xl shadow-slate-950/18 dark:border-slate-800 dark:bg-slate-950 sm:max-h-[calc(100dvh-3rem)] sm:w-[calc(100%-3rem)] lg:max-w-[42rem]"
                             aria-describedby={undefined}
                         >
-                            <DialogHeader className="border-b bg-muted/20 px-5 py-5 text-left sm:px-7">
-                                <div className="flex flex-col gap-4 pr-8 sm:flex-row sm:items-start sm:justify-between">
-                                    <div className="min-w-0 space-y-2">
-                                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
-                                            TravelBoost Agreement
-                                        </p>
-                                        <DialogTitle className="text-xl font-semibold leading-snug text-foreground sm:text-2xl">
-                                            {copy.title}
-                                        </DialogTitle>
+                            <div className="max-h-[calc(100dvh-1.5rem)] overflow-y-auto bg-slate-50/70 px-5 pt-5 pb-9 dark:bg-slate-950 sm:max-h-[calc(100dvh-3rem)] sm:px-7 sm:pb-10">
+                                <div className="space-y-4 font-sans text-sm leading-7 text-slate-800 dark:text-slate-100">
+                                    <DialogHeader className="space-y-4 pr-8 text-left">
+                                        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                                            <div className="min-w-0 space-y-1.5">
+                                                <DialogTitle className="text-lg font-semibold leading-snug text-slate-950 dark:text-white sm:text-xl">
+                                                    {copy.title}
+                                                </DialogTitle>
+                                                <p className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+                                                    <BookOpenCheckIcon className="h-[1.125rem] w-[1.125rem] shrink-0 text-primary" />
+                                                    Read carefully before
+                                                    registering
+                                                </p>
+                                            </div>
+                                            <div className="inline-flex w-fit shrink-0 items-center gap-1 rounded-full border border-slate-200 bg-white p-1 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                                                <LanguagesIcon className="ml-2 h-4 w-4 text-slate-400" />
+                                                {(
+                                                    [
+                                                        'en',
+                                                        'id',
+                                                    ] as TermsLanguage[]
+                                                ).map((option) => (
+                                                    <button
+                                                        key={option}
+                                                        type="button"
+                                                        className={cn(
+                                                            'rounded-full px-3 py-1.5 text-xs font-semibold transition',
+                                                            language === option
+                                                                ? 'bg-primary text-white shadow-sm'
+                                                                : 'text-slate-500 hover:text-slate-950 dark:text-slate-400 dark:hover:text-white',
+                                                        )}
+                                                        onClick={() =>
+                                                            setLanguage(option)
+                                                        }
+                                                    >
+                                                        {option.toUpperCase()}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
                                         {copy.platform && (
-                                            <p className="text-sm font-medium text-muted-foreground">
-                                                {copy.platform}
-                                            </p>
+                                            <div className="flex items-start gap-2 rounded-2xl bg-primary/5 px-4 py-3 text-sm text-slate-600 ring-1 ring-primary/10 dark:bg-primary/10 dark:text-slate-300 dark:ring-primary/20">
+                                                <ShieldCheckIcon className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                                                <span>{copy.platform}</span>
+                                            </div>
                                         )}
-                                    </div>
-                                    <div className="inline-flex w-fit rounded-full border bg-background p-1 shadow-sm">
-                                        {(['en', 'id'] as TermsLanguage[]).map(
-                                            (option) => (
-                                                <button
-                                                    key={option}
-                                                    type="button"
-                                                    className={cn(
-                                                        'rounded-full px-3 py-1.5 text-xs font-semibold transition',
-                                                        language === option
-                                                            ? 'bg-primary text-primary-foreground shadow-sm'
-                                                            : 'text-muted-foreground hover:text-foreground',
-                                                    )}
-                                                    onClick={() =>
-                                                        setLanguage(option)
-                                                    }
-                                                >
-                                                    {option.toUpperCase()}
-                                                </button>
-                                            ),
-                                        )}
-                                    </div>
-                                </div>
-                            </DialogHeader>
-                            <div className="max-h-[calc(100dvh-13rem)] overflow-y-auto px-5 py-5 sm:max-h-[calc(100dvh-15rem)] sm:px-7">
-                                <div className="space-y-5 font-sans text-sm leading-7 text-foreground">
-                                    <div className="rounded-xl border bg-background p-4 text-muted-foreground shadow-sm">
+                                    </DialogHeader>
+                                    <div className="rounded-2xl border border-slate-200 bg-white p-4 text-slate-600 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">
                                         {copy.intro}
                                     </div>
-                                    <div className="grid gap-4">
-                                        {copy.sections.map((section) => (
+                                    <div className="grid gap-3">
+                                        {copy.sections.map((section, index) => (
                                             <section
                                                 key={section.title}
-                                                className="rounded-xl border bg-background p-4 shadow-sm"
+                                                className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900"
                                             >
-                                                <h3 className="text-base font-semibold leading-6 text-foreground">
-                                                    {section.title}
-                                                </h3>
-                                                {section.lead && (
-                                                    <p className="mt-3 text-muted-foreground">
-                                                        {section.lead}
-                                                    </p>
-                                                )}
+                                                <div className="flex items-start gap-3 border-b border-slate-100 bg-white px-4 py-3.5 dark:border-slate-800 dark:bg-slate-900">
+                                                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-sm font-semibold text-primary">
+                                                        {index + 1}
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <h3 className="text-sm font-semibold leading-6 text-slate-950 dark:text-white sm:text-base">
+                                                            {section.title}
+                                                        </h3>
+                                                        {section.lead && (
+                                                            <p className="mt-2 text-slate-600 dark:text-slate-300">
+                                                                {section.lead}
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                </div>
                                                 {section.items && (
-                                                    <ul className="mt-3 space-y-3">
+                                                    <ul className="space-y-0">
                                                         {section.items.map(
-                                                            (item, index) => (
+                                                            (
+                                                                item,
+                                                                itemIndex,
+                                                            ) => (
                                                                 <li
-                                                                    key={`${section.title}-${index}`}
-                                                                    className="flex gap-3"
+                                                                    key={`${section.title}-${itemIndex}`}
+                                                                    className="flex gap-3 border-b border-slate-100 px-4 py-3 last:border-b-0 dark:border-slate-800"
                                                                 >
-                                                                    <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-primary" />
-                                                                    <span className="min-w-0 text-muted-foreground">
+                                                                    <CheckCircle2Icon className="mt-1 h-4 w-4 shrink-0 text-emerald-500" />
+                                                                    <span className="min-w-0 text-slate-600 dark:text-slate-300">
                                                                         {item.label && (
-                                                                            <span className="font-semibold text-foreground">
+                                                                            <span className="font-semibold text-slate-950 dark:text-white">
                                                                                 {
                                                                                     item.label
                                                                                 }
 
-                                                                                :{' '}
+                                                                                :
                                                                             </span>
                                                                         )}
+                                                                        {item.label &&
+                                                                            ' '}
                                                                         {
                                                                             item.text
                                                                         }

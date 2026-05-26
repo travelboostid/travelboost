@@ -71,21 +71,17 @@
   <table style="width: 100%;">
     <tr>
       <td colspan="2" rowspan="3"></td>
-      <td colspan="7" style="font-size: 16pt; font-weight: 800; text-transform: uppercase; vertical-align: bottom; color: #0f172a;">Room Listing</td>
-      <td colspan="6" halign="right" style="vertical-align: bottom;">
-        <div style="font-size: 8pt; font-weight: 700; text-transform: uppercase; color: #64748b;">Tour Product</div>
-        <div style="font-size: 10pt; font-weight: 700; color: #0f172a;">{{ $tour ? ($tour->code . ' - ' . $tour->name) : 'Not selected' }}</div>
-      </td>
+      <td colspan="7" rowspan="2" style="font-size: 18pt; font-weight: 800; text-transform: uppercase; vertical-align: middle; color: #0f172a;">Room Listing</td>
+      <td colspan="2" style="font-size: 8pt; font-weight: 700; text-transform: uppercase; color: #64748b; vertical-align: middle;">Tour Product</td>
+      <td colspan="4" style="font-size: 10pt; font-weight: 700; color: #0f172a; vertical-align: middle;">{{ $tour ? ($tour->code . ' - ' . $tour->name) : 'Not selected' }}</td>
+    </tr>
+    <tr>
+      <td colspan="2" style="font-size: 8pt; font-weight: 700; text-transform: uppercase; color: #64748b; vertical-align: middle;">Departure Date</td>
+      <td colspan="4" style="font-size: 10pt; font-weight: 700; color: #0f172a; vertical-align: middle;">{{ $departure_date ? \Carbon\Carbon::parse($departure_date)->format('d F Y') : 'Not selected' }}</td>
     </tr>
     <tr>
       <td colspan="7" style="font-size: 10pt; font-weight: 700; text-transform: uppercase; vertical-align: top; color: #334155;">{{ $company->name }}</td>
-      <td colspan="6" halign="right" style="vertical-align: top;">
-        <div style="font-size: 8pt; font-weight: 700; text-transform: uppercase; color: #64748b;">Departure Date</div>
-        <div style="font-size: 10pt; font-weight: 700; color: #0f172a;">{{ $departure_date ? \Carbon\Carbon::parse($departure_date)->format('d F Y') : 'Not selected' }}</div>
-      </td>
-    </tr>
-    <tr>
-      <td colspan="13" style="border-bottom: 2px solid #111827;"></td>
+      <td colspan="6" style="border-bottom: 2px solid #111827;"></td>
     </tr>
     <tr>
       <td colspan="15"></td>
@@ -169,7 +165,7 @@
               if ($passenger->passport_expiry_date) {
                 $expiryDate = \Carbon\Carbon::parse($passenger->passport_expiry_date);
                 $referenceDate = $departure_date ? \Carbon\Carbon::parse($departure_date) : now();
-                $validityMonths = $referenceDate->diffInMonths($expiryDate, false);
+                $validityMonths = (int) round($referenceDate->diffInMonths($expiryDate, false));
                 $isWarning = $validityMonths < 6;
               }
             @endphp
@@ -179,11 +175,11 @@
 
               @if($isFirstInRoom)
                 <td rowspan="{{ $roomPassengerCount }}" style="{{ $cellStyle }} text-align: center; text-transform: uppercase; font-size: 7pt;">{{ $roomType }}</td>
-                <td rowspan="{{ $roomPassengerCount }}" style="{{ $cellStyle }} text-align: center;">{{ $passenger->room_number ?: '' }}</td>
+                <td rowspan="{{ $roomPassengerCount }}" style="{{ $cellStyle }} text-align: center;"></td>
               @endif
 
               <td style="{{ $cellStyle }} text-align: center;"></td>
-              <td style="{{ $cellStyle }} text-align: center;">{{ $passenger->visa_number ? 'YES' : '-' }}</td>
+              <td style="{{ $cellStyle }} text-align: center;"></td>
               <td style="{{ $cellStyle }} font-size: 7pt; font-style: italic; color: #475569;">{{ $passenger->note ?: $bookingData['contact_notes'] ?: '-' }}</td>
               <td style="{{ $cellStyle }} text-align: center; font-size: 8pt; mso-number-format: '\@'; font-family: monospace;">{{ $passenger->passport_number ?: '-' }}</td>
               <td style="{{ $cellStyle }} text-align: center; font-size: 8pt;">{{ $passenger->passport_issue_date ? \Carbon\Carbon::parse($passenger->passport_issue_date)->format('d/m/Y') : '-' }}</td>

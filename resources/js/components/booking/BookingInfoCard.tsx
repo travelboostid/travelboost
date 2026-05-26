@@ -48,6 +48,8 @@ type BookingInfoCardProps = {
     displayTotalPrice?: number;
     totalPaid?: number;
     remainingBalance?: number;
+    agentCommissionAmount?: number;
+    showAgentCommission?: boolean;
     timerStarted?: boolean;
 };
 
@@ -68,6 +70,8 @@ export default function BookingInfoCard({
     displayTotalPrice,
     totalPaid = 0,
     remainingBalance = 0,
+    agentCommissionAmount = 0,
+    showAgentCommission = false,
     timerStarted = false,
 }: BookingInfoCardProps) {
     const normalizeStatus = (s: string): BookingStatusCode => {
@@ -304,29 +308,47 @@ export default function BookingInfoCard({
                     <p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                         Invoice
                     </p>
-                    <p className="text-xs sm:text-sm">
-                        <span className="text-muted-foreground md:mr-2">
-                            Invoice Number:
-                        </span>{' '}
-                        {invoiceNumber ? (
-                            <motion.span
-                                initial={{ opacity: 0, scale: 0.82 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                transition={{
-                                    type: 'spring',
-                                    stiffness: 200,
-                                    damping: 18,
-                                }}
-                                className="font-bold text-primary"
-                            >
-                                {invoiceNumber}
-                            </motion.span>
-                        ) : (
-                            <span className="font-semibold text-muted-foreground/60">
-                                -
-                            </span>
+                    <div className="grid grid-cols-1 gap-1 text-xs sm:text-sm md:grid-cols-3">
+                        <p
+                            className={
+                                showAgentCommission ? 'md:col-span-2' : ''
+                            }
+                        >
+                            <span className="text-muted-foreground md:mr-2">
+                                Invoice Number:
+                            </span>{' '}
+                            {invoiceNumber ? (
+                                <motion.span
+                                    initial={{ opacity: 0, scale: 0.82 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    transition={{
+                                        type: 'spring',
+                                        stiffness: 200,
+                                        damping: 18,
+                                    }}
+                                    className="font-bold text-primary"
+                                >
+                                    {invoiceNumber}
+                                </motion.span>
+                            ) : (
+                                <span className="font-semibold text-muted-foreground/60">
+                                    -
+                                </span>
+                            )}
+                        </p>
+                        {showAgentCommission && (
+                            <p>
+                                <span className="text-muted-foreground md:mr-2">
+                                    Commission:
+                                </span>{' '}
+                                <span className="font-bold text-primary">
+                                    <AnimatedPrice
+                                        value={agentCommissionAmount}
+                                    />
+                                </span>
+                            </p>
                         )}
-                    </p>
+                    </div>
                 </div>
             </div>
         </div>

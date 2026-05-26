@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/table';
 import { formatIDR } from '@/lib/utils';
 import { Head, Link } from '@inertiajs/react';
+import type { LucideIcon } from 'lucide-react';
 import {
     AlertCircle,
     ArrowRight,
@@ -36,21 +37,29 @@ type DashboardProps = {
 };
 
 const getResponsiveAmountClass = (value: string | number) => {
-    const length = String(value).length;
-
-    if (length >= 20) {
-        return 'text-lg sm:text-xl';
-    }
+    const length = String(value).replace(/\D/g, '').length;
 
     if (length >= 16) {
-        return 'text-xl sm:text-2xl';
+        return 'text-xs sm:text-sm';
     }
 
-    if (length >= 12) {
-        return 'text-2xl';
+    if (length >= 13) {
+        return 'text-sm sm:text-base';
     }
 
-    return 'text-2xl sm:text-3xl';
+    if (length >= 10) {
+        return 'text-base sm:text-lg';
+    }
+
+    return 'text-xl sm:text-2xl';
+};
+
+type SummaryCard = {
+    title: string;
+    value: string | number;
+    description: string;
+    icon: LucideIcon;
+    isCurrency?: boolean;
 };
 
 export default function AffiliateDashboardIndex({
@@ -76,7 +85,7 @@ export default function AffiliateDashboardIndex({
           ? 'Master Affiliate'
           : 'Affiliate';
 
-    const performanceCards = isPartner
+    const performanceCards: SummaryCard[] = isPartner
         ? [
               {
                   title: 'Master Affiliates',
@@ -133,7 +142,7 @@ export default function AffiliateDashboardIndex({
                 },
             ];
 
-    const summaryCards = [
+    const summaryCards: SummaryCard[] = [
         ...performanceCards,
         {
             title: 'Earned Commission',
@@ -153,7 +162,7 @@ export default function AffiliateDashboardIndex({
 
     return (
         <AffiliateDashboardLayout
-            activeMenuIds={['dashboard']}
+            activeMenuIds={['home']}
             breadcrumb={[{ title: 'Dashboard', url: '/affiliate/dashboard' }]}
             containerClassName="min-h-screen bg-slate-50/60 dark:bg-slate-950"
         >
@@ -301,10 +310,10 @@ export default function AffiliateDashboardIndex({
                                                 <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
                                                     Wallet Balance
                                                 </span>
-                                                <Wallet className="h-5 w-5 text-primary" />
+                                                <Wallet className="h-4 w-4 text-primary" />
                                             </div>
                                             <p
-                                                className={`mt-3 break-words font-semibold leading-tight text-slate-900 dark:text-slate-100 ${getResponsiveAmountClass(formatIDR(wallet_balance))}`}
+                                                className={`mt-3 min-w-0 break-all font-semibold leading-tight text-slate-900 tabular-nums dark:text-slate-100 ${getResponsiveAmountClass(formatIDR(wallet_balance))}`}
                                             >
                                                 {formatIDR(wallet_balance)}
                                             </p>
@@ -333,7 +342,7 @@ export default function AffiliateDashboardIndex({
                                                         </span>
                                                     )}
                                                 </div>
-                                                <Bell className="h-5 w-5 text-primary transition-transform group-hover:scale-105" />
+                                                <Bell className="h-4 w-4 text-primary transition-transform group-hover:scale-105" />
                                             </div>
                                             <p className="mt-3 text-2xl font-semibold text-slate-900 dark:text-slate-100">
                                                 {unreadNotificationsCount}
@@ -359,24 +368,24 @@ export default function AffiliateDashboardIndex({
                                 >
                                     <CardContent className="p-6">
                                         <div className="flex items-start justify-between gap-4">
-                                            <div className="min-w-0">
+                                            <div className="min-w-0 flex-1">
                                                 <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">
                                                     {item.title}
                                                 </p>
                                                 <p
-                                                    className={`mt-4 break-words font-semibold leading-tight tracking-tight text-slate-900 dark:text-slate-100 ${
+                                                    className={`mt-4 min-w-0 break-all font-semibold leading-tight tracking-tight text-slate-900 tabular-nums dark:text-slate-100 ${
                                                         item.isCurrency
                                                             ? getResponsiveAmountClass(
                                                                   item.value,
                                                               )
-                                                            : 'text-3xl'
+                                                            : 'text-xl sm:text-2xl'
                                                     }`}
                                                 >
                                                     {item.value}
                                                 </p>
                                             </div>
-                                            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10 text-primary dark:bg-primary/15">
-                                                <Icon className="h-5 w-5" />
+                                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary dark:bg-primary/15">
+                                                <Icon className="h-4 w-4" />
                                             </div>
                                         </div>
                                         <p className="mt-4 text-sm text-slate-500 dark:text-slate-400">

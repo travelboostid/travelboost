@@ -22,13 +22,20 @@ class AgentTourController extends Controller
                 'tour.image',
                 'tour.document',
                 'tour.availabilities.schedule',
+                'tour.schedules.availability',
+                'tour.schedules.prices.priceCategory',
                 'category',
             ])
             ->when($status !== 'all', function ($query) use ($status) {
                 return $query->where('status', $status);
             })
             ->orderBy('id', 'desc')
-            ->get();
+            ->get()
+            ->each(function (AgentTour $agentTour): void {
+                $agentTour->tour?->schedules?->each(function ($schedule): void {
+                    $schedule->setAttribute('price', $this->lowestDiscountedSchedulePrice($schedule->prices));
+                });
+            });
 
         return Inertia::render('companies/dashboard/agent-tours/index', [
             'data' => $tours,
@@ -63,5 +70,27 @@ class AgentTourController extends Controller
         $agent_tour->delete();
 
         return back();
+    }
+
+    private function lowestDiscountedSchedulePrice($prices): float
+    {
+        return (float) $prices
+            ->map(function ($price): float {
+                $basePrice = (float) $price->price;
+                $promotionRate = (float) ($price->promotion_rate ?? 0);
+                $promotion = (float) ($price->promotion ?? 0);
+
+                if ($promotionRate > 0) {
+                    return max(0.0, (float) round($basePrice - (($basePrice * $promotionRate) / 100)));
+                }
+
+                if ($promotion > 0) {
+                    return max(0.0, (float) round($basePrice - $promotion));
+                }
+
+                return $basePrice;
+            })
+            ->filter(fn (float $price): bool => $price > 0)
+            ->min();
     }
 }

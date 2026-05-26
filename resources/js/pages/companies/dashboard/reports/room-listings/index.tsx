@@ -19,7 +19,13 @@ import {
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { Head, router, usePage } from '@inertiajs/react';
 import dayjs from 'dayjs';
-import { DownloadIcon, FileIcon, PrinterIcon } from 'lucide-react';
+import {
+    DownloadIcon,
+    FileIcon,
+    InfoIcon,
+    PrinterIcon,
+    RotateCcwIcon,
+} from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 const TourAutocomplete = ({
@@ -126,7 +132,9 @@ export default function RoomListing() {
             return null;
         }
 
-        return dayjs(expiryDate).diff(dayjs(filters.departure_date), 'month');
+        return Math.round(
+            dayjs(expiryDate).diff(dayjs(filters.departure_date), 'month'),
+        );
     };
 
     const selectedTour = useMemo(() => {
@@ -178,6 +186,14 @@ export default function RoomListing() {
         }
 
         return params.toString();
+    };
+
+    const handleResetFilters = () => {
+        router.get(
+            window.location.pathname,
+            { tour_id: '', departure_date: '' },
+            { preserveState: true },
+        );
     };
 
     const handleExportExcel = () => {
@@ -236,72 +252,101 @@ export default function RoomListing() {
                                 <label className="mb-2 block text-xs font-black uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
                                     Departure Date
                                 </label>
-                                <Select
-                                    value={filters.departure_date || undefined}
-                                    onValueChange={(value) =>
-                                        router.get(
-                                            window.location.pathname,
-                                            {
-                                                ...filters,
-                                                departure_date: value,
-                                            },
-                                            { preserveState: true },
-                                        )
-                                    }
-                                    disabled={!hasTourSelected}
-                                >
-                                    <SelectTrigger className="h-11 rounded-xl bg-white dark:border-slate-700 dark:bg-slate-900 dark:text-white">
-                                        <SelectValue
-                                            placeholder={
-                                                hasTourSelected
-                                                    ? 'Select departure date'
-                                                    : 'Select a tour product first'
-                                            }
-                                        />
-                                    </SelectTrigger>
-                                    <SelectContent className="dark:border-slate-700 dark:bg-slate-900">
-                                        {availableDates.map((date: string) => (
-                                            <SelectItem
-                                                key={date}
-                                                value={date}
-                                                className="dark:focus:bg-slate-800"
-                                            >
-                                                {dayjs(date).format(
-                                                    'DD MMM YYYY',
-                                                )}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
+                                <div className="flex gap-2">
+                                    <Select
+                                        value={
+                                            filters.departure_date || undefined
+                                        }
+                                        onValueChange={(value) =>
+                                            router.get(
+                                                window.location.pathname,
+                                                {
+                                                    ...filters,
+                                                    departure_date: value,
+                                                },
+                                                { preserveState: true },
+                                            )
+                                        }
+                                        disabled={!hasTourSelected}
+                                    >
+                                        <SelectTrigger className="h-11 rounded-xl bg-white dark:border-slate-700 dark:bg-slate-900 dark:text-white">
+                                            <SelectValue
+                                                placeholder={
+                                                    hasTourSelected
+                                                        ? 'Select departure date'
+                                                        : 'Select a tour product first'
+                                                }
+                                            />
+                                        </SelectTrigger>
+                                        <SelectContent className="dark:border-slate-700 dark:bg-slate-900">
+                                            {availableDates.map(
+                                                (date: string) => (
+                                                    <SelectItem
+                                                        key={date}
+                                                        value={date}
+                                                        className="dark:focus:bg-slate-800"
+                                                    >
+                                                        {dayjs(date).format(
+                                                            'DD MMM YYYY',
+                                                        )}
+                                                    </SelectItem>
+                                                ),
+                                            )}
+                                        </SelectContent>
+                                    </Select>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="icon"
+                                        className="h-11 w-11 shrink-0 rounded-xl border-slate-200 bg-white text-slate-600 shadow-sm hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
+                                        onClick={handleResetFilters}
+                                        disabled={
+                                            !hasTourSelected &&
+                                            !hasDepartureSelected
+                                        }
+                                        title="Reset search"
+                                    >
+                                        <RotateCcwIcon size={16} />
+                                    </Button>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div className="mb-6 flex flex-col gap-3 print:hidden sm:flex-row sm:flex-wrap sm:justify-end">
-                    <Button
-                        variant="outline"
-                        className="h-11 min-w-[148px] justify-center gap-2 rounded-xl border-slate-200 bg-white px-5 shadow-sm transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:hover:bg-slate-800"
-                        onClick={handlePrintNative}
-                        disabled={!hasCompleteFilters || !roomData?.length}
-                    >
-                        <PrinterIcon size={16} /> Print
-                    </Button>
-                    <Button
-                        variant="outline"
-                        className="h-11 min-w-[148px] justify-center gap-2 rounded-xl border-red-200 bg-red-50 px-5 text-red-600 shadow-sm transition hover:bg-red-100 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/30"
-                        onClick={handleExportPDF}
-                        disabled={!hasCompleteFilters || !roomData?.length}
-                    >
-                        <FileIcon size={16} /> Export PDF
-                    </Button>
-                    <Button
-                        className="h-11 min-w-[148px] justify-center gap-2 rounded-xl bg-emerald-600 px-5 text-white shadow-sm transition hover:bg-emerald-700"
-                        onClick={handleExportExcel}
-                        disabled={!hasCompleteFilters || !roomData?.length}
-                    >
-                        <DownloadIcon size={16} /> Export Excel
-                    </Button>
+                <div className="mb-6 flex flex-col gap-3 print:hidden xl:flex-row xl:items-center xl:justify-between">
+                    <div className="flex max-w-2xl items-start gap-3 rounded-2xl border border-blue-100 bg-blue-50/70 px-4 py-3 text-sm text-blue-900 dark:border-blue-900/40 dark:bg-blue-950/30 dark:text-blue-200">
+                        <InfoIcon className="mt-0.5 h-4 w-4 shrink-0" />
+                        <p>
+                            Only tour bookings with full payment status are
+                            displayed in this room listing report.
+                        </p>
+                    </div>
+                    <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:justify-end">
+                        <Button
+                            variant="outline"
+                            className="h-11 min-w-[148px] justify-center gap-2 rounded-xl border-slate-200 bg-white px-5 shadow-sm transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:hover:bg-slate-800"
+                            onClick={handlePrintNative}
+                            disabled={!hasCompleteFilters || !roomData?.length}
+                        >
+                            <PrinterIcon size={16} /> Print
+                        </Button>
+                        <Button
+                            variant="outline"
+                            className="h-11 min-w-[148px] justify-center gap-2 rounded-xl border-red-200 bg-red-50 px-5 text-red-600 shadow-sm transition hover:bg-red-100 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/30"
+                            onClick={handleExportPDF}
+                            disabled={!hasCompleteFilters || !roomData?.length}
+                        >
+                            <FileIcon size={16} /> Export PDF
+                        </Button>
+                        <Button
+                            className="h-11 min-w-[148px] justify-center gap-2 rounded-xl bg-emerald-600 px-5 text-white shadow-sm transition hover:bg-emerald-700"
+                            onClick={handleExportExcel}
+                            disabled={!hasCompleteFilters || !roomData?.length}
+                        >
+                            <DownloadIcon size={16} /> Export Excel
+                        </Button>
+                    </div>
                 </div>
 
                 <div className="mb-5 hidden items-start justify-between border-b-2 border-black pb-4 print:flex">
@@ -478,18 +523,11 @@ export default function RoomListing() {
                                                                                     totalPaxInRoom
                                                                                 }
                                                                                 className="border-r border-slate-200 p-2 dark:border-slate-800"
-                                                                            >
-                                                                                {row.room_number ||
-                                                                                    ''}
-                                                                            </TableCell>
+                                                                            />
                                                                         </>
                                                                     )}
                                                                     <TableCell className="border-r border-slate-200 p-2 dark:border-slate-800" />
-                                                                    <TableCell className="border-r border-slate-200 p-2 text-center text-[11px] dark:border-slate-800 dark:text-slate-300">
-                                                                        {row.visa_number
-                                                                            ? 'Yes'
-                                                                            : '-'}
-                                                                    </TableCell>
+                                                                    <TableCell className="border-r border-slate-200 p-2 text-center text-[11px] dark:border-slate-800 dark:text-slate-300" />
                                                                     <TableCell className="border-r border-slate-200 p-2 text-[11px] italic leading-tight text-slate-500 dark:border-slate-800 dark:text-slate-400">
                                                                         {row.note ||
                                                                             row.contact_notes ||

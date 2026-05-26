@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Actions\Booking\ExpireBookingReservationsAction;
 use App\Actions\Booking\FinalizeBookingPaymentAction;
+use App\Actions\Booking\NotifyBookingPaymentEventAction;
 use App\Actions\Booking\SyncAvailabilityAction;
 use App\Enums\BookingStatus;
 use App\Enums\PaymentStatus;
@@ -12,6 +13,7 @@ use App\Models\Booking;
 use App\Models\BookingDocument;
 use App\Models\Payment;
 use App\Models\Tour;
+use App\Models\TourAddOn;
 use App\Models\TourAvailability;
 use App\Models\TourPrice;
 use App\Models\TourSchedule;
@@ -70,13 +72,13 @@ class BookingController extends Controller
             if ($schedule) {
                 app(ExpireBookingReservationsAction::class)->execute($tour->company, $tour->id);
 
-                $availability = \App\Models\TourAvailability::where('schedule_id', $schedule->id)
+                $availability = TourAvailability::where('schedule_id', $schedule->id)
                     ->where('tour_id', $tour->id)
                     ->first();
 
                 $availableSeats = $isScheduleBookable && $availability ? (int) $availability->available : 0;
 
-                $addOns = \App\Models\TourAddOn::where('schedule_id', $schedule->id)
+                $addOns = TourAddOn::where('schedule_id', $schedule->id)
                     ->where('tour_id', $tour->id)
                     ->get()
                     ->map(function ($addon) {
@@ -107,6 +109,11 @@ class BookingController extends Controller
         $forceNewBooking = request()->boolean('force_new');
 
         if ($user && $schedule) {
+            $draftStatuses = [
+                BookingStatus::AWAITING_PAYMENT,
+                BookingStatus::BOOKING_RESERVED,
+                BookingStatus::RESERVED,
+            ];
             $resumableStatuses = [
                 BookingStatus::AWAITING_PAYMENT,
                 BookingStatus::BOOKING_RESERVED,
@@ -165,7 +172,17 @@ class BookingController extends Controller
                     ->first();
             }
 
-            if (! $existingBooking && ! $bookingConflict && ! $forceNewBooking && $isScheduleBookable) {
+            if (! $existingBooking && ! $bookingConflict && $forceNewBooking && $isScheduleBookable) {
+                $existingBooking = Booking::with(['passengers', 'rooms'])
+                    ->where('user_id', $user->id)
+                    ->where('tour_id', $tour->id)
+                    ->whereIn('status', $draftStatuses)
+                    ->whereDate('departure_date', request()->query('date'))
+                    ->latest()
+                    ->first();
+            }
+
+            if (! $existingBooking && ! $bookingConflict && $isScheduleBookable) {
                 $existingBooking = Booking::with(['passengers', 'rooms'])
                     ->where('user_id', $user->id)
                     ->where('tour_id', $tour->id)
@@ -176,30 +193,30 @@ class BookingController extends Controller
                     ->first();
             }
 
+            if ($existingBooking && $existingBooking->status === BookingStatus::EXPIRED && $isScheduleBookable) {
+                $existingBooking = DB::transaction(function () use ($existingBooking): Booking {
+                    $lockedBooking = Booking::with(['passengers', 'rooms'])
+                        ->whereKey($existingBooking->id)
+                        ->lockForUpdate()
+                        ->firstOrFail();
+
+                    if ($lockedBooking->status === BookingStatus::EXPIRED) {
+                        $lockedBooking->update([
+                            'status' => BookingStatus::AWAITING_PAYMENT,
+                            'reserved_type' => 'system',
+                            'reserved_expires_at' => null,
+                        ]);
+                    }
+
+                    return $lockedBooking->fresh(['passengers', 'rooms']);
+                });
+
+                app(SyncAvailabilityAction::class)->executeForBooking($existingBooking->fresh());
+            }
+
             if ($existingBooking) {
                 $bookingNumber = $existingBooking->booking_number;
                 $isResumingExistingBooking = true;
-            } elseif (! $bookingConflict && $isScheduleBookable) {
-                $existingBooking = Booking::create([
-                    'booking_number' => $bookingNumber,
-                    'user_id' => $user->id,
-                    'tour_id' => $tour->id,
-                    'departure_date' => request()->query('date'),
-                    'pax_adult' => 0,
-                    'pax_child' => 0,
-                    'pax_infant' => 0,
-                    'status' => BookingStatus::AWAITING_PAYMENT,
-                    'reserved_type' => 'system',
-                    'vendor_id' => $tour->company_id,
-                    'agent_id' => $tenant?->id ?? null,
-                    'total_price' => 0,
-                    'tax_amount' => 0,
-                    'platform_fee' => 0,
-                    'commission_amount' => 0,
-                    'grand_total' => 0,
-                    'contact_name' => $user->name ?? null,
-                    'contact_email' => $user->email ?? null,
-                ]);
             }
         }
 
@@ -503,6 +520,7 @@ class BookingController extends Controller
         abort_unless($booking instanceof Booking, 404);
         abort_unless($request->user()?->id === $booking->user_id, 403);
         abort_unless(in_array($booking->status, [
+            BookingStatus::WAITING_PAYMENT_APPROVAL,
             BookingStatus::DOWN_PAYMENT,
             BookingStatus::FULL_PAYMENT,
         ], true), 422);
@@ -706,6 +724,7 @@ class BookingController extends Controller
         });
 
         app(SyncAvailabilityAction::class)->executeForBooking($booking->fresh());
+        app(NotifyBookingPaymentEventAction::class)->execute($booking->fresh(), 'manual_payment_submitted', $payment->fresh());
 
         return back()
             ->with('success', 'Payment proof submitted. We will verify shortly.')
@@ -731,6 +750,7 @@ class BookingController extends Controller
         );
 
         $payment = DB::transaction(function () use ($request, $booking, $validated) {
+            $paymentReceiver = app(BookingPaymentReceiverService::class)->resolveForBooking($booking);
             $payment = $booking->payments()->create([
                 'owner_type' => get_class($request->user()),
                 'owner_id' => $request->user()->id,
@@ -740,6 +760,9 @@ class BookingController extends Controller
                 'status' => 'unpaid',
                 'payload' => [
                     'payment_type' => $validated['payment_type'],
+                    'payment_receiver_type' => $paymentReceiver['receiver_type'],
+                    'payment_receiver_company_id' => $paymentReceiver['receiver_company']?->id,
+                    'partnership_payment_mode' => $paymentReceiver['payment_mode'],
                 ],
             ]);
 
@@ -780,6 +803,9 @@ class BookingController extends Controller
                 'order_id' => $orderId,
                 'snap_token' => $snapToken,
                 'request' => $params,
+                'payment_receiver_type' => $paymentReceiver['receiver_type'],
+                'payment_receiver_company_id' => $paymentReceiver['receiver_company']?->id,
+                'partnership_payment_mode' => $paymentReceiver['payment_mode'],
             ];
 
             if (! $snapToken) {
@@ -802,6 +828,7 @@ class BookingController extends Controller
         });
 
         app(SyncAvailabilityAction::class)->executeForBooking($booking->fresh());
+        app(NotifyBookingPaymentEventAction::class)->execute($booking->fresh(), 'online_payment_pending', $payment->fresh());
 
         return response()->json([
             'payment' => [
@@ -849,6 +876,16 @@ class BookingController extends Controller
             if ($newStatus === PaymentStatus::PAID) {
                 app(FinalizeBookingPaymentAction::class)->execute($booking->fresh(), $payment->fresh());
             }
+
+            app(NotifyBookingPaymentEventAction::class)->execute(
+                $booking->fresh(),
+                match ($newStatus) {
+                    PaymentStatus::PAID => 'online_payment_confirmed',
+                    PaymentStatus::FAILED => 'online_payment_failed',
+                    default => 'online_payment_pending',
+                },
+                $payment->fresh()
+            );
         });
 
         return response()->json([
@@ -940,7 +977,7 @@ class BookingController extends Controller
         try {
             $dob = Carbon::parse($dateOfBirth);
             $departure = Carbon::parse($departureDate);
-        } catch (\Throwable) {
+        } catch (Throwable) {
             return null;
         }
 

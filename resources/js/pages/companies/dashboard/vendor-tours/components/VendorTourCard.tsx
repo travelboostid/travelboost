@@ -19,7 +19,10 @@ export default function VendorTourCard({
             ? {
                   ...tour,
                   schedules: tour.schedules.map((schedule: any) => {
-                      if (Number.isFinite(Number(schedule?.price))) {
+                      if (
+                          Number.isFinite(Number(schedule?.price)) &&
+                          Number(schedule.price) > 0
+                      ) {
                           return schedule;
                       }
 
@@ -90,7 +93,7 @@ export default function VendorTourCard({
             isVendorNameVisible={isVendorNameVisible}
             isVendorInactive={isVendorInactive}
             statusSection={
-                <div className="px-4 py-2 border-t border-slate-50 dark:border-slate-800/60">
+                <div className="mx-4 mt-4 border-t border-slate-100 pt-3 dark:border-slate-800/60">
                     <div className="flex items-center justify-between">
                         <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase">
                             My Catalog Status
@@ -134,7 +137,7 @@ export default function VendorTourCard({
                             </Button>
                         </TooltipTrigger>
                         <TooltipContent>
-                            <p>View Brochure</p>
+                            <p>Itinerary</p>
                         </TooltipContent>
                     </Tooltip>
                 </>

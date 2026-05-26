@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Me\HomeController;
+use App\Http\Controllers\Me\NotificationController;
 use App\Http\Controllers\Me\OnboardingController;
 use App\Http\Controllers\Me\Settings\PasswordController;
 use App\Http\Controllers\Me\Settings\ProfileController;
@@ -10,6 +11,9 @@ use Illuminate\Support\Facades\Route;
 
 Route::name('me.')->group(function () {
     Route::get('/mybookings', [HomeController::class, 'bookings'])->name('bookings');
+    Route::get('/mybookings/{booking}/invoice', [HomeController::class, 'bookingInvoice'])
+        ->middleware('auth')
+        ->name('bookings.invoice');
 });
 
 Route::middleware(['auth', 'check.user.status'])->prefix('me')->name('me.')->group(function () {
@@ -22,6 +26,10 @@ Route::middleware(['auth', 'check.user.status'])->prefix('me')->name('me.')->gro
     Route::get('profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::post('/tours/{tour}/like', [HomeController::class, 'toggleTourLike'])->name('tours.like');
+    Route::get('notifications', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::post('notifications/mark-all-as-read', [NotificationController::class, 'markAllAsRead'])->name('notifications.mark-all-read');
+    Route::put('notifications/{notification}', [NotificationController::class, 'update'])->name('notifications.update');
+    Route::delete('notifications/{notification}', [NotificationController::class, 'destroy'])->name('notifications.destroy');
     Route::middleware(['verified'])->group(function () {
         Route::get('password', [PasswordController::class, 'edit'])->name('user-password.edit');
         Route::put('password', [PasswordController::class, 'update'])

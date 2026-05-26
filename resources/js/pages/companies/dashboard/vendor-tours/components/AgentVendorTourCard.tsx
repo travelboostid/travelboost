@@ -23,7 +23,16 @@ import {
     TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { IconPdf } from '@tabler/icons-react';
-import { InfoIcon, MessageSquareIcon, SaveIcon } from 'lucide-react';
+import {
+    CalendarDaysIcon,
+    CircleDollarSignIcon,
+    ClockIcon,
+    InfoIcon,
+    MapPinIcon,
+    MessageSquareIcon,
+    SaveIcon,
+    UsersRoundIcon,
+} from 'lucide-react';
 import { useState } from 'react';
 import BaseTourCard from './BaseTourCard';
 
@@ -68,17 +77,102 @@ const getPriceCategoryName = (price: any) =>
         ? `Category #${price.price_category_id}`
         : 'Category');
 
+const toNumber = (value: any) => {
+    const numericValue = Number(value || 0);
+
+    return Number.isFinite(numericValue) ? numericValue : 0;
+};
+
+const getPromotionalPrice = (price: any) => {
+    const basePrice = toNumber(price.price);
+    const promotionConfig =
+        typeof price.promotion === 'object' && price.promotion !== null
+            ? price.promotion
+            : null;
+    const promotionRate = toNumber(
+        price.promotion_rate ??
+            price.promotionRate ??
+            price.discount_rate ??
+            price.discountRate ??
+            (promotionConfig?.type === 'percent' ? promotionConfig.value : 0),
+    );
+    const promotionAmount = toNumber(
+        (promotionConfig && promotionConfig.type !== 'percent'
+            ? promotionConfig.value
+            : price.promotion) ??
+            price.promotion_amount ??
+            price.promotionAmount ??
+            price.discount ??
+            price.discount_amount ??
+            price.discountAmount,
+    );
+
+    if (promotionRate > 0) {
+        return Math.max(0, basePrice - (basePrice * promotionRate) / 100);
+    }
+
+    if (promotionAmount > 0) {
+        return Math.max(0, basePrice - promotionAmount);
+    }
+
+    return basePrice;
+};
+
+const getPromotionLabel = (price: any, currency = 'IDR') => {
+    const basePrice = toNumber(price.price);
+    const promotionalPrice = getPromotionalPrice(price);
+    const promotionAmount = Math.max(0, basePrice - promotionalPrice);
+
+    if (promotionAmount <= 0) {
+        return null;
+    }
+
+    const promotionConfig =
+        typeof price.promotion === 'object' && price.promotion !== null
+            ? price.promotion
+            : null;
+    const promotionRate = toNumber(
+        price.promotion_rate ??
+            price.promotionRate ??
+            price.discount_rate ??
+            price.discountRate ??
+            (promotionConfig?.type === 'percent' ? promotionConfig.value : 0),
+    );
+
+    if (promotionRate > 0) {
+        return `${formatCurrency(promotionAmount, currency)} (${promotionRate}%)`;
+    }
+
+    return formatCurrency(promotionAmount, currency);
+};
+
 const getCommissionLabel = (price: any, currency = 'IDR') => {
-    if (Number(price.commission_rate || 0) > 0) {
-        const commissionRate = Number(price.commission_rate);
+    const commissionConfig =
+        typeof price.commission === 'object' && price.commission !== null
+            ? price.commission
+            : null;
+    const commissionRate = toNumber(
+        price.commission_rate ??
+            price.commissionRate ??
+            (commissionConfig?.type === 'percent' ? commissionConfig.value : 0),
+    );
+    const commissionAmount = toNumber(
+        (commissionConfig && commissionConfig.type !== 'percent'
+            ? commissionConfig.value
+            : price.commission) ??
+            price.commission_amount ??
+            price.commissionAmount,
+    );
+
+    if (commissionRate > 0) {
         const commissionValue =
-            (Number(price.price || 0) * commissionRate) / 100;
+            (getPromotionalPrice(price) * commissionRate) / 100;
 
         return `${formatCurrency(commissionValue, currency)} (${commissionRate}%)`;
     }
 
-    if (Number(price.commission || 0) > 0) {
-        return formatCurrency(price.commission, currency);
+    if (commissionAmount > 0) {
+        return formatCurrency(commissionAmount, currency);
     }
 
     return '-';
@@ -110,6 +204,16 @@ export default function AgentVendorTourCard({
           )
         : [];
     const currency = tour.currency || 'IDR';
+    const totalAvailability = schedules.reduce(
+        (total: number, schedule: any) =>
+            total + Number(schedule.availability?.available || 0),
+        0,
+    );
+    const totalMaxPax = schedules.reduce(
+        (total: number, schedule: any) =>
+            total + Number(schedule.availability?.max_pax || 0),
+        0,
+    );
 
     return (
         <>
@@ -118,7 +222,7 @@ export default function AgentVendorTourCard({
                 isVendorNameVisible={isVendorNameVisible}
                 isVendorInactive={isVendorInactive}
                 statusSection={
-                    <div className="px-4 py-2 border-t border-slate-50 dark:border-slate-800/60">
+                    <div className="mx-4 mt-4 border-t border-slate-100 pt-3 dark:border-slate-800/60">
                         <div className="flex items-center justify-between">
                             <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase">
                                 Vendor Tour Status
@@ -193,7 +297,7 @@ export default function AgentVendorTourCard({
                                 </Button>
                             </TooltipTrigger>
                             <TooltipContent>
-                                <p>Information</p>
+                                <p>Detail Information</p>
                             </TooltipContent>
                         </Tooltip>
                         <Tooltip delayDuration={200}>
@@ -209,7 +313,7 @@ export default function AgentVendorTourCard({
                                 </Button>
                             </TooltipTrigger>
                             <TooltipContent>
-                                <p>View Brochure</p>
+                                <p>Itinerary</p>
                             </TooltipContent>
                         </Tooltip>
                         <Tooltip delayDuration={200}>
@@ -229,7 +333,7 @@ export default function AgentVendorTourCard({
                                 </Button>
                             </TooltipTrigger>
                             <TooltipContent>
-                                <p>Send Message to Vendor</p>
+                                <p>Ask AI</p>
                             </TooltipContent>
                         </Tooltip>
                     </>
@@ -238,63 +342,121 @@ export default function AgentVendorTourCard({
 
             <Dialog open={isInfoOpen} onOpenChange={setIsInfoOpen}>
                 <DialogContent
-                    className="w-[calc(100%-2rem)] max-w-[64rem] overflow-hidden rounded-3xl border-none p-0 dark:bg-slate-900 lg:max-w-[68rem]"
+                    className="max-h-[calc(100dvh-2rem)] w-[calc(100%-1.5rem)] max-w-[58rem] overflow-hidden rounded-[1.75rem] border border-slate-200/80 bg-white p-0 shadow-2xl shadow-slate-950/20 dark:border-slate-800 dark:bg-slate-950 sm:max-h-[calc(100dvh-4rem)] sm:w-[calc(100%-3rem)] lg:max-w-[60rem] [&_[data-slot=dialog-close]]:right-4 [&_[data-slot=dialog-close]]:top-4 [&_[data-slot=dialog-close]]:z-30 [&_[data-slot=dialog-close]]:flex [&_[data-slot=dialog-close]]:h-10 [&_[data-slot=dialog-close]]:w-10 [&_[data-slot=dialog-close]]:items-center [&_[data-slot=dialog-close]]:justify-center [&_[data-slot=dialog-close]]:rounded-2xl [&_[data-slot=dialog-close]]:border [&_[data-slot=dialog-close]]:border-white/25 [&_[data-slot=dialog-close]]:bg-white/15 [&_[data-slot=dialog-close]]:p-0 [&_[data-slot=dialog-close]]:text-white [&_[data-slot=dialog-close]]:opacity-100 [&_[data-slot=dialog-close]]:shadow-lg [&_[data-slot=dialog-close]]:shadow-black/10 [&_[data-slot=dialog-close]]:backdrop-blur-md [&_[data-slot=dialog-close]]:hover:bg-white/25 [&_[data-slot=dialog-close]]:focus:ring-white/40 [&_[data-slot=dialog-close]_svg]:h-5 [&_[data-slot=dialog-close]_svg]:w-5"
                     aria-describedby={undefined}
                 >
-                    <DialogHeader className="border-b border-slate-100 px-5 py-4 text-left dark:border-slate-800 sm:px-6">
-                        <DialogTitle className="text-lg font-bold text-slate-900 dark:text-white">
-                            Tour Information
-                        </DialogTitle>
-                    </DialogHeader>
-                    <div className="max-h-[calc(100dvh-8rem)] overflow-y-auto p-5 sm:p-6">
-                        <div className="space-y-6">
-                            <div>
-                                <h3 className="text-xl font-bold text-slate-900 dark:text-white">
+                    <DialogHeader className="relative overflow-hidden border-b border-slate-200 bg-slate-950 px-5 py-6 text-left text-white dark:border-slate-800 sm:px-6">
+                        <div className="absolute inset-y-0 right-0 w-1/2 bg-[radial-gradient(circle_at_top_right,rgba(236,72,153,0.35),transparent_45%),radial-gradient(circle_at_bottom_right,rgba(59,130,246,0.28),transparent_45%)]" />
+                        <div className="relative flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+                            <div className="min-w-0">
+                                <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-semibold text-white/80 backdrop-blur">
+                                    <InfoIcon className="h-3.5 w-3.5 text-sky-200" />
+                                    Detail Information
+                                </div>
+                                <DialogTitle className="text-2xl font-semibold leading-tight text-white sm:text-3xl">
                                     {tour.name}
-                                </h3>
-                                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                                    {tour.code || 'No tour code'}
-                                </p>
+                                </DialogTitle>
+                                <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-white/70">
+                                    <span className="rounded-full bg-white/10 px-3 py-1 font-mono text-xs">
+                                        {tour.code || 'No tour code'}
+                                    </span>
+                                    <span>{tour.destination || '-'}</span>
+                                </div>
                             </div>
-
-                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                                <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950">
-                                    <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">
+                            <div className="grid grid-cols-3 gap-2 rounded-2xl border border-white/10 bg-white/10 p-2 backdrop-blur sm:min-w-[21rem]">
+                                <div className="rounded-xl bg-white/10 px-3 py-2">
+                                    <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/50">
+                                        Schedules
+                                    </p>
+                                    <p className="mt-1 text-lg font-semibold">
+                                        {schedules.length}
+                                    </p>
+                                </div>
+                                <div className="rounded-xl bg-white/10 px-3 py-2">
+                                    <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/50">
+                                        Available
+                                    </p>
+                                    <p className="mt-1 text-lg font-semibold text-emerald-200">
+                                        {totalAvailability}
+                                    </p>
+                                </div>
+                                <div className="rounded-xl bg-white/10 px-3 py-2">
+                                    <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/50">
+                                        Max Pax
+                                    </p>
+                                    <p className="mt-1 text-lg font-semibold">
+                                        {totalMaxPax}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </DialogHeader>
+                    <div className="max-h-[calc(100dvh-12rem)] overflow-y-auto bg-slate-50/80 p-5 dark:bg-slate-950 sm:max-h-[calc(100dvh-15rem)] sm:p-6">
+                        <div className="space-y-6">
+                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                                <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                                    <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-300">
+                                        <MapPinIcon className="h-5 w-5" />
+                                    </div>
+                                    <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
                                         Destination
                                     </p>
-                                    <p className="mt-2 text-sm font-semibold text-slate-800 dark:text-slate-100">
+                                    <p className="mt-2 text-sm font-semibold leading-6 text-slate-800 dark:text-slate-100">
                                         {tour.destination || '-'}
                                     </p>
                                 </div>
-                                <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950">
-                                    <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">
+                                <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                                    <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 text-amber-600 dark:bg-amber-950/50 dark:text-amber-300">
+                                        <ClockIcon className="h-5 w-5" />
+                                    </div>
+                                    <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
                                         Duration
                                     </p>
-                                    <p className="mt-2 text-sm font-semibold text-slate-800 dark:text-slate-100">
+                                    <p className="mt-2 text-sm font-semibold leading-6 text-slate-800 dark:text-slate-100">
                                         {tour.duration_days
                                             ? `${tour.duration_days} days`
                                             : '-'}
                                     </p>
                                 </div>
-                                <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950">
-                                    <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">
+                                <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                                    <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-pink-50 text-pink-600 dark:bg-pink-950/50 dark:text-pink-300">
+                                        <CircleDollarSignIcon className="h-5 w-5" />
+                                    </div>
+                                    <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
                                         Normal Price in Catalog
                                     </p>
-                                    <p className="mt-2 break-words text-sm font-semibold text-slate-800 dark:text-slate-100">
+                                    <p className="mt-2 break-words text-sm font-semibold leading-6 text-slate-800 dark:text-slate-100">
                                         {formatCurrency(
                                             tour.showprice,
                                             currency,
                                         )}
                                     </p>
                                 </div>
+                                <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                                    <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-300">
+                                        <UsersRoundIcon className="h-5 w-5" />
+                                    </div>
+                                    <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                                        Total Availability
+                                    </p>
+                                    <p className="mt-2 text-sm font-semibold leading-6 text-slate-800 dark:text-slate-100">
+                                        {totalAvailability} seats
+                                    </p>
+                                </div>
                             </div>
 
                             <div className="space-y-3">
                                 <div className="flex items-center justify-between gap-3">
-                                    <h4 className="text-sm font-bold uppercase tracking-[0.14em] text-slate-700 dark:text-slate-200">
-                                        Schedule & Pricing
-                                    </h4>
-                                    <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-500 dark:bg-slate-800 dark:text-slate-300">
+                                    <div>
+                                        <h4 className="text-sm font-semibold uppercase tracking-[0.14em] text-slate-700 dark:text-slate-200">
+                                            Schedule & Pricing
+                                        </h4>
+                                        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                                            Available departures based on the
+                                            booking deadline parameter.
+                                        </p>
+                                    </div>
+                                    <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-500 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">
                                         {schedules.length} Schedule
                                         {schedules.length === 1 ? '' : 's'}
                                     </span>
@@ -321,41 +483,48 @@ export default function AgentVendorTourCard({
                                                             schedule.id ||
                                                             scheduleIndex
                                                         }
-                                                        className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950"
+                                                        className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900"
                                                     >
-                                                        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                                                        <div className="flex flex-col gap-4 border-b border-slate-100 bg-white p-4 dark:border-slate-800 dark:bg-slate-900 lg:flex-row lg:items-center lg:justify-between">
                                                             <div>
-                                                                <p className="text-sm font-bold text-slate-900 dark:text-white">
-                                                                    {formatDate(
-                                                                        schedule.departure_date,
-                                                                    )}{' '}
-                                                                    -{' '}
-                                                                    {formatDate(
-                                                                        schedule.return_date,
-                                                                    )}
-                                                                </p>
-                                                                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                                                                    Departure
-                                                                    schedule
-                                                                </p>
+                                                                <div className="flex items-center gap-2">
+                                                                    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                                                                        <CalendarDaysIcon className="h-4 w-4" />
+                                                                    </div>
+                                                                    <div>
+                                                                        <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                                                                            {formatDate(
+                                                                                schedule.departure_date,
+                                                                            )}{' '}
+                                                                            -{' '}
+                                                                            {formatDate(
+                                                                                schedule.return_date,
+                                                                            )}
+                                                                        </p>
+                                                                        <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+                                                                            Departure
+                                                                            schedule
+                                                                        </p>
+                                                                    </div>
+                                                                </div>
                                                             </div>
-                                                            <div className="grid grid-cols-2 gap-2">
-                                                                <div className="rounded-xl bg-slate-50 px-3 py-2 dark:bg-slate-900">
+                                                            <div className="grid grid-cols-2 gap-2 sm:min-w-[17rem]">
+                                                                <div className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-950">
                                                                     <p className="text-[10px] font-semibold uppercase text-slate-400">
                                                                         Max Pax
                                                                     </p>
-                                                                    <p className="text-sm font-bold text-slate-800 dark:text-slate-100">
+                                                                    <p className="mt-1 text-base font-semibold text-slate-800 dark:text-slate-100">
                                                                         {Number(
                                                                             availability.max_pax ||
                                                                                 0,
                                                                         )}
                                                                     </p>
                                                                 </div>
-                                                                <div className="rounded-xl bg-slate-50 px-3 py-2 dark:bg-slate-900">
+                                                                <div className="rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 dark:border-emerald-900/50 dark:bg-emerald-950/30">
                                                                     <p className="text-[10px] font-semibold uppercase text-slate-400">
                                                                         Availability
                                                                     </p>
-                                                                    <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
+                                                                    <p className="mt-1 text-base font-semibold text-emerald-600 dark:text-emerald-400">
                                                                         {Number(
                                                                             availability.available ||
                                                                                 0,
@@ -365,8 +534,8 @@ export default function AgentVendorTourCard({
                                                             </div>
                                                         </div>
 
-                                                        <div className="mt-4 overflow-hidden rounded-xl border border-slate-100 dark:border-slate-800">
-                                                            <div className="hidden grid-cols-[minmax(0,1fr)_minmax(130px,0.65fr)_minmax(180px,0.75fr)] bg-slate-50 px-4 py-2 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400 dark:bg-slate-900 sm:grid">
+                                                        <div className="overflow-hidden">
+                                                            <div className="hidden grid-cols-[minmax(0,1fr)_minmax(150px,0.65fr)_minmax(210px,0.75fr)] bg-slate-50 px-5 py-3 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400 dark:bg-slate-950 sm:grid">
                                                                 <span>
                                                                     Category
                                                                 </span>
@@ -389,13 +558,13 @@ export default function AgentVendorTourCard({
                                                                                 price.id ||
                                                                                 priceIndex
                                                                             }
-                                                                            className="grid gap-2 border-t border-slate-100 px-4 py-3 text-sm dark:border-slate-800 sm:grid-cols-[minmax(0,1fr)_minmax(130px,0.65fr)_minmax(180px,0.75fr)] sm:items-center"
+                                                                            className="grid gap-2 border-t border-slate-100 px-5 py-4 text-sm dark:border-slate-800 sm:grid-cols-[minmax(0,1fr)_minmax(150px,0.65fr)_minmax(210px,0.75fr)] sm:items-center"
                                                                         >
                                                                             <div>
                                                                                 <p className="text-[10px] font-semibold uppercase text-slate-400 sm:hidden">
                                                                                     Category
                                                                                 </p>
-                                                                                <p className="font-semibold text-slate-800 dark:text-slate-100">
+                                                                                <p className="font-medium text-slate-800 dark:text-slate-100">
                                                                                     {getPriceCategoryName(
                                                                                         price,
                                                                                     )}
@@ -405,18 +574,32 @@ export default function AgentVendorTourCard({
                                                                                 <p className="text-[10px] font-semibold uppercase text-slate-400 sm:hidden">
                                                                                     Price
                                                                                 </p>
-                                                                                <p className="font-semibold text-slate-800 dark:text-slate-100">
-                                                                                    {formatCurrency(
-                                                                                        price.price,
+                                                                                <div className="space-y-1">
+                                                                                    <p className="font-medium text-slate-800 dark:text-slate-100">
+                                                                                        {formatCurrency(
+                                                                                            price.price,
+                                                                                            currency,
+                                                                                        )}
+                                                                                    </p>
+                                                                                    {getPromotionLabel(
+                                                                                        price,
                                                                                         currency,
+                                                                                    ) && (
+                                                                                        <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-300">
+                                                                                            Promo{' '}
+                                                                                            {getPromotionLabel(
+                                                                                                price,
+                                                                                                currency,
+                                                                                            )}
+                                                                                        </p>
                                                                                     )}
-                                                                                </p>
+                                                                                </div>
                                                                             </div>
                                                                             <div>
                                                                                 <p className="text-[10px] font-semibold uppercase text-slate-400 sm:hidden">
                                                                                     Commission
                                                                                 </p>
-                                                                                <p className="font-semibold text-primary">
+                                                                                <p className="font-semibold text-pink-600 dark:text-pink-300">
                                                                                     {getCommissionLabel(
                                                                                         price,
                                                                                         currency,
@@ -427,7 +610,7 @@ export default function AgentVendorTourCard({
                                                                     ),
                                                                 )
                                                             ) : (
-                                                                <div className="border-t border-slate-100 px-4 py-4 text-sm font-medium text-slate-400 dark:border-slate-800">
+                                                                <div className="border-t border-slate-100 px-5 py-5 text-sm font-medium text-slate-400 dark:border-slate-800">
                                                                     No pricing
                                                                     category
                                                                     available.

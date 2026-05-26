@@ -202,6 +202,28 @@ test('full payment settles agent commission travelboost commission and platform 
         ->and(Transaction::where('meta->type', 'booking-travelboost-commission')->where('meta->booking_id', $booking->id)->count())->toBe(2)
         ->and(Transaction::where('meta->type', 'booking-platform-fee')->where('meta->booking_id', $booking->id)->count())->toBe(2);
 
+    foreach ([
+        'booking-agent-commission',
+        'booking-travelboost-commission',
+        'booking-platform-fee',
+    ] as $type) {
+        $description = data_get(
+            Transaction::query()
+                ->where('meta->type', $type)
+                ->where('meta->booking_id', $booking->id)
+                ->where('amount', '>', 0)
+                ->firstOrFail()
+                ->meta,
+            'description'
+        );
+
+        expect($description)
+            ->toContain($booking->contact_name)
+            ->toContain('2 pax')
+            ->toContain($booking->booking_number)
+            ->not->toContain('full payment');
+    }
+
     app(FinalizeBookingPaymentAction::class)->execute($booking->fresh());
 
     expect((int) $vendor->wallet->fresh()->balance)->toBe(5_000_000 - $requiredSettlement)
@@ -399,7 +421,7 @@ test('customer manual full payment is blocked before proof is stored when vendor
 test('customer online full payment is blocked before snap payment is created when vendor wallet cannot settle commissions', function () {
     ['customer' => $customer, 'vendor' => $vendor, 'booking' => $booking, 'quote' => $quote] = createSettlementScenario(vendorBalance: 100_000);
 
-    \Mockery::mock('alias:Midtrans\Snap')
+    Mockery::mock('alias:Midtrans\Snap')
         ->shouldReceive('getSnapToken')
         ->andReturn('blocked-token');
 
@@ -424,7 +446,7 @@ test('customer online full payment is blocked before snap payment is created whe
 test('customer online down payment remains available when vendor wallet cannot settle full payment commissions', function () {
     ['customer' => $customer, 'vendor' => $vendor, 'booking' => $booking] = createSettlementScenario(vendorBalance: 100_000);
 
-    \Mockery::mock('alias:Midtrans\Snap')
+    Mockery::mock('alias:Midtrans\Snap')
         ->shouldReceive('getSnapToken')
         ->once()
         ->andReturn('down-payment-token');
@@ -450,7 +472,7 @@ test('customer online down payment remains available when vendor wallet cannot s
 test('customer online payment returns validation error when midtrans snap token request fails', function () {
     ['customer' => $customer, 'booking' => $booking] = createSettlementScenario(vendorBalance: 100_000);
 
-    \Mockery::mock('alias:Midtrans\Snap')
+    Mockery::mock('alias:Midtrans\Snap')
         ->shouldReceive('getSnapToken')
         ->once()
         ->andThrow(new RuntimeException('CURL Error: Failed to connect to app.sandbox.midtrans.com'));
@@ -477,7 +499,7 @@ test('customer can submit manual payment after online provider is unavailable', 
 
     ['customer' => $customer, 'booking' => $booking] = createSettlementScenario(vendorBalance: 100_000);
 
-    \Mockery::mock('alias:Midtrans\Snap')
+    Mockery::mock('alias:Midtrans\Snap')
         ->shouldReceive('getSnapToken')
         ->once()
         ->andThrow(new RuntimeException('CURL Error: Failed to connect to app.sandbox.midtrans.com'));
@@ -555,7 +577,7 @@ test('customer balance payment is blocked when it would finalize full payment wi
         'payload' => ['payment_type' => 'down_payment'],
     ]);
 
-    \Mockery::mock('alias:Midtrans\Snap')
+    Mockery::mock('alias:Midtrans\Snap')
         ->shouldReceive('getSnapToken')
         ->andReturn('blocked-token');
 

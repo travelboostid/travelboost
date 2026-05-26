@@ -7,11 +7,16 @@ use App\Enums\BookingStatus;
 use App\Enums\PaymentStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Booking;
+use App\Models\Payment;
 use App\Models\Tour;
 use App\Models\TourAvailability;
+use App\Models\TourPrice;
 use App\Models\TourSchedule;
+use App\Services\BookingPaymentReceiverService;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Inertia\Inertia;
@@ -113,6 +118,61 @@ class HomeController extends Controller
         ]);
     }
 
+    public function bookingInvoice(Request $request, Booking $booking): HttpResponse
+    {
+        abort_unless($request->user()?->id === $booking->user_id, 403);
+
+        $booking->load([
+            'user',
+            'agent.photo',
+            'vendor.companySetting',
+            'tour.company.companySetting',
+            'passengers',
+            'addons',
+            'payments',
+        ]);
+
+        $paidPayments = $booking->payments
+            ->filter(fn (Payment $payment): bool => $payment->status === PaymentStatus::PAID)
+            ->sortBy(fn (Payment $payment): string => (string) ($payment->paid_at ?? $payment->created_at))
+            ->values();
+
+        abort_if($paidPayments->isEmpty(), 404);
+
+        $paymentDate = $paidPayments->last()?->paid_at ?? $paidPayments->last()?->created_at;
+        $paymentReceiver = app(BookingPaymentReceiverService::class)->resolveForBooking($booking);
+        $agent = $paymentReceiver['receiver_company'] ?? $booking->vendor ?? $booking->tour?->company;
+        $invoiceSchedule = $this->resolveInvoiceSchedule($booking);
+        $priceBreakdown = $this->buildInvoicePriceBreakdown($booking);
+        $paymentDetails = $this->buildInvoicePaymentDetails($booking);
+        $paymentDetailsTotal = (float) collect($paymentDetails)->sum('amount');
+        $otherChargeAmount = (float) $booking->platform_fee;
+        $vatRate = $this->resolveInvoiceVatRate($booking);
+
+        $filename = 'Invoice_'.$booking->booking_number.'.pdf';
+
+        $pdf = Pdf::setOption(['isRemoteEnabled' => true])
+            ->loadView('exports.booking-invoice', [
+                'booking' => $booking,
+                'agent' => $agent,
+                'logoSrc' => $this->resolveCompanyLogoSrc($agent),
+                'customerName' => $booking->user?->name ?: $booking->contact_name,
+                'billedToAddress' => $booking->user?->address,
+                'paymentDate' => $paymentDate,
+                'returnDate' => $invoiceSchedule?->return_date,
+                'paidAmount' => (float) $paidPayments->sum('amount'),
+                'priceBreakdown' => $priceBreakdown,
+                'paymentDetails' => $paymentDetails,
+                'paymentDetailsTotal' => $paymentDetailsTotal,
+                'vatRate' => $vatRate,
+                'otherChargeAmount' => $otherChargeAmount,
+                'discountAmount' => 0,
+            ])
+            ->setPaper('A4', 'portrait');
+
+        return $pdf->stream($filename);
+    }
+
     /**
      * @return array<string, mixed>
      */
@@ -128,6 +188,7 @@ class HomeController extends Controller
             : BookingStatus::tryFrom((string) $booking->status);
         $isDownPayment = $status === BookingStatus::DOWN_PAYMENT;
         $needsTravelDocuments = in_array($status, [
+            BookingStatus::WAITING_PAYMENT_APPROVAL,
             BookingStatus::DOWN_PAYMENT,
             BookingStatus::FULL_PAYMENT,
         ], true) && $this->bookingNeedsTravelDocuments($booking);
@@ -241,8 +302,143 @@ class HomeController extends Controller
         return "/brochure/{$booking->tour->company->username}/{$booking->tour->id}";
     }
 
+    private function buildInvoicePriceBreakdown(Booking $booking): array
+    {
+        $schedule = $this->resolveInvoiceSchedule($booking);
+
+        $categories = $schedule
+            ? TourPrice::query()
+                ->with('priceCategory:id,name')
+                ->where('schedule_id', $schedule->id)
+                ->orderBy('id')
+                ->get()
+                ->map(fn (TourPrice $price): string => (string) ($price->priceCategory?->name ?? 'Category '.$price->price_category_id))
+                ->filter()
+                ->unique()
+                ->values()
+            : collect();
+
+        if ($categories->isEmpty()) {
+            $categories = $booking->passengers
+                ->pluck('price_category')
+                ->filter()
+                ->unique()
+                ->values();
+        }
+
+        $bookedCounts = $booking->passengers
+            ->groupBy(fn ($passenger): string => (string) $passenger->price_category)
+            ->map(fn (Collection $passengers): int => $passengers->count());
+
+        return $categories
+            ->map(fn (string $category): array => [
+                'category' => $category,
+                'pax' => (int) ($bookedCounts->get($category) ?? 0),
+            ])
+            ->values()
+            ->all();
+    }
+
+    private function buildInvoicePaymentDetails(Booking $booking): array
+    {
+        $schedule = $this->resolveInvoiceSchedule($booking);
+
+        $tourPrices = $schedule
+            ? TourPrice::query()
+                ->with('priceCategory:id,name')
+                ->where('schedule_id', $schedule->id)
+                ->get()
+                ->mapWithKeys(fn (TourPrice $price): array => [
+                    (string) ($price->priceCategory?->name ?? 'Category '.$price->price_category_id) => (float) $price->price,
+                ])
+            : collect();
+
+        $passengerRows = $booking->passengers
+            ->groupBy(fn ($passenger): string => (string) ($passenger->price_category ?: 'Tour Package'))
+            ->map(function (Collection $passengers, string $category) use ($tourPrices): array {
+                $quantity = $passengers->count();
+                $amount = (float) $passengers->sum('price_amount');
+                $unitPrice = (float) ($tourPrices->get($category) ?? ($quantity > 0 ? $amount / $quantity : 0));
+                $grossAmount = $unitPrice * $quantity;
+                $discount = max(0.0, $grossAmount - $amount);
+
+                return [
+                    'description' => $category,
+                    'quantity' => $quantity,
+                    'unit_price' => $unitPrice,
+                    'discount' => $discount,
+                    'amount' => $amount,
+                ];
+            })
+            ->values();
+
+        $addonRows = $booking->addons
+            ->map(fn ($addon): array => [
+                'description' => $addon->name ?: 'Add-on',
+                'quantity' => 1,
+                'unit_price' => (float) $addon->price,
+                'discount' => 0.0,
+                'amount' => (float) $addon->price,
+            ]);
+
+        return $passengerRows
+            ->concat($addonRows)
+            ->values()
+            ->all();
+    }
+
+    private function resolveInvoiceSchedule(Booking $booking): ?TourSchedule
+    {
+        if (! $booking->tour_id || ! $booking->vendor_id || ! $booking->departure_date) {
+            return null;
+        }
+
+        return TourSchedule::query()
+            ->where('tour_id', $booking->tour_id)
+            ->where('company_id', $booking->vendor_id)
+            ->whereDate('departure_date', Carbon::parse($booking->departure_date)->toDateString())
+            ->first();
+    }
+
+    private function resolveInvoiceVatRate(Booking $booking): float
+    {
+        $settingsRate = $booking->vendor?->companySetting?->minimum_vat
+            ?? $booking->tour?->company?->companySetting?->minimum_vat;
+
+        if ($settingsRate !== null) {
+            return (float) $settingsRate;
+        }
+
+        $taxBase = (float) $booking->total_price;
+
+        if ($taxBase <= 0) {
+            return 0.0;
+        }
+
+        return round(((float) $booking->tax_amount / $taxBase) * 100, 2);
+    }
+
+    private function resolveCompanyLogoSrc(mixed $company): ?string
+    {
+        $url = $company?->photo_url;
+
+        if (! $url) {
+            return null;
+        }
+
+        $path = public_path(ltrim((string) $url, '/'));
+
+        if (! file_exists($path)) {
+            return $url;
+        }
+
+        $mime = mime_content_type($path) ?: 'image/png';
+
+        return 'data:'.$mime.';base64,'.base64_encode((string) file_get_contents($path));
+    }
+
     /**
-     * @param  \Illuminate\Support\Collection<int, \App\Models\Tour>  $tours
+     * @param  Collection<int, Tour>  $tours
      */
     private function appendSchedulePayload(Collection $tours): void
     {

@@ -82,7 +82,7 @@ export default function PublicTourCard({
                             if (onLike) onLike();
                             else handleLike();
                         } else if (stored.action === 'book') {
-                            if (onBook) onBook();
+                            if (onBook) onBook(tour);
                             else setIsBookingOpen(true);
                         }
                     }
@@ -91,7 +91,7 @@ export default function PublicTourCard({
                 }
             }
         }
-    }, [auth?.user, tour.id, onLike, onBook, handleLike]);
+    }, [auth?.user, tour, tour.id, onLike, onBook, handleLike]);
 
     const handleLikeClick = () => {
         if (onLike) {
@@ -138,7 +138,7 @@ export default function PublicTourCard({
     };
 
     const handleBookClick = () => {
-        if (onBook) onBook();
+        if (onBook) onBook(tour);
         else setIsBookingOpen(true);
     };
 
@@ -171,15 +171,18 @@ export default function PublicTourCard({
                                 <Button
                                     variant="secondary"
                                     size="sm"
-                                    className="h-11 w-14 shrink-0 rounded-xl border-none bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 sm:h-9 sm:w-12"
+                                    className="h-11 flex-[1_1_calc(50%-0.25rem)] rounded-xl border-none bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 sm:h-9 sm:w-12 sm:flex-none"
                                     disabled={!tour.document}
                                     onClick={handleViewBrochureClick}
                                 >
                                     <IconPdf size={20} />
+                                    <span className="ml-1 text-xs font-semibold sm:hidden">
+                                        Itinerary
+                                    </span>
                                 </Button>
                             </TooltipTrigger>
                             <TooltipContent>
-                                <p>View Brochure</p>
+                                <p>Itinerary</p>
                             </TooltipContent>
                         </Tooltip>
                         <Tooltip delayDuration={200}>
@@ -187,7 +190,7 @@ export default function PublicTourCard({
                                 <Button
                                     variant="secondary"
                                     size="sm"
-                                    className="h-11 w-14 shrink-0 rounded-xl border-none bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 sm:h-9 sm:w-12"
+                                    className="h-11 flex-[1_1_calc(50%-0.25rem)] rounded-xl border-none bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 sm:h-9 sm:w-12 sm:flex-none"
                                     disabled={startingChat}
                                     onClick={handleChatClick}
                                 >
@@ -196,16 +199,19 @@ export default function PublicTourCard({
                                     ) : (
                                         <MessageSquareIcon size={20} />
                                     )}
+                                    <span className="ml-1 text-xs font-semibold sm:hidden">
+                                        Ask AI
+                                    </span>
                                 </Button>
                             </TooltipTrigger>
                             <TooltipContent>
-                                <p>Send Message to Agent</p>
+                                <p>Ask AI</p>
                             </TooltipContent>
                         </Tooltip>
                         <Button
                             variant="default"
                             size="sm"
-                            className="flex h-11 min-w-0 flex-1 items-center justify-center gap-2 rounded-xl bg-primary px-3 text-xs font-bold text-primary-foreground shadow-sm transition-transform hover:scale-105 active:scale-95 sm:h-9 sm:text-sm"
+                            className="flex h-11 min-w-0 basis-full items-center justify-center gap-2 rounded-xl bg-primary px-3 text-xs font-bold text-primary-foreground shadow-sm transition-transform hover:scale-105 active:scale-95 sm:h-9 sm:basis-auto sm:flex-1 sm:text-sm"
                             onClick={handleBookClick}
                         >
                             <IconCalendarEvent size={20} />
