@@ -14,7 +14,7 @@
         "bavix/laravel-wallet": "^12.0",
         "dedoc/scramble": "*",
         "google/analytics-admin": "^0.32.0",
-        "google/analytics-data": "*",
+        "google/analytics-data": "^0.24.0",
         "google/apiclient": "^2.19",
         "google/auth": "^1.50",
         "inertiajs/inertia-laravel": "^2.0",
