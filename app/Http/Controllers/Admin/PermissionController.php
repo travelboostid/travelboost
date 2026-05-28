@@ -7,8 +7,10 @@ use App\Http\Requests\Admin\IndexAgentRequest;
 use App\Http\Requests\Admin\StorePermissionRequest;
 use App\Http\Requests\Admin\UpdatePermissionRequest;
 use App\Models\Permission;
+use Illuminate\Routing\Attributes\Controllers\Authorize;
 use Inertia\Inertia;
 
+#[Authorize('access-admin')]
 class PermissionController extends Controller
 {
     /**

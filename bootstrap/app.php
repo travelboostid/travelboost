@@ -3,10 +3,14 @@
 use App\Http\Middleware\CheckUserStatus;
 use App\Http\Middleware\DomainResolver;
 use App\Http\Middleware\EnsureAgentSubscriptionIsActive;
-use App\Http\Middleware\EnsureHasAdminAccess;
 use App\Http\Middleware\EnsureHasCompanyAccess;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Http\Middleware\SetAndUseAnonymousUserProps;
+use App\Http\Middleware\UseAffiliateProps;
+use App\Http\Middleware\UseAnalyticsMeasurementIdsProps;
+use App\Http\Middleware\UseCurrentCompanyProps;
+use App\Http\Middleware\UseCustomerProps;
 use Illuminate\Auth\Middleware\Authenticate;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -29,9 +33,13 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
         $middleware->alias([
             'company.access' => EnsureHasCompanyAccess::class,
-            'admin.access' => EnsureHasAdminAccess::class,
             'agent.subscription.active' => EnsureAgentSubscriptionIsActive::class,
             'check.user.status' => CheckUserStatus::class,
+            'use-affiliate-props' => UseAffiliateProps::class,
+            'use-customer-props' => UseCustomerProps::class,
+            'use-current-company-props' => UseCurrentCompanyProps::class,
+            'set-and-use-anonymous-user-props' => SetAndUseAnonymousUserProps::class,
+            'use-analytics-measurement-ids-props' => UseAnalyticsMeasurementIdsProps::class,
         ]);
         $middleware->web(append: [
             DomainResolver::class,

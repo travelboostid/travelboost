@@ -7,8 +7,10 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\IndexVendorRequest;
 use App\Models\Company;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Attributes\Controllers\Authorize;
 use Inertia\Inertia;
 
+#[Authorize('access-admin')]
 class VendorController extends Controller
 {
     /**

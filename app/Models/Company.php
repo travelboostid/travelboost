@@ -64,12 +64,6 @@ class Company extends Model
                 'balance' => 10000, // Default AI free credit balance for new companies
             ]);
 
-            Team::create([
-                'name' => "company:{$company->id}",
-                'display_name' => "Company {$company->id} Team",
-                'description' => "Default team for company {$company->id}",
-            ]);
-
             $roles = config('travelboost.company_default_roles', []);
             foreach ($roles as $role) {
                 $newRole = Role::create([
@@ -194,5 +188,10 @@ class Company extends Model
     public function withdrawals()
     {
         return $this->morphMany(Withdrawal::class, 'owner');
+    }
+
+    public function googleAccount()
+    {
+        return $this->hasOne(CompanyGoogleAccount::class);
     }
 }

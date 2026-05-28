@@ -41,7 +41,7 @@ type MenuItem =
       });
 
 export function useCompanyDashboardNavMainMenu() {
-    const { company, auth, subscription_rules } =
+    const { company, auth, subscriptionRules } =
         usePageSharedDataProps() as any;
 
     const { data } = useGetCompanies(
@@ -58,7 +58,7 @@ export function useCompanyDashboardNavMainMenu() {
     const port = window.location.port ? `:${window.location.port}` : '';
 
     const companySubdomain = `${protocol}//${company.username}.${baseHost}${port}`;
-    const isMarketingDisabled = !!subscription_rules?.isMarketingDisabled;
+    const isMarketingDisabled = !!subscriptionRules?.isMarketingDisabled;
 
     const renderTitle = (node: React.ReactNode, isLocked: boolean) => {
         if (isLocked) {
@@ -295,14 +295,14 @@ export function useCompanyDashboardNavMainMenu() {
                     disabled: isMarketingDisabled,
                 },
                 {
-                    id: 'marketings.socmed-analytics',
+                    id: 'marketings.analytics',
                     title: renderTitle(
-                        <FormattedMessage defaultMessage="Social Media Analytics" />,
+                        <FormattedMessage defaultMessage="Analytics" />,
                         isMarketingDisabled,
                     ),
                     urlOrAction: isMarketingDisabled
                         ? (handleLockedClick as any)
-                        : '#',
+                        : `/companies/${company.username}/dashboard/analytics`,
                     disabled: isMarketingDisabled,
                 },
                 {

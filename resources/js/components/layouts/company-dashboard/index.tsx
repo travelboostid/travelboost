@@ -28,10 +28,10 @@ export type CompanyDashboardLayoutProps = {
 export default function CompanyDashboardLayout(
     props: CompanyDashboardLayoutProps,
 ) {
-    const { company, subscription_rules } = usePageSharedDataProps() as any;
+    const { company, subscriptionRules } = usePageSharedDataProps() as any;
     const { children, breadcrumb, applet, containerClassName } = props;
 
-    const isExpired = subscription_rules?.isExpired;
+    const isExpired = subscriptionRules?.isExpired;
     const walletBalance = company?.wallet?.balance || 0;
 
     return (

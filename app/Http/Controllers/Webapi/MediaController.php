@@ -12,14 +12,20 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use Intervention\Image\Drivers\Gd\Driver;
 use Intervention\Image\Encoders\JpegEncoder;
 use Intervention\Image\ImageManager;
 
 class MediaController extends Controller
 {
-    public function __construct(
-        private ImageManager $imageManager
-    ) {}
+    private ImageManager $imageManager;
+
+    public function __construct()
+    {
+        $this->imageManager = new ImageManager(
+            new Driver
+        );
+    }
 
     /**
      * Get medias

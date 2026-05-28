@@ -6,8 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\IndexMediaRequest;
 use App\Models\Media;
 use Carbon\Carbon;
+use Illuminate\Routing\Attributes\Controllers\Authorize;
 use Inertia\Inertia;
 
+#[Authorize('access-admin')]
 class MediaController extends Controller
 {
     /**

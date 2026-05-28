@@ -9,14 +9,14 @@ use App\Http\Controllers\Me\Settings\TwoFactorAuthenticationController;
 use App\Http\Controllers\Me\TeamInvitationController;
 use Illuminate\Support\Facades\Route;
 
-Route::name('me.')->group(function () {
+Route::name('me.')->middleware(['use-analytics-measurement-ids-props'])->group(function () {
     Route::get('/mybookings', [HomeController::class, 'bookings'])->name('bookings');
     Route::get('/mybookings/{booking}/invoice', [HomeController::class, 'bookingInvoice'])
         ->middleware('auth')
         ->name('bookings.invoice');
 });
 
-Route::middleware(['auth', 'check.user.status'])->prefix('me')->name('me.')->group(function () {
+Route::middleware(['auth', 'check.user.status', 'use-analytics-measurement-ids-props'])->prefix('me')->name('me.')->group(function () {
     Route::get('/onboarding', [OnboardingController::class, 'index'])->name('onboarding');
     Route::post('/onboarding/create-company', [OnboardingController::class, 'createCompany'])->name('onboarding.create-company');
     Route::post('/onboarding/accept-invitation/{invitation}', [OnboardingController::class, 'acceptInvitation'])->name('onboarding.accept-invitation');

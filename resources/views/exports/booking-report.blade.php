@@ -11,7 +11,9 @@
             <th colspan="19">{{ $company->name }}</th>
         </tr>
         <tr>
-            <th colspan="19">Generated {{ $generatedAt->format('d M Y H:i') }} - Period {{ $filters['period_from'] ?: 'All' }} - {{ $filters['period_to'] ?: 'All' }}</th>
+            <th colspan="19">
+                Generated {{ $generatedAt->format('d M Y H:i') }} - Period {{ $filters['period_from'] ?: 'All' }} - {{ $filters['period_to'] ?: 'All' }}
+            </th>
         </tr>
         <tr>
             <th>No</th>
@@ -44,29 +46,59 @@
                 @endphp
                 <tr>
                     @if ($isFirstPassenger)
-                        <td rowspan="{{ $rowspan }}">{{ $loop->parent->iteration }}</td>
-                        <td rowspan="{{ $rowspan }}">{{ $isVendor ? $row['agent_code'] : $row['vendor_name'] }}</td>
-                        <td rowspan="{{ $rowspan }}">{{ $isVendor ? $row['agent_name'] : $row['vendor_name'] }}</td>
-                        <td rowspan="{{ $rowspan }}">{{ $row['tour_code'] }}</td>
-                        <td rowspan="{{ $rowspan }}">{{ $row['tour_name'] }}</td>
-                        <td rowspan="{{ $rowspan }}">{{ $formatDate($row['departure_date']).' - '.$formatDate($row['return_date']) }}</td>
-                        <td rowspan="{{ $rowspan }}">{{ $row['booking_code'] }}</td>
-                        <td rowspan="{{ $rowspan }}">{{ $row['booking_customer'] }}</td>
+                        <td rowspan="{{ $rowspan }}">
+                            {{ $loop->parent->iteration }}
+                        </td>
+                        <td rowspan="{{ $rowspan }}">
+                            {{ $isVendor ? $row['agent_code'] : $row['vendor_name'] }}
+                        </td>
+                        <td rowspan="{{ $rowspan }}">
+                            {{ $isVendor ? $row['agent_name'] : $row['vendor_name'] }}
+                        </td>
+                        <td rowspan="{{ $rowspan }}">
+                            {{ $row['tour_code'] }}
+                        </td>
+                        <td rowspan="{{ $rowspan }}">
+                            {{ $row['tour_name'] }}
+                        </td>
+                        <td rowspan="{{ $rowspan }}">
+                            {{ $formatDate($row['departure_date']).' - '.$formatDate($row['return_date']) }}
+                        </td>
+                        <td rowspan="{{ $rowspan }}">
+                            {{ $row['booking_code'] }}
+                        </td>
+                        <td rowspan="{{ $rowspan }}">
+                            {{ $row['booking_customer'] }}
+                        </td>
                     @endif
-                    <td>{{ $passenger['name'].' / DOB: '.$formatDate($passenger['dob'] ?? null) }}</td>
+                    <td>
+                        {{ $passenger['name'].' / DOB: '.$formatDate($passenger['dob'] ?? null) }}
+                    </td>
                     <td>{{ $passenger['category'] }}</td>
                     <td>{{ $passenger['price_amount'] }}</td>
                     <td>1</td>
                     @if ($isFirstPassenger)
-                        <td rowspan="{{ $rowspan }}">{{ $row['tour_price_total'] }}</td>
-                        <td rowspan="{{ $rowspan }}">{{ $row['tax_amount'] }}</td>
-                        <td rowspan="{{ $rowspan }}">{{ $row['addon_cost'] }}</td>
-                        <td rowspan="{{ $rowspan }}">{{ $row['platform_fee'] }}</td>
+                        <td rowspan="{{ $rowspan }}">
+                            {{ $row['tour_price_total'] }}
+                        </td>
+                        <td rowspan="{{ $rowspan }}">
+                            {{ $row['tax_amount'] }}
+                        </td>
+                        <td rowspan="{{ $rowspan }}">
+                            {{ $row['addon_cost'] }}
+                        </td>
+                        <td rowspan="{{ $rowspan }}">
+                            {{ $row['platform_fee'] }}
+                        </td>
                     @endif
                     <td>{{ $passenger['promo_amount'] }}</td>
                     @if ($isFirstPassenger)
-                        <td rowspan="{{ $rowspan }}">{{ $row['grand_total'] }}</td>
-                        <td rowspan="{{ $rowspan }}">{{ $row['commission_amount'] }}</td>
+                        <td rowspan="{{ $rowspan }}">
+                            {{ $row['grand_total'] }}
+                        </td>
+                        <td rowspan="{{ $rowspan }}">
+                            {{ $row['commission_amount'] }}
+                        </td>
                     @endif
                 </tr>
             @endforeach

@@ -61,7 +61,7 @@ test('shared tenant props include landing page settings for navbar branding', fu
     ]);
 
     $request = Request::create('/mybookings');
-    $request->attributes->set('tenant', $company);
+    Context::set('tenant', $company);
     $request->setLaravelSession(app('session')->driver());
 
     $shared = app(HandleInertiaRequests::class)->share($request);

@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\Route;
 
 // hapus batasan domain agar panel bisa diakses dari subdomain manapun
 Route::prefix('affiliate')
+    ->middleware(['use-affiliate-props', 'use-analytics-measurement-ids-props'])
     ->name('affiliate.panel.')
     ->group(function () {
 

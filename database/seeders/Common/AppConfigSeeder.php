@@ -44,5 +44,15 @@ class AppConfigSeeder extends Seeder
                 ],
             ]
         );
+
+        AppConfig::updateOrCreate(
+            ['key' => 'common'],
+            [
+                'description' => 'Common configuration',
+                'value' => [
+                    'google_analytics_measurement_id' => 'G-M84B9HDRKQ',
+                ],
+            ]
+        );
     }
 }

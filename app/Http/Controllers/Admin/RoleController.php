@@ -8,9 +8,11 @@ use App\Http\Requests\Admin\StoreRoleRequest;
 use App\Http\Requests\Admin\UpdateRoleRequest;
 use App\Models\Permission;
 use App\Models\Role;
+use Illuminate\Routing\Attributes\Controllers\Authorize;
 use Illuminate\Support\Arr;
 use Inertia\Inertia;
 
+#[Authorize('access-admin')]
 class RoleController extends Controller
 {
     /**
