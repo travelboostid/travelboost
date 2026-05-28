@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\BookingController;
+use App\Http\Controllers\CaddyController;
 use App\Http\Controllers\Google\GoogleAuthController;
 use App\Http\Controllers\HomeController as BaseHomeController;
 use App\Http\Controllers\HomeDispatcherController;
@@ -65,3 +66,4 @@ Route::prefix('api/regions')->group(function () {
     Route::get('villages/{district}', fn ($district) => response()->json(Village::where('district_code', $district)->orderBy('name')->get()));
 });
 Route::get('/auth/google/callback', [GoogleAuthController::class, 'callback']);
+Route::get('/caddy/verify-domain', [CaddyController::class, 'verifyDomain']);
