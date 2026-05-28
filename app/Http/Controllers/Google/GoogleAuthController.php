@@ -12,11 +12,24 @@ class GoogleAuthController extends Controller
 {
     public function callback(Request $request)
     {
-        $googleUser = Socialite::driver('google')->stateless()->user();
+        $googleUser = Socialite::driver('google')
+            ->stateless()
+            ->user();
 
-        // decode state
-        // TODO: check intent (connect-for-company, connect-for-user)
         $state = json_decode($request->input('state'), true);
+
+        $intent = $state['intent'] ?? null;
+
+        // TODO: match more intent
+        return match ($intent) {
+            'connect-analytics' => $this->continueToConnectAnalytics($state, $googleUser),
+
+            default => abort(400, 'Invalid OAuth intent'),
+        };
+    }
+
+    private function continueToConnectAnalytics(mixed $state, mixed $googleUser)
+    {
         $company = Company::findOrFail($state['company_id']);
 
         CompanyGoogleAccount::updateOrCreate(
@@ -34,7 +47,7 @@ class GoogleAuthController extends Controller
         );
 
         return redirect()
-            ->route('companies.dashboard.index', [
+            ->route('companies.dashboard.analytics.index', [
                 'company' => $company->username,
             ]);
     }
