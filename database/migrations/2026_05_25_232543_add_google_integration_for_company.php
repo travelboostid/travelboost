@@ -19,9 +19,9 @@ return new class extends Migration
                 ->constrained()
                 ->cascadeOnDelete();
 
-            $table->string('google_id')->index();
-            $table->string('email')->nullable();
-            $table->string('name')->nullable();
+            $table->string('google_id', 255)->index();
+            $table->string('email', 255)->nullable();
+            $table->string('name', 255)->nullable();
 
             $table->longText('access_token')->nullable();
             $table->longText('refresh_token')->nullable();
@@ -37,13 +37,13 @@ return new class extends Migration
                 ->constrained()
                 ->cascadeOnDelete();
 
-            $table->string('ga_account_id')->nullable(); // accounts/123
-            $table->string('property_id')->nullable();   // properties/123
-            $table->string('measurement_id')->nullable(); // G-XXXXXXX
+            $table->string('ga_account_id', 255)->nullable(); // accounts/123
+            $table->string('property_id', 255)->nullable();   // properties/123
+            $table->string('measurement_id', 255)->nullable(); // G-XXXXXXX
 
-            $table->string('website_url')->nullable();
-            $table->string('timezone')->default('Asia/Jakarta');
-            $table->string('currency')->default('IDR');
+            $table->string('website_url', 255)->nullable();
+            $table->string('timezone', 100)->default('Asia/Jakarta');
+            $table->string('currency', 50)->default('IDR');
 
             $table->timestamps();
         });
