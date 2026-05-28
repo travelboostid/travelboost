@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\AffiliateProfile;
 use App\Models\Company;
 use App\Models\Domain;
 use Closure;
@@ -60,6 +61,9 @@ class DomainResolver
         // TODO: switch usage to context
         if ($domainObject->owner instanceof Company) {
             $request->attributes->set('tenant', $domainObject->owner);
+            Context::add('tenant', $domainObject->owner);
+        } elseif ($domainObject->owner instanceof AffiliateProfile) {
+            Context::add('affiliate', $domainObject->owner);
         }
 
         return $next($request);

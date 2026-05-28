@@ -11,7 +11,9 @@
             <th colspan="10">{{ $company->name }}</th>
         </tr>
         <tr>
-            <th colspan="10">Generated {{ $generatedAt->format('d M Y H:i') }} - Period {{ $filters['period_from'] ?: 'All' }} - {{ $filters['period_to'] ?: 'All' }}</th>
+            <th colspan="10">
+                Generated {{ $generatedAt->format('d M Y H:i') }} - Period {{ $filters['period_from'] ?: 'All' }} - {{ $filters['period_to'] ?: 'All' }}
+            </th>
         </tr>
         <tr>
             <th>No</th>
@@ -30,11 +32,17 @@
         @forelse ($rows as $row)
             <tr>
                 <td>{{ $loop->iteration }}</td>
-                <td>{{ $isVendor ? $row['agent_code'] : $row['vendor_name'] }}</td>
-                <td>{{ $isVendor ? $row['agent_name'] : $row['vendor_name'] }}</td>
+                <td>
+                    {{ $isVendor ? $row['agent_code'] : $row['vendor_name'] }}
+                </td>
+                <td>
+                    {{ $isVendor ? $row['agent_name'] : $row['vendor_name'] }}
+                </td>
                 <td>{{ $row['tour_code'] }}</td>
                 <td>{{ $row['tour_name'] }}</td>
-                <td>{{ $formatDate($row['departure_date']).' - '.$formatDate($row['return_date']) }}</td>
+                <td>
+                    {{ $formatDate($row['departure_date']).' - '.$formatDate($row['return_date']) }}
+                </td>
                 <td>{{ $row['booking_code'] }}</td>
                 <td>{{ $row['booking_contact'] }}</td>
                 <td>{{ $row['pax'] }}</td>

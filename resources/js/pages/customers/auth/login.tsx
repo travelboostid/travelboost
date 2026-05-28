@@ -6,6 +6,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
+import useAnalytics from '@/hooks/use-analytics';
 import { store as submitLogin } from '@/routes/customers/login';
 import { show as showRegister } from '@/routes/customers/register';
 // import { request } from '@/routes/password';
@@ -20,6 +21,7 @@ type Props = {
 };
 
 export default function Login({ status }: Props) {
+    const analytics = useAnalytics();
     const { flash } = usePage().props as any;
 
     const [showModal, setShowModal] = useState(false);
@@ -51,6 +53,7 @@ export default function Login({ status }: Props) {
                     {...submitLogin.form()}
                     resetOnSuccess={['password']}
                     className="flex flex-col gap-6"
+                    onSuccess={() => analytics.login('email')}
                 >
                     {({ processing, errors }) => (
                         <>

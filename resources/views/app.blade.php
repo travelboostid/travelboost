@@ -1,54 +1,97 @@
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
-
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <script>
-    (function() {
-      const appearance = '{{ $appearance ?? "system" }}';
+    <script>
+        (function () {
+            const appearance = '{{ $appearance ?? "system" }}';
 
-      if (appearance === 'system') {
-        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            if (appearance === 'system') {
+                const prefersDark = window.matchMedia(
+                    '(prefers-color-scheme: dark)',
+                ).matches;
 
-        if (prefersDark) {
-          document.documentElement.classList.add('dark');
+                if (prefersDark) {
+                    document.documentElement.classList.add('dark');
+                }
+            }
+        })();
+    </script>
+    <script
+        src="https://app.sandbox.midtrans.com/snap/snap.js"
+        data-client-key="{{ config('midtrans.client_key') }}"
+    ></script>
+    @if (! empty($analyticsMeasurementIds))
+        <script
+            async
+            src="https://www.googletagmanager.com/gtag/js?id={{ $analyticsMeasurementIds[0] }}"
+        ></script>
+        <script>
+            window.dataLayer = window.dataLayer || [];
+
+            function gtag() {
+                dataLayer.push(arguments);
+            }
+
+            window.gtag = gtag;
+
+            gtag('js', new Date());
+
+            const measurementIds = @json ($analyticsMeasurementIds);
+
+            measurementIds.forEach((id) => {
+                gtag('config', id, {
+                    send_page_view: false,
+                });
+            });
+        </script>
+    @endif
+
+    <style>
+        html {
+            background-color: oklch(1 0 0);
         }
-      }
-    })();
-  </script>
-  <script src="https://app.sandbox.midtrans.com/snap/snap.js"
-    data-client-key="{{ config('midtrans.client_key') }}"></script>
 
-  <style>
-    html {
-      background-color: oklch(1 0 0);
-    }
+        html.dark {
+            background-color: oklch(0.145 0 0);
+        }
+    </style>
 
-    html.dark {
-      background-color: oklch(0.145 0 0);
-    }
-  </style>
+    <title inertia>{{ config('app.name', 'Travelboost') }}</title>
 
-  <title inertia>{{ config('app.name', 'Travelboost') }}</title>
+    <link rel="icon" href="/images/logo/logo-square/favicon.ico" sizes="any" />
+    <link
+        rel="icon"
+        type="image/png"
+        sizes="32x32"
+        href="/images/logo/logo-square/favicon-32x32.png"
+    />
+    <link
+        rel="icon"
+        type="image/png"
+        sizes="16x16"
+        href="/images/logo/logo-square/favicon-16x16.png"
+    />
+    <link
+        rel="apple-touch-icon"
+        href="/images/logo/logo-square/apple-touch-icon.png"
+    />
+    <link rel="manifest" href="/images/logo/logo-square/site.webmanifest" />
 
-  <link rel="icon" href="/images/logo/logo-square/favicon.ico" sizes="any">
-  <link rel="icon" type="image/png" sizes="32x32" href="/images/logo/logo-square/favicon-32x32.png">
-  <link rel="icon" type="image/png" sizes="16x16" href="/images/logo/logo-square/favicon-16x16.png">
-  <link rel="apple-touch-icon" href="/images/logo/logo-square/apple-touch-icon.png">
-  <link rel="manifest" href="/images/logo/logo-square/site.webmanifest">
+    <link rel="preconnect" href="https://fonts.bunny.net" />
+    <link
+        href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600"
+        rel="stylesheet"
+    />
 
-  <link rel="preconnect" href="https://fonts.bunny.net">
-  <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600" rel="stylesheet" />
-
-  @viteReactRefresh
-  @vite(['resources/js/app.tsx', "resources/js/pages/{$page['component']}.tsx"])
-  @inertiaHead
+    @viteReactRefresh
+    @vite (['resources/js/app.tsx', "resources/js/pages/{$page['component']}.tsx"])
+    @inertiaHead
 </head>
 
 <body class="font-sans antialiased">
-  @inertia
+    @inertia
 </body>
-
 </html>

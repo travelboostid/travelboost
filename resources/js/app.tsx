@@ -1,4 +1,4 @@
-import { createInertiaApp } from '@inertiajs/react';
+import { createInertiaApp, router } from '@inertiajs/react';
 import { configureEcho } from '@laravel/echo-react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import dayjs from 'dayjs';
@@ -15,6 +15,14 @@ import { TooltipProvider } from './components/ui/tooltip';
 import { initializeTheme } from './hooks/use-appearance';
 import { NuqsAdapter } from './lib/nuqs-inertia-adapter';
 dayjs.extend(relativeTime);
+
+router.on('navigate', (event) => {
+    window.gtag?.('event', 'page_view', {
+        page_title: document.title,
+        page_location: window.location.href,
+        page_path: event.detail.page.url,
+    });
+});
 
 const queryClient = new QueryClient();
 

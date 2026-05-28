@@ -9,7 +9,6 @@ use App\Models\AgentSubscription;
 use App\Models\AgentSubscriptionPackage;
 use App\Models\Company;
 use App\Models\Role;
-use App\Models\Team;
 use App\Models\User;
 use App\Models\VendorAgentPartner;
 use Illuminate\Database\Seeder;
@@ -91,9 +90,8 @@ class CompanySeeder extends Seeder
                 'is_owner' => true,
             ]);
 
-            $team = Team::where('name', "company:{$company->id}")->firstOrCreate();
             $superadmin = Role::where('name', "company:{$company->id}:superadmin")->firstOrCreate();
-            $user->addRole($superadmin, $team);
+            $user->addRole($superadmin);
 
             if ($company['type'] === CompanyType::AGENT) {
                 AgentSubscription::create([

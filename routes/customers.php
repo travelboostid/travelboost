@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\BookingController;
+use App\Http\Controllers\Customers\AuthController;
 use App\Http\Controllers\Customers\ProfileController as CustomerProfileController;
 use App\Http\Controllers\Me\HomeController as MeHomeController;
 use App\Http\Controllers\Tenant\TourController;
@@ -10,8 +11,18 @@ use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Support\Facades\Route;
 
 $appHost = env('APP_HOST', 'localhost');
-
-Route::domain('{username}.'.$appHost)->group(function () {
+Route::prefix('customers')
+    ->middleware(['use-customer-props', 'set-and-use-anonymous-user-props', 'use-analytics-measurement-ids-props'])
+    ->name('customers.')
+    ->group(function () {
+        Route::middleware(['guest'])->group(function () {
+            Route::get('login', [AuthController::class, 'showLogin'])->name('login.show');
+            Route::post('login', [AuthController::class, 'login'])->name('login.store');
+            Route::get('register', [AuthController::class, 'showRegister'])->name('register.show');
+            Route::post('register', [AuthController::class, 'register'])->name('register.store');
+        });
+    });
+Route::domain('{username}.'.$appHost)->middleware(['use-customer-props',  'use-analytics-measurement-ids-props'])->group(function () {
     Route::get('/tours', [TourController::class, 'index']);
     Route::get('/mybookings', [MeHomeController::class, 'bookings']);
     Route::get('/mybookings/{booking}/invoice', function (Request $request, string $username, Booking $booking): HttpResponse {

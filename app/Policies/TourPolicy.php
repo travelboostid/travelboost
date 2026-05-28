@@ -12,15 +12,16 @@ class TourPolicy
      */
     public function viewAny(User $user): bool
     {
-        return false;
+        return $user->isAbleTo('tour.query');
     }
 
-    /**
-     * Determine whether the user can view the model.
-     */
     public function view(User $user, Tour $tour): bool
     {
-        return false;
+        if (! $user->isAbleTo('tour.query')) {
+            return false;
+        }
+
+        return $this->belongsToTourCompanyTeam($user, $tour) || $user->hasRole('user:admin');
     }
 
     /**
@@ -28,7 +29,7 @@ class TourPolicy
      */
     public function create(User $user): bool
     {
-        return false;
+        return $user->isAbleTo('tour.mutation');
     }
 
     /**
@@ -36,7 +37,11 @@ class TourPolicy
      */
     public function update(User $user, Tour $tour): bool
     {
-        return false;
+        if (! $user->isAbleTo('tour.mutation')) {
+            return false;
+        }
+
+        return $this->belongsToTourCompanyTeam($user, $tour) || $user->hasRole('user:admin');
     }
 
     /**
@@ -44,22 +49,17 @@ class TourPolicy
      */
     public function delete(User $user, Tour $tour): bool
     {
-        return false;
+        if (! $user->isAbleTo('tour.mutation')) {
+            return false;
+        }
+
+        return $this->belongsToTourCompanyTeam($user, $tour) || $user->hasRole('user:admin');
     }
 
-    /**
-     * Determine whether the user can restore the model.
-     */
-    public function restore(User $user, Tour $tour): bool
+    private function belongsToTourCompanyTeam(User $user, Tour $tour): bool
     {
-        return false;
-    }
-
-    /**
-     * Determine whether the user can permanently delete the model.
-     */
-    public function forceDelete(User $user, Tour $tour): bool
-    {
-        return false;
+        return $tour->company()
+            ->teams
+            ->contains('user_id', $user->id);
     }
 }
