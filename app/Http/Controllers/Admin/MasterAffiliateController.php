@@ -5,9 +5,11 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\AffiliateProfile;
 use App\Models\User;
+use Illuminate\Routing\Attributes\Controllers\Authorize;
 use Inertia\Inertia;
 use Inertia\Response;
 
+#[Authorize('access-admin')]
 class MasterAffiliateController extends Controller
 {
     public function index(): Response

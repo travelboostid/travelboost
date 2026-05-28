@@ -16,6 +16,7 @@ use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Facades\Context;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 use Intervention\Image\Drivers\Gd\Driver;
@@ -66,6 +67,10 @@ class AppServiceProvider extends ServiceProvider
             }
 
             return $redirectPath;
+        });
+
+        Gate::define('access-admin', function (User $user) {
+            return $user->hasRole('user:admin');
         });
 
         $this->configureDefaults();
