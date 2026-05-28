@@ -11,10 +11,8 @@ use App\Models\Company;
 use App\Models\CompanyTeam;
 use App\Models\Domain;
 use App\Models\Media;
-use App\Models\PriceCategory;
 use App\Models\Tour;
 use App\Models\TourAvailability;
-use App\Models\TourPrice;
 use App\Models\TourSchedule;
 use App\Models\User;
 use Database\Seeders\Common\RolePermissionSeeder;
@@ -63,7 +61,7 @@ test('shared tenant props include landing page settings for navbar branding', fu
     ]);
 
     $request = Request::create('/mybookings');
-    $request->attributes->set('tenant', $company);
+    Context::set('tenant', $company);
     $request->setLaravelSession(app('session')->driver());
 
     $shared = app(HandleInertiaRequests::class)->share($request);

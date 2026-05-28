@@ -15,12 +15,15 @@ use App\Models\Tour;
 use App\Models\TourAddOn;
 use App\Notifications\TourStatusChangedNotification;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Routing\Attributes\Controllers\Authorize;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class TourController extends Controller
 {
+    #[Authorize('view', 'company')]
+    #[Authorize('viewAny', Tour::class)]
     public function index(Company $company): Response
     {
         $tours = $company->tours()
@@ -34,6 +37,8 @@ class TourController extends Controller
         ]);
     }
 
+    #[Authorize('view', 'company')]
+    #[Authorize('create', Tour::class)]
     public function create(Company $company): Response
     {
         return Inertia::render('companies/dashboard/tours/create', [
@@ -43,6 +48,8 @@ class TourController extends Controller
         ]);
     }
 
+    #[Authorize('view', 'company')]
+    #[Authorize('create', Tour::class)]
     public function store(StoreTourRequest $request, Company $company): RedirectResponse
     {
         $data = $request->validated();
@@ -69,6 +76,8 @@ class TourController extends Controller
         }
     }
 
+    #[Authorize('view', 'company')]
+    #[Authorize('update', Tour::class)]
     public function edit(Company $company, Tour $tour): Response
     {
         app(ExpireBookingReservationsAction::class)->execute($company, $tour->id);
@@ -96,6 +105,8 @@ class TourController extends Controller
         ]);
     }
 
+    #[Authorize('view', 'company')]
+    #[Authorize('update', Tour::class)]
     public function update(UpdateTourRequest $request, Company $company, Tour $tour): RedirectResponse
     {
         if ($request->has('quick_update')) {
@@ -152,6 +163,8 @@ class TourController extends Controller
         }
     }
 
+    #[Authorize('view', 'company')]
+    #[Authorize('delete', Tour::class)]
     public function destroy(Company $company, Tour $tour): RedirectResponse
     {
         $hasBookings = DB::table('bookings')

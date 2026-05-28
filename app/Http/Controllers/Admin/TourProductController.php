@@ -7,9 +7,11 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\IndexTourProductRequest;
 use App\Http\Requests\UpdateTourRequest;
 use App\Models\Tour;
+use Illuminate\Routing\Attributes\Controllers\Authorize;
 use Illuminate\Support\Carbon;
 use Inertia\Inertia;
 
+#[Authorize('access-admin')]
 class TourProductController extends Controller
 {
     /**

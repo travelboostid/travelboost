@@ -37,7 +37,7 @@ class EnsureAgentSubscriptionIsActive
             }
         }
 
-        Inertia::share('subscription_rules', [
+        Inertia::share('subscriptionRules', [
             'isMarketingDisabled' => $isMarketingDisabled,
             'isExpired' => $isSubscriptionExpired,
         ]);
