@@ -1,54 +1,36 @@
 {
     email admin@travelboost.co.id
-
-    # Prevent random domain abuse
     on_demand_tls {
-        ask http://127.0.0.1:8081/caddy/verify-domain
+        ask http://127.0.0.1:8081/caddy/verify
     }
 }
 
-# Internal-only checker
 :8081 {
     bind 127.0.0.1
-
-    root * /home/travelboost/infra/caddy
-
+    root * /home/travelboost/travelboost/public
+    encode zstd gzip
     php_fastcgi unix//run/php/php8.5-fpm.sock
-
     file_server
 }
 
-
-# Reverb websocket
 reverb.dev.travelboost.co.id {
     reverse_proxy 127.0.0.1:8080
 }
 
-# Main dev domains
-dev.travelboost.co.id, *.dev.travelboost.co.id {
-    tls /etc/letsencrypt/live/dev.travelboost.co.id/fullchain.pem /etc/letsencrypt/live/dev.travelboost.co.id/privkey.pem
-    
-    root * /home/travelboost/travelboost-dev/public
-
+dev.travelboost.co.id {
+    root * /home/travelboost/travelboost/public
     encode zstd gzip
-
     php_fastcgi unix//run/php/php8.5-fpm.sock
-
     file_server
 }
 
-# ALL customer/custom domains
-# Auto HTTPS handled entirely by Caddy
 https:// {
-     tls {
+    tls {
         on_demand
     }
 
-    root * /home/travelboost/travelboost-dev/public
-
+    root * /home/travelboost/travelboost/public
     encode zstd gzip
-
     php_fastcgi unix//run/php/php8.5-fpm.sock
-
     file_server
 }
