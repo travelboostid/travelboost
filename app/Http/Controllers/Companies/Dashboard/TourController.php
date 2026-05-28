@@ -77,7 +77,7 @@ class TourController extends Controller
     }
 
     #[Authorize('view', 'company')]
-    #[Authorize('update', Tour::class)]
+    #[Authorize('update', 'tour')]
     public function edit(Company $company, Tour $tour): Response
     {
         app(ExpireBookingReservationsAction::class)->execute($company, $tour->id);
@@ -106,7 +106,7 @@ class TourController extends Controller
     }
 
     #[Authorize('view', 'company')]
-    #[Authorize('update', Tour::class)]
+    #[Authorize('update', 'tour')]
     public function update(UpdateTourRequest $request, Company $company, Tour $tour): RedirectResponse
     {
         if ($request->has('quick_update')) {
@@ -164,7 +164,7 @@ class TourController extends Controller
     }
 
     #[Authorize('view', 'company')]
-    #[Authorize('delete', Tour::class)]
+    #[Authorize('delete', 'tour')]
     public function destroy(Company $company, Tour $tour): RedirectResponse
     {
         $hasBookings = DB::table('bookings')

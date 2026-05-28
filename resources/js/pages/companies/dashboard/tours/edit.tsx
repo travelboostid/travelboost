@@ -2099,19 +2099,6 @@ export default function Page({ tour }: Props) {
                                                     rowSpan={2}
                                                 ></th>
                                             </tr>
-
-                                            <tr className="text-xs text-muted-foreground">
-                                                <th className="p-2">
-                                                    Category
-                                                </th>
-                                                <th className="p-2">Price</th>
-                                                <th className="p-2">
-                                                    Promotion
-                                                </th>
-                                                <th className="p-2">
-                                                    Commission
-                                                </th>
-                                            </tr>
                                         </thead>
 
                                         {/* ================= BODY ================= */}
@@ -2231,7 +2218,36 @@ export default function Page({ tour }: Props) {
                                                                         </AccordionTrigger>
 
                                                                         <AccordionContent className="border-t px-4 py-4">
-                                                                            <div className="rounded-md border p-3">
+                                                                            {/* HEADER */}
+                                                                            <div
+                                                                                className="
+                                                                                    grid
+                                                                                    gap-3
+                                                                                    px-1
+                                                                                    pb-2
+                                                                                    text-xs
+                                                                                    font-medium
+                                                                                    text-muted-foreground
+                                                                                "
+                                                                                style={{
+                                                                                    gridTemplateColumns:
+                                                                                        '24% 22% 1fr 44px',
+                                                                                }}
+                                                                            >
+                                                                                <div>
+                                                                                    Category
+                                                                                </div>
+                                                                                <div>
+                                                                                    Price
+                                                                                </div>
+                                                                                <div>
+                                                                                    Promotion
+                                                                                </div>
+                                                                                <div></div>
+                                                                            </div>
+
+                                                                            {/* CONTENT */}
+                                                                            <div className="rounded-md border p-3 space-y-3">
                                                                                 {(
                                                                                     item.prices ||
                                                                                     []
@@ -2353,8 +2369,14 @@ export default function Page({ tour }: Props) {
                                                                                                 />
 
                                                                                                 {/* PROMOTION */}
-                                                                                                <div className="space-y-1">
-                                                                                                    <div className="relative">
+                                                                                                <div
+                                                                                                    className="grid gap-3 items-center"
+                                                                                                    style={{
+                                                                                                        gridTemplateColumns:
+                                                                                                            '120px 180px',
+                                                                                                    }}
+                                                                                                >
+                                                                                                    <div className="relative flex-[2]">
                                                                                                         <input
                                                                                                             type="text"
                                                                                                             inputMode="decimal"
@@ -2416,131 +2438,44 @@ export default function Page({ tour }: Props) {
                                                                                                         </span>
                                                                                                     </div>
 
-                                                                                                    <MoneyInput
-                                                                                                        value={
-                                                                                                            room
-                                                                                                                .promotion
-                                                                                                                .type ===
-                                                                                                            'value'
-                                                                                                                ? room
-                                                                                                                      .promotion
-                                                                                                                      .value
-                                                                                                                : ''
-                                                                                                        }
-                                                                                                        placeholder="Promotion Value"
-                                                                                                        onChange={(
-                                                                                                            val,
-                                                                                                        ) => {
-                                                                                                            updateRoomAdjustment(
-                                                                                                                index,
-                                                                                                                rIndex,
-                                                                                                                'promotion',
-                                                                                                                'type',
-                                                                                                                'value',
-                                                                                                            );
-
-                                                                                                            updateRoomAdjustment(
-                                                                                                                index,
-                                                                                                                rIndex,
-                                                                                                                'promotion',
-                                                                                                                'value',
-                                                                                                                val,
-                                                                                                            );
-                                                                                                        }}
-                                                                                                    />
-                                                                                                </div>
-
-                                                                                                {/* COMMISSION */}
-                                                                                                <div className="space-y-1">
-                                                                                                    <div className="relative">
-                                                                                                        <input
-                                                                                                            type="text"
-                                                                                                            inputMode="decimal"
-                                                                                                            className="w-full pr-8 border rounded px-2 h-9 text-sm"
+                                                                                                    <div>
+                                                                                                        <MoneyInput
                                                                                                             value={
                                                                                                                 room
-                                                                                                                    .commission
+                                                                                                                    .promotion
                                                                                                                     .type ===
-                                                                                                                'percent'
+                                                                                                                'value'
                                                                                                                     ? room
-                                                                                                                          .commission
+                                                                                                                          .promotion
                                                                                                                           .value
                                                                                                                     : ''
                                                                                                             }
-                                                                                                            placeholder="Commission %"
+                                                                                                            placeholder="Promotion Value"
                                                                                                             onChange={(
-                                                                                                                e,
+                                                                                                                val,
                                                                                                             ) => {
-                                                                                                                const raw =
-                                                                                                                    e.target.value
-                                                                                                                        .replace(
-                                                                                                                            /[^0-9.,]/g,
-                                                                                                                            '',
-                                                                                                                        )
-                                                                                                                        .replace(
-                                                                                                                            ',',
-                                                                                                                            '.',
-                                                                                                                        );
-
                                                                                                                 updateRoomAdjustment(
                                                                                                                     index,
                                                                                                                     rIndex,
-                                                                                                                    'commission',
+                                                                                                                    'promotion',
                                                                                                                     'type',
-                                                                                                                    'percent',
+                                                                                                                    'value',
                                                                                                                 );
 
                                                                                                                 updateRoomAdjustment(
                                                                                                                     index,
                                                                                                                     rIndex,
-                                                                                                                    'commission',
+                                                                                                                    'promotion',
                                                                                                                     'value',
-                                                                                                                    raw,
+                                                                                                                    val,
                                                                                                                 );
                                                                                                             }}
                                                                                                         />
-
-                                                                                                        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs">
-                                                                                                            %
-                                                                                                        </span>
                                                                                                     </div>
-
-                                                                                                    <MoneyInput
-                                                                                                        value={
-                                                                                                            room
-                                                                                                                .commission
-                                                                                                                .type ===
-                                                                                                            'value'
-                                                                                                                ? room
-                                                                                                                      .commission
-                                                                                                                      .value
-                                                                                                                : ''
-                                                                                                        }
-                                                                                                        placeholder="Commission Value"
-                                                                                                        onChange={(
-                                                                                                            val,
-                                                                                                        ) => {
-                                                                                                            updateRoomAdjustment(
-                                                                                                                index,
-                                                                                                                rIndex,
-                                                                                                                'commission',
-                                                                                                                'type',
-                                                                                                                'value',
-                                                                                                            );
-
-                                                                                                            updateRoomAdjustment(
-                                                                                                                index,
-                                                                                                                rIndex,
-                                                                                                                'commission',
-                                                                                                                'value',
-                                                                                                                val,
-                                                                                                            );
-                                                                                                        }}
-                                                                                                    />
                                                                                                 </div>
                                                                                             </div>
-
-                                                                                            <div className="mt-3 flex justify-end">
+                                                                                            {/* REMOVE ROOM */}
+                                                                                            <div className="col-span-4 flex justify-end">
                                                                                                 <Button
                                                                                                     type="button"
                                                                                                     size="sm"
@@ -2553,6 +2488,7 @@ export default function Page({ tour }: Props) {
                                                                                                         )
                                                                                                     }
                                                                                                 >
+                                                                                                    x
                                                                                                     Delete
                                                                                                     Category
                                                                                                 </Button>
@@ -3139,13 +3075,13 @@ export default function Page({ tour }: Props) {
                                                                             </div>
 
                                                                             {/* COMMISSION */}
-                                                                            <div className="space-y-1">
+                                                                            {/*<div className="space-y-1">
                                                                                 <p className="text-xs text-muted-foreground">
                                                                                     Commission
                                                                                 </p>
 
                                                                                 <div className="grid gap-2 sm:grid-cols-2">
-                                                                                    {/* % */}
+                                                                                    
                                                                                     <div className="relative">
                                                                                         <MoneyInput
                                                                                             value={
@@ -3185,7 +3121,7 @@ export default function Page({ tour }: Props) {
                                                                                         </span>
                                                                                     </div>
 
-                                                                                    {/* VALUE */}
+                                                                                    
                                                                                     <MoneyInput
                                                                                         value={
                                                                                             room
@@ -3217,8 +3153,8 @@ export default function Page({ tour }: Props) {
                                                                                             );
                                                                                         }}
                                                                                     />
-                                                                                </div>
-                                                                            </div>
+                                                                                </div> 
+                                                                            </div> */}
                                                                         </div>
                                                                     ),
                                                                 )}

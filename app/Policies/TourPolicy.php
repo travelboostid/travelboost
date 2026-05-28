@@ -58,7 +58,7 @@ class TourPolicy
 
     private function belongsToTourCompanyTeam(User $user, Tour $tour): bool
     {
-        return $tour->company()
+        return $tour->company
             ->teams
             ->contains('user_id', $user->id);
     }

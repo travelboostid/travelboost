@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\AffiliateController;
 use App\Http\Controllers\Admin\AgentController;
 use App\Http\Controllers\Admin\AiUsageLogController;
+use App\Http\Controllers\Admin\AppConfigAdminController;
 use App\Http\Controllers\Admin\AppConfigController;
 use App\Http\Controllers\Admin\AuthController;
 use App\Http\Controllers\Admin\BankAccountController;
@@ -38,6 +39,17 @@ Route::prefix('admin')
         Route::middleware(['auth'])->group(function () {
             //
             Route::resource('app-configs', AppConfigController::class)->names('app-configs');
+
+            Route::get(
+                'settings/app-config-admin',
+                [AppConfigAdminController::class, 'index']
+            )->name('app-config-admin.index');
+
+            Route::put(
+                'settings/app-config-admin',
+                [AppConfigAdminController::class, 'update']
+            )->name('app-config-admin.update');
+
             // 2. Dashboard
             Route::get('/dashboard', [HomeController::class, 'show'])->name('dashboard');
 
