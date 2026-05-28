@@ -6,7 +6,8 @@
     "printWidth": 80,
     "plugins": [
         "prettier-plugin-tailwindcss",
-        "prettier-plugin-organize-imports"
+        "prettier-plugin-organize-imports",
+        "prettier-plugin-blade"
     ],
     "tailwindFunctions": ["clsx", "cn", "cva"],
     "tailwindStylesheet": "resources/css/app.css",

@@ -296,6 +296,9 @@ importers:
             prettier:
                 specifier: ^3.4.2
                 version: 3.8.3
+            prettier-plugin-blade:
+                specifier: ^3.1.6
+                version: 3.1.6(prettier-plugin-tailwindcss@0.6.14(prettier-plugin-organize-imports@4.3.0(prettier@3.8.3)(typescript@5.9.3))(prettier@3.8.3))(prettier@3.8.3)
             prettier-plugin-organize-imports:
                 specifier: ^4.3.0
                 version: 4.3.0(prettier@3.8.3)(typescript@5.9.3)
@@ -2169,6 +2172,18 @@ packages:
         resolution:
             {
                 integrity: sha512-vxPpfXqrwUe9lpjqfYNjAF/0RF/eFGeLgdJzdmIIZjpOnTmGmAB4BjWone562mJGMRP4frU6iZ6ei3PDsu52Ng==,
+            }
+
+    '@prettier/html-tags@2.2.0':
+        resolution:
+            {
+                integrity: sha512-6qLjt8ncestmSfEOeVf/kX5VhkinUsppybvkwn1X7wu+BjQ/GBSZYu7cytxdCvi5BaljCGIAr4rmfL5zVqdgyQ==,
+            }
+
+    '@prettier/parse-srcset@3.1.0':
+        resolution:
+            {
+                integrity: sha512-FIRv2rZotO9NP/r66taYqD1zICpPiBbrECqjKV/xqNotqDxF7fLzzUeK+1RSRx9Tenk0DajR/GcRmTJ2qtHaKQ==,
             }
 
     '@puckeditor/core@0.21.2':
@@ -6361,6 +6376,12 @@ packages:
                 integrity: sha512-6pEjquH3rqaI6cYAXYPcz9MS4rY6R4ngRgrgfDshRptUZIc3lw0MCIJIGDj9++mfySOuPTHB4nrSW99BCvOPIA==,
             }
 
+    html-element-attributes@3.5.0:
+        resolution:
+            {
+                integrity: sha512-rU2BFhp0kQla9sqPBI46C+zbP6PFOtD7z6XNAJ6as+cGecCDXLx0W3aIs6XdPLmBBG/Fy1meRi/n65Exofz4Qw==,
+            }
+
     html-url-attributes@3.0.1:
         resolution:
             {
@@ -8042,6 +8063,22 @@ packages:
                 integrity: sha512-vkcDPrRZo1QZLbn5RLGPpg/WmIQ65qoWWhcGKf/b5eplkkarX0m9z8ppCat4mlOqUsWpyNuYgO3VRyrYHSzX5g==,
             }
         engines: { node: '>= 0.8.0' }
+
+    prettier-plugin-blade@3.1.6:
+        resolution:
+            {
+                integrity: sha512-XtVlH7IyVOWlCIW8Kx0lIKVa3U9XIDg7VcDfkiRgl+wSn6jvwRZkR9FFrRKibh5B/SiykTfhASSGjvKdXNmbWQ==,
+            }
+        engines: { node: '>=18.0.0' }
+        peerDependencies:
+            '@prettier/plugin-php': ^0.24.0
+            prettier: ^3.0.0
+            prettier-plugin-tailwindcss: ^0.7.0
+        peerDependenciesMeta:
+            '@prettier/plugin-php':
+                optional: true
+            prettier-plugin-tailwindcss:
+                optional: true
 
     prettier-plugin-organize-imports@4.3.0:
         resolution:
@@ -10999,6 +11036,10 @@ snapshots:
 
     '@preact/signals-core@1.14.1': {}
 
+    '@prettier/html-tags@2.2.0': {}
+
+    '@prettier/parse-srcset@3.1.0': {}
+
     '@puckeditor/core@0.21.2(@floating-ui/dom@1.7.6)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(immer@11.1.6)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(use-sync-external-store@1.6.0(react@19.2.5))':
         dependencies:
             '@dnd-kit/helpers': 0.1.18
@@ -13950,6 +13991,8 @@ snapshots:
         dependencies:
             hermes-estree: 0.25.1
 
+    html-element-attributes@3.5.0: {}
+
     html-url-attributes@3.0.1: {}
 
     http-cache-semantics@4.2.0: {}
@@ -15097,6 +15140,15 @@ snapshots:
             source-map-js: 1.2.1
 
     prelude-ls@1.2.1: {}
+
+    prettier-plugin-blade@3.1.6(prettier-plugin-tailwindcss@0.6.14(prettier-plugin-organize-imports@4.3.0(prettier@3.8.3)(typescript@5.9.3))(prettier@3.8.3))(prettier@3.8.3):
+        dependencies:
+            '@prettier/html-tags': 2.2.0
+            '@prettier/parse-srcset': 3.1.0
+            html-element-attributes: 3.5.0
+            prettier: 3.8.3
+        optionalDependencies:
+            prettier-plugin-tailwindcss: 0.6.14(prettier-plugin-organize-imports@4.3.0(prettier@3.8.3)(typescript@5.9.3))(prettier@3.8.3)
 
     prettier-plugin-organize-imports@4.3.0(prettier@3.8.3)(typescript@5.9.3):
         dependencies:
