@@ -20,7 +20,7 @@ class GoogleAccountController extends Controller
                 'access_type' => 'offline',
                 'prompt' => 'consent',
                 'state' => json_encode([
-                    'intent' => 'connect-for-company',
+                    'intent' => 'connect-analytics',
                     'company_id' => $company->id,
                 ]),
             ])

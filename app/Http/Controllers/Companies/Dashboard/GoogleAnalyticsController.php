@@ -12,6 +12,11 @@ use Google\Analytics\Admin\V1beta\ListDataStreamsRequest;
 use Google\Analytics\Admin\V1beta\ListPropertiesRequest;
 use Google\Analytics\Admin\V1beta\ProvisionAccountTicketRequest;
 use Google\Analytics\Data\V1beta\Client\BetaAnalyticsDataClient;
+use Google\Analytics\Data\V1beta\DateRange;
+use Google\Analytics\Data\V1beta\Dimension;
+use Google\Analytics\Data\V1beta\Metric;
+use Google\Analytics\Data\V1beta\RunRealtimeReportRequest;
+use Google\Analytics\Data\V1beta\RunReportRequest;
 use Google\ApiCore\ApiException;
 use Google\Auth\Credentials\UserRefreshCredentials;
 use Google\Client;
@@ -31,6 +36,7 @@ class GoogleAnalyticsController extends Controller
         $analytics = $account?->analyticsConnection;
 
         $insights = null;
+        $realtimeInsights = null;
 
         if ($account && $analytics) {
             $insights = Cache::remember(
@@ -46,32 +52,46 @@ class GoogleAnalyticsController extends Controller
                     $analytics->data_stream_id
                 )
             );
+            $realtimeInsights = Cache::remember(
+                sprintf(
+                    'ga-realtime-dashboard:%s:30d',
+                    $analytics->property_id,
+                ),
+                now()->addSeconds(20),
+                fn () => $this->getRealtimeInsights(
+                    $account,
+                    $analytics->property_id,
+                )
+            );
         }
 
         return Inertia::render(
-            'companies/dashboard/google-analytics/index',
+            'companies/dashboard/analytics/index',
             [
                 'account' => $account,
                 'analytics' => $analytics,
                 'insights' => $insights,
+                'realtimeInsights' => $realtimeInsights,
             ]
         );
     }
 
     public function showAccountSetupOrSelections(Request $request, Company $company)
     {
-        $existing = $company->googleAccount->analyticsConnection;
-        if ($existing != null) {
+        $googleAccount = $company->googleAccount;
+
+        if ($googleAccount?->analyticsConnection) {
             return redirect('/');
-        } // redirect to list
-        $accounts = Cache::remember(
-            "google-analytics-accounts:{$company->id}",
+        }
+        $analyticAccounts = Cache::remember(
+            "analytics-accounts:{$company->id}",
             now()->addHour(),
             fn () => $this->getAvailableAnalyticsAccounts($company)
         );
 
-        return Inertia::render('companies/dashboard/google-analytics/select-or-setup-account', [
-            'accounts' => $accounts,
+        return Inertia::render('companies/dashboard/analytics/select-or-setup-account', [
+            'googleAccount' => $googleAccount,
+            'analyticAccounts' => $analyticAccounts,
         ]);
     }
 
@@ -124,7 +144,7 @@ class GoogleAnalyticsController extends Controller
                 'size:3',
             ],
         ]);
-        $created = $company->googleAccount->analyticsConnection->create($validated);
+        $created = $company->googleAccount->analyticsConnection()->create($validated);
 
         return back();
     }
@@ -474,6 +494,156 @@ class GoogleAnalyticsController extends Controller
         ];
     }
 
+    private function getRealtimeInsights(
+        CompanyGoogleAccount $googleAccount,
+        string $propertyId
+    ): array {
+        return [
+            'overview' => $this->getRealtimeOverview(
+                $googleAccount,
+                $propertyId,
+            ),
+
+            'devices' => $this->getRealtimeBreakdown(
+                $googleAccount,
+                $propertyId,
+                'deviceCategory',
+            ),
+
+            'countries' => $this->getRealtimeBreakdown(
+                $googleAccount,
+                $propertyId,
+                'country',
+            ),
+
+            'pages' => $this->getRealtimePages(
+                $googleAccount,
+                $propertyId,
+            ),
+
+            'events' => $this->getRealtimeEvents(
+                $googleAccount,
+                $propertyId,
+            ),
+        ];
+    }
+
+    private function getRealtimePages(
+        CompanyGoogleAccount $googleAccount,
+        string $propertyId
+    ): array {
+        return $this->getRealtimeBreakdown(
+            $googleAccount,
+            $propertyId,
+            'unifiedScreenName', // ✅ FIXED
+            'screenPageViews',
+            20
+        );
+    }
+
+    private function getRealtimeEvents(
+        CompanyGoogleAccount $googleAccount,
+        string $propertyId
+    ): array {
+        return $this->getRealtimeBreakdown(
+            $googleAccount,
+            $propertyId,
+            'eventName',
+            'eventCount',
+            20
+        );
+    }
+
+    private function getRealtimeOverview(
+        CompanyGoogleAccount $googleAccount,
+        string $propertyId
+    ): array {
+        $rows = $this->runRealtimeReport(
+            $googleAccount,
+            $propertyId,
+            [],
+            [
+                'activeUsers',
+                'eventCount',
+                'screenPageViews',
+            ]
+        );
+
+        $row = $rows[0] ?? null;
+
+        return [
+            'active_users' => (int) ($row['metrics'][0] ?? 0),
+            'events' => (int) ($row['metrics'][1] ?? 0),
+            'page_views' => (int) ($row['metrics'][2] ?? 0),
+        ];
+    }
+
+    private function getRealtimeBreakdown(
+        CompanyGoogleAccount $googleAccount,
+        string $propertyId,
+        string $dimension,
+        string $metric = 'activeUsers',
+        int $limit = 10
+    ): array {
+        $rows = $this->runRealtimeReport(
+            $googleAccount,
+            $propertyId,
+            [$dimension],
+            [$metric],
+            $limit
+        );
+
+        return collect($rows)
+            ->map(fn ($row) => [
+                'name' => $row['dimensions'][0] ?? 'unknown',
+                'value' => (int) ($row['metrics'][0] ?? 0),
+            ])
+            ->values()
+            ->all();
+    }
+
+    private function runRealtimeReport(
+        CompanyGoogleAccount $googleAccount,
+        string $propertyId,
+        array $dimensions = [],
+        array $metrics = [],
+        int $limit = 20
+    ): array {
+        $client = $this->makeAnalyticsClient($googleAccount);
+
+        $response = $client->runRealtimeReport(
+            new RunRealtimeReportRequest([
+                'property' => "properties/{$propertyId}",
+
+                'dimensions' => collect($dimensions)
+                    ->map(fn ($name) => new Dimension([
+                        'name' => $name,
+                    ]))
+                    ->all(),
+
+                'metrics' => collect($metrics)
+                    ->map(fn ($name) => new Metric([
+                        'name' => $name,
+                    ]))
+                    ->all(),
+
+                'limit' => $limit,
+            ])
+        );
+
+        return collect($response->getRows())
+            ->map(fn ($row) => [
+                'dimensions' => collect($row->getDimensionValues())
+                    ->map(fn ($v) => $v->getValue())
+                    ->all(),
+
+                'metrics' => collect($row->getMetricValues())
+                    ->map(fn ($v) => $v->getValue())
+                    ->all(),
+            ])
+            ->all();
+    }
+
     private function getOverviewInsights(
         CompanyGoogleAccount $googleAccount,
         string $propertyId,
@@ -632,6 +802,41 @@ class GoogleAnalyticsController extends Controller
                     ->all(),
             ])
             ->all();
+    }
+
+    private function buildReportRequest(
+        string $propertyId,
+        ?string $streamId,
+        array $dimensions,
+        array $metrics,
+        int $limit
+    ): RunReportRequest {
+        $request = new RunReportRequest;
+
+        $request->setProperty('properties/'.$propertyId);
+
+        // Date range (required)
+        $dateRange = new DateRange([
+            'start_date' => '30daysAgo',
+            'end_date' => 'today',
+        ]);
+
+        $request->setDateRanges([$dateRange]);
+
+        // Dimensions
+        $request->setDimensions(
+            array_map(fn ($d) => new Dimension(['name' => $d]), $dimensions)
+        );
+
+        // Metrics
+        $request->setMetrics(
+            array_map(fn ($m) => new Metric(['name' => $m]), $metrics)
+        );
+
+        // Limit rows
+        $request->setLimit($limit);
+
+        return $request;
     }
 
     private function makeAnalyticsClient(
