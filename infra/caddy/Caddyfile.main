@@ -1,7 +1,7 @@
 {
     email admin@travelboost.co.id
     on_demand_tls {
-       ask http://127.0.0.1:8081/caddy/verify
+       ask http://127.0.0.1:8081/caddy/verify-main
     }
 }
 
@@ -19,7 +19,7 @@ reverb.dev.travelboost.co.id {
 
 travelboost.co.id, *.travelboost.co.id {
     tls /etc/ssl/cloudflare/travelboost/origin.crt /etc/ssl/cloudflare/travelboost/origin.key
-    
+
     root * /home/travelboost/travelboost/public
     encode zstd gzip
     php_fastcgi unix//run/php/php8.5-fpm.sock
