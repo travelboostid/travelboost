@@ -4,7 +4,8 @@
 
 - **PHP 8.4** with **Laravel 12**
 - **PostgreSQL** with pgvector for AI embeddings
-- **Nginx** web server
+- **Caddy** web server
+- **Laravel 13**
 
 ## Frontend
 

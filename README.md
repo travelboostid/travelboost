@@ -12,7 +12,7 @@ This repository contains the core application along with tools to support develo
 - [Deployment Guidelines](./docs/deployments.md)
 - [XDebug Setup](./docs/debugging.md)
 - [Architecture Overview](./docs/architecture.md)
-- [Translations](./docs/technical/translations.md)
+- [Translations](./docs/translations.md)
 
 ---
 
