@@ -13,6 +13,7 @@ use App\Models\AgentSubscriptionPackage;
 use App\Models\AppConfig;
 use App\Models\Booking;
 use App\Models\Company;
+use App\Models\Domain;
 use App\Models\Payment;
 use App\Models\User;
 use App\Notifications\AffiliateAgentSubscriptionNotification;
@@ -62,7 +63,7 @@ class MidtransWebhookController extends Controller
 
             $payment->update([
                 'status' => $newStatus,
-                'payload' => array_merge($payment->payload ?? [], $payload),
+                'payload' => Payment::mergeMidtransPayload($payment->payload ?? [], $payload),
                 'paid_at' => $newStatus === PaymentStatus::PAID ? now() : null,
             ]);
 
@@ -196,7 +197,7 @@ class MidtransWebhookController extends Controller
         $owner->notify(new AgentSubscriptionActivatedNotification($owner, $subscription, $package));
 
         // --- MENGAKTIFKAN SUBDOMAIN AGEN ---
-        $domain = \App\Models\Domain::where('owner_id', $owner->id)
+        $domain = Domain::where('owner_id', $owner->id)
             ->where('owner_type', 'company')
             ->first();
 

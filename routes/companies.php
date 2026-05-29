@@ -145,6 +145,7 @@ Route::prefix('companies')->middleware(['use-analytics-measurement-ids-props'])-
         Route::post('bookings/{booking}/manual-payment', [DashboardBookingController::class, 'storeManualPayment'])->name('bookings.manual-payment');
         Route::post('bookings/{booking}/online-payment', [DashboardBookingController::class, 'storeOnlinePayment'])->name('bookings.online-payment');
         Route::post('bookings/{booking}/online-payment/{payment}/confirm', [DashboardBookingController::class, 'confirmOnlinePayment'])->name('bookings.online-payment.confirm');
+        Route::post('bookings/{booking}/reorder', [BookingIndexController::class, 'reorder'])->name('bookings.reorder');
         Route::get('booking-action-requests', [BookingIndexController::class, 'actionRequests'])->name('booking-action-requests.index');
         Route::post('booking-action-requests/{bookingActionRequest}/approve', [BookingIndexController::class, 'approveActionRequest'])->name('booking-action-requests.approve');
         Route::post('booking-action-requests/{bookingActionRequest}/reject', [BookingIndexController::class, 'rejectActionRequest'])->name('booking-action-requests.reject');

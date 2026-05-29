@@ -48,6 +48,7 @@ test('customer can submit a manual payment proof for a booking', function () {
         'sender_account_number' => '1234567890',
         'transfer_amount' => 500_000,
         'payment_type' => 'down_payment',
+        'payment_date' => '2026-05-01',
         'proof' => UploadedFile::fake()->image('proof.jpg'),
     ]);
 
@@ -83,6 +84,7 @@ test('customer can submit a manual payment proof for a booking', function () {
     expect($booking->fresh()->payment_mode)->toBe('manual');
     expect($manualPayment->payload)->toMatchArray([
         'payment_type' => 'down_payment',
+        'payment_date' => '2026-05-01',
         'payment_receiver_type' => 'vendor',
         'payment_receiver_company_id' => $vendor->id,
         'partnership_payment_mode' => 'vendor',
@@ -113,6 +115,7 @@ test('customer cannot submit down payment proof when vendor minimum down payment
             'sender_account_number' => '1234567890',
             'transfer_amount' => 500_000,
             'payment_type' => 'down_payment',
+            'payment_date' => '2026-05-01',
             'proof' => UploadedFile::fake()->image('proof.jpg'),
         ]);
 
@@ -160,6 +163,7 @@ test('agent payment mode records agent receiver context on manual payment proof'
         'sender_account_number' => '1234567890',
         'transfer_amount' => 500_000,
         'payment_type' => 'down_payment',
+        'payment_date' => '2026-05-01',
         'proof' => UploadedFile::fake()->image('proof.jpg'),
     ])->assertRedirect();
 
@@ -200,6 +204,37 @@ test('manual payment proof requires payment type', function () {
         ]);
 
     $response->assertSessionHasErrors('payment_type');
+    expect($booking->payments()->count())->toBe(0);
+});
+
+test('manual payment proof requires payment date', function () {
+    Storage::fake('public');
+
+    $user = User::factory()->create();
+    $vendor = Company::factory()->create(['type' => 'vendor']);
+    $vendor->companySetting()->updateOrCreate([], [
+        'minimum_down_payment' => 30,
+    ]);
+    $tour = Tour::factory()->create(['company_id' => $vendor->id]);
+    $booking = Booking::factory()->create([
+        'user_id' => $user->id,
+        'vendor_id' => $vendor->id,
+        'tour_id' => $tour->id,
+        'status' => 'booking reserved',
+        'grand_total' => 1_000_000,
+    ]);
+
+    $response = $this->actingAs($user)
+        ->from("/bookings/{$booking->id}/manual-payment")
+        ->post("/bookings/{$booking->id}/manual-payment", [
+            'sender_bank_name' => 'BCA',
+            'sender_account_number' => '1234567890',
+            'transfer_amount' => 500_000,
+            'payment_type' => 'down_payment',
+            'proof' => UploadedFile::fake()->image('proof.jpg'),
+        ]);
+
+    $response->assertSessionHasErrors('payment_date');
     expect($booking->payments()->count())->toBe(0);
 });
 
@@ -294,7 +329,7 @@ test('customer can create an online booking payment with midtrans snap token', f
         'grand_total' => 1_000_000,
     ]);
 
-    \Mockery::mock('alias:Midtrans\Snap')
+    Mockery::mock('alias:Midtrans\Snap')
         ->shouldReceive('getSnapToken')
         ->once()
         ->andReturn('booking-snap-token');
@@ -320,6 +355,110 @@ test('customer can create an online booking payment with midtrans snap token', f
     ]);
 
     expect($booking->fresh()->payment_mode)->toBe('online');
+});
+
+test('dashboard online full payment keeps down payment booking status until midtrans confirms', function () {
+    $user = User::factory()->create();
+    $vendorUser = User::factory()->create();
+    $vendor = Company::factory()->create(['type' => 'vendor']);
+    CompanyTeam::create([
+        'company_id' => $vendor->id,
+        'user_id' => $vendorUser->id,
+        'status' => CompanyTeamStatus::ACTIVE,
+        'is_owner' => true,
+        'accepted_at' => now(),
+    ]);
+
+    $tour = Tour::factory()->create(['company_id' => $vendor->id]);
+    $booking = Booking::factory()->create([
+        'user_id' => $user->id,
+        'vendor_id' => $vendor->id,
+        'tour_id' => $tour->id,
+        'status' => BookingStatus::DOWN_PAYMENT,
+        'payment_mode' => 'online',
+        'grand_total' => 1_000_000,
+        'total_price' => 1_000_000,
+        'tax_amount' => 0,
+        'platform_fee' => 0,
+        'commission_amount' => 0,
+    ]);
+    $booking->payments()->create([
+        'owner_type' => User::class,
+        'owner_id' => $user->id,
+        'provider' => 'midtrans',
+        'payment_method' => 'snap',
+        'amount' => 250_000,
+        'status' => 'paid',
+        'payload' => ['payment_type' => 'down_payment'],
+        'paid_at' => now()->subDay(),
+    ]);
+
+    Mockery::mock('alias:Midtrans\Snap')
+        ->shouldReceive('getSnapToken')
+        ->once()
+        ->andReturn('dashboard-balance-token');
+
+    $response = $this->actingAs($vendorUser)
+        ->postJson("/companies/{$vendor->username}/dashboard/bookings/{$booking->id}/online-payment", [
+            'payment_type' => 'full_payment',
+            'amount' => 750_000,
+        ]);
+
+    $response->assertOk()
+        ->assertJsonPath('payment.payload.snap_token', 'dashboard-balance-token')
+        ->assertJsonPath('payment.payload.payment_type', 'full_payment')
+        ->assertJsonPath('bookingPaymentResult.bookingStatus', 'down payment')
+        ->assertJsonPath('bookingPaymentResult.paymentStatus', 'pending');
+
+    expect($booking->fresh()->status)->toBe(BookingStatus::DOWN_PAYMENT)
+        ->and($booking->fresh()->payment_mode)->toBe('online');
+});
+
+test('customer online full payment keeps down payment booking status until midtrans confirms', function () {
+    $user = User::factory()->create();
+    $vendor = Company::factory()->create(['type' => 'vendor']);
+    $tour = Tour::factory()->create(['company_id' => $vendor->id]);
+    $booking = Booking::factory()->create([
+        'user_id' => $user->id,
+        'vendor_id' => $vendor->id,
+        'tour_id' => $tour->id,
+        'status' => BookingStatus::DOWN_PAYMENT,
+        'payment_mode' => 'online',
+        'grand_total' => 1_000_000,
+        'total_price' => 1_000_000,
+        'tax_amount' => 0,
+        'platform_fee' => 0,
+        'commission_amount' => 0,
+    ]);
+    $booking->payments()->create([
+        'owner_type' => User::class,
+        'owner_id' => $user->id,
+        'provider' => 'midtrans',
+        'payment_method' => 'snap',
+        'amount' => 250_000,
+        'status' => 'paid',
+        'payload' => ['payment_type' => 'down_payment'],
+        'paid_at' => now()->subDay(),
+    ]);
+
+    Mockery::mock('alias:Midtrans\Snap')
+        ->shouldReceive('getSnapToken')
+        ->once()
+        ->andReturn('customer-balance-token');
+
+    $response = $this->actingAs($user)->postJson("/bookings/{$booking->id}/online-payment", [
+        'payment_type' => 'full_payment',
+        'amount' => 750_000,
+    ]);
+
+    $response->assertOk()
+        ->assertJsonPath('payment.payload.snap_token', 'customer-balance-token')
+        ->assertJsonPath('payment.payload.payment_type', 'full_payment')
+        ->assertJsonPath('bookingPaymentResult.bookingStatus', 'down payment')
+        ->assertJsonPath('bookingPaymentResult.paymentStatus', 'pending');
+
+    expect($booking->fresh()->status)->toBe(BookingStatus::DOWN_PAYMENT)
+        ->and($booking->fresh()->payment_mode)->toBe('online');
 });
 
 test('customer cannot create online payment after booking reservation expired', function () {
@@ -383,6 +522,7 @@ test('midtrans webhook marks online booking payment as paid and updates booking 
     expect($booking->fresh()->status->value)->toBe('down payment');
     expect($booking->fresh()->payment_mode)->toBe('online');
     expect($payment->fresh()->status->value)->toBe('paid');
+    expect(data_get($payment->fresh()->payload, 'payment_type'))->toBe('down_payment');
 });
 
 test('customer can confirm successful midtrans booking payment after hold expiry and update booking status', function () {
@@ -418,7 +558,7 @@ test('customer can confirm successful midtrans booking payment after hold expiry
         ],
     ]);
 
-    \Mockery::mock('alias:Midtrans\Transaction')
+    Mockery::mock('alias:Midtrans\Transaction')
         ->shouldReceive('status')
         ->once()
         ->with('booking-order-123')
@@ -443,6 +583,7 @@ test('customer can confirm successful midtrans booking payment after hold expiry
 
     expect($booking->fresh()->status->value)->toBe('full payment');
     expect($payment->fresh()->status->value)->toBe('paid');
+    expect(data_get($payment->fresh()->payload, 'payment_type'))->toBe('full_payment');
 });
 
 test('vendor can approve pending manual payment proof and move booking to selected payment status', function () {
@@ -476,6 +617,7 @@ test('vendor can approve pending manual payment proof and move booking to select
         'status' => 'pending',
         'payload' => [
             'payment_type' => 'down_payment',
+            'payment_date' => '2026-05-03',
             'sender_bank' => 'BCA',
             'sender_account' => '1234567890',
         ],
@@ -488,7 +630,7 @@ test('vendor can approve pending manual payment proof and move booking to select
 
     expect($booking->fresh()->status->value)->toBe('down payment');
     expect($payment->fresh()->status->value)->toBe('paid');
-    expect($payment->fresh()->paid_at)->not->toBeNull();
+    expect($payment->fresh()->paid_at?->toDateString())->toBe('2026-05-03');
 });
 
 test('manual payment approval uses verified paid total instead of payload status', function () {

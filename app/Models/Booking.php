@@ -42,6 +42,10 @@ class Booking extends Model
         'contact_email',
         'contact_phone',
         'contact_notes',
+        'invoice_number',
+        'input_by_user_id',
+        'input_by_company_id',
+        'input_by_role',
     ];
 
     protected function casts(): array
@@ -76,6 +80,16 @@ class Booking extends Model
     public function tour(): BelongsTo
     {
         return $this->belongsTo(Tour::class);
+    }
+
+    public function inputByUser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'input_by_user_id');
+    }
+
+    public function inputByCompany(): BelongsTo
+    {
+        return $this->belongsTo(Company::class, 'input_by_company_id');
     }
 
     public function passengers(): HasMany

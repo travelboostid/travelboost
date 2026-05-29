@@ -655,6 +655,7 @@ type Step1Props = {
     onCustomerBookingModeChange?: (mode: 'existing' | 'guest') => void;
     selectedCustomerId?: number | null;
     onCustomerSelect?: (customer: DashboardCustomerOption | null) => void;
+    customerOptionsEmptyMessage?: string;
     readOnly?: boolean;
 };
 
@@ -685,6 +686,7 @@ export default function Step1GuestInformation({
     onCustomerBookingModeChange,
     selectedCustomerId = null,
     onCustomerSelect,
+    customerOptionsEmptyMessage = 'No customer accounts available.',
     readOnly = false,
 }: Step1Props) {
     const [
@@ -874,7 +876,7 @@ export default function Step1GuestInformation({
                                 </Select>
                                 {customerOptions.length === 0 && (
                                     <span className="text-[10px] text-muted-foreground">
-                                        No customer accounts available.
+                                        {customerOptionsEmptyMessage}
                                     </span>
                                 )}
                             </div>

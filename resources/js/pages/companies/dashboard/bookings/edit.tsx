@@ -66,6 +66,7 @@ type Passenger = {
 type BookingData = {
     id: number;
     booking_number: string;
+    invoice_number?: string | null;
     status: string;
     departure_date: string | null;
     contact_name: string | null;
@@ -87,6 +88,12 @@ type BookingData = {
     passengers: Passenger[];
     rooms: any[];
     addons: any[];
+    input_by?: {
+        user_name: string;
+        role_label: string;
+        company_name?: string | null;
+        created_at: string | null;
+    } | null;
 };
 
 type PageProps = {
@@ -314,7 +321,11 @@ export default function Page({
                                 variant="outline"
                                 size="sm"
                                 className="mt-4"
-                                onClick={() => window.history.back()}
+                                onClick={() =>
+                                    router.visit(
+                                        `/companies/${company.username}/dashboard/bookings`,
+                                    )
+                                }
                             >
                                 Go Back
                             </Button>
@@ -602,12 +613,7 @@ function EditableWizard({
     };
 
     const goBack = () => {
-        if (currentStep === 1) {
-            window.history.back();
-            return;
-        }
-        setDirection(-1);
-        setCurrentStep((s) => Math.max(1, s - 1) as WizardStepId);
+        router.visit(`/companies/${company.username}/dashboard/bookings`);
     };
 
     const handleGuestUpdate = useCallback((updated: GuestEntry) => {
@@ -939,7 +945,12 @@ function EditableWizard({
                                     tour={booking.tour as TourResource}
                                     status={booking.status as any}
                                     bookingNumber={booking.booking_number}
-                                    invoiceNumber={null}
+                                    invoiceNumber={
+                                        booking.invoice_number ??
+                                        (booking.status === 'full payment'
+                                            ? booking.booking_number
+                                            : null)
+                                    }
                                     departureDate={departureDate}
                                     vendor={vendor}
                                     agentName={booking.agent?.name ?? '-'}
@@ -956,9 +967,29 @@ function EditableWizard({
                                             ? displayGrandTotal
                                             : undefined
                                     }
+                                    totalPaid={paidAmount}
+                                    remainingBalance={remainingBalance}
                                     timeLeftSeconds={0}
                                     currentStep={currentStep}
                                     timerStarted={false}
+                                    inputBy={
+                                        booking.input_by
+                                            ? {
+                                                  userName:
+                                                      booking.input_by
+                                                          .user_name,
+                                                  roleLabel:
+                                                      booking.input_by
+                                                          .role_label,
+                                                  companyName:
+                                                      booking.input_by
+                                                          .company_name,
+                                                  createdAt:
+                                                      booking.input_by
+                                                          .created_at,
+                                              }
+                                            : null
+                                    }
                                 />
                             </div>
 

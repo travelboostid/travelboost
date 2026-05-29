@@ -1,13 +1,16 @@
 <?php
 
+use App\Actions\Booking\FinalizeBookingPaymentAction;
 use App\Enums\BookingStatus;
 use App\Enums\CompanyTeamStatus;
 use App\Enums\UserStatus;
 use App\Models\Booking;
 use App\Models\Company;
 use App\Models\CompanyTeam;
+use App\Models\Payment;
 use App\Models\Tour;
 use App\Models\User;
+use App\Notifications\BookingDeadlineReminderNotification;
 use Database\Seeders\Common\RolePermissionSeeder;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Artisan;
@@ -105,6 +108,7 @@ test('manual payment submission creates a customer payment notification', functi
         'sender_account_number' => '1234567890',
         'transfer_amount' => 300_000,
         'payment_type' => 'down_payment',
+        'payment_date' => '2026-05-01',
         'proof' => UploadedFile::fake()->image('proof.jpg'),
     ])->assertRedirect();
 
@@ -120,6 +124,29 @@ test('manual payment submission creates a customer payment notification', functi
     expect(data_get($data, 'type'))->toBe('booking_payment')
         ->and(data_get($data, 'stage'))->toBe('manual_payment_submitted')
         ->and(data_get($data, 'booking_id'))->toBe($booking->id);
+
+    $payment = Payment::query()
+        ->where('payable_type', Booking::class)
+        ->where('payable_id', $booking->id)
+        ->firstOrFail();
+
+    $companyNotification = DB::table('notifications')
+        ->where('notifiable_type', $vendor->getMorphClass())
+        ->where('notifiable_id', $vendor->id)
+        ->first();
+
+    expect($companyNotification)->not->toBeNull();
+
+    $companyNotificationData = json_decode($companyNotification->data, true);
+
+    expect(data_get($companyNotificationData, 'type'))->toBe('booking_manual_payment_review')
+        ->and(data_get($companyNotificationData, 'booking_id'))->toBe($booking->id)
+        ->and(data_get($companyNotificationData, 'payment_id'))->toBe($payment->id)
+        ->and(data_get($companyNotificationData, 'action_label'))->toBe('Review Payment')
+        ->and(data_get($companyNotificationData, 'action_url'))->toContain("/companies/{$vendor->username}/dashboard/bookings")
+        ->and(data_get($companyNotificationData, 'action_url'))->toContain('status=waiting+payment+approval')
+        ->and(data_get($companyNotificationData, 'action_url'))->toContain("booking_number={$booking->booking_number}")
+        ->and(data_get($companyNotificationData, 'action_url'))->toContain("review_payment={$payment->id}");
 });
 
 test('booking finalization creates down payment and full payment customer notifications once', function () {
@@ -145,7 +172,7 @@ test('booking finalization creates down payment and full payment customer notifi
         'paid_at' => now(),
     ]);
 
-    app(\App\Actions\Booking\FinalizeBookingPaymentAction::class)->execute($booking->fresh(), $downPayment);
+    app(FinalizeBookingPaymentAction::class)->execute($booking->fresh(), $downPayment);
 
     $fullPayment = $booking->payments()->create([
         'owner_type' => User::class,
@@ -158,8 +185,8 @@ test('booking finalization creates down payment and full payment customer notifi
         'paid_at' => now(),
     ]);
 
-    app(\App\Actions\Booking\FinalizeBookingPaymentAction::class)->execute($booking->fresh(), $fullPayment);
-    app(\App\Actions\Booking\FinalizeBookingPaymentAction::class)->execute($booking->fresh(), $fullPayment);
+    app(FinalizeBookingPaymentAction::class)->execute($booking->fresh(), $fullPayment);
+    app(FinalizeBookingPaymentAction::class)->execute($booking->fresh(), $fullPayment);
 
     $stages = DB::table('notifications')
         ->where('notifiable_type', $user->getMorphClass())
@@ -316,8 +343,8 @@ test('booking deadline reminder command sends mail to booking contact email', fu
 
     Artisan::call('booking:send-deadline-reminders');
 
-    Notification::assertSentTo($user, \App\Notifications\BookingDeadlineReminderNotification::class);
-    Notification::assertSentOnDemand(\App\Notifications\BookingDeadlineReminderNotification::class, function ($notification, array $channels, object $notifiable): bool {
+    Notification::assertSentTo($user, BookingDeadlineReminderNotification::class);
+    Notification::assertSentOnDemand(BookingDeadlineReminderNotification::class, function ($notification, array $channels, object $notifiable): bool {
         return $channels === ['mail']
             && data_get($notifiable->routes, 'mail') === 'booking-contact@example.test';
     });
@@ -348,6 +375,6 @@ test('booking deadline reminder command does not duplicate mail when contact ema
 
     Artisan::call('booking:send-deadline-reminders');
 
-    Notification::assertSentTo($user, \App\Notifications\BookingDeadlineReminderNotification::class);
-    Notification::assertSentOnDemandTimes(\App\Notifications\BookingDeadlineReminderNotification::class, 0);
+    Notification::assertSentTo($user, BookingDeadlineReminderNotification::class);
+    Notification::assertSentOnDemandTimes(BookingDeadlineReminderNotification::class, 0);
 });

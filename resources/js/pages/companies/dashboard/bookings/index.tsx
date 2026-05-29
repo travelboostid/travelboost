@@ -1,7 +1,6 @@
 import CompanyDashboardLayout from '@/components/layouts/company-dashboard';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import {
     Dialog,
     DialogContent,
@@ -62,8 +61,10 @@ import {
     FileCheckIcon,
     FileTextIcon,
     MoreHorizontal,
+    RotateCcwIcon,
     Search,
     Undo2Icon,
+    XIcon,
 } from 'lucide-react';
 import * as React from 'react';
 
@@ -96,6 +97,24 @@ type FollowupSummary = {
     documents_due_soon: number;
 };
 
+type PaymentDetail = {
+    method_label: string;
+    receiver_label: string;
+    amount: number;
+    payment_date: string | null;
+    booking_payment_type?: 'down_payment' | 'full_payment' | null;
+    receipt: {
+        type: 'manual' | 'online';
+        url?: string | null;
+        provider?: string | null;
+        method?: string | null;
+        order_id?: string | null;
+        transaction_id?: string | null;
+        status?: string | null;
+        raw?: Record<string, unknown> | null;
+    } | null;
+};
+
 type BookingResource = {
     id: number;
     booking_number: string;
@@ -109,9 +128,14 @@ type BookingResource = {
     paid_amount: number;
     remaining_balance: number;
     commission_amount: string | null;
-    payment_mode: string | null;
     payment_receiver_type?: 'vendor' | 'agent' | null;
     payment_receiver_company_id?: number | null;
+    input_by?: {
+        user_name: string;
+        role_label: string;
+        company_name?: string | null;
+        created_at: string | null;
+    } | null;
     payment_followup: FollowupPayload;
     document_followup: FollowupPayload;
     pending_action_request?: {
@@ -121,6 +145,9 @@ type BookingResource = {
     } | null;
     can_cancel?: boolean;
     can_refund?: boolean;
+    can_reorder?: boolean;
+    down_payment_detail: PaymentDetail | null;
+    full_payment_detail: PaymentDetail | null;
     departure_date: string | null;
     created_at: string;
     tour: { id: number; name: string } | null;
@@ -136,6 +163,7 @@ type BookingResource = {
         proof_path: string | null;
         proof_url: string | null;
         payment_type: string | null;
+        payment_date: string | null;
     } | null;
 };
 
@@ -151,53 +179,61 @@ type PageProps = {
 };
 
 const STATUS_TABS = [
-    { label: 'All', value: '', style: undefined },
+    { label: 'ALL', fullLabel: 'All', value: '', style: undefined },
     {
-        label: 'Booking Reserved',
+        label: 'BR',
+        fullLabel: 'Booking Reserved',
         value: 'reserved',
         style: 'bg-teal-100 text-teal-800',
     },
     {
-        label: 'Awaiting Payment',
+        label: 'WP',
+        fullLabel: 'Awaiting Payment',
         value: 'awaiting payment',
         style: 'bg-amber-100 text-amber-800',
     },
     {
-        label: 'Waiting Payment Approval',
+        label: 'WA',
+        fullLabel: 'Waiting Payment Approval',
         value: 'waiting payment approval',
         style: 'bg-sky-100 text-sky-800',
     },
     {
-        label: 'Down Payment',
+        label: 'DP',
+        fullLabel: 'Down Payment',
         value: 'down payment',
         style: 'bg-cyan-100 text-cyan-800',
     },
     {
-        label: 'Full Payment',
+        label: 'FP',
+        fullLabel: 'Full Payment',
         value: 'full payment',
         style: 'bg-green-100 text-green-800',
     },
     {
-        label: 'Waiting List',
+        label: 'WL',
+        fullLabel: 'Waiting List',
         value: 'waiting list',
         style: 'bg-purple-100 text-purple-800',
     },
     {
-        label: 'Manual Reserved',
-        value: 'manual reserved',
-        style: 'bg-violet-100 text-violet-800',
-    },
-    {
-        label: 'Cancelled',
+        label: 'CA',
+        fullLabel: 'Cancelled',
         value: 'cancelled',
         style: 'bg-red-100 text-red-800',
     },
     {
-        label: 'Refunded',
+        label: 'RF',
+        fullLabel: 'Refunded',
         value: 'refunded',
         style: 'bg-orange-100 text-orange-800',
     },
-    { label: 'Expired', value: 'expired', style: 'bg-gray-100 text-gray-800' },
+    {
+        label: 'EX',
+        fullLabel: 'Expired',
+        value: 'expired',
+        style: 'bg-gray-100 text-gray-800',
+    },
 ] as const;
 
 // ---------------------------------------------------------------------------
@@ -231,10 +267,31 @@ const statusStyles: Record<string, string> = {
 };
 
 const statusLabels: Record<string, string> = {
+    reserved: 'BR',
+    'booking reserved': 'BR',
+    'manual reserved': 'RS',
+    'awaiting payment': 'WP',
+    'waiting payment approval': 'WA',
+    'down payment': 'DP',
+    'full payment': 'FP',
+    'waiting list': 'WL',
+    cancelled: 'CA',
+    refunded: 'RF',
+    expired: 'EX',
+};
+
+const statusFullLabels: Record<string, string> = {
     reserved: 'Booking Reserved',
     'booking reserved': 'Booking Reserved',
     'manual reserved': 'Manual Reserved',
+    'awaiting payment': 'Awaiting Payment',
     'waiting payment approval': 'Waiting Payment Approval',
+    'down payment': 'Down Payment',
+    'full payment': 'Full Payment',
+    'waiting list': 'Waiting List',
+    cancelled: 'Cancelled',
+    refunded: 'Refunded',
+    expired: 'Expired',
 };
 
 function formatCommission(value: number | string | null | undefined): string {
@@ -320,6 +377,52 @@ function FollowupCell({
     );
 }
 
+function PaymentDetailCell({
+    detail,
+    onViewReceipt,
+}: {
+    detail: PaymentDetail | null;
+    onViewReceipt: (detail: PaymentDetail) => void;
+}) {
+    if (!detail) {
+        return <span className="text-slate-400">—</span>;
+    }
+
+    const paymentLabel =
+        `${detail.method_label} to ${detail.receiver_label}`.toUpperCase();
+
+    return (
+        <div className="min-w-[150px] text-xs">
+            <Badge
+                variant="secondary"
+                className="bg-primary/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary dark:bg-primary/20"
+            >
+                {paymentLabel}
+            </Badge>
+            <p className="mt-0.5 font-bold tabular-nums text-slate-900 dark:text-slate-100">
+                {formatIDR(detail.amount)}
+            </p>
+            <p className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">
+                {detail.payment_date
+                    ? dayjs(detail.payment_date).format('DD MMM YYYY')
+                    : '—'}
+            </p>
+            {detail.receipt && (
+                <button
+                    type="button"
+                    className="mt-1 text-[11px] font-semibold text-primary underline-offset-2 hover:text-blue-600 hover:underline dark:hover:text-blue-400"
+                    onClick={(event) => {
+                        event.stopPropagation();
+                        onViewReceipt(detail);
+                    }}
+                >
+                    View Receipt
+                </button>
+            )}
+        </div>
+    );
+}
+
 function FollowupSummaryCards({ summary }: { summary: FollowupSummary }) {
     const items = [
         {
@@ -353,7 +456,7 @@ function FollowupSummaryCards({ summary }: { summary: FollowupSummary }) {
     ];
 
     return (
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
             {items.map((item) => {
                 const Icon = item.icon;
 
@@ -361,19 +464,19 @@ function FollowupSummaryCards({ summary }: { summary: FollowupSummary }) {
                     <div
                         key={item.label}
                         className={cn(
-                            'flex items-center justify-between rounded-lg border px-3 py-2.5 shadow-sm dark:shadow-none',
+                            'flex items-center justify-between rounded-md border px-2.5 py-2 shadow-sm dark:shadow-none',
                             item.className,
                         )}
                     >
                         <div>
-                            <p className="text-[10px] font-bold uppercase tracking-wider">
+                            <p className="text-[9px] font-bold uppercase tracking-wider">
                                 {item.label}
                             </p>
-                            <p className="mt-1 text-xl font-bold tabular-nums">
+                            <p className="mt-0.5 text-lg font-bold tabular-nums">
                                 {item.value}
                             </p>
                         </div>
-                        <Icon className="size-5 opacity-80" />
+                        <Icon className="size-4 opacity-80" />
                     </div>
                 );
             })}
@@ -422,7 +525,7 @@ function RowActions({
     >(null);
     const [actionReason, setActionReason] = React.useState('');
     const [processingAction, setProcessingAction] = React.useState<
-        'accept' | 'cancel' | 'refund' | null
+        'accept' | 'cancel' | 'refund' | 'reorder' | null
     >(null);
     const canReviewManualPayment =
         booking.status === 'waiting payment approval' &&
@@ -431,7 +534,23 @@ function RowActions({
     const hasPendingActionRequest = Boolean(booking.pending_action_request);
     const canCancel = Boolean(booking.can_cancel) && !hasPendingActionRequest;
     const canRefund = Boolean(booking.can_refund) && !hasPendingActionRequest;
+    const canReorder = Boolean(booking.can_reorder);
     const canViewInvoice = booking.status === 'full payment';
+    const manualPaymentId = booking.manual_payment?.id;
+
+    React.useEffect(() => {
+        if (!canReviewManualPayment || !manualPaymentId) {
+            return;
+        }
+
+        const reviewPaymentId = new URLSearchParams(window.location.search).get(
+            'review_payment',
+        );
+
+        if (reviewPaymentId === String(manualPaymentId)) {
+            setReviewOpen(true);
+        }
+    }, [canReviewManualPayment, manualPaymentId]);
 
     const submitManualPaymentDecision = () => {
         if (!booking.manual_payment) return;
@@ -464,6 +583,16 @@ function RowActions({
             },
         );
     };
+    const submitReorder = () => {
+        setProcessingAction('reorder');
+        router.post(
+            `/companies/${companyUsername}/dashboard/bookings/${booking.id}/reorder`,
+            {},
+            {
+                onFinish: () => setProcessingAction(null),
+            },
+        );
+    };
 
     return (
         <>
@@ -478,7 +607,7 @@ function RowActions({
                         <span className="sr-only">Open menu</span>
                     </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
+                <DropdownMenuContent align="start">
                     {canReviewManualPayment && (
                         <>
                             <DropdownMenuItem
@@ -534,6 +663,23 @@ function RowActions({
                                 View Invoice
                             </a>
                         </DropdownMenuItem>
+                    )}
+                    {canReorder && (
+                        <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                                disabled={processingAction !== null}
+                                onSelect={(event) => {
+                                    event.preventDefault();
+                                    submitReorder();
+                                }}
+                            >
+                                <RotateCcwIcon className="mr-2 h-4 w-4" />
+                                {processingAction === 'reorder'
+                                    ? 'Reordering...'
+                                    : 'Reorder'}
+                            </DropdownMenuItem>
+                        </>
                     )}
                     <DropdownMenuSeparator />
                     <DropdownMenuItem asChild>
@@ -633,6 +779,19 @@ function RowActions({
                                     )
                                         .replace(/_/g, ' ')
                                         .toLowerCase()}
+                                </span>
+                            </div>
+                            <div className="flex justify-between gap-4">
+                                <span className="text-muted-foreground">
+                                    Payment Time
+                                </span>
+                                <span className="text-right font-semibold">
+                                    {booking.manual_payment.payment_date
+                                        ? dayjs(
+                                              booking.manual_payment
+                                                  .payment_date,
+                                          ).format('DD MMM YYYY')
+                                        : '—'}
                                 </span>
                             </div>
                             <div className="flex justify-between gap-4 border-t pt-3">
@@ -738,38 +897,22 @@ function RowActions({
 function buildColumns(
     isAgent: boolean,
     companyUsername: string,
+    onViewReceipt: (detail: PaymentDetail) => void,
 ): ColumnDef<BookingResource>[] {
     return [
         {
-            id: 'select',
-            header: ({ table }) => (
-                <div className="px-1 flex items-center justify-center">
-                    <Checkbox
-                        checked={
-                            table.getIsAllPageRowsSelected() ||
-                            (table.getIsSomePageRowsSelected() &&
-                                'indeterminate')
-                        }
-                        onCheckedChange={(value) =>
-                            table.toggleAllPageRowsSelected(!!value)
-                        }
-                        aria-label="Select all"
-                        className="border-primary/50 data-[state=checked]:bg-primary"
-                    />
-                </div>
-            ),
+            id: 'actions',
+            header: 'Actions',
             cell: ({ row }) => (
-                <div className="px-1 flex items-center justify-center">
-                    <Checkbox
-                        checked={row.getIsSelected()}
-                        onCheckedChange={(value) => row.toggleSelected(!!value)}
-                        aria-label="Select row"
-                        className="border-primary/40 data-[state=checked]:bg-primary"
+                <div className="flex justify-center">
+                    <RowActions
+                        booking={row.original}
+                        companyUsername={companyUsername}
                     />
                 </div>
             ),
-            enableSorting: false,
             enableHiding: false,
+            enableSorting: false,
         },
         {
             id: 'created_at',
@@ -824,15 +967,26 @@ function buildColumns(
             cell: ({ cell }) => {
                 const status = cell.getValue<string>();
                 return (
-                    <Badge
-                        variant="secondary"
-                        className={cn(
-                            'capitalize text-[10px] font-bold uppercase tracking-wider',
-                            statusStyles[status] ?? statusStyles['expired'],
-                        )}
-                    >
-                        {statusLabels[status] ?? status}
-                    </Badge>
+                    <TooltipProvider>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Badge
+                                    variant="secondary"
+                                    className={cn(
+                                        'cursor-help text-[10px] font-bold uppercase tracking-wider',
+                                        statusStyles[status] ??
+                                            statusStyles['expired'],
+                                    )}
+                                >
+                                    {statusLabels[status] ??
+                                        status.toUpperCase()}
+                                </Badge>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                <p>{statusFullLabels[status] ?? status}</p>
+                            </TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
                 );
             },
         },
@@ -911,6 +1065,28 @@ function buildColumns(
             },
         },
         {
+            id: 'down_payment_detail',
+            header: 'Down Payments',
+            cell: ({ row }) => (
+                <PaymentDetailCell
+                    detail={row.original.down_payment_detail}
+                    onViewReceipt={onViewReceipt}
+                />
+            ),
+            enableSorting: false,
+        },
+        {
+            id: 'full_payment_detail',
+            header: 'Full Payment',
+            cell: ({ row }) => (
+                <PaymentDetailCell
+                    detail={row.original.full_payment_detail}
+                    onViewReceipt={onViewReceipt}
+                />
+            ),
+            enableSorting: false,
+        },
+        {
             id: 'payment_followup',
             header: 'Payment Follow-up',
             cell: ({ row }) => {
@@ -949,44 +1125,6 @@ function buildColumns(
             enableSorting: false,
         },
         {
-            id: 'payment_mode',
-            accessorKey: 'payment_mode',
-            header: 'Payment Mode',
-            cell: ({ cell, row }) => {
-                const status = row.original.status;
-                const mode = cell.getValue<string | null>();
-                const showPaymentMode =
-                    !!mode ||
-                    !['reserved', 'awaiting payment'].includes(status);
-
-                if (!showPaymentMode)
-                    return <span className="text-slate-400">—</span>;
-
-                if (!mode) return <span className="text-slate-400">—</span>;
-
-                const paymentLabel =
-                    mode === 'manual' ? 'Manual payment' : 'Online payment';
-                const receiverLabel =
-                    row.original.payment_receiver_type === 'agent'
-                        ? 'agent'
-                        : 'vendor';
-                const label = `${paymentLabel} to ${receiverLabel}`;
-
-                return (
-                    <span
-                        className={cn(
-                            'inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-bold tracking-wide',
-                            mode === 'online'
-                                ? 'bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary'
-                                : 'bg-slate-100 text-slate-500 dark:bg-slate-900 dark:text-slate-300',
-                        )}
-                    >
-                        {label}
-                    </span>
-                );
-            },
-        },
-        {
             id: 'commission_amount',
             accessorKey: 'commission_amount',
             header: 'Commission',
@@ -996,21 +1134,81 @@ function buildColumns(
                 </div>
             ),
         },
-        {
-            id: 'actions',
-            header: 'Actions',
-            cell: ({ row }) => (
-                <div className="flex justify-center">
-                    <RowActions
-                        booking={row.original}
-                        companyUsername={companyUsername}
-                    />
-                </div>
-            ),
-            enableHiding: false,
-            enableSorting: false,
-        },
     ];
+}
+
+function receiptPaymentTime(payment: PaymentDetail): string {
+    if (!payment.payment_date) {
+        return '-';
+    }
+
+    return dayjs(payment.payment_date).format(
+        payment.receipt?.type === 'online'
+            ? 'DD MMM YYYY HH:mm:ss'
+            : 'DD MMM YYYY',
+    );
+}
+
+function ReceiptDialog({
+    payment,
+    onOpenChange,
+}: {
+    payment: PaymentDetail | null;
+    onOpenChange: (open: boolean) => void;
+}) {
+    const receipt = payment?.receipt ?? null;
+    const receiptRows =
+        payment && receipt
+            ? [
+                  ['Type', receipt.type.toUpperCase()],
+                  ['Method', payment.method_label],
+                  ['Receiver', payment.receiver_label],
+                  ['Amount', formatIDR(payment.amount)],
+                  ['Payment Time', receiptPaymentTime(payment)],
+              ]
+            : [];
+
+    return (
+        <Dialog open={payment !== null} onOpenChange={onOpenChange}>
+            <DialogContent className="w-full max-w-md">
+                <DialogHeader>
+                    <DialogTitle>Payment Receipt</DialogTitle>
+                    <DialogDescription>
+                        Transaction details for this booking payment.
+                    </DialogDescription>
+                </DialogHeader>
+
+                {payment && receipt && (
+                    <div className="space-y-3 text-sm">
+                        {receiptRows.map(([label, value]) => (
+                            <div
+                                key={label}
+                                className="flex justify-between gap-4"
+                            >
+                                <span className="text-muted-foreground">
+                                    {label}
+                                </span>
+                                <span className="text-right font-semibold">
+                                    {value}
+                                </span>
+                            </div>
+                        ))}
+
+                        {receipt.type === 'manual' && receipt.url && (
+                            <a
+                                href={receipt.url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex text-sm font-semibold text-primary underline-offset-2 hover:text-blue-600 hover:underline dark:hover:text-blue-400"
+                            >
+                                Open uploaded receipt
+                            </a>
+                        )}
+                    </div>
+                )}
+            </DialogContent>
+        </Dialog>
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -1020,10 +1218,15 @@ function buildColumns(
 export default function Page({ data, followupSummary }: PageProps) {
     const { company } = usePageSharedDataProps();
     const isAgent = company.type === 'agent';
+    const [receiptDialogPayment, setReceiptDialogPayment] =
+        React.useState<PaymentDetail | null>(null);
+    const handleViewReceipt = React.useCallback((detail: PaymentDetail) => {
+        setReceiptDialogPayment(detail);
+    }, []);
 
     const columns = React.useMemo(
-        () => buildColumns(isAgent, company.username),
-        [isAgent, company.username],
+        () => buildColumns(isAgent, company.username, handleViewReceipt),
+        [handleViewReceipt, isAgent, company.username],
     );
 
     const [sorting, setSorting] = React.useState<SortingState>([]);
@@ -1032,7 +1235,6 @@ export default function Page({ data, followupSummary }: PageProps) {
     const [globalFilter, setGlobalFilter] = React.useState('');
     const [columnVisibility, setColumnVisibility] =
         React.useState<VisibilityState>({});
-    const [rowSelection, setRowSelection] = React.useState({});
 
     const fuzzyFilter = React.useCallback(
         (row: any, _columnId: string, value: string) => {
@@ -1055,6 +1257,7 @@ export default function Page({ data, followupSummary }: PageProps) {
         [],
     );
 
+    // eslint-disable-next-line react-hooks/incompatible-library
     const table = useReactTable({
         data: data?.data ?? [],
         columns,
@@ -1068,13 +1271,11 @@ export default function Page({ data, followupSummary }: PageProps) {
         getSortedRowModel: getSortedRowModel(),
         getFilteredRowModel: getFilteredRowModel(),
         onColumnVisibilityChange: setColumnVisibility,
-        onRowSelectionChange: setRowSelection,
         state: {
             sorting,
             columnFilters,
             globalFilter,
             columnVisibility,
-            rowSelection,
         },
     });
     const tableRows = table.getRowModel().rows;
@@ -1090,10 +1291,8 @@ export default function Page({ data, followupSummary }: PageProps) {
             <div className="w-full flex flex-col gap-6 p-4 md:p-6 max-w-screen-2xl mx-auto pb-20 min-w-0 overflow-hidden">
                 {/* ── Page header ─────────────────────────────────────── */}
                 {/* ── Status filter tabs ───────────────────────────── */}
-                <div className="flex flex-wrap gap-1.5">
-                    {STATUS_TABS.filter(
-                        (tab) => tab.value !== 'manual reserved',
-                    ).map((tab) => {
+                <div className="flex flex-wrap justify-center gap-1.5">
+                    {STATUS_TABS.map((tab) => {
                         const params = new URLSearchParams(
                             window.location.search,
                         );
@@ -1101,45 +1300,62 @@ export default function Page({ data, followupSummary }: PageProps) {
                         const isActive = activeStatus === tab.value;
 
                         return (
-                            <button
-                                key={tab.value}
-                                type="button"
-                                onClick={() => {
-                                    const url = `/companies/${company.username}/dashboard/bookings`;
-                                    const query: Record<string, string> = {};
-                                    params.forEach((v, k) => {
-                                        if (k !== 'status' && k !== 'page')
-                                            query[k] = v;
-                                    });
-                                    if (tab.value) query.status = tab.value;
-                                    const qs = new URLSearchParams(
-                                        query,
-                                    ).toString();
-                                    router.get(
-                                        qs ? `${url}?${qs}` : url,
-                                        {},
-                                        {
-                                            preserveState: true,
-                                            preserveScroll: true,
-                                        },
-                                    );
-                                }}
-                                className={cn(
-                                    'px-3 py-1 rounded-full text-[11px] font-semibold uppercase tracking-wider border transition-all',
-                                    isActive
-                                        ? (tab.style ??
-                                              'bg-primary/10 text-primary border-primary/30 dark:bg-primary/20 dark:text-primary dark:border-primary/40')
-                                        : 'bg-white text-muted-foreground border-slate-200 hover:bg-slate-50 dark:bg-slate-950 dark:text-slate-300 dark:border-slate-800 dark:hover:bg-slate-900',
-                                    isActive &&
-                                        !tab.style &&
-                                        'border-primary/30',
-                                    isActive &&
-                                        tab.style &&
-                                        'border-current/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100',
-                                )}
-                            >
-                                {tab.label}
-                            </button>
+                            <TooltipProvider key={tab.value}>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                const url = `/companies/${company.username}/dashboard/bookings`;
+                                                const query: Record<
+                                                    string,
+                                                    string
+                                                > = {};
+                                                params.forEach((v, k) => {
+                                                    if (
+                                                        k !== 'status' &&
+                                                        k !== 'page'
+                                                    ) {
+                                                        query[k] = v;
+                                                    }
+                                                });
+                                                if (tab.value) {
+                                                    query.status = tab.value;
+                                                }
+                                                const qs = new URLSearchParams(
+                                                    query,
+                                                ).toString();
+                                                router.get(
+                                                    qs ? `${url}?${qs}` : url,
+                                                    {},
+                                                    {
+                                                        preserveState: true,
+                                                        preserveScroll: true,
+                                                    },
+                                                );
+                                            }}
+                                            className={cn(
+                                                'px-3 py-1 rounded-full text-[11px] font-semibold uppercase tracking-wider border transition-all',
+                                                isActive
+                                                    ? (tab.style ??
+                                                          'bg-primary/10 text-primary border-primary/30 dark:bg-primary/20 dark:text-primary dark:border-primary/40')
+                                                    : 'bg-white text-muted-foreground border-slate-200 hover:bg-slate-50 dark:bg-slate-950 dark:text-slate-300 dark:border-slate-800 dark:hover:bg-slate-900',
+                                                isActive &&
+                                                    !tab.style &&
+                                                    'border-primary/30',
+                                                isActive &&
+                                                    tab.style &&
+                                                    'border-current/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100',
+                                            )}
+                                        >
+                                            {tab.label}
+                                        </button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                        <p>{tab.fullLabel}</p>
+                                    </TooltipContent>
+                                </Tooltip>
+                            </TooltipProvider>
                         );
                     })}
                 </div>
@@ -1147,23 +1363,37 @@ export default function Page({ data, followupSummary }: PageProps) {
                 <FollowupSummaryCards summary={followupSummary} />
 
                 {/* ── Toolbar: search + view-columns ──────────────────── */}
-                <div className="order-first flex flex-col sm:flex-row items-center gap-3 justify-between bg-slate-50/50 p-1 rounded-lg dark:border dark:border-slate-800 dark:bg-slate-950/70">
-                    <div className="relative w-full sm:max-w-sm">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input
-                            placeholder="Search booking number, tour, guest..."
-                            value={globalFilter}
-                            onChange={(event) =>
-                                setGlobalFilter(event.target.value)
-                            }
-                            className="pl-9 w-full focus-visible:ring-primary border-slate-200 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:placeholder:text-slate-500"
-                        />
+                <div className="order-first flex flex-col gap-2 rounded-xl border border-slate-200/80 bg-card/95 p-2 shadow-sm dark:border-slate-800 dark:bg-slate-950/80 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="w-full min-w-0 sm:max-w-xs md:max-w-sm">
+                        <div className="relative">
+                            <span className="pointer-events-none absolute left-2 top-1/2 flex size-6 -translate-y-1/2 items-center justify-center rounded-lg bg-primary/10 text-primary ring-1 ring-primary/15 dark:bg-primary/15">
+                                <Search className="size-3.5" />
+                            </span>
+                            <Input
+                                placeholder="Search booking number, tour, guest, vendor, or agent"
+                                value={globalFilter}
+                                onChange={(event) =>
+                                    setGlobalFilter(event.target.value)
+                                }
+                                className="h-9 w-full rounded-lg border-slate-200 bg-background pl-9 pr-9 text-xs font-medium shadow-inner shadow-slate-100/70 transition-all placeholder:text-[13px] placeholder:font-normal placeholder:text-muted-foreground/70 focus-visible:border-primary/50 focus-visible:ring-2 focus-visible:ring-primary/20 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:shadow-black/20 dark:placeholder:text-slate-500"
+                            />
+                            {globalFilter.trim() !== '' && (
+                                <button
+                                    type="button"
+                                    aria-label="Clear search"
+                                    onClick={() => setGlobalFilter('')}
+                                    className="absolute right-2 top-1/2 flex size-6 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                                >
+                                    <XIcon className="size-3.5" />
+                                </button>
+                            )}
+                        </div>
                     </div>
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <Button
                                 variant="outline"
-                                className="w-full sm:w-auto ml-auto bg-white border-slate-200 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100 dark:hover:bg-slate-900"
+                                className="ml-auto h-9 w-full border-slate-200 bg-white text-xs dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:hover:bg-slate-900 sm:w-auto"
                             >
                                 View Columns{' '}
                                 <ChevronDown className="ml-2 h-4 w-4 opacity-50" />
@@ -1211,7 +1441,7 @@ export default function Page({ data, followupSummary }: PageProps) {
                                                     'bg-slate-50 dark:bg-slate-900/90 text-primary font-bold h-12 px-3 whitespace-nowrap',
                                                     header.column.id ===
                                                         'actions' &&
-                                                        'sticky right-0 z-50 w-[3.75rem] min-w-[3.75rem] max-w-[3.75rem] overflow-visible rounded-t-xl border-l border-border/70 px-0 text-center shadow-[-10px_0_14px_-16px_rgba(15,23,42,0.55)]',
+                                                        'sticky left-0 z-50 w-[3.75rem] min-w-[3.75rem] max-w-[3.75rem] overflow-visible rounded-tl-xl border-r border-border/70 px-0 text-center shadow-[10px_0_14px_-16px_rgba(15,23,42,0.55)]',
                                                 )}
                                             >
                                                 {header.isPlaceholder
@@ -1231,10 +1461,6 @@ export default function Page({ data, followupSummary }: PageProps) {
                                     tableRows.map((row, rowIndex) => (
                                         <TableRow
                                             key={row.id}
-                                            data-state={
-                                                row.getIsSelected() &&
-                                                'selected'
-                                            }
                                             className="group border-none transition-colors hover:bg-slate-50 dark:hover:bg-slate-900/50"
                                         >
                                             {row
@@ -1246,13 +1472,13 @@ export default function Page({ data, followupSummary }: PageProps) {
                                                             'border-b border-border py-3 px-3',
                                                             cell.column.id ===
                                                                 'actions' &&
-                                                                'sticky right-0 z-20 w-[3.75rem] min-w-[3.75rem] max-w-[3.75rem] overflow-visible border-l border-border/70 bg-card px-0 text-center shadow-[-10px_0_14px_-16px_rgba(15,23,42,0.55)] transition-colors group-hover:bg-slate-50 dark:bg-slate-950/95 dark:group-hover:bg-slate-900/50',
+                                                                'sticky left-0 z-20 w-[3.75rem] min-w-[3.75rem] max-w-[3.75rem] overflow-visible border-r border-border/70 bg-card px-0 text-center shadow-[10px_0_14px_-16px_rgba(15,23,42,0.55)] transition-colors group-hover:bg-slate-50 dark:bg-slate-950/95 dark:group-hover:bg-slate-900/50',
                                                             cell.column.id ===
                                                                 'actions' &&
                                                                 rowIndex ===
                                                                     tableRows.length -
                                                                         1 &&
-                                                                'rounded-b-xl',
+                                                                'rounded-bl-xl',
                                                         )}
                                                     >
                                                         {flexRender(
@@ -1288,13 +1514,13 @@ export default function Page({ data, followupSummary }: PageProps) {
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2">
                     <p className="text-sm text-muted-foreground bg-slate-50 px-3 py-1.5 rounded-md border border-slate-100 dark:bg-slate-950 dark:border-slate-800 dark:text-slate-400">
                         <span className="font-semibold text-foreground">
-                            {table.getFilteredSelectedRowModel().rows.length}
+                            {tableRows.length}
                         </span>{' '}
                         of{' '}
                         <span className="font-semibold text-foreground">
                             {table.getFilteredRowModel().rows.length}
                         </span>{' '}
-                        row(s) selected.
+                        booking(s) shown.
                     </p>
                     <div className="flex gap-2">
                         <Button
@@ -1318,6 +1544,14 @@ export default function Page({ data, followupSummary }: PageProps) {
                     </div>
                 </div>
             </div>
+            <ReceiptDialog
+                payment={receiptDialogPayment}
+                onOpenChange={(open) => {
+                    if (!open) {
+                        setReceiptDialogPayment(null);
+                    }
+                }}
+            />
         </CompanyDashboardLayout>
     );
 }

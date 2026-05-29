@@ -1,41 +1,53 @@
 import type { TourResource } from '@/api/model';
 import { Badge } from '@/components/ui/badge';
 import {
+    Command,
+    CommandEmpty,
+    CommandGroup,
+    CommandInput,
+    CommandItem,
+    CommandList,
+} from '@/components/ui/command';
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from '@/components/ui/popover';
+import {
     BOOKING_STATUS_CONFIG,
     formatCurrency,
     formatDate,
 } from '@/constants/booking';
+import { cn } from '@/lib/utils';
 import type {
     BookingPricing,
     BookingStatusCode,
     VendorInfo,
 } from '@/types/booking';
-import { motion, useSpring, useTransform } from 'framer-motion';
-import { ClockIcon, MapPinIcon } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import {
+    CheckIcon,
+    ChevronsUpDownIcon,
+    ClockIcon,
+    MapPinIcon,
+} from 'lucide-react';
+import { useMemo, useState } from 'react';
 
-function AnimatedPrice({ value }: { value: number }) {
-    const spring = useSpring(0, { stiffness: 300, damping: 35 });
-    const display = useTransform(spring, (v) => formatCurrency(Math.round(v)));
-    const [text, setText] = useState(formatCurrency(0));
-
-    useEffect(() => {
-        spring.set(value);
-    }, [value, spring]);
-
-    useEffect(() => {
-        const unsubscribe = display.on('change', (v) => setText(v));
-        return unsubscribe;
-    }, [display]);
-
-    return <motion.span>{text}</motion.span>;
+function PriceText({ value }: { value: number }) {
+    return <span>{formatCurrency(value)}</span>;
 }
+
+type AgentOption = {
+    id: number;
+    name: string;
+    username: string;
+    email?: string | null;
+};
 
 type BookingInfoCardProps = {
     tour: TourResource;
     status: BookingStatusCode;
     bookingNumber: string | null;
-    invoiceNumber: string | null;
+    invoiceNumber?: string | null;
     departureDate: string;
     vendor: VendorInfo;
     agentName: string;
@@ -50,6 +62,18 @@ type BookingInfoCardProps = {
     remainingBalance?: number;
     agentCommissionAmount?: number;
     showAgentCommission?: boolean;
+    agentOptions?: AgentOption[];
+    selectedAgentId?: number | null;
+    onAgentChange?: (agentId: number | null) => void;
+    requiresAgentSelection?: boolean;
+    agentSelectionError?: string | null;
+    agentSelectionDisabled?: boolean;
+    inputBy?: {
+        userName: string;
+        roleLabel: string;
+        companyName?: string | null;
+        createdAt: string | null;
+    } | null;
     timerStarted?: boolean;
 };
 
@@ -72,8 +96,16 @@ export default function BookingInfoCard({
     remainingBalance = 0,
     agentCommissionAmount = 0,
     showAgentCommission = false,
+    agentOptions = [],
+    selectedAgentId = null,
+    onAgentChange,
+    requiresAgentSelection = false,
+    agentSelectionError = null,
+    agentSelectionDisabled = false,
+    inputBy = null,
     timerStarted = false,
 }: BookingInfoCardProps) {
+    const [agentPopoverOpen, setAgentPopoverOpen] = useState(false);
     const normalizeStatus = (s: string): BookingStatusCode => {
         const map: Record<string, BookingStatusCode> = {
             'awaiting payment': 'waiting_payment',
@@ -115,6 +147,31 @@ export default function BookingInfoCard({
             .toString()
             .padStart(2, '0')}`;
     };
+
+    const selectedAgent = useMemo(
+        () =>
+            agentOptions.find(
+                (agentOption) => agentOption.id === selectedAgentId,
+            ) ?? null,
+        [agentOptions, selectedAgentId],
+    );
+
+    const inputByText = inputBy
+        ? [
+              `${inputBy.roleLabel}${inputBy.companyName ? ` ${inputBy.companyName}` : ''} (${inputBy.userName})`,
+              inputBy.createdAt
+                  ? new Date(inputBy.createdAt).toLocaleString('id-ID', {
+                        day: '2-digit',
+                        month: 'short',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                    })
+                  : null,
+          ]
+              .filter(Boolean)
+              .join(' - ')
+        : null;
 
     return (
         <div className="rounded-xl border bg-card p-3 text-sm shadow-sm ring-1 ring-primary/5">
@@ -206,14 +263,115 @@ export default function BookingInfoCard({
                                 {vendor.name}
                             </span>
                         </p>
-                        <p className="flex justify-between md:block">
-                            <span className="text-muted-foreground md:mr-2">
-                                Agent:
-                            </span>{' '}
-                            <span className="font-semibold text-foreground">
-                                {agentName}
-                            </span>
-                        </p>
+                        {requiresAgentSelection ? (
+                            <div className="space-y-1.5">
+                                <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
+                                    <span className="shrink-0 text-muted-foreground">
+                                        Agent:
+                                    </span>
+                                    <Popover
+                                        open={agentPopoverOpen}
+                                        onOpenChange={setAgentPopoverOpen}
+                                    >
+                                        <PopoverTrigger asChild>
+                                            <button
+                                                type="button"
+                                                role="combobox"
+                                                aria-expanded={agentPopoverOpen}
+                                                disabled={
+                                                    agentSelectionDisabled
+                                                }
+                                                className={cn(
+                                                    'flex min-h-8 w-full items-center justify-between rounded-md border bg-background px-2.5 py-1.5 text-left text-xs font-semibold text-foreground shadow-sm transition-colors sm:w-[240px]',
+                                                    'hover:bg-muted/50 disabled:cursor-not-allowed disabled:opacity-60',
+                                                    agentSelectionError &&
+                                                        'border-destructive/60',
+                                                )}
+                                            >
+                                                <span className="min-w-0 truncate">
+                                                    {selectedAgent
+                                                        ? selectedAgent.name
+                                                        : 'Select agent'}
+                                                </span>
+                                                <ChevronsUpDownIcon className="ml-2 size-3.5 shrink-0 opacity-50" />
+                                            </button>
+                                        </PopoverTrigger>
+                                        <PopoverContent
+                                            align="start"
+                                            className="w-[260px] p-0"
+                                        >
+                                            <Command>
+                                                <CommandInput placeholder="Search agent..." />
+                                                <CommandList>
+                                                    <CommandEmpty>
+                                                        No active agents found.
+                                                    </CommandEmpty>
+                                                    <CommandGroup>
+                                                        {agentOptions.map(
+                                                            (agentOption) => (
+                                                                <CommandItem
+                                                                    key={
+                                                                        agentOption.id
+                                                                    }
+                                                                    value={`${agentOption.name} ${agentOption.username} ${agentOption.email ?? ''}`}
+                                                                    onSelect={() => {
+                                                                        onAgentChange?.(
+                                                                            agentOption.id,
+                                                                        );
+                                                                        setAgentPopoverOpen(
+                                                                            false,
+                                                                        );
+                                                                    }}
+                                                                >
+                                                                    <span className="min-w-0 flex-1 truncate">
+                                                                        {
+                                                                            agentOption.name
+                                                                        }
+                                                                    </span>
+                                                                    <CheckIcon
+                                                                        className={cn(
+                                                                            'ml-2 size-4 shrink-0',
+                                                                            selectedAgentId ===
+                                                                                agentOption.id
+                                                                                ? 'opacity-100'
+                                                                                : 'opacity-0',
+                                                                        )}
+                                                                    />
+                                                                </CommandItem>
+                                                            ),
+                                                        )}
+                                                    </CommandGroup>
+                                                </CommandList>
+                                            </Command>
+                                        </PopoverContent>
+                                    </Popover>
+                                </div>
+                                {agentSelectionError && (
+                                    <p className="text-xs font-semibold text-destructive">
+                                        {agentSelectionError}
+                                    </p>
+                                )}
+                            </div>
+                        ) : (
+                            <p className="flex justify-between md:block">
+                                <span className="text-muted-foreground md:mr-2">
+                                    Agent:
+                                </span>{' '}
+                                <span className="font-semibold text-foreground">
+                                    {agentName}
+                                </span>
+                            </p>
+                        )}
+                        {inputByText && (
+                            <p className="flex justify-between gap-2 md:block">
+                                <span className="text-muted-foreground md:mr-2">
+                                    Input by:
+                                </span>{' '}
+                                <span className="font-semibold text-foreground">
+                                    {inputByText}
+                                </span>
+                            </p>
+                        )}
                     </div>
                 </div>
 
@@ -276,7 +434,7 @@ export default function BookingInfoCard({
                                 Total Price:
                             </span>{' '}
                             <span className="font-bold text-foreground">
-                                <AnimatedPrice
+                                <PriceText
                                     value={
                                         displayTotalPrice ??
                                         pricing.subtotalGuests
@@ -289,7 +447,7 @@ export default function BookingInfoCard({
                                 Total Payment:
                             </span>{' '}
                             <span className="font-bold text-primary">
-                                <AnimatedPrice value={totalPaid ?? 0} />
+                                <PriceText value={totalPaid ?? 0} />
                             </span>
                         </p>
                         <p>
@@ -297,7 +455,7 @@ export default function BookingInfoCard({
                                 Remaining Balance:
                             </span>{' '}
                             <span className="font-bold text-foreground">
-                                <AnimatedPrice value={remainingBalance ?? 0} />
+                                <PriceText value={remainingBalance ?? 0} />
                             </span>
                         </p>
                     </div>
@@ -310,41 +468,34 @@ export default function BookingInfoCard({
                     </p>
                     <div className="grid grid-cols-1 gap-1 text-xs sm:text-sm md:grid-cols-3">
                         <p
-                            className={
-                                showAgentCommission ? 'md:col-span-2' : ''
-                            }
+                            className={cn(
+                                'min-w-0',
+                                showAgentCommission
+                                    ? 'md:col-span-2'
+                                    : 'md:col-span-3',
+                            )}
                         >
-                            <span className="text-muted-foreground md:mr-2">
+                            <span className="text-muted-foreground">
                                 Invoice Number:
                             </span>{' '}
-                            {invoiceNumber ? (
-                                <motion.span
-                                    initial={{ opacity: 0, scale: 0.82 }}
-                                    animate={{ opacity: 1, scale: 1 }}
-                                    transition={{
-                                        type: 'spring',
-                                        stiffness: 200,
-                                        damping: 18,
-                                    }}
-                                    className="font-bold text-primary"
-                                >
-                                    {invoiceNumber}
-                                </motion.span>
-                            ) : (
-                                <span className="font-semibold text-muted-foreground/60">
-                                    -
-                                </span>
-                            )}
+                            <span
+                                className={cn(
+                                    'break-words font-bold',
+                                    invoiceNumber
+                                        ? 'text-primary'
+                                        : 'text-muted-foreground/60',
+                                )}
+                            >
+                                {invoiceNumber || '-'}
+                            </span>
                         </p>
                         {showAgentCommission && (
-                            <p>
+                            <p className="min-w-0">
                                 <span className="text-muted-foreground md:mr-2">
                                     Commission:
                                 </span>{' '}
                                 <span className="font-bold text-primary">
-                                    <AnimatedPrice
-                                        value={agentCommissionAmount}
-                                    />
+                                    <PriceText value={agentCommissionAmount} />
                                 </span>
                             </p>
                         )}

@@ -13,6 +13,7 @@ use App\Models\Booking;
 use App\Models\BookingDocument;
 use App\Models\Payment;
 use App\Models\Tour;
+use App\Models\TourAddOn;
 use App\Models\TourAvailability;
 use App\Models\TourPrice;
 use App\Models\TourSchedule;
@@ -71,24 +72,13 @@ class BookingController extends Controller
             if ($schedule) {
                 app(ExpireBookingReservationsAction::class)->execute($tour->company, $tour->id);
 
-                $availability = \App\Models\TourAvailability::where('schedule_id', $schedule->id)
+                $availability = TourAvailability::where('schedule_id', $schedule->id)
                     ->where('tour_id', $tour->id)
                     ->first();
 
                 $availableSeats = $isScheduleBookable && $availability ? (int) $availability->available : 0;
 
-                $addOns = \App\Models\TourAddOn::where('schedule_id', $schedule->id)
-                    ->where('tour_id', $tour->id)
-                    ->get()
-                    ->map(function ($addon) {
-                        return [
-                            'key' => 'addon_'.$addon->id,
-                            'label' => $addon->description,
-                            'unitPrice' => (float) $addon->price,
-                            'qty' => $addon->edit_status ? 0 : 1,
-                            'hasQty' => (bool) $addon->edit_status,
-                        ];
-                    })->values()->toArray();
+                $addOns = $this->buildAddOnOptions($tour, $schedule);
             } else {
                 $addOns = [];
             }
@@ -119,7 +109,6 @@ class BookingController extends Controller
                 BookingStatus::WAITING_PAYMENT_APPROVAL,
                 BookingStatus::DOWN_PAYMENT,
                 BookingStatus::RESERVED,
-                BookingStatus::EXPIRED,
             ];
 
             if ($requestedBookingNumber !== '') {
@@ -133,7 +122,7 @@ class BookingController extends Controller
                         BookingStatus::FULL_PAYMENT,
                     ];
 
-                $existingBooking = Booking::with(['passengers', 'rooms'])
+                $existingBooking = Booking::with(['passengers', 'rooms', 'addons'])
                     ->where('booking_number', $requestedBookingNumber)
                     ->where('user_id', $user->id)
                     ->where('tour_id', $tour->id)
@@ -159,7 +148,7 @@ class BookingController extends Controller
             }
 
             if (! $existingBooking && ! $bookingConflict && ! $forceNewBooking && $isScheduleBookable) {
-                $existingBooking = Booking::with(['passengers', 'rooms'])
+                $existingBooking = Booking::with(['passengers', 'rooms', 'addons'])
                     ->where('user_id', $user->id)
                     ->where('tour_id', $tour->id)
                     ->whereIn('status', array_filter(
@@ -172,7 +161,7 @@ class BookingController extends Controller
             }
 
             if (! $existingBooking && ! $bookingConflict && $forceNewBooking && $isScheduleBookable) {
-                $existingBooking = Booking::with(['passengers', 'rooms'])
+                $existingBooking = Booking::with(['passengers', 'rooms', 'addons'])
                     ->where('user_id', $user->id)
                     ->where('tour_id', $tour->id)
                     ->whereIn('status', $draftStatuses)
@@ -181,42 +170,14 @@ class BookingController extends Controller
                     ->first();
             }
 
-            if (! $existingBooking && ! $bookingConflict && $isScheduleBookable) {
-                $existingBooking = Booking::with(['passengers', 'rooms'])
-                    ->where('user_id', $user->id)
-                    ->where('tour_id', $tour->id)
-                    ->where('status', BookingStatus::EXPIRED)
-                    ->whereDate('departure_date', request()->query('date'))
-                    ->whereDate('departure_date', '>=', now()->toDateString())
-                    ->latest()
-                    ->first();
-            }
-
-            if ($existingBooking && $existingBooking->status === BookingStatus::EXPIRED && $isScheduleBookable) {
-                $existingBooking = DB::transaction(function () use ($existingBooking): Booking {
-                    $lockedBooking = Booking::with(['passengers', 'rooms'])
-                        ->whereKey($existingBooking->id)
-                        ->lockForUpdate()
-                        ->firstOrFail();
-
-                    if ($lockedBooking->status === BookingStatus::EXPIRED) {
-                        $lockedBooking->update([
-                            'status' => BookingStatus::AWAITING_PAYMENT,
-                            'reserved_type' => 'system',
-                            'reserved_expires_at' => null,
-                        ]);
-                    }
-
-                    return $lockedBooking->fresh(['passengers', 'rooms']);
-                });
-
-                app(SyncAvailabilityAction::class)->executeForBooking($existingBooking->fresh());
-            }
-
             if ($existingBooking) {
                 $bookingNumber = $existingBooking->booking_number;
                 $isResumingExistingBooking = true;
             }
+        }
+
+        if ($schedule) {
+            $addOns = $this->buildAddOnOptions($tour, $schedule, $existingBooking);
         }
 
         $paidAmount = $existingBooking
@@ -467,6 +428,9 @@ class BookingController extends Controller
                     'contact_email' => $data['contact_email'] ?? null,
                     'contact_phone' => $data['contact_phone'] ?? null,
                     'contact_notes' => $data['contact_notes'] ?? null,
+                    'input_by_user_id' => request()->user()->id,
+                    'input_by_company_id' => null,
+                    'input_by_role' => 'customer',
                 ]
             );
 
@@ -673,6 +637,7 @@ class BookingController extends Controller
             'sender_account_number' => ['required', 'string', 'max:255', 'regex:/^\d+$/'],
             'transfer_amount' => ['required', 'numeric', 'min:1'],
             'payment_type' => ['required', 'string', 'in:down_payment,full_payment'],
+            'payment_date' => ['required', 'date', 'before_or_equal:today'],
             'proof' => ['required', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:5120'],
         ]);
 
@@ -699,6 +664,7 @@ class BookingController extends Controller
                     'sender_account' => $validated['sender_account_number'],
                     'proof_path' => $path,
                     'payment_type' => $validated['payment_type'],
+                    'payment_date' => Carbon::parse($validated['payment_date'])->toDateString(),
                     'payment_receiver_type' => $paymentReceiver['receiver_type'],
                     'payment_receiver_company_id' => $paymentReceiver['receiver_company']?->id,
                     'partnership_payment_mode' => $paymentReceiver['payment_mode'],
@@ -758,6 +724,7 @@ class BookingController extends Controller
                 'amount' => $validated['amount'],
                 'status' => 'unpaid',
                 'payload' => [
+                    'booking_payment_type' => $validated['payment_type'],
                     'payment_type' => $validated['payment_type'],
                     'payment_receiver_type' => $paymentReceiver['receiver_type'],
                     'payment_receiver_company_id' => $paymentReceiver['receiver_company']?->id,
@@ -798,6 +765,7 @@ class BookingController extends Controller
             }
 
             $payload = [
+                'booking_payment_type' => $validated['payment_type'],
                 'payment_type' => $validated['payment_type'],
                 'order_id' => $orderId,
                 'snap_token' => $snapToken,
@@ -819,7 +787,7 @@ class BookingController extends Controller
             ]);
 
             $booking->update([
-                'status' => BookingStatus::BOOKING_RESERVED,
+                'status' => $this->pendingOnlinePaymentBookingStatus($booking),
                 'payment_mode' => 'online',
             ]);
 
@@ -868,7 +836,7 @@ class BookingController extends Controller
 
             $payment->update([
                 'status' => $newStatus,
-                'payload' => array_merge($payment->payload ?? [], $transactionStatus),
+                'payload' => Payment::mergeMidtransPayload($payment->payload ?? [], $transactionStatus),
                 'paid_at' => $newStatus === PaymentStatus::PAID ? now() : null,
             ]);
 
@@ -976,7 +944,7 @@ class BookingController extends Controller
         try {
             $dob = Carbon::parse($dateOfBirth);
             $departure = Carbon::parse($departureDate);
-        } catch (\Throwable) {
+        } catch (Throwable) {
             return null;
         }
 
@@ -1056,6 +1024,15 @@ class BookingController extends Controller
                 'payment' => self::CUSTOMER_PAYMENT_UNAVAILABLE_MESSAGE,
             ]);
         }
+    }
+
+    private function pendingOnlinePaymentBookingStatus(Booking $booking): BookingStatus
+    {
+        if ($booking->status === BookingStatus::DOWN_PAYMENT) {
+            return BookingStatus::DOWN_PAYMENT;
+        }
+
+        return BookingStatus::BOOKING_RESERVED;
     }
 
     private function midtransEnvironment(): string
@@ -1139,6 +1116,60 @@ class BookingController extends Controller
         }
 
         return $booking->passengers()->exists();
+    }
+
+    /**
+     * @return array<int, array{key: string, label: string, unitPrice: float, qty: int, hasQty: bool}>
+     */
+    private function buildAddOnOptions(Tour $tour, TourSchedule $schedule, ?Booking $booking = null): array
+    {
+        $booking?->loadMissing('addons');
+
+        $bookingAddOns = $booking
+            ? $booking->addons->keyBy(fn ($addon): string => strtolower((string) $addon->name))
+            : collect();
+
+        $addOns = TourAddOn::query()
+            ->where('schedule_id', $schedule->id)
+            ->where('tour_id', $tour->id)
+            ->get()
+            ->map(function (TourAddOn $addon) use ($bookingAddOns): array {
+                $savedAddon = $bookingAddOns->get(strtolower((string) $addon->description));
+                $unitPrice = (float) $addon->price;
+
+                return [
+                    'key' => 'addon_'.$addon->id,
+                    'label' => $addon->description,
+                    'unitPrice' => $unitPrice,
+                    'qty' => $savedAddon
+                        ? (int) max(1, round((float) $savedAddon->price / max($unitPrice, 1)))
+                        : ($addon->edit_status ? 0 : 1),
+                    'hasQty' => (bool) $addon->edit_status,
+                ];
+            })
+            ->values()
+            ->toArray();
+
+        $knownAddOnLabels = collect($addOns)
+            ->pluck('label')
+            ->map(fn ($label): string => strtolower((string) $label))
+            ->all();
+
+        foreach ($booking?->addons ?? [] as $bookingAddon) {
+            if (in_array(strtolower((string) $bookingAddon->name), $knownAddOnLabels, true)) {
+                continue;
+            }
+
+            $addOns[] = [
+                'key' => 'booking_addon_'.$bookingAddon->id,
+                'label' => $bookingAddon->name,
+                'unitPrice' => (float) $bookingAddon->price,
+                'qty' => 1,
+                'hasQty' => true,
+            ];
+        }
+
+        return $addOns;
     }
 
     /**
