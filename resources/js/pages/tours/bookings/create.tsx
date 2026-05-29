@@ -71,6 +71,13 @@ const CONTACT_GUEST_ID = 'booking-contact-guest';
 const DEFAULT_PAYMENT_UNAVAILABLE_MESSAGE =
     'Payment is temporarily unavailable. Please try again later or contact customer support.';
 
+type AgentOption = {
+    id: number;
+    name: string;
+    username: string;
+    email?: string | null;
+};
+
 function formatCountdown(seconds: number) {
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
@@ -293,6 +300,7 @@ export default function Page() {
         tenant,
         company,
         bookingNumber,
+        inputBy,
         availability,
         bookingSeatLimit,
         addOns,
@@ -314,6 +322,8 @@ export default function Page() {
         bookingConflict,
         savedPassengers,
         customerOptions = [],
+        agentOptions = [],
+        requiresAgentSelection = false,
         dashboardBookingContext,
         flash,
     } = usePage<any>().props as any;
@@ -485,9 +495,70 @@ export default function Page() {
             : 'There is already a booking for this trip that is currently waiting for payment approval. Would you like to create a new booking?';
 
     // ─── Contact ────────────────────────────────────────────────────────
-    const dashboardCustomerOptions = Array.isArray(customerOptions)
-        ? (customerOptions as DashboardCustomerOption[])
-        : [];
+    const dashboardCustomerOptions = useMemo(
+        () =>
+            Array.isArray(customerOptions)
+                ? (customerOptions as DashboardCustomerOption[])
+                : [],
+        [customerOptions],
+    );
+    const dashboardAgentOptions = useMemo(
+        () =>
+            Array.isArray(agentOptions) ? (agentOptions as AgentOption[]) : [],
+        [agentOptions],
+    );
+    const [selectedAgentId, setSelectedAgentId] = useState<number | null>(
+        () => {
+            const existingAgentId = Number(existingBooking?.agent_id ?? 0);
+
+            if (existingAgentId > 0) {
+                return existingAgentId;
+            }
+
+            if (isDashboardBooking && requiresAgentSelection) {
+                return null;
+            }
+
+            return Number((tenant as any)?.id ?? 0) || null;
+        },
+    );
+    const selectedDashboardAgent = useMemo(
+        () =>
+            dashboardAgentOptions.find(
+                (agentOption) => agentOption.id === selectedAgentId,
+            ) ?? null,
+        [dashboardAgentOptions, selectedAgentId],
+    );
+    const agentSelectionError =
+        isDashboardBooking && requiresAgentSelection
+            ? dashboardAgentOptions.length === 0
+                ? 'Vendor must have at least one active agent partner before creating a booking.'
+                : selectedAgentId === null
+                  ? 'Please select an agent for this booking.'
+                  : null
+            : null;
+    const hasRequiredAgentSelection =
+        !isDashboardBooking ||
+        !requiresAgentSelection ||
+        selectedAgentId !== null;
+    const filteredDashboardCustomerOptions = useMemo(() => {
+        if (!isDashboardBooking || !requiresAgentSelection) {
+            return dashboardCustomerOptions;
+        }
+
+        if (selectedAgentId === null) {
+            return [];
+        }
+
+        return dashboardCustomerOptions.filter(
+            (customer) => Number(customer.company_id ?? 0) === selectedAgentId,
+        );
+    }, [
+        dashboardCustomerOptions,
+        isDashboardBooking,
+        requiresAgentSelection,
+        selectedAgentId,
+    ]);
     const [contact, setContact] = useState<BookingContact>({
         name:
             existingBooking?.contact_name ||
@@ -532,6 +603,17 @@ export default function Page() {
     );
 
     // ─── Guests ─────────────────────────────────────────────────────────
+    const handleDashboardAgentChange = useCallback(
+        (agentId: number | null) => {
+            setSelectedAgentId(agentId);
+
+            if (customerBookingMode === 'existing') {
+                handleDashboardCustomerSelect(null);
+            }
+        },
+        [customerBookingMode, handleDashboardCustomerSelect],
+    );
+
     const [adults, setAdults] = useState<number>(
         Number(existingBooking?.pax_adult ?? 0),
     );
@@ -723,6 +805,20 @@ export default function Page() {
     }, [guests]);
 
     // ─── Pricing (single source of truth) ───────────────────────────────
+    const pricingTourPrices = useMemo(
+        () =>
+            isDashboardBooking &&
+            requiresAgentSelection &&
+            selectedAgentId === null
+                ? []
+                : (tourPrices ?? []),
+        [
+            isDashboardBooking,
+            requiresAgentSelection,
+            selectedAgentId,
+            tourPrices,
+        ],
+    );
     const pricing = useMemo(
         () =>
             calculateBookingPricing(
@@ -730,9 +826,9 @@ export default function Page() {
                 0,
                 minimumVatPct ?? 11,
                 platformFeePerPax ?? 25_000,
-                tourPrices ?? [],
+                pricingTourPrices,
             ),
-        [guests, minimumVatPct, platformFeePerPax, tourPrices],
+        [guests, minimumVatPct, platformFeePerPax, pricingTourPrices],
     );
     const [selectedAddOns, setSelectedAddOns] = useState<AddOnItem[]>(
         () => addOns ?? [],
@@ -770,6 +866,11 @@ export default function Page() {
     const displayRemainingBalance = shouldUseSnapshotTotals
         ? snapshotRemainingBalance
         : Math.max(0, displayGrandTotal - paidAmountValue);
+    const bookingInvoiceNumber =
+        existingBooking?.invoice_number ??
+        (isReadOnlyBookingMode && existingBooking?.booking_number
+            ? existingBooking.booking_number
+            : null);
     const selectedSchedule = useMemo(() => {
         const schedules = Array.isArray(tour?.schedules) ? tour.schedules : [];
 
@@ -1004,7 +1105,7 @@ export default function Page() {
                 pax_infant: infants,
                 booking_number: bookingNumber,
                 vendor_id: vendor?.id ?? (tour.company as any)?.id,
-                agent_id: (tenant as any)?.id ?? null,
+                agent_id: selectedAgentId,
                 contact_name: contact.name,
                 contact_email: contact.email,
                 contact_phone: contact.phone,
@@ -1264,9 +1365,13 @@ export default function Page() {
         emailRegex.test(contact.email.trim()) &&
         contact.phone.trim() !== '' &&
         phoneRegex.test(contact.phone.trim()) &&
+        (!isDashboardBooking ||
+            customerBookingMode !== 'existing' ||
+            selectedCustomerId !== null) &&
         guests.length > 0 &&
         !isAvailabilityExceeded &&
         extraBedValid &&
+        hasRequiredAgentSelection &&
         guests.every((g) => {
             if (
                 g.title.trim() === '' ||
@@ -1538,6 +1643,7 @@ export default function Page() {
             String(manualData.transferAmount || finalAmount),
         );
         formData.append('payment_type', paymentType);
+        formData.append('payment_date', manualData.paymentDate);
         formData.append('proof', manualData.proofFile);
 
         router.post(bookingActionUrl(bookingId, 'manual-payment'), formData, {
@@ -1563,6 +1669,7 @@ export default function Page() {
             onError: (errors) => {
                 const message =
                     firstErrorMessage(errors.payment) ??
+                    firstErrorMessage(errors.payment_date) ??
                     firstErrorMessage(errors.payment_type);
 
                 if (message) {
@@ -1760,8 +1867,11 @@ export default function Page() {
             pax_child: children,
             pax_infant: infants,
             vendor_id: vendor?.id ?? (tour.company as any)?.id,
-            agent_id: (tenant as any)?.id ?? null,
-            agent_code: (tenant as any)?.username ?? 'AGT',
+            agent_id: selectedAgentId,
+            agent_code:
+                selectedDashboardAgent?.username ??
+                (tenant as any)?.username ??
+                'AGT',
             booking_number: bookingNumber,
             contact_name: contact.name,
             contact_email: contact.email,
@@ -1844,6 +1954,7 @@ export default function Page() {
             onError: (errors) => {
                 const message =
                     firstErrorMessage(errors.payment) ??
+                    firstErrorMessage(errors.payment_date) ??
                     firstErrorMessage(errors.payment_type);
 
                 if (message) {
@@ -2047,10 +2158,9 @@ export default function Page() {
                                     tour={tour}
                                     status={bookingInfoStatus}
                                     bookingNumber={bookingNumber ?? null}
-                                    invoiceNumber={null}
+                                    invoiceNumber={bookingInvoiceNumber}
                                     departureDate={preselectedDate}
                                     vendor={vendor}
-                                    agentName={tenant?.name || '-'}
                                     contactName={contact.name}
                                     contactEmail={contact.email}
                                     contactPhone={contact.phone}
@@ -2062,7 +2172,39 @@ export default function Page() {
                                         pricing.agentCommission
                                     }
                                     showAgentCommission={
-                                        isDashboardBooking && Boolean(tenant)
+                                        isDashboardBooking &&
+                                        (Boolean(tenant) ||
+                                            Boolean(selectedDashboardAgent))
+                                    }
+                                    agentName={
+                                        requiresAgentSelection
+                                            ? (selectedDashboardAgent?.name ??
+                                              '-')
+                                            : tenant?.name || '-'
+                                    }
+                                    agentOptions={dashboardAgentOptions}
+                                    selectedAgentId={selectedAgentId}
+                                    onAgentChange={handleDashboardAgentChange}
+                                    requiresAgentSelection={
+                                        isDashboardBooking &&
+                                        requiresAgentSelection &&
+                                        !isReadOnlyBookingMode &&
+                                        currentStep === 1
+                                    }
+                                    agentSelectionError={agentSelectionError}
+                                    agentSelectionDisabled={
+                                        dashboardAgentOptions.length === 0
+                                    }
+                                    inputBy={
+                                        inputBy
+                                            ? {
+                                                  userName: inputBy.user_name,
+                                                  roleLabel: inputBy.role_label,
+                                                  companyName:
+                                                      inputBy.company_name,
+                                                  createdAt: inputBy.created_at,
+                                              }
+                                            : null
                                     }
                                 />
                             </div>
@@ -2121,7 +2263,7 @@ export default function Page() {
                                                 }
                                                 customerOptions={
                                                     isDashboardBooking
-                                                        ? dashboardCustomerOptions
+                                                        ? filteredDashboardCustomerOptions
                                                         : undefined
                                                 }
                                                 customerBookingMode={
@@ -2141,6 +2283,13 @@ export default function Page() {
                                                     isDashboardBooking
                                                         ? handleDashboardCustomerSelect
                                                         : undefined
+                                                }
+                                                customerOptionsEmptyMessage={
+                                                    isDashboardBooking &&
+                                                    requiresAgentSelection &&
+                                                    selectedAgentId === null
+                                                        ? 'Select an agent first to view customers.'
+                                                        : 'No customer accounts available for this agent.'
                                                 }
                                                 readOnly={isReadOnlyBookingMode}
                                             />
@@ -2175,7 +2324,12 @@ export default function Page() {
                                                 rooms={rooms}
                                                 pricing={pricing}
                                                 vendor={vendor}
-                                                agentName={tenant?.name || '-'}
+                                                agentName={
+                                                    requiresAgentSelection
+                                                        ? (selectedDashboardAgent?.name ??
+                                                          '-')
+                                                        : tenant?.name || '-'
+                                                }
                                                 onPayNow={handlePayNow}
                                                 isSubmitting={isSubmitting}
                                                 initialAddOns={selectedAddOns}
@@ -2258,6 +2412,13 @@ export default function Page() {
                                                     "Extra Bed" can only be
                                                     added with an Adult Twin or
                                                     Adult Double room.
+                                                </span>
+                                            )}
+                                        {currentStep === 1 &&
+                                            !isReadOnlyBookingMode &&
+                                            agentSelectionError && (
+                                                <span className="text-sm font-semibold text-destructive">
+                                                    {agentSelectionError}
                                                 </span>
                                             )}
                                         <Button
