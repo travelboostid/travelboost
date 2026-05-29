@@ -58,8 +58,9 @@ class TourPolicy
 
     private function belongsToTourCompanyTeam(User $user, Tour $tour): bool
     {
-        return $tour->company
-            ->teams
-            ->contains('user_id', $user->id);
+        return (bool) $tour->company
+            ?->teams()
+            ->where('user_id', $user->id)
+            ->exists();
     }
 }

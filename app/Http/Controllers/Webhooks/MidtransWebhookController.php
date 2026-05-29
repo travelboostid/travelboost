@@ -63,7 +63,7 @@ class MidtransWebhookController extends Controller
 
             $payment->update([
                 'status' => $newStatus,
-                'payload' => array_merge($payment->payload ?? [], $payload),
+                'payload' => Payment::mergeMidtransPayload($payment->payload ?? [], $payload),
                 'paid_at' => $newStatus === PaymentStatus::PAID ? now() : null,
             ]);
 

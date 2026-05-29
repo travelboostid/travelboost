@@ -12,6 +12,18 @@ class Payment extends Model
 {
     use HasFactory;
 
+    public const BOOKING_PAYMENT_TYPE_DOWN_PAYMENT = 'down_payment';
+
+    public const BOOKING_PAYMENT_TYPE_FULL_PAYMENT = 'full_payment';
+
+    /**
+     * @var list<string>
+     */
+    private const BOOKING_PAYMENT_TYPES = [
+        self::BOOKING_PAYMENT_TYPE_DOWN_PAYMENT,
+        self::BOOKING_PAYMENT_TYPE_FULL_PAYMENT,
+    ];
+
     protected $fillable = [
         'owner_id',
         'owner_type',
@@ -45,6 +57,53 @@ class Payment extends Model
     public function payable(): MorphTo
     {
         return $this->morphTo();
+    }
+
+    public function bookingPaymentType(): ?string
+    {
+        $bookingPaymentType = data_get($this->payload, 'booking_payment_type');
+
+        if (in_array($bookingPaymentType, self::BOOKING_PAYMENT_TYPES, true)) {
+            return $bookingPaymentType;
+        }
+
+        $paymentType = data_get($this->payload, 'payment_type');
+
+        if (in_array($paymentType, self::BOOKING_PAYMENT_TYPES, true)) {
+            return $paymentType;
+        }
+
+        return null;
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @param  array<string, mixed>  $midtransPayload
+     * @return array<string, mixed>
+     */
+    public static function mergeMidtransPayload(array $payload, array $midtransPayload): array
+    {
+        $bookingPaymentType = data_get($payload, 'booking_payment_type');
+
+        if (! in_array($bookingPaymentType, self::BOOKING_PAYMENT_TYPES, true)) {
+            $legacyPaymentType = data_get($payload, 'payment_type');
+            $bookingPaymentType = in_array($legacyPaymentType, self::BOOKING_PAYMENT_TYPES, true)
+                ? $legacyPaymentType
+                : null;
+        }
+
+        $existingMidtransPayload = data_get($payload, 'midtrans');
+        $payload['midtrans'] = array_merge(
+            is_array($existingMidtransPayload) ? $existingMidtransPayload : [],
+            $midtransPayload
+        );
+
+        if ($bookingPaymentType !== null) {
+            $payload['booking_payment_type'] = $bookingPaymentType;
+            $payload['payment_type'] = $bookingPaymentType;
+        }
+
+        return $payload;
     }
 
     public function scopeWhereOwnerIn(

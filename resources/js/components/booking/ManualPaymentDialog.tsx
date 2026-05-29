@@ -19,9 +19,16 @@ import { useRef, useState } from 'react';
 export type ManualPaymentData = {
     senderBankName: string;
     senderAccountNumber: string;
+    paymentDate: string;
     transferAmount: number;
     proofFile: File | null;
 };
+
+const todayInputValue = new Date(
+    Date.now() - new Date().getTimezoneOffset() * 60000,
+)
+    .toISOString()
+    .slice(0, 10);
 
 type Props = {
     open: boolean;
@@ -47,6 +54,7 @@ export function ManualPaymentDialog({
     const [form, setForm] = useState<ManualPaymentData>({
         senderBankName: '',
         senderAccountNumber: '',
+        paymentDate: todayInputValue,
         transferAmount: amount,
         proofFile: null,
     });
@@ -60,6 +68,7 @@ export function ManualPaymentDialog({
     const canSubmit =
         form.senderBankName.trim() !== '' &&
         form.senderAccountNumber.trim() !== '' &&
+        form.paymentDate.trim() !== '' &&
         /^\d+$/.test(form.senderAccountNumber) &&
         amount > 0 &&
         form.proofFile !== null;
@@ -143,6 +152,17 @@ export function ManualPaymentDialog({
                             value={amount}
                             disabled
                             readOnly
+                        />
+                    </div>
+                    <div className="grid gap-1">
+                        <Label>Payment Date</Label>
+                        <Input
+                            type="date"
+                            max={todayInputValue}
+                            value={form.paymentDate}
+                            onChange={(event) =>
+                                update('paymentDate', event.target.value)
+                            }
                         />
                     </div>
                     <div className="grid gap-1">

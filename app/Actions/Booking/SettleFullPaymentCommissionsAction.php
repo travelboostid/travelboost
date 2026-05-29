@@ -126,13 +126,16 @@ class SettleFullPaymentCommissionsAction
 
     private function settlementDescription(Booking $booking, string $label): string
     {
+        $booking->loadMissing('vendor');
+
         $contactName = trim((string) $booking->contact_name) ?: 'Booking customer';
+        $vendorName = trim((string) $booking->vendor?->name) ?: 'Unknown vendor';
         $totalPax = max(
             0,
             (int) $booking->pax_adult + (int) $booking->pax_child + (int) $booking->pax_infant
         );
 
-        return "{$label} for {$contactName} ({$totalPax} pax) booking {$booking->booking_number}";
+        return "{$label} for {$contactName} ({$totalPax} pax) booking {$booking->booking_number} from {$vendorName}";
     }
 
     private function hasSettlement(Booking $booking, string $type): bool

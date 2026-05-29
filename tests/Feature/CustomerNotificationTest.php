@@ -7,6 +7,7 @@ use App\Enums\UserStatus;
 use App\Models\Booking;
 use App\Models\Company;
 use App\Models\CompanyTeam;
+use App\Models\Payment;
 use App\Models\Tour;
 use App\Models\User;
 use App\Notifications\BookingDeadlineReminderNotification;
@@ -107,6 +108,7 @@ test('manual payment submission creates a customer payment notification', functi
         'sender_account_number' => '1234567890',
         'transfer_amount' => 300_000,
         'payment_type' => 'down_payment',
+        'payment_date' => '2026-05-01',
         'proof' => UploadedFile::fake()->image('proof.jpg'),
     ])->assertRedirect();
 
@@ -122,6 +124,29 @@ test('manual payment submission creates a customer payment notification', functi
     expect(data_get($data, 'type'))->toBe('booking_payment')
         ->and(data_get($data, 'stage'))->toBe('manual_payment_submitted')
         ->and(data_get($data, 'booking_id'))->toBe($booking->id);
+
+    $payment = Payment::query()
+        ->where('payable_type', Booking::class)
+        ->where('payable_id', $booking->id)
+        ->firstOrFail();
+
+    $companyNotification = DB::table('notifications')
+        ->where('notifiable_type', $vendor->getMorphClass())
+        ->where('notifiable_id', $vendor->id)
+        ->first();
+
+    expect($companyNotification)->not->toBeNull();
+
+    $companyNotificationData = json_decode($companyNotification->data, true);
+
+    expect(data_get($companyNotificationData, 'type'))->toBe('booking_manual_payment_review')
+        ->and(data_get($companyNotificationData, 'booking_id'))->toBe($booking->id)
+        ->and(data_get($companyNotificationData, 'payment_id'))->toBe($payment->id)
+        ->and(data_get($companyNotificationData, 'action_label'))->toBe('Review Payment')
+        ->and(data_get($companyNotificationData, 'action_url'))->toContain("/companies/{$vendor->username}/dashboard/bookings")
+        ->and(data_get($companyNotificationData, 'action_url'))->toContain('status=waiting+payment+approval')
+        ->and(data_get($companyNotificationData, 'action_url'))->toContain("booking_number={$booking->booking_number}")
+        ->and(data_get($companyNotificationData, 'action_url'))->toContain("review_payment={$payment->id}");
 });
 
 test('booking finalization creates down payment and full payment customer notifications once', function () {

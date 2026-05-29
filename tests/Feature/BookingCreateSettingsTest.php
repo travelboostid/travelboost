@@ -610,7 +610,10 @@ test('reserve stores server hold expiry using ten minute fallback when setting i
     $booking = Booking::where('booking_number', 'BKG-TIMER-FALLBACK')->firstOrFail();
 
     expect($booking->status)->toBe(BookingStatus::BOOKING_RESERVED)
-        ->and($booking->reserved_expires_at->equalTo(now()->addMinutes(10)))->toBeTrue();
+        ->and($booking->reserved_expires_at->equalTo(now()->addMinutes(10)))->toBeTrue()
+        ->and($booking->input_by_user_id)->toBe($user->id)
+        ->and($booking->input_by_company_id)->toBeNull()
+        ->and($booking->input_by_role)->toBe('customer');
 });
 
 test('reserve rejects zero passengers before starting the hold timer', function () {
@@ -2085,7 +2088,7 @@ test('force new booking reuses existing same schedule draft booking instead of c
         ->count())->toBe($bookingCount);
 });
 
-test('force new booking restores same schedule expired draft booking as awaiting payment', function () {
+test('force new booking does not restore same schedule expired draft booking', function () {
     ['user' => $user, 'company' => $company, 'tour' => $tour, 'schedule' => $schedule] = createBookingCreateScenario('forcenewexpireddraftvendor');
 
     Booking::factory()->create([
@@ -2124,15 +2127,14 @@ test('force new booking restores same schedule expired draft booking as awaiting
     $response->assertOk();
     $response->assertInertia(fn ($page) => $page
         ->component('tours/bookings/create')
-        ->where('bookingNumber', 'BKG-FORCE-EXPIRED-DRAFT')
-        ->where('existingBooking.booking_number', 'BKG-FORCE-EXPIRED-DRAFT')
-        ->where('existingBooking.status', BookingStatus::AWAITING_PAYMENT->value)
-        ->where('isResumingExistingBooking', true));
+        ->whereNot('bookingNumber', 'BKG-FORCE-EXPIRED-DRAFT')
+        ->where('existingBooking', null)
+        ->where('isResumingExistingBooking', false));
     expect(Booking::where('user_id', $user->id)
         ->where('tour_id', $tour->id)
         ->whereDate('departure_date', $schedule->departure_date)
         ->count())->toBe($bookingCount)
-        ->and($expiredDraft->fresh()->status)->toBe(BookingStatus::AWAITING_PAYMENT);
+        ->and($expiredDraft->fresh()->status)->toBe(BookingStatus::EXPIRED);
 });
 
 test('same schedule conflict can be bypassed only with force new booking', function () {
@@ -2169,7 +2171,7 @@ test('same schedule conflict can be bypassed only with force new booking', funct
         ->count())->toBe(1);
 });
 
-test('expired future booking can be reordered with the same booking number', function () {
+test('opening create route for an expired booking number does not restore it', function () {
     $user = User::factory()->create();
     $company = Company::factory()->create([
         'username' => 'reordervendor',
@@ -2227,11 +2229,17 @@ test('expired future booking can be reordered with the same booking number', fun
     $response->assertOk();
     $response->assertInertia(fn ($page) => $page
         ->component('tours/bookings/create')
-        ->where('bookingNumber', 'BKG-REORDER-EXPIRED')
-        ->where('existingBooking.booking_number', 'BKG-REORDER-EXPIRED')
-        ->where('isResumingExistingBooking', true)
+        ->whereNot('bookingNumber', 'BKG-REORDER-EXPIRED')
+        ->where('existingBooking', null)
+        ->where('isResumingExistingBooking', false)
         ->where('reservedExpiresAt', null)
         ->where('remainingHoldSeconds', null));
+
+    $this->assertDatabaseHas('bookings', [
+        'booking_number' => 'BKG-REORDER-EXPIRED',
+        'status' => BookingStatus::EXPIRED->value,
+        'reserved_expires_at' => null,
+    ]);
 });
 
 test('expired future booking can be reset through reorder endpoint with the same booking number', function () {
@@ -2485,7 +2493,7 @@ test('reorder endpoint rejects expired bookings after the vendor booking deadlin
     ]);
 });
 
-test('selecting the same schedule reuses a future expired booking number without query parameter', function () {
+test('selecting the same schedule does not reuse a future expired booking without reorder', function () {
     $user = User::factory()->create();
     $company = Company::factory()->create([
         'username' => 'sameexpiredvendor',
@@ -2542,15 +2550,63 @@ test('selecting the same schedule reuses a future expired booking number without
     $response->assertOk();
     $response->assertInertia(fn ($page) => $page
         ->component('tours/bookings/create')
-        ->where('bookingNumber', 'BKG-SAME-SCHEDULE')
-        ->where('existingBooking.booking_number', 'BKG-SAME-SCHEDULE')
-        ->where('existingBooking.status', BookingStatus::AWAITING_PAYMENT->value)
-        ->where('isResumingExistingBooking', true));
+        ->whereNot('bookingNumber', 'BKG-SAME-SCHEDULE')
+        ->where('existingBooking', null)
+        ->where('isResumingExistingBooking', false));
     expect(Booking::where('user_id', $user->id)
         ->where('tour_id', $tour->id)
         ->whereDate('departure_date', $schedule->departure_date)
         ->count())->toBe(1)
-        ->and(Booking::where('booking_number', 'BKG-SAME-SCHEDULE')->firstOrFail()->status)->toBe(BookingStatus::AWAITING_PAYMENT);
+        ->and(Booking::where('booking_number', 'BKG-SAME-SCHEDULE')->firstOrFail()->status)->toBe(BookingStatus::EXPIRED);
+});
+
+test('customer resume hydrates saved booking add ons with quantity', function () {
+    ['user' => $user, 'company' => $company, 'tour' => $tour, 'schedule' => $schedule] = createBookingCreateScenario('savedaddonvendor');
+
+    TourAddOn::create([
+        'company_id' => $company->id,
+        'tour_id' => $tour->id,
+        'schedule_id' => $schedule->id,
+        'description' => 'VISA',
+        'price' => 500_000,
+        'edit_status' => true,
+    ]);
+
+    $booking = Booking::factory()->create([
+        'booking_number' => 'BKG-SAVED-ADDON',
+        'user_id' => $user->id,
+        'vendor_id' => $company->id,
+        'tour_id' => $tour->id,
+        'departure_date' => $schedule->departure_date,
+        'status' => BookingStatus::DOWN_PAYMENT,
+        'grand_total' => 1_500_000,
+    ]);
+    $booking->passengers()->create([
+        'first_name' => 'Addon',
+        'last_name' => 'Customer',
+        'price_category' => 'Adult Twin',
+        'price_amount' => 1_000_000,
+    ]);
+    $booking->addons()->create([
+        'name' => 'VISA',
+        'price' => 500_000,
+    ]);
+
+    $response = $this->actingAs($user)->get(route('bookings.create', [
+        'username' => $company->username,
+        'tour' => $tour,
+        'date' => $schedule->departure_date,
+        'booking_number' => 'BKG-SAVED-ADDON',
+        'mode' => 'review',
+    ]));
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->component('tours/bookings/create')
+        ->where('bookingNumber', 'BKG-SAVED-ADDON')
+        ->where('existingBooking.addons.0.name', 'VISA')
+        ->where('addOns.0.label', 'VISA')
+        ->where('addOns.0.qty', 1));
 });
 
 test('expired past booking number is not reused for reorder', function () {
