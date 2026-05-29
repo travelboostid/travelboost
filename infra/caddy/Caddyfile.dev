@@ -1,0 +1,36 @@
+{
+    email admin@travelboost.co.id
+    on_demand_tls {
+        ask http://127.0.0.1:8081/caddy/verify-domain
+    }
+}
+
+:8081 {
+    bind 127.0.0.1
+    root * /home/travelboost/travelboost/public
+    encode zstd gzip
+    php_fastcgi unix//run/php/php8.5-fpm.sock
+    file_server
+}
+
+reverb.dev.travelboost.co.id {
+    reverse_proxy 127.0.0.1:8080
+}
+
+dev.travelboost.co.id {
+    root * /home/travelboost/travelboost/public
+    encode zstd gzip
+    php_fastcgi unix//run/php/php8.5-fpm.sock
+    file_server
+}
+
+https:// {
+    tls {
+        on_demand
+    }
+
+    root * /home/travelboost/travelboost/public
+    encode zstd gzip
+    php_fastcgi unix//run/php/php8.5-fpm.sock
+    file_server
+}

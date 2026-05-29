@@ -1,10 +1,12 @@
 <?php
 
 use App\Http\Controllers\BookingController;
+use App\Http\Controllers\CaddyController;
 use App\Http\Controllers\Google\GoogleAuthController;
 use App\Http\Controllers\HomeController as BaseHomeController;
 use App\Http\Controllers\HomeDispatcherController;
 use App\Http\Controllers\Webhooks\MidtransWebhookController;
+use App\Http\Middleware\DomainResolver;
 use Illuminate\Support\Facades\Route;
 use Laravolt\Indonesia\Models\City;
 use Laravolt\Indonesia\Models\District;
@@ -65,3 +67,6 @@ Route::prefix('api/regions')->group(function () {
     Route::get('villages/{district}', fn ($district) => response()->json(Village::where('district_code', $district)->orderBy('name')->get()));
 });
 Route::get('/auth/google/callback', [GoogleAuthController::class, 'callback']);
+Route::get('/caddy/verify-domain', [CaddyController::class, 'verifyDomain'])->withoutMiddleware([
+    DomainResolver::class,
+]);
