@@ -1,7 +1,7 @@
 {
     email admin@travelboost.co.id
     on_demand_tls {
-       ask http://127.0.0.1:8081/caddy/verify-main
+       ask http://127.0.0.1:8081/caddy/verify-domain
     }
 }
 
