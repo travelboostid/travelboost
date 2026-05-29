@@ -14,7 +14,6 @@ use App\Models\BookingDocument;
 use App\Models\Payment;
 use App\Models\Tour;
 use App\Models\TourAddOn;
-use App\Models\TourAddOn;
 use App\Models\TourAvailability;
 use App\Models\TourPrice;
 use App\Models\TourSchedule;

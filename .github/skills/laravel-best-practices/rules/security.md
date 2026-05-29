@@ -104,7 +104,7 @@ Incorrect:
 
 ```blade
 <form method="POST" action="/posts">
-    <input type="text" name="title">
+    <input type="text" name="title" />
 </form>
 ```
 
@@ -113,7 +113,7 @@ Correct:
 ```blade
 <form method="POST" action="/posts">
     @csrf
-    <input type="text" name="title">
+    <input type="text" name="title" />
 </form>
 ```
 

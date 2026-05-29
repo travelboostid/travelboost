@@ -24,6 +24,7 @@ import SelectCategory from './components/select-category';
 import SelectContinent from './components/select-continent';
 import SelectCountry from './components/select-country';
 import SelectCurrency from './components/select-currency';
+import SelectProductCommissionCategory from './components/select-product-commission-category';
 import SelectRegion from './components/select-region';
 
 import { useEffect } from 'react';
@@ -188,6 +189,7 @@ export default function Page({ tour }: Props) {
     );
 
     const { company } = usePageSharedDataProps();
+    const { productCommissionCategories } = usePage().props as any;
     const handleSuccess = () => {
         toast.success('Success', {
             position: 'top-center',
@@ -217,6 +219,8 @@ export default function Page({ tour }: Props) {
         region_id: tour.region_id || '',
         country_id: tour.country_id || '',
         category_id: tour.category_id || '',
+        product_commission_category_id:
+            tour.product_commission_category_id || '',
         status: tour.status || 'inactive',
 
         image_id: tour.image?.id || '',
@@ -1609,6 +1613,35 @@ export default function Page({ tour }: Props) {
                                             />
                                         </div>
 
+                                        {/* Product Commission Category */}
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="product_commission_category_id">
+                                                Product Commission Category
+                                            </Label>
+
+                                            <SelectProductCommissionCategory
+                                                value={
+                                                    data.product_commission_category_id ||
+                                                    undefined
+                                                }
+                                                categories={
+                                                    productCommissionCategories
+                                                }
+                                                onChange={(val) =>
+                                                    setData(
+                                                        'product_commission_category_id',
+                                                        Number(val),
+                                                    )
+                                                }
+                                            />
+
+                                            <InputError
+                                                message={
+                                                    errors.product_commission_category_id
+                                                }
+                                            />
+                                        </div>
+
                                         <div className="grid gap-2">
                                             <Label htmlFor="continent_id">
                                                 Continent
@@ -1712,7 +1745,7 @@ export default function Page({ tour }: Props) {
                                         {/* Category */}
                                         <div className="grid gap-2">
                                             <Label htmlFor="category_id">
-                                                Category
+                                                Product Catalog Category
                                             </Label>
                                             <SelectCategory
                                                 name="category_id"
@@ -1969,6 +2002,21 @@ export default function Page({ tour }: Props) {
                                                 </div>
                                             </div>
                                         </div>
+                                    </div>
+                                </div>
+
+                                {/* Created By */}
+                                <div className="grid gap-2">
+                                    <Label>Input By</Label>
+
+                                    <div className="rounded-xl border bg-muted/30 px-4 py-3">
+                                        <div className="font-medium">
+                                            {tour.user?.name || '-'}
+                                        </div>
+
+                                        {/* <div className="text-sm text-muted-foreground">
+                                            User ID: {tour.user?.id || '-'}
+                                        </div> */}
                                     </div>
                                 </div>
                             </div>

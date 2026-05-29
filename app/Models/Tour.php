@@ -23,8 +23,10 @@ class Tour extends Model
         'country_id',
         'destination',
         'category_id',
+        'product_commission_category_id',
         'parent_id',
         'company_id',
+        'user_id',
         'image_id',
         'document_id',
         'showprice',
@@ -145,6 +147,16 @@ class Tour extends Model
     public function availabilities()
     {
         return $this->hasMany(TourAvailability::class, 'tour_id');
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    public function productCommissionCategory()
+    {
+        return $this->belongsTo(ProductCommissionCategory::class);
     }
 
     public function agents()

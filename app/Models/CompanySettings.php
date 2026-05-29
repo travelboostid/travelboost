@@ -17,6 +17,7 @@ class CompanySettings extends Model
         'landing_page_data',
         'booking_deadline',
         'minimum_down_payment',
+        'minimum_down_payment_value',
         'minimum_vat',
         'term_conditions',
         'booking_entry_time_limit',
