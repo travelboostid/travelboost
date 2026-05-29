@@ -2,6 +2,7 @@
 
 use App\Enums\BookingStatus;
 use App\Enums\CompanyTeamStatus;
+use App\Enums\PaymentStatus;
 use App\Enums\VendorAgentPartnerStatus;
 use App\Models\Booking;
 use App\Models\BookingAddon;
@@ -11,6 +12,7 @@ use App\Models\Company;
 use App\Models\CompanyTeam;
 use App\Models\Payment;
 use App\Models\PriceCategory;
+use App\Models\Role;
 use App\Models\Tour;
 use App\Models\TourAvailability;
 use App\Models\TourPrice;
@@ -19,6 +21,7 @@ use App\Models\User;
 use App\Models\VendorAgentPartner;
 use Database\Seeders\Common\RolePermissionSeeder;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 beforeEach(function () {
     $this->withoutVite();
@@ -293,6 +296,281 @@ test('booking index includes paid amount and remaining balance', function () {
         ->where('data.data.0.remaining_balance', 600_000));
 });
 
+test('booking index exposes down payment and full payment details', function () {
+    $this->travelTo('2026-05-01 09:00:00');
+
+    $vendor = Company::factory()->create(['type' => 'vendor']);
+
+    CompanyTeam::create([
+        'company_id' => $vendor->id,
+        'user_id' => $this->user->id,
+        'status' => CompanyTeamStatus::ACTIVE,
+        'is_owner' => true,
+        'accepted_at' => now(),
+    ]);
+
+    $tour = Tour::factory()->create(['company_id' => $vendor->id]);
+    $booking = Booking::factory()->create([
+        'vendor_id' => $vendor->id,
+        'tour_id' => $tour->id,
+        'status' => BookingStatus::FULL_PAYMENT,
+        'grand_total' => 1_500_000,
+    ]);
+
+    Payment::create([
+        'owner_type' => User::class,
+        'owner_id' => $this->user->id,
+        'payable_type' => Booking::class,
+        'payable_id' => $booking->id,
+        'provider' => 'manual',
+        'payment_method' => 'bank_transfer',
+        'amount' => 500_000,
+        'status' => PaymentStatus::PAID,
+        'paid_at' => now()->subDays(3),
+        'payload' => [
+            'payment_type' => 'down_payment',
+            'payment_date' => '2026-04-28',
+            'payment_receiver_type' => 'vendor',
+            'proof_path' => 'payment-proofs/down-payment.jpg',
+        ],
+    ]);
+
+    Payment::create([
+        'owner_type' => User::class,
+        'owner_id' => $this->user->id,
+        'payable_type' => Booking::class,
+        'payable_id' => $booking->id,
+        'provider' => 'midtrans',
+        'payment_method' => 'snap',
+        'amount' => 1_000_000,
+        'status' => PaymentStatus::PAID,
+        'paid_at' => '2026-05-01 10:00:00',
+        'payload' => [
+            'booking_payment_type' => 'full_payment',
+            'payment_type' => 'full_payment',
+            'payment_receiver_type' => 'vendor',
+            'midtrans' => [
+                'payment_type' => 'bank_transfer',
+                'order_id' => 'full-order-123',
+                'transaction_id' => 'midtrans-transaction-123',
+                'transaction_status' => 'settlement',
+            ],
+        ],
+    ]);
+
+    $response = $this->actingAs($this->user)
+        ->get("/companies/{$vendor->username}/dashboard/bookings");
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->where('data.data.0.down_payment_detail.method_label', 'Manual payment')
+        ->where('data.data.0.down_payment_detail.receiver_label', 'vendor')
+        ->where('data.data.0.down_payment_detail.amount', 500000)
+        ->where('data.data.0.down_payment_detail.payment_date', '2026-04-28')
+        ->where('data.data.0.down_payment_detail.receipt.type', 'manual')
+        ->where('data.data.0.down_payment_detail.receipt.url', Storage::disk('public')->url('payment-proofs/down-payment.jpg'))
+        ->where('data.data.0.full_payment_detail.method_label', 'Online payment')
+        ->where('data.data.0.full_payment_detail.receiver_label', 'vendor')
+        ->where('data.data.0.full_payment_detail.amount', 1000000)
+        ->where('data.data.0.full_payment_detail.payment_date', '2026-05-01T10:00:00.000000Z')
+        ->where('data.data.0.full_payment_detail.receipt.type', 'online')
+        ->where('data.data.0.full_payment_detail.receipt.order_id', 'full-order-123')
+        ->where('data.data.0.full_payment_detail.receipt.transaction_id', 'midtrans-transaction-123')
+        ->where('data.data.0.full_payment_detail.receipt.status', 'settlement'));
+});
+
+test('booking index infers legacy paid midtrans full payment detail when payment type is missing', function () {
+    $this->travelTo('2026-05-01 09:00:00');
+
+    $vendor = Company::factory()->create(['type' => 'vendor']);
+
+    CompanyTeam::create([
+        'company_id' => $vendor->id,
+        'user_id' => $this->user->id,
+        'status' => CompanyTeamStatus::ACTIVE,
+        'is_owner' => true,
+        'accepted_at' => now(),
+    ]);
+
+    $tour = Tour::factory()->create(['company_id' => $vendor->id]);
+    $booking = Booking::factory()->create([
+        'vendor_id' => $vendor->id,
+        'tour_id' => $tour->id,
+        'status' => BookingStatus::FULL_PAYMENT,
+        'grand_total' => 1_500_000,
+    ]);
+
+    Payment::create([
+        'owner_type' => User::class,
+        'owner_id' => $booking->user_id,
+        'payable_type' => Booking::class,
+        'payable_id' => $booking->id,
+        'provider' => 'manual',
+        'payment_method' => 'bank_transfer',
+        'amount' => 500_000,
+        'status' => PaymentStatus::PAID,
+        'paid_at' => '2026-04-28 09:00:00',
+        'payload' => [
+            'payment_type' => 'down_payment',
+            'payment_receiver_type' => 'vendor',
+        ],
+    ]);
+
+    Payment::create([
+        'owner_type' => User::class,
+        'owner_id' => $booking->user_id,
+        'payable_type' => Booking::class,
+        'payable_id' => $booking->id,
+        'provider' => 'midtrans',
+        'payment_method' => 'snap',
+        'amount' => 1_000_000,
+        'status' => PaymentStatus::PAID,
+        'paid_at' => '2026-05-01 10:00:00',
+        'payload' => [
+            'payment_receiver_type' => 'vendor',
+        ],
+    ]);
+
+    $response = $this->actingAs($this->user)
+        ->get("/companies/{$vendor->username}/dashboard/bookings");
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->where('data.data.0.full_payment_detail.method_label', 'Online payment')
+        ->where('data.data.0.full_payment_detail.receiver_label', 'vendor')
+        ->where('data.data.0.full_payment_detail.amount', 1000000)
+        ->where('data.data.0.full_payment_detail.payment_date', '2026-05-01T10:00:00.000000Z'));
+});
+
+test('booking index infers paid midtrans full payment detail when gateway overwrites payment type', function () {
+    $this->travelTo('2026-05-01 09:00:00');
+
+    $vendor = Company::factory()->create(['type' => 'vendor']);
+
+    CompanyTeam::create([
+        'company_id' => $vendor->id,
+        'user_id' => $this->user->id,
+        'status' => CompanyTeamStatus::ACTIVE,
+        'is_owner' => true,
+        'accepted_at' => now(),
+    ]);
+
+    $tour = Tour::factory()->create(['company_id' => $vendor->id]);
+    $booking = Booking::factory()->create([
+        'vendor_id' => $vendor->id,
+        'tour_id' => $tour->id,
+        'status' => BookingStatus::FULL_PAYMENT,
+        'grand_total' => 1_500_000,
+    ]);
+
+    Payment::create([
+        'owner_type' => User::class,
+        'owner_id' => $booking->user_id,
+        'payable_type' => Booking::class,
+        'payable_id' => $booking->id,
+        'provider' => 'manual',
+        'payment_method' => 'bank_transfer',
+        'amount' => 500_000,
+        'status' => PaymentStatus::PAID,
+        'paid_at' => '2026-04-28 09:00:00',
+        'payload' => [
+            'payment_type' => 'down_payment',
+            'payment_receiver_type' => 'vendor',
+        ],
+    ]);
+
+    Payment::create([
+        'owner_type' => User::class,
+        'owner_id' => $booking->user_id,
+        'payable_type' => Booking::class,
+        'payable_id' => $booking->id,
+        'provider' => 'midtrans',
+        'payment_method' => 'snap',
+        'amount' => 1_000_000,
+        'status' => PaymentStatus::PAID,
+        'paid_at' => '2026-05-01 10:00:00',
+        'payload' => [
+            'payment_type' => 'bank_transfer',
+            'payment_receiver_type' => 'vendor',
+            'order_id' => '2-overwritten',
+            'transaction_id' => 'midtrans-overwritten-123',
+            'transaction_status' => 'settlement',
+        ],
+    ]);
+
+    $response = $this->actingAs($this->user)
+        ->get("/companies/{$vendor->username}/dashboard/bookings");
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->where('data.data.0.full_payment_detail.method_label', 'Online payment')
+        ->where('data.data.0.full_payment_detail.receiver_label', 'vendor')
+        ->where('data.data.0.full_payment_detail.amount', 1000000)
+        ->where('data.data.0.full_payment_detail.payment_date', '2026-05-01T10:00:00.000000Z')
+        ->where('data.data.0.full_payment_detail.receipt.type', 'online')
+        ->where('data.data.0.full_payment_detail.receipt.order_id', '2-overwritten')
+        ->where('data.data.0.full_payment_detail.receipt.transaction_id', 'midtrans-overwritten-123'));
+});
+
+test('booking index exposes input by audit payload with legacy fallback', function () {
+    $this->travelTo('2026-05-01 09:00:00');
+
+    $this->user->update(['name' => 'Udin Admin']);
+    $vendor = Company::factory()->create([
+        'type' => 'vendor',
+        'name' => 'Vendor Company',
+    ]);
+
+    CompanyTeam::create([
+        'company_id' => $vendor->id,
+        'user_id' => $this->user->id,
+        'status' => CompanyTeamStatus::ACTIVE,
+        'is_owner' => true,
+        'accepted_at' => now(),
+    ]);
+
+    $customer = User::factory()->create(['name' => 'Jane Customer']);
+    $tour = Tour::factory()->create(['company_id' => $vendor->id]);
+    $operatorRole = "company:{$vendor->id}:operator";
+    Role::query()->create([
+        'name' => $operatorRole,
+        'display_name' => 'Operator',
+        'description' => 'Operator',
+    ]);
+
+    Booking::factory()->create([
+        'user_id' => $customer->id,
+        'vendor_id' => $vendor->id,
+        'tour_id' => $tour->id,
+        'contact_name' => 'Legacy Contact',
+        'created_at' => '2026-04-30 08:00:00',
+    ]);
+
+    Booking::factory()->create([
+        'user_id' => $customer->id,
+        'vendor_id' => $vendor->id,
+        'tour_id' => $tour->id,
+        'input_by_user_id' => $this->user->id,
+        'input_by_company_id' => $vendor->id,
+        'input_by_role' => $operatorRole,
+        'created_at' => '2026-05-01 08:00:00',
+    ]);
+
+    $response = $this->actingAs($this->user)
+        ->get("/companies/{$vendor->username}/dashboard/bookings");
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->where('data.data.0.input_by.user_name', 'Udin Admin')
+        ->where('data.data.0.input_by.company_name', 'Vendor Company')
+        ->where('data.data.0.input_by.role_label', 'Operator')
+        ->where('data.data.0.input_by.created_at', '2026-05-01T08:00:00.000000Z')
+        ->where('data.data.1.input_by.user_name', 'Jane Customer')
+        ->where('data.data.1.input_by.company_name', null)
+        ->where('data.data.1.input_by.role_label', 'Customer')
+        ->where('data.data.1.input_by.created_at', '2026-04-30T08:00:00.000000Z'));
+});
+
 test('booking index exposes payment and document follow up payloads with summary counts', function () {
     $this->travelTo('2026-05-01 09:00:00');
 
@@ -469,7 +747,7 @@ test('booking follow up summary excludes terminal bookings', function () {
         ->where('followupSummary.documents_due_soon', 0));
 });
 
-test('booking index derives commission amount and includes payment mode', function () {
+test('booking index derives commission amount', function () {
     $vendor = Company::factory()->create(['type' => 'vendor']);
 
     CompanyTeam::create([
@@ -522,8 +800,7 @@ test('booking index derives commission amount and includes payment mode', functi
 
     $response->assertOk();
     $response->assertInertia(fn ($page) => $page
-        ->where('data.data.0.commission_amount', '300000.00')
-        ->where('data.data.0.payment_mode', 'manual'));
+        ->where('data.data.0.commission_amount', '300000.00'));
 });
 
 test('booking index derives commission from each passenger schedule price category', function () {
@@ -641,6 +918,7 @@ test('booking index filters waiting payment approval and exposes manual payment 
         'status' => 'pending',
         'payload' => [
             'payment_type' => 'down_payment',
+            'payment_date' => '2026-05-01',
             'sender_bank' => 'BCA',
             'sender_account' => '1234567890',
             'proof_path' => 'payment-proofs/proof.jpg',
@@ -664,6 +942,7 @@ test('booking index filters waiting payment approval and exposes manual payment 
         ->where('data.data.0.manual_payment.sender_bank_name', 'BCA')
         ->where('data.data.0.manual_payment.sender_account_number', '1234567890')
         ->where('data.data.0.manual_payment.transfer_amount', 500_000)
+        ->where('data.data.0.manual_payment.payment_date', '2026-05-01')
         ->where('data.data.0.manual_payment.proof_path', 'payment-proofs/proof.jpg'));
 });
 
@@ -876,6 +1155,33 @@ test('full payment booking exposes cancel and refund actions in dashboard index'
         ->where('data.data.0.can_refund', true));
 });
 
+test('down payment booking exposes cancel and refund actions in dashboard index', function () {
+    $vendor = Company::factory()->create(['type' => 'vendor']);
+
+    CompanyTeam::create([
+        'company_id' => $vendor->id,
+        'user_id' => $this->user->id,
+        'status' => CompanyTeamStatus::ACTIVE,
+        'is_owner' => true,
+        'accepted_at' => now(),
+    ]);
+
+    $tour = Tour::factory()->create(['company_id' => $vendor->id]);
+    Booking::factory()->create([
+        'vendor_id' => $vendor->id,
+        'tour_id' => $tour->id,
+        'status' => BookingStatus::DOWN_PAYMENT,
+    ]);
+
+    $response = $this->actingAs($this->user)
+        ->get("/companies/{$vendor->username}/dashboard/bookings");
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->where('data.data.0.can_cancel', true)
+        ->where('data.data.0.can_refund', true));
+});
+
 test('vendor can directly cancel a full payment booking and release availability', function () {
     $vendor = Company::factory()->create(['type' => 'vendor']);
 
@@ -933,8 +1239,71 @@ test('vendor can directly cancel a full payment booking and release availability
     $response->assertRedirect();
 
     expect($booking->fresh()->status)->toBe(BookingStatus::CANCELLED)
-        ->and($payment->fresh()->status)->toBe(\App\Enums\PaymentStatus::PAID)
+        ->and($payment->fresh()->status)->toBe(PaymentStatus::PAID)
         ->and((int) $availability->fresh()->FP)->toBe(0)
+        ->and((int) $availability->fresh()->CA)->toBe(2)
+        ->and((float) $availability->fresh()->available)->toBe(10.0);
+});
+
+test('vendor can directly cancel a down payment booking and release availability', function () {
+    $vendor = Company::factory()->create(['type' => 'vendor']);
+
+    CompanyTeam::create([
+        'company_id' => $vendor->id,
+        'user_id' => $this->user->id,
+        'status' => CompanyTeamStatus::ACTIVE,
+        'is_owner' => true,
+        'accepted_at' => now(),
+    ]);
+
+    $tour = Tour::factory()->create(['company_id' => $vendor->id]);
+    $departureDate = now()->addMonth()->toDateString();
+    $schedule = TourSchedule::create([
+        'tour_id' => $tour->id,
+        'tour_code' => $tour->code,
+        'company_id' => $vendor->id,
+        'departure_date' => $departureDate,
+        'return_date' => now()->addMonth()->addDays(5)->toDateString(),
+        'is_active' => true,
+    ]);
+    $availability = TourAvailability::create([
+        'company_id' => $vendor->id,
+        'tour_id' => $tour->id,
+        'schedule_id' => $schedule->id,
+        'max_pax' => 10,
+        'available' => 8,
+        'DP' => 2,
+    ]);
+    $booking = Booking::factory()->create([
+        'vendor_id' => $vendor->id,
+        'tour_id' => $tour->id,
+        'departure_date' => $departureDate,
+        'status' => BookingStatus::DOWN_PAYMENT,
+        'pax_adult' => 2,
+        'pax_child' => 0,
+        'pax_infant' => 0,
+    ]);
+    $payment = Payment::create([
+        'owner_type' => User::class,
+        'owner_id' => $booking->user_id,
+        'payable_type' => Booking::class,
+        'payable_id' => $booking->id,
+        'provider' => 'manual',
+        'payment_method' => 'bank_transfer',
+        'amount' => 500_000,
+        'status' => 'paid',
+    ]);
+
+    $response = $this->actingAs($this->user)
+        ->post("/companies/{$vendor->username}/dashboard/bookings/{$booking->id}/cancel", [
+            'reason' => 'Customer requested cancellation after down payment',
+        ]);
+
+    $response->assertRedirect();
+
+    expect($booking->fresh()->status)->toBe(BookingStatus::CANCELLED)
+        ->and($payment->fresh()->status)->toBe(PaymentStatus::PAID)
+        ->and((int) $availability->fresh()->DP)->toBe(0)
         ->and((int) $availability->fresh()->CA)->toBe(2)
         ->and((float) $availability->fresh()->available)->toBe(10.0);
 });
@@ -996,7 +1365,7 @@ test('vendor can directly refund a paid booking and release availability', funct
     $response->assertRedirect();
 
     expect($booking->fresh()->status)->toBe(BookingStatus::REFUNDED)
-        ->and($payment->fresh()->status)->toBe(\App\Enums\PaymentStatus::REFUNDED)
+        ->and($payment->fresh()->status)->toBe(PaymentStatus::REFUNDED)
         ->and((int) $availability->fresh()->DP)->toBe(0)
         ->and((int) $availability->fresh()->RF)->toBe(2)
         ->and((float) $availability->fresh()->available)->toBe(10.0);
@@ -1031,6 +1400,43 @@ test('agent cancel creates a pending vendor approval request without mutating bo
     $response->assertRedirect();
 
     expect($booking->fresh()->status)->toBe(BookingStatus::WAITING_PAYMENT_APPROVAL);
+    $this->assertDatabaseHas('booking_action_requests', [
+        'booking_id' => $booking->id,
+        'requester_company_id' => $agent->id,
+        'target_action' => 'cancel',
+        'status' => 'pending',
+    ]);
+});
+
+test('agent down payment cancel creates a pending vendor approval request without mutating booking', function () {
+    $agentUser = User::factory()->create();
+    $vendor = Company::factory()->create(['type' => 'vendor']);
+    $agent = Company::factory()->create(['type' => 'agent']);
+
+    CompanyTeam::create([
+        'company_id' => $agent->id,
+        'user_id' => $agentUser->id,
+        'status' => CompanyTeamStatus::ACTIVE,
+        'is_owner' => true,
+        'accepted_at' => now(),
+    ]);
+
+    $tour = Tour::factory()->create(['company_id' => $vendor->id]);
+    $booking = Booking::factory()->create([
+        'vendor_id' => $vendor->id,
+        'agent_id' => $agent->id,
+        'tour_id' => $tour->id,
+        'status' => BookingStatus::DOWN_PAYMENT,
+    ]);
+
+    $response = $this->actingAs($agentUser)
+        ->post("/companies/{$agent->username}/dashboard/bookings/{$booking->id}/cancel", [
+            'reason' => 'Agent requested down payment cancellation',
+        ]);
+
+    $response->assertRedirect();
+
+    expect($booking->fresh()->status)->toBe(BookingStatus::DOWN_PAYMENT);
     $this->assertDatabaseHas('booking_action_requests', [
         'booking_id' => $booking->id,
         'requester_company_id' => $agent->id,
@@ -1074,6 +1480,131 @@ test('agent full payment cancel creates a pending vendor approval request withou
         'target_action' => 'cancel',
         'status' => 'pending',
     ]);
+});
+
+test('vendor can reorder an eligible expired booking with the same booking number', function () {
+    $vendor = Company::factory()->create(['type' => 'vendor']);
+
+    CompanyTeam::create([
+        'company_id' => $vendor->id,
+        'user_id' => $this->user->id,
+        'status' => CompanyTeamStatus::ACTIVE,
+        'is_owner' => true,
+        'accepted_at' => now(),
+    ]);
+
+    $tour = Tour::factory()->create(['company_id' => $vendor->id]);
+    $departureDate = now()->addMonth()->toDateString();
+    $schedule = TourSchedule::create([
+        'tour_id' => $tour->id,
+        'tour_code' => $tour->code,
+        'company_id' => $vendor->id,
+        'departure_date' => $departureDate,
+        'return_date' => now()->addMonth()->addDays(5)->toDateString(),
+        'is_active' => true,
+    ]);
+    $availability = TourAvailability::create([
+        'company_id' => $vendor->id,
+        'tour_id' => $tour->id,
+        'schedule_id' => $schedule->id,
+        'max_pax' => 10,
+        'available' => 8,
+        'EX' => 2,
+    ]);
+    $booking = Booking::factory()->create([
+        'vendor_id' => $vendor->id,
+        'tour_id' => $tour->id,
+        'booking_number' => 'BKG-REORDER-001',
+        'departure_date' => $departureDate,
+        'status' => BookingStatus::EXPIRED,
+        'reserved_type' => 'system',
+        'reserved_expires_at' => now()->subMinute(),
+        'pax_adult' => 2,
+        'pax_child' => 0,
+        'pax_infant' => 0,
+    ]);
+
+    $this->actingAs($this->user)
+        ->get("/companies/{$vendor->username}/dashboard/bookings")
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('data.data.0.can_reorder', true));
+
+    $response = $this->actingAs($this->user)
+        ->post("/companies/{$vendor->username}/dashboard/bookings/{$booking->id}/reorder");
+
+    $response->assertRedirect("/companies/{$vendor->username}/dashboard/bookings/create/{$tour->id}?date={$departureDate}&booking_number=BKG-REORDER-001");
+
+    expect($booking->fresh()->status)->toBe(BookingStatus::AWAITING_PAYMENT)
+        ->and($booking->fresh()->booking_number)->toBe('BKG-REORDER-001')
+        ->and($booking->fresh()->reserved_expires_at)->toBeNull()
+        ->and((int) $availability->fresh()->EX)->toBe(0)
+        ->and((int) $availability->fresh()->WP)->toBe(2);
+});
+
+test('agent can reorder an eligible expired agent booking with the same booking number', function () {
+    $agentUser = User::factory()->create();
+    $vendor = Company::factory()->create(['type' => 'vendor']);
+    $agent = Company::factory()->create(['type' => 'agent']);
+
+    CompanyTeam::create([
+        'company_id' => $agent->id,
+        'user_id' => $agentUser->id,
+        'status' => CompanyTeamStatus::ACTIVE,
+        'is_owner' => true,
+        'accepted_at' => now(),
+    ]);
+
+    $tour = Tour::factory()->create(['company_id' => $vendor->id]);
+    $departureDate = now()->addMonth()->toDateString();
+    TourSchedule::create([
+        'tour_id' => $tour->id,
+        'tour_code' => $tour->code,
+        'company_id' => $vendor->id,
+        'departure_date' => $departureDate,
+        'return_date' => now()->addMonth()->addDays(5)->toDateString(),
+        'is_active' => true,
+    ]);
+    $booking = Booking::factory()->create([
+        'vendor_id' => $vendor->id,
+        'agent_id' => $agent->id,
+        'tour_id' => $tour->id,
+        'booking_number' => 'BKG-AGENT-REORDER',
+        'departure_date' => $departureDate,
+        'status' => BookingStatus::EXPIRED,
+    ]);
+
+    $response = $this->actingAs($agentUser)
+        ->post("/companies/{$agent->username}/dashboard/bookings/{$booking->id}/reorder");
+
+    $response->assertRedirect("/companies/{$agent->username}/dashboard/bookings/create/{$tour->id}?date={$departureDate}&booking_number=BKG-AGENT-REORDER");
+
+    expect($booking->fresh()->status)->toBe(BookingStatus::AWAITING_PAYMENT)
+        ->and($booking->fresh()->booking_number)->toBe('BKG-AGENT-REORDER');
+});
+
+test('dashboard reorder rejects non expired bookings', function () {
+    $vendor = Company::factory()->create(['type' => 'vendor']);
+
+    CompanyTeam::create([
+        'company_id' => $vendor->id,
+        'user_id' => $this->user->id,
+        'status' => CompanyTeamStatus::ACTIVE,
+        'is_owner' => true,
+        'accepted_at' => now(),
+    ]);
+
+    $tour = Tour::factory()->create(['company_id' => $vendor->id]);
+    $booking = Booking::factory()->create([
+        'vendor_id' => $vendor->id,
+        'tour_id' => $tour->id,
+        'departure_date' => now()->addMonth()->toDateString(),
+        'status' => BookingStatus::DOWN_PAYMENT,
+    ]);
+
+    $this->actingAs($this->user)
+        ->post("/companies/{$vendor->username}/dashboard/bookings/{$booking->id}/reorder")
+        ->assertStatus(422);
 });
 
 test('vendor can approve and reject agent cancel refund requests', function () {
@@ -1476,6 +2007,16 @@ test('booking edit exposes customer wizard payment props for dashboard', functio
         'price_category' => 'Adult Twin',
         'price_amount' => 1_000_000,
     ]);
+    Payment::create([
+        'owner_type' => User::class,
+        'owner_id' => $this->user->id,
+        'payable_type' => Booking::class,
+        'payable_id' => $booking->id,
+        'provider' => 'manual',
+        'payment_method' => 'bank_transfer',
+        'amount' => 250_000,
+        'status' => 'paid',
+    ]);
 
     $response = $this->actingAs($this->user)
         ->get("/companies/{$vendor->username}/dashboard/bookings/{$booking->id}/edit");
@@ -1487,8 +2028,92 @@ test('booking edit exposes customer wizard payment props for dashboard', functio
         ->where('downPaymentAvailable', true)
         ->where('minimumDownPaymentPct', 25)
         ->where('platformFeePerPax', 25000)
+        ->where('paidAmount', 250000)
+        ->where('remainingBalance', 750000)
         ->where('vendorBankInfo.bankName', 'Mandiri')
         ->where('bookingSeatLimit', 4));
+});
+
+test('booking edit resolves agent commission when booking snapshot is zero', function () {
+    $agentUser = User::factory()->create();
+    $vendor = Company::factory()->create([
+        'username' => 'editcommissionvendor',
+        'type' => 'vendor',
+    ]);
+    $agent = Company::factory()->create([
+        'username' => 'editcommissionagent',
+        'type' => 'agent',
+    ]);
+
+    CompanyTeam::create([
+        'company_id' => $agent->id,
+        'user_id' => $agentUser->id,
+        'status' => CompanyTeamStatus::ACTIVE,
+        'is_owner' => true,
+        'accepted_at' => now(),
+    ]);
+    VendorAgentPartner::create([
+        'vendor_id' => $vendor->id,
+        'agent_id' => $agent->id,
+        'status' => VendorAgentPartnerStatus::ACTIVE,
+        'accepted_at' => now(),
+        'payment_mode' => 'agent',
+    ]);
+
+    $tour = Tour::factory()->create(['company_id' => $vendor->id]);
+    $departureDate = now()->addMonth()->toDateString();
+    $schedule = TourSchedule::create([
+        'tour_id' => $tour->id,
+        'tour_code' => $tour->code,
+        'company_id' => $vendor->id,
+        'departure_date' => $departureDate,
+        'return_date' => now()->addMonth()->addDays(5)->toDateString(),
+        'is_active' => true,
+    ]);
+    $category = PriceCategory::create([
+        'company_id' => $vendor->id,
+        'name' => 'Adult Twin',
+        'room_type' => 'twin',
+    ]);
+    TourPrice::create([
+        'company_id' => $vendor->id,
+        'tour_code' => $tour->code,
+        'schedule_id' => $schedule->id,
+        'price_category_id' => $category->id,
+        'currency' => 'IDR',
+        'price' => 10_000_000,
+        'commission_rate' => 10,
+        'commission' => 0,
+    ]);
+
+    $booking = Booking::factory()->create([
+        'vendor_id' => $vendor->id,
+        'agent_id' => $agent->id,
+        'tour_id' => $tour->id,
+        'departure_date' => $departureDate,
+        'status' => BookingStatus::AWAITING_PAYMENT,
+        'pax_adult' => 1,
+        'pax_child' => 0,
+        'pax_infant' => 0,
+        'commission_amount' => 0,
+        'grand_total' => 10_135_000,
+    ]);
+    BookingPassenger::create([
+        'booking_id' => $booking->id,
+        'title' => 'Mr',
+        'first_name' => 'Commission',
+        'last_name' => 'Guest',
+        'price_category' => 'Adult Twin',
+        'price_amount' => 9_000_000,
+    ]);
+
+    $response = $this->actingAs($agentUser)
+        ->get("/companies/{$agent->username}/dashboard/bookings/{$booking->id}/edit");
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->component('companies/dashboard/bookings/edit')
+        ->where('booking.commission_amount', '900000.00'));
 });
 
 test('full payment booking with incomplete documents allows dashboard document-only updates', function () {

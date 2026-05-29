@@ -21,7 +21,7 @@ import type {
     VendorInfo,
 } from '@/types/booking';
 import { calculateBookingPricing } from '@/utils/booking-calculations';
-import { Head } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ArrowLeftIcon, InfoIcon } from 'lucide-react';
 import { useMemo, useState } from 'react';
@@ -54,6 +54,7 @@ type Passenger = {
 type BookingData = {
     id: number;
     booking_number: string;
+    invoice_number?: string | null;
     status: string;
     departure_date: string | null;
     contact_name: string | null;
@@ -75,6 +76,12 @@ type BookingData = {
     passengers: Passenger[];
     rooms: any[];
     addons: any[];
+    input_by?: {
+        user_name: string;
+        role_label: string;
+        company_name?: string | null;
+        created_at: string | null;
+    } | null;
 };
 
 type PageProps = {
@@ -320,12 +327,7 @@ function ReadOnlyWizard({
     };
 
     const goBack = () => {
-        if (currentStep === 1) {
-            window.history.back();
-            return;
-        }
-        setDirection(-1);
-        setCurrentStep((s) => Math.max(1, s - 1) as WizardStepId);
+        router.visit(`/companies/${company.username}/dashboard/bookings`);
     };
 
     return (
@@ -404,7 +406,12 @@ function ReadOnlyWizard({
                                     tour={booking.tour as TourResource}
                                     status={booking.status as any}
                                     bookingNumber={booking.booking_number}
-                                    invoiceNumber={null}
+                                    invoiceNumber={
+                                        booking.invoice_number ??
+                                        (booking.status === 'full payment'
+                                            ? booking.booking_number
+                                            : null)
+                                    }
                                     departureDate={departureDate}
                                     vendor={vendor}
                                     agentName={booking.agent?.name ?? '-'}
@@ -426,6 +433,24 @@ function ReadOnlyWizard({
                                     timeLeftSeconds={0}
                                     currentStep={currentStep}
                                     timerStarted={false}
+                                    inputBy={
+                                        booking.input_by
+                                            ? {
+                                                  userName:
+                                                      booking.input_by
+                                                          .user_name,
+                                                  roleLabel:
+                                                      booking.input_by
+                                                          .role_label,
+                                                  companyName:
+                                                      booking.input_by
+                                                          .company_name,
+                                                  createdAt:
+                                                      booking.input_by
+                                                          .created_at,
+                                              }
+                                            : null
+                                    }
                                 />
                             </div>
 

@@ -59,6 +59,9 @@ class BookingService
                     'contact_phone' => data_get($data, 'contact_phone'),
                     'contact_notes' => data_get($data, 'contact_notes'),
                     'status' => BookingStatus::BOOKING_RESERVED,
+                    'input_by_user_id' => data_get($data, 'input_by_user_id', $user->id),
+                    'input_by_company_id' => data_get($data, 'input_by_company_id'),
+                    'input_by_role' => data_get($data, 'input_by_role', 'customer'),
                 ]
             );
 

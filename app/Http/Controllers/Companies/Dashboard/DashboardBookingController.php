@@ -8,6 +8,7 @@ use App\Actions\Booking\NotifyBookingPaymentEventAction;
 use App\Actions\Booking\SyncAvailabilityAction;
 use App\Enums\BookingStatus;
 use App\Enums\PaymentStatus;
+use App\Enums\VendorAgentPartnerStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreBookingRequest;
 use App\Models\AgentTour;
@@ -15,21 +16,25 @@ use App\Models\Booking;
 use App\Models\BookingDocument;
 use App\Models\Company;
 use App\Models\Payment;
+use App\Models\Role;
 use App\Models\Tour;
 use App\Models\TourAddOn;
 use App\Models\TourAvailability;
 use App\Models\TourPrice;
 use App\Models\TourSchedule;
 use App\Models\User;
+use App\Models\VendorAgentPartner;
 use App\Services\BookingNumberService;
 use App\Services\BookingPaymentReceiverService;
 use App\Services\BookingPricingService;
 use App\Services\BookingService;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
@@ -44,6 +49,11 @@ class DashboardBookingController extends Controller
     private const PAYMENT_UNAVAILABLE_MESSAGE = 'Payment is temporarily unavailable. Please try again later or contact customer support.';
 
     private const ONLINE_PAYMENT_UNAVAILABLE_MESSAGE = 'Online payment is temporarily unavailable. Please try again later or contact customer support.';
+
+    /**
+     * @var array<string, string>
+     */
+    private array $roleLabelCache = [];
 
     public function create(Company $company, Tour $tour): Response
     {
@@ -95,6 +105,7 @@ class DashboardBookingController extends Controller
         $bookingNumber = null;
         $dashboardUser = request()->user();
         $agent = $this->dashboardAgent($company, $tour);
+        $agentOptions = $this->agentOptionsForDashboardBooking($company);
         $existingBooking = null;
 
         if ($dashboardUser && $schedule && $isScheduleBookable && $requestedBookingNumber !== '') {
@@ -106,7 +117,21 @@ class DashboardBookingController extends Controller
 
             if ($existingBooking) {
                 $bookingNumber = $existingBooking->booking_number;
+                $existingBooking->load([
+                    'inputByCompany:id,name,type',
+                    'inputByUser:id,name',
+                    'passengers',
+                    'rooms',
+                    'user:id,name',
+                ]);
             }
+        }
+
+        if (($company->type->value ?? $company->type) === 'vendor' && $existingBooking?->agent_id) {
+            $agent = Company::query()
+                ->whereKey($existingBooking->agent_id)
+                ->where('type', 'agent')
+                ->first();
         }
 
         $paidAmount = $existingBooking
@@ -140,7 +165,10 @@ class DashboardBookingController extends Controller
             'vendor' => $tour->company,
             'tenant' => $agent,
             'bookingNumber' => $bookingNumber,
-            'existingBooking' => $existingBooking?->load(['passengers', 'rooms']),
+            'existingBooking' => $existingBooking,
+            'inputBy' => $existingBooking
+                ? $this->inputByPayload($existingBooking)
+                : $this->provisionalInputByPayload($dashboardUser, $company),
             'roomTypes' => [],
             'availability' => $availableSeats,
             'bookingSeatLimit' => $bookingSeatLimit,
@@ -167,6 +195,8 @@ class DashboardBookingController extends Controller
             'bookingPaymentResult' => null,
             'savedPassengers' => [],
             'customerOptions' => $this->customerOptionsForDashboardBooking($company),
+            'agentOptions' => $agentOptions,
+            'requiresAgentSelection' => ($company->type->value ?? $company->type) === 'vendor',
             'bookingConflict' => null,
             'dashboardBookingContext' => [
                 'isDashboard' => true,
@@ -194,6 +224,7 @@ class DashboardBookingController extends Controller
             'contact_email' => ['nullable', 'email', 'max:255'],
             'contact_phone' => ['nullable', 'string', 'max:50'],
             'contact_notes' => ['nullable', 'string', 'max:1000'],
+            'agent_id' => ['nullable', 'integer', 'exists:companies,id'],
             'passengers' => ['required', 'array', 'min:1'],
             'passengers.*.title' => ['nullable', 'string', 'max:20'],
             'passengers.*.first_name' => ['required', 'string', 'max:255'],
@@ -207,10 +238,11 @@ class DashboardBookingController extends Controller
         ]);
 
         $owner = $this->resolveBookingOwner($request, $data);
-        $agent = $this->dashboardAgent($company, $tour);
+        $agent = $this->resolveDashboardBookingAgent($company, $tour, data_get($data, 'agent_id'));
+        $inputByRole = $this->currentCompanyRoleName($request->user(), $company);
         $bookingTimeLimitMinutes = $this->resolveBookingTimeLimitMinutes($tour);
 
-        $booking = DB::transaction(function () use ($request, $data, $tour, $owner, $agent, $bookingTimeLimitMinutes, $company, $bookingNumberService): Booking {
+        $booking = DB::transaction(function () use ($request, $data, $tour, $owner, $agent, $inputByRole, $bookingTimeLimitMinutes, $company, $bookingNumberService): Booking {
             $bookingNumber = $this->resolveDashboardBookingNumber(data_get($data, 'booking_number'), $company, $bookingNumberService);
             $this->transferDashboardPlaceholderOwnership($bookingNumber, $request->user(), $owner);
 
@@ -282,6 +314,9 @@ class DashboardBookingController extends Controller
                     'contact_email' => $data['contact_email'] ?? null,
                     'contact_phone' => $data['contact_phone'] ?? null,
                     'contact_notes' => $data['contact_notes'] ?? null,
+                    'input_by_user_id' => $request->user()->id,
+                    'input_by_company_id' => $company->id,
+                    'input_by_role' => $inputByRole,
                 ]
             );
 
@@ -306,7 +341,7 @@ class DashboardBookingController extends Controller
         $this->assertCompanyCanBookTour($company, $tour);
 
         $validated = $request->validated();
-        $agent = $this->dashboardAgent($company, $tour);
+        $agent = $this->resolveDashboardBookingAgent($company, $tour, data_get($validated, 'agent_id'));
         $owner = $this->resolveBookingOwner($request, $validated);
         $this->assertPaymentTypeAllowedForTour($tour, (string) $validated['payment_type']);
 
@@ -316,6 +351,9 @@ class DashboardBookingController extends Controller
         $validated['vendor_id'] = $tour->company_id;
         $validated['agent_id'] = $agent?->id;
         $validated['tour_id'] = $tour->id;
+        $validated['input_by_user_id'] = $request->user()->id;
+        $validated['input_by_company_id'] = $company->id;
+        $validated['input_by_role'] = $this->currentCompanyRoleName($request->user(), $company);
 
         $bookingService->createBooking($validated, $owner);
 
@@ -409,6 +447,7 @@ class DashboardBookingController extends Controller
             'sender_account_number' => ['required', 'string', 'max:255', 'regex:/^\d+$/'],
             'transfer_amount' => ['required', 'numeric', 'min:1'],
             'payment_type' => ['required', 'string', 'in:down_payment,full_payment'],
+            'payment_date' => ['required', 'date', 'before_or_equal:today'],
             'proof' => ['required', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:5120'],
         ]);
 
@@ -431,6 +470,7 @@ class DashboardBookingController extends Controller
                     'sender_account' => $validated['sender_account_number'],
                     'proof_path' => $path,
                     'payment_type' => $validated['payment_type'],
+                    'payment_date' => Carbon::parse($validated['payment_date'])->toDateString(),
                     'payment_receiver_type' => $paymentReceiver['receiver_type'],
                     'payment_receiver_company_id' => $paymentReceiver['receiver_company']?->id,
                     'partnership_payment_mode' => $paymentReceiver['payment_mode'],
@@ -484,6 +524,7 @@ class DashboardBookingController extends Controller
                 'amount' => $validated['amount'],
                 'status' => 'unpaid',
                 'payload' => [
+                    'booking_payment_type' => $validated['payment_type'],
                     'payment_type' => $validated['payment_type'],
                     'payment_receiver_type' => $paymentReceiver['receiver_type'],
                     'payment_receiver_company_id' => $paymentReceiver['receiver_company']?->id,
@@ -528,6 +569,7 @@ class DashboardBookingController extends Controller
             $payment->update([
                 'status' => 'pending',
                 'payload' => [
+                    'booking_payment_type' => $validated['payment_type'],
                     'payment_type' => $validated['payment_type'],
                     'order_id' => $orderId,
                     'snap_token' => $snapToken,
@@ -539,7 +581,7 @@ class DashboardBookingController extends Controller
             ]);
 
             $booking->update([
-                'status' => BookingStatus::BOOKING_RESERVED,
+                'status' => $this->pendingOnlinePaymentBookingStatus($booking),
                 'payment_mode' => 'online',
             ]);
 
@@ -583,7 +625,7 @@ class DashboardBookingController extends Controller
 
             $payment->update([
                 'status' => $newStatus,
-                'payload' => array_merge($payment->payload ?? [], $transactionStatus),
+                'payload' => Payment::mergeMidtransPayload($payment->payload ?? [], $transactionStatus),
                 'paid_at' => $newStatus === PaymentStatus::PAID ? now() : null,
             ]);
 
@@ -661,6 +703,43 @@ class DashboardBookingController extends Controller
                 : null;
     }
 
+    private function resolveDashboardBookingAgent(Company $company, Tour $tour, mixed $agentId): ?Company
+    {
+        $companyType = $company->type->value ?? $company->type;
+
+        if ($companyType === 'agent') {
+            return $this->dashboardAgent($company, $tour);
+        }
+
+        if ($companyType !== 'vendor') {
+            return null;
+        }
+
+        $normalizedAgentId = (int) $agentId;
+
+        if ($normalizedAgentId <= 0) {
+            throw ValidationException::withMessages([
+                'agent_id' => 'Please select an agent for this booking.',
+            ]);
+        }
+
+        $partnership = VendorAgentPartner::query()
+            ->with('agent:id,name,username,email')
+            ->where('vendor_id', $company->id)
+            ->where('agent_id', $normalizedAgentId)
+            ->where('status', VendorAgentPartnerStatus::ACTIVE->value)
+            ->whereHas('agent.agentSubscription', fn (Builder $query): Builder => $this->eligibleAgentSubscriptionConstraint($query))
+            ->first();
+
+        if (! $partnership?->agent) {
+            throw ValidationException::withMessages([
+                'agent_id' => 'Please select an active agent partner for this booking.',
+            ]);
+        }
+
+        return $partnership->agent;
+    }
+
     private function resolveBookingOwner(Request $request, array $data): User
     {
         $email = trim((string) data_get($data, 'contact_email'));
@@ -688,32 +767,144 @@ class DashboardBookingController extends Controller
     }
 
     /**
-     * @return \Illuminate\Support\Collection<int, array{id: int, name: string, email: string, phone: string|null}>
+     * @return array{user_name: string, company_name: string|null, role_label: string, created_at: string|null}
      */
-    private function customerOptionsForDashboardBooking(Company $company): \Illuminate\Support\Collection
+    private function inputByPayload(Booking $booking): array
     {
-        $agentIds = $company->agentPartners()
+        $role = filled($booking->input_by_role)
+            ? (string) $booking->input_by_role
+            : 'customer';
+
+        $userName = $booking->inputByUser?->name
+            ?? $booking->user?->name
+            ?? $booking->contact_name
+            ?? 'Customer';
+
+        return [
+            'user_name' => $userName,
+            'company_name' => $booking->inputByCompany?->name,
+            'role_label' => $this->companyRoleLabel($role),
+            'created_at' => $booking->created_at?->toJSON(),
+        ];
+    }
+
+    /**
+     * @return array{user_name: string, company_name: string|null, role_label: string, created_at: string|null}
+     */
+    private function provisionalInputByPayload(?User $user, Company $company): array
+    {
+        $role = $this->currentCompanyRoleName($user, $company);
+
+        return [
+            'user_name' => $user?->name ?? 'Dashboard user',
+            'company_name' => $company->name,
+            'role_label' => $this->companyRoleLabel($role),
+            'created_at' => now()->toJSON(),
+        ];
+    }
+
+    private function currentCompanyRoleName(?User $user, Company $company): string
+    {
+        $companyType = (string) ($company->type->value ?? $company->type);
+
+        if (! $user) {
+            return $companyType;
+        }
+
+        $team = $company->teams()
+            ->where('user_id', $user->id)
             ->where('status', 'active')
-            ->pluck('agent_id');
+            ->first(['id', 'invite_role']);
+
+        if (filled($team?->invite_role)) {
+            return (string) $team->invite_role;
+        }
+
+        $roleName = $user->roles()
+            ->where('name', 'like', "company:{$company->id}:%")
+            ->value('name');
+
+        if (filled($roleName)) {
+            return (string) $roleName;
+        }
+
+        return $companyType;
+    }
+
+    private function companyRoleLabel(string $role): string
+    {
+        if (! array_key_exists($role, $this->roleLabelCache)) {
+            $displayName = str_contains($role, ':')
+                ? Role::query()->where('name', $role)->value('display_name')
+                : null;
+
+            $this->roleLabelCache[$role] = filled($displayName)
+                ? (string) $displayName
+                : str($role)->afterLast(':')->replace(['_', '-'], ' ')->title()->toString();
+        }
+
+        return $this->roleLabelCache[$role];
+    }
+
+    /**
+     * @return Collection<int, array{id: int, company_id: int|null, name: string, email: string, phone: string|null}>
+     */
+    private function customerOptionsForDashboardBooking(Company $company): Collection
+    {
+        $companyType = $company->type->value ?? $company->type;
+
+        $customerCompanyIds = $companyType === 'vendor'
+            ? $company->agentPartners()
+                ->where('status', VendorAgentPartnerStatus::ACTIVE->value)
+                ->whereHas('agent.agentSubscription', fn (Builder $query): Builder => $this->eligibleAgentSubscriptionConstraint($query))
+                ->pluck('agent_id')
+            : collect([$company->id]);
 
         return User::query()
-            ->where(function ($query) use ($company, $agentIds): void {
-                $query->where('company_id', $company->id)
-                    ->when($agentIds->isNotEmpty(), function ($query) use ($agentIds): void {
-                        $query->orWhereIn('company_id', $agentIds);
-                    });
-            })
+            ->whereIn('company_id', $customerCompanyIds)
             ->whereNotNull('email')
             ->orderBy('name')
             ->limit(50)
-            ->get(['id', 'name', 'email', 'phone'])
+            ->get(['id', 'company_id', 'name', 'email', 'phone'])
             ->map(fn (User $user): array => [
                 'id' => $user->id,
+                'company_id' => $user->company_id,
                 'name' => $user->name,
                 'email' => $user->email,
                 'phone' => $user->phone,
             ])
             ->values();
+    }
+
+    /**
+     * @return Collection<int, array{id: int, name: string, username: string, email: string|null}>
+     */
+    private function agentOptionsForDashboardBooking(Company $company): Collection
+    {
+        if (($company->type->value ?? $company->type) !== 'vendor') {
+            return collect();
+        }
+
+        return $company->agentPartners()
+            ->with('agent:id,name,username,email')
+            ->where('status', VendorAgentPartnerStatus::ACTIVE->value)
+            ->whereHas('agent.agentSubscription', fn (Builder $query): Builder => $this->eligibleAgentSubscriptionConstraint($query))
+            ->get()
+            ->map(fn (VendorAgentPartner $partner): ?array => $partner->agent ? [
+                'id' => $partner->agent->id,
+                'name' => $partner->agent->name,
+                'username' => $partner->agent->username,
+                'email' => $partner->agent->email,
+            ] : null)
+            ->filter()
+            ->values();
+    }
+
+    private function eligibleAgentSubscriptionConstraint(Builder $query): Builder
+    {
+        return $query
+            ->whereNotNull('package_id')
+            ->where('package_id', '!=', 1);
     }
 
     private function transferDashboardPlaceholderOwnership(string $bookingNumber, ?User $dashboardUser, User $owner): void
@@ -732,7 +923,7 @@ class DashboardBookingController extends Controller
             ->update(['user_id' => $owner->id]);
     }
 
-    private function tourPricesForSchedule(Tour $tour, ?TourSchedule $schedule): \Illuminate\Support\Collection
+    private function tourPricesForSchedule(Tour $tour, ?TourSchedule $schedule): Collection
     {
         return TourPrice::query()
             ->with('priceCategory:id,name,description')
@@ -827,6 +1018,15 @@ class DashboardBookingController extends Controller
         } catch (ValidationException) {
             throw ValidationException::withMessages(['payment' => self::PAYMENT_UNAVAILABLE_MESSAGE]);
         }
+    }
+
+    private function pendingOnlinePaymentBookingStatus(Booking $booking): BookingStatus
+    {
+        if ($booking->status === BookingStatus::DOWN_PAYMENT) {
+            return BookingStatus::DOWN_PAYMENT;
+        }
+
+        return BookingStatus::BOOKING_RESERVED;
     }
 
     private function fullPaymentAvailabilityForBooking(?Booking $booking, float $incomingAmount): array

@@ -15,6 +15,8 @@ use App\Models\BookingActionRequest;
 use App\Models\BookingPassenger;
 use App\Models\Company;
 use App\Models\Payment;
+use App\Models\Role;
+use App\Models\TourAddOn;
 use App\Models\TourAvailability;
 use App\Models\TourPrice;
 use App\Models\TourSchedule;
@@ -28,11 +30,17 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class BookingIndexController extends Controller
 {
+    /**
+     * @var array<string, string>
+     */
+    private array $roleLabelCache = [];
+
     /**
      * @var list<string>
      */
@@ -40,6 +48,7 @@ class BookingIndexController extends Controller
         'awaiting payment',
         'booking reserved',
         'waiting payment approval',
+        'down payment',
         'full payment',
     ];
 
@@ -54,6 +63,14 @@ class BookingIndexController extends Controller
     /**
      * @var list<string>
      */
+    private const BOOKING_PAYMENT_TYPES = [
+        'down_payment',
+        'full_payment',
+    ];
+
+    /**
+     * @var list<string>
+     */
     private const FOLLOW_UP_STATUSES = [
         'awaiting payment',
         'waiting payment approval',
@@ -63,8 +80,12 @@ class BookingIndexController extends Controller
 
     private const FOLLOW_UP_DUE_SOON_DAYS = 7;
 
-    public function index(Company $company, Request $request): Response
+    public function index(Company $company, Request $request): Response|RedirectResponse
     {
+        if (! $this->userCanAccessCompanyDashboard($request->user(), $company)) {
+            return redirect('/');
+        }
+
         app(ExpireBookingReservationsAction::class)->execute($company);
 
         $bookings = Booking::query()
@@ -108,6 +129,8 @@ class BookingIndexController extends Controller
                 'agent:id,name',
                 'agent.companySetting',
                 'user:id,name',
+                'inputByUser:id,name',
+                'inputByCompany:id,name,type',
                 'passengers:id,booking_id,price_category,price_amount',
                 'payments',
                 'actionRequests' => fn ($query) => $query->where('status', 'pending')->latest(),
@@ -131,7 +154,10 @@ class BookingIndexController extends Controller
             $documentFollowup = $this->documentFollowupPayload($company, $booking);
             $booking->payment_followup = $paymentFollowup;
             $booking->document_followup = $documentFollowup;
+            $booking->input_by = $this->inputByPayload($booking);
             $this->addToFollowupSummary($followupSummary, $paymentFollowup, $documentFollowup);
+            $booking->down_payment_detail = $this->paymentDetailPayload($booking, 'down_payment', $paymentReceiverService);
+            $booking->full_payment_detail = $this->paymentDetailPayload($booking, 'full_payment', $paymentReceiverService);
             $booking->manual_payment = $this->resolvePendingManualPayment($booking);
             $booking->can_review_manual_payment = $booking->manual_payment !== null
                 && $paymentReceiverService->companyCanReviewManualPayment($company, $booking);
@@ -153,6 +179,7 @@ class BookingIndexController extends Controller
                 : null;
             $booking->can_cancel = in_array($this->bookingStatusValue($booking), self::CANCELLABLE_STATUSES, true);
             $booking->can_refund = in_array($this->bookingStatusValue($booking), self::REFUNDABLE_STATUSES, true);
+            $booking->can_reorder = $this->canReorderBooking($booking);
 
             return $booking;
         });
@@ -177,6 +204,32 @@ class BookingIndexController extends Controller
         $booking = app(ExpireBookingReservationsAction::class)->expireIfDue($booking);
 
         return $this->renderBookingPage($company, $booking, 'companies/dashboard/bookings/edit');
+    }
+
+    public function reorder(Company $company, Booking $booking): RedirectResponse
+    {
+        $this->assertCompanyCanAccessBooking($company, $booking);
+        $booking = app(ExpireBookingReservationsAction::class)->expireIfDue($booking);
+        $booking->loadMissing(['tour', 'vendor.companySetting']);
+
+        abort_unless($this->canReorderBooking($booking), 422);
+
+        DB::transaction(function () use ($booking): void {
+            $booking->update([
+                'status' => BookingStatus::AWAITING_PAYMENT,
+                'reserved_type' => 'system',
+                'reserved_expires_at' => null,
+            ]);
+        });
+
+        app(SyncAvailabilityAction::class)->executeForBooking($booking->fresh());
+
+        return to_route('companies.dashboard.bookings.create', [
+            'company' => $company,
+            'tour' => $booking->tour,
+            'date' => Carbon::parse($booking->departure_date)->toDateString(),
+            'booking_number' => $booking->booking_number,
+        ]);
     }
 
     public function invoice(Company $company, Booking $booking): HttpResponse
@@ -361,7 +414,7 @@ class BookingIndexController extends Controller
 
             $payment->update([
                 'status' => PaymentStatus::PAID,
-                'paid_at' => now(),
+                'paid_at' => $this->manualPaymentPaidAt($payment),
             ]);
 
             $booking->update([
@@ -606,6 +659,8 @@ class BookingIndexController extends Controller
             'agent:id,name',
             'agent.companySetting',
             'user:id,name',
+            'inputByUser:id,name',
+            'inputByCompany:id,name,type',
             'passengers',
             'rooms',
             'addons',
@@ -618,7 +673,7 @@ class BookingIndexController extends Controller
         $addOns = [];
 
         if ($tour) {
-            $schedule = \App\Models\TourSchedule::where('tour_code', $tour->code)
+            $schedule = TourSchedule::where('tour_code', $tour->code)
                 ->whereDate('departure_date', $booking->departure_date)
                 ->first();
 
@@ -648,7 +703,7 @@ class BookingIndexController extends Controller
                 $bookingAddOns = $booking->addons
                     ->keyBy(fn ($addon) => strtolower((string) $addon->name));
 
-                $addOns = \App\Models\TourAddOn::where('schedule_id', $schedule->id)
+                $addOns = TourAddOn::where('schedule_id', $schedule->id)
                     ->where('tour_id', $tour->id)
                     ->get()
                     ->map(function ($addon) use ($bookingAddOns) {
@@ -696,6 +751,8 @@ class BookingIndexController extends Controller
             ->where('status', PaymentStatus::PAID)
             ->sum('amount');
         $remainingBalance = max(0.0, (float) $booking->grand_total - $paidAmount);
+        $booking->commission_amount = $this->resolveCommissionAmount($booking);
+        $booking->input_by = $this->inputByPayload($booking);
         [$fullPaymentAvailable, $paymentUnavailableReason] = $this->fullPaymentAvailabilityForBooking($booking, $remainingBalance);
         $editMode = $this->resolveEditMode($booking);
 
@@ -883,7 +940,222 @@ class BookingIndexController extends Controller
             'proof_path' => $proofPath,
             'proof_url' => $proofPath ? Storage::disk('public')->url($proofPath) : null,
             'payment_type' => data_get($manualPayment->payload, 'payment_type'),
+            'payment_date' => data_get($manualPayment->payload, 'payment_date'),
         ];
+    }
+
+    private function userCanAccessCompanyDashboard(mixed $user, Company $company): bool
+    {
+        if (! $user) {
+            return false;
+        }
+
+        if (method_exists($user, 'hasRole') && $user->hasRole('user:admin')) {
+            return true;
+        }
+
+        return $company->teams()
+            ->where('user_id', $user->id)
+            ->where('status', 'active')
+            ->exists();
+    }
+
+    /**
+     * @return array{user_name: string, company_name: string|null, role_label: string, created_at: string|null}
+     */
+    private function inputByPayload(Booking $booking): array
+    {
+        $role = filled($booking->input_by_role)
+            ? (string) $booking->input_by_role
+            : 'customer';
+
+        $userName = $booking->inputByUser?->name
+            ?? $booking->user?->name
+            ?? $booking->contact_name
+            ?? 'Customer';
+
+        return [
+            'user_name' => $userName,
+            'company_name' => $booking->inputByCompany?->name,
+            'role_label' => $this->companyRoleLabel($role),
+            'created_at' => $booking->created_at?->toJSON(),
+        ];
+    }
+
+    private function companyRoleLabel(string $role): string
+    {
+        if (! array_key_exists($role, $this->roleLabelCache)) {
+            $displayName = str_contains($role, ':')
+                ? Role::query()->where('name', $role)->value('display_name')
+                : null;
+
+            $this->roleLabelCache[$role] = filled($displayName)
+                ? (string) $displayName
+                : str($role)->afterLast(':')->replace(['_', '-'], ' ')->title()->toString();
+        }
+
+        return $this->roleLabelCache[$role];
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function paymentDetailPayload(Booking $booking, string $paymentType, BookingPaymentReceiverService $paymentReceiverService): ?array
+    {
+        $paidPayments = $booking->payments
+            ->filter(fn (Payment $payment): bool => $payment->status === PaymentStatus::PAID)
+            ->sortBy(fn (Payment $payment): string => (string) ($payment->paid_at ?? $payment->created_at))
+            ->values();
+
+        $payment = $paidPayments
+            ->filter(fn (Payment $payment): bool => $this->bookingPaymentType($payment) === $paymentType)
+            ->sortByDesc(fn (Payment $payment): string => (string) ($payment->paid_at ?? $payment->created_at))
+            ->first();
+
+        if (! $payment && $paymentType === 'full_payment') {
+            $payment = $this->inferLegacyFullPaymentDetail($booking, $paidPayments);
+        }
+
+        if (! $payment) {
+            return null;
+        }
+
+        $paymentReceiver = $paymentReceiverService->resolveForBooking($booking);
+        $receiverType = data_get($payment->payload, 'payment_receiver_type')
+            ?: $paymentReceiver['receiver_type'];
+
+        return [
+            'method_label' => $payment->provider === 'manual' ? 'Manual payment' : 'Online payment',
+            'receiver_label' => $receiverType === 'agent' ? 'agent' : 'vendor',
+            'amount' => (float) $payment->amount,
+            'payment_date' => $this->paymentDisplayDate($payment),
+            'booking_payment_type' => $this->bookingPaymentType($payment) ?? $paymentType,
+            'receipt' => $this->paymentReceiptPayload($payment),
+        ];
+    }
+
+    private function inferLegacyFullPaymentDetail(Booking $booking, Collection $paidPayments): ?Payment
+    {
+        if ($this->bookingStatusValue($booking) !== BookingStatus::FULL_PAYMENT->value) {
+            return null;
+        }
+
+        $grandTotal = (float) $booking->grand_total;
+
+        if ($grandTotal <= 0) {
+            return null;
+        }
+
+        $runningPaid = 0.0;
+        $inferredPayment = null;
+
+        foreach ($paidPayments as $payment) {
+            $paymentType = $this->bookingPaymentType($payment);
+
+            if (filled($paymentType)) {
+                $runningPaid += (float) $payment->amount;
+
+                continue;
+            }
+
+            $amount = (float) $payment->amount;
+            $completesGrandTotal = $runningPaid < $grandTotal
+                && ($runningPaid + $amount) >= $grandTotal;
+
+            if ($payment->provider !== 'manual' && $completesGrandTotal) {
+                $inferredPayment = $payment;
+            }
+
+            $runningPaid += $amount;
+        }
+
+        return $inferredPayment;
+    }
+
+    private function bookingPaymentType(Payment $payment): ?string
+    {
+        $bookingPaymentType = data_get($payment->payload, 'booking_payment_type');
+
+        if (in_array($bookingPaymentType, self::BOOKING_PAYMENT_TYPES, true)) {
+            return $bookingPaymentType;
+        }
+
+        $paymentType = data_get($payment->payload, 'payment_type');
+
+        if (in_array($paymentType, self::BOOKING_PAYMENT_TYPES, true)) {
+            return $paymentType;
+        }
+
+        return null;
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function paymentReceiptPayload(Payment $payment): ?array
+    {
+        if ($payment->provider === 'manual') {
+            $proofPath = data_get($payment->payload, 'proof_path');
+
+            return [
+                'type' => 'manual',
+                'url' => filled($proofPath) ? Storage::disk('public')->url((string) $proofPath) : null,
+                'provider' => $payment->provider,
+                'method' => $payment->payment_method,
+                'order_id' => null,
+                'transaction_id' => null,
+                'status' => $payment->status->value,
+                'raw' => null,
+            ];
+        }
+
+        if ($payment->provider !== 'midtrans') {
+            return null;
+        }
+
+        $midtransPayload = data_get($payment->payload, 'midtrans');
+        $rawPayload = is_array($midtransPayload) ? $midtransPayload : ($payment->payload ?? []);
+
+        return [
+            'type' => 'online',
+            'url' => null,
+            'provider' => $payment->provider,
+            'method' => (string) (data_get($rawPayload, 'payment_type') ?: $payment->payment_method),
+            'order_id' => data_get($payment->payload, 'order_id') ?: data_get($rawPayload, 'order_id'),
+            'transaction_id' => data_get($rawPayload, 'transaction_id'),
+            'status' => data_get($rawPayload, 'transaction_status') ?: $payment->status->value,
+            'raw' => $rawPayload,
+        ];
+    }
+
+    private function paymentDisplayDate(Payment $payment): ?string
+    {
+        $payloadPaymentDate = data_get($payment->payload, 'payment_date');
+
+        if ($payment->provider === 'manual') {
+            if (filled($payloadPaymentDate)) {
+                return Carbon::parse($payloadPaymentDate)->toDateString();
+            }
+
+            return ($payment->paid_at ?? $payment->created_at)?->toDateString();
+        }
+
+        if (filled($payloadPaymentDate)) {
+            return Carbon::parse($payloadPaymentDate)->toJSON();
+        }
+
+        return ($payment->paid_at ?? $payment->created_at)?->toJSON();
+    }
+
+    private function manualPaymentPaidAt(Payment $payment): \DateTimeInterface
+    {
+        $payloadPaymentDate = data_get($payment->payload, 'payment_date');
+
+        if (filled($payloadPaymentDate)) {
+            return Carbon::parse($payloadPaymentDate)->startOfDay();
+        }
+
+        return now();
     }
 
     private function assertPaymentReviewable(Company $company, Booking $booking, Payment $payment): void
@@ -909,6 +1181,54 @@ class BookingIndexController extends Controller
             : (int) $booking->agent_id === (int) $company->id;
 
         abort_unless($belongsToCompany, 404);
+    }
+
+    private function canReorderBooking(Booking $booking): bool
+    {
+        if ($this->bookingStatusValue($booking) !== BookingStatus::EXPIRED->value) {
+            return false;
+        }
+
+        if (! $booking->departure_date || ! $booking->tour) {
+            return false;
+        }
+
+        $departureDate = Carbon::parse($booking->departure_date);
+
+        if (! ($departureDate->isToday() || $departureDate->isFuture())) {
+            return false;
+        }
+
+        return $this->resolveBookableSchedule($booking) !== null;
+    }
+
+    private function resolveBookableSchedule(Booking $booking): ?TourSchedule
+    {
+        if (! $this->isDepartureDateInsideBookingWindow($booking)) {
+            return null;
+        }
+
+        return TourSchedule::query()
+            ->where('tour_id', $booking->tour_id)
+            ->where('company_id', $booking->vendor_id)
+            ->where('is_active', true)
+            ->whereDate('departure_date', Carbon::parse($booking->departure_date)->toDateString())
+            ->first();
+    }
+
+    private function isDepartureDateInsideBookingWindow(Booking $booking): bool
+    {
+        $booking->loadMissing(['vendor.companySetting', 'tour.company.companySetting']);
+
+        $deadlineDays = (int) (
+            $booking->vendor?->companySetting?->booking_deadline
+            ?? $booking->tour?->company?->companySetting?->booking_deadline
+            ?? 0
+        );
+
+        return Carbon::parse($booking->departure_date)
+            ->startOfDay()
+            ->gte(now()->startOfDay()->addDays($deadlineDays));
     }
 
     private function resolveCommissionAmount(Booking $booking): float
@@ -1006,7 +1326,7 @@ class BookingIndexController extends Controller
                 ->assertCanFinalizeIncomingAmount($booking->fresh(), $incomingAmount);
 
             return [true, null];
-        } catch (\Illuminate\Validation\ValidationException) {
+        } catch (ValidationException) {
             return [false, 'Payment is temporarily unavailable. Please try again later or contact customer support.'];
         }
     }
