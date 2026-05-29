@@ -138,7 +138,15 @@ export interface BookingContact {
 
 export interface DashboardCustomerOption {
     id: number;
+    company_id: number | null;
     name: string;
     email: string;
     phone: string | null;
+}
+
+export interface BookingInputBy {
+    userName: string;
+    roleLabel: string;
+    companyName?: string | null;
+    createdAt: string | null;
 }
