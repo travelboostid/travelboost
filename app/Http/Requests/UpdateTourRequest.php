@@ -40,6 +40,7 @@ class UpdateTourRequest extends FormRequest
             'country_id' => 'nullable|exists:countries,id',
             'destination' => 'nullable|string|max:100',
             'category_id' => 'nullable|exists:tour_categories,id',
+            'product_commission_category_id' => 'required|exists:product_commission_categories,id',
             'parent_id' => 'nullable|exists:tours,id',
             'user_id' => 'nullable|exists:users,id',
             'image_id' => 'nullable|exists:medias,id',

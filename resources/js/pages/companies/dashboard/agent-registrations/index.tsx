@@ -142,7 +142,10 @@ export default function Page({ data }: PageProps) {
                                 agent_registration: registration.id,
                             }).url,
                             { payment_mode: val },
-                            { preserveScroll: true },
+                            {
+                                preserveScroll: true,
+                                preserveState: true,
+                            },
                         );
                     };
 

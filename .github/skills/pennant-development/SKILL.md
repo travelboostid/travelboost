@@ -46,7 +46,7 @@ if (Feature::for($user)->active('new-dashboard')) {
 <!-- Blade Directive -->
 
 ```blade
-@feature('new-dashboard')
+@feature ('new-dashboard')
     <x-new-dashboard />
 @else
     <x-old-dashboard />

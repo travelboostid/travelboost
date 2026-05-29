@@ -16,6 +16,7 @@ class ParameterVendorController extends Controller
             [
                 'booking_deadline' => 0,
                 'minimum_down_payment' => 0,
+                'minimum_down_payment_value' => 0,
                 'minimum_vat' => 0,
                 'booking_entry_time_limit' => 0,
                 'full_payment_deadline' => 0,
@@ -33,6 +34,7 @@ class ParameterVendorController extends Controller
         $validated = $request->validate([
             'booking_deadline' => ['required', 'integer', 'min:0'],
             'minimum_down_payment' => ['required', 'numeric', 'min:0'],
+            'minimum_down_payment_value' => ['required', 'numeric', 'min:0'],
             'minimum_vat' => ['required', 'numeric', 'min:0'],
             'term_conditions' => ['nullable', 'string'],
             'booking_entry_time_limit' => ['required', 'integer', 'min:0'],

@@ -38,6 +38,7 @@ import {
     TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { InfoIcon } from 'lucide-react';
+import SelectProductCommissionCategory from './components/select-product-commission-category';
 
 ///////////tab 2
 type RoomPrice = {
@@ -73,6 +74,8 @@ export default function Page() {
     const [regionId, setRegionId] = useState<number | null>(null);
     const [countryId, setCountryId] = useState<number | null>(null);
     const { company } = usePageSharedDataProps();
+    const { auth } = usePage().props as any;
+    const { productCommissionCategories } = usePage().props as any;
     const handleSuccess = () => {
         router.visit(index({ username: company.username }), { replace: true });
     };
@@ -128,6 +131,7 @@ export default function Page() {
         region_id: '',
         country_id: '',
         category_id: '',
+        product_commission_category_id: '',
         status: 'inactive',
         image_id: '',
         document_id: '',
@@ -461,7 +465,7 @@ export default function Page() {
                                         </div>
 
                                         {/* Description */}
-                                        <div className="grid gap-2">
+                                        <div className="grid gap-2 md:col-span-2">
                                             {/* <div className="grid gap-2 md:col-span-2"> */}
                                             <Label htmlFor="description">
                                                 Description
@@ -516,6 +520,35 @@ export default function Page() {
                                             />
                                             <InputError
                                                 message={errors.duration_days}
+                                            />
+                                        </div>
+
+                                        {/* Product Commission Category */}
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="product_commission_category_id">
+                                                Product Commission Category
+                                            </Label>
+
+                                            <SelectProductCommissionCategory
+                                                value={
+                                                    data.product_commission_category_id ||
+                                                    undefined
+                                                }
+                                                categories={
+                                                    productCommissionCategories
+                                                }
+                                                onChange={(val) =>
+                                                    setData(
+                                                        'product_commission_category_id',
+                                                        Number(val),
+                                                    )
+                                                }
+                                            />
+
+                                            <InputError
+                                                message={
+                                                    errors.product_commission_category_id
+                                                }
                                             />
                                         </div>
 
@@ -631,7 +664,7 @@ export default function Page() {
                                         {/* Category */}
                                         <div className="grid gap-2">
                                             <Label htmlFor="category_id">
-                                                Category
+                                                Product Catalog Category
                                             </Label>
                                             <SelectCategory
                                                 name="category_id"
@@ -891,6 +924,20 @@ export default function Page() {
                                                 </div>
                                             </div>
                                         </div>
+                                    </div>
+                                </div>
+                                {/* Created By */}
+                                <div className="grid gap-2">
+                                    <Label>Input By</Label>
+
+                                    <div className="rounded-xl border bg-muted/30 px-4 py-3">
+                                        <div className="font-medium">
+                                            {auth.user?.name || '-'}
+                                        </div>
+
+                                        {/* <div className="text-sm text-muted-foreground">
+                                            User ID: {auth.user?.id || '-'}
+                                        </div> */}
                                     </div>
                                 </div>
                             </div>
