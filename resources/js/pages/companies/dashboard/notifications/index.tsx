@@ -27,11 +27,12 @@ import 'dayjs/locale/id';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import {
     CheckCheckIcon,
+    ExternalLinkIcon,
     EyeIcon,
     MoreHorizontal,
     TrashIcon,
 } from 'lucide-react';
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { toast } from 'sonner';
 
 dayjs.extend(relativeTime);
@@ -75,16 +76,20 @@ function DetailRow({
 export default function NotificationsPage({ data }: NotificationsPageProps) {
     const { company } = usePageSharedDataProps();
 
-    const markAsRead = (id: string) => {
-        router.put(
-            `/companies/${company.username}/dashboard/notifications/${id}`,
-            {},
-            {
-                preserveScroll: true,
-                onSuccess: () => toast.success('Notification marked as read'),
-            },
-        );
-    };
+    const markAsRead = useCallback(
+        (id: string) => {
+            router.put(
+                `/companies/${company.username}/dashboard/notifications/${id}`,
+                {},
+                {
+                    preserveScroll: true,
+                    onSuccess: () =>
+                        toast.success('Notification marked as read'),
+                },
+            );
+        },
+        [company.username],
+    );
 
     const markAllAsRead = () => {
         router.post(
@@ -98,17 +103,20 @@ export default function NotificationsPage({ data }: NotificationsPageProps) {
         );
     };
 
-    const deleteNotification = (id: string) => {
-        if (confirm('Are you sure you want to delete this notification?')) {
-            router.delete(
-                `/companies/${company.username}/dashboard/notifications/${id}`,
-                {
-                    preserveScroll: true,
-                    onSuccess: () => toast.success('Notification deleted'),
-                },
-            );
-        }
-    };
+    const deleteNotification = useCallback(
+        (id: string) => {
+            if (confirm('Are you sure you want to delete this notification?')) {
+                router.delete(
+                    `/companies/${company.username}/dashboard/notifications/${id}`,
+                    {
+                        preserveScroll: true,
+                        onSuccess: () => toast.success('Notification deleted'),
+                    },
+                );
+            }
+        },
+        [company.username],
+    );
 
     const columns = useMemo<ColumnDef<NotificationResource>[]>(
         () => [
@@ -220,6 +228,15 @@ export default function NotificationsPage({ data }: NotificationsPageProps) {
                 id: 'actions',
                 cell: ({ row }) => {
                     const notif = row.original;
+                    const actionUrl =
+                        typeof notif.data?.action_url === 'string'
+                            ? notif.data.action_url
+                            : null;
+                    const actionLabel =
+                        typeof notif.data?.action_label === 'string'
+                            ? notif.data.action_label
+                            : 'Open';
+
                     return (
                         <div className="flex items-center gap-2">
                             <Dialog>
@@ -277,6 +294,17 @@ export default function NotificationsPage({ data }: NotificationsPageProps) {
                                             }
                                         />
                                     </div>
+                                    {actionUrl && (
+                                        <Button
+                                            className="w-full"
+                                            onClick={() =>
+                                                router.visit(actionUrl)
+                                            }
+                                        >
+                                            <ExternalLinkIcon className="mr-2 h-4 w-4" />
+                                            {actionLabel}
+                                        </Button>
+                                    )}
                                 </DialogContent>
                             </Dialog>
 
@@ -301,6 +329,17 @@ export default function NotificationsPage({ data }: NotificationsPageProps) {
                                         >
                                             <CheckCheckIcon className="mr-2 h-4 w-4" />{' '}
                                             Mark as Read
+                                        </DropdownMenuItem>
+                                    )}
+                                    {actionUrl && (
+                                        <DropdownMenuItem
+                                            className="cursor-pointer"
+                                            onClick={() =>
+                                                router.visit(actionUrl)
+                                            }
+                                        >
+                                            <ExternalLinkIcon className="mr-2 h-4 w-4" />
+                                            {actionLabel}
                                         </DropdownMenuItem>
                                     )}
                                     <DropdownMenuItem
