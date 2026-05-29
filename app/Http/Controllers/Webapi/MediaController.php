@@ -149,7 +149,7 @@ class MediaController extends Controller
 
         $files = [];
 
-        $image = $this->imageManager->read($file->getRealPath() ?: $file->getPathname());
+        $image = $this->imageManager->decode($file->getRealPath() ?: $file->getPathname());
 
         foreach ($variants as $variant) {
             // Skip if width > original and not always resized
