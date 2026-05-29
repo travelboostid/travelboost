@@ -7,7 +7,7 @@ const CONFIG = {
     branch: 'dev',
     sshUser: 'travelboost',
     sshHost: '103.127.138.76',
-    remotePath: '~/travelboost-dev',
+    remotePath: '~/travelboost',
     buildPath: 'public/build',
 };
 
