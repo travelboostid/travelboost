@@ -3,10 +3,12 @@
 namespace App\Http\Controllers\Companies\Dashboard;
 
 use App\Http\Controllers\Controller;
+use App\Models\AgentTour;
 use App\Models\Company;
 use App\Models\Tour;
 use App\Models\TourCategory;
 use App\Models\VendorAgentPartner;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class VendorTourCatalogController extends Controller
@@ -53,7 +55,7 @@ class VendorTourCatalogController extends Controller
                 $query->where('name', 'ilike', "%{$search}%");
             })
             ->get();
-        $agentTours = \App\Models\AgentTour::where('company_id', $vendor->id)
+        $agentTours = AgentTour::where('company_id', $vendor->id)
             ->when(request('category'), function ($q, $categoryId) {
                 $q->where('category_id', $categoryId);
             })
@@ -98,7 +100,7 @@ class VendorTourCatalogController extends Controller
                     $schedule->setAttribute('price', $this->lowestDiscountedSchedulePrice($schedule->prices));
                 });
 
-                $tour->agent_status = \Illuminate\Support\Facades\DB::table('agent_tours')
+                $tour->agent_status = DB::table('agent_tours')
                     ->where('tour_id', $tour->id)
                     ->where('company_id', $company->id)
                     ->value('status');

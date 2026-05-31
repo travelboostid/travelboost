@@ -23,7 +23,6 @@ import { Ban, MoreHorizontal, Text } from 'lucide-react';
 import { useMemo } from 'react';
 import { EmptyAgents } from './components/empty-agents';
 
-
 type NetworkPerson = {
     id: number;
     name?: string | null;
@@ -277,7 +276,9 @@ export default function Page({ data }: PageProps) {
 
                     return (
                         <div className="min-w-[110px] text-sm text-slate-700 dark:text-slate-300">
-                            {createdAt ? dayjs(createdAt).format('DD MMM YYYY') : '-'}
+                            {createdAt
+                                ? dayjs(createdAt).format('DD MMM YYYY')
+                                : '-'}
                         </div>
                     );
                 },

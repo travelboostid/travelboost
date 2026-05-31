@@ -111,7 +111,9 @@ let article = `{{ json_encode($article) }}`;
 Correct:
 
 ```blade
-<button class="js-fav-article" data-article='@json($article)'>{{ $article->name }}</button>
+<button class="js-fav-article" data-article='@json($article)'>
+    {{ $article->name }}
+</button>
 ```
 
 Pass data to JS via data attributes or use a dedicated PHP-to-JS package.

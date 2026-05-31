@@ -6,6 +6,7 @@ import { FormattedMessage, useIntl } from 'react-intl';
 type Settings = {
     booking_deadline: number;
     minimum_down_payment: number;
+    minimum_down_payment_value: number;
     minimum_vat: number;
     term_conditions: string;
     booking_entry_time_limit: number;
@@ -31,6 +32,8 @@ export default function ParameterVendorPage() {
     const { data, setData, post, processing, errors } = useForm({
         booking_deadline: props.settings?.booking_deadline ?? 0,
         minimum_down_payment: props.settings?.minimum_down_payment ?? 0,
+        minimum_down_payment_value:
+            props.settings?.minimum_down_payment_value ?? 0,
         minimum_vat: props.settings?.minimum_vat ?? 0,
         term_conditions: props.settings?.term_conditions ?? '',
         booking_entry_time_limit: props.settings?.booking_entry_time_limit ?? 0,
@@ -57,6 +60,14 @@ export default function ParameterVendorPage() {
                 minimum_down_payment:
                     parseFloat(
                         String(data.minimum_down_payment).replace(',', '.'),
+                    ) || 0,
+
+                minimum_down_payment_value:
+                    parseFloat(
+                        String(data.minimum_down_payment_value).replace(
+                            ',',
+                            '.',
+                        ),
                     ) || 0,
 
                 minimum_vat:
@@ -193,10 +204,10 @@ export default function ParameterVendorPage() {
                             <FormattedMessage defaultMessage="Booking Payment Rules" />
                         </h2>
 
-                        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+                        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                             <div>
-                                <label className={labelClass}>
-                                    <FormattedMessage defaultMessage="Minimum Down Payment (%)" />
+                                <label className={labelClassSingleRow}>
+                                    <FormattedMessage defaultMessage="Minimum Down Payment (%) / amount" />
                                 </label>
                                 <input
                                     type="text"
@@ -219,50 +230,73 @@ export default function ParameterVendorPage() {
                             </div>
 
                             <div>
-                                <label className={labelClass}>
-                                    <FormattedMessage defaultMessage="VAT (%)" />
+                                <label className={labelClassSingleRow}>
+                                    <FormattedMessage defaultMessage="Minimum Down Payment (amount) / Pax" />
                                 </label>
-                                <input
-                                    type="text"
-                                    inputMode="decimal"
+                                <MoneyInput
+                                    value={data.minimum_down_payment_value}
                                     className={inputClass}
-                                    value={data.minimum_vat}
-                                    onChange={(e) => {
-                                        const raw = e.target.value
-                                            .replace(/[^0-9.,]/g, '')
-                                            .replace(',', '.');
-
-                                        setData('minimum_vat', raw);
-                                    }}
+                                    onChange={(raw) =>
+                                        setData(
+                                            'minimum_down_payment_value',
+                                            raw,
+                                        )
+                                    }
                                 />
-                                {errors.minimum_vat && (
+                                {errors.minimum_down_payment_value && (
                                     <p className="mt-1 text-sm text-red-500">
-                                        {errors.minimum_vat}
+                                        {errors.minimum_down_payment_value}
                                     </p>
                                 )}
                             </div>
 
-                            <div>
-                                <label className={labelClass}>
-                                    <FormattedMessage defaultMessage="Full Payment Deadline Before Departure Date (days)" />
-                                </label>
+                            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:col-span-2">
+                                <div>
+                                    <label className={labelClassSingleRow}>
+                                        <FormattedMessage defaultMessage="VAT (%)" />
+                                    </label>
+                                    <input
+                                        type="text"
+                                        inputMode="decimal"
+                                        className={inputClass}
+                                        value={data.minimum_vat}
+                                        onChange={(e) => {
+                                            const raw = e.target.value
+                                                .replace(/[^0-9.,]/g, '')
+                                                .replace(',', '.');
 
-                                <MoneyInput
-                                    value={data.full_payment_deadline}
-                                    className={inputClass}
-                                    onChange={(raw) =>
-                                        setData(
-                                            'full_payment_deadline',
-                                            Number(raw),
-                                        )
-                                    }
-                                />
+                                            setData('minimum_vat', raw);
+                                        }}
+                                    />
+                                    {errors.minimum_vat && (
+                                        <p className="mt-1 text-sm text-red-500">
+                                            {errors.minimum_vat}
+                                        </p>
+                                    )}
+                                </div>
 
-                                {errors.document_completed_deadline && (
-                                    <p className="mt-1 text-sm text-red-500">
-                                        {errors.full_payment_deadline}
-                                    </p>
-                                )}
+                                <div>
+                                    <label className={labelClassSingleRow}>
+                                        <FormattedMessage defaultMessage="Full Payment Deadline Before Departure Date (days)" />
+                                    </label>
+
+                                    <MoneyInput
+                                        value={data.full_payment_deadline}
+                                        className={inputClass}
+                                        onChange={(raw) =>
+                                            setData(
+                                                'full_payment_deadline',
+                                                Number(raw),
+                                            )
+                                        }
+                                    />
+
+                                    {errors.document_completed_deadline && (
+                                        <p className="mt-1 text-sm text-red-500">
+                                            {errors.full_payment_deadline}
+                                        </p>
+                                    )}
+                                </div>
                             </div>
                         </div>
                     </div>

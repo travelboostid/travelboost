@@ -72,7 +72,7 @@ class UpdateWithdrawalRequest extends FormRequest
                         $fail('Invalid withdrawal status transition.');
                     }
                 },
-        ],
+            ],
         ];
     }
 }

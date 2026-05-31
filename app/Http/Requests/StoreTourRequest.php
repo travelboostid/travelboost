@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Enums\TourStatus;
+use App\Models\Tour;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
@@ -28,6 +29,9 @@ class StoreTourRequest extends FormRequest
             // 'name'         => 'required|string|max:255',
             'name' => 'nullable|string|max:255',
             'description' => 'nullable|string',
+
+            'user_id' => 'nullable|exists:users,id',
+
             'duration_days' => 'nullable|integer|min:1',
             'status' => ['nullable', Rule::in([
                 TourStatus::ACTIVE->value,
@@ -38,6 +42,7 @@ class StoreTourRequest extends FormRequest
             'country_id' => 'nullable|exists:countries,id',
             'destination' => 'nullable|string|max:100',
             'category_id' => 'nullable|exists:tour_categories,id',
+            'product_commission_category_id' => 'required|exists:product_commission_categories,id',
             'parent_id' => 'nullable|exists:tours,id',
             'image_id' => 'nullable|exists:medias,id',
             'document_id' => 'nullable|exists:medias,id',
@@ -60,6 +65,7 @@ class StoreTourRequest extends FormRequest
         return [
             'code.unique' => 'This tour code is already in use.',
             // TODO: add more
+            'product_commission_category_id.required' => 'Product Commission Category is required.',
         ];
     }
 
@@ -71,6 +77,7 @@ class StoreTourRequest extends FormRequest
         return [
             'category_id' => 'category',
             // TODO: add more
+            'product_commission_category_id' => 'product commission category',
         ];
     }
 
@@ -116,7 +123,7 @@ class StoreTourRequest extends FormRequest
         $code = $baseCode.'-'.str_pad($counter, 3, '0', STR_PAD_LEFT);
 
         // Check for existing codes
-        while (\App\Models\Tour::where('code', $code)->exists()) {
+        while (Tour::where('code', $code)->exists()) {
             $counter++;
             $code = $baseCode.'-'.str_pad($counter, 3, '0', STR_PAD_LEFT);
         }

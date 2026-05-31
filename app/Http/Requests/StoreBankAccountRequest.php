@@ -39,7 +39,7 @@ class StoreBankAccountRequest extends FormRequest
                 BankAccountStatus::PENDING,
                 BankAccountStatus::VERIFIED,
                 BankAccountStatus::REJECTED,
-        ]),
+            ]),
         ];
     }
 
