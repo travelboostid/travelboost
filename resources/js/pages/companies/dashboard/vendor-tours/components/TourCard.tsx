@@ -1,7 +1,3 @@
-import {
-    copy,
-    viewBrochure,
-} from '@/actions/App/Http/Controllers/Companies/Dashboard/VendorTourCatalogController';
 import type { TourResource } from '@/api/model';
 import { useFloatingChatWidgetContext } from '@/components/chat/state';
 import TourBookingModal from '@/components/tours/tour-booking-modal';
@@ -16,6 +12,7 @@ import {
     AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
+import { extractDocumentUrl } from '@/lib/utils';
 import { router } from '@inertiajs/react';
 import axios from 'axios';
 import { useCallback, useEffect, useState } from 'react';
@@ -34,6 +31,12 @@ type TourCardResource = TourResource & {
     promoprice?: number | string | null;
     showprice?: number | string | null;
     user?: { phone?: string | null } | null;
+    agent_document?: any;
+    agentDocument?: any;
+    agent_document_url?: string | null;
+    vendor_document_url?: string | null;
+    itinerary_document_url?: string | null;
+    itinerary_document_source?: 'agent' | 'vendor' | null;
     agent_status?: string | { value: string };
     has_copied?: boolean;
     show_vendor_name?: boolean | number | string;
@@ -184,11 +187,7 @@ export default function TourCard({
 
     const handleCopy = () => {
         router.post(
-            copy({
-                company: company.username,
-                vendor: tour.company?.username || '',
-                tour: tour.id,
-            }),
+            `/companies/${company.username}/dashboard/vendors/${tour.company?.username || ''}/tours/${tour.id}/copy`,
             {},
             { preserveScroll: true },
         );
@@ -210,25 +209,46 @@ export default function TourCard({
         }
     };
 
+    const agentDocument = tour.agent_document || tour.agentDocument;
+    const hasTourItinerary = Boolean(agentDocument || tour.document);
+    const agentDocumentUrl =
+        tour.agent_document_url ||
+        (agentDocument ? extractDocumentUrl(agentDocument) : '');
+    const preferredItineraryDocumentUrl =
+        tour.itinerary_document_url || agentDocumentUrl;
+
     const handleViewBrochure = (isPublic: boolean) => {
-        if (!tour.document) return;
+        if (!hasTourItinerary) return;
+        if (preferredItineraryDocumentUrl) {
+            window.open(
+                preferredItineraryDocumentUrl,
+                '_blank',
+                'noopener,noreferrer',
+            );
+            return;
+        }
+
         const url = isPublic
             ? `/brochure/${tour.company?.username}/${tour.id}`
-            : viewBrochure({
-                  company: company.username,
-                  vendor: tour.company?.username || '',
-                  tour: tour.id,
-              }).url;
+            : `/companies/${company.username}/dashboard/vendors/${tour.company?.username || ''}/tours/${tour.id}/brochure`;
         window.open(url, '_blank', 'noopener,noreferrer');
     };
 
+    const handleViewAgentCatalogBrochure = () => {
+        if (!hasTourItinerary) return;
+
+        window.open(
+            `/companies/${company.username}/dashboard/vendors/${tour.company?.username || ''}/tours/${tour.id}/brochure`,
+            '_blank',
+            'noopener,noreferrer',
+        );
+    };
+
     const handleShareFacebook = () => {
-        if (!tour.document) return;
-        const pdfUrl = viewBrochure({
-            company: company.username,
-            vendor: tour.company?.username || '',
-            tour: tour.id,
-        }).url;
+        if (!hasTourItinerary) return;
+        const pdfUrl =
+            preferredItineraryDocumentUrl ||
+            `/companies/${company.username}/dashboard/vendors/${tour.company?.username || ''}/tours/${tour.id}/brochure`;
         window.open(
             `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(pdfUrl)}`,
             '_blank',
@@ -302,7 +322,7 @@ export default function TourCard({
                     tour={tour}
                     isVendorNameVisible={isVendorNameVisible}
                     isVendorInactive={isVendorInactive}
-                    onViewBrochure={() => handleViewBrochure(false)}
+                    onViewBrochure={handleViewAgentCatalogBrochure}
                     onChat={() => handleChat(tour.company_id)}
                     onShareFB={handleShareFacebook}
                     onBook={(nextTour: TourCardResource) => {
@@ -314,6 +334,7 @@ export default function TourCard({
             ) : (
                 <AgentVendorTourCard
                     tour={tour}
+                    partnership={partnership}
                     isVendorNameVisible={isVendorNameVisible}
                     isVendorInactive={isVendorInactive}
                     canCopy={canCopy}

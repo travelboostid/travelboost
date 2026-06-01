@@ -20,7 +20,7 @@ class TourController extends Controller
         $tenant->load([
             'agentTours' => function ($query) {
                 $query->where('status', 'active')
-                    ->with('tour.company.companySetting');
+                    ->with(['agentDocument', 'tour.company.companySetting']);
             },
             'settings',
         ]);
@@ -84,6 +84,12 @@ class TourController extends Controller
             $showVendor = $partnership ? (bool) $partnership->show_vendor_name : true;
 
             $agentTour->tour->show_vendor_name = $showVendor;
+
+            if ($agentTour->agentDocument) {
+                $agentTour->tour->setRelation('agentDocument', $agentTour->agentDocument);
+                $agentTour->tour->setRelation('agent_document', $agentTour->agentDocument);
+                $agentTour->tour->setRelation('document', $agentTour->agentDocument);
+            }
 
             $agentTour->show_vendor_name = $showVendor;
             $agentTour->agent_status = $statusVal;

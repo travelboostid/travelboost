@@ -91,6 +91,7 @@ class BookingController extends Controller
         $paymentReceiver = app(BookingPaymentReceiverService::class)
             ->resolveForTourAndTenant($tour, $tenant);
         $paymentReceiverSettings = $paymentReceiver['settings'];
+        $paymentReceiverPartnership = $paymentReceiver['partnership'];
         $existingBooking = null;
         $bookingConflict = null;
         $isResumingExistingBooking = false;
@@ -260,6 +261,10 @@ class BookingController extends Controller
             'paidAmount' => $paidAmount,
             'remainingBalance' => $remainingBalance,
             'fullPaymentAvailable' => $fullPaymentAvailable,
+            'paymentMethodAvailability' => [
+                'manual' => (bool) ($paymentReceiverPartnership?->manual_payment_enabled ?? true),
+                'online' => (bool) ($paymentReceiverPartnership?->online_payment_enabled ?? true),
+            ],
             'paymentUnavailableReason' => $paymentUnavailableReason,
             'bookingPaymentResult' => $bookingPaymentResult,
             'savedPassengers' => $user instanceof User

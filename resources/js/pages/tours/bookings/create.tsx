@@ -318,6 +318,10 @@ export default function Page() {
         remainingBalance,
         downPaymentAvailable = true,
         fullPaymentAvailable = true,
+        paymentMethodAvailability = {
+            manual: true,
+            online: true,
+        },
         paymentUnavailableReason = null,
         bookingConflict,
         savedPassengers,
@@ -2362,6 +2366,14 @@ export default function Page() {
                                                 }
                                                 fullPaymentAvailable={
                                                     fullPaymentAvailable
+                                                }
+                                                manualPaymentAvailable={
+                                                    paymentMethodAvailability
+                                                        ?.manual ?? true
+                                                }
+                                                onlinePaymentAvailable={
+                                                    paymentMethodAvailability
+                                                        ?.online ?? true
                                                 }
                                                 paymentUnavailableReason={
                                                     paymentUnavailableReason
