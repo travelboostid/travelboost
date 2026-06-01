@@ -22,6 +22,7 @@ export type WalletPageProps = {
     };
     transactions: any[];
     wallet: any;
+    pendingTopup: any | null;
 };
 
 export default function WalletPage() {

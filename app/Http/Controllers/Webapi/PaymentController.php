@@ -92,6 +92,7 @@ class PaymentController extends Controller
         $user = Auth::user();
 
         $topup = WalletTopupPayment::create([
+            'user_id' => $user->id,
             'amount' => $validated['amount'],
         ]);
 
