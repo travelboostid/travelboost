@@ -103,6 +103,16 @@ class Company extends Model
         return $this->hasMany(TourCategory::class);
     }
 
+    public function agentTiers()
+    {
+        return $this->hasMany(AgentTier::class);
+    }
+
+    public function productCommissionCategories()
+    {
+        return $this->hasMany(ProductCommissionCategory::class);
+    }
+
     public function settings()
     {
         return $this->hasOne(CompanySettings::class, 'company_id');

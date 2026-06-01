@@ -33,6 +33,10 @@ export type ProfilePageProps = {
 
 export default function Profile({ profile, account_status }: ProfilePageProps) {
     const intl = useIntl();
+    const profileType = String(
+        profile.type?.value ?? profile.type ?? '',
+    ).toLowerCase();
+    const profileEntity = profileType === 'vendor' ? 'Vendor' : 'Agent';
 
     const [identityPreviewUrl, setIdentityPreviewUrl] = useState<string | null>(
         null,
@@ -101,7 +105,6 @@ export default function Profile({ profile, account_status }: ProfilePageProps) {
         >
             <Head title={intl.formatMessage({ defaultMessage: 'Profile' })} />
 
-            {/* PERBAIKAN RESPONSIVE: Tambahkan px-4 sm:px-6 lg:px-8 agar rapi di layar kecil */}
             <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6 pb-20">
                 <div className="flex items-center justify-between mt-4 md:mt-0">
                     <div>
@@ -109,18 +112,18 @@ export default function Profile({ profile, account_status }: ProfilePageProps) {
                             <FormattedMessage defaultMessage="Profile Settings" />
                         </h1>
                         <p className="text-muted-foreground text-sm md:text-base">
-                            <FormattedMessage defaultMessage="Manage your agency identity and verification documents." />
+                            Manage your {profileEntity.toLowerCase()} identity
+                            and verification documents.
                         </p>
                     </div>
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-6">
-                    {/* Agency Identity Card */}
                     <Card className="shadow-sm border-border overflow-hidden">
                         <CardHeader className="bg-muted/30 flex flex-row items-center justify-between py-4 border-b">
                             <CardTitle className="text-lg flex items-center gap-2">
                                 <Building className="w-5 h-5 text-primary" />
-                                <FormattedMessage defaultMessage="Agency Identity" />
+                                {profileEntity} Identity
                             </CardTitle>
                             <div
                                 className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${isStatusActive ? 'bg-primary/15 text-primary' : 'bg-destructive/15 text-destructive'}`}
@@ -148,14 +151,14 @@ export default function Profile({ profile, account_status }: ProfilePageProps) {
                                         defaultValue={profile.photo_url}
                                     />
                                     <Label className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">
-                                        Logo
+                                        {profileEntity} Logo
                                     </Label>
                                 </div>
 
                                 <div className="flex-1 grid gap-4 sm:grid-cols-2">
                                     <div className="space-y-2">
                                         <Label htmlFor="name">
-                                            <FormattedMessage defaultMessage="Agency Name" />{' '}
+                                            {profileEntity} Name{' '}
                                             <span className="text-destructive">
                                                 *
                                             </span>
@@ -313,7 +316,6 @@ export default function Profile({ profile, account_status }: ProfilePageProps) {
                         </CardContent>
                     </Card>
 
-                    {/* Location & Contact Card */}
                     <Card className="shadow-sm border-border overflow-hidden">
                         <CardHeader className="bg-muted/30 border-b py-4">
                             <CardTitle className="text-lg flex items-center gap-2">
@@ -451,7 +453,6 @@ export default function Profile({ profile, account_status }: ProfilePageProps) {
                         </CardContent>
                     </Card>
 
-                    {/* Verification Card with Preview KTP */}
                     <Card className="shadow-sm border-primary/20 border-l-4 overflow-hidden">
                         <CardHeader className="bg-primary/5 py-4 border-b">
                             <CardTitle className="text-lg flex items-center gap-2 text-primary font-bold">
@@ -460,9 +461,7 @@ export default function Profile({ profile, account_status }: ProfilePageProps) {
                             </CardTitle>
                         </CardHeader>
                         <CardContent className="pt-6">
-                            {/* PERBAIKAN GRID & TINGGI: items-stretch agar kiri & kanan sejajar tingginya */}
                             <div className="grid gap-6 md:gap-8 lg:grid-cols-2 items-stretch">
-                                {/* KOLOM KIRI: Input NIK dan Unggah Gambar */}
                                 <div className="flex flex-col space-y-4 justify-start">
                                     <div className="space-y-2">
                                         <Label
@@ -515,7 +514,6 @@ export default function Profile({ profile, account_status }: ProfilePageProps) {
                                                     'identity_card_id',
                                                     media?.id,
                                                 );
-                                                // PERBAIKAN: Set preview URL agar langsung tampil!
                                                 setIdentityPreviewUrl(
                                                     media?.url ||
                                                         media?.original_url ||
@@ -533,12 +531,10 @@ export default function Profile({ profile, account_status }: ProfilePageProps) {
                                     </div>
                                 </div>
 
-                                {/* KOLOM KANAN: Preview KTP */}
                                 <div className="flex flex-col space-y-3">
                                     <Label className="font-bold text-sm text-muted-foreground uppercase tracking-wider">
                                         <FormattedMessage defaultMessage="Current Identity Preview" />
                                     </Label>
-                                    {/* PERBAIKAN TINGGI PREVIEW: flex-1 dan min-h-[200px] dengan object-contain */}
                                     <div className="relative flex-1 w-full min-h-[200px] rounded-xl overflow-hidden bg-slate-100 border-2 border-slate-200 flex items-center justify-center shadow-inner group">
                                         {currentIdentityPreview ? (
                                             <img
