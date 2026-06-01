@@ -7,6 +7,7 @@ use App\Enums\CompanyType;
 use App\Http\Controllers\Controller;
 use App\Models\Booking;
 use App\Models\Company;
+use Illuminate\Contracts\Database\Query\Expression;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
@@ -30,21 +31,47 @@ class HomeController extends Controller
 
         $companyColumn = $isVendor ? 'vendor_id' : 'agent_id';
         $fullPaymentStatus = BookingStatus::FULL_PAYMENT->value;
+        $salesAmountExpression = $this->salesAmountExpression();
 
         $baseQuery = Booking::query()
             ->where($companyColumn, $company->id)
             ->where('status', $fullPaymentStatus);
 
-        $totalRevenue = (float) (clone $baseQuery)->sum('grand_total');
+        $totalRevenue = (float) (clone $baseQuery)->sum($salesAmountExpression);
         $totalPax = (int) (clone $baseQuery)->sum(DB::raw('pax_adult + pax_child + pax_infant'));
 
-        $profitColumn = $isVendor ? DB::raw('grand_total - commission_amount') : 'commission_amount';
-        $totalProfit = (float) (clone $baseQuery)->sum($profitColumn);
+        $commissionQuery = $wallet
+            ? $wallet->transactions()
+                ->whereIn('meta->type', [
+                    'booking-agent-commission',
+                    'booking agent commission',
+                ])
+            : null;
 
-        $monthlyProfit = (float) (clone $baseQuery)
+        $totalCommission = $commissionQuery
+            ? abs((float) (clone $commissionQuery)
+                ->when(! $isVendor, fn ($query) => $query->where('amount', '>', 0))
+                ->when($isVendor, fn ($query) => $query->where('amount', '<', 0))
+                ->sum('amount'))
+            : 0.0;
+
+        $monthlyCommission = $commissionQuery
+            ? abs((float) (clone $commissionQuery)
+                ->when(! $isVendor, fn ($query) => $query->where('amount', '>', 0))
+                ->when($isVendor, fn ($query) => $query->where('amount', '<', 0))
+                ->whereYear('created_at', now()->year)
+                ->whereMonth('created_at', now()->month)
+                ->sum('amount'))
+            : 0.0;
+
+        $totalProfit = $isVendor ? max(0, $totalRevenue - $totalCommission) : $totalCommission;
+
+        $monthlyRevenue = (float) (clone $baseQuery)
             ->whereYear('created_at', now()->year)
             ->whereMonth('created_at', now()->month)
-            ->sum($profitColumn);
+            ->sum($salesAmountExpression);
+
+        $monthlyProfit = $isVendor ? max(0, $monthlyRevenue - $monthlyCommission) : $monthlyCommission;
 
         $networkCount = (int) (clone $baseQuery)->distinct('user_id')->count('user_id');
 
@@ -76,7 +103,7 @@ class HomeController extends Controller
             $monthSales = (float) (clone $baseQuery)
                 ->whereYear('created_at', $monthDate->year)
                 ->whereMonth('created_at', $monthDate->month)
-                ->sum('grand_total');
+                ->sum($salesAmountExpression);
 
             $chartData[] = [
                 'month' => $monthDate->format('M'),
@@ -93,7 +120,7 @@ class HomeController extends Controller
                 'tours.code',
                 'tours.name',
                 DB::raw('SUM(bookings.pax_adult + bookings.pax_child + bookings.pax_infant) as pax'),
-                DB::raw('SUM(bookings.grand_total) as revenue')
+                DB::raw('SUM('.$this->salesAmountSql().') as revenue')
             )
             ->groupBy('tours.id', 'tours.code', 'tours.name')
             ->orderByDesc('pax')
@@ -109,7 +136,7 @@ class HomeController extends Controller
                 ->select(
                     'companies.name',
                     DB::raw('SUM(bookings.pax_adult + bookings.pax_child + bookings.pax_infant) as pax'),
-                    DB::raw('SUM(bookings.grand_total) as revenue')
+                    DB::raw('SUM('.$this->salesAmountSql().') as revenue')
                 )
                 ->groupBy('companies.id', 'companies.name')
                 ->orderByDesc('pax')
@@ -131,5 +158,15 @@ class HomeController extends Controller
                 'limit' => (float) ($credit->limit ?? 0),
             ],
         ]);
+    }
+
+    private function salesAmountExpression(): Expression
+    {
+        return DB::raw($this->salesAmountSql());
+    }
+
+    private function salesAmountSql(): string
+    {
+        return 'COALESCE((SELECT SUM(booking_passengers.price_amount) FROM booking_passengers WHERE booking_passengers.booking_id = bookings.id), bookings.total_price)';
     }
 }

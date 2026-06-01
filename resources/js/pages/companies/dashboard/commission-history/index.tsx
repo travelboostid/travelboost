@@ -17,6 +17,7 @@ import { HandCoins, Receipt, Store, UserRound } from 'lucide-react';
 type CommissionHistoryItem = {
     id: number;
     booking_code: string;
+    agent_name: string;
     vendor_name: string;
     customer_name: string;
     commission_amount: number;
@@ -30,23 +31,32 @@ type CommissionHistoryProps = {
         total_records: number;
         total_amount: number;
     };
+    companyType: 'agent' | 'vendor';
 };
 
 export default function AgentCommissionHistoryPage({
     commissions,
     summary,
+    companyType,
 }: CommissionHistoryProps) {
+    const isVendor = companyType === 'vendor';
+    const counterpartyLabel = isVendor ? 'Agent' : 'Vendor';
+    const commissionLabel = isVendor ? 'Commission Paid' : 'Commission Earned';
     const summaryCards = [
         {
-            title: 'Full Payment Bookings',
+            title: 'Commission Transactions',
             value: summary.total_records.toLocaleString('id-ID'),
-            description: 'Bookings eligible for agent commission.',
+            description: isVendor
+                ? 'Agent commission payouts from your wallet.'
+                : 'Agent commission received in your wallet.',
             icon: Receipt,
         },
         {
-            title: 'Total Commission',
+            title: commissionLabel,
             value: formatIDR(summary.total_amount || 0),
-            description: 'Commission from fully paid bookings.',
+            description: isVendor
+                ? 'Total commission paid to agents.'
+                : 'Total commission received from vendors.',
             icon: HandCoins,
         },
     ];
@@ -109,7 +119,7 @@ export default function AgentCommissionHistoryPage({
                                         Booking Code
                                     </TableHead>
                                     <TableHead className="min-w-48">
-                                        Vendor
+                                        {counterpartyLabel}
                                     </TableHead>
                                     <TableHead className="min-w-48">
                                         Customer
@@ -157,9 +167,9 @@ export default function AgentCommissionHistoryPage({
                                                     <div className="flex items-center gap-2 font-medium text-slate-800 dark:text-slate-100">
                                                         <Store className="h-4 w-4 shrink-0 text-slate-400" />
                                                         <span className="line-clamp-1">
-                                                            {
-                                                                commission.vendor_name
-                                                            }
+                                                            {isVendor
+                                                                ? commission.agent_name
+                                                                : commission.vendor_name}
                                                         </span>
                                                     </div>
                                                 </TableCell>
@@ -174,7 +184,7 @@ export default function AgentCommissionHistoryPage({
                                                     </div>
                                                 </TableCell>
                                                 <TableCell className="text-right font-bold text-emerald-600 dark:text-emerald-300">
-                                                    +
+                                                    {isVendor ? '-' : '+'}
                                                     {formatIDR(
                                                         Number(
                                                             commission.commission_amount ||
