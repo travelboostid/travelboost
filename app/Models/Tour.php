@@ -89,6 +89,11 @@ class Tour extends Model
         return $this->belongsTo(TourCategory::class, 'category_id');
     }
 
+    public function productCommissionCategory()
+    {
+        return $this->belongsTo(ProductCommissionCategory::class);
+    }
+
     public function image()
     {
         return $this->belongsTo(Media::class, 'image_id');
@@ -144,6 +149,11 @@ class Tour extends Model
         return $this->hasMany(Booking::class, 'tour_id');
     }
 
+    public function commissionRules()
+    {
+        return $this->hasMany(TourCommissionRule::class);
+    }
+
     public function availabilities()
     {
         return $this->hasMany(TourAvailability::class, 'tour_id');
@@ -152,11 +162,6 @@ class Tour extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
-    }
-
-    public function productCommissionCategory()
-    {
-        return $this->belongsTo(ProductCommissionCategory::class);
     }
 
     public function agents()

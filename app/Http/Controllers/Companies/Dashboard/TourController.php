@@ -11,7 +11,6 @@ use App\Models\AgentTour;
 use App\Models\Company;
 use App\Models\Currency;
 use App\Models\PriceCategory;
-use App\Models\ProductCommissionCategory;
 use App\Models\Tour;
 use App\Models\TourAddOn;
 use App\Notifications\TourStatusChangedNotification;
@@ -49,8 +48,11 @@ class TourController extends Controller
             'currencies' => Currency::select('code', 'name')
                 ->orderBy('code')
                 ->get(),
-
-            'productCommissionCategories' => ProductCommissionCategory::orderBy('id')->get(),
+            'productCommissionCategories' => $company->productCommissionCategories()
+                ->where('is_active', true)
+                ->orderBy('sort_order')
+                ->orderBy('category_name')
+                ->get(['id', 'category_name']),
         ]);
     }
 
@@ -93,6 +95,7 @@ class TourController extends Controller
             'schedules.prices',
             'schedules.availability',
             'schedules.addOns',
+            'productCommissionCategory',
         ]);
 
         $addOnsFromDb = TourAddOn::where('company_id', $company->id)
@@ -109,8 +112,14 @@ class TourController extends Controller
             'priceCategories' => PriceCategory::where('company_id', $company->id)
                 ->orderBy('name')
                 ->get(['id', 'name']),
-
-            'productCommissionCategories' => ProductCommissionCategory::orderBy('id')->get(),
+            'productCommissionCategories' => $company->productCommissionCategories()
+                ->where(function ($query) use ($tour) {
+                    $query->where('is_active', true)
+                        ->orWhere('id', $tour->product_commission_category_id);
+                })
+                ->orderBy('sort_order')
+                ->orderBy('category_name')
+                ->get(['id', 'category_name']),
         ]);
     }
 
@@ -123,6 +132,10 @@ class TourController extends Controller
 
             if (array_key_exists('category_id', $payload)) {
                 $payload['category_id'] = $payload['category_id'] ?: null;
+            }
+
+            if (array_key_exists('product_commission_category_id', $payload)) {
+                $payload['product_commission_category_id'] = $payload['product_commission_category_id'] ?: null;
             }
 
             $tour->fill($payload);
@@ -140,6 +153,7 @@ class TourController extends Controller
         $data['showprice'] = (int) ($data['showprice'] ?? 0);
         $data['promote_price'] = (int) ($data['promote_price'] ?? 0);
         $data['category_id'] = $data['category_id'] ?: null;
+        $data['product_commission_category_id'] = ($data['product_commission_category_id'] ?? null) ?: null;
         $data['image_id'] = $data['image_id'] ?: null;
         $data['document_id'] = $data['document_id'] ?: null;
 
