@@ -6,7 +6,9 @@ use App\Actions\Booking\ExpireBookingReservationsAction;
 use App\Enums\BookingStatus;
 use App\Enums\PaymentStatus;
 use App\Http\Controllers\Controller;
+use App\Models\BankAccount;
 use App\Models\Booking;
+use App\Models\Company;
 use App\Models\Payment;
 use App\Models\Tour;
 use App\Models\TourAvailability;
@@ -148,6 +150,7 @@ class HomeController extends Controller
         $paymentDetailsTotal = (float) collect($paymentDetails)->sum('amount');
         $otherChargeAmount = (float) $booking->platform_fee;
         $vatRate = $this->resolveInvoiceVatRate($booking);
+        $isProforma = $booking->status === BookingStatus::DOWN_PAYMENT;
 
         $filename = 'Invoice_'.$booking->booking_number.'.pdf';
 
@@ -167,6 +170,10 @@ class HomeController extends Controller
                 'vatRate' => $vatRate,
                 'otherChargeAmount' => $otherChargeAmount,
                 'discountAmount' => 0,
+                'isProforma' => $isProforma,
+                'paymentInstructions' => $isProforma
+                    ? $this->proformaPaymentInstructions($agent)
+                    : [],
             ])
             ->setPaper('A4', 'portrait');
 
@@ -435,6 +442,71 @@ class HomeController extends Controller
         $mime = mime_content_type($path) ?: 'image/png';
 
         return 'data:'.$mime.';base64,'.base64_encode((string) file_get_contents($path));
+    }
+
+    /**
+     * @return list<array{label: string, value: string}>
+     */
+    private function proformaPaymentInstructions(mixed $issuer): array
+    {
+        $recipient = $issuer?->name ?: 'the issuing company';
+        $bankAccount = $this->defaultCompanyBankAccount($issuer);
+        $issuer?->loadMissing('companySetting');
+        $settings = $issuer?->companySetting;
+        $bankName = $bankAccount
+            ? $this->bankAccountProviderName((string) $bankAccount->provider)
+            : $settings?->manual_bank_transfer;
+        $accountName = $bankAccount?->account_name ?: $settings?->manual_bank_transfer_account_name;
+        $accountNumber = $bankAccount?->account_number ?: $settings?->manual_bank_transfer_account_number;
+
+        return [
+            [
+                'label' => 'Payment Recipient',
+                'value' => $recipient,
+            ],
+            [
+                'label' => 'Bank Name',
+                'value' => filled($bankName) ? (string) $bankName : '-',
+            ],
+            [
+                'label' => 'Account Number',
+                'value' => filled($accountNumber) ? (string) $accountNumber : '-',
+            ],
+            [
+                'label' => 'Account Holder',
+                'value' => filled($accountName) ? (string) $accountName : $recipient,
+            ],
+            [
+                'label' => 'Payment Responsibility',
+                'value' => 'Customer must complete the remaining balance according to the agreed payment method.',
+            ],
+            [
+                'label' => 'Important Notice',
+                'value' => 'This document is not proof of full settlement. Please retain the final invoice after the booking has been fully paid.',
+            ],
+        ];
+    }
+
+    private function defaultCompanyBankAccount(mixed $company): ?BankAccount
+    {
+        if (! $company instanceof Company) {
+            return null;
+        }
+
+        return $company->bankAccounts()
+            ->orderByDesc('is_default')
+            ->orderByRaw("case when status = 'verified' then 1 else 0 end desc")
+            ->latest()
+            ->first();
+    }
+
+    private function bankAccountProviderName(string $provider): string
+    {
+        $providerConfig = collect(config('travelboost.bank_account_providers', []))
+            ->firstWhere('code', $provider);
+        $name = is_array($providerConfig) ? ($providerConfig['name'] ?? null) : null;
+
+        return filled($name) ? (string) $name : str($provider)->upper()->toString();
     }
 
     /**
