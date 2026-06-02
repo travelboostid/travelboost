@@ -5,7 +5,8 @@ use App\Enums\CompanyTeamStatus;
 use App\Enums\MediaType;
 use App\Enums\PaymentStatus;
 use App\Enums\UserStatus;
-use App\Http\Middleware\HandleInertiaRequests;
+use App\Enums\VendorAgentPartnerStatus;
+use App\Http\Middleware\UseCustomerProps;
 use App\Models\Booking;
 use App\Models\Company;
 use App\Models\CompanyTeam;
@@ -15,9 +16,11 @@ use App\Models\Tour;
 use App\Models\TourAvailability;
 use App\Models\TourSchedule;
 use App\Models\User;
+use App\Models\VendorAgentPartner;
 use Database\Seeders\Common\RolePermissionSeeder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Inertia\Inertia;
 
 beforeEach(function () {
     $this->withoutVite();
@@ -61,12 +64,12 @@ test('shared tenant props include landing page settings for navbar branding', fu
     ]);
 
     $request = Request::create('/mybookings');
-    Context::set('tenant', $company);
+    Context::add('tenant', $company);
     $request->setLaravelSession(app('session')->driver());
 
-    $shared = app(HandleInertiaRequests::class)->share($request);
+    app(UseCustomerProps::class)->handle($request, fn (Request $request) => response('ok'));
 
-    expect($shared['tenant']->settings->landing_page_data)->toBe($landingPageData);
+    expect(Inertia::getShared('tenant')->settings->landing_page_data)->toBe($landingPageData);
 });
 
 test('agent subdomains can view my bookings when subdomain access is enabled', function () {
@@ -504,6 +507,154 @@ test('my bookings exposes paid balance deadlines document completeness and broch
         ->where('bookings.data.0.document_deadline.days_remaining', 15)
         ->where('bookings.data.0.tour.document.id', $document->id)
         ->where('bookings.data.0.document_url', "/brochure/{$vendor->username}/{$tour->id}"));
+});
+
+test('my bookings excludes paid agent vendor settlement from down payment balance', function () {
+    $user = User::factory()->create(['status' => UserStatus::ACTIVE]);
+    $vendor = Company::factory()->create(['type' => 'vendor']);
+    $agent = Company::factory()->create(['type' => 'agent']);
+    VendorAgentPartner::create([
+        'vendor_id' => $vendor->id,
+        'agent_id' => $agent->id,
+        'status' => VendorAgentPartnerStatus::ACTIVE,
+        'accepted_at' => now(),
+        'payment_mode' => 'agent',
+    ]);
+
+    $tour = Tour::factory()->create(['company_id' => $vendor->id]);
+    $booking = Booking::factory()->create([
+        'user_id' => $user->id,
+        'vendor_id' => $vendor->id,
+        'agent_id' => $agent->id,
+        'tour_id' => $tour->id,
+        'status' => BookingStatus::DOWN_PAYMENT,
+        'booking_number' => 'BKG-AGENT-DP-BALANCE',
+        'departure_date' => now()->addMonth()->toDateString(),
+        'grand_total' => 1_000_000,
+    ]);
+    $customerPayment = $booking->payments()->create([
+        'owner_type' => User::class,
+        'owner_id' => $user->id,
+        'provider' => 'midtrans',
+        'payment_method' => 'snap',
+        'amount' => 500_000,
+        'status' => PaymentStatus::PAID,
+        'paid_at' => now()->subHour(),
+        'payload' => [
+            'booking_payment_type' => 'down_payment',
+            'payment_type' => 'down_payment',
+            'payment_flow_stage' => 'customer_to_agent',
+            'payment_receiver_type' => 'agent',
+            'payment_receiver_company_id' => $agent->id,
+            'partnership_payment_mode' => 'agent',
+            'agent_review_status' => 'approved',
+            'vendor_review_status' => 'approved',
+            'counts_toward_booking_total' => true,
+        ],
+    ]);
+    $booking->payments()->create([
+        'owner_type' => User::class,
+        'owner_id' => $user->id,
+        'provider' => 'midtrans',
+        'payment_method' => 'snap',
+        'amount' => 500_000,
+        'status' => PaymentStatus::PAID,
+        'paid_at' => now(),
+        'payload' => [
+            'booking_payment_type' => 'down_payment',
+            'payment_type' => 'down_payment',
+            'payment_flow_stage' => 'agent_to_vendor',
+            'linked_customer_payment_id' => $customerPayment->id,
+            'payment_receiver_type' => 'vendor',
+            'payment_receiver_company_id' => $vendor->id,
+            'partnership_payment_mode' => 'agent',
+            'vendor_review_status' => 'approved',
+            'counts_toward_booking_total' => false,
+        ],
+    ]);
+
+    $response = $this->actingAs($user)->get('/mybookings?tab=current');
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->where('bookings.data.0.booking_number', 'BKG-AGENT-DP-BALANCE')
+        ->where('bookings.data.0.paid_amount', 500000)
+        ->where('bookings.data.0.remaining_balance', 500000)
+        ->where('bookings.data.0.display_amount', 500000));
+});
+
+test('my bookings excludes paid agent vendor settlement from full payment total', function () {
+    $user = User::factory()->create(['status' => UserStatus::ACTIVE]);
+    $vendor = Company::factory()->create(['type' => 'vendor']);
+    $agent = Company::factory()->create(['type' => 'agent']);
+    VendorAgentPartner::create([
+        'vendor_id' => $vendor->id,
+        'agent_id' => $agent->id,
+        'status' => VendorAgentPartnerStatus::ACTIVE,
+        'accepted_at' => now(),
+        'payment_mode' => 'agent',
+    ]);
+
+    $tour = Tour::factory()->create(['company_id' => $vendor->id]);
+    $booking = Booking::factory()->create([
+        'user_id' => $user->id,
+        'vendor_id' => $vendor->id,
+        'agent_id' => $agent->id,
+        'tour_id' => $tour->id,
+        'status' => BookingStatus::FULL_PAYMENT,
+        'booking_number' => 'BKG-AGENT-FP-BALANCE',
+        'departure_date' => now()->addMonth()->toDateString(),
+        'grand_total' => 1_000_000,
+    ]);
+    $customerPayment = $booking->payments()->create([
+        'owner_type' => User::class,
+        'owner_id' => $user->id,
+        'provider' => 'midtrans',
+        'payment_method' => 'snap',
+        'amount' => 1_000_000,
+        'status' => PaymentStatus::PAID,
+        'paid_at' => now()->subHour(),
+        'payload' => [
+            'booking_payment_type' => 'full_payment',
+            'payment_type' => 'full_payment',
+            'payment_flow_stage' => 'customer_to_agent',
+            'payment_receiver_type' => 'agent',
+            'payment_receiver_company_id' => $agent->id,
+            'partnership_payment_mode' => 'agent',
+            'agent_review_status' => 'approved',
+            'vendor_review_status' => 'approved',
+            'counts_toward_booking_total' => true,
+        ],
+    ]);
+    $booking->payments()->create([
+        'owner_type' => User::class,
+        'owner_id' => $user->id,
+        'provider' => 'midtrans',
+        'payment_method' => 'snap',
+        'amount' => 1_000_000,
+        'status' => PaymentStatus::PAID,
+        'paid_at' => now(),
+        'payload' => [
+            'booking_payment_type' => 'full_payment',
+            'payment_type' => 'full_payment',
+            'payment_flow_stage' => 'agent_to_vendor',
+            'linked_customer_payment_id' => $customerPayment->id,
+            'payment_receiver_type' => 'vendor',
+            'payment_receiver_company_id' => $vendor->id,
+            'partnership_payment_mode' => 'agent',
+            'vendor_review_status' => 'approved',
+            'counts_toward_booking_total' => false,
+        ],
+    ]);
+
+    $response = $this->actingAs($user)->get('/mybookings?tab=current');
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->where('bookings.data.0.booking_number', 'BKG-AGENT-FP-BALANCE')
+        ->where('bookings.data.0.paid_amount', 1000000)
+        ->where('bookings.data.0.remaining_balance', 0)
+        ->where('bookings.data.0.display_amount', 1000000));
 });
 
 test('my bookings exposes waiting payment approval deadlines and document need', function () {
