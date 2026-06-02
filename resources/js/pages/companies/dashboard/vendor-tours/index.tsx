@@ -1,3 +1,4 @@
+import { index } from '@/actions/App/Http/Controllers/Companies/Dashboard/VendorTourCatalogController';
 import type { TourCategoryResource, TourResource } from '@/api/model';
 import CompanyDashboardLayout from '@/components/layouts/company-dashboard';
 import { Label } from '@/components/ui/label';
