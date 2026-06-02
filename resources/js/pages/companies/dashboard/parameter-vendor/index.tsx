@@ -1,5 +1,4 @@
 import CompanyDashboardLayout from '@/components/layouts/company-dashboard';
-import MoneyInput from '@/components/ui/money-input';
 import { Head, useForm, usePage } from '@inertiajs/react';
 import { FormattedMessage, useIntl } from 'react-intl';
 
@@ -208,7 +207,7 @@ export default function ParameterVendorPage() {
                         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                             <div>
                                 <label className={labelClassSingleRow}>
-                                    <FormattedMessage defaultMessage="Minimum Down Payment (%) / amount" />
+                                    <FormattedMessage defaultMessage="Minimum Down Payment (%) / Grand Total" />
                                 </label>
                                 <input
                                     type="text"
@@ -228,18 +227,24 @@ export default function ParameterVendorPage() {
 
                             <div>
                                 <label className={labelClassSingleRow}>
-                                    <FormattedMessage defaultMessage="Minimum Down Payment (amount) / Pax" />
+                                    <FormattedMessage defaultMessage="Minimum Down Payment (%) / Pax" />
                                 </label>
-                                <MoneyInput
+                                <input
+                                    type="text"
+                                    inputMode="decimal"
                                     value={data.minimum_down_payment_value}
                                     className={inputClass}
                                     disabled={hasPercentage}
-                                    onChange={(raw) =>
+                                    onChange={(e) => {
+                                        const raw = e.target.value
+                                            .replace(/[^0-9.,]/g, '')
+                                            .replace(',', '.');
+
                                         setData(
                                             'minimum_down_payment_value',
                                             raw,
-                                        )
-                                    }
+                                        );
+                                    }}
                                 />
                             </div>
 
