@@ -316,8 +316,15 @@ class BookingController extends Controller
         }
     }
 
-    public function update(UpdateBookingRequest $request, Booking $booking, BookingService $bookingService): RedirectResponse
-    {
+    public function update(
+        UpdateBookingRequest $request,
+        string|Booking $usernameOrBooking,
+        BookingService $bookingService,
+        ?Booking $booking = null
+    ): RedirectResponse {
+        $booking = $booking ?? $usernameOrBooking;
+        abort_unless($booking instanceof Booking, 404);
+
         abort_unless($request->user()?->id === $booking->user_id, 403);
 
         abort_unless(in_array($booking->status, [

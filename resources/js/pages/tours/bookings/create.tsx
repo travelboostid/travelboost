@@ -2043,6 +2043,7 @@ export default function Page() {
             .map((a) => ({
                 name: a.label,
                 price: a.unitPrice * a.qty,
+                qty: a.qty,
             }));
         const addOnsTotal = addOnRows.reduce(
             (sum, item) => sum + item.price,

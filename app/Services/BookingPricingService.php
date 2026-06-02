@@ -324,10 +324,12 @@ class BookingPricingService
             ->map(function (array $addon) use ($tourAddons): array {
                 $name = (string) (data_get($addon, 'name') ?? data_get($addon, 'label') ?? '');
                 $matchedAddon = $tourAddons->get($this->categoryKey($name));
+                $quantity = max(1, (int) data_get($addon, 'qty', 1));
+                $unitPrice = $matchedAddon ? (float) $matchedAddon->price : (float) data_get($addon, 'price', 0);
 
                 return [
                     'name' => $name,
-                    'price' => $matchedAddon ? (float) $matchedAddon->price : (float) data_get($addon, 'price', 0),
+                    'price' => $matchedAddon ? $unitPrice * $quantity : $unitPrice,
                 ];
             })
             ->values()

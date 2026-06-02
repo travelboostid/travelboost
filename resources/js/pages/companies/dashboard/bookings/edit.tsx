@@ -764,6 +764,7 @@ function EditableWizard({
             .map((addon) => ({
                 name: addon.label,
                 price: addon.unitPrice * addon.qty,
+                qty: addon.qty,
             }));
         const addOnsTotal = addOnRows.reduce(
             (sum, item) => sum + item.price,

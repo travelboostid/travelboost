@@ -79,6 +79,7 @@ class StoreBookingRequest extends FormRequest
             'addons' => ['nullable', 'array'],
             'addons.*.name' => ['required_with:addons', 'string', 'max:255'],
             'addons.*.price' => ['required_with:addons', 'numeric', 'min:0'],
+            'addons.*.qty' => ['nullable', 'integer', 'min:1', 'max:999'],
 
             // Expected totals from frontend
             'total_price' => ['required', 'numeric', 'min:0'],

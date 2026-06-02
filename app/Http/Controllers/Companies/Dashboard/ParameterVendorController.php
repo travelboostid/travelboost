@@ -39,6 +39,7 @@ class ParameterVendorController extends Controller
                 'required',
                 'numeric',
                 'min:0',
+                'max:100',
             ],
 
             'minimum_down_payment_value' => [
@@ -64,7 +65,7 @@ class ParameterVendorController extends Controller
         ) {
             return back()
                 ->withErrors([
-                    'minimum_down_payment' => 'Fill percentage OR amount, not both.',
+                    'minimum_down_payment_value' => 'Fill percentage OR amount, not both.',
                 ])
                 ->withInput();
         }

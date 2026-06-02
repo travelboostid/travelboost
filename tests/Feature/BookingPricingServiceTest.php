@@ -164,6 +164,19 @@ test('booking pricing service calculates server authoritative totals and commiss
         ->and($quote['passengers'][3]['price_amount'])->toBe(0.0);
 });
 
+test('booking pricing service multiplies matched addon unit price by submitted quantity', function () {
+    ['tour' => $tour, 'schedule' => $schedule, 'addOn' => $addOn] = createPricingScenario();
+
+    $quote = app(BookingPricingService::class)->quoteForBookingData($tour, $schedule->departure_date, [
+        ['first_name' => 'Adult', 'price_category' => 'Adult Single', 'price_amount' => 1],
+    ], [
+        ['name' => 'Airport transfer', 'price' => $addOn->price * 2, 'qty' => 2],
+    ]);
+
+    expect($quote['addons_total'])->toBe(1_000_000.0)
+        ->and($quote['addons'][0]['price'])->toBe(1_000_000.0);
+});
+
 test('booking pricing service calculates travelboost commission from admin tier parameters', function () {
     ['tour' => $tour, 'schedule' => $schedule] = createPricingScenario();
 
