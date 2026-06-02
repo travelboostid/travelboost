@@ -80,7 +80,6 @@ export default function Page() {
     const [countryId, setCountryId] = useState<number | null>(null);
     const { company } = usePageSharedDataProps();
     const { auth } = usePage().props as any;
-    const { productCommissionCategories } = usePage().props as any;
     const handleSuccess = () => {
         router.visit(index({ username: company.username }), { replace: true });
     };

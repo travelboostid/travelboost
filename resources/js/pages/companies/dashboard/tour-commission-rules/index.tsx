@@ -40,6 +40,8 @@ import {
     ArrowUpDown,
     CheckIcon,
     ChevronsUpDownIcon,
+    CircleAlertIcon,
+    PencilIcon,
     RotateCcwIcon,
     SaveIcon,
 } from 'lucide-react';
@@ -397,14 +399,17 @@ export default function Page({
     productCommissionCategories: ProductCommissionCategory[];
     rules: Rule[];
 }) {
+    const { company } = usePageSharedDataProps();
     const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
     const selectedCategory = getTourCategory(selectedTour);
+    const isCategoryMissing =
+        !!selectedTour && !selectedTour.product_commission_category_id;
     const displayedCategories =
         selectedCategory && selectedTour?.product_commission_category_id
             ? productCommissionCategories.filter(
                   (category) => category.id === selectedCategory.id,
               )
-            : productCommissionCategories;
+            : [];
 
     const sortedTiers = useMemo(() => {
         return [...agentTiers].sort((a, b) => {
@@ -444,7 +449,9 @@ export default function Page({
                             <div className="mt-2">
                                 <Badge className="rounded-full px-3 py-1 text-sm">
                                     {selectedTour
-                                        ? getCategoryName(selectedCategory)
+                                        ? isCategoryMissing
+                                            ? 'Not selected'
+                                            : getCategoryName(selectedCategory)
                                         : 'Select a tour first'}
                                 </Badge>
                             </div>
@@ -461,6 +468,36 @@ export default function Page({
                             Commission rules will appear after a tour product is
                             selected.
                         </p>
+                    </div>
+                ) : isCategoryMissing ? (
+                    <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 shadow-sm dark:border-amber-900/70 dark:bg-amber-950/30">
+                        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                            <div className="flex gap-3">
+                                <CircleAlertIcon className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
+                                <div>
+                                    <p className="font-semibold text-amber-950 dark:text-amber-100">
+                                        Product commission category is required
+                                    </p>
+                                    <p className="mt-1 text-sm text-amber-800 dark:text-amber-200">
+                                        Select a product commission category
+                                        from the tour edit page before setting
+                                        commission rules.
+                                    </p>
+                                </div>
+                            </div>
+                            <Button
+                                type="button"
+                                onClick={() =>
+                                    router.visit(
+                                        `/companies/${company.username}/dashboard/tours/${selectedTour.id}/edit`,
+                                    )
+                                }
+                                className="shrink-0 gap-2 rounded-xl"
+                            >
+                                <PencilIcon className="h-4 w-4" />
+                                Edit Tour
+                            </Button>
+                        </div>
                     </div>
                 ) : (
                     <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-950">

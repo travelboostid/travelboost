@@ -49,10 +49,7 @@ class TourCommissionRuleController extends Controller
 
         $productCommissionCategories = $selectedTour?->productCommissionCategory
             ? collect([$selectedTour->productCommissionCategory])
-            : $company->productCommissionCategories()
-                ->orderBy('sort_order')
-                ->orderBy('category_name')
-                ->get();
+            : collect();
 
         return Inertia::render('companies/dashboard/tour-commission-rules/index', [
             'tours' => $tours,
@@ -93,9 +90,14 @@ class TourCommissionRuleController extends Controller
             ->with('schedules:id,tour_id')
             ->findOrFail($data['tour_id']);
 
+        abort_unless(
+            $tour->product_commission_category_id,
+            422,
+            'Select the product commission category from the tour edit page first.'
+        );
+
         abort_if(
-            $tour->product_commission_category_id
-            && $tour->product_commission_category_id !== (int) $data['product_commission_category_id'],
+            $tour->product_commission_category_id !== (int) $data['product_commission_category_id'],
             422
         );
 
