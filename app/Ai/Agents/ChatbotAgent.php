@@ -165,7 +165,7 @@ class ChatbotAgent implements Agent, Conversational
             })->toArray(), // Take the last 5 messages for context
             schema: function (JsonSchema $schema) {
                 return [
-                    'intent' => $schema->string()->enum(['tour_detail', 'tour_query', 'my_bookings', 'booking_detail', 'general'])->required(),
+                    'intent' => $schema->string()->enum(['tour_detail', 'tour_query', 'booking_query', 'booking_detail', 'general'])->required(),
                     'args' => $schema->object([
                         'tour_id' => $schema->integer()->required(),
                         'continents' => $schema->array()->items($schema->string()->required())->required(),
@@ -183,12 +183,13 @@ class ChatbotAgent implements Agent, Conversational
             provider: $this->chatbotModelProvider,
             model: $this->chatbotModelName,
         );
+
         $this->trackTokenUsage($response);
         $context = match ($response['intent'] ?? 'general') {
             'general' => $this->retrieveGeneralContext($response['args'] ?? []),
             'tour_detail' => $this->retrieveTourDetailContext($response['args'] ?? []),
             'tour_query' => $this->retrieveTourQueryContext($response['args'] ?? []),
-            'booking_query' => $this->retrieveMyBookingsContext($response['args'] ?? []),
+            'booking_query' => $this->retrieveBookingQueryContext($response['args'] ?? []),
             'booking_detail' => $this->retrieveBookingDetailContext($response['args'] ?? []),
             default => 'No context available.',
         };
@@ -309,7 +310,7 @@ class ChatbotAgent implements Agent, Conversational
         CONTEXT;
     }
 
-    private function retrieveMyBookingsContext(array $args)
+    private function retrieveBookingQueryContext(array $args)
     {
         $bookings = Booking::query()
             ->where('user_id', $this->message->sender_id)
