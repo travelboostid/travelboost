@@ -58,17 +58,14 @@ export default function ParameterVendorPage() {
             data: {
                 ...data,
                 minimum_down_payment:
-                    parseFloat(
-                        String(data.minimum_down_payment).replace(',', '.'),
-                    ) || 0,
+                    data.minimum_down_payment === ''
+                        ? 0
+                        : parseFloat(String(data.minimum_down_payment)),
 
                 minimum_down_payment_value:
-                    parseFloat(
-                        String(data.minimum_down_payment_value).replace(
-                            ',',
-                            '.',
-                        ),
-                    ) || 0,
+                    data.minimum_down_payment_value === ''
+                        ? 0
+                        : parseFloat(String(data.minimum_down_payment_value)),
 
                 minimum_vat:
                     parseFloat(String(data.minimum_vat).replace(',', '.')) || 0,
@@ -82,6 +79,10 @@ export default function ParameterVendorPage() {
         'mb-2 block min-h-[48px] text-sm font-medium text-foreground';
     const labelClassSingleRow =
         'mb-2 block text-sm font-medium text-foreground';
+
+    const hasPercentage = Number(data.minimum_down_payment || 0) > 0;
+
+    const hasAmount = Number(data.minimum_down_payment_value || 0) > 0;
 
     return (
         <CompanyDashboardLayout
@@ -213,6 +214,7 @@ export default function ParameterVendorPage() {
                                     type="text"
                                     inputMode="decimal"
                                     className={inputClass}
+                                    disabled={hasAmount}
                                     value={data.minimum_down_payment}
                                     onChange={(e) => {
                                         const raw = e.target.value
@@ -222,11 +224,6 @@ export default function ParameterVendorPage() {
                                         setData('minimum_down_payment', raw);
                                     }}
                                 />
-                                {errors.minimum_down_payment && (
-                                    <p className="mt-1 text-sm text-red-500">
-                                        {errors.minimum_down_payment}
-                                    </p>
-                                )}
                             </div>
 
                             <div>
@@ -236,6 +233,7 @@ export default function ParameterVendorPage() {
                                 <MoneyInput
                                     value={data.minimum_down_payment_value}
                                     className={inputClass}
+                                    disabled={hasPercentage}
                                     onChange={(raw) =>
                                         setData(
                                             'minimum_down_payment_value',
@@ -243,11 +241,6 @@ export default function ParameterVendorPage() {
                                         )
                                     }
                                 />
-                                {errors.minimum_down_payment_value && (
-                                    <p className="mt-1 text-sm text-red-500">
-                                        {errors.minimum_down_payment_value}
-                                    </p>
-                                )}
                             </div>
 
                             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:col-span-2">

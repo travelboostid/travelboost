@@ -33,8 +33,17 @@ class ParameterVendorController extends Controller
     {
         $validated = $request->validate([
             'booking_deadline' => ['required', 'integer', 'min:0'],
-            'minimum_down_payment' => ['required', 'numeric', 'min:0'],
-            'minimum_down_payment_value' => ['required', 'numeric', 'min:0'],
+            'minimum_down_payment' => [
+                'required',
+                'numeric',
+                'min:0',
+            ],
+
+            'minimum_down_payment_value' => [
+                'required',
+                'numeric',
+                'min:0',
+            ],
             'minimum_vat' => ['required', 'numeric', 'min:0'],
             'term_conditions' => ['nullable', 'string'],
             'booking_entry_time_limit' => ['required', 'integer', 'min:0'],
@@ -46,6 +55,17 @@ class ParameterVendorController extends Controller
             'full_payment_deadline' => ['required', 'numeric', 'min:0'],
             'document_completed_deadline' => ['required', 'numeric', 'min:0'],
         ]);
+
+        if (
+            $validated['minimum_down_payment'] > 0 &&
+            $validated['minimum_down_payment_value'] > 0
+        ) {
+            return back()
+                ->withErrors([
+                    'minimum_down_payment' => 'Fill percentage OR amount, not both.',
+                ])
+                ->withInput();
+        }
 
         $company->companySetting()->updateOrCreate(
             ['company_id' => $company->id],
