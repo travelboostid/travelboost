@@ -78,6 +78,13 @@ type AgentOption = {
     email?: string | null;
 };
 
+type OnlinePaymentAttempt = {
+    bookingId: number | string;
+    paymentId?: number | string;
+    snapToken: string;
+    pendingResult?: BookingPaymentResultData;
+};
+
 function formatCountdown(seconds: number) {
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
@@ -85,6 +92,16 @@ function formatCountdown(seconds: number) {
     return `${minutes.toString().padStart(2, '0')}:${remainingSeconds
         .toString()
         .padStart(2, '0')}`;
+}
+
+function parseTimestamp(value: unknown): number | null {
+    if (typeof value !== 'string' || value.trim() === '') {
+        return null;
+    }
+
+    const timestamp = new Date(value).getTime();
+
+    return Number.isFinite(timestamp) ? timestamp : null;
 }
 
 function BookingHoldTimer({ timeLeftSeconds }: { timeLeftSeconds: number }) {
@@ -307,11 +324,13 @@ export default function Page() {
         existingBooking,
         bookingTimeLimitMinutes,
         minimumDownPaymentPct,
+        downPaymentRule,
         minimumVatPct,
         platformFeePerPax,
         vendorBankInfo,
         termConditions,
         isResumingExistingBooking,
+        serverNow,
         reservedExpiresAt,
         remainingHoldSeconds,
         paidAmount,
@@ -357,6 +376,7 @@ export default function Page() {
                                 ? 'tours.bookings'
                                 : 'tours.orders',
                         ]}
+                        onNavigateAway={onNavigateAway}
                         breadcrumb={[
                             { title: 'Tours' },
                             {
@@ -399,6 +419,8 @@ export default function Page() {
     const [paymentErrorMessage, setPaymentErrorMessage] = useState<
         string | null
     >(null);
+    const [, setActiveOnlinePaymentAttempt] =
+        useState<OnlinePaymentAttempt | null>(null);
     const [isRefreshingPaymentResult, setIsRefreshingPaymentResult] =
         useState(false);
 
@@ -457,15 +479,43 @@ export default function Page() {
     const [hasAgreedToTnc, setHasAgreedToTnc] = useState(
         isResuming || isDocumentUpdateMode || isDashboardPaymentStep,
     );
-    const initialHoldSeconds =
+    const clientServerOffsetMs = useMemo(() => {
+        const timestamp = parseTimestamp(serverNow);
+
+        return timestamp === null ? 0 : timestamp - Date.now();
+    }, [serverNow]);
+    const reservedExpiresAtTimestamp = useMemo(
+        () => parseTimestamp(reservedExpiresAt),
+        [reservedExpiresAt],
+    );
+    const fallbackHoldSeconds = Math.max(
+        0,
         typeof remainingHoldSeconds === 'number'
             ? remainingHoldSeconds
-            : reservedExpiresAt
-              ? Math.ceil(
-                    (new Date(reservedExpiresAt).getTime() - Date.now()) / 1000,
-                )
-              : (bookingTimeLimitMinutes ?? 10) * 60;
-    const [timeLeft, setTimeLeft] = useState(Math.max(0, initialHoldSeconds));
+            : (bookingTimeLimitMinutes ?? 10) * 60,
+    );
+    const localHoldExpiresAtRef = useRef<number | null>(
+        reservedExpiresAtTimestamp,
+    );
+    const holdExpiryHandledRef = useRef(false);
+    const calculateRemainingHoldSeconds = useCallback(() => {
+        const holdExpiresAt =
+            reservedExpiresAtTimestamp ?? localHoldExpiresAtRef.current;
+
+        if (holdExpiresAt === null) {
+            return fallbackHoldSeconds;
+        }
+
+        const serverAdjustedNow = Date.now() + clientServerOffsetMs;
+
+        return Math.max(
+            0,
+            Math.ceil((holdExpiresAt - serverAdjustedNow) / 1000),
+        );
+    }, [clientServerOffsetMs, fallbackHoldSeconds, reservedExpiresAtTimestamp]);
+    const [timeLeft, setTimeLeft] = useState(() =>
+        calculateRemainingHoldSeconds(),
+    );
     const [timerStarted, setTimerStarted] = useState(
         !isReviewMode &&
             (resumedStatusValue === 'reserved' ||
@@ -477,6 +527,25 @@ export default function Page() {
         historyBack?: boolean;
     } | null>(null);
     const [isReleasingHold, setIsReleasingHold] = useState(false);
+    const [holdExpiryDialogOpen, setHoldExpiryDialogOpen] = useState(false);
+    const [isResolvingHoldExpiry, setIsResolvingHoldExpiry] = useState(false);
+    useEffect(() => {
+        if (reservedExpiresAtTimestamp !== null) {
+            localHoldExpiresAtRef.current = reservedExpiresAtTimestamp;
+            holdExpiryHandledRef.current = false;
+            setTimeLeft(calculateRemainingHoldSeconds());
+
+            return;
+        }
+
+        if (!timerStarted) {
+            localHoldExpiresAtRef.current = null;
+        }
+    }, [
+        calculateRemainingHoldSeconds,
+        reservedExpiresAtTimestamp,
+        timerStarted,
+    ]);
     const isBalancePayment = resumedStatusValue === 'down payment';
     const conflictStatus = normalizePaymentValue(bookingConflict?.status);
     const hasBookingConflict = Boolean(bookingConflict);
@@ -493,6 +562,11 @@ export default function Page() {
               : 'waiting_payment';
     const showBookingTimer =
         !isReadOnlyBookingMode && (timerStarted || currentStep >= 2);
+    const showProformaInvoiceButton =
+        resumedStatusValue === 'down payment' ||
+        (isDashboardBooking &&
+            bookingInfoStatus === 'booking_reserved' &&
+            showBookingTimer);
     const conflictDescription =
         conflictStatus === 'down payment'
             ? 'There is already a booking for this trip that requires balance payment. Would you like to create a new booking or settle the previous one?'
@@ -967,24 +1041,118 @@ export default function Page() {
     );
     const inFlightOnlineConfirms = useRef(new Set<string>());
 
+    const releaseExpiredCustomerHold = useCallback(() => {
+        const redirectAfterRelease = () => {
+            alert(
+                'Your booking hold has expired. The reserved seats have been released. Please start a new booking or reorder from My Bookings.',
+            );
+            window.history.back();
+        };
+
+        setActiveOnlinePaymentAttempt(null);
+
+        if (!existingBooking?.id) {
+            redirectAfterRelease();
+            return;
+        }
+
+        router.post(
+            bookingActionUrl(existingBooking.id, 'release-hold'),
+            {},
+            {
+                preserveScroll: true,
+                onFinish: redirectAfterRelease,
+            },
+        );
+    }, [bookingActionUrl, existingBooking?.id]);
+
     // ─── Timer (starts when entering Step 2) ────────────────────────────
+    const handleHoldExpired = useCallback(() => {
+        if (holdExpiryHandledRef.current) {
+            return;
+        }
+
+        holdExpiryHandledRef.current = true;
+        setTimerStarted(false);
+        setTimeLeft(0);
+
+        if (isDashboardBooking) {
+            setHoldExpiryDialogOpen(true);
+            return;
+        }
+
+        releaseExpiredCustomerHold();
+    }, [isDashboardBooking, releaseExpiredCustomerHold]);
+
+    const syncHoldTimer = useCallback(() => {
+        const nextSeconds = calculateRemainingHoldSeconds();
+
+        setTimeLeft(nextSeconds);
+
+        if (timerStarted && nextSeconds <= 0) {
+            handleHoldExpired();
+        }
+    }, [calculateRemainingHoldSeconds, handleHoldExpired, timerStarted]);
+
     useEffect(() => {
-        if (!timerStarted) return;
-        const interval = setInterval(() => {
-            setTimeLeft((prev) => {
-                if (prev <= 1) {
-                    clearInterval(interval);
-                    alert(
-                        'Your time to complete this form has expired. Please refresh the page to try again.',
-                    );
-                    window.history.back();
-                    return 0;
-                }
-                return prev - 1;
-            });
-        }, 1000);
-        return () => clearInterval(interval);
-    }, [timerStarted]);
+        if (!timerStarted) {
+            setTimeLeft(calculateRemainingHoldSeconds());
+            return;
+        }
+
+        syncHoldTimer();
+
+        const interval = window.setInterval(syncHoldTimer, 1000);
+
+        return () => window.clearInterval(interval);
+    }, [calculateRemainingHoldSeconds, syncHoldTimer, timerStarted]);
+
+    useEffect(() => {
+        const handleFocus = () => syncHoldTimer();
+        const handleOnline = () => syncHoldTimer();
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible') {
+                syncHoldTimer();
+            }
+        };
+
+        window.addEventListener('focus', handleFocus);
+        window.addEventListener('online', handleOnline);
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+
+        return () => {
+            window.removeEventListener('focus', handleFocus);
+            window.removeEventListener('online', handleOnline);
+            document.removeEventListener(
+                'visibilitychange',
+                handleVisibilityChange,
+            );
+        };
+    }, [syncHoldTimer]);
+
+    const resolveHoldExpiry = useCallback(
+        (resolution: 'awaiting_payment' | 'payment_in_progress') => {
+            if (!existingBooking?.id) {
+                return;
+            }
+
+            setIsResolvingHoldExpiry(true);
+
+            router.post(
+                bookingActionUrl(existingBooking.id, 'resolve-hold-expiry'),
+                { resolution },
+                {
+                    preserveScroll: true,
+                    onSuccess: () => {
+                        setHoldExpiryDialogOpen(false);
+                        router.visit(dashboardReturnUrl);
+                    },
+                    onFinish: () => setIsResolvingHoldExpiry(false),
+                },
+            );
+        },
+        [bookingActionUrl, dashboardReturnUrl, existingBooking?.id],
+    );
 
     const navigateToExitTarget = useCallback(
         (target: { href?: string; historyBack?: boolean }) => {
@@ -1120,6 +1288,7 @@ export default function Page() {
                 commission_amount: pricing.agentCommission,
                 grand_total: pricing.totalPrice,
                 passengers: guests.map((g) => ({
+                    client_guest_id: g.id,
                     title: g.title || null,
                     first_name: g.firstName,
                     last_name: g.lastName || '',
@@ -1137,6 +1306,12 @@ export default function Page() {
         );
 
         if (!timerStarted) {
+            holdExpiryHandledRef.current = false;
+            localHoldExpiresAtRef.current =
+                Date.now() +
+                clientServerOffsetMs +
+                (bookingTimeLimitMinutes ?? 10) * 60 * 1000;
+            setTimeLeft((bookingTimeLimitMinutes ?? 10) * 60);
             setTimerStarted(true);
         }
 
@@ -1163,7 +1338,8 @@ export default function Page() {
 
             setHasAgreedToTnc(false);
             if (!timerStarted) {
-                setTimeLeft((bookingTimeLimitMinutes ?? 10) * 60);
+                localHoldExpiresAtRef.current = null;
+                setTimeLeft(fallbackHoldSeconds);
             }
             return;
         }
@@ -1187,9 +1363,9 @@ export default function Page() {
                 <AlertDialogHeader>
                     <AlertDialogTitle>Release reserved seats?</AlertDialogTitle>
                     <AlertDialogDescription>
-                        Leaving this booking will release your reserved seats
-                        and stop the hold timer. You can start again from My
-                        Bookings if the departure is still available.
+                        {isDashboardBooking
+                            ? 'Leaving this booking flow will release the reserved seats and stop the hold timer. You can reopen the booking from the dashboard if the departure is still available.'
+                            : 'Leaving this booking will release your reserved seats and stop the hold timer. You can start again from My Bookings if the departure is still available.'}
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
@@ -1204,6 +1380,48 @@ export default function Page() {
                         disabled={isReleasingHold}
                     >
                         {isReleasingHold ? 'Releasing...' : 'Release and leave'}
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+    );
+
+    const holdExpiryResolutionDialog = (
+        <AlertDialog open={holdExpiryDialogOpen}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>
+                        Booking hold timer has ended
+                    </AlertDialogTitle>
+                    <AlertDialogDescription>
+                        The seat hold timer has expired. Is the customer
+                        currently completing payment? Choose Payment in Progress
+                        to move this booking to Waiting Payment Approval (WA).
+                        You can submit the payment proof later from Bookings
+                        &gt; Actions. Choose Release to Awaiting Payment if
+                        payment is not in progress.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel
+                        disabled={isResolvingHoldExpiry}
+                        onClick={(event) => {
+                            event.preventDefault();
+                            resolveHoldExpiry('awaiting_payment');
+                        }}
+                    >
+                        Release to Awaiting Payment
+                    </AlertDialogCancel>
+                    <AlertDialogAction
+                        disabled={isResolvingHoldExpiry}
+                        onClick={(event) => {
+                            event.preventDefault();
+                            resolveHoldExpiry('payment_in_progress');
+                        }}
+                    >
+                        {isResolvingHoldExpiry
+                            ? 'Resolving...'
+                            : 'Payment in Progress'}
                     </AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>
@@ -1415,6 +1633,7 @@ export default function Page() {
 
     const showPaymentResult = useCallback(
         (nextResult: BookingPaymentResultData) => {
+            setActiveOnlinePaymentAttempt(null);
             stopHoldTimer();
             if (isDashboardBooking) {
                 router.visit(dashboardReturnUrl);
@@ -1506,8 +1725,12 @@ export default function Page() {
             pendingResult: BookingPaymentResultData | undefined,
         ) => {
             const snap = (window as any).snap;
+            let receivedPendingEvent = false;
+            let receivedTerminalEvent = false;
+
             const callbacks = {
                 onSuccess: () => {
+                    receivedTerminalEvent = true;
                     confirmOnlinePaymentAndShowResult(
                         bookingId,
                         paymentId,
@@ -1518,21 +1741,31 @@ export default function Page() {
                     );
                 },
                 onPending: () => {
-                    showPaymentResult(
-                        pendingResult ??
-                            buildPaymentResultFallback({
-                                bookingId,
-                                bookingStatus: 'booking reserved',
-                                paymentStatus: 'pending',
-                                paymentMode: 'online',
-                            }),
-                    );
+                    receivedPendingEvent = true;
+                    setActiveOnlinePaymentAttempt({
+                        bookingId,
+                        paymentId,
+                        snapToken,
+                        pendingResult,
+                    });
+                    setPaymentErrorMessage(null);
                     setIsSubmitting(false);
                 },
                 onError: () => {
+                    receivedTerminalEvent = true;
+                    setActiveOnlinePaymentAttempt(null);
                     setIsSubmitting(false);
                 },
                 onClose: () => {
+                    setIsSubmitting(false);
+
+                    if (receivedPendingEvent || receivedTerminalEvent) {
+                        setPaymentErrorMessage(
+                            'Payment window closed. You can continue payment again while the booking timer is still active.',
+                        );
+                        return;
+                    }
+
                     confirmOnlinePaymentAndShowResult(
                         bookingId,
                         paymentId,
@@ -1545,14 +1778,9 @@ export default function Page() {
             };
 
             if (typeof snap?.pay !== 'function') {
-                showPaymentResult(
-                    pendingResult ??
-                        buildPaymentResultFallback({
-                            bookingId,
-                            bookingStatus: 'booking reserved',
-                            paymentStatus: 'pending',
-                            paymentMode: 'online',
-                        }),
+                setActiveOnlinePaymentAttempt(null);
+                setPaymentErrorMessage(
+                    'Online payment is not available in this browser session. Please refresh the page and try again.',
                 );
                 setIsSubmitting(false);
                 return;
@@ -1560,11 +1788,7 @@ export default function Page() {
 
             snap.pay(snapToken, callbacks);
         },
-        [
-            buildPaymentResultFallback,
-            confirmOnlinePaymentAndShowResult,
-            showPaymentResult,
-        ],
+        [confirmOnlinePaymentAndShowResult],
     );
 
     const startOnlinePayment = (
@@ -1596,19 +1820,20 @@ export default function Page() {
                     | undefined;
 
                 if (!snapToken) {
-                    showPaymentResult(
-                        pendingResult ??
-                            buildPaymentResultFallback({
-                                bookingId,
-                                bookingStatus: 'booking reserved',
-                                paymentStatus: 'pending',
-                                paymentMode: 'online',
-                            }),
+                    setActiveOnlinePaymentAttempt(null);
+                    setPaymentErrorMessage(
+                        'Online payment could not be started. Please try again.',
                     );
                     setIsSubmitting(false);
                     return;
                 }
 
+                setActiveOnlinePaymentAttempt({
+                    bookingId,
+                    paymentId,
+                    snapToken,
+                    pendingResult,
+                });
                 openSnapPayment(snapToken, bookingId, paymentId, pendingResult);
             })
             .catch((error) => {
@@ -1807,52 +2032,13 @@ export default function Page() {
         travelDocuments,
     ]);
 
-    const handlePayNow = (
+    const buildBookingPayload = (
+        addOnsForPayload: AddOnItem[],
         paymentType: PaymentType,
         paymentMethod: PaymentMethod,
-        addOns: AddOnItem[],
-        finalAmount: number,
-        manualData?: ManualPaymentData,
+        includePaymentFields: boolean,
     ) => {
-        setIsSubmitting(true);
-        setPaymentErrorMessage(null);
-
-        if (!fullPaymentAvailable && paymentType === 'full_payment') {
-            setPaymentErrorMessage(
-                paymentUnavailableReason ?? DEFAULT_PAYMENT_UNAVAILABLE_MESSAGE,
-            );
-            setIsSubmitting(false);
-            return;
-        }
-
-        if (!downPaymentAvailable && paymentType === 'down_payment') {
-            setPaymentErrorMessage(
-                'Down payment is unavailable for this tour. Please complete full payment.',
-            );
-            setIsSubmitting(false);
-            return;
-        }
-
-        if (isBalancePayment && existingBooking?.id) {
-            if (paymentMethod === 'midtrans') {
-                startOnlinePayment(
-                    existingBooking.id,
-                    paymentType,
-                    finalAmount,
-                );
-                return;
-            }
-
-            submitManualPayment(
-                existingBooking.id,
-                paymentType,
-                finalAmount,
-                manualData,
-            );
-            return;
-        }
-
-        const addOnRows = addOns
+        const addOnRows = addOnsForPayload
             .filter((a) => a.qty > 0)
             .map((a) => ({
                 name: a.label,
@@ -1881,11 +2067,11 @@ export default function Page() {
             contact_email: contact.email,
             contact_phone: contact.phone,
             contact_notes: contact.notes,
-            payment_type: paymentType,
-            payment_method: paymentMethod,
             passengers: guests.map((g) => {
                 const doc = travelDocuments.find((d) => d.guestId === g.id);
                 return {
+                    id: g.bookingPassengerId,
+                    client_guest_id: g.id,
                     title: g.title || null,
                     first_name: g.firstName,
                     last_name: g.lastName || '',
@@ -1919,9 +2105,98 @@ export default function Page() {
             grand_total: grandTotal,
         };
 
+        if (includePaymentFields) {
+            payload.payment_type = paymentType;
+            payload.payment_method = paymentMethod;
+        }
+
         if (rooms.length > 0) {
             payload.rooms = serializeRoomsForBooking(rooms);
         }
+
+        return payload;
+    };
+
+    const handlePayNow = (
+        paymentType: PaymentType,
+        paymentMethod: PaymentMethod,
+        addOns: AddOnItem[],
+        finalAmount: number,
+        manualData?: ManualPaymentData,
+    ) => {
+        setIsSubmitting(true);
+        setPaymentErrorMessage(null);
+
+        if (!fullPaymentAvailable && paymentType === 'full_payment') {
+            setPaymentErrorMessage(
+                paymentUnavailableReason ?? DEFAULT_PAYMENT_UNAVAILABLE_MESSAGE,
+            );
+            setIsSubmitting(false);
+            return;
+        }
+
+        if (!downPaymentAvailable && paymentType === 'down_payment') {
+            setPaymentErrorMessage(
+                'Down payment is unavailable for this tour. Please complete full payment.',
+            );
+            setIsSubmitting(false);
+            return;
+        }
+
+        if (isBalancePayment && existingBooking?.id) {
+            let startedPayment = false;
+
+            router.put(
+                `/bookings/${existingBooking.id}`,
+                buildBookingPayload(addOns, paymentType, paymentMethod, false),
+                {
+                    forceFormData: true,
+                    preserveScroll: true,
+                    onSuccess: () => {
+                        startedPayment = true;
+
+                        if (paymentMethod === 'midtrans') {
+                            startOnlinePayment(
+                                existingBooking.id,
+                                paymentType,
+                                finalAmount,
+                            );
+                            return;
+                        }
+
+                        submitManualPayment(
+                            existingBooking.id,
+                            paymentType,
+                            finalAmount,
+                            manualData,
+                        );
+                    },
+                    onError: (errors) => {
+                        const message =
+                            firstErrorMessage(errors.payment) ??
+                            firstErrorMessage(errors.payment_date) ??
+                            firstErrorMessage(errors.payment_type);
+
+                        if (message) {
+                            setPaymentErrorMessage(message);
+                        }
+                    },
+                    onFinish: () => {
+                        if (!startedPayment) {
+                            setIsSubmitting(false);
+                        }
+                    },
+                },
+            );
+            return;
+        }
+
+        const payload = buildBookingPayload(
+            addOns,
+            paymentType,
+            paymentMethod,
+            true,
+        );
 
         router.post(storeUrl, payload as any, {
             forceFormData: true,
@@ -2097,6 +2372,7 @@ export default function Page() {
                     </motion.div>
                 </div>
                 {releaseHoldDialog}
+                {holdExpiryResolutionDialog}
             </>,
             (href) => requestIntentionalExit({ href }, { releaseHold: true }),
         );
@@ -2343,6 +2619,9 @@ export default function Page() {
                                                 minimumDownPaymentPct={
                                                     minimumDownPaymentPct
                                                 }
+                                                downPaymentRule={
+                                                    downPaymentRule
+                                                }
                                                 minimumVatPct={minimumVatPct}
                                                 paidAmount={paidAmountValue}
                                                 remainingBalance={
@@ -2368,18 +2647,21 @@ export default function Page() {
                                                     fullPaymentAvailable
                                                 }
                                                 manualPaymentAvailable={
-                                                    paymentMethodAvailability
-                                                        ?.manual ?? true
+                                                    paymentMethodAvailability?.manual ??
+                                                    true
                                                 }
                                                 onlinePaymentAvailable={
-                                                    paymentMethodAvailability
-                                                        ?.online ?? true
+                                                    paymentMethodAvailability?.online ??
+                                                    true
                                                 }
                                                 paymentUnavailableReason={
                                                     paymentUnavailableReason
                                                 }
                                                 paymentErrorMessage={
                                                     paymentErrorMessage
+                                                }
+                                                showProformaInvoiceButton={
+                                                    showProformaInvoiceButton
                                                 }
                                             />
                                         )}
@@ -2511,6 +2793,7 @@ export default function Page() {
                 </AlertDialog>
 
                 {releaseHoldDialog}
+                {holdExpiryResolutionDialog}
             </div>
         </>,
         (href) => requestIntentionalExit({ href }, { releaseHold: true }),

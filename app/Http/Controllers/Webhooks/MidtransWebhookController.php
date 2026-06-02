@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Webhooks;
 use App\Actions\Booking\FinalizeBookingPaymentAction;
 use App\Actions\Booking\NotifyBookingPaymentEventAction;
 use App\Enums\AgentSubscriptionStatus;
+use App\Enums\BookingStatus;
 use App\Enums\PaymentStatus;
 use App\Http\Controllers\Controller;
 use App\Models\AffiliateProfile;
@@ -18,6 +19,7 @@ use App\Models\Payment;
 use App\Models\User;
 use App\Notifications\AffiliateAgentSubscriptionNotification;
 use App\Notifications\AgentSubscriptionActivatedNotification;
+use App\Services\BookingPaymentWorkflowService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -47,13 +49,22 @@ class MidtransWebhookController extends Controller
         }
 
         if ($this->isAlreadyProcessed($payment)) {
+            $this->reconcileAlreadyProcessedBookingPayment($payment);
+
             return response()->json(['message' => 'Payment already processed']);
         }
 
         $newStatus = $this->mapMidtransStatus($payload['transaction_status'] ?? 'pending');
 
         DB::transaction(function () use ($payment, $payload, $newStatus): void {
-            if ($newStatus === PaymentStatus::PAID && $payment->payable_type === Booking::class) {
+            $paymentWorkflow = app(BookingPaymentWorkflowService::class);
+
+            if (
+                $newStatus === PaymentStatus::PAID
+                && $payment->payable_type === Booking::class
+                && ! $paymentWorkflow->isCustomerToAgentPayment($payment)
+                && ! $paymentWorkflow->isAgentToVendorPayment($payment)
+            ) {
                 $booking = $payment->payable;
                 if ($booking instanceof Booking) {
                     app(FinalizeBookingPaymentAction::class)
@@ -113,6 +124,24 @@ class MidtransWebhookController extends Controller
         return $payment->status === PaymentStatus::PAID;
     }
 
+    private function reconcileAlreadyProcessedBookingPayment(Payment $payment): void
+    {
+        if ($payment->payable_type !== Booking::class) {
+            return;
+        }
+
+        $payment->load('payable');
+
+        if (! $payment->payable instanceof Booking) {
+            return;
+        }
+
+        app(FinalizeBookingPaymentAction::class)->reconcilePaidStatusIfStale(
+            $payment->payable->fresh(),
+            $payment->fresh()
+        );
+    }
+
     private function mapMidtransStatus($midtransStatus)
     {
         return match ($midtransStatus) {
@@ -149,7 +178,23 @@ class MidtransWebhookController extends Controller
             'payment_mode' => 'online',
         ]);
 
-        app(FinalizeBookingPaymentAction::class)->execute($booking->fresh(), $payment);
+        $paymentWorkflow = app(BookingPaymentWorkflowService::class);
+
+        if ($paymentWorkflow->isCustomerToAgentPayment($payment)) {
+            $paymentWorkflow->markOnlineCustomerPaymentVerified($payment->fresh());
+            $booking->fresh()->update([
+                'status' => BookingStatus::WAITING_PAYMENT_APPROVAL,
+                'reserved_expires_at' => null,
+            ]);
+        } elseif ($paymentWorkflow->isAgentToVendorPayment($payment)) {
+            $booking->fresh()->update([
+                'status' => BookingStatus::WAITING_PAYMENT_APPROVAL,
+                'reserved_expires_at' => null,
+            ]);
+        } else {
+            app(FinalizeBookingPaymentAction::class)->execute($booking->fresh(), $payment);
+        }
+
         $this->notifyBookingPaymentEvent($payment->fresh(), PaymentStatus::PAID);
     }
 

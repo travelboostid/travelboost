@@ -38,6 +38,10 @@ import type { RoomConfig } from './Step2RoomConfiguration';
 
 export type PaymentType = 'down_payment' | 'full_payment';
 export type PaymentMethod = 'manual_transfer' | 'midtrans';
+export type DownPaymentRule = {
+    mode: 'grand_total_percent' | 'per_pax_percent';
+    percent: number;
+} | null;
 
 export type AddOnItem = {
     key: string;
@@ -66,6 +70,7 @@ type Step4Props = {
     initialAddOns?: AddOnItem[];
     onAddOnsChange?: (addOns: AddOnItem[]) => void;
     minimumDownPaymentPct?: number | null;
+    downPaymentRule?: DownPaymentRule;
     minimumVatPct?: number;
     paidAmount?: number;
     remainingBalance?: number;
@@ -83,6 +88,7 @@ type Step4Props = {
     fullPaymentAvailable?: boolean;
     paymentUnavailableReason?: string | null;
     paymentErrorMessage?: string | null;
+    showProformaInvoiceButton?: boolean;
     manualPaymentAvailable?: boolean;
     onlinePaymentAvailable?: boolean;
 };
@@ -103,6 +109,7 @@ export default function Step4BookingSummary({
     initialAddOns,
     onAddOnsChange,
     minimumDownPaymentPct,
+    downPaymentRule,
     minimumVatPct,
     paidAmount = 0,
     remainingBalance = 0,
@@ -116,6 +123,7 @@ export default function Step4BookingSummary({
     fullPaymentAvailable = true,
     paymentUnavailableReason = null,
     paymentErrorMessage = null,
+    showProformaInvoiceButton = false,
     manualPaymentAvailable = true,
     onlinePaymentAvailable = true,
 }: Step4Props) {
@@ -183,15 +191,33 @@ export default function Step4BookingSummary({
     const grandTotal = hasGrandTotalOverride
         ? grandTotalOverride
         : pricing.totalPrice + addOnsTotal;
-    const dpPct = minimumDownPaymentPct ?? 0;
+    const effectiveDownPaymentRule =
+        downPaymentRule ??
+        (minimumDownPaymentPct !== null && minimumDownPaymentPct !== undefined
+            ? {
+                  mode: 'grand_total_percent' as const,
+                  percent: minimumDownPaymentPct,
+              }
+            : null);
+    const dpPct = effectiveDownPaymentRule?.percent ?? 0;
     const dpRate = dpPct / 100;
+    const perPaxDownPaymentBase = guests.reduce(
+        (sum, guest) => sum + Number(guest.price || 0),
+        0,
+    );
+    const downPaymentBase =
+        effectiveDownPaymentRule?.mode === 'per_pax_percent'
+            ? perPaxDownPaymentBase
+            : grandTotal;
     const dpLabel = downPaymentAvailable
-        ? `Down Payment (${dpPct}%)`
+        ? effectiveDownPaymentRule?.mode === 'per_pax_percent'
+            ? `Down Payment (${dpPct}% per pax)`
+            : `Down Payment (${dpPct}%)`
         : 'Down Payment';
     const effectivePaymentType: PaymentType | null = forceBalancePayment
         ? 'full_payment'
         : paymentType;
-    const downPaymentAmount = Math.round(grandTotal * dpRate);
+    const downPaymentAmount = Math.round(downPaymentBase * dpRate);
     const fullPaymentAmount = grandTotal;
     const payAmount =
         effectivePaymentType === 'full_payment'
@@ -262,6 +288,27 @@ export default function Step4BookingSummary({
             </div>
         </div>
     );
+    const proformaInvoiceButton = showProformaInvoiceButton ? (
+        <Tooltip>
+            <TooltipTrigger asChild>
+                <span className="inline-flex">
+                    <Button
+                        type="button"
+                        variant="outline"
+                        size="lg"
+                        disabled
+                        className="gap-2"
+                    >
+                        <ReceiptIcon className="size-4" />
+                        Proforma Invoice
+                    </Button>
+                </span>
+            </TooltipTrigger>
+            <TooltipContent>
+                <p>Proforma invoice will be available soon</p>
+            </TooltipContent>
+        </Tooltip>
+    ) : null;
 
     // ─── Add-on qty handler ────────────────────────────────────────────
     const updateAddOnQty = useCallback(
@@ -583,6 +630,11 @@ export default function Step4BookingSummary({
                                 <div className="hidden lg:block" />
                                 {paymentSummaryStack}
                             </div>
+                            {proformaInvoiceButton && (
+                                <div className="mt-4 flex justify-end">
+                                    {proformaInvoiceButton}
+                                </div>
+                            )}
                         </div>
                     )}
 
@@ -683,7 +735,8 @@ export default function Step4BookingSummary({
                     {/* ─── Pay Now ────────────────────────────────────────────────── */}
                     {!paymentControlsHidden && (
                         <div className="p-4">
-                            <div className="flex justify-end">
+                            <div className="flex flex-wrap justify-end gap-2">
+                                {proformaInvoiceButton}
                                 <Popover
                                     open={paymentPopoverOpen}
                                     onOpenChange={(open) => {

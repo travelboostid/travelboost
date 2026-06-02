@@ -23,6 +23,7 @@ export type CompanyDashboardLayoutProps = {
     containerClassName?: string;
     activeMenuIds?: string[];
     openMenuIds?: string[];
+    onNavigateAway?: (href: string) => void;
 };
 
 export default function CompanyDashboardLayout(
@@ -50,6 +51,7 @@ export default function CompanyDashboardLayout(
                                 <div className="flex-1">
                                     <BreadcrumbRenderer
                                         breadcrumb={breadcrumb}
+                                        onNavigateAway={props.onNavigateAway}
                                     />
                                 </div>
                                 <div>{applet}</div>

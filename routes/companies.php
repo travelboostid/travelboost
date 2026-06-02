@@ -147,6 +147,7 @@ Route::prefix('companies')->middleware(['use-analytics-measurement-ids-props'])-
         Route::post('bookings/create/{tour}/reserve', [DashboardBookingController::class, 'reserve'])->name('bookings.create.reserve');
         Route::post('bookings/create/{tour}', [DashboardBookingController::class, 'store'])->name('bookings.create.store');
         Route::post('bookings/{booking}/release-hold', [DashboardBookingController::class, 'releaseHold'])->name('bookings.release-hold');
+        Route::post('bookings/{booking}/resolve-hold-expiry', [DashboardBookingController::class, 'resolveHoldExpiry'])->name('bookings.resolve-hold-expiry');
         Route::post('bookings/{booking}/travel-documents', [DashboardBookingController::class, 'updateTravelDocuments'])->name('bookings.travel-documents');
         Route::get('bookings/{booking}/payment-result', [DashboardBookingController::class, 'paymentResult'])->name('bookings.payment-result');
         Route::post('bookings/{booking}/manual-payment', [DashboardBookingController::class, 'storeManualPayment'])->name('bookings.manual-payment');
@@ -162,6 +163,10 @@ Route::prefix('companies')->middleware(['use-analytics-measurement-ids-props'])-
         Route::get('bookings/{booking}', [BookingIndexController::class, 'show'])->name('bookings.show');
         Route::get('bookings/{booking}/edit', [BookingIndexController::class, 'edit'])->name('bookings.edit');
         Route::put('bookings/{booking}', [BookingIndexController::class, 'update'])->name('bookings.update');
+        Route::post('bookings/{booking}/payments/{payment}/approve', [BookingIndexController::class, 'acceptManualPayment'])
+            ->name('bookings.payments.approve');
+        Route::post('bookings/{booking}/payments/{payment}/decline', [BookingIndexController::class, 'declineManualPayment'])
+            ->name('bookings.payments.decline');
         Route::post('bookings/{booking}/manual-payments/{payment}/accept', [BookingIndexController::class, 'acceptManualPayment'])
             ->name('bookings.manual-payments.accept');
         Route::post('bookings/{booking}/manual-payments/{payment}/decline', [BookingIndexController::class, 'declineManualPayment'])

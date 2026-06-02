@@ -2,11 +2,12 @@ import type { TourResource } from '@/api/model';
 import BookingInfoCard from '@/components/booking/BookingInfoCard';
 import Step1GuestInformation from '@/components/booking/Step1GuestInformation';
 import Step2RoomConfiguration, {
-    type RoomConfig,
+    deserializeRoomsFromBooking,
 } from '@/components/booking/Step2RoomConfiguration';
 import Step3TravelDocuments from '@/components/booking/Step3TravelDocuments';
 import Step4BookingSummary, {
     type AddOnItem,
+    type DownPaymentRule,
 } from '@/components/booking/Step4BookingSummary';
 import WizardStepIndicator from '@/components/booking/WizardStepIndicator';
 import CompanyDashboardLayout from '@/components/layouts/company-dashboard';
@@ -89,6 +90,7 @@ type PageProps = {
     tourPrices: TourPrice[];
     addOns: AddOnItem[];
     minimumDownPaymentPct: number | null;
+    downPaymentRule?: DownPaymentRule;
     minimumVatPct: number;
     platformFeePerPax?: number;
     paidAmount?: number;
@@ -124,6 +126,7 @@ function passengersToGuests(passengers: Passenger[]): GuestEntry[] {
             originalPrice: p.price_amount ?? 0,
             roomTypeDescription: p.room_type ?? '',
             note: p.note ?? '',
+            bookingPassengerId: p.id,
         };
     });
 }
@@ -161,25 +164,6 @@ function passengersToTravelDocs(
         .filter(Boolean) as TravelDocumentEntry[];
 }
 
-function buildRoomsConfig(rooms: any[]): RoomConfig[] {
-    return rooms.map((r, idx) => {
-        const bedLayout: { guestId?: string }[] = Array.isArray(r.bed_layout)
-            ? r.bed_layout
-            : [];
-
-        return {
-            id: `room-${idx}`,
-            type: r.room_type,
-            label: r.room_label,
-            capacity: r.capacity || 2,
-            guestIds: bedLayout
-                .map((b) => b.guestId)
-                .filter(Boolean) as string[],
-            sharingGuestIds: [],
-        };
-    });
-}
-
 // ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
@@ -189,6 +173,7 @@ export default function Page({
     tourPrices,
     addOns,
     minimumDownPaymentPct,
+    downPaymentRule = null,
     minimumVatPct,
     platformFeePerPax = 25_000,
     paidAmount = 0,
@@ -203,6 +188,7 @@ export default function Page({
             tourPrices={tourPrices}
             addOns={addOns}
             minimumDownPaymentPct={minimumDownPaymentPct}
+            downPaymentRule={downPaymentRule}
             minimumVatPct={minimumVatPct}
             platformFeePerPax={platformFeePerPax}
             paidAmount={paidAmount}
@@ -222,6 +208,7 @@ function ReadOnlyWizard({
     tourPrices,
     addOns: initialAddOns,
     minimumDownPaymentPct,
+    downPaymentRule,
     minimumVatPct,
     platformFeePerPax,
     paidAmount,
@@ -233,6 +220,7 @@ function ReadOnlyWizard({
     tourPrices: TourPrice[];
     addOns: AddOnItem[];
     minimumDownPaymentPct: number | null;
+    downPaymentRule: DownPaymentRule;
     minimumVatPct: number;
     platformFeePerPax: number;
     paidAmount: number;
@@ -265,8 +253,13 @@ function ReadOnlyWizard({
 
     // ── Rooms ──────────────────────────────────────────────────────────
     const rooms = useMemo(
-        () => buildRoomsConfig(booking.rooms || []),
-        [booking.rooms],
+        () =>
+            deserializeRoomsFromBooking(
+                booking.rooms || [],
+                guests,
+                booking.passengers,
+            ),
+        [booking.rooms, booking.passengers, guests],
     );
 
     // ── Travel Documents ───────────────────────────────────────────────
@@ -523,6 +516,9 @@ function ReadOnlyWizard({
                                                 minimumDownPaymentPct={
                                                     minimumDownPaymentPct
                                                 }
+                                                downPaymentRule={
+                                                    downPaymentRule
+                                                }
                                                 minimumVatPct={minimumVatPct}
                                                 paidAmount={paidAmount}
                                                 remainingBalance={
@@ -533,6 +529,10 @@ function ReadOnlyWizard({
                                                 }
                                                 readOnly
                                                 hidePaymentControls
+                                                showProformaInvoiceButton={
+                                                    booking.status ===
+                                                    'down payment'
+                                                }
                                             />
                                         )}
                                     </motion.div>

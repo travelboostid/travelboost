@@ -25,8 +25,7 @@ class NotifyBookingPaymentEventAction
             return;
         }
 
-        $receiverCompany = app(BookingPaymentReceiverService::class)
-            ->resolveForBooking($booking)['receiver_company'];
+        $receiverCompany = $this->paymentReceiverCompany($booking, $payment);
 
         if (! $receiverCompany instanceof Company) {
             return;
@@ -43,6 +42,18 @@ class NotifyBookingPaymentEventAction
             $payment->fresh(),
             $receiverCompany
         ));
+    }
+
+    private function paymentReceiverCompany(Booking $booking, Payment $payment): ?Company
+    {
+        $receiverCompanyId = data_get($payment->payload, 'payment_receiver_company_id');
+
+        if ($receiverCompanyId) {
+            return Company::find($receiverCompanyId);
+        }
+
+        return app(BookingPaymentReceiverService::class)
+            ->resolveForBooking($booking)['receiver_company'];
     }
 
     private function alreadySentToCustomer(Booking $booking, string $stage, ?Payment $payment = null): bool

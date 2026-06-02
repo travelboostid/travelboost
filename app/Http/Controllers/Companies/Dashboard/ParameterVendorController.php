@@ -4,12 +4,14 @@ namespace App\Http\Controllers\Companies\Dashboard;
 
 use App\Http\Controllers\Controller;
 use App\Models\Company;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Inertia\Response;
 
 class ParameterVendorController extends Controller
 {
-    public function index(Request $request, Company $company)
+    public function index(Request $request, Company $company): Response
     {
         $settings = $company->companySetting()->firstOrCreate(
             ['company_id' => $company->id],
@@ -29,7 +31,7 @@ class ParameterVendorController extends Controller
         ]);
     }
 
-    public function update(Request $request, Company $company)
+    public function update(Request $request, Company $company): RedirectResponse
     {
         $validated = $request->validate([
             'booking_deadline' => ['required', 'integer', 'min:0'],

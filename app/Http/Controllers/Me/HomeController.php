@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Me;
 
 use App\Actions\Booking\ExpireBookingReservationsAction;
 use App\Enums\BookingStatus;
-use App\Enums\PaymentStatus;
 use App\Http\Controllers\Controller;
 use App\Models\BankAccount;
 use App\Models\Booking;
@@ -15,6 +14,7 @@ use App\Models\TourAvailability;
 use App\Models\TourPrice;
 use App\Models\TourSchedule;
 use App\Services\BookingPaymentReceiverService;
+use App\Services\BookingPaymentWorkflowService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -134,8 +134,8 @@ class HomeController extends Controller
             'payments',
         ]);
 
-        $paidPayments = $booking->payments
-            ->filter(fn (Payment $payment): bool => $payment->status === PaymentStatus::PAID)
+        $paidPayments = app(BookingPaymentWorkflowService::class)
+            ->finalizablePaidPayments($booking)
             ->sortBy(fn (Payment $payment): string => (string) ($payment->paid_at ?? $payment->created_at))
             ->values();
 
@@ -185,9 +185,7 @@ class HomeController extends Controller
      */
     private function appendBookingPayload(Booking $booking): array
     {
-        $paidAmount = (float) $booking->payments
-            ->where('status', PaymentStatus::PAID)
-            ->sum('amount');
+        $paidAmount = app(BookingPaymentWorkflowService::class)->finalizablePaidAmount($booking);
         $grandTotal = (float) $booking->grand_total;
         $remainingBalance = max(0.0, $grandTotal - $paidAmount);
         $status = $booking->status instanceof BookingStatus

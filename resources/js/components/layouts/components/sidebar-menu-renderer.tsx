@@ -51,12 +51,14 @@ type Props = {
     menu: MenuItem[];
     activeMenuIds: string[];
     openMenuIds: string[];
+    onNavigateAway?: (href: string) => void;
 };
 
 export function SidebarMenuRenderer({
     menu,
     activeMenuIds = [],
     openMenuIds = [],
+    onNavigateAway,
 }: Props) {
     const isMobile = useIsMobile();
     const { state } = useSidebar();
@@ -80,6 +82,27 @@ export function SidebarMenuRenderer({
         'h-8.5 rounded-xl pl-3 text-[0.85rem] font-medium shadow-none data-[active=true]:shadow-sm';
     const disabledButtonClassName =
         'h-9 rounded-2xl px-2 text-[0.9rem] font-medium text-slate-600 transition-all dark:text-slate-300';
+    const handleLinkClick = (
+        event: React.MouseEvent<HTMLAnchorElement>,
+        href: string,
+        target?: HTMLAttributeAnchorTarget,
+    ) => {
+        if (
+            !onNavigateAway ||
+            event.defaultPrevented ||
+            event.button !== 0 ||
+            event.metaKey ||
+            event.ctrlKey ||
+            event.shiftKey ||
+            event.altKey ||
+            (target && target !== '_self')
+        ) {
+            return;
+        }
+
+        event.preventDefault();
+        onNavigateAway(href);
+    };
 
     const renderLink = (item: MenuItem, isSub = false) => {
         const Button = isSub ? SidebarMenuSubButton : SidebarMenuButton;
@@ -114,7 +137,17 @@ export function SidebarMenuRenderer({
                         isSub && submenuButtonClassName,
                     )}
                 >
-                    <a href={item.urlOrAction} target={item.target}>
+                    <a
+                        href={item.urlOrAction}
+                        target={item.target}
+                        onClick={(event) =>
+                            handleLinkClick(
+                                event,
+                                item.urlOrAction as string,
+                                item.target,
+                            )
+                        }
+                    >
                         {item.icon && (
                             <item.icon className="text-slate-500 transition-colors dark:text-slate-400" />
                         )}
@@ -191,6 +224,15 @@ export function SidebarMenuRenderer({
                                     sub.disabled ? undefined : sub.urlOrAction
                                 }
                                 target={sub.disabled ? undefined : sub.target}
+                                onClick={(event) => {
+                                    if (!sub.disabled) {
+                                        handleLinkClick(
+                                            event,
+                                            sub.urlOrAction as string,
+                                            sub.target,
+                                        );
+                                    }
+                                }}
                             >
                                 {sub.icon && (
                                     <sub.icon className="size-4 text-slate-500 dark:text-slate-400" />
@@ -254,6 +296,19 @@ export function SidebarMenuRenderer({
                                 target={
                                     action.disabled ? undefined : action.target
                                 }
+                                onClick={(event) => {
+                                    if (
+                                        typeof action.urlOrAction ===
+                                            'string' &&
+                                        !action.disabled
+                                    ) {
+                                        handleLinkClick(
+                                            event,
+                                            action.urlOrAction,
+                                            action.target,
+                                        );
+                                    }
+                                }}
                             >
                                 {action.icon && (
                                     <action.icon className="text-muted-foreground" />

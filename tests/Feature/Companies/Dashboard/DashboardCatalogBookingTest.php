@@ -1,5 +1,7 @@
 <?php
 
+use App\Actions\Booking\SyncAvailabilityAction;
+use App\Enums\BookingStatus;
 use App\Enums\CompanyTeamStatus;
 use App\Enums\VendorAgentPartnerStatus;
 use App\Models\AgentTour;
@@ -285,6 +287,7 @@ test('dashboard booking create page uses customer wizard with dashboard endpoint
     $response->assertOk();
     $response->assertInertia(fn ($page) => $page
         ->component('tours/bookings/create')
+        ->where('serverNow', fn (?string $value): bool => is_string($value) && str_contains($value, 'T'))
         ->where('bookingNumber', null)
         ->where('dashboardBookingContext.isDashboard', true)
         ->where('dashboardBookingContext.reserveUrl', "/companies/{$vendor->username}/dashboard/bookings/create/{$tour->id}/reserve")
@@ -498,6 +501,142 @@ test('dashboard reserve without booking number creates one booking and reuses it
 
     expect(Booking::query()->count())->toBe(1);
     expect($booking->fresh()->contact_phone)->toBe('0899999999');
+});
+
+test('dashboard hold expiry can release a booking reserved hold back to awaiting payment', function () {
+    ['vendor' => $vendor, 'tour' => $tour, 'schedule' => $schedule] = createPricedDashboardTour();
+    $dashboardUser = User::factory()->create();
+    attachDashboardUserToCompany($dashboardUser, $vendor);
+
+    $booking = Booking::factory()->create([
+        'vendor_id' => $vendor->id,
+        'tour_id' => $tour->id,
+        'departure_date' => $schedule->departure_date,
+        'status' => 'booking reserved',
+        'reserved_type' => 'system',
+        'reserved_expires_at' => now()->subSecond(),
+        'pax_adult' => 2,
+        'pax_child' => 0,
+        'pax_infant' => 0,
+    ]);
+
+    app(SyncAvailabilityAction::class)->executeForBooking($booking);
+
+    $response = $this->actingAs($dashboardUser)
+        ->post("/companies/{$vendor->username}/dashboard/bookings/{$booking->id}/resolve-hold-expiry", [
+            'resolution' => 'awaiting_payment',
+        ]);
+
+    $response->assertRedirect();
+
+    $availability = TourAvailability::query()
+        ->where('schedule_id', $schedule->id)
+        ->firstOrFail();
+
+    expect($booking->fresh()->status)->toBe(BookingStatus::AWAITING_PAYMENT)
+        ->and($booking->fresh()->reserved_type)->toBe('system')
+        ->and($booking->fresh()->reserved_expires_at)->toBeNull()
+        ->and((int) $availability->fresh()->BRS)->toBe(0)
+        ->and((int) $availability->fresh()->WP)->toBe(2)
+        ->and((int) $availability->fresh()->available)->toBe(10);
+});
+
+test('dashboard hold expiry can mark payment in progress as waiting payment approval', function () {
+    ['vendor' => $vendor, 'tour' => $tour, 'schedule' => $schedule] = createPricedDashboardTour();
+    $agent = Company::factory()->create(['type' => 'agent']);
+    $dashboardUser = User::factory()->create();
+    attachDashboardUserToCompany($dashboardUser, $agent);
+    AgentTour::create([
+        'company_id' => $agent->id,
+        'tour_id' => $tour->id,
+        'status' => 'active',
+    ]);
+
+    $booking = Booking::factory()->create([
+        'vendor_id' => $vendor->id,
+        'agent_id' => $agent->id,
+        'tour_id' => $tour->id,
+        'departure_date' => $schedule->departure_date,
+        'status' => 'booking reserved',
+        'reserved_type' => 'system',
+        'reserved_expires_at' => now()->subSecond(),
+        'pax_adult' => 2,
+        'pax_child' => 0,
+        'pax_infant' => 0,
+    ]);
+
+    app(SyncAvailabilityAction::class)->executeForBooking($booking);
+
+    $response = $this->actingAs($dashboardUser)
+        ->post("/companies/{$agent->username}/dashboard/bookings/{$booking->id}/resolve-hold-expiry", [
+            'resolution' => 'payment_in_progress',
+        ]);
+
+    $response->assertRedirect();
+
+    $availability = TourAvailability::query()
+        ->where('schedule_id', $schedule->id)
+        ->firstOrFail();
+
+    expect($booking->fresh()->status)->toBe(BookingStatus::WAITING_PAYMENT_APPROVAL)
+        ->and($booking->fresh()->reserved_type)->toBe('payment_in_progress')
+        ->and($booking->fresh()->reserved_expires_at)->toBeNull()
+        ->and((int) $availability->fresh()->BRS)->toBe(0)
+        ->and((int) $availability->fresh()->WPA)->toBe(2)
+        ->and((int) $availability->fresh()->available)->toBe(8);
+});
+
+test('dashboard hold expiry rejects inaccessible and non reserved bookings', function () {
+    ['vendor' => $vendor, 'tour' => $tour, 'schedule' => $schedule] = createPricedDashboardTour();
+    $otherVendor = Company::factory()->create(['type' => 'vendor']);
+    $dashboardUser = User::factory()->create();
+    attachDashboardUserToCompany($dashboardUser, $otherVendor);
+
+    $booking = Booking::factory()->create([
+        'vendor_id' => $vendor->id,
+        'tour_id' => $tour->id,
+        'departure_date' => $schedule->departure_date,
+        'status' => 'booking reserved',
+        'reserved_type' => 'system',
+        'reserved_expires_at' => now()->subSecond(),
+    ]);
+
+    $this->actingAs($dashboardUser)
+        ->post("/companies/{$otherVendor->username}/dashboard/bookings/{$booking->id}/resolve-hold-expiry", [
+            'resolution' => 'awaiting_payment',
+        ])
+        ->assertNotFound();
+
+    $otherTour = Tour::factory()->create(['company_id' => $otherVendor->id]);
+    $otherSchedule = TourSchedule::create([
+        'tour_id' => $otherTour->id,
+        'tour_code' => $otherTour->code,
+        'company_id' => $otherVendor->id,
+        'departure_date' => $schedule->departure_date,
+        'return_date' => now()->addDays(50)->toDateString(),
+        'is_active' => true,
+    ]);
+    TourAvailability::create([
+        'company_id' => $otherVendor->id,
+        'tour_id' => $otherTour->id,
+        'schedule_id' => $otherSchedule->id,
+        'max_pax' => 10,
+        'available' => 8,
+    ]);
+    $downPaymentBooking = Booking::factory()->create([
+        'vendor_id' => $otherVendor->id,
+        'tour_id' => $otherTour->id,
+        'departure_date' => $otherSchedule->departure_date,
+        'status' => 'down payment',
+        'reserved_type' => 'system',
+        'reserved_expires_at' => now()->subSecond(),
+    ]);
+
+    $this->actingAs($dashboardUser)
+        ->post("/companies/{$otherVendor->username}/dashboard/bookings/{$downPaymentBooking->id}/resolve-hold-expiry", [
+            'resolution' => 'awaiting_payment',
+        ])
+        ->assertStatus(422);
 });
 
 test('vendor dashboard booking reserve requires an active agent partner', function () {
