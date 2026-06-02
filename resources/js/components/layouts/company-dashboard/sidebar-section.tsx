@@ -27,7 +27,7 @@ export function SidebarSection(props: CompanyDashboardLayoutProps) {
             </SidebarHeader>
             <SidebarContent className="gap-1.5 px-1.5 pb-2 group-data-[collapsible=icon]:px-0">
                 <NavMain {...props} />
-                <NavSecondary />
+                <NavSecondary onNavigateAway={props.onNavigateAway} />
             </SidebarContent>
             <SidebarFooter className="px-1.5 pt-2 pb-4 group-data-[collapsible=icon]:px-0">
                 <NavUser />

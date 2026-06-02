@@ -15,7 +15,11 @@ import {
     type MenuItem,
 } from '../components/sidebar-menu-renderer';
 
-export function NavSecondary() {
+export function NavSecondary({
+    onNavigateAway,
+}: {
+    onNavigateAway?: (href: string) => void;
+}) {
     const { locale, setLocale } = useLocale();
     const localeInfo = useMemo(() => {
         return (
@@ -79,6 +83,7 @@ export function NavSecondary() {
                 menu={menus}
                 activeMenuIds={[]}
                 openMenuIds={[]}
+                onNavigateAway={onNavigateAway}
             />
         </SidebarGroup>
     );
