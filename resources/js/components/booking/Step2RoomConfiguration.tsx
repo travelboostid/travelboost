@@ -221,6 +221,7 @@ type PersistedBookingRoom = {
 type PersistedBookingPassenger = {
     id?: number | string | null;
     room_number?: string | number | null;
+    room_type?: string | null;
     price_category?: string | null;
 };
 
@@ -320,14 +321,104 @@ const placeGuestInFirstEmptyBed = (
     }
 };
 
+const nextUnassignedBedGuest = (
+    guests: GuestEntry[],
+    assignedGuestIds: Set<string>,
+): string | null =>
+    guests.find(
+        (guest) =>
+            !assignedGuestIds.has(guest.id) &&
+            !isNoBedCategory(guest.priceCategory),
+    )?.id ?? null;
+
+const roomTypeFromPassengers = (
+    roomPassengers: PersistedBookingPassenger[],
+    matchedGuests: GuestEntry[],
+): BedType => {
+    const persistedRoomType = roomPassengers
+        .map((passenger) => String(passenger.room_type ?? '').trim())
+        .find((roomType) => isBedType(roomType));
+
+    if (persistedRoomType && isBedType(persistedRoomType)) {
+        return persistedRoomType;
+    }
+
+    if (matchedGuests.length <= 1) {
+        return 'single';
+    }
+
+    if (matchedGuests.length === 2) {
+        return 'twin';
+    }
+
+    if (matchedGuests.length === 3) {
+        return 'triple';
+    }
+
+    return 'quad';
+};
+
+const deserializeRoomsFromPassengerRoomNumbers = (
+    guests: GuestEntry[],
+    passengers: PersistedBookingPassenger[] | null | undefined,
+): RoomConfig[] => {
+    const passengersByRoom = new Map<string, PersistedBookingPassenger[]>();
+
+    (passengers ?? []).forEach((passenger) => {
+        const roomNumber = String(passenger.room_number ?? '').trim();
+
+        if (roomNumber === '') {
+            return;
+        }
+
+        passengersByRoom.set(roomNumber, [
+            ...(passengersByRoom.get(roomNumber) ?? []),
+            passenger,
+        ]);
+    });
+
+    return Array.from(passengersByRoom.entries()).map(
+        ([roomNumber, roomPassengers], roomIndex) => {
+            const matchedGuests = roomPassengers
+                .map((passenger) => resolvePassengerGuest(passenger, guests))
+                .filter(Boolean) as GuestEntry[];
+            const bedGuests = matchedGuests.filter(
+                (guest) => !isNoBedCategory(guest.priceCategory),
+            );
+            const sharingGuestIds = matchedGuests
+                .filter((guest) => isNoBedCategory(guest.priceCategory))
+                .map((guest) => guest.id);
+            const type = roomTypeFromPassengers(roomPassengers, bedGuests);
+            const capacity = Math.max(
+                BED_TYPES[type].capacity,
+                bedGuests.length,
+            );
+
+            return {
+                id: `room-${roomIndex + 1}`,
+                type,
+                label: `Room ${roomNumber}`,
+                capacity,
+                guestIds: Array.from(
+                    { length: capacity },
+                    (_, index) => bedGuests[index]?.id ?? '',
+                ),
+                sharingGuestIds,
+            };
+        },
+    );
+};
+
 export function deserializeRoomsFromBooking(
     bookingRooms: PersistedBookingRoom[] | null | undefined,
     guests: GuestEntry[],
     passengers: PersistedBookingPassenger[] | null | undefined = [],
 ): RoomConfig[] {
     if (!Array.isArray(bookingRooms) || bookingRooms.length === 0) {
-        return [];
+        return deserializeRoomsFromPassengerRoomNumbers(guests, passengers);
     }
+
+    const assignedGuestIds = new Set<string>();
 
     return bookingRooms.map((room, roomIndex) => {
         const rawRoomType = String(room.room_type ?? '');
@@ -345,10 +436,9 @@ export function deserializeRoomsFromBooking(
         );
 
         bedLayout.forEach((bed, index) => {
-            const resolvedGuestId = resolvePersistedGuestId(
-                bed.guestId,
-                guests,
-            );
+            const resolvedGuestId =
+                resolvePersistedGuestId(bed.guestId, guests) ??
+                nextUnassignedBedGuest(guests, assignedGuestIds);
 
             if (!resolvedGuestId) {
                 return;
@@ -362,6 +452,7 @@ export function deserializeRoomsFromBooking(
             }
 
             guestIds[safeSlot] = resolvedGuestId;
+            assignedGuestIds.add(resolvedGuestId);
         });
 
         const roomNumber = String(roomIndex + 1);
@@ -382,12 +473,14 @@ export function deserializeRoomsFromBooking(
                 if (isNoBedCategory(matchedGuest.priceCategory)) {
                     if (!guestIds.includes(matchedGuest.id)) {
                         sharingGuestIds.push(matchedGuest.id);
+                        assignedGuestIds.add(matchedGuest.id);
                     }
 
                     return;
                 }
 
                 placeGuestInFirstEmptyBed(guestIds, matchedGuest.id);
+                assignedGuestIds.add(matchedGuest.id);
             });
 
         return {
