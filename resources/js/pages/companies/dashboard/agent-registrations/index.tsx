@@ -157,29 +157,6 @@ export default function Page({ data, agentTiers }: PageProps) {
                 },
             },
             {
-                id: 'applied_at',
-                accessorKey: 'applied_at',
-                header: ({ column }) => (
-                    <DataTableColumnHeader column={column} label="Applied At" />
-                ),
-                cell: ({ row }) =>
-                    dayjs(row.original.applied_at).format('DD MMM YYYY'),
-            },
-            {
-                id: 'accepted_at',
-                accessorKey: 'accepted_at',
-                header: ({ column }) => (
-                    <DataTableColumnHeader
-                        column={column}
-                        label="Accepted At"
-                    />
-                ),
-                cell: ({ row }) =>
-                    row.original.accepted_at
-                        ? dayjs(row.original.accepted_at).format('DD MMM YYYY')
-                        : '-',
-            },
-            {
                 id: 'payment_mode',
                 header: ({ column }) => (
                     <DataTableColumnHeader
@@ -278,11 +255,36 @@ export default function Page({ data, agentTiers }: PageProps) {
 
                     return (
                         <Switch
-                            checked={registration.online_payment_enabled ?? true}
+                            checked={
+                                registration.online_payment_enabled ?? true
+                            }
                             onCheckedChange={handleUpdate}
                         />
                     );
                 },
+            },
+            {
+                id: 'applied_at',
+                accessorKey: 'applied_at',
+                header: ({ column }) => (
+                    <DataTableColumnHeader column={column} label="Applied At" />
+                ),
+                cell: ({ row }) =>
+                    dayjs(row.original.applied_at).format('DD MMM YYYY'),
+            },
+            {
+                id: 'accepted_at',
+                accessorKey: 'accepted_at',
+                header: ({ column }) => (
+                    <DataTableColumnHeader
+                        column={column}
+                        label="Accepted At"
+                    />
+                ),
+                cell: ({ row }) =>
+                    row.original.accepted_at
+                        ? dayjs(row.original.accepted_at).format('DD MMM YYYY')
+                        : '-',
             },
             {
                 id: 'actions',
