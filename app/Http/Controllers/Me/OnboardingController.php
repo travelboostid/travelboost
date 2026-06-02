@@ -19,6 +19,7 @@ use App\Notifications\AgentOnboardingWelcomeNotification;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Context;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class OnboardingController extends Controller
@@ -55,53 +56,58 @@ class OnboardingController extends Controller
 
         $validated = $request->validated();
 
-        $validatedCompanyDto = Arr::except($validated, ['subdomain']);
-        $validatedCompanyDto['type'] = CompanyType::AGENT;
+        $company = DB::transaction(function () use ($user, $validated): Company {
+            $validatedCompanyDto = Arr::except($validated, ['subdomain']);
+            $validatedCompanyDto['type'] = CompanyType::AGENT;
 
-        $domain = Context::get('domain');
-        if ($domain && $domain->owner_type === AffiliateProfile::class) {
-            $validatedCompanyDto['referred_by'] = $domain->owner->user_id;
-        }
+            $domain = Context::get('domain');
+            if ($domain && $domain->owner_type === AffiliateProfile::class) {
+                $validatedCompanyDto['referred_by'] = $domain->owner->user_id;
+            }
 
-        $company = Company::forceCreate($validatedCompanyDto);
+            $company = Company::forceCreate($validatedCompanyDto);
 
-        $company->domain()->create([
-            'subdomain' => $validated['subdomain'],
-            'domain_enabled' => false,
-            'subdomain_enabled' => true,
-        ]);
-
-        $appConfig = AppConfig::where('key', 'admin')->first();
-        $adminConfig = $appConfig ? $appConfig->value : [];
-        $freeAiCredit = isset($adminConfig['free_ai_credit']) ? (float) $adminConfig['free_ai_credit'] : 0;
-
-        $company->aiCredit()->update([
-            'balance' => $freeAiCredit,
-        ]);
-
-        CompanyTeam::create([
-            'company_id' => $company->id,
-            'user_id' => $user->id,
-            'role' => CompanyTeamRole::SUPERADMIN,
-            'status' => CompanyTeamStatus::ACTIVE,
-        ]);
-
-        $trialPackage = AgentSubscriptionPackage::where('name', 'Free Trial 1 Month')->first();
-
-        if ($trialPackage) {
-            AgentSubscription::create([
-                'company_id' => $company->id,
-                'package_id' => $trialPackage->id,
-                'started_at' => now(),
-                'ended_at' => now()->addMonth(),
+            $company->domain()->create([
+                'subdomain' => $validated['subdomain'],
+                'domain_enabled' => false,
+                'subdomain_enabled' => false,
             ]);
-        }
 
-        $user->update([
-            'status' => UserStatus::ACTIVE,
-        ]);
+            $appConfig = AppConfig::where('key', 'admin')->first();
+            $adminConfig = $appConfig ? $appConfig->value : [];
+            $freeAiCredit = isset($adminConfig['free_ai_credit']) ? (float) $adminConfig['free_ai_credit'] : 0;
 
-        $user->addRole("company:{$company->id}:superadmin", "company:{$company->id}");
+            $company->aiCredit()->updateOrCreate([], [
+                'balance' => $freeAiCredit,
+            ]);
+
+            CompanyTeam::create([
+                'company_id' => $company->id,
+                'user_id' => $user->id,
+                'role' => CompanyTeamRole::SUPERADMIN,
+                'status' => CompanyTeamStatus::ACTIVE,
+                'is_owner' => true,
+            ]);
+
+            $trialPackage = AgentSubscriptionPackage::find(1);
+
+            if ($trialPackage) {
+                AgentSubscription::create([
+                    'company_id' => $company->id,
+                    'package_id' => $trialPackage->id,
+                    'started_at' => now(),
+                    'ended_at' => now()->addMonth(),
+                ]);
+            }
+
+            $user->update([
+                'status' => UserStatus::ACTIVE,
+            ]);
+
+            $user->addRole("company:{$company->id}:superadmin", "company:{$company->id}");
+
+            return $company;
+        });
 
         $user->notify(new AgentOnboardingWelcomeNotification($company, $user));
 

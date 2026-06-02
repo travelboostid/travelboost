@@ -146,7 +146,93 @@ const getPromotionLabel = (price: any, currency = 'IDR') => {
     return formatCurrency(promotionAmount, currency);
 };
 
-const getCommissionLabel = (price: any, currency = 'IDR') => {
+const formatPercentage = (value: any) =>
+    `${Number(toNumber(value).toFixed(2)).toString()}%`;
+
+const getCommissionComponent = (
+    basePrice: number,
+    type: any,
+    value: any,
+    currency = 'IDR',
+) => {
+    const commissionValue = toNumber(value);
+
+    if (commissionValue <= 0) {
+        return null;
+    }
+
+    if (type === 'percent') {
+        const amount = (basePrice * commissionValue) / 100;
+
+        return {
+            amount,
+            label: `${formatCurrency(amount, currency)} (${formatPercentage(commissionValue)})`,
+            shortLabel: formatPercentage(commissionValue),
+        };
+    }
+
+    return {
+        amount: commissionValue,
+        label: formatCurrency(commissionValue, currency),
+        shortLabel: formatCurrency(commissionValue, currency),
+    };
+};
+
+const getApplicableCommissionRule = (tour: any, partnership: any) => {
+    const tierId = Number(
+        partnership?.agent_tier_id ??
+            partnership?.agentTier?.id ??
+            partnership?.agent_tier?.id ??
+            0,
+    );
+    const categoryId = Number(
+        tour.product_commission_category_id ??
+            tour.productCommissionCategory?.id ??
+            tour.product_commission_category?.id ??
+            0,
+    );
+    const rules = Array.isArray(tour.commission_rules)
+        ? tour.commission_rules
+        : Array.isArray(tour.commissionRules)
+          ? tour.commissionRules
+          : [];
+
+    return rules.find((rule: any) => {
+        const isActive = rule.is_active ?? rule.isActive ?? true;
+        const isRuleActive =
+            isActive === true ||
+            isActive === 1 ||
+            isActive === '1' ||
+            isActive === 'true';
+
+        return (
+            isRuleActive &&
+            Number(rule.agent_tier_id ?? rule.agentTier?.id ?? 0) === tierId &&
+            Number(
+                rule.product_commission_category_id ??
+                    rule.productCommissionCategory?.id ??
+                    0,
+            ) === categoryId
+        );
+    });
+};
+
+const getScheduleAdjustment = (rule: any, schedule: any) => {
+    const adjustments = Array.isArray(rule?.schedule_adjustments)
+        ? rule.schedule_adjustments
+        : Array.isArray(rule?.scheduleAdjustments)
+          ? rule.scheduleAdjustments
+          : [];
+
+    return adjustments.find(
+        (adjustment: any) =>
+            Number(
+                adjustment.tour_schedule_id ?? adjustment.tourSchedule?.id ?? 0,
+            ) === Number(schedule?.id ?? 0),
+    );
+};
+
+const getFallbackCommission = (price: any, currency = 'IDR') => {
     const commissionConfig =
         typeof price.commission === 'object' && price.commission !== null
             ? price.commission
@@ -168,18 +254,87 @@ const getCommissionLabel = (price: any, currency = 'IDR') => {
         const commissionValue =
             (getPromotionalPrice(price) * commissionRate) / 100;
 
-        return `${formatCurrency(commissionValue, currency)} (${commissionRate}%)`;
+        return {
+            label: `${formatCurrency(commissionValue, currency)} (${formatPercentage(commissionRate)})`,
+            detail: 'Based on price after promotion.',
+        };
     }
 
     if (commissionAmount > 0) {
-        return formatCurrency(commissionAmount, currency);
+        return {
+            label: formatCurrency(commissionAmount, currency),
+            detail: 'Fixed commission per pax.',
+        };
     }
 
-    return '-';
+    return {
+        label: '-',
+        detail: null,
+    };
+};
+
+const getCommissionDetails = (
+    price: any,
+    schedule: any,
+    tour: any,
+    partnership: any,
+    currency = 'IDR',
+) => {
+    const rule = getApplicableCommissionRule(tour, partnership);
+
+    if (!rule) {
+        return getFallbackCommission(price, currency);
+    }
+
+    const basePrice = getPromotionalPrice(price);
+    const main = getCommissionComponent(
+        basePrice,
+        rule.commission_type ?? rule.commissionType,
+        rule.commission_value ?? rule.commissionValue,
+        currency,
+    );
+    const adjustment = getScheduleAdjustment(rule, schedule);
+    const additional = adjustment
+        ? getCommissionComponent(
+              basePrice,
+              adjustment.commission_type ?? adjustment.commissionType,
+              adjustment.commission_value ?? adjustment.commissionValue,
+              currency,
+          )
+        : null;
+
+    if (!main && !additional) {
+        return {
+            label: '-',
+            detail: 'Commission matrix has no value for this tier and category.',
+        };
+    }
+
+    const totalAmount = (main?.amount ?? 0) + (additional?.amount ?? 0);
+    const detail = [
+        main ? `Base ${main.label}` : null,
+        additional ? `Additional ${additional.label}` : null,
+    ]
+        .filter(Boolean)
+        .join(' + ');
+
+    return {
+        label:
+            additional && totalAmount > 0
+                ? `${formatCurrency(totalAmount, currency)} (${[
+                      main?.shortLabel,
+                      additional.shortLabel,
+                  ]
+                      .filter(Boolean)
+                      .join(' + ')})`
+                : main?.label || additional?.label || '-',
+        detail: detail ? `Per pax: ${detail}` : null,
+    };
 };
 
 export default function AgentVendorTourCard({
     tour,
+    partnership,
     isVendorNameVisible,
     canCopy,
     hasCopied,
@@ -552,62 +707,99 @@ export default function AgentVendorTourCard({
                                                                     (
                                                                         price: any,
                                                                         priceIndex: number,
-                                                                    ) => (
-                                                                        <div
-                                                                            key={
-                                                                                price.id ||
-                                                                                priceIndex
-                                                                            }
-                                                                            className="grid gap-2 border-t border-slate-100 px-5 py-4 text-sm dark:border-slate-800 sm:grid-cols-[minmax(0,1fr)_minmax(150px,0.65fr)_minmax(210px,0.75fr)] sm:items-center"
-                                                                        >
-                                                                            <div>
-                                                                                <p className="text-[10px] font-semibold uppercase text-slate-400 sm:hidden">
-                                                                                    Category
-                                                                                </p>
-                                                                                <p className="font-medium text-slate-800 dark:text-slate-100">
-                                                                                    {getPriceCategoryName(
-                                                                                        price,
-                                                                                    )}
-                                                                                </p>
-                                                                            </div>
-                                                                            <div>
-                                                                                <p className="text-[10px] font-semibold uppercase text-slate-400 sm:hidden">
-                                                                                    Price
-                                                                                </p>
-                                                                                <div className="space-y-1">
+                                                                    ) => {
+                                                                        const promotionLabel =
+                                                                            getPromotionLabel(
+                                                                                price,
+                                                                                currency,
+                                                                            );
+                                                                        const promotionalPrice =
+                                                                            getPromotionalPrice(
+                                                                                price,
+                                                                            );
+                                                                        const commission =
+                                                                            getCommissionDetails(
+                                                                                price,
+                                                                                schedule,
+                                                                                tour,
+                                                                                partnership,
+                                                                                currency,
+                                                                            );
+
+                                                                        return (
+                                                                            <div
+                                                                                key={
+                                                                                    price.id ||
+                                                                                    priceIndex
+                                                                                }
+                                                                                className="grid gap-2 border-t border-slate-100 px-5 py-4 text-sm dark:border-slate-800 sm:grid-cols-[minmax(0,1fr)_minmax(150px,0.65fr)_minmax(210px,0.75fr)] sm:items-center"
+                                                                            >
+                                                                                <div>
+                                                                                    <p className="text-[10px] font-semibold uppercase text-slate-400 sm:hidden">
+                                                                                        Category
+                                                                                    </p>
                                                                                     <p className="font-medium text-slate-800 dark:text-slate-100">
-                                                                                        {formatCurrency(
-                                                                                            price.price,
-                                                                                            currency,
+                                                                                        {getPriceCategoryName(
+                                                                                            price,
                                                                                         )}
                                                                                     </p>
-                                                                                    {getPromotionLabel(
-                                                                                        price,
-                                                                                        currency,
-                                                                                    ) && (
-                                                                                        <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-300">
-                                                                                            Promo{' '}
-                                                                                            {getPromotionLabel(
-                                                                                                price,
-                                                                                                currency,
-                                                                                            )}
+                                                                                </div>
+                                                                                <div>
+                                                                                    <p className="text-[10px] font-semibold uppercase text-slate-400 sm:hidden">
+                                                                                        Price
+                                                                                    </p>
+                                                                                    <div className="space-y-1">
+                                                                                        {promotionLabel ? (
+                                                                                            <>
+                                                                                                <p className="text-xs font-medium text-slate-400 line-through dark:text-slate-500">
+                                                                                                    {formatCurrency(
+                                                                                                        price.price,
+                                                                                                        currency,
+                                                                                                    )}
+                                                                                                </p>
+                                                                                                <p className="font-semibold text-slate-800 dark:text-slate-100">
+                                                                                                    {formatCurrency(
+                                                                                                        promotionalPrice,
+                                                                                                        currency,
+                                                                                                    )}
+                                                                                                </p>
+                                                                                                <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-300">
+                                                                                                    Promotion{' '}
+                                                                                                    {
+                                                                                                        promotionLabel
+                                                                                                    }
+                                                                                                </p>
+                                                                                            </>
+                                                                                        ) : (
+                                                                                            <p className="font-medium text-slate-800 dark:text-slate-100">
+                                                                                                {formatCurrency(
+                                                                                                    price.price,
+                                                                                                    currency,
+                                                                                                )}
+                                                                                            </p>
+                                                                                        )}
+                                                                                    </div>
+                                                                                </div>
+                                                                                <div>
+                                                                                    <p className="text-[10px] font-semibold uppercase text-slate-400 sm:hidden">
+                                                                                        Commission
+                                                                                    </p>
+                                                                                    <p className="font-semibold text-pink-600 dark:text-pink-300">
+                                                                                        {
+                                                                                            commission.label
+                                                                                        }
+                                                                                    </p>
+                                                                                    {commission.detail && (
+                                                                                        <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
+                                                                                            {
+                                                                                                commission.detail
+                                                                                            }
                                                                                         </p>
                                                                                     )}
                                                                                 </div>
                                                                             </div>
-                                                                            <div>
-                                                                                <p className="text-[10px] font-semibold uppercase text-slate-400 sm:hidden">
-                                                                                    Commission
-                                                                                </p>
-                                                                                <p className="font-semibold text-pink-600 dark:text-pink-300">
-                                                                                    {getCommissionLabel(
-                                                                                        price,
-                                                                                        currency,
-                                                                                    )}
-                                                                                </p>
-                                                                            </div>
-                                                                        </div>
-                                                                    ),
+                                                                        );
+                                                                    },
                                                                 )
                                                             ) : (
                                                                 <div className="border-t border-slate-100 px-5 py-5 text-sm font-medium text-slate-400 dark:border-slate-800">

@@ -244,7 +244,7 @@ class SalesReportController extends Controller
             $addonCost = (float) $booking->addons->sum('price');
             $commissionAmount = $this->resolveCommissionAmount($booking);
             $pricing = $this->passengerPricingSummary($booking, $schedule);
-            $totalWithoutPlatformFee = max(0, (float) $booking->grand_total - (float) $booking->platform_fee);
+            $salesAmount = (float) $pricing['discounted_total'];
 
             return [
                 'id' => $booking->id,
@@ -264,7 +264,7 @@ class SalesReportController extends Controller
                 'tax_amount' => (float) $booking->tax_amount,
                 'addon_cost' => $addonCost,
                 'promo_amount' => $pricing['promo_amount'],
-                'grand_total' => $totalWithoutPlatformFee,
+                'grand_total' => $salesAmount,
                 'commission_amount' => $commissionAmount,
                 'paid_at' => $paidAt?->toIso8601String(),
                 'visible_agent_identity' => $companyType === 'vendor',

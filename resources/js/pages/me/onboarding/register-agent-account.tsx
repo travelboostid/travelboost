@@ -22,6 +22,7 @@ import { Head, useForm } from '@inertiajs/react';
 import { Building, CreditCard, MapPin, Save, ShieldCheck } from 'lucide-react';
 import React, { useState } from 'react';
 import { FormattedMessage } from 'react-intl';
+import { toast } from 'sonner';
 
 interface Props {
     affiliate?: {
@@ -57,6 +58,9 @@ export default function RegisterAgentAccount({ affiliate }: Props) {
         e.preventDefault();
         form.post(createCompany().url, {
             preserveScroll: true,
+            onError: () => {
+                toast.error('Please check the required registration fields.');
+            },
         });
     };
 

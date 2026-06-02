@@ -18,6 +18,7 @@ import {
     TooltipTrigger,
 } from '@/components/ui/tooltip';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
+import { extractDocumentUrl } from '@/lib/utils';
 import { router } from '@inertiajs/react';
 import { IconCalendarEvent, IconPdf } from '@tabler/icons-react';
 import axios from 'axios';
@@ -56,6 +57,14 @@ export default function PublicTourCard({
     const liked = passedLiked !== undefined ? passedLiked : internalLiked;
     const vendorNameVisible =
         isVendorNameVisible !== undefined ? isVendorNameVisible : true;
+    const agentDocument = tour.agent_document || tour.agentDocument;
+    const agentDocumentUrl = agentDocument
+        ? extractDocumentUrl(agentDocument)
+        : '';
+    const vendorDocumentUrl = tour.document
+        ? extractDocumentUrl(tour.document)
+        : '';
+    const hasItinerary = Boolean(agentDocumentUrl || vendorDocumentUrl);
 
     const handleLike = useCallback(async () => {
         try {
@@ -127,12 +136,18 @@ export default function PublicTourCard({
     };
 
     const handleViewBrochureInternal = () => {
-        if (!tour.document) return;
+        if (!hasItinerary) return;
         const url = `/brochure/${tour.company?.username}/${tour.id}`;
         window.open(url, '_blank', 'noopener,noreferrer');
     };
 
     const handleViewBrochureClick = () => {
+        if (!hasItinerary) return;
+        if (agentDocumentUrl) {
+            window.open(agentDocumentUrl, '_blank', 'noopener,noreferrer');
+            return;
+        }
+
         if (onViewBrochure) onViewBrochure();
         else handleViewBrochureInternal();
     };
@@ -172,7 +187,7 @@ export default function PublicTourCard({
                                     variant="secondary"
                                     size="sm"
                                     className="h-11 flex-[1_1_calc(50%-0.25rem)] rounded-xl border-none bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 sm:h-9 sm:w-12 sm:flex-none"
-                                    disabled={!tour.document}
+                                    disabled={!hasItinerary}
                                     onClick={handleViewBrochureClick}
                                 >
                                     <IconPdf size={20} />

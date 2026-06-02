@@ -18,7 +18,10 @@
     $invoiceNumber = $invoiceNumber ?? $booking->booking_number;
     $discountAmount = (float) $discountAmount;
     $paidAmount = (float) ($invoicePaidAmount ?? $paidAmount);
-    $invoiceStatus = ($paidAmount >= $grandTotal) ? 'Paid' : 'Down Payment';
+    $isProforma = (bool) ($isProforma ?? false);
+    $invoiceTitle = $isProforma ? 'PROFORMA INVOICE' : 'INVOICE';
+    $invoiceStatus = $isProforma ? 'Proforma' : (($paidAmount >= $grandTotal) ? 'Paid' : 'Down Payment');
+    $paymentInstructions = collect($paymentInstructions ?? []);
 @endphp
 <!doctype html>
 <html lang="en">
@@ -153,7 +156,7 @@
 
                    .invoice-word {
                        margin: 0;
-                       font-size: 24px;
+                       font-size: {{ $isProforma ? '12px' : '24px' }};
                        font-weight: 700;
                        letter-spacing: 0.08em;
                    }
@@ -467,6 +470,77 @@
                        transform: rotate(-2deg);
                    }
 
+                   .stamp.proforma {
+                       border-color: #d97706;
+                       color: #b45309;
+                   }
+
+                   .proforma-watermark {
+                       position: absolute;
+                       top: 44%;
+                       left: 7%;
+                       z-index: 0;
+                       color: rgba(200, 59, 139, 0.07);
+                       font-size: 58px;
+                       font-weight: 700;
+                       letter-spacing: 0.12em;
+                       text-transform: uppercase;
+                       transform: rotate(-28deg);
+                   }
+
+                   .proforma-notice {
+                       margin-bottom: 10px;
+                       padding: 8px 10px;
+                       border: 1px solid #f5c2dc;
+                       background: #fff5fb;
+                       color: #7a284f;
+                       font-size: 9px;
+                       line-height: 1.35;
+                   }
+
+                   .proforma-notice strong {
+                       display: block;
+                       margin-bottom: 2px;
+                       color: #a12e6e;
+                       font-size: 10px;
+                       letter-spacing: 0.08em;
+                       text-transform: uppercase;
+                   }
+
+                   .instruction-panel {
+                       margin-bottom: 10px;
+                       border: 1px solid #f5c2dc;
+                       background: #fffafd;
+                   }
+
+                   .instruction-panel .panel-title {
+                       border-bottom-color: #f5c2dc;
+                       background: #c83b8b;
+                       color: #ffffff;
+                   }
+
+                   .instruction-table {
+                       width: 100%;
+                       border-collapse: collapse;
+                   }
+
+                   .instruction-table td {
+                       padding: 5px 10px;
+                       border-bottom: 1px solid #f8d7e8;
+                       color: #475467;
+                       font-size: 9px;
+                   }
+
+                   .instruction-table tr:last-child td {
+                       border-bottom: 0;
+                   }
+
+                   .instruction-table .key {
+                       width: 138px;
+                       color: #7a284f;
+                       font-weight: 700;
+                   }
+
                    .payment-total {
                        color: #111827;
                        font-size: 16px;
@@ -496,6 +570,9 @@
 </head>
 <body>
     <div class="page">
+        @if ($isProforma)
+            <div class="proforma-watermark">Proforma</div>
+        @endif
         <div class="accent"></div>
 
         <div class="header">
@@ -526,10 +603,17 @@
                 </div>
             </div>
             <div class="invoice-title">
-                <h2 class="invoice-word">INVOICE</h2>
+                <h2 class="invoice-word">{{ $invoiceTitle }}</h2>
                 <div class="invoice-number">{{ $invoiceNumber }}</div>
             </div>
         </div>
+
+        @if ($isProforma)
+            <div class="proforma-notice">
+                <strong>Proforma Invoice Notice</strong>
+                This booking has not been fully paid. This document is issued for payment reference only and must not be used as proof of full settlement.
+            </div>
+        @endif
 
         <div class="section-grid">
             <div class="section-cell">
@@ -700,9 +784,23 @@
             </div>
         </div>
 
+        @if ($isProforma && $paymentInstructions->isNotEmpty())
+            <div class="instruction-panel">
+                <div class="panel-title">Payment Instructions</div>
+                <table class="instruction-table">
+                    @foreach ($paymentInstructions as $instruction)
+                        <tr>
+                            <td class="key">{{ $instruction['label'] }}</td>
+                            <td>{{ $instruction['value'] }}</td>
+                        </tr>
+                    @endforeach
+                </table>
+            </div>
+        @endif
+
         <div class="paid-stamp">
             <div class="paid-left">
-                <span class="stamp">{{ $invoiceStatus }}</span>
+                <span class="stamp {{ $isProforma ? 'proforma' : '' }}">{{ $invoiceStatus }}</span>
             </div>
             <div class="paid-right">
                 <div class="muted">Total Paid</div>

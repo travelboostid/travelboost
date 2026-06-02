@@ -149,18 +149,19 @@ class RoomListingController extends Controller
                         'A' => 5,
                         'B' => 28,
                         'C' => 12,
-                        'D' => 8,
+                        'D' => 9,
                         'E' => 8,
-                        'F' => 7,
-                        'G' => 24,
-                        'H' => 16,
-                        'I' => 13,
+                        'F' => 8,
+                        'G' => 7,
+                        'H' => 24,
+                        'I' => 16,
                         'J' => 13,
-                        'K' => 16,
-                        'L' => 13,
-                        'M' => 14,
-                        'N' => 6,
+                        'K' => 13,
+                        'L' => 16,
+                        'M' => 13,
+                        'N' => 14,
                         'O' => 6,
+                        'P' => 6,
                     ];
                 }
 
@@ -176,32 +177,32 @@ class RoomListingController extends Controller
                         ->getAlignment()
                         ->setVertical(Alignment::VERTICAL_CENTER);
 
-                    $sheet->getStyle('A1:O4')->getAlignment()
+                    $sheet->getStyle('A1:P4')->getAlignment()
                         ->setHorizontal(Alignment::HORIZONTAL_LEFT)
                         ->setVertical(Alignment::VERTICAL_CENTER);
 
-                    $sheet->getStyle('A6:O6')->getAlignment()
+                    $sheet->getStyle('A6:P6')->getAlignment()
                         ->setHorizontal(Alignment::HORIZONTAL_CENTER)
                         ->setVertical(Alignment::VERTICAL_CENTER);
 
-                    $sheet->getStyle('A6:O6')->getFill()
+                    $sheet->getStyle('A6:P6')->getFill()
                         ->setFillType(Fill::FILL_SOLID)
                         ->getStartColor()
                         ->setRGB('EAF2FF');
 
-                    $sheet->getStyle('A6:O6')->getBorders()->getAllBorders()
+                    $sheet->getStyle('A6:P6')->getBorders()->getAllBorders()
                         ->setBorderStyle(Border::BORDER_THIN)
                         ->getColor()
                         ->setRGB('B8C7D9');
 
-                    $sheet->getStyle('A1:O3')->getFill()
+                    $sheet->getStyle('A1:P3')->getFill()
                         ->setFillType(Fill::FILL_SOLID)
                         ->getStartColor()
                         ->setRGB('FFFFFF');
 
                     $highestRow = max(7, $sheet->getHighestRow());
 
-                    $sheet->getStyle('A7:O'.$highestRow)->getBorders()->getAllBorders()
+                    $sheet->getStyle('A7:P'.$highestRow)->getBorders()->getAllBorders()
                         ->setBorderStyle(Border::BORDER_THIN)
                         ->getColor()
                         ->setRGB('D8E1EC');
@@ -245,7 +246,7 @@ class RoomListingController extends Controller
                                 ->getColor()
                                 ->setRGB('64748B');
 
-                            $worksheet->getStyle('L1:O2')->getFont()
+                            $worksheet->getStyle('L1:P2')->getFont()
                                 ->setBold(true)
                                 ->setSize(10)
                                 ->getColor()
@@ -257,7 +258,7 @@ class RoomListingController extends Controller
                                 ->getColor()
                                 ->setRGB('334155');
 
-                            $worksheet->getStyle('A1:O4')->getBorders()->getBottom()
+                            $worksheet->getStyle('A1:P4')->getBorders()->getBottom()
                                 ->setBorderStyle(Border::BORDER_MEDIUM)
                                 ->getColor()
                                 ->setRGB('0F172A');
@@ -307,16 +308,10 @@ class RoomListingController extends Controller
         $groupedData = [];
 
         foreach ($bookings as $booking) {
-            $rooms = $booking->passengers
-                ->sortBy(function ($passenger) {
-                    return [$passenger->room_type, $passenger->first_name];
-                })
-                ->groupBy(fn ($passenger) => $passenger->room_type ?: 'TBA');
-
             $groupedData[$booking->booking_number] = [
                 'contact_phone' => $booking->contact_phone,
                 'contact_notes' => $booking->contact_notes,
-                'rooms' => $rooms,
+                'rooms' => $this->buildRoomGroups($booking->passengers),
                 'total_pax' => $booking->passengers->count(),
             ];
         }
@@ -326,6 +321,7 @@ class RoomListingController extends Controller
             'tour' => $tour,
             'departure_date' => $departureDate,
             'groupedData' => $groupedData,
+            'roomRecap' => $this->buildRoomRecap($groupedData),
         ];
     }
 
@@ -348,7 +344,7 @@ class RoomListingController extends Controller
         foreach ($bookings as $booking) {
             $passengers = $booking->passengers
                 ->sortBy(function ($passenger) {
-                    return [$passenger->room_type, $passenger->first_name];
+                    return [$this->normalizeRoomType($passenger->room_type), $passenger->first_name];
                 })
                 ->values();
 
@@ -371,7 +367,8 @@ class RoomListingController extends Controller
                     'passport_expiry_date' => $passenger->passport_expiry_date
                       ? $passenger->passport_expiry_date->format('Y-m-d')
                       : null,
-                    'room_type' => $passenger->room_type ?: 'TBA',
+                    'room_type' => $this->normalizeRoomType($passenger->room_type),
+                    'room_capacity' => $this->roomCapacity($passenger->room_type),
                     'room_number' => $passenger->room_number,
                     'price_category' => $passenger->price_category,
                     'visa_number' => $passenger->visa_number,
@@ -381,6 +378,77 @@ class RoomListingController extends Controller
         }
 
         return $roomData;
+    }
+
+    private function buildRoomGroups($passengers): array
+    {
+        $roomGroups = [];
+
+        $passengers
+            ->sortBy(function ($passenger) {
+                return [$this->normalizeRoomType($passenger->room_type), $passenger->first_name];
+            })
+            ->groupBy(fn ($passenger) => $this->normalizeRoomType($passenger->room_type))
+            ->each(function ($roomPassengers, string $roomType) use (&$roomGroups): void {
+                $capacity = max(1, $this->roomCapacity($roomPassengers->first()?->room_type));
+
+                $roomPassengers
+                    ->values()
+                    ->chunk($capacity)
+                    ->each(function ($chunk) use (&$roomGroups, $roomType): void {
+                        $roomGroups[] = [
+                            'room_type' => $roomType,
+                            'passengers' => $chunk,
+                        ];
+                    });
+            });
+
+        return $roomGroups;
+    }
+
+    private function normalizeRoomType(?string $roomType): string
+    {
+        $normalized = trim((string) preg_replace('/\s*\([^)]*\)/', '', $roomType ?? ''));
+
+        return $normalized !== '' ? $normalized : 'TBA';
+    }
+
+    private function roomCapacity(?string $roomType): int
+    {
+        $roomTypeValue = strtolower((string) $roomType);
+
+        if (preg_match('/\((\d+)\s*(?:person|persons|pax)?\)/i', $roomTypeValue, $matches)) {
+            return max(1, (int) $matches[1]);
+        }
+
+        return match (true) {
+            str_contains($roomTypeValue, 'quad') => 4,
+            str_contains($roomTypeValue, 'triple') => 3,
+            str_contains($roomTypeValue, 'twin'), str_contains($roomTypeValue, 'double') => 2,
+            default => 1,
+        };
+    }
+
+    private function buildRoomRecap(array $groupedData): array
+    {
+        $recap = [];
+
+        foreach ($groupedData as $bookingData) {
+            foreach ($bookingData['rooms'] as $roomGroup) {
+                $roomType = $roomGroup['room_type'];
+                $recap[$roomType] = ($recap[$roomType] ?? 0) + 1;
+            }
+        }
+
+        ksort($recap);
+
+        return collect($recap)
+            ->map(fn (int $count, string $roomType): array => [
+                'room_type' => $roomType,
+                'count' => $count,
+            ])
+            ->values()
+            ->all();
     }
 
     private function ensureVendorAccess(Company $company): void

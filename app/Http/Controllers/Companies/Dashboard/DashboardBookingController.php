@@ -151,6 +151,7 @@ class DashboardBookingController extends Controller
         $paymentReceiver = app(BookingPaymentReceiverService::class)
             ->resolveForTourAndTenant($tour, $agent);
         $paymentReceiverSettings = $paymentReceiver['settings'];
+        $paymentReceiverPartnership = $paymentReceiver['partnership'];
 
         $tour->setRelation(
             'schedules',
@@ -191,6 +192,10 @@ class DashboardBookingController extends Controller
             'paidAmount' => $paidAmount,
             'remainingBalance' => $remainingBalance,
             'fullPaymentAvailable' => $fullPaymentAvailable,
+            'paymentMethodAvailability' => [
+                'manual' => (bool) ($paymentReceiverPartnership?->manual_payment_enabled ?? true),
+                'online' => (bool) ($paymentReceiverPartnership?->online_payment_enabled ?? true),
+            ],
             'paymentUnavailableReason' => $paymentUnavailableReason,
             'bookingPaymentResult' => null,
             'savedPassengers' => [],

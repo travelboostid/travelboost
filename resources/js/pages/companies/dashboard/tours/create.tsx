@@ -65,6 +65,11 @@ type PriceCategory = {
     id: number;
     name: string;
 };
+
+type ProductCommissionCategory = {
+    id: number;
+    name: string;
+};
 /////////////
 
 export default function Page() {
@@ -75,7 +80,6 @@ export default function Page() {
     const [countryId, setCountryId] = useState<number | null>(null);
     const { company } = usePageSharedDataProps();
     const { auth } = usePage().props as any;
-    const { productCommissionCategories } = usePage().props as any;
     const handleSuccess = () => {
         router.visit(index({ username: company.username }), { replace: true });
     };
@@ -139,8 +143,9 @@ export default function Page() {
         currency: 'IDR',
     });
 
-    const { priceCategories } = usePage<{
+    const { priceCategories, productCommissionCategories } = usePage<{
         priceCategories: PriceCategory[];
+        productCommissionCategories: ProductCommissionCategory[];
     }>().props;
 
     const [schedules, setSchedules] = useState<Schedule[]>([]);
@@ -682,6 +687,56 @@ export default function Page() {
 
                                             <InputError
                                                 message={errors.category_id}
+                                            />
+                                        </div>
+
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="product_commission_category_id">
+                                                Product Commission Category
+                                            </Label>
+                                            <Select
+                                                value={
+                                                    data.product_commission_category_id
+                                                        ? String(
+                                                              data.product_commission_category_id,
+                                                          )
+                                                        : 'none'
+                                                }
+                                                onValueChange={(val) =>
+                                                    setData(
+                                                        'product_commission_category_id',
+                                                        val === 'none'
+                                                            ? ''
+                                                            : Number(val),
+                                                    )
+                                                }
+                                            >
+                                                <SelectTrigger className="w-full">
+                                                    <SelectValue placeholder="Select commission category" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="none">
+                                                        No Category
+                                                    </SelectItem>
+                                                    {(
+                                                        productCommissionCategories ||
+                                                        []
+                                                    ).map((category) => (
+                                                        <SelectItem
+                                                            key={category.id}
+                                                            value={String(
+                                                                category.id,
+                                                            )}
+                                                        >
+                                                            {category.name}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                            <InputError
+                                                message={
+                                                    errors.product_commission_category_id
+                                                }
                                             />
                                         </div>
                                     </div>

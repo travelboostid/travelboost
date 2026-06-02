@@ -4,6 +4,7 @@ use App\Http\Controllers\Companies\AuthController;
 use App\Http\Controllers\Companies\Dashboard\AgentCommissionHistoryController;
 use App\Http\Controllers\Companies\Dashboard\AgentRegistrationController;
 use App\Http\Controllers\Companies\Dashboard\AgentSubscriptionController;
+use App\Http\Controllers\Companies\Dashboard\AgentTierController;
 use App\Http\Controllers\Companies\Dashboard\AgentTourController;
 use App\Http\Controllers\Companies\Dashboard\BankAccountController;
 use App\Http\Controllers\Companies\Dashboard\BookingIndexController;
@@ -22,6 +23,7 @@ use App\Http\Controllers\Companies\Dashboard\ParameterAgentController;
 use App\Http\Controllers\Companies\Dashboard\ParameterVendorController;
 use App\Http\Controllers\Companies\Dashboard\PaymentController;
 use App\Http\Controllers\Companies\Dashboard\PriceCategoryController;
+use App\Http\Controllers\Companies\Dashboard\ProductCommissionCategoryController;
 use App\Http\Controllers\Companies\Dashboard\ProfileController;
 use App\Http\Controllers\Companies\Dashboard\RoleController;
 use App\Http\Controllers\Companies\Dashboard\RoomListingController;
@@ -30,6 +32,7 @@ use App\Http\Controllers\Companies\Dashboard\SeatAvailabilityController;
 use App\Http\Controllers\Companies\Dashboard\TeamController;
 use App\Http\Controllers\Companies\Dashboard\TourAddOnController;
 use App\Http\Controllers\Companies\Dashboard\TourAvailabilityController;
+use App\Http\Controllers\Companies\Dashboard\TourCommissionRuleController;
 use App\Http\Controllers\Companies\Dashboard\TourController;
 use App\Http\Controllers\Companies\Dashboard\TourPriceController;
 use App\Http\Controllers\Companies\Dashboard\TourScheduleController;
@@ -72,8 +75,12 @@ Route::prefix('companies')->middleware(['use-analytics-measurement-ids-props'])-
         });
 
         Route::resource('agent-registrations', AgentRegistrationController::class);
+        Route::resource('agent-tiers', AgentTierController::class)->except(['create', 'show', 'edit']);
+        Route::resource('product-commission-categories', ProductCommissionCategoryController::class)->except(['create', 'show', 'edit']);
+        Route::resource('tour-commission-rules', TourCommissionRuleController::class)->only(['index', 'store']);
         Route::middleware(['agent.subscription.active'])->resource('vendor-registrations', VendorRegistrationController::class);
         Route::middleware(['agent.subscription.active'])->post('vendor-registrations/register', [VendorRegistrationController::class, 'register'])->name('vendor-registrations.register');
+        Route::post('tours/{tour}/notify-agents', [VendorTourCatalogController::class, 'notifyAgents'])->name('tours.notify-agents');
         Route::resource('tours', TourController::class);
 
         Route::delete('/tours/{tour}/schedules/{schedule}', [TourScheduleController::class, 'destroy'])

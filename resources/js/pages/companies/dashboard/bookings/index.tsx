@@ -130,6 +130,10 @@ type BookingResource = {
     commission_amount: string | null;
     payment_receiver_type?: 'vendor' | 'agent' | null;
     payment_receiver_company_id?: number | null;
+    invoice_options?: {
+        type: 'vendor_to_customer' | 'vendor_to_agent' | 'agent_to_customer';
+        label: string;
+    }[];
     input_by?: {
         user_name: string;
         role_label: string;
@@ -535,7 +539,7 @@ function RowActions({
     const canCancel = Boolean(booking.can_cancel) && !hasPendingActionRequest;
     const canRefund = Boolean(booking.can_refund) && !hasPendingActionRequest;
     const canReorder = Boolean(booking.can_reorder);
-    const canViewInvoice = booking.status === 'full payment';
+    const invoiceOptions = booking.invoice_options ?? [];
     const manualPaymentId = booking.manual_payment?.id;
 
     React.useEffect(() => {
@@ -652,18 +656,18 @@ function RowActions({
                             View Detail
                         </Link>
                     </DropdownMenuItem>
-                    {canViewInvoice && (
-                        <DropdownMenuItem asChild>
+                    {invoiceOptions.map((option) => (
+                        <DropdownMenuItem key={option.type} asChild>
                             <a
-                                href={`/companies/${companyUsername}/dashboard/bookings/${booking.id}/invoice`}
+                                href={`/companies/${companyUsername}/dashboard/bookings/${booking.id}/invoice?type=${option.type}`}
                                 target="_blank"
                                 rel="noreferrer"
                             >
                                 <FileTextIcon className="mr-2 h-4 w-4" />
-                                View Invoice
+                                {option.label}
                             </a>
                         </DropdownMenuItem>
-                    )}
+                    ))}
                     {canReorder && (
                         <>
                             <DropdownMenuSeparator />

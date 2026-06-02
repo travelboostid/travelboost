@@ -11,12 +11,15 @@ class VendorAgentPartner extends Model
     protected $fillable = [
         'vendor_id',
         'agent_id',
+        'agent_tier_id',
         'status',
         'applied_at',
         'accepted_at',
         'note',
         'show_vendor_name',
         'payment_mode',
+        'manual_payment_enabled',
+        'online_payment_enabled',
     ];
 
     protected function casts(): array
@@ -26,6 +29,8 @@ class VendorAgentPartner extends Model
             'applied_at' => 'datetime',
             'accepted_at' => 'datetime',
             'show_vendor_name' => 'boolean',
+            'manual_payment_enabled' => 'boolean',
+            'online_payment_enabled' => 'boolean',
         ];
     }
 
@@ -37,5 +42,10 @@ class VendorAgentPartner extends Model
     public function agent(): BelongsTo
     {
         return $this->belongsTo(Company::class, 'agent_id');
+    }
+
+    public function agentTier(): BelongsTo
+    {
+        return $this->belongsTo(AgentTier::class);
     }
 }

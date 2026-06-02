@@ -7,6 +7,7 @@ import type { ChangeEvent, ReactElement } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Area } from 'react-easy-crop';
 import Cropper from 'react-easy-crop';
+import { toast } from 'sonner';
 import {
     AlertDialog,
     AlertDialogCancel,
@@ -29,6 +30,19 @@ type ImageMediaUploaderProps = {
         props: MediaUploaderTriggerProps,
     ) => ReactElement<{ onClick?: React.MouseEventHandler }>;
 };
+
+function resolveMediaResource(data: unknown): MediaResource {
+    if (
+        data &&
+        typeof data === 'object' &&
+        'data' in data &&
+        (data as { data?: MediaResource }).data?.id
+    ) {
+        return (data as { data: MediaResource }).data;
+    }
+
+    return data as MediaResource;
+}
 
 export function ImageMediaUploader({
     aspect = 1,
@@ -73,7 +87,7 @@ export function ImageMediaUploader({
         if (!file) return;
         if (!file.type.startsWith('image/')) {
             alert('Only image files are allowed');
-            e.target.value = ''; // reset input
+            e.target.value = '';
             return;
         }
         setFile(file);
@@ -100,12 +114,14 @@ export function ImageMediaUploader({
                     onSuccess: (data) => {
                         setFile(null);
                         setOpen(false);
-                        afterUpload?.(data);
+                        afterUpload?.(resolveMediaResource(data));
                     },
                 },
             );
         } catch (e) {
             console.error(e);
+            toast.error('Failed to upload image. Please try again.');
+            setUploadProgress({});
         }
     };
 

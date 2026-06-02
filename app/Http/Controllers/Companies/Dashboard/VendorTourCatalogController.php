@@ -2,13 +2,15 @@
 
 namespace App\Http\Controllers\Companies\Dashboard;
 
+use App\Enums\CompanyType;
+use App\Enums\VendorAgentPartnerStatus;
 use App\Http\Controllers\Controller;
 use App\Models\AgentTour;
 use App\Models\Company;
 use App\Models\Tour;
 use App\Models\TourCategory;
 use App\Models\VendorAgentPartner;
-use Illuminate\Support\Facades\DB;
+use App\Notifications\TourAgentPromotionNotification;
 use Inertia\Inertia;
 
 class VendorTourCatalogController extends Controller
@@ -37,6 +39,8 @@ class VendorTourCatalogController extends Controller
                 'category',
                 'image',
                 'document',
+                'productCommissionCategory',
+                'commissionRules.scheduleAdjustments',
                 'schedules.availability',
                 'schedules.prices.priceCategory',
             ])
@@ -70,6 +74,8 @@ class VendorTourCatalogController extends Controller
                         'category',
                         'image',
                         'document',
+                        'productCommissionCategory',
+                        'commissionRules.scheduleAdjustments',
                         'schedules.availability',
                         'schedules.prices.priceCategory',
                     ]);
@@ -78,7 +84,14 @@ class VendorTourCatalogController extends Controller
             ->pluck('tour')
             ->filter();
 
-        $copiedTourIds = $company->agentTours()->pluck('tour_id');
+        $copiedAgentTours = $company->agentTours()
+            ->with('agentDocument')
+            ->orderByRaw('CASE WHEN agent_document_id IS NULL THEN 1 ELSE 0 END')
+            ->latest('updated_at')
+            ->get()
+            ->unique('tour_id')
+            ->keyBy('tour_id');
+        $copiedTourIds = $copiedAgentTours->keys();
 
         $tours = $tours
             ->merge($agentTours)
@@ -91,25 +104,44 @@ class VendorTourCatalogController extends Controller
                 'category',
                 'image',
                 'document',
+                'productCommissionCategory',
+                'commissionRules.scheduleAdjustments',
                 'schedules.availability',
                 'schedules.prices.priceCategory',
             ])
-            ->map(function ($tour) use ($copiedTourIds, $company) {
+            ->map(function ($tour) use ($copiedTourIds, $company, $copiedAgentTours, $username) {
                 $tour->has_copied = $copiedTourIds->contains($tour->id);
                 $tour->schedules?->each(function ($schedule): void {
                     $schedule->setAttribute('price', $this->lowestDiscountedSchedulePrice($schedule->prices));
                 });
 
-                $tour->agent_status = DB::table('agent_tours')
-                    ->where('tour_id', $tour->id)
-                    ->where('company_id', $company->id)
-                    ->value('status');
+                $copiedAgentTour = $copiedAgentTours->get($tour->id);
+                $tour->agent_status = $copiedAgentTour?->status;
+
+                if (
+                    $company->type === CompanyType::AGENT
+                    && $company->username === $username
+                ) {
+                    $agentDocument = $copiedAgentTour?->agentDocument;
+                    $vendorDocumentUrl = $tour->document['data']['url'] ?? null;
+                    $agentDocumentUrl = $agentDocument['data']['url'] ?? null;
+
+                    if ($agentDocument) {
+                        $tour->setRelation('agentDocument', $agentDocument);
+                    }
+
+                    $tour->setAttribute('vendor_document_url', $vendorDocumentUrl);
+                    $tour->setAttribute('agent_document_url', $agentDocumentUrl);
+                    $tour->setAttribute('itinerary_document_url', $agentDocumentUrl ?: $vendorDocumentUrl);
+                    $tour->setAttribute('itinerary_document_source', $agentDocumentUrl ? 'agent' : ($vendorDocumentUrl ? 'vendor' : null));
+                }
 
                 return $tour;
             });
 
         $partnership = VendorAgentPartner::where('vendor_id', $vendor->id)
             ->where('agent_id', $company->id)
+            ->with('agentTier')
             ->first();
 
         return Inertia::render('companies/dashboard/vendor-tours/index', [
@@ -134,8 +166,44 @@ class VendorTourCatalogController extends Controller
         return back();
     }
 
+    public function notifyAgents(Company $company, Tour $tour)
+    {
+        abort_unless($company->type === CompanyType::VENDOR, 403);
+        abort_unless((int) $tour->company_id === (int) $company->id, 404);
+
+        $agents = $company->agentPartners()
+            ->where('status', VendorAgentPartnerStatus::ACTIVE)
+            ->with('agent')
+            ->get()
+            ->pluck('agent')
+            ->filter()
+            ->unique('id')
+            ->values();
+
+        $agents->each(function (Company $agent) use ($tour, $company): void {
+            $agent->notify(new TourAgentPromotionNotification($tour, $company));
+        });
+
+        return back()->with('success', "{$agents->count()} agent notification(s) sent successfully.");
+    }
+
     public function viewBrochure(Company $company, string $username, Tour $tour)
     {
+        if ($company->type === CompanyType::AGENT) {
+            $agentTour = $company->agentTours()
+                ->with('agentDocument')
+                ->where('tour_id', $tour->id)
+                ->orderByRaw('CASE WHEN agent_document_id IS NULL THEN 1 ELSE 0 END')
+                ->latest('updated_at')
+                ->first();
+
+            if ($agentTour?->agentDocument) {
+                $tour->setRelation('agentDocument', $agentTour->agentDocument);
+                $tour->setRelation('agent_document', $agentTour->agentDocument);
+                $tour->setRelation('document', $agentTour->agentDocument);
+            }
+        }
+
         return Inertia::render('companies/dashboard/vendor-tours/view-brochure', [
             'username' => $username,
             'tour' => $tour,
@@ -145,6 +213,22 @@ class VendorTourCatalogController extends Controller
     public function viewPublicBrochure($vendor, $tourId)
     {
         $tour = Tour::with('document')->findOrFail($tourId);
+        $tenant = request()->attributes->get('tenant');
+
+        if ($tenant instanceof Company && $tenant->type === CompanyType::AGENT) {
+            $agentTour = $tenant->agentTours()
+                ->with('agentDocument')
+                ->where('tour_id', $tour->id)
+                ->orderByRaw('CASE WHEN agent_document_id IS NULL THEN 1 ELSE 0 END')
+                ->latest('updated_at')
+                ->first();
+
+            if ($agentTour?->agentDocument) {
+                $tour->setRelation('agentDocument', $agentTour->agentDocument);
+                $tour->setRelation('agent_document', $agentTour->agentDocument);
+                $tour->setRelation('document', $agentTour->agentDocument);
+            }
+        }
 
         if (! $tour->document) {
             abort(404);

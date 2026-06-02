@@ -1,10 +1,24 @@
 import { Button } from '@/components/ui/button';
 import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
     Tooltip,
     TooltipContent,
     TooltipTrigger,
 } from '@/components/ui/tooltip';
+import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
+import { router } from '@inertiajs/react';
 import { IconCalendarEvent, IconPdf } from '@tabler/icons-react';
+import { BellIcon } from 'lucide-react';
+import { useState } from 'react';
 import BaseTourCard from './BaseTourCard';
 
 export default function VendorTourCard({
@@ -14,6 +28,10 @@ export default function VendorTourCard({
     onViewBrochure,
     onBook,
 }: any) {
+    const { company } = usePageSharedDataProps();
+    const [isNotificationDialogOpen, setIsNotificationDialogOpen] =
+        useState(false);
+
     const handleBookClick = () => {
         const normalizedTour = Array.isArray(tour?.schedules)
             ? {
@@ -87,6 +105,17 @@ export default function VendorTourCard({
         onBook?.(normalizedTour);
     };
 
+    const handleSendNotification = () => {
+        router.post(
+            `/companies/${company.username}/dashboard/tours/${tour.id}/notify-agents`,
+            {},
+            {
+                preserveScroll: true,
+                onFinish: () => setIsNotificationDialogOpen(false),
+            },
+        );
+    };
+
     return (
         <BaseTourCard
             tour={tour}
@@ -140,6 +169,48 @@ export default function VendorTourCard({
                             <p>Itinerary</p>
                         </TooltipContent>
                     </Tooltip>
+                    <AlertDialog
+                        open={isNotificationDialogOpen}
+                        onOpenChange={setIsNotificationDialogOpen}
+                    >
+                        <Tooltip delayDuration={200}>
+                            <TooltipTrigger asChild>
+                                <Button
+                                    variant="secondary"
+                                    size="sm"
+                                    type="button"
+                                    className="flex-1 rounded-xl bg-slate-100 dark:bg-slate-800 h-9 border-none text-slate-700 dark:text-slate-300"
+                                    onClick={() =>
+                                        setIsNotificationDialogOpen(true)
+                                    }
+                                >
+                                    <BellIcon className="h-[18px] w-[18px]" />
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                <p>Send notifications to agents</p>
+                            </TooltipContent>
+                        </Tooltip>
+                        <AlertDialogContent>
+                            <AlertDialogHeader>
+                                <AlertDialogTitle>
+                                    Send tour notification?
+                                </AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    Are you sure you want to send information
+                                    about this tour to all of your agents?
+                                </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction
+                                    onClick={handleSendNotification}
+                                >
+                                    Yes, send notification
+                                </AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
                 </>
             }
         />

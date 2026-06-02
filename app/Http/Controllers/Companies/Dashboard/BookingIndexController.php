@@ -10,6 +10,7 @@ use App\Enums\BookingStatus;
 use App\Enums\PaymentStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\UpdateBookingRequest;
+use App\Models\BankAccount;
 use App\Models\Booking;
 use App\Models\BookingActionRequest;
 use App\Models\BookingPassenger;
@@ -66,6 +67,14 @@ class BookingIndexController extends Controller
     private const BOOKING_PAYMENT_TYPES = [
         'down_payment',
         'full_payment',
+    ];
+
+    /**
+     * @var list<string>
+     */
+    private const INVOICEABLE_STATUSES = [
+        'down payment',
+        'full payment',
     ];
 
     /**
@@ -169,6 +178,7 @@ class BookingIndexController extends Controller
                 ?: $paymentReceiver['receiver_type'];
             $booking->payment_receiver_company_id = data_get($latestPayment?->payload, 'payment_receiver_company_id')
                 ?: $paymentReceiver['receiver_company']?->id;
+            $booking->invoice_options = $this->invoiceOptions($company, $booking, $paymentReceiver['payment_mode']);
             $pendingActionRequest = $booking->actionRequests->first();
             $booking->pending_action_request = $pendingActionRequest
                 ? [
@@ -232,7 +242,7 @@ class BookingIndexController extends Controller
         ]);
     }
 
-    public function invoice(Company $company, Booking $booking): HttpResponse
+    public function invoice(Company $company, Booking $booking, Request $request): HttpResponse
     {
         $companyType = $company->type->value ?? $company->type;
 
@@ -242,11 +252,12 @@ class BookingIndexController extends Controller
             || ($companyType === 'vendor' && (int) $booking->vendor_id === (int) $company->id),
             404
         );
-        abort_unless($booking->status === BookingStatus::FULL_PAYMENT, 404);
+        abort_unless(in_array($this->bookingStatusValue($booking), self::INVOICEABLE_STATUSES, true), 404);
 
         $booking->load([
             'user',
             'agent.photo',
+            'agent.companySetting',
             'vendor.photo',
             'vendor.companySetting',
             'tour.company.companySetting',
@@ -269,14 +280,28 @@ class BookingIndexController extends Controller
         $paymentDetailsTotal = (float) collect($paymentDetails)->sum('amount');
         $vatAmount = (float) $booking->tax_amount;
         $paymentReceiver = app(BookingPaymentReceiverService::class)->resolveForBooking($booking);
-        $isVendorToAgentInvoice = $paymentReceiver['payment_mode'] === 'agent' && $booking->agent !== null;
+        $invoiceOptions = $this->invoiceOptions($company, $booking, $paymentReceiver['payment_mode']);
+        $requestedInvoiceType = $request->string('type')->toString();
+        $invoiceType = collect($invoiceOptions)
+            ->pluck('type')
+            ->first(fn (string $type): bool => $type === $requestedInvoiceType)
+            ?? data_get($invoiceOptions, '0.type');
+
+        abort_unless($invoiceType, 404);
+
+        $isVendorToAgentInvoice = $invoiceType === 'vendor_to_agent';
+        $isAgentToCustomerInvoice = $invoiceType === 'agent_to_customer';
+        $isCustomerInvoice = ! $isVendorToAgentInvoice;
+        $isProforma = $this->bookingStatusValue($booking) === BookingStatus::DOWN_PAYMENT->value;
         $invoiceGrandTotal = $isVendorToAgentInvoice
             ? $paymentDetailsTotal + $vatAmount
             : (float) $booking->grand_total;
         $invoiceNumber = $isVendorToAgentInvoice
             ? 'V2A-'.str_pad((string) $booking->vendor_id, 4, '0', STR_PAD_LEFT).'-'.$booking->booking_number
             : $booking->booking_number;
-        $issuer = $booking->vendor ?? $booking->tour?->company;
+        $issuer = $isAgentToCustomerInvoice
+            ? $booking->agent
+            : ($booking->vendor ?? $booking->tour?->company);
         $customerAddress = $booking->user?->address;
         $billedTo = $isVendorToAgentInvoice ? ($booking->agent ?? $company) : null;
         $vatRate = $this->resolveInvoiceVatRate($booking);
@@ -295,15 +320,21 @@ class BookingIndexController extends Controller
                 'paymentDate' => $paymentDate,
                 'returnDate' => $invoiceSchedule?->return_date,
                 'paidAmount' => (float) $paidPayments->sum('amount'),
-                'invoicePaidAmount' => $isVendorToAgentInvoice ? $invoiceGrandTotal : (float) $paidPayments->sum('amount'),
+                'invoicePaidAmount' => $isVendorToAgentInvoice && ! $isProforma
+                    ? $invoiceGrandTotal
+                    : (float) $paidPayments->sum('amount'),
                 'priceBreakdown' => $priceBreakdown,
                 'paymentDetails' => $paymentDetails,
                 'paymentDetailsTotal' => $paymentDetailsTotal,
                 'vatRate' => $vatRate,
-                'otherChargeAmount' => $isVendorToAgentInvoice ? 0 : (float) $booking->platform_fee,
+                'otherChargeAmount' => $isCustomerInvoice ? (float) $booking->platform_fee : 0,
                 'discountAmount' => 0,
                 'invoiceGrandTotal' => $invoiceGrandTotal,
                 'invoiceNumber' => $invoiceNumber,
+                'isProforma' => $isProforma,
+                'paymentInstructions' => $isProforma
+                    ? $this->proformaPaymentInstructions($issuer, $invoiceType)
+                    : [],
             ])
             ->setPaper('A4', 'portrait');
 
@@ -980,6 +1011,150 @@ class BookingIndexController extends Controller
             'role_label' => $this->companyRoleLabel($role),
             'created_at' => $booking->created_at?->toJSON(),
         ];
+    }
+
+    /**
+     * @return list<array{type: string, label: string}>
+     */
+    private function invoiceOptions(Company $company, Booking $booking, ?string $paymentMode = null): array
+    {
+        if (! in_array($this->bookingStatusValue($booking), self::INVOICEABLE_STATUSES, true)) {
+            return [];
+        }
+
+        $companyType = $company->type->value ?? $company->type;
+        $paymentMode ??= app(BookingPaymentReceiverService::class)
+            ->resolveForBooking($booking)['payment_mode'];
+        $orderSource = $this->bookingOrderSource($booking);
+        $isProforma = $this->bookingStatusValue($booking) === BookingStatus::DOWN_PAYMENT->value;
+        $invoiceLabel = $isProforma ? 'Proforma Invoice' : 'Invoice';
+
+        if ($companyType === 'vendor') {
+            if ($orderSource === 'vendor' || $paymentMode === 'vendor') {
+                return [[
+                    'type' => 'vendor_to_customer',
+                    'label' => 'View '.$invoiceLabel,
+                ]];
+            }
+
+            return [[
+                'type' => 'vendor_to_agent',
+                'label' => 'View '.$invoiceLabel,
+            ]];
+        }
+
+        if ($companyType !== 'agent' || $orderSource === 'vendor') {
+            return [];
+        }
+
+        if ($paymentMode === 'vendor') {
+            return [[
+                'type' => 'vendor_to_customer',
+                'label' => 'View '.$invoiceLabel,
+            ]];
+        }
+
+        return [
+            [
+                'type' => 'vendor_to_agent',
+                'label' => 'View Vendor '.$invoiceLabel,
+            ],
+            [
+                'type' => 'agent_to_customer',
+                'label' => 'View Customer '.$invoiceLabel,
+            ],
+        ];
+    }
+
+    private function bookingOrderSource(Booking $booking): string
+    {
+        if (
+            $booking->input_by_company_id
+            && (int) $booking->input_by_company_id === (int) $booking->vendor_id
+        ) {
+            return 'vendor';
+        }
+
+        if (
+            $booking->input_by_company_id
+            && $booking->agent_id
+            && (int) $booking->input_by_company_id === (int) $booking->agent_id
+        ) {
+            return 'agent';
+        }
+
+        $role = str((string) ($booking->input_by_role ?: 'customer'))
+            ->afterLast(':')
+            ->lower()
+            ->toString();
+
+        return in_array($role, ['agent', 'vendor'], true) ? $role : 'customer';
+    }
+
+    /**
+     * @return list<array{label: string, value: string}>
+     */
+    private function proformaPaymentInstructions(mixed $issuer, string $invoiceType): array
+    {
+        $recipient = $issuer?->name ?: 'the issuing company';
+        $payer = $invoiceType === 'vendor_to_agent' ? 'Agent' : 'Customer';
+        $bankAccount = $this->defaultCompanyBankAccount($issuer);
+        $issuer?->loadMissing('companySetting');
+        $settings = $issuer?->companySetting;
+        $bankName = $bankAccount
+            ? $this->bankAccountProviderName((string) $bankAccount->provider)
+            : $settings?->manual_bank_transfer;
+        $accountName = $bankAccount?->account_name ?: $settings?->manual_bank_transfer_account_name;
+        $accountNumber = $bankAccount?->account_number ?: $settings?->manual_bank_transfer_account_number;
+
+        return [
+            [
+                'label' => 'Payment Recipient',
+                'value' => $recipient,
+            ],
+            [
+                'label' => 'Bank Name',
+                'value' => filled($bankName) ? (string) $bankName : '-',
+            ],
+            [
+                'label' => 'Account Number',
+                'value' => filled($accountNumber) ? (string) $accountNumber : '-',
+            ],
+            [
+                'label' => 'Account Holder',
+                'value' => filled($accountName) ? (string) $accountName : $recipient,
+            ],
+            [
+                'label' => 'Payment Responsibility',
+                'value' => $payer.' must complete the remaining balance according to the agreed payment method.',
+            ],
+            [
+                'label' => 'Important Notice',
+                'value' => 'This document is not proof of full settlement. Please retain the final invoice after the booking has been fully paid.',
+            ],
+        ];
+    }
+
+    private function defaultCompanyBankAccount(mixed $company): ?BankAccount
+    {
+        if (! $company instanceof Company) {
+            return null;
+        }
+
+        return $company->bankAccounts()
+            ->orderByDesc('is_default')
+            ->orderByRaw("case when status = 'verified' then 1 else 0 end desc")
+            ->latest()
+            ->first();
+    }
+
+    private function bankAccountProviderName(string $provider): string
+    {
+        $providerConfig = collect(config('travelboost.bank_account_providers', []))
+            ->firstWhere('code', $provider);
+        $name = is_array($providerConfig) ? ($providerConfig['name'] ?? null) : null;
+
+        return filled($name) ? (string) $name : str($provider)->upper()->toString();
     }
 
     private function companyRoleLabel(string $role): string

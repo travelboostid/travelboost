@@ -15,6 +15,19 @@ type RawMediaUploaderProps = {
     ) => ReactElement<{ onClick?: React.MouseEventHandler }>;
 };
 
+function resolveMediaResource(data: unknown): MediaResource {
+    if (
+        data &&
+        typeof data === 'object' &&
+        'data' in data &&
+        (data as { data?: MediaResource }).data?.id
+    ) {
+        return (data as { data: MediaResource }).data;
+    }
+
+    return data as MediaResource;
+}
+
 export function RawMediaUploader({
     accept = '*/*',
     trigger,
@@ -47,7 +60,7 @@ export function RawMediaUploader({
             },
             {
                 onSuccess: (data) => {
-                    afterUpload?.(data);
+                    afterUpload?.(resolveMediaResource(data));
                 },
                 onError: () => {
                     toast.error('Failed to upload media. Please try again.');

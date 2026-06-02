@@ -8,6 +8,7 @@ use App\Models\Company;
 use App\Models\VendorAgentPartner;
 use App\Notifications\PaymentModeChangedNotification;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class AgentRegistrationController extends Controller
@@ -21,6 +22,7 @@ class AgentRegistrationController extends Controller
                 'agent' => function ($query) {
                     $query->with(['photo', 'identityCard']);
                 },
+                'agentTier',
             ])
             ->when($validated['agent.name'] ?? null, function ($query, $name) {
                 $query->whereHas('agent', function ($query) use ($name) {
@@ -42,12 +44,28 @@ class AgentRegistrationController extends Controller
 
         return Inertia::render('companies/dashboard/agent-registrations/index', [
             'data' => $data,
+            'agentTiers' => $company->agentTiers()
+                ->where('is_active', true)
+                ->orderBy('sort_order')
+                ->orderBy('name')
+                ->get(['id', 'name']),
         ]);
     }
 
     public function update(Request $request, Company $company, VendorAgentPartner $agent_registration)
     {
-        $data = $request->all();
+        $data = $request->validate([
+            'status' => ['nullable', 'string'],
+            'note' => ['nullable', 'string'],
+            'agent_tier_id' => [
+                'nullable',
+                Rule::exists('agent_tiers', 'id')->where('company_id', $company->id),
+            ],
+            'show_vendor_name' => ['nullable', 'boolean'],
+            'payment_mode' => ['nullable', 'in:vendor,agent'],
+            'manual_payment_enabled' => ['nullable', 'boolean'],
+            'online_payment_enabled' => ['nullable', 'boolean'],
+        ]);
 
         if (isset($data['status']) && $data['status'] === 'active' && is_null($agent_registration->accepted_at)) {
             $data['accepted_at'] = now();

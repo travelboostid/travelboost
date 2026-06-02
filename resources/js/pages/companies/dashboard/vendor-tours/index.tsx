@@ -1,4 +1,3 @@
-import { index } from '@/actions/App/Http/Controllers/Companies/Dashboard/VendorTourCatalogController';
 import type { TourCategoryResource, TourResource } from '@/api/model';
 import CompanyDashboardLayout from '@/components/layouts/company-dashboard';
 import { Label } from '@/components/ui/label';
@@ -42,7 +41,7 @@ export default function Page({
             if (filters.category) params.category = filters.category;
             if (search.trim()) params.search = search.trim();
             router.get(
-                index({ company: company.username, vendor: vendor.username }),
+                `/companies/${company.username}/dashboard/vendors/${vendor.username}/tours`,
                 params,
                 { preserveState: true, preserveScroll: true, replace: true },
             );
