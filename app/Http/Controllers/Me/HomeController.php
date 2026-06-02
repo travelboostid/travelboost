@@ -438,7 +438,7 @@ class HomeController extends Controller
     }
 
     /**
-     * @param  \Illuminate\Support\Collection<int, \App\Models\Tour>  $tours
+     * @param  Collection<int, Tour>  $tours
      */
     private function appendSchedulePayload(Collection $tours): void
     {

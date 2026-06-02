@@ -11,6 +11,7 @@ use App\Models\AgentTour;
 use App\Models\Company;
 use App\Models\Currency;
 use App\Models\PriceCategory;
+use App\Models\ProductCommissionCategory;
 use App\Models\Tour;
 use App\Models\TourAddOn;
 use App\Notifications\TourStatusChangedNotification;
@@ -27,7 +28,10 @@ class TourController extends Controller
     public function index(Company $company): Response
     {
         $tours = $company->tours()
-            ->with('availabilities.schedule')
+            ->with([
+                'availabilities.schedule',
+                'user',
+            ])
             ->orderBy('id', 'desc')
             ->get();
 
@@ -45,6 +49,8 @@ class TourController extends Controller
             'currencies' => Currency::select('code', 'name')
                 ->orderBy('code')
                 ->get(),
+
+            'productCommissionCategories' => ProductCommissionCategory::orderBy('id')->get(),
         ]);
     }
 
@@ -83,6 +89,7 @@ class TourController extends Controller
         app(ExpireBookingReservationsAction::class)->execute($company, $tour->id);
 
         $tour->load([
+            'user',
             'schedules.prices',
             'schedules.availability',
             'schedules.addOns',
@@ -102,6 +109,8 @@ class TourController extends Controller
             'priceCategories' => PriceCategory::where('company_id', $company->id)
                 ->orderBy('name')
                 ->get(['id', 'name']),
+
+            'productCommissionCategories' => ProductCommissionCategory::orderBy('id')->get(),
         ]);
     }
 

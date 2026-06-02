@@ -44,7 +44,7 @@ class OpenChatRequest extends FormRequest
                     'anonymous-user' => Rule::exists('anonymous_users', 'id'),
                     default => Rule::exists('users', 'id'), // Default to users if type is unknown
                 },
-        ],
+            ],
         ];
     }
 }

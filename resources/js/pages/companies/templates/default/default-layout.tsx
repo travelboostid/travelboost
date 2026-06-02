@@ -150,36 +150,28 @@ function DefaultLayoutContent({
                                         <Link
                                             href="/"
                                             className="font-bold text-muted-foreground transition-colors hover:text-foreground"
-                                            onClick={() =>
-                                                setIsMenuOpen(false)
-                                            }
+                                            onClick={() => setIsMenuOpen(false)}
                                         >
                                             Home
                                         </Link>
                                         <Link
                                             href="/tours"
                                             className="font-bold text-muted-foreground transition-colors hover:text-foreground"
-                                            onClick={() =>
-                                                setIsMenuOpen(false)
-                                            }
+                                            onClick={() => setIsMenuOpen(false)}
                                         >
                                             Tours
                                         </Link>
                                         <Link
                                             href="/mybookings"
                                             className="font-bold text-muted-foreground transition-colors hover:text-foreground"
-                                            onClick={() =>
-                                                setIsMenuOpen(false)
-                                            }
+                                            onClick={() => setIsMenuOpen(false)}
                                         >
                                             My Bookings
                                         </Link>
                                         <Link
                                             href="/#about-us"
                                             className="font-bold text-muted-foreground transition-colors hover:text-foreground"
-                                            onClick={() =>
-                                                setIsMenuOpen(false)
-                                            }
+                                            onClick={() => setIsMenuOpen(false)}
                                         >
                                             About Us
                                         </Link>

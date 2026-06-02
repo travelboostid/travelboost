@@ -22,7 +22,9 @@ export default function MoneyInput({
   name,
 }: Props) {
     const displayValue = useMemo(() => {
-        const numeric = Number(`${value}`.replace(/\D/g, '')) || 0
+        const numeric =
+            parseFloat(String(value ?? '0').replace(/,/g, '')) || 0;
+
         return formatter.format(numeric)
     }, [value])
 

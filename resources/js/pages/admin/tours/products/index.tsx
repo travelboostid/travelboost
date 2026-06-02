@@ -211,7 +211,9 @@ export default function TourProductsPage({ data }: TourProductsPageProps) {
                 ),
                 cell: ({ row }) => (
                     <div className="text-muted-foreground">
-                        {dayjs(row.getValue('created_at')).format('DD MMM YYYY')}
+                        {dayjs(row.getValue('created_at')).format(
+                            'DD MMM YYYY',
+                        )}
                     </div>
                 ),
                 meta: {
