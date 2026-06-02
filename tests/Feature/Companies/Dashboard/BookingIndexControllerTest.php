@@ -2488,6 +2488,34 @@ test('dashboard reorder rejects non expired bookings', function () {
         ->assertStatus(422);
 });
 
+test('dashboard cancel returns validation error instead of exception overlay for invalid status', function () {
+    $vendor = Company::factory()->create(['type' => 'vendor']);
+
+    CompanyTeam::create([
+        'company_id' => $vendor->id,
+        'user_id' => $this->user->id,
+        'status' => CompanyTeamStatus::ACTIVE,
+        'is_owner' => true,
+        'accepted_at' => now(),
+    ]);
+
+    $tour = Tour::factory()->create(['company_id' => $vendor->id]);
+    $booking = Booking::factory()->create([
+        'vendor_id' => $vendor->id,
+        'tour_id' => $tour->id,
+        'status' => BookingStatus::CANCELLED,
+    ]);
+
+    $response = $this->actingAs($this->user)
+        ->from("/companies/{$vendor->username}/dashboard/bookings")
+        ->post("/companies/{$vendor->username}/dashboard/bookings/{$booking->id}/cancel", [
+            'reason' => 'Duplicate click after cancellation',
+        ]);
+
+    $response->assertRedirect("/companies/{$vendor->username}/dashboard/bookings");
+    $response->assertSessionHasErrors('booking_action');
+});
+
 test('vendor can approve and reject agent cancel refund requests', function () {
     $vendorUser = User::factory()->create();
     $vendor = Company::factory()->create(['type' => 'vendor']);

@@ -94,6 +94,7 @@ class UpdateBookingRequest extends FormRequest
             'addons' => ['nullable', 'array'],
             'addons.*.name' => ['required_with:addons', 'string', 'max:255'],
             'addons.*.price' => ['required_with:addons', 'numeric', 'min:0'],
+            'addons.*.qty' => ['nullable', 'integer', 'min:1', 'max:999'],
         ];
     }
 

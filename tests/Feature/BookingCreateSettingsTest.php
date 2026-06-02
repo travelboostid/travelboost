@@ -2705,11 +2705,176 @@ test('customer can update booking snapshot before balance payment without resett
         ->and($booking->rooms()->first()->bed_layout[0]['guestId'])->toBe((string) $passenger->id);
 });
 
-test('customer booking create exposes per pax down payment rule', function () {
+test('customer can update booking snapshot from tenant subdomain before balance payment', function () {
+    Storage::fake('public');
+    ['user' => $user, 'company' => $company, 'tour' => $tour, 'schedule' => $schedule] = createBookingCreateScenario('snapshotsubdomainvendor');
+    User::factory()->create([
+        'username' => 'root',
+        'email' => 'root@travelboost.co.id',
+    ]);
+    $company->wallet->deposit(1_000_000, ['type' => 'test-wallet-topup']);
+
+    TourAddOn::create([
+        'company_id' => $company->id,
+        'tour_id' => $tour->id,
+        'schedule_id' => $schedule->id,
+        'description' => 'VISA',
+        'price' => 500_000,
+        'edit_status' => true,
+    ]);
+
+    $booking = Booking::factory()->create([
+        'booking_number' => 'BKG-SNAPSHOT-SUBDOMAIN',
+        'user_id' => $user->id,
+        'vendor_id' => $company->id,
+        'tour_id' => $tour->id,
+        'departure_date' => $schedule->departure_date,
+        'status' => BookingStatus::DOWN_PAYMENT,
+        'pax_adult' => 2,
+        'pax_child' => 0,
+        'pax_infant' => 0,
+        'grand_total' => 2_000_000,
+    ]);
+    $passengerOne = $booking->passengers()->create([
+        'first_name' => 'First',
+        'last_name' => 'Guest',
+        'pob' => 'Jakarta',
+        'price_category' => 'Adult Twin',
+        'price_amount' => 1_000_000,
+        'room_type' => 'Twin',
+        'room_number' => '1',
+    ]);
+    $passengerTwo = $booking->passengers()->create([
+        'first_name' => 'Second',
+        'last_name' => 'Guest',
+        'pob' => 'Bandung',
+        'price_category' => 'Adult Twin',
+        'price_amount' => 1_000_000,
+        'room_type' => 'Twin',
+        'room_number' => '1',
+    ]);
+    $appHost = env('APP_HOST', 'localhost');
+
+    $response = $this->actingAs($user)
+        ->put("http://{$company->username}.{$appHost}/bookings/{$booking->id}", [
+            'contact_name' => 'Snapshot Customer',
+            'contact_email' => 'snapshot@example.com',
+            'contact_phone' => '08123456789',
+            'contact_notes' => null,
+            'pax_adult' => 2,
+            'pax_child' => 0,
+            'pax_infant' => 0,
+            'total_price' => 2_000_000,
+            'tax_amount' => 220_000,
+            'platform_fee' => 50_000,
+            'commission_amount' => 0,
+            'grand_total' => 3_270_000,
+            'passengers' => [
+                [
+                    'id' => $passengerOne->id,
+                    'client_guest_id' => 'adult-0',
+                    'title' => 'Mr',
+                    'first_name' => 'First',
+                    'last_name' => 'Guest',
+                    'pob' => 'Jakarta',
+                    'price_category' => 'Adult Twin',
+                    'price_amount' => 1_000_000,
+                    'room_type' => 'Twin',
+                    'room_number' => '1',
+                ],
+                [
+                    'id' => $passengerTwo->id,
+                    'client_guest_id' => 'adult-1',
+                    'title' => 'Ms',
+                    'first_name' => 'Second',
+                    'last_name' => 'Guest',
+                    'pob' => 'Bandung',
+                    'price_category' => 'Adult Twin',
+                    'price_amount' => 1_000_000,
+                    'room_type' => 'Twin',
+                    'room_number' => '1',
+                ],
+            ],
+            'rooms' => [
+                [
+                    'room_type' => 'twin',
+                    'room_label' => 'Twin Room 1',
+                    'bed_layout' => [
+                        ['bedType' => 'twin', 'guestId' => 'adult-0'],
+                        ['bedType' => 'twin', 'guestId' => 'adult-1'],
+                    ],
+                ],
+            ],
+            'addons' => [
+                ['name' => 'VISA', 'price' => 1_000_000, 'qty' => 2],
+            ],
+        ]);
+
+    $response->assertSessionHasNoErrors();
+    $response->assertRedirect();
+
+    $booking->refresh();
+
+    expect($booking->status)->toBe(BookingStatus::DOWN_PAYMENT)
+        ->and((float) $booking->grand_total)->toBe(3_050_000.0)
+        ->and($booking->addons)->toHaveCount(1)
+        ->and($booking->addons()->first()->name)->toBe('VISA')
+        ->and((float) $booking->addons()->first()->price)->toBe(1_000_000.0);
+
+    $this->actingAs($user)
+        ->get("http://{$company->username}.{$appHost}/bookings/{$tour->id}/create?".http_build_query([
+            'date' => $schedule->departure_date,
+            'booking_number' => 'BKG-SNAPSHOT-SUBDOMAIN',
+        ]))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('tours/bookings/create')
+            ->where('addOns.0.label', 'VISA')
+            ->where('addOns.0.qty', 2));
+
+    $booking->payments()->create([
+        'owner_type' => User::class,
+        'owner_id' => $user->id,
+        'provider' => 'manual',
+        'payment_method' => 'bank_transfer',
+        'amount' => 1_000_000,
+        'status' => PaymentStatus::PAID,
+        'paid_at' => now(),
+        'payload' => [
+            'booking_payment_type' => 'down_payment',
+            'payment_type' => 'down_payment',
+            'payment_flow_stage' => 'direct_to_vendor',
+            'counts_toward_booking_total' => true,
+        ],
+    ]);
+
+    $paymentResponse = $this->actingAs($user)
+        ->from("http://{$company->username}.{$appHost}/bookings/{$booking->id}/manual-payment")
+        ->post("http://{$company->username}.{$appHost}/bookings/{$booking->id}/manual-payment", [
+            'sender_bank_name' => 'BCA',
+            'sender_account_number' => '1234567890',
+            'transfer_amount' => 2_050_000,
+            'payment_type' => 'full_payment',
+            'payment_date' => now()->toDateString(),
+            'proof' => UploadedFile::fake()->image('full-payment-proof.jpg'),
+        ]);
+
+    $paymentResponse->assertSessionHasNoErrors();
+    $paymentResponse->assertRedirect("http://{$company->username}.{$appHost}/bookings/{$booking->id}/manual-payment");
+
+    $fullPayment = $booking->fresh()->payments
+        ->first(fn ($payment) => data_get($payment->payload, 'payment_type') === 'full_payment');
+
+    expect($booking->fresh()->status)->toBe(BookingStatus::WAITING_PAYMENT_APPROVAL)
+        ->and((float) $fullPayment->amount)->toBe(2_050_000.0)
+        ->and(data_get($fullPayment->payload, 'payment_type'))->toBe('full_payment');
+});
+
+test('customer booking create exposes fixed per pax down payment amount rule', function () {
     ['user' => $user, 'company' => $company, 'tour' => $tour, 'schedule' => $schedule] = createBookingCreateScenario('perpaxdpvendor');
     $company->companySetting()->updateOrCreate([], [
         'minimum_down_payment' => 0,
-        'minimum_down_payment_value' => 50,
+        'minimum_down_payment_value' => 1_000_000,
     ]);
 
     $response = $this->actingAs($user)->get(route('bookings.create', [
@@ -2722,15 +2887,15 @@ test('customer booking create exposes per pax down payment rule', function () {
     $response->assertInertia(fn ($page) => $page
         ->component('tours/bookings/create')
         ->where('downPaymentAvailable', true)
-        ->where('downPaymentRule.mode', 'per_pax_percent')
-        ->where('downPaymentRule.percent', 50));
+        ->where('downPaymentRule.mode', 'per_pax_amount')
+        ->where('downPaymentRule.amount', 1_000_000));
 });
 
-test('per pax down payment rule rejects payment below passenger price percentage', function () {
+test('per pax down payment amount rule rejects payment below amount multiplied by pax', function () {
     ['user' => $user, 'company' => $company, 'tour' => $tour, 'schedule' => $schedule] = createBookingCreateScenario('perpaxguardvendor');
     $company->companySetting()->updateOrCreate([], [
         'minimum_down_payment' => 0,
-        'minimum_down_payment_value' => 50,
+        'minimum_down_payment_value' => 1_000_000,
     ]);
 
     $booking = Booking::factory()->create([
@@ -2740,22 +2905,27 @@ test('per pax down payment rule rejects payment below passenger price percentage
         'tour_id' => $tour->id,
         'departure_date' => $schedule->departure_date,
         'status' => BookingStatus::BOOKING_RESERVED,
-        'grand_total' => 1_500_000,
+        'pax_adult' => 5,
+        'pax_child' => 0,
+        'pax_infant' => 0,
+        'grand_total' => 7_500_000,
     ]);
-    $booking->passengers()->create([
-        'first_name' => 'Per',
-        'last_name' => 'Pax',
-        'pob' => 'Jakarta',
-        'price_category' => 'Adult Twin',
-        'price_amount' => 1_000_000,
-    ]);
+    foreach (range(1, 5) as $index) {
+        $booking->passengers()->create([
+            'first_name' => "Per {$index}",
+            'last_name' => 'Pax',
+            'pob' => 'Jakarta',
+            'price_category' => 'Adult Twin',
+            'price_amount' => 1_000_000,
+        ]);
+    }
 
     $response = $this->actingAs($user)
         ->from('/bookings/payment-test')
         ->post("/bookings/{$booking->id}/manual-payment", [
             'sender_bank_name' => 'BCA',
             'sender_account_number' => '1234567890',
-            'transfer_amount' => 400_000,
+            'transfer_amount' => 4_000_000,
             'payment_type' => 'down_payment',
             'payment_date' => now()->toDateString(),
             'proof' => UploadedFile::fake()->image('proof.jpg'),
@@ -2763,6 +2933,51 @@ test('per pax down payment rule rejects payment below passenger price percentage
 
     $response->assertRedirect('/bookings/payment-test');
     $response->assertSessionHasErrors('payment');
+});
+
+test('per pax down payment amount rule accepts payment equal to amount multiplied by pax', function () {
+    Storage::fake('public');
+    ['user' => $user, 'company' => $company, 'tour' => $tour, 'schedule' => $schedule] = createBookingCreateScenario('perpaxacceptvendor');
+    $company->companySetting()->updateOrCreate([], [
+        'minimum_down_payment' => 0,
+        'minimum_down_payment_value' => 1_000_000,
+    ]);
+
+    $booking = Booking::factory()->create([
+        'booking_number' => 'BKG-PER-PAX-ACCEPT',
+        'user_id' => $user->id,
+        'vendor_id' => $company->id,
+        'tour_id' => $tour->id,
+        'departure_date' => $schedule->departure_date,
+        'status' => BookingStatus::BOOKING_RESERVED,
+        'pax_adult' => 5,
+        'pax_child' => 0,
+        'pax_infant' => 0,
+        'grand_total' => 7_500_000,
+    ]);
+    foreach (range(1, 5) as $index) {
+        $booking->passengers()->create([
+            'first_name' => "Accepted {$index}",
+            'last_name' => 'Pax',
+            'pob' => 'Jakarta',
+            'price_category' => 'Adult Twin',
+            'price_amount' => 1_000_000,
+        ]);
+    }
+
+    $response = $this->actingAs($user)
+        ->from('/bookings/payment-test')
+        ->post("/bookings/{$booking->id}/manual-payment", [
+            'sender_bank_name' => 'BCA',
+            'sender_account_number' => '1234567890',
+            'transfer_amount' => 5_000_000,
+            'payment_type' => 'down_payment',
+            'payment_date' => now()->toDateString(),
+            'proof' => UploadedFile::fake()->image('proof.jpg'),
+        ]);
+
+    $response->assertRedirect('/bookings/payment-test');
+    $response->assertSessionHasNoErrors();
 });
 
 test('vendor parameter update rejects two active down payment rules', function () {
@@ -2800,6 +3015,86 @@ test('vendor parameter update rejects two active down payment rules', function (
 
     $response->assertRedirect("/companies/{$company->username}/dashboard/parameter-vendor");
     $response->assertSessionHasErrors('minimum_down_payment_value');
+});
+
+test('vendor parameter update rejects grand total down payment above one hundred percent', function () {
+    $user = User::factory()->create();
+    $company = Company::factory()->create([
+        'username' => 'maxdprulesvendor',
+        'type' => 'vendor',
+    ]);
+
+    CompanyTeam::create([
+        'company_id' => $company->id,
+        'user_id' => $user->id,
+        'status' => CompanyTeamStatus::ACTIVE,
+        'is_owner' => true,
+        'accepted_at' => now(),
+    ]);
+
+    $response = $this->actingAs($user)
+        ->from("/companies/{$company->username}/dashboard/parameter-vendor")
+        ->put("/companies/{$company->username}/dashboard/parameter-vendor", [
+            'booking_deadline' => 0,
+            'minimum_down_payment' => 100.01,
+            'minimum_down_payment_value' => 0,
+            'minimum_vat' => 11.5,
+            'term_conditions' => null,
+            'booking_entry_time_limit' => 10,
+            'manual_bank_transfer' => null,
+            'manual_bank_transfer_account_name' => null,
+            'manual_bank_transfer_account_number' => null,
+            'email_payment_gateway' => null,
+            'password_payment_gateway' => null,
+            'full_payment_deadline' => 0,
+            'document_completed_deadline' => 0,
+        ]);
+
+    $response->assertRedirect("/companies/{$company->username}/dashboard/parameter-vendor");
+    $response->assertSessionHasErrors('minimum_down_payment');
+});
+
+test('vendor parameter update accepts decimal grand total down payment and vat', function () {
+    $user = User::factory()->create();
+    $company = Company::factory()->create([
+        'username' => 'decimaldprulesvendor',
+        'type' => 'vendor',
+    ]);
+
+    CompanyTeam::create([
+        'company_id' => $company->id,
+        'user_id' => $user->id,
+        'status' => CompanyTeamStatus::ACTIVE,
+        'is_owner' => true,
+        'accepted_at' => now(),
+    ]);
+
+    $response = $this->actingAs($user)
+        ->from("/companies/{$company->username}/dashboard/parameter-vendor")
+        ->put("/companies/{$company->username}/dashboard/parameter-vendor", [
+            'booking_deadline' => 0,
+            'minimum_down_payment' => 12.5,
+            'minimum_down_payment_value' => 0,
+            'minimum_vat' => 11.5,
+            'term_conditions' => null,
+            'booking_entry_time_limit' => 10,
+            'manual_bank_transfer' => null,
+            'manual_bank_transfer_account_name' => null,
+            'manual_bank_transfer_account_number' => null,
+            'email_payment_gateway' => null,
+            'password_payment_gateway' => null,
+            'full_payment_deadline' => 0,
+            'document_completed_deadline' => 0,
+        ]);
+
+    $response->assertRedirect("/companies/{$company->username}/dashboard/parameter-vendor");
+    $response->assertSessionHasNoErrors();
+
+    $company->refresh();
+    $settings = $company->companySetting()->first();
+
+    expect((float) $settings->minimum_down_payment)->toBe(12.5)
+        ->and((float) $settings->minimum_vat)->toBe(11.5);
 });
 
 test('expired past booking number is not reused for reorder', function () {

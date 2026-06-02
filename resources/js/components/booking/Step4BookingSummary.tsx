@@ -38,10 +38,16 @@ import type { RoomConfig } from './Step2RoomConfiguration';
 
 export type PaymentType = 'down_payment' | 'full_payment';
 export type PaymentMethod = 'manual_transfer' | 'midtrans';
-export type DownPaymentRule = {
-    mode: 'grand_total_percent' | 'per_pax_percent';
-    percent: number;
-} | null;
+export type DownPaymentRule =
+    | {
+          mode: 'grand_total_percent';
+          percent: number;
+      }
+    | {
+          mode: 'per_pax_amount';
+          amount: number;
+      }
+    | null;
 
 export type AddOnItem = {
     key: string;
@@ -199,25 +205,27 @@ export default function Step4BookingSummary({
                   percent: minimumDownPaymentPct,
               }
             : null);
-    const dpPct = effectiveDownPaymentRule?.percent ?? 0;
+    const dpPct =
+        effectiveDownPaymentRule?.mode === 'grand_total_percent'
+            ? effectiveDownPaymentRule.percent
+            : 0;
     const dpRate = dpPct / 100;
-    const perPaxDownPaymentBase = guests.reduce(
-        (sum, guest) => sum + Number(guest.price || 0),
-        0,
-    );
-    const downPaymentBase =
-        effectiveDownPaymentRule?.mode === 'per_pax_percent'
-            ? perPaxDownPaymentBase
-            : grandTotal;
+    const perPaxDownPaymentAmount =
+        effectiveDownPaymentRule?.mode === 'per_pax_amount'
+            ? effectiveDownPaymentRule.amount
+            : 0;
     const dpLabel = downPaymentAvailable
-        ? effectiveDownPaymentRule?.mode === 'per_pax_percent'
-            ? `Down Payment (${dpPct}% per pax)`
+        ? effectiveDownPaymentRule?.mode === 'per_pax_amount'
+            ? `Down Payment (${formatCurrency(perPaxDownPaymentAmount)} per pax)`
             : `Down Payment (${dpPct}%)`
         : 'Down Payment';
     const effectivePaymentType: PaymentType | null = forceBalancePayment
         ? 'full_payment'
         : paymentType;
-    const downPaymentAmount = Math.round(downPaymentBase * dpRate);
+    const downPaymentAmount =
+        effectiveDownPaymentRule?.mode === 'per_pax_amount'
+            ? Math.round(perPaxDownPaymentAmount * guests.length)
+            : Math.round(grandTotal * dpRate);
     const fullPaymentAmount = grandTotal;
     const payAmount =
         effectivePaymentType === 'full_payment'

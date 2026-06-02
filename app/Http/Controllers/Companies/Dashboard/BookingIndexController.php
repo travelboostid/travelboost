@@ -745,7 +745,13 @@ class BookingIndexController extends Controller
             ? self::CANCELLABLE_STATUSES
             : self::REFUNDABLE_STATUSES;
 
-        abort_unless(in_array($this->bookingStatusValue($booking), $allowedStatuses, true), 422);
+        if (in_array($this->bookingStatusValue($booking), $allowedStatuses, true)) {
+            return;
+        }
+
+        throw ValidationException::withMessages([
+            'booking_action' => 'This booking cannot be '.($action === 'cancel' ? 'cancelled' : 'refunded').' from its current status.',
+        ]);
     }
 
     private function markPendingAgentVendorAttemptsInactive(Booking $booking): void

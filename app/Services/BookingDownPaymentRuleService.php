@@ -11,20 +11,20 @@ class BookingDownPaymentRuleService
 {
     public const MODE_GRAND_TOTAL_PERCENT = 'grand_total_percent';
 
-    public const MODE_PER_PAX_PERCENT = 'per_pax_percent';
+    public const MODE_PER_PAX_AMOUNT = 'per_pax_amount';
 
     /**
-     * @return array{mode: string, percent: float}|null
+     * @return array{mode: string, percent?: float, amount?: float}|null
      */
     public function resolveForSettings(?CompanySettings $settings): ?array
     {
         $grandTotalPercent = $this->positivePercent($settings?->minimum_down_payment);
-        $perPaxPercent = $this->positivePercent($settings?->minimum_down_payment_value);
+        $perPaxAmount = $this->positiveAmount($settings?->minimum_down_payment_value);
 
-        if ($perPaxPercent !== null) {
+        if ($perPaxAmount !== null) {
             return [
-                'mode' => self::MODE_PER_PAX_PERCENT,
-                'percent' => $perPaxPercent,
+                'mode' => self::MODE_PER_PAX_AMOUNT,
+                'amount' => $perPaxAmount,
             ];
         }
 
@@ -39,7 +39,7 @@ class BookingDownPaymentRuleService
     }
 
     /**
-     * @return array{mode: string, percent: float}|null
+     * @return array{mode: string, percent?: float, amount?: float}|null
      */
     public function resolveForTour(Tour $tour): ?array
     {
@@ -49,7 +49,7 @@ class BookingDownPaymentRuleService
     }
 
     /**
-     * @return array{mode: string, percent: float}|null
+     * @return array{mode: string, percent?: float, amount?: float}|null
      */
     public function resolveForBooking(Booking $booking): ?array
     {
@@ -108,19 +108,29 @@ class BookingDownPaymentRuleService
         }
 
         if ($rule['mode'] === self::MODE_GRAND_TOTAL_PERCENT) {
-            return (float) round((float) $booking->grand_total * ($rule['percent'] / 100));
+            return (float) round((float) $booking->grand_total * ((float) $rule['percent'] / 100));
         }
 
         $booking->loadMissing('passengers');
+        $paxCount = $booking->passengers->count();
 
-        return (float) round(
-            $booking->passengers->sum(
-                fn ($passenger): float => (float) $passenger->price_amount * ($rule['percent'] / 100)
-            )
-        );
+        if ($paxCount === 0) {
+            $paxCount = (int) $booking->pax_adult + (int) $booking->pax_child + (int) $booking->pax_infant;
+        }
+
+        return (float) round($paxCount * (float) $rule['amount']);
     }
 
     private function positivePercent(mixed $value): ?float
+    {
+        if (! is_numeric($value) || (float) $value <= 0 || (float) $value > 100) {
+            return null;
+        }
+
+        return (float) $value;
+    }
+
+    private function positiveAmount(mixed $value): ?float
     {
         if (! is_numeric($value) || (float) $value <= 0) {
             return null;
