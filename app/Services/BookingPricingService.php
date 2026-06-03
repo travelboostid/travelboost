@@ -184,6 +184,25 @@ class BookingPricingService
         ];
     }
 
+    public function reconcileSnapshotTotals(Booking $booking): Booking
+    {
+        $booking->loadMissing(['passengers', 'addons', 'vendor.companySetting', 'tour.company.companySetting']);
+
+        if ($booking->passengers->isEmpty() || $booking->addons->isEmpty()) {
+            return $booking;
+        }
+
+        $totals = $this->bookingTotalsFromQuote($this->quoteForBooking($booking));
+
+        if (abs((float) $booking->grand_total - (float) $totals['grand_total']) < 0.01) {
+            return $booking;
+        }
+
+        $booking->forceFill($totals)->save();
+
+        return $booking->refresh();
+    }
+
     /**
      * @return array<string, mixed>
      */
@@ -339,9 +358,6 @@ class BookingPricingService
     /**
      * @return array<string, mixed>
      */
-    /**
-     * @return array<string, mixed>
-     */
     private function bookingSnapshotQuote(Booking $booking): array
     {
         $passengers = $booking->passengers
@@ -350,6 +366,8 @@ class BookingPricingService
             ->all();
         $discountedSubtotal = (float) $booking->passengers->sum('price_amount');
         $subtotalGuests = (float) $booking->total_price;
+        $addonsTotal = (float) $booking->addons->sum('price');
+        $grandTotal = $discountedSubtotal + (float) $booking->tax_amount + (float) $booking->platform_fee + $addonsTotal;
         $travelboostBreakdown = $booking->passengers
             ->values()
             ->map(function ($passenger, int $index): array {
@@ -377,10 +395,10 @@ class BookingPricingService
             'platform_fee_per_pax' => $this->platformFeePerPax(),
             'tax_amount' => (float) $booking->tax_amount,
             'tax_rate' => (float) ($booking->vendor?->companySetting?->minimum_vat ?? $booking->tour?->company?->companySetting?->minimum_vat ?? self::DEFAULT_PPN_RATE),
-            'addons_total' => (float) $booking->addons->sum('price'),
+            'addons_total' => $addonsTotal,
             'agent_commission' => $agentCommission,
             'travelboost_commission' => $travelboostCommission,
-            'grand_total' => (float) $booking->grand_total,
+            'grand_total' => (float) $grandTotal,
             'pax_count' => $booking->passengers->count(),
             'passengers' => $passengers,
             'addons' => $booking->addons->map->toArray()->all(),

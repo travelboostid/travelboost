@@ -123,6 +123,7 @@ class BookingIndexController extends Controller
 
         $paymentReceiverService = app(BookingPaymentReceiverService::class);
         $paymentWorkflowService = app(BookingPaymentWorkflowService::class);
+        $pricingService = app(BookingPricingService::class);
         $baseQuery = $this->bookingIndexBaseQuery($company, $request);
         $followupSummary = $this->followupSummaryForQuery(clone $baseQuery, $company);
 
@@ -142,7 +143,8 @@ class BookingIndexController extends Controller
             ->paginate(10)
             ->withQueryString();
 
-        $bookings->getCollection()->transform(function ($booking) use ($company, $paymentReceiverService, $paymentWorkflowService) {
+        $bookings->getCollection()->transform(function ($booking) use ($company, $paymentReceiverService, $paymentWorkflowService, $pricingService) {
+            $booking = $pricingService->reconcileSnapshotTotals($booking);
             $booking = $this->reconcilePaidBookingStatusIfStale($booking);
             $booking->commission_amount = $this->resolveCommissionAmount($booking);
 
@@ -325,6 +327,7 @@ class BookingIndexController extends Controller
             }], 'amount')
             ->get()
             ->map(function (Booking $booking) use ($company): Booking {
+                $booking = app(BookingPricingService::class)->reconcileSnapshotTotals($booking);
                 $this->attachFollowupPayloads($company, $booking);
 
                 return $booking;
@@ -405,6 +408,7 @@ class BookingIndexController extends Controller
             'addons',
             'payments',
         ]);
+        $booking = app(BookingPricingService::class)->reconcileSnapshotTotals($booking);
 
         $paidPayments = $booking->payments
             ->filter(fn (Payment $payment): bool => $payment->status === PaymentStatus::PAID)
@@ -838,6 +842,7 @@ class BookingIndexController extends Controller
             'addons',
             'payments',
         ]);
+        $booking = app(BookingPricingService::class)->reconcileSnapshotTotals($booking);
 
         $tour = $booking->tour;
 
