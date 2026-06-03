@@ -13,23 +13,7 @@ use Laravolt\Indonesia\Models\District;
 use Laravolt\Indonesia\Models\Province;
 use Laravolt\Indonesia\Models\Village;
 
-Route::get('/', HomeDispatcherController::class);
-// Route::get('/', function () {
-//     $affiliateBaseUrl = 'affiliate.'.env('APP_HOST', 'localhost');
-//     $domain = Context::get('domain');
-
-//     $owner = $domain?->owner;
-
-//     return match (true) {
-//         $affiliateBaseUrl === request()->getHost() => app(AffiliateHomeController::class)->index(),
-//         $owner instanceof Company => app(TenantHomeController::class)->index(),
-//         $owner instanceof AffiliateProfile => in_array($owner->tier, ['master_affiliate', 'partner'])
-//           ? inertia('affiliate/landing', ['referral_code' => $owner->referral_code])
-//           : inertia('home/index', ['referral_code' => $owner->referral_code]),
-//         default => app(BaseHomeController::class)->index(),
-//     };
-// })->name('index');
-
+Route::get('/', HomeDispatcherController::class)->name('index');
 Route::get('/about', [BaseHomeController::class, 'about'])->name('about');
 Route::get('/contact', [BaseHomeController::class, 'contact'])->name('contact');
 Route::get('/learn-more', [BaseHomeController::class, 'learnMore'])->name('learn-more');
