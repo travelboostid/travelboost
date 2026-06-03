@@ -1,6 +1,8 @@
 <?php
 
+use App\Enums\BookingStatus;
 use App\Models\AppConfig;
+use App\Models\Booking;
 use App\Models\Company;
 use App\Models\PriceCategory;
 use App\Models\Tour;
@@ -175,6 +177,46 @@ test('booking pricing service multiplies matched addon unit price by submitted q
 
     expect($quote['addons_total'])->toBe(1_000_000.0)
         ->and($quote['addons'][0]['price'])->toBe(1_000_000.0);
+});
+
+test('booking snapshot quote includes persisted add ons without double counting stale grand total', function () {
+    ['tour' => $tour, 'schedule' => $schedule, 'addOn' => $addOn] = createPricingScenario();
+
+    $quote = app(BookingPricingService::class)->quoteForBookingData($tour, $schedule->departure_date, [
+        ['first_name' => 'Adult', 'price_category' => 'Adult Single', 'price_amount' => 1],
+        ['first_name' => 'Child', 'price_category' => 'Child With Bed', 'price_amount' => 1],
+    ], [
+        ['name' => 'Airport transfer', 'price' => $addOn->price],
+    ]);
+
+    $booking = Booking::factory()->create([
+        'vendor_id' => $tour->company_id,
+        'tour_id' => $tour->id,
+        'departure_date' => $schedule->departure_date,
+        'status' => BookingStatus::BOOKING_RESERVED,
+        'pax_adult' => 1,
+        'pax_child' => 1,
+        'pax_infant' => 0,
+        'total_price' => $quote['subtotal_guests'],
+        'tax_amount' => $quote['tax_amount'],
+        'platform_fee' => $quote['platform_fee'],
+        'commission_amount' => $quote['agent_commission'],
+        'grand_total' => $quote['grand_total'] - $quote['addons_total'],
+    ]);
+    $booking->passengers()->createMany($quote['passengers']);
+    $booking->addons()->createMany($quote['addons']);
+
+    $staleSnapshotQuote = app(BookingPricingService::class)->quoteForBooking($booking->fresh());
+
+    expect($staleSnapshotQuote['addons_total'])->toBe($quote['addons_total'])
+        ->and($staleSnapshotQuote['grand_total'])->toBe($quote['grand_total']);
+
+    $booking->update(['grand_total' => $quote['grand_total']]);
+
+    $currentSnapshotQuote = app(BookingPricingService::class)->quoteForBooking($booking->fresh());
+
+    expect($currentSnapshotQuote['addons_total'])->toBe($quote['addons_total'])
+        ->and($currentSnapshotQuote['grand_total'])->toBe($quote['grand_total']);
 });
 
 test('booking pricing service calculates travelboost commission from admin tier parameters', function () {

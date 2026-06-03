@@ -330,6 +330,105 @@ test('booking index includes paid amount and remaining balance', function () {
         ->where('data.data.0.remaining_balance', 600_000));
 });
 
+test('dashboard booking payload reconciles stale grand total with persisted add ons', function () {
+    $vendor = Company::factory()->create(['type' => 'vendor']);
+    $vendor->companySetting()->create(['minimum_vat' => 1.1]);
+
+    CompanyTeam::create([
+        'company_id' => $vendor->id,
+        'user_id' => $this->user->id,
+        'status' => CompanyTeamStatus::ACTIVE,
+        'is_owner' => true,
+        'accepted_at' => now(),
+    ]);
+
+    $tour = Tour::factory()->create([
+        'company_id' => $vendor->id,
+        'code' => 'ADDON-DASHBOARD',
+        'status' => 'active',
+    ]);
+    $schedule = TourSchedule::create([
+        'company_id' => $vendor->id,
+        'tour_id' => $tour->id,
+        'tour_code' => $tour->code,
+        'departure_date' => now()->addMonths(6)->toDateString(),
+        'return_date' => now()->addMonths(6)->addDays(7)->toDateString(),
+        'is_active' => true,
+    ]);
+    $priceCategory = PriceCategory::create([
+        'company_id' => $vendor->id,
+        'name' => 'Adult Single',
+        'room_type' => 'single',
+    ]);
+    TourPrice::create([
+        'company_id' => $vendor->id,
+        'tour_code' => $tour->code,
+        'schedule_id' => $schedule->id,
+        'price_category_id' => $priceCategory->id,
+        'currency' => 'IDR',
+        'price' => 16_700_000,
+    ]);
+
+    $staleGrandTotal = 33_817_400;
+    $expectedGrandTotal = 37_273_400;
+    $booking = Booking::factory()->create([
+        'vendor_id' => $vendor->id,
+        'tour_id' => $tour->id,
+        'departure_date' => $schedule->departure_date,
+        'status' => BookingStatus::BOOKING_RESERVED,
+        'reserved_expires_at' => now()->addMinutes(20),
+        'pax_adult' => 2,
+        'pax_child' => 0,
+        'pax_infant' => 0,
+        'total_price' => 33_400_000,
+        'tax_amount' => 367_400,
+        'platform_fee' => 50_000,
+        'commission_amount' => 0,
+        'grand_total' => $staleGrandTotal,
+    ]);
+    $booking->passengers()->createMany([
+        [
+            'first_name' => 'First',
+            'last_name' => 'Guest',
+            'price_category' => 'Adult Single',
+            'price_amount' => 16_700_000,
+            'room_type' => 'Single',
+        ],
+        [
+            'first_name' => 'Second',
+            'last_name' => 'Guest',
+            'price_category' => 'Adult Single',
+            'price_amount' => 16_700_000,
+            'room_type' => 'Single',
+        ],
+    ]);
+    $booking->addons()->createMany([
+        ['name' => 'VISA GROUP', 'price' => 1_960_000],
+        ['name' => 'Tipping', 'price' => 1_496_000],
+    ]);
+
+    $this->actingAs($this->user)
+        ->get("/companies/{$vendor->username}/dashboard/bookings")
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('companies/dashboard/bookings/index')
+            ->where('data.data.0.booking_number', $booking->booking_number)
+            ->where('data.data.0.grand_total', fn (mixed $value): bool => (float) $value === (float) $expectedGrandTotal)
+            ->where('data.data.0.remaining_balance', $expectedGrandTotal));
+
+    expect((float) $booking->fresh()->grand_total)->toBe((float) $expectedGrandTotal);
+
+    $booking->update(['grand_total' => $staleGrandTotal]);
+
+    $this->actingAs($this->user)
+        ->get("/companies/{$vendor->username}/dashboard/bookings/{$booking->id}")
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('companies/dashboard/bookings/show')
+            ->where('booking.grand_total', fn (mixed $value): bool => (float) $value === (float) $expectedGrandTotal)
+            ->where('remainingBalance', $expectedGrandTotal));
+});
+
 test('booking index exposes down payment and full payment details', function () {
     $this->travelTo('2026-05-01 09:00:00');
 

@@ -233,6 +233,31 @@ test('full payment settles agent commission travelboost commission and platform 
         ->and(Transaction::where('meta->booking_id', $booking->id)->count())->toBe(6);
 });
 
+test('full payment finalization reconciles persisted add ons before marking booking as full payment', function () {
+    ['vendor' => $vendor, 'booking' => $booking, 'quote' => $quote] = createSettlementScenario();
+
+    $booking->addons()->create([
+        'name' => 'Visa service',
+        'price' => 500_000,
+    ]);
+
+    $booking->payments()->create([
+        'owner_type' => User::class,
+        'owner_id' => $booking->user_id,
+        'provider' => 'manual',
+        'payment_method' => 'bank_transfer',
+        'amount' => $quote['grand_total'] + 500_000,
+        'status' => 'paid',
+        'payload' => ['payment_type' => 'full_payment'],
+    ]);
+
+    app(FinalizeBookingPaymentAction::class)->execute($booking->fresh());
+
+    expect($booking->fresh()->status)->toBe(BookingStatus::FULL_PAYMENT)
+        ->and((float) $booking->fresh()->grand_total)->toBe((float) ($quote['grand_total'] + 500_000))
+        ->and((int) $vendor->wallet->fresh()->balance)->toBeLessThan(5_000_000);
+});
+
 test('full payment finalization settles from persisted booking snapshot after tour prices change', function () {
     ['vendor' => $vendor, 'agent' => $agent, 'booking' => $booking, 'quote' => $quote] = createSettlementScenario();
     $root = User::where('username', 'root')->firstOrFail();
@@ -446,7 +471,8 @@ test('customer online full payment is blocked before snap payment is created whe
 });
 
 test('customer online down payment remains available when vendor wallet cannot settle full payment commissions', function () {
-    ['customer' => $customer, 'vendor' => $vendor, 'booking' => $booking] = createSettlementScenario(vendorBalance: 100_000);
+    ['customer' => $customer, 'vendor' => $vendor, 'booking' => $booking, 'quote' => $quote] = createSettlementScenario(vendorBalance: 100_000);
+    $downPaymentAmount = (float) ceil($quote['grand_total'] * 0.3);
 
     Mockery::mock('alias:Midtrans\Snap')
         ->shouldReceive('getSnapToken')
@@ -460,7 +486,7 @@ test('customer online down payment remains available when vendor wallet cannot s
     $response = $this->actingAs($customer)
         ->postJson("/bookings/{$booking->id}/online-payment", [
             'payment_type' => 'down_payment',
-            'amount' => 1_000_000,
+            'amount' => $downPaymentAmount,
         ]);
 
     $response->assertOk()
@@ -472,7 +498,8 @@ test('customer online down payment remains available when vendor wallet cannot s
 });
 
 test('customer online payment returns validation error when midtrans snap token request fails', function () {
-    ['customer' => $customer, 'booking' => $booking] = createSettlementScenario(vendorBalance: 100_000);
+    ['customer' => $customer, 'booking' => $booking, 'quote' => $quote] = createSettlementScenario(vendorBalance: 100_000);
+    $downPaymentAmount = (float) ceil($quote['grand_total'] * 0.3);
 
     Mockery::mock('alias:Midtrans\Snap')
         ->shouldReceive('getSnapToken')
@@ -486,7 +513,7 @@ test('customer online payment returns validation error when midtrans snap token 
     $response = $this->actingAs($customer)
         ->postJson("/bookings/{$booking->id}/online-payment", [
             'payment_type' => 'down_payment',
-            'amount' => 1_000_000,
+            'amount' => $downPaymentAmount,
         ]);
 
     $response->assertUnprocessable()
@@ -499,7 +526,8 @@ test('customer online payment returns validation error when midtrans snap token 
 test('customer can submit manual payment after online provider is unavailable', function () {
     Storage::fake('public');
 
-    ['customer' => $customer, 'booking' => $booking] = createSettlementScenario(vendorBalance: 100_000);
+    ['customer' => $customer, 'booking' => $booking, 'quote' => $quote] = createSettlementScenario(vendorBalance: 100_000);
+    $downPaymentAmount = (float) ceil($quote['grand_total'] * 0.3);
 
     Mockery::mock('alias:Midtrans\Snap')
         ->shouldReceive('getSnapToken')
@@ -513,7 +541,7 @@ test('customer can submit manual payment after online provider is unavailable', 
     $onlineResponse = $this->actingAs($customer)
         ->postJson("/bookings/{$booking->id}/online-payment", [
             'payment_type' => 'down_payment',
-            'amount' => 1_000_000,
+            'amount' => $downPaymentAmount,
         ]);
 
     $onlineResponse->assertUnprocessable()
@@ -526,7 +554,7 @@ test('customer can submit manual payment after online provider is unavailable', 
         ->post("/bookings/{$booking->id}/manual-payment", [
             'sender_bank_name' => 'BCA',
             'sender_account_number' => '1234567890',
-            'transfer_amount' => 1_000_000,
+            'transfer_amount' => $downPaymentAmount,
             'payment_type' => 'down_payment',
             'payment_date' => '2026-05-01',
             'proof' => UploadedFile::fake()->image('proof.jpg'),
@@ -542,7 +570,8 @@ test('customer can submit manual payment after online provider is unavailable', 
 test('customer down payment remains available when vendor wallet cannot settle full payment commissions', function () {
     Storage::fake('public');
 
-    ['customer' => $customer, 'booking' => $booking] = createSettlementScenario(vendorBalance: 100_000);
+    ['customer' => $customer, 'booking' => $booking, 'quote' => $quote] = createSettlementScenario(vendorBalance: 100_000);
+    $downPaymentAmount = (float) ceil($quote['grand_total'] * 0.3);
 
     $booking->update([
         'status' => BookingStatus::BOOKING_RESERVED,
@@ -552,7 +581,7 @@ test('customer down payment remains available when vendor wallet cannot settle f
         ->post("/bookings/{$booking->id}/manual-payment", [
             'sender_bank_name' => 'BCA',
             'sender_account_number' => '1234567890',
-            'transfer_amount' => 1_000_000,
+            'transfer_amount' => $downPaymentAmount,
             'payment_type' => 'down_payment',
             'payment_date' => '2026-05-01',
             'proof' => UploadedFile::fake()->image('proof.jpg'),
