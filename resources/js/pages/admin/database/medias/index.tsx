@@ -13,6 +13,7 @@ import { useMemo } from 'react';
 import { AddMediaButton } from './components/add-media-button';
 import DeleteButton from './components/delete-button';
 import { EmptyMedias } from './components/empty-medias';
+import GenerateKnowledgeBaseButton from './components/generate-knowledge-base-button';
 
 const TYPE_OPTIONS = [
     { label: 'Image', value: 'image' },
@@ -178,6 +179,11 @@ export default function MediasPage({ data }: MediasPageProps) {
                     return (
                         <div className="flex gap-1">
                             <DeleteButton data={row.original} />
+                            {row.original.subtype === 'tour-document' && (
+                                <GenerateKnowledgeBaseButton
+                                    data={row.original}
+                                />
+                            )}
                         </div>
                     );
                 },

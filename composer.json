@@ -32,6 +32,7 @@
         "maatwebsite/excel": "4.x-dev",
         "midtrans/midtrans-php": "*",
         "santigarcor/laratrust": "^8.5",
+        "smalot/pdfparser": "^2.12",
         "tpetry/laravel-postgresql-enhanced": "*"
     },
     "require-dev": {

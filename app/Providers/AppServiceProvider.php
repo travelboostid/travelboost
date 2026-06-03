@@ -10,6 +10,7 @@ use App\Models\Company;
 use App\Models\Media;
 use App\Models\User;
 use App\Models\WalletTopupPayment;
+use App\Services\KnowledgeBaseService;
 use Carbon\CarbonImmutable;
 use Illuminate\Auth\Middleware\Authenticate;
 use Illuminate\Database\Eloquent\Relations\Relation;
@@ -31,6 +32,9 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->app->singleton(ImageManager::class, function () {
             return new ImageManager(new Driver);
+        });
+        $this->app->singleton(KnowledgeBaseService::class, function () {
+            return new KnowledgeBaseService;
         });
     }
 

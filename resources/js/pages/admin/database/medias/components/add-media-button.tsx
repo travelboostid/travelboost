@@ -72,6 +72,9 @@ export function AddMediaButton({
                                 <SelectItem value="tour-image">
                                     Tour Image
                                 </SelectItem>
+                                <SelectItem value="tour-document">
+                                    Tour Document
+                                </SelectItem>
                                 <SelectItem value="photo">Photo</SelectItem>
                                 <SelectItem value="general-knowledge-base-document">
                                     General Knowlege Base
@@ -109,6 +112,35 @@ export function AddMediaButton({
                                 <p className="mb-4 text-sm text-muted-foreground">
                                     Choose an image file from your device to
                                     upload as your new avatar.
+                                </p>
+                            </button>
+                        )}
+                    />
+                )}
+                {owner && subtype === 'tour-document' && (
+                    <RawMediaUploader
+                        afterUpload={handleAfterUpload}
+                        accept="application/pdf"
+                        uploadParams={{
+                            owner_type: ownerType,
+                            owner_id: ownerId,
+                            type: 'document',
+                            subtype: 'tour-document',
+                        }}
+                        trigger={({ open }) => (
+                            <button
+                                className="cursor-pointer rounded-md border-2 border-dashed p-4 text-center"
+                                onClick={open}
+                            >
+                                <UploadCloudIcon
+                                    size={48}
+                                    className="mx-auto text-muted-foreground"
+                                />
+                                <h1 className="mb-2 font-medium">
+                                    Click Here to Upload
+                                </h1>
+                                <p className="mb-4 text-sm text-muted-foreground">
+                                    Choose a PDF document from your device.
                                 </p>
                             </button>
                         )}

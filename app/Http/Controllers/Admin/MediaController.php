@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\IndexMediaRequest;
 use App\Models\Media;
+use App\Services\KnowledgeBaseService;
 use Carbon\Carbon;
 use Illuminate\Routing\Attributes\Controllers\Authorize;
 use Inertia\Inertia;
@@ -12,6 +13,8 @@ use Inertia\Inertia;
 #[Authorize('access-admin')]
 class MediaController extends Controller
 {
+    public function __construct(private KnowledgeBaseService $knowledgeBaseService) {}
+
     /**
      * Display a listing of the resource.
      */
@@ -73,5 +76,15 @@ class MediaController extends Controller
         $media->delete();
 
         return redirect()->back()->with('success', 'Role deleted successfully');
+    }
+
+    public function triggerGenerateKnowledgeBase(Media $media)
+    {
+        $success = $this->knowledgeBaseService->generateMediaKnowledgeBase($media);
+        if (! $success) {
+            return redirect()->back()->with('error', 'Failed to generate knowledge base');
+        }
+
+        return redirect()->back()->with('success', 'Knowledge base generated successfully');
     }
 }

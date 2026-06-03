@@ -67,6 +67,7 @@ Route::prefix('admin')
                 Route::resource('roles', RoleController::class)->names('roles');
                 Route::resource('knowledge-bases', KnowledgeBaseController::class)->names('knowledge-bases');
                 Route::resource('medias', MediaController::class)->names('medias');
+                Route::post('medias/{media}/trigger-generate-knowledge-base', [MediaController::class, 'triggerGenerateKnowledgeBase'])->name('medias.trigger-generate-knowledge-base');
                 Route::resource('ai-usage-logs', AiUsageLogController::class)->names('ai-usage-logs');
             });
             Route::prefix('funds')->name('funds.')->group(function () {
