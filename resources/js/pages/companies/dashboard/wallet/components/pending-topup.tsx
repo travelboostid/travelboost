@@ -1,4 +1,3 @@
-import { useGetPayments } from '@/api/payment/payment';
 import {
     Item,
     ItemActions,
@@ -7,15 +6,14 @@ import {
     ItemMedia,
     ItemTitle,
 } from '@/components/ui/item';
+import usePageProps from '@/hooks/use-page-props';
 import { ShieldAlertIcon } from 'lucide-react';
+import type { WalletPageProps } from '..';
 import CancelPayment from '../../payments/components/cancel-payment';
 import ContinuePayment from './continue-payment';
 
 export default function PendingTopup() {
-    const { data } = useGetPayments();
-    const pendingTopup = data?.data.find(
-        (payment) => payment.status === 'pending',
-    );
+    const { pendingTopup } = usePageProps<WalletPageProps>();
 
     return pendingTopup ? (
         <Item variant="outline">

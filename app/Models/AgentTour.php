@@ -13,6 +13,7 @@ class AgentTour extends Model
     protected $fillable = [
         'category_id',
         'tour_id',
+        'agent_document_id',
         'company_id',
         'status',
     ];
@@ -34,6 +35,11 @@ class AgentTour extends Model
     public function tour()
     {
         return $this->belongsTo(Tour::class, 'tour_id');
+    }
+
+    public function agentDocument()
+    {
+        return $this->belongsTo(Media::class, 'agent_document_id');
     }
 
     public function category()

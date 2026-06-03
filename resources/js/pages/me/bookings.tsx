@@ -635,6 +635,7 @@ function BookingCard({
         booking.needs_travel_documents && paidProgressStatuses.includes(status)
             ? bookingDocumentsHref(booking)
             : null;
+    const shouldShowProformaButton = status === 'down payment';
     const paymentDeadline = deadlineText(
         'Balance payment',
         booking.payment_deadline,
@@ -659,6 +660,7 @@ function BookingCard({
         reviewHref,
         documentHref,
         booking.document_url,
+        shouldShowProformaButton,
     ].filter(Boolean).length;
     const shouldPrimaryActionSpanMobile =
         Boolean(action) && (actionCount === 1 || actionCount === 3);
@@ -801,35 +803,35 @@ function BookingCard({
                     </div>
                     <div
                         className={cn(
-                            'grid min-w-0 grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:justify-end',
+                            'flex min-w-0 flex-nowrap justify-start gap-1.5 overflow-x-auto pb-1 sm:justify-end sm:overflow-visible',
                             actionCount === 0 && 'hidden',
                         )}
                     >
                         {action && (
                             <div
                                 className={cn(
-                                    'min-w-0 sm:flex-none',
+                                    'shrink-0',
                                     shouldPrimaryActionSpanMobile &&
-                                        'col-span-2 sm:col-span-1',
+                                        'sm:flex-none',
                                 )}
                             >
                                 <BookingActionButton action={action} />
                             </div>
                         )}
                         {reviewHref && (
-                            <div className="min-w-0 sm:flex-none">
+                            <div className="shrink-0">
                                 <BookingReviewButton href={reviewHref} />
                             </div>
                         )}
                         {documentHref && (
-                            <div className="min-w-0 sm:flex-none">
+                            <div className="shrink-0">
                                 <Tooltip>
                                     <TooltipTrigger asChild>
                                         <Button
                                             asChild
                                             variant="outline"
                                             aria-label="Complete Documents"
-                                            className="h-9 w-full min-w-0 gap-1.5 rounded-xl px-2 text-xs sm:w-9 sm:flex-none sm:px-0"
+                                            className="h-8 min-w-8 gap-1.5 rounded-lg px-2 text-[11px] sm:w-8 sm:flex-none sm:px-0"
                                         >
                                             <Link href={documentHref}>
                                                 <ClipboardCheckIcon className="size-4" />
@@ -847,14 +849,14 @@ function BookingCard({
                             </div>
                         )}
                         {booking.document_url && (
-                            <div className="min-w-0 sm:flex-none">
+                            <div className="shrink-0">
                                 <Tooltip>
                                     <TooltipTrigger asChild>
                                         <Button
                                             asChild
                                             variant="outline"
                                             aria-label="View trip PDF"
-                                            className="h-9 w-full min-w-0 gap-1.5 rounded-xl px-2 text-xs sm:w-9 sm:flex-none sm:px-0"
+                                            className="h-8 min-w-8 gap-1.5 rounded-lg px-2 text-[11px] sm:w-8 sm:flex-none sm:px-0"
                                         >
                                             <a
                                                 href={booking.document_url}
@@ -871,6 +873,31 @@ function BookingCard({
                                     <TooltipContent>
                                         View itinerary and other trip
                                         information.
+                                    </TooltipContent>
+                                </Tooltip>
+                            </div>
+                        )}
+                        {shouldShowProformaButton && (
+                            <div className="shrink-0">
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <span className="inline-flex">
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                aria-label="Print Proforma Invoice"
+                                                disabled
+                                                className="h-8 min-w-8 gap-1.5 rounded-lg px-2 text-[11px] sm:w-8 sm:flex-none sm:px-0"
+                                            >
+                                                <FileTextIcon className="size-4" />
+                                                <span className="truncate font-semibold sm:sr-only">
+                                                    Proforma
+                                                </span>
+                                            </Button>
+                                        </span>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                        Print Proforma Invoice
                                     </TooltipContent>
                                 </Tooltip>
                             </div>
@@ -895,7 +922,7 @@ function BookingActionButton({ action }: { action: BookingAction }) {
         return (
             <Button
                 asChild
-                className="h-9 w-full min-w-0 gap-1.5 rounded-xl px-3 text-xs sm:min-w-36 sm:flex-none"
+                className="h-8 min-w-24 gap-1.5 rounded-lg px-2.5 text-[11px] sm:min-w-28 sm:flex-none"
             >
                 <Link href={action.href}>{content}</Link>
             </Button>
@@ -905,7 +932,7 @@ function BookingActionButton({ action }: { action: BookingAction }) {
     return (
         <Button
             type="button"
-            className="h-9 w-full min-w-0 gap-1.5 rounded-xl px-3 text-xs sm:min-w-36 sm:flex-none"
+            className="h-8 min-w-24 gap-1.5 rounded-lg px-2.5 text-[11px] sm:min-w-28 sm:flex-none"
             onClick={action.onClick}
         >
             {content}
@@ -921,7 +948,7 @@ function BookingReviewButton({ href }: { href: string }) {
                     asChild
                     variant="outline"
                     aria-label="View Booking"
-                    className="h-9 w-full min-w-0 gap-1.5 rounded-xl px-2 text-xs sm:w-9 sm:flex-none sm:px-0"
+                    className="h-8 min-w-8 gap-1.5 rounded-lg px-2 text-[11px] sm:w-8 sm:flex-none sm:px-0"
                 >
                     <Link href={href}>
                         <EyeIcon className="size-4" />

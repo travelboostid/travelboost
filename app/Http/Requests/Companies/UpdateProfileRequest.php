@@ -2,12 +2,40 @@
 
 namespace App\Http\Requests\Companies;
 
-use App\Models\Company;
+use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 class UpdateProfileRequest extends FormRequest
 {
+    protected function prepareForValidation(): void
+    {
+        $nullableIntegerFields = [
+            'photo_id',
+            'province_id',
+            'city_id',
+            'district_id',
+            'village_id',
+            'identity_card_id',
+        ];
+
+        $data = [];
+
+        foreach ($nullableIntegerFields as $field) {
+            if (in_array($this->input($field), ['', '0', 0], true)) {
+                $data[$field] = null;
+            }
+        }
+
+        if (! $this->boolean('domain_enabled')) {
+            $data['domain'] = null;
+        }
+
+        if ($data !== []) {
+            $this->merge($data);
+        }
+    }
+
     /**
      * Determine if the user is authorized to make this request.
      */
@@ -19,10 +47,12 @@ class UpdateProfileRequest extends FormRequest
     /**
      * Get the validation rules that apply to the request.
      *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
+        $domain = $this->company?->domain;
+
         return [
             'username' => [
                 'nullable',
@@ -35,10 +65,7 @@ class UpdateProfileRequest extends FormRequest
                 'string',
                 'max:255',
                 Rule::unique('domains', 'subdomain')
-                    ->where(
-                        fn ($q) => $q->where('owner_type', Company::class)
-                            ->where('owner_id', $this->company?->id)
-                    ),
+                    ->ignore($domain?->id),
             ],
             'domain_enabled' => [
                 'sometimes',
@@ -51,10 +78,13 @@ class UpdateProfileRequest extends FormRequest
                 'max:255',
                 'regex:/^(?=.{1,253}$)(?!-)(?:[a-zA-Z0-9-]{1,63}\.)+[a-zA-Z]{2,63}$/',
                 Rule::unique('domains', 'domain')
-                    ->where(
-                        fn ($q) => $q->where('owner_type', Company::class)
-                            ->where('owner_id', $this->company?->id)
-                    ),
+                    ->ignore($domain?->id),
+            ],
+            'email' => [
+                'required',
+                'email',
+                'max:255',
+                Rule::unique('companies', 'email')->ignore($this->company->id),
             ],
             'name' => [
                 'required',
@@ -67,7 +97,7 @@ class UpdateProfileRequest extends FormRequest
                 'max:20',
             ],
             'customer_service_phone' => [
-                'required',
+                'nullable',
                 'string',
                 'max:20',
             ],
@@ -77,31 +107,31 @@ class UpdateProfileRequest extends FormRequest
                 'max:255',
             ],
             'photo_id' => [
-                'required',
+                'nullable',
                 'exists:medias,id',
             ],
             'province_id' => [
-                'required',
+                'nullable',
                 'exists:'.config('laravolt.indonesia.table_prefix').'provinces,id',
             ],
             'city_id' => [
-                'required',
+                'nullable',
                 'exists:'.config('laravolt.indonesia.table_prefix').'cities,id',
             ],
             'district_id' => [
-                'required',
+                'nullable',
                 'exists:'.config('laravolt.indonesia.table_prefix').'districts,id',
             ],
             'village_id' => [
-                'required',
+                'nullable',
                 'exists:'.config('laravolt.indonesia.table_prefix').'villages,id',
             ],
-            'identity_card_id' => ['required', 'exists:medias,id'],
+            'identity_card_id' => ['nullable', 'exists:medias,id'],
             'postal_code' => [
-                'required',
+                'nullable',
                 'string',
                 'max:20', ],
-            'identity_number' => 'required|string|size:16',
+            'identity_number' => 'nullable|string|size:16',
         ];
     }
 

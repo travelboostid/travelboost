@@ -2,6 +2,7 @@ import { useGetCompanies } from '@/api/company/company';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import type { LucideIcon } from 'lucide-react';
 import {
+    BadgePercentIcon,
     BarChart3Icon,
     BoltIcon,
     BookUserIcon,
@@ -442,6 +443,45 @@ export function useCompanyDashboardNavMainMenu() {
             ],
             shouldDisplay: (roles, _permissions) =>
                 roles.includes('user:agent') || roles.includes('user:vendor'),
+        },
+        {
+            id: 'commission-setup',
+            title: <FormattedMessage defaultMessage="Commission Setup" />,
+            urlOrAction: '#',
+            icon: BadgePercentIcon,
+            items: [
+                {
+                    id: 'commission-setup.agent-tiers',
+                    title: <FormattedMessage defaultMessage="Agent Tiers" />,
+                    urlOrAction: `/companies/${company.username}/dashboard/agent-tiers`,
+                    shouldDisplay: (roles, permissions) =>
+                        roles.includes('user:vendor') &&
+                        permissions.includes('company-settings.query'),
+                },
+                {
+                    id: 'commission-setup.product-categories',
+                    title: (
+                        <FormattedMessage defaultMessage="Commission Categories" />
+                    ),
+                    urlOrAction: `/companies/${company.username}/dashboard/product-commission-categories`,
+                    shouldDisplay: (roles, permissions) =>
+                        roles.includes('user:vendor') &&
+                        permissions.includes('company-settings.query'),
+                },
+                {
+                    id: 'commission-setup.tour-rules',
+                    title: (
+                        <FormattedMessage defaultMessage="Tour Commission Rules" />
+                    ),
+                    urlOrAction: `/companies/${company.username}/dashboard/tour-commission-rules`,
+                    shouldDisplay: (roles, permissions) =>
+                        roles.includes('user:vendor') &&
+                        permissions.includes('company-settings.query'),
+                },
+            ],
+            shouldDisplay: (roles, permissions) =>
+                roles.includes('user:vendor') &&
+                permissions.includes('company-settings.query'),
         },
     ] as MenuItem[];
 

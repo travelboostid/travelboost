@@ -1,10 +1,12 @@
 import type { TourResource } from '@/api/model';
 import BookingInfoCard from '@/components/booking/BookingInfoCard';
+import type { ManualPaymentData } from '@/components/booking/ManualPaymentDialog';
 import Step1GuestInformation, {
     calculateAgeAtDeparture,
 } from '@/components/booking/Step1GuestInformation';
 import Step2RoomConfiguration, {
     autoRecommendRooms,
+    deserializeRoomsFromBooking,
     getRoomNumberByGuestId,
     serializeRoomsForBooking,
     type RoomConfig,
@@ -12,6 +14,9 @@ import Step2RoomConfiguration, {
 import Step3TravelDocuments from '@/components/booking/Step3TravelDocuments';
 import Step4BookingSummary, {
     type AddOnItem,
+    type DownPaymentRule,
+    type PaymentMethod,
+    type PaymentType,
 } from '@/components/booking/Step4BookingSummary';
 import WizardStepIndicator from '@/components/booking/WizardStepIndicator';
 import CompanyDashboardLayout from '@/components/layouts/company-dashboard';
@@ -27,6 +32,7 @@ import type {
 } from '@/types/booking';
 import { calculateBookingPricing } from '@/utils/booking-calculations';
 import { Head, router } from '@inertiajs/react';
+import axios from 'axios';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
     ArrowLeftIcon,
@@ -68,6 +74,7 @@ type BookingData = {
     booking_number: string;
     invoice_number?: string | null;
     status: string;
+    reserved_type?: string | null;
     departure_date: string | null;
     contact_name: string | null;
     contact_email: string | null;
@@ -101,6 +108,7 @@ type PageProps = {
     tourPrices: TourPrice[];
     addOns: AddOnItem[];
     minimumDownPaymentPct: number | null;
+    downPaymentRule?: DownPaymentRule;
     minimumVatPct: number;
     platformFeePerPax?: number;
     downPaymentAvailable?: boolean;
@@ -204,25 +212,7 @@ function passengersToGuests(
             roomTypeDescription: p.room_type ?? '',
             note: p.note ?? '',
             passengerId: p.id,
-        };
-    });
-}
-
-function bookingRoomsToConfig(rooms: any[]): RoomConfig[] {
-    return rooms.map((r, idx) => {
-        const bedLayout: { guestId?: string }[] = Array.isArray(r.bed_layout)
-            ? r.bed_layout
-            : [];
-
-        return {
-            id: `room-${idx}`,
-            type: r.room_type,
-            label: r.room_label,
-            capacity: r.capacity || 2,
-            guestIds: bedLayout
-                .map((b) => b.guestId)
-                .filter(Boolean) as string[],
-            sharingGuestIds: [],
+            bookingPassengerId: p.id,
         };
     });
 }
@@ -269,6 +259,7 @@ export default function Page({
     tourPrices,
     addOns,
     minimumDownPaymentPct,
+    downPaymentRule = null,
     minimumVatPct,
     platformFeePerPax = 25_000,
     downPaymentAvailable = true,
@@ -342,6 +333,7 @@ export default function Page({
             tourPrices={tourPrices}
             addOns={addOns}
             minimumDownPaymentPct={minimumDownPaymentPct}
+            downPaymentRule={downPaymentRule}
             minimumVatPct={minimumVatPct}
             platformFeePerPax={platformFeePerPax}
             downPaymentAvailable={downPaymentAvailable}
@@ -368,6 +360,7 @@ function EditableWizard({
     tourPrices,
     addOns: initialAddOns,
     minimumDownPaymentPct,
+    downPaymentRule,
     minimumVatPct,
     platformFeePerPax,
     downPaymentAvailable,
@@ -386,6 +379,7 @@ function EditableWizard({
     tourPrices: TourPrice[];
     addOns: AddOnItem[];
     minimumDownPaymentPct: number | null;
+    downPaymentRule: DownPaymentRule;
     minimumVatPct: number;
     platformFeePerPax: number;
     downPaymentAvailable: boolean;
@@ -413,7 +407,13 @@ function EditableWizard({
             ? new URLSearchParams(window.location.search).get('step')
             : null;
     const [currentStep, setCurrentStep] = useState<WizardStepId>(
-        requestedStep === 'documents' ? 3 : isDocumentOnlyMode ? 3 : 1,
+        requestedStep === 'payment'
+            ? 4
+            : requestedStep === 'documents'
+              ? 3
+              : isDocumentOnlyMode
+                ? 3
+                : 1,
     );
     const [direction, setDirection] = useState(1);
 
@@ -439,7 +439,11 @@ function EditableWizard({
     // ── Rooms ──────────────────────────────────────────────────────────
     const [rooms, setRooms] = useState<RoomConfig[]>(() =>
         booking.rooms?.length
-            ? bookingRoomsToConfig(booking.rooms)
+            ? deserializeRoomsFromBooking(
+                  booking.rooms,
+                  initialGuests,
+                  booking.passengers,
+              )
             : autoRecommendRooms(initialGuests),
     );
     const [selectedAddOns, setSelectedAddOns] =
@@ -461,7 +465,13 @@ function EditableWizard({
             ),
         [selectedAddOnsForPricing],
     );
-    const roomsGuestFingerprint = useRef<string>('');
+    const roomsGuestFingerprint = useRef<string>(
+        booking.rooms?.length
+            ? JSON.stringify(
+                  initialGuests.map((g) => `${g.id}-${g.priceCategory}`),
+              )
+            : '',
+    );
     const skipGuestSyncRef = useRef(false);
 
     // ── Travel Documents ───────────────────────────────────────────────
@@ -732,18 +742,29 @@ function EditableWizard({
         ];
         return guests.every((g) => assignedGuestIds.includes(g.id));
     }, [guests, rooms]);
+    const isCurrentStepInvalid =
+        (currentStep === 1 && !canProceedStep1) ||
+        (currentStep === 2 && !canProceedStep2);
+    const canUsePaymentControls =
+        (booking.status === 'down payment' && remainingBalance > 0) ||
+        (booking.status === 'waiting payment approval' &&
+            booking.reserved_type === 'payment_in_progress');
+    const canSaveCurrentStep =
+        editMode === 'full' || (canEditDocuments && currentStep === 3);
 
     // ── Save (replaces Pay Now) ────────────────────────────────────────
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [paymentErrorMessage, setPaymentErrorMessage] = useState<
+        string | null
+    >(null);
 
-    const handleSave = (addOnsForSave = selectedAddOns) => {
-        setIsSubmitting(true);
-
+    const buildBookingSnapshotPayload = (addOnsForSave = selectedAddOns) => {
         const addOnRows = addOnsForSave
             .filter((addon) => addon.qty > 0)
             .map((addon) => ({
                 name: addon.label,
                 price: addon.unitPrice * addon.qty,
+                qty: addon.qty,
             }));
         const addOnsTotal = addOnRows.reduce(
             (sum, item) => sum + item.price,
@@ -752,48 +773,53 @@ function EditableWizard({
         const grandTotal = pricing.totalPrice + addOnsTotal;
         const roomNumberByGuestId = getRoomNumberByGuestId(rooms);
 
+        return {
+            contact_name: contact.name,
+            contact_email: contact.email,
+            contact_phone: contact.phone,
+            contact_notes: contact.notes,
+            pax_adult: adults,
+            pax_child: children,
+            pax_infant: infants,
+            total_price: pricing.subtotalGuests,
+            tax_amount: pricing.ppn,
+            platform_fee: pricing.platformFee,
+            commission_amount: pricing.agentCommission,
+            grand_total: grandTotal,
+            passengers: guests.map((guest) => {
+                const doc = travelDocuments.find((d) => d.guestId === guest.id);
+                return {
+                    id: (guest as EditableGuestEntry).passengerId,
+                    client_guest_id: guest.id,
+                    title: guest.title || null,
+                    first_name: guest.firstName,
+                    last_name: guest.lastName || null,
+                    gender: null,
+                    dob: guest.dateOfBirth || null,
+                    pob: guest.placeOfBirth || null,
+                    nationality: null,
+                    passport_number: doc?.passportNumber || null,
+                    passport_issue_date: doc?.passportIssueDate || null,
+                    passport_expiry_date: doc?.passportExpiryDate || null,
+                    visa_number: doc?.visaNumber || null,
+                    price_category: guest.priceCategory,
+                    price_amount: guest.price,
+                    room_type: guest.roomTypeDescription || null,
+                    room_number: roomNumberByGuestId.get(guest.id) ?? null,
+                    note: guest.note || null,
+                };
+            }),
+            rooms: serializeRoomsForBooking(rooms),
+            addons: addOnRows,
+        };
+    };
+
+    const handleSave = (addOnsForSave = selectedAddOns) => {
+        setIsSubmitting(true);
+
         router.put(
             `/companies/${company.username}/dashboard/bookings/${booking.id}`,
-            {
-                contact_name: contact.name,
-                contact_email: contact.email,
-                contact_phone: contact.phone,
-                contact_notes: contact.notes,
-                pax_adult: adults,
-                pax_child: children,
-                pax_infant: infants,
-                total_price: pricing.subtotalGuests,
-                tax_amount: pricing.ppn,
-                platform_fee: pricing.platformFee,
-                commission_amount: pricing.agentCommission,
-                grand_total: grandTotal,
-                passengers: guests.map((guest) => {
-                    const doc = travelDocuments.find(
-                        (d) => d.guestId === guest.id,
-                    );
-                    return {
-                        id: (guest as EditableGuestEntry).passengerId,
-                        title: guest.title || null,
-                        first_name: guest.firstName,
-                        last_name: guest.lastName || null,
-                        gender: null,
-                        dob: guest.dateOfBirth || null,
-                        pob: guest.placeOfBirth || null,
-                        nationality: null,
-                        passport_number: doc?.passportNumber || null,
-                        passport_issue_date: doc?.passportIssueDate || null,
-                        passport_expiry_date: doc?.passportExpiryDate || null,
-                        visa_number: doc?.visaNumber || null,
-                        price_category: guest.priceCategory,
-                        price_amount: guest.price,
-                        room_type: guest.roomTypeDescription || null,
-                        room_number: roomNumberByGuestId.get(guest.id) ?? null,
-                        note: guest.note || null,
-                    };
-                }),
-                rooms: serializeRoomsForBooking(rooms),
-                addons: addOnRows,
-            } as any,
+            buildBookingSnapshotPayload(addOnsForSave) as any,
             {
                 preserveScroll: true,
                 onSuccess: () => toast.success('Booking updated successfully.'),
@@ -880,6 +906,199 @@ function EditableWizard({
                 onError: () =>
                     toast.error('Failed to update travel documents.'),
                 onFinish: () => setIsSubmitting(false),
+            },
+        );
+    };
+    const handleSaveCurrentStep = () => {
+        if (canEditDocuments && currentStep === 3) {
+            handleSaveDocumentsOnly();
+            return;
+        }
+
+        handleSave();
+    };
+    const confirmOnlinePayment = (paymentId: number | string | undefined) => {
+        if (!paymentId) {
+            setIsSubmitting(false);
+            return;
+        }
+
+        axios
+            .post(
+                `/companies/${company.username}/dashboard/bookings/${booking.id}/online-payment/${paymentId}/confirm`,
+                {},
+                {
+                    withCredentials: true,
+                    withXSRFToken: true,
+                },
+            )
+            .then(() => {
+                toast.success('Payment confirmed.');
+                router.visit(
+                    `/companies/${company.username}/dashboard/bookings`,
+                );
+            })
+            .catch(() => {
+                setPaymentErrorMessage(
+                    'Payment status could not be confirmed yet. You can try again while the payment attempt is active.',
+                );
+            })
+            .finally(() => setIsSubmitting(false));
+    };
+    const submitManualPayment = (
+        paymentType: PaymentType,
+        finalAmount: number,
+        manualData?: ManualPaymentData,
+    ) => {
+        if (!manualData?.proofFile) {
+            setIsSubmitting(false);
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('sender_bank_name', manualData.senderBankName);
+        formData.append(
+            'sender_account_number',
+            manualData.senderAccountNumber,
+        );
+        formData.append(
+            'transfer_amount',
+            String(manualData.transferAmount || finalAmount),
+        );
+        formData.append('payment_type', paymentType);
+        formData.append('payment_date', manualData.paymentDate);
+        formData.append('proof', manualData.proofFile);
+
+        router.post(
+            `/companies/${company.username}/dashboard/bookings/${booking.id}/manual-payment`,
+            formData,
+            {
+                forceFormData: true,
+                preserveScroll: true,
+                onSuccess: () => {
+                    toast.success('Payment proof submitted.');
+                    router.reload({ preserveScroll: true });
+                },
+                onError: (errors) => {
+                    setPaymentErrorMessage(
+                        String(
+                            errors.payment ??
+                                errors.payment_type ??
+                                errors.transfer_amount ??
+                                'Payment could not be submitted.',
+                        ),
+                    );
+                },
+                onFinish: () => setIsSubmitting(false),
+            },
+        );
+    };
+    const submitOnlinePayment = (
+        paymentType: PaymentType,
+        finalAmount: number,
+    ) => {
+        axios
+            .post(
+                `/companies/${company.username}/dashboard/bookings/${booking.id}/online-payment`,
+                {
+                    payment_type: paymentType,
+                    amount: finalAmount,
+                },
+                {
+                    withCredentials: true,
+                    withXSRFToken: true,
+                },
+            )
+            .then((response) => {
+                const snapToken = response.data?.payment?.payload
+                    ?.snap_token as string | undefined;
+                const paymentId = response.data?.payment?.id as
+                    | number
+                    | string
+                    | undefined;
+                const snap = (window as any).snap;
+
+                if (!snapToken || typeof snap?.pay !== 'function') {
+                    setPaymentErrorMessage(
+                        'Online payment is not available in this browser session. Please refresh and try again.',
+                    );
+                    setIsSubmitting(false);
+                    return;
+                }
+
+                snap.pay(snapToken, {
+                    onSuccess: () => confirmOnlinePayment(paymentId),
+                    onPending: () => setIsSubmitting(false),
+                    onError: () => setIsSubmitting(false),
+                    onClose: () => setIsSubmitting(false),
+                });
+            })
+            .catch((error) => {
+                const message =
+                    error?.response?.data?.message ??
+                    error?.response?.data?.errors?.payment?.[0] ??
+                    'Online payment could not be started.';
+
+                setPaymentErrorMessage(String(message));
+                setIsSubmitting(false);
+            });
+    };
+    const handlePayment = (
+        paymentType: PaymentType,
+        paymentMethod: PaymentMethod,
+        addOns: AddOnItem[],
+        finalAmount: number,
+        manualData?: ManualPaymentData,
+    ) => {
+        setIsSubmitting(true);
+        setPaymentErrorMessage(null);
+
+        if (editMode !== 'full') {
+            if (paymentMethod === 'manual_transfer') {
+                submitManualPayment(paymentType, finalAmount, manualData);
+                return;
+            }
+
+            submitOnlinePayment(paymentType, finalAmount);
+            return;
+        }
+
+        let startedPayment = false;
+
+        router.put(
+            `/companies/${company.username}/dashboard/bookings/${booking.id}`,
+            buildBookingSnapshotPayload(addOns) as any,
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    startedPayment = true;
+
+                    if (paymentMethod === 'manual_transfer') {
+                        submitManualPayment(
+                            paymentType,
+                            finalAmount,
+                            manualData,
+                        );
+                        return;
+                    }
+
+                    submitOnlinePayment(paymentType, finalAmount);
+                },
+                onError: (errors) => {
+                    setPaymentErrorMessage(
+                        String(
+                            errors.payment ??
+                                errors.payment_type ??
+                                errors.transfer_amount ??
+                                'Booking could not be saved before payment.',
+                        ),
+                    );
+                },
+                onFinish: () => {
+                    if (!startedPayment) {
+                        setIsSubmitting(false);
+                    }
+                },
             },
         );
     };
@@ -1071,11 +1290,7 @@ function EditableWizard({
                                                 agentName={
                                                     booking.agent?.name ?? '-'
                                                 }
-                                                onPayNow={(
-                                                    _paymentType,
-                                                    _paymentMethod,
-                                                    addOns,
-                                                ) => handleSave(addOns)}
+                                                onPayNow={handlePayment}
                                                 isSubmitting={isSubmitting}
                                                 initialAddOns={selectedAddOns}
                                                 onAddOnsChange={
@@ -1083,6 +1298,9 @@ function EditableWizard({
                                                 }
                                                 minimumDownPaymentPct={
                                                     minimumDownPaymentPct
+                                                }
+                                                downPaymentRule={
+                                                    downPaymentRule
                                                 }
                                                 minimumVatPct={minimumVatPct}
                                                 paidAmount={paidAmount}
@@ -1096,8 +1314,23 @@ function EditableWizard({
                                                         : null
                                                 }
                                                 vendorBankInfo={vendorBankInfo}
-                                                readOnly={isDocumentOnlyMode}
-                                                hidePaymentControls
+                                                readOnly={
+                                                    isDocumentOnlyMode &&
+                                                    !canUsePaymentControls
+                                                }
+                                                addOnsReadOnly={
+                                                    isDocumentOnlyMode
+                                                }
+                                                hidePaymentControls={
+                                                    !canUsePaymentControls
+                                                }
+                                                forceBalancePayment={
+                                                    booking.status ===
+                                                    'down payment'
+                                                }
+                                                paymentErrorMessage={
+                                                    paymentErrorMessage
+                                                }
                                                 downPaymentAvailable={
                                                     downPaymentAvailable
                                                 }
@@ -1107,6 +1340,10 @@ function EditableWizard({
                                                 paymentUnavailableReason={
                                                     paymentUnavailableReason
                                                 }
+                                                showProformaInvoiceButton={
+                                                    booking.status ===
+                                                    'down payment'
+                                                }
                                             />
                                         )}
                                     </motion.div>
@@ -1114,53 +1351,8 @@ function EditableWizard({
                             </div>
 
                             {/* Navigation */}
-                            {currentStep < 4 && (
-                                <div className="flex items-center justify-between pb-12 pt-4">
-                                    {currentStep > 1 ? (
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            onClick={goBack}
-                                            className="gap-2"
-                                        >
-                                            <ArrowLeftIcon className="size-4" />{' '}
-                                            Back
-                                        </Button>
-                                    ) : (
-                                        <div />
-                                    )}
-                                    <Button
-                                        type="button"
-                                        disabled={
-                                            (isDocumentOnlyMode &&
-                                                currentStep !== 3) ||
-                                            (isDocumentOnlyMode &&
-                                                currentStep === 3 &&
-                                                isSubmitting) ||
-                                            (currentStep === 1 &&
-                                                !canProceedStep1) ||
-                                            (currentStep === 2 &&
-                                                !canProceedStep2)
-                                        }
-                                        onClick={
-                                            isDocumentOnlyMode &&
-                                            currentStep === 3
-                                                ? handleSaveDocumentsOnly
-                                                : goNext
-                                        }
-                                        className="gap-2"
-                                    >
-                                        {isDocumentOnlyMode && currentStep === 3
-                                            ? isSubmitting
-                                                ? 'Saving...'
-                                                : 'Save Documents'
-                                            : 'Next'}
-                                        <ArrowRightIcon className="size-4" />
-                                    </Button>
-                                </div>
-                            )}
-                            {currentStep === 4 && (
-                                <div className="flex items-center justify-between pb-12 pt-4">
+                            <div className="flex items-center justify-between gap-3 pb-12 pt-4">
+                                {currentStep > 1 ? (
                                     <Button
                                         type="button"
                                         variant="outline"
@@ -1170,23 +1362,60 @@ function EditableWizard({
                                         <ArrowLeftIcon className="size-4" />{' '}
                                         Back
                                     </Button>
-                                    <Button
-                                        type="button"
-                                        onClick={() => handleSave()}
-                                        disabled={
-                                            isSubmitting || isDocumentOnlyMode
-                                        }
-                                        className="gap-2"
-                                    >
-                                        {isSubmitting ? (
-                                            <Loader2Icon className="size-4 animate-spin" />
-                                        ) : (
-                                            <SaveIcon className="size-4" />
+                                ) : (
+                                    <div />
+                                )}
+                                <div className="flex items-center gap-2">
+                                    {canSaveCurrentStep && (
+                                        <Button
+                                            type="button"
+                                            variant={
+                                                currentStep < 4
+                                                    ? 'outline'
+                                                    : 'default'
+                                            }
+                                            onClick={handleSaveCurrentStep}
+                                            disabled={
+                                                isSubmitting ||
+                                                isCurrentStepInvalid
+                                            }
+                                            className="gap-2"
+                                        >
+                                            {isSubmitting ? (
+                                                <Loader2Icon className="size-4 animate-spin" />
+                                            ) : (
+                                                <SaveIcon className="size-4" />
+                                            )}
+                                            {canEditDocuments &&
+                                            currentStep === 3
+                                                ? isSubmitting
+                                                    ? 'Saving...'
+                                                    : 'Save Documents'
+                                                : isSubmitting
+                                                  ? 'Saving...'
+                                                  : 'Save'}
+                                        </Button>
+                                    )}
+                                    {currentStep < 4 &&
+                                        (!isDocumentOnlyMode ||
+                                            canUsePaymentControls) && (
+                                            <Button
+                                                type="button"
+                                                disabled={
+                                                    (currentStep === 1 &&
+                                                        !canProceedStep1) ||
+                                                    (currentStep === 2 &&
+                                                        !canProceedStep2)
+                                                }
+                                                onClick={goNext}
+                                                className="gap-2"
+                                            >
+                                                Next
+                                                <ArrowRightIcon className="size-4" />
+                                            </Button>
                                         )}
-                                        Save Changes
-                                    </Button>
                                 </div>
-                            )}
+                            </div>
                         </div>
 
                         {/* Right spacer */}

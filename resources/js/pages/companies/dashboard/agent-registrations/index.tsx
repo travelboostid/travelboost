@@ -10,6 +10,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { DEFAULT_PHOTO } from '@/config';
 import { useDataTable } from '@/hooks/use-data-table';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
@@ -31,9 +32,13 @@ type PageProps = {
     data: {
         data: any[];
     };
+    agentTiers: {
+        id: number;
+        name: string;
+    }[];
 };
 
-export default function Page({ data }: PageProps) {
+export default function Page({ data, agentTiers }: PageProps) {
     const { company } = usePageSharedDataProps();
     const columns = useMemo<ColumnDef<any>[]>(
         () => [
@@ -102,27 +107,54 @@ export default function Page({ data }: PageProps) {
                 ),
             },
             {
-                id: 'applied_at',
-                accessorKey: 'applied_at',
+                id: 'agent_tier_id',
+                accessorKey: 'agent_tier_id',
                 header: ({ column }) => (
-                    <DataTableColumnHeader column={column} label="Applied At" />
+                    <DataTableColumnHeader column={column} label="Agent Tier" />
                 ),
-                cell: ({ row }) =>
-                    dayjs(row.original.applied_at).format('DD MMM YYYY'),
-            },
-            {
-                id: 'accepted_at',
-                accessorKey: 'accepted_at',
-                header: ({ column }) => (
-                    <DataTableColumnHeader
-                        column={column}
-                        label="Accepted At"
-                    />
-                ),
-                cell: ({ row }) =>
-                    row.original.accepted_at
-                        ? dayjs(row.original.accepted_at).format('DD MMM YYYY')
-                        : '-',
+                cell: ({ row }) => {
+                    const registration = row.original;
+
+                    const handleUpdate = (val: string) => {
+                        router.put(
+                            update({
+                                company: company.username,
+                                agent_registration: registration.id,
+                            }).url,
+                            {
+                                agent_tier_id:
+                                    val === 'none' ? null : Number(val),
+                            },
+                            { preserveScroll: true },
+                        );
+                    };
+
+                    return (
+                        <Select
+                            defaultValue={
+                                registration.agent_tier_id
+                                    ? String(registration.agent_tier_id)
+                                    : 'none'
+                            }
+                            onValueChange={handleUpdate}
+                        >
+                            <SelectTrigger className="h-8 w-[150px] text-xs">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="none">No Tier</SelectItem>
+                                {agentTiers.map((tier) => (
+                                    <SelectItem
+                                        key={tier.id}
+                                        value={String(tier.id)}
+                                    >
+                                        {tier.name}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    );
+                },
             },
             {
                 id: 'payment_mode',
@@ -166,6 +198,95 @@ export default function Page({ data }: PageProps) {
                 },
             },
             {
+                id: 'manual_payment_enabled',
+                accessorKey: 'manual_payment_enabled',
+                header: ({ column }) => (
+                    <DataTableColumnHeader
+                        column={column}
+                        label="Manual Payment"
+                    />
+                ),
+                cell: ({ row }) => {
+                    const registration = row.original;
+
+                    const handleUpdate = (checked: boolean) => {
+                        router.put(
+                            update({
+                                company: company.username,
+                                agent_registration: registration.id,
+                            }).url,
+                            { manual_payment_enabled: checked },
+                            { preserveScroll: true },
+                        );
+                    };
+
+                    return (
+                        <Switch
+                            checked={
+                                registration.manual_payment_enabled ?? true
+                            }
+                            onCheckedChange={handleUpdate}
+                        />
+                    );
+                },
+            },
+            {
+                id: 'online_payment_enabled',
+                accessorKey: 'online_payment_enabled',
+                header: ({ column }) => (
+                    <DataTableColumnHeader
+                        column={column}
+                        label="Online Payment"
+                    />
+                ),
+                cell: ({ row }) => {
+                    const registration = row.original;
+
+                    const handleUpdate = (checked: boolean) => {
+                        router.put(
+                            update({
+                                company: company.username,
+                                agent_registration: registration.id,
+                            }).url,
+                            { online_payment_enabled: checked },
+                            { preserveScroll: true },
+                        );
+                    };
+
+                    return (
+                        <Switch
+                            checked={
+                                registration.online_payment_enabled ?? true
+                            }
+                            onCheckedChange={handleUpdate}
+                        />
+                    );
+                },
+            },
+            {
+                id: 'applied_at',
+                accessorKey: 'applied_at',
+                header: ({ column }) => (
+                    <DataTableColumnHeader column={column} label="Applied At" />
+                ),
+                cell: ({ row }) =>
+                    dayjs(row.original.applied_at).format('DD MMM YYYY'),
+            },
+            {
+                id: 'accepted_at',
+                accessorKey: 'accepted_at',
+                header: ({ column }) => (
+                    <DataTableColumnHeader
+                        column={column}
+                        label="Accepted At"
+                    />
+                ),
+                cell: ({ row }) =>
+                    row.original.accepted_at
+                        ? dayjs(row.original.accepted_at).format('DD MMM YYYY')
+                        : '-',
+            },
+            {
                 id: 'actions',
                 cell: ({ row }) => {
                     return (
@@ -202,7 +323,7 @@ export default function Page({ data }: PageProps) {
                 size: 32,
             },
         ],
-        [company.username],
+        [agentTiers, company.username],
     );
 
     const { table } = useDataTable({

@@ -9,6 +9,7 @@ use App\Models\Tour;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 class BookingService
@@ -77,15 +78,20 @@ class BookingService
                 $booking->rooms()->delete();
             }
 
+            $persistedPassengers = collect();
+
             if (! empty($data['passengers'])) {
                 $passengerRows = $this->preparePassengerRows($quote['passengers']);
 
-                $booking->passengers()->createMany($passengerRows);
+                $persistedPassengers = $booking->passengers()->createMany($passengerRows);
                 $this->syncSavedPassengers($user, $passengerRows);
             }
 
             if (array_key_exists('rooms', $data) && ! empty($data['rooms'])) {
-                $booking->rooms()->createMany($data['rooms']);
+                $booking->rooms()->createMany($this->normalizeRoomGuestIds(
+                    $data['rooms'],
+                    $this->guestIdMapForPersistedPassengers($quote['passengers'], $persistedPassengers)
+                ));
             }
 
             if (! empty($quote['addons'])) {
@@ -101,6 +107,160 @@ class BookingService
 
             return $booking;
         });
+    }
+
+    /**
+     * Update an existing booking snapshot without changing its lifecycle status.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    public function updateBookingSnapshot(Booking $booking, array $data, ?User $savedPassengerOwner = null): Booking
+    {
+        return DB::transaction(function () use ($booking, $data, $savedPassengerOwner): Booking {
+            $booking->loadMissing(['tour.company.companySetting', 'vendor.companySetting']);
+
+            $quote = app(BookingPricingService::class)->quoteForBookingData(
+                $booking->tour,
+                $booking->departure_date,
+                data_get($data, 'passengers', []),
+                data_get($data, 'addons', []),
+                (float) ($booking->vendor?->companySetting?->minimum_vat ?? $booking->tour?->company?->companySetting?->minimum_vat ?? 11),
+                $booking->agent_id !== null,
+            );
+            $totals = app(BookingPricingService::class)->bookingTotalsFromQuote($quote);
+
+            $booking->update([
+                'contact_name' => data_get($data, 'contact_name'),
+                'contact_email' => data_get($data, 'contact_email'),
+                'contact_phone' => data_get($data, 'contact_phone'),
+                'contact_notes' => data_get($data, 'contact_notes'),
+                'pax_adult' => data_get($data, 'pax_adult'),
+                'pax_child' => data_get($data, 'pax_child'),
+                'pax_infant' => data_get($data, 'pax_infant'),
+                'total_price' => $totals['total_price'],
+                'tax_amount' => $totals['tax_amount'],
+                'platform_fee' => $totals['platform_fee'],
+                'commission_amount' => $totals['commission_amount'],
+                'grand_total' => $totals['grand_total'],
+            ]);
+
+            $retainedPassengerIds = collect($quote['passengers'])
+                ->pluck('id')
+                ->filter()
+                ->map(fn ($id) => (int) $id)
+                ->values();
+
+            if ($retainedPassengerIds->isNotEmpty()) {
+                $booking->passengers()
+                    ->whereNotIn('id', $retainedPassengerIds)
+                    ->delete();
+            } else {
+                $booking->passengers()->delete();
+            }
+
+            $passengerRows = $this->preparePassengerRows($quote['passengers']);
+            $persistedPassengers = collect();
+
+            foreach ($passengerRows as $index => $payload) {
+                $incomingPassengerId = data_get($quote['passengers'], "{$index}.id");
+
+                if (! empty($incomingPassengerId)) {
+                    $booking->passengers()
+                        ->where('id', $incomingPassengerId)
+                        ->update($payload);
+
+                    $persistedPassengers->put($index, (object) ['id' => (int) $incomingPassengerId]);
+
+                    continue;
+                }
+
+                $persistedPassengers->put($index, $booking->passengers()->create($payload));
+            }
+
+            if ($savedPassengerOwner) {
+                $this->syncSavedPassengers($savedPassengerOwner, $passengerRows);
+            }
+
+            if (array_key_exists('rooms', $data)) {
+                $rooms = data_get($data, 'rooms', []);
+
+                $booking->rooms()->delete();
+                $booking->rooms()->createMany($this->normalizeRoomGuestIds(
+                    is_array($rooms) ? $rooms : [],
+                    $this->guestIdMapForPersistedPassengers($quote['passengers'], $persistedPassengers)
+                ));
+            }
+
+            if (array_key_exists('addons', $data)) {
+                $booking->addons()->delete();
+                $booking->addons()->createMany($quote['addons'] ?? []);
+            }
+
+            return $booking->fresh(['passengers', 'rooms', 'addons']);
+        });
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $rooms
+     * @param  array<string, string>  $guestIdMap
+     * @return array<int, array<string, mixed>>
+     */
+    public function normalizeRoomGuestIds(array $rooms, array $guestIdMap): array
+    {
+        return collect($rooms)
+            ->map(function (array $room) use ($guestIdMap): array {
+                if (! array_key_exists('bed_layout', $room) || ! is_array($room['bed_layout'])) {
+                    return $room;
+                }
+
+                $room['bed_layout'] = collect($room['bed_layout'])
+                    ->map(function (array $bed) use ($guestIdMap): array {
+                        $guestId = data_get($bed, 'guestId');
+
+                        if (filled($guestId) && array_key_exists((string) $guestId, $guestIdMap)) {
+                            $bed['guestId'] = $guestIdMap[(string) $guestId];
+                        }
+
+                        return $bed;
+                    })
+                    ->all();
+
+                return $room;
+            })
+            ->all();
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $passengers
+     * @param  Collection<int, mixed>  $persistedPassengers
+     * @return array<string, string>
+     */
+    public function guestIdMapForPersistedPassengers(array $passengers, Collection $persistedPassengers): array
+    {
+        $guestIdMap = [];
+
+        foreach ($passengers as $index => $passenger) {
+            $persistedPassenger = $persistedPassengers->get($index);
+            $persistedPassengerId = data_get($persistedPassenger, 'id');
+
+            if (! $persistedPassengerId) {
+                continue;
+            }
+
+            $clientGuestId = data_get($passenger, 'client_guest_id');
+
+            if (filled($clientGuestId)) {
+                $guestIdMap[(string) $clientGuestId] = (string) $persistedPassengerId;
+            }
+
+            $incomingPassengerId = data_get($passenger, 'id');
+
+            if (filled($incomingPassengerId)) {
+                $guestIdMap[(string) $incomingPassengerId] = (string) $persistedPassengerId;
+            }
+        }
+
+        return $guestIdMap;
     }
 
     /**

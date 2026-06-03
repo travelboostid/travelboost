@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Me;
 
+use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -20,17 +21,21 @@ class CreateCompanyRequest extends FormRequest
      */
     protected function prepareForValidation(): void
     {
+        $username = strtolower((string) $this->input('username', ''));
+        $subdomain = strtolower((string) $this->input('subdomain', $username));
+        $email = strtolower((string) $this->input('email', ''));
+
         $this->merge([
-            'username' => strtolower($this->username),
-            'subdomain' => strtolower($this->username),
-            'email' => strtolower($this->email),
+            'username' => $username,
+            'subdomain' => $subdomain ?: $username,
+            'email' => $email,
         ]);
     }
 
     /**
      * Get the validation rules that apply to the request.
      *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
@@ -74,7 +79,7 @@ class CreateCompanyRequest extends FormRequest
                 'max:255',
             ],
             'photo_id' => [
-                'required',
+                'nullable',
                 'exists:medias,id',
             ],
             'province_id' => [

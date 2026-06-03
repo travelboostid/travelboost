@@ -4,12 +4,14 @@ namespace App\Http\Controllers\Companies\Dashboard;
 
 use App\Http\Controllers\Controller;
 use App\Models\Company;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Inertia\Response;
 
 class ParameterVendorController extends Controller
 {
-    public function index(Request $request, Company $company)
+    public function index(Request $request, Company $company): Response
     {
         $settings = $company->companySetting()->firstOrCreate(
             ['company_id' => $company->id],
@@ -29,12 +31,22 @@ class ParameterVendorController extends Controller
         ]);
     }
 
-    public function update(Request $request, Company $company)
+    public function update(Request $request, Company $company): RedirectResponse
     {
         $validated = $request->validate([
             'booking_deadline' => ['required', 'integer', 'min:0'],
-            'minimum_down_payment' => ['required', 'numeric', 'min:0'],
-            'minimum_down_payment_value' => ['required', 'numeric', 'min:0'],
+            'minimum_down_payment' => [
+                'required',
+                'numeric',
+                'min:0',
+                'max:100',
+            ],
+
+            'minimum_down_payment_value' => [
+                'required',
+                'numeric',
+                'min:0',
+            ],
             'minimum_vat' => ['required', 'numeric', 'min:0'],
             'term_conditions' => ['nullable', 'string'],
             'booking_entry_time_limit' => ['required', 'integer', 'min:0'],
@@ -46,6 +58,17 @@ class ParameterVendorController extends Controller
             'full_payment_deadline' => ['required', 'numeric', 'min:0'],
             'document_completed_deadline' => ['required', 'numeric', 'min:0'],
         ]);
+
+        if (
+            $validated['minimum_down_payment'] > 0 &&
+            $validated['minimum_down_payment_value'] > 0
+        ) {
+            return back()
+                ->withErrors([
+                    'minimum_down_payment_value' => 'Fill percentage OR amount, not both.',
+                ])
+                ->withInput();
+        }
 
         $company->companySetting()->updateOrCreate(
             ['company_id' => $company->id],

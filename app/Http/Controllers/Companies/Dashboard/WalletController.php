@@ -3,13 +3,17 @@
 namespace App\Http\Controllers\Companies\Dashboard;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\PaymentResource;
 use App\Models\Company;
+use App\Models\Payment;
+use App\Models\WalletTopupPayment;
 use Bavix\Wallet\Models\Transaction;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 class WalletController extends Controller
 {
-    public function index(Company $company)
+    public function index(Request $request, Company $company)
     {
         $wallet = $company->wallet; // Get the default wallet
         $balance = $wallet->balance; // Current balance
@@ -66,6 +70,19 @@ class WalletController extends Controller
                 'created_at' => $t->created_at,
             ]);
 
+        $pendingTopup = Payment::query()
+            ->whereMorphedTo('owner', $company)
+            ->whereMorphedTo('payable', WalletTopupPayment::class)
+            ->where('status', 'pending')
+            ->whereIn(
+                'payable_id',
+                WalletTopupPayment::query()
+                    ->select('id')
+                    ->where('user_id', $request->user()->id)
+            )
+            ->latest()
+            ->first();
+
         // Render the Inertia view with wallet data
         return Inertia::render('companies/dashboard/wallet/index', [
             'balance' => $balance,
@@ -86,6 +103,9 @@ class WalletController extends Controller
             ],
             'transactions' => $transactions,
             'wallet' => $wallet,
+            'pendingTopup' => $pendingTopup
+                ? (new PaymentResource($pendingTopup))->resolve($request)
+                : null,
         ]);
     }
 

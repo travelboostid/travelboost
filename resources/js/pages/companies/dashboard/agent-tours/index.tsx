@@ -1,5 +1,6 @@
 import { useGetTourCategories } from '@/api/tour-category/tour-category';
 import CompanyDashboardLayout from '@/components/layouts/company-dashboard';
+import { MediaPicker } from '@/components/media-picker';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -40,7 +41,7 @@ import {
 } from '@/components/ui/table';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
-import { extractImageSrc } from '@/lib/utils';
+import { extractDocumentUrl, extractImageSrc } from '@/lib/utils';
 import { router, usePage } from '@inertiajs/react';
 import {
     flexRender,
@@ -61,6 +62,7 @@ import {
     ArrowUp,
     ArrowUpDown,
     ChevronDown,
+    DownloadIcon,
     EyeIcon,
     FileTextIcon,
     HistoryIcon,
@@ -68,6 +70,8 @@ import {
     MoreVertical,
     Search,
     TrashIcon,
+    UploadCloudIcon,
+    XIcon,
 } from 'lucide-react';
 import * as React from 'react';
 import { toast } from 'sonner';
@@ -92,9 +96,17 @@ const toDateString = (date: Date) => {
 const getBookingDeadlineDays = (tour: any): number =>
     Number(
         tour?.company?.company_setting?.booking_deadline ??
-            tour?.company?.companySetting?.booking_deadline ??
+        tour?.company?.companySetting?.booking_deadline ??
             0,
     );
+
+const getDocumentName = (media: any): string =>
+    media?.name ||
+    media?.file_name ||
+    media?.data?.name ||
+    media?.data?.file_name ||
+    media?.data?.filename ||
+    'Itinerary PDF';
 
 const isActiveAvailability = (
     availability: any,
@@ -397,6 +409,137 @@ function StatusCell({ row }: { row: any }) {
     );
 }
 
+function VendorDocumentCell({ row }: { row: any }) {
+    const tour = row.original.tour;
+    const hasDocument = Boolean(tour?.document);
+    const documentUrl = hasDocument ? extractDocumentUrl(tour.document) : '';
+
+    return (
+        <Button
+            asChild={Boolean(documentUrl)}
+            variant="outline"
+            size="sm"
+            disabled={!documentUrl}
+            className="h-9 rounded-xl border-slate-200 bg-white text-xs font-semibold shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+        >
+            {documentUrl ? (
+                <a
+                    href={documentUrl}
+                    download={getDocumentName(tour.document)}
+                    title={getDocumentName(tour.document)}
+                >
+                    <DownloadIcon className="mr-1.5 h-3.5 w-3.5" />
+                    Vendor PDF
+                </a>
+            ) : (
+                <span>Not available</span>
+            )}
+        </Button>
+    );
+}
+
+function AgentDocumentCell({ row }: { row: any }) {
+    const { company } = usePageSharedDataProps();
+    const agentTour = row.original;
+    const vendorDocument = agentTour.tour?.document;
+    const agentDocument = agentTour.agent_document;
+    const documentUrl = agentDocument ? extractDocumentUrl(agentDocument) : '';
+    const hasVendorDocument = Boolean(
+        vendorDocument && extractDocumentUrl(vendorDocument),
+    );
+
+    const updateDocument = (media: any) => {
+        router.put(
+            `/companies/${company.username}/dashboard/agent-tours/${agentTour.id}`,
+            { agent_document_id: media?.id ?? null },
+            {
+                preserveScroll: true,
+                preserveState: true,
+                onSuccess: () =>
+                    toast.success(
+                        media
+                            ? 'Agent itinerary uploaded successfully'
+                            : 'Agent itinerary removed successfully',
+                    ),
+            },
+        );
+    };
+
+    return (
+        <div className="flex min-w-[220px] items-center gap-2">
+            {agentDocument ? (
+                <>
+                    <Button
+                        asChild={Boolean(documentUrl)}
+                        variant="outline"
+                        size="sm"
+                        className="h-9 min-w-0 flex-1 justify-start rounded-xl border-slate-200 bg-white text-xs font-semibold shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                    >
+                        {documentUrl ? (
+                            <a
+                                href={documentUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                title={getDocumentName(agentDocument)}
+                            >
+                                <FileTextIcon className="mr-1.5 h-3.5 w-3.5 shrink-0" />
+                                <span className="truncate">Agent PDF</span>
+                            </a>
+                        ) : (
+                            <span>Agent PDF</span>
+                        )}
+                    </Button>
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-9 w-9 shrink-0 rounded-xl text-red-500 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/30"
+                        onClick={() => updateDocument(null)}
+                    >
+                        <XIcon className="h-4 w-4" />
+                    </Button>
+                </>
+            ) : (
+                <MediaPicker
+                    type="document"
+                    defaultValue={agentDocument}
+                    onChange={updateDocument}
+                    params={{
+                        owner_type: 'company',
+                        owner_id: company.id,
+                    }}
+                    uploadParams={{
+                        owner_type: 'company',
+                        owner_id: company.id,
+                        subtype: 'agent-itinerary',
+                    }}
+                >
+                    {(_, change) => (
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="h-9 rounded-xl border-slate-200 bg-white text-xs font-semibold shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                            onClick={change}
+                            disabled={!hasVendorDocument}
+                            title={
+                                hasVendorDocument
+                                    ? 'Upload Agent PDF'
+                                    : 'Vendor PDF is required before uploading Agent PDF'
+                            }
+                        >
+                            <UploadCloudIcon className="mr-1.5 h-3.5 w-3.5" />
+                            {hasVendorDocument
+                                ? 'Upload Agent PDF'
+                                : 'Vendor PDF Required'}
+                        </Button>
+                    )}
+                </MediaPicker>
+            )}
+        </div>
+    );
+}
+
 function SortableHeader({
     column,
     title,
@@ -528,6 +671,20 @@ export const columns: ColumnDef<any>[] = [
             );
         },
         enableSorting: false,
+    },
+    {
+        id: 'vendor_document',
+        header: 'Vendor Itinerary',
+        cell: ({ row }) => <VendorDocumentCell row={row} />,
+        enableSorting: false,
+    },
+    {
+        id: 'agent_document',
+        accessorFn: (row) => row.agent_document?.name,
+        header: ({ column }) => (
+            <SortableHeader column={column} title="Agent Itinerary" />
+        ),
+        cell: ({ row }) => <AgentDocumentCell row={row} />,
     },
     {
         id: 'category',

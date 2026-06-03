@@ -38,6 +38,16 @@ import type { RoomConfig } from './Step2RoomConfiguration';
 
 export type PaymentType = 'down_payment' | 'full_payment';
 export type PaymentMethod = 'manual_transfer' | 'midtrans';
+export type DownPaymentRule =
+    | {
+          mode: 'grand_total_percent';
+          percent: number;
+      }
+    | {
+          mode: 'per_pax_amount';
+          amount: number;
+      }
+    | null;
 
 export type AddOnItem = {
     key: string;
@@ -66,6 +76,7 @@ type Step4Props = {
     initialAddOns?: AddOnItem[];
     onAddOnsChange?: (addOns: AddOnItem[]) => void;
     minimumDownPaymentPct?: number | null;
+    downPaymentRule?: DownPaymentRule;
     minimumVatPct?: number;
     paidAmount?: number;
     remainingBalance?: number;
@@ -83,6 +94,9 @@ type Step4Props = {
     fullPaymentAvailable?: boolean;
     paymentUnavailableReason?: string | null;
     paymentErrorMessage?: string | null;
+    showProformaInvoiceButton?: boolean;
+    manualPaymentAvailable?: boolean;
+    onlinePaymentAvailable?: boolean;
 };
 
 // ─── Constants ───────────────────────────────────────────────────────────────────
@@ -101,6 +115,7 @@ export default function Step4BookingSummary({
     initialAddOns,
     onAddOnsChange,
     minimumDownPaymentPct,
+    downPaymentRule,
     minimumVatPct,
     paidAmount = 0,
     remainingBalance = 0,
@@ -114,6 +129,9 @@ export default function Step4BookingSummary({
     fullPaymentAvailable = true,
     paymentUnavailableReason = null,
     paymentErrorMessage = null,
+    showProformaInvoiceButton = false,
+    manualPaymentAvailable = true,
+    onlinePaymentAvailable = true,
 }: Step4Props) {
     const addOnsLocked = readOnly || addOnsReadOnly;
 
@@ -179,15 +197,35 @@ export default function Step4BookingSummary({
     const grandTotal = hasGrandTotalOverride
         ? grandTotalOverride
         : pricing.totalPrice + addOnsTotal;
-    const dpPct = minimumDownPaymentPct ?? 0;
+    const effectiveDownPaymentRule =
+        downPaymentRule ??
+        (minimumDownPaymentPct !== null && minimumDownPaymentPct !== undefined
+            ? {
+                  mode: 'grand_total_percent' as const,
+                  percent: minimumDownPaymentPct,
+              }
+            : null);
+    const dpPct =
+        effectiveDownPaymentRule?.mode === 'grand_total_percent'
+            ? effectiveDownPaymentRule.percent
+            : 0;
     const dpRate = dpPct / 100;
+    const perPaxDownPaymentAmount =
+        effectiveDownPaymentRule?.mode === 'per_pax_amount'
+            ? effectiveDownPaymentRule.amount
+            : 0;
     const dpLabel = downPaymentAvailable
-        ? `Down Payment (${dpPct}%)`
+        ? effectiveDownPaymentRule?.mode === 'per_pax_amount'
+            ? `Down Payment (${formatCurrency(perPaxDownPaymentAmount)} per pax)`
+            : `Down Payment (${dpPct}%)`
         : 'Down Payment';
     const effectivePaymentType: PaymentType | null = forceBalancePayment
         ? 'full_payment'
         : paymentType;
-    const downPaymentAmount = Math.round(grandTotal * dpRate);
+    const downPaymentAmount =
+        effectiveDownPaymentRule?.mode === 'per_pax_amount'
+            ? Math.round(perPaxDownPaymentAmount * guests.length)
+            : Math.round(grandTotal * dpRate);
     const fullPaymentAmount = grandTotal;
     const payAmount =
         effectivePaymentType === 'full_payment'
@@ -205,6 +243,8 @@ export default function Step4BookingSummary({
     const isFullPaymentUnavailable = !fullPaymentAvailable;
     const isCurrentPaymentUnavailable =
         isFullPaymentUnavailable && effectivePaymentType === 'full_payment';
+    const arePaymentMethodsUnavailable =
+        !manualPaymentAvailable && !onlinePaymentAvailable;
     const isPaymentSelectionMissing = !effectivePaymentType;
     const paymentControlsHidden = readOnly || hidePaymentControls;
     const activePaymentAmountLabel = forceBalancePayment
@@ -218,7 +258,9 @@ export default function Step4BookingSummary({
         paymentErrorMessage ??
         (isCurrentPaymentUnavailable
             ? (paymentUnavailableReason ?? PAYMENT_UNAVAILABLE_MESSAGE)
-            : null);
+            : arePaymentMethodsUnavailable
+              ? 'Payment methods are currently unavailable for this tour.'
+              : null);
     const paymentSummaryStack = (
         <div className="space-y-1.5 lg:text-right">
             <div>
@@ -254,6 +296,27 @@ export default function Step4BookingSummary({
             </div>
         </div>
     );
+    const proformaInvoiceButton = showProformaInvoiceButton ? (
+        <Tooltip>
+            <TooltipTrigger asChild>
+                <span className="inline-flex">
+                    <Button
+                        type="button"
+                        variant="outline"
+                        size="lg"
+                        disabled
+                        className="gap-2"
+                    >
+                        <ReceiptIcon className="size-4" />
+                        Proforma Invoice
+                    </Button>
+                </span>
+            </TooltipTrigger>
+            <TooltipContent>
+                <p>Proforma invoice will be available soon</p>
+            </TooltipContent>
+        </Tooltip>
+    ) : null;
 
     // ─── Add-on qty handler ────────────────────────────────────────────
     const updateAddOnQty = useCallback(
@@ -285,8 +348,16 @@ export default function Step4BookingSummary({
         if (
             paymentControlsHidden ||
             isCurrentPaymentUnavailable ||
+            arePaymentMethodsUnavailable ||
             !selectedPaymentType ||
             payAmount === null
+        ) {
+            return;
+        }
+
+        if (
+            (method === 'manual_transfer' && !manualPaymentAvailable) ||
+            (method === 'midtrans' && !onlinePaymentAvailable)
         ) {
             return;
         }
@@ -306,6 +377,7 @@ export default function Step4BookingSummary({
         if (
             paymentControlsHidden ||
             isCurrentPaymentUnavailable ||
+            !manualPaymentAvailable ||
             !selectedPaymentType ||
             payAmount === null
         ) {
@@ -566,6 +638,11 @@ export default function Step4BookingSummary({
                                 <div className="hidden lg:block" />
                                 {paymentSummaryStack}
                             </div>
+                            {proformaInvoiceButton && (
+                                <div className="mt-4 flex justify-end">
+                                    {proformaInvoiceButton}
+                                </div>
+                            )}
                         </div>
                     )}
 
@@ -666,7 +743,8 @@ export default function Step4BookingSummary({
                     {/* ─── Pay Now ────────────────────────────────────────────────── */}
                     {!paymentControlsHidden && (
                         <div className="p-4">
-                            <div className="flex justify-end">
+                            <div className="flex flex-wrap justify-end gap-2">
+                                {proformaInvoiceButton}
                                 <Popover
                                     open={paymentPopoverOpen}
                                     onOpenChange={(open) => {
@@ -685,15 +763,18 @@ export default function Step4BookingSummary({
                                             disabled={
                                                 isSubmitting ||
                                                 isCurrentPaymentUnavailable ||
+                                                arePaymentMethodsUnavailable ||
                                                 isPaymentSelectionMissing
                                             }
                                             className="gap-2 bg-[#1ebe5d] px-6 text-white shadow-lg hover:bg-[#19a34f]"
                                         >
                                             {isSubmitting
                                                 ? 'Processing...'
-                                                : isPaymentSelectionMissing
-                                                  ? 'Select Payment Option'
-                                                  : 'Pay Now!'}
+                                                : arePaymentMethodsUnavailable
+                                                  ? 'Payment Unavailable'
+                                                  : isPaymentSelectionMissing
+                                                    ? 'Select Payment Option'
+                                                    : 'Pay Now!'}
                                         </Button>
                                     </PopoverTrigger>
                                     <PopoverContent
@@ -705,45 +786,50 @@ export default function Step4BookingSummary({
                                             Select Payment Method
                                         </p>
                                         <div className="space-y-1">
-                                            <button
-                                                type="button"
-                                                className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors hover:bg-muted"
-                                                onClick={() =>
-                                                    handlePaymentMethodSelect(
-                                                        'manual_transfer',
-                                                    )
-                                                }
-                                            >
-                                                <BanknoteIcon className="size-5 text-emerald-600" />
-                                                <div className="text-left">
-                                                    <p className="font-semibold">
-                                                        Manual Payment
-                                                    </p>
-                                                    <p className="text-xs text-muted-foreground">
-                                                        Bank Transfer
-                                                    </p>
-                                                </div>
-                                            </button>
-                                            <button
-                                                type="button"
-                                                className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors hover:bg-muted"
-                                                onClick={() =>
-                                                    handlePaymentMethodSelect(
-                                                        'midtrans',
-                                                    )
-                                                }
-                                            >
-                                                <CreditCardIcon className="size-5 text-blue-600" />
-                                                <div className="text-left">
-                                                    <p className="font-semibold">
-                                                        Online Payment
-                                                    </p>
-                                                    <p className="text-xs text-muted-foreground">
-                                                        Visa, Mastercard, Amex,
-                                                        QRIS, Virtual Account
-                                                    </p>
-                                                </div>
-                                            </button>
+                                            {manualPaymentAvailable && (
+                                                <button
+                                                    type="button"
+                                                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors hover:bg-muted"
+                                                    onClick={() =>
+                                                        handlePaymentMethodSelect(
+                                                            'manual_transfer',
+                                                        )
+                                                    }
+                                                >
+                                                    <BanknoteIcon className="size-5 text-emerald-600" />
+                                                    <div className="text-left">
+                                                        <p className="font-semibold">
+                                                            Manual Payment
+                                                        </p>
+                                                        <p className="text-xs text-muted-foreground">
+                                                            Bank Transfer
+                                                        </p>
+                                                    </div>
+                                                </button>
+                                            )}
+                                            {onlinePaymentAvailable && (
+                                                <button
+                                                    type="button"
+                                                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors hover:bg-muted"
+                                                    onClick={() =>
+                                                        handlePaymentMethodSelect(
+                                                            'midtrans',
+                                                        )
+                                                    }
+                                                >
+                                                    <CreditCardIcon className="size-5 text-blue-600" />
+                                                    <div className="text-left">
+                                                        <p className="font-semibold">
+                                                            Online Payment
+                                                        </p>
+                                                        <p className="text-xs text-muted-foreground">
+                                                            Visa, Mastercard,
+                                                            Amex, QRIS, Virtual
+                                                            Account
+                                                        </p>
+                                                    </div>
+                                                </button>
+                                            )}
                                         </div>
                                     </PopoverContent>
                                 </Popover>

@@ -1,6 +1,7 @@
 import CompanyDashboardLayout from '@/components/layouts/company-dashboard';
 import MoneyInput from '@/components/ui/money-input';
 import { Head, useForm, usePage } from '@inertiajs/react';
+import type { FormEvent } from 'react';
 import { FormattedMessage, useIntl } from 'react-intl';
 
 type Settings = {
@@ -19,6 +20,51 @@ type Settings = {
     document_completed_deadline: number;
 };
 
+type DecimalInputValue = string | number;
+
+type ParameterVendorFormData = {
+    booking_deadline: number;
+    minimum_down_payment: DecimalInputValue;
+    minimum_down_payment_value: number;
+    minimum_vat: DecimalInputValue;
+    term_conditions: string;
+    booking_entry_time_limit: number;
+    manual_bank_transfer: string;
+    manual_bank_transfer_account_name: string;
+    manual_bank_transfer_account_number: string;
+    email_payment_gateway: string;
+    password_payment_gateway: string;
+    full_payment_deadline: number | string;
+    document_completed_deadline: number | string;
+    _method: 'put';
+};
+
+const decimalInputValue = (value: unknown): string => {
+    const numeric = Number(value ?? 0);
+
+    return Number.isFinite(numeric) ? String(numeric) : '0';
+};
+
+const normalizeDecimalInput = (value: string): string => {
+    const sanitized = value.replace(/[^0-9.,]/g, '').replace(',', '.');
+    const firstDotIndex = sanitized.indexOf('.');
+
+    if (firstDotIndex === -1) {
+        return sanitized;
+    }
+
+    return (
+        sanitized.slice(0, firstDotIndex + 1) +
+        sanitized.slice(firstDotIndex + 1).replace(/\./g, '')
+    );
+};
+
+const parseDecimalInput = (value: DecimalInputValue): number => {
+    const parsed = parseFloat(String(value).replace(',', '.'));
+
+    return Number.isFinite(parsed) ? parsed : 0;
+};
+
 export default function ParameterVendorPage() {
     const intl = useIntl();
 
@@ -29,12 +75,14 @@ export default function ParameterVendorPage() {
         };
     }>();
 
-    const { data, setData, post, processing, errors } = useForm({
+    const form = useForm<ParameterVendorFormData>({
         booking_deadline: props.settings?.booking_deadline ?? 0,
-        minimum_down_payment: props.settings?.minimum_down_payment ?? 0,
+        minimum_down_payment: decimalInputValue(
+            props.settings?.minimum_down_payment ?? 0,
+        ),
         minimum_down_payment_value:
             props.settings?.minimum_down_payment_value ?? 0,
-        minimum_vat: props.settings?.minimum_vat ?? 0,
+        minimum_vat: decimalInputValue(props.settings?.minimum_vat ?? 0),
         term_conditions: props.settings?.term_conditions ?? '',
         booking_entry_time_limit: props.settings?.booking_entry_time_limit ?? 0,
         manual_bank_transfer: props.settings?.manual_bank_transfer ?? '',
@@ -50,30 +98,23 @@ export default function ParameterVendorPage() {
             props.settings?.document_completed_deadline ?? '',
         _method: 'put',
     });
+    const { data, setData, post, processing, errors } = form;
 
-    const submit = (e: React.FormEvent) => {
+    const submit = (e: FormEvent<HTMLFormElement>) => {
         e.preventDefault();
 
-        post(window.location.pathname, {
-            data: {
-                ...data,
-                minimum_down_payment:
-                    parseFloat(
-                        String(data.minimum_down_payment).replace(',', '.'),
-                    ) || 0,
+        form.transform((payload) => ({
+            ...payload,
+            minimum_down_payment: parseDecimalInput(
+                payload.minimum_down_payment,
+            ),
+            minimum_down_payment_value: Number(
+                payload.minimum_down_payment_value || 0,
+            ),
+            minimum_vat: parseDecimalInput(payload.minimum_vat),
+        }));
 
-                minimum_down_payment_value:
-                    parseFloat(
-                        String(data.minimum_down_payment_value).replace(
-                            ',',
-                            '.',
-                        ),
-                    ) || 0,
-
-                minimum_vat:
-                    parseFloat(String(data.minimum_vat).replace(',', '.')) || 0,
-            },
-        });
+        post(window.location.pathname);
     };
 
     const inputClass =
@@ -82,6 +123,10 @@ export default function ParameterVendorPage() {
         'mb-2 block min-h-[48px] text-sm font-medium text-foreground';
     const labelClassSingleRow =
         'mb-2 block text-sm font-medium text-foreground';
+
+    const hasPercentage = parseDecimalInput(data.minimum_down_payment) > 0;
+
+    const hasAmount = Number(data.minimum_down_payment_value || 0) > 0;
 
     return (
         <CompanyDashboardLayout
@@ -207,19 +252,21 @@ export default function ParameterVendorPage() {
                         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                             <div>
                                 <label className={labelClassSingleRow}>
-                                    <FormattedMessage defaultMessage="Minimum Down Payment (%) / amount" />
+                                    <FormattedMessage defaultMessage="Minimum Down Payment (%) / total base price" />
                                 </label>
                                 <input
                                     type="text"
                                     inputMode="decimal"
                                     className={inputClass}
+                                    disabled={hasAmount}
                                     value={data.minimum_down_payment}
                                     onChange={(e) => {
-                                        const raw = e.target.value
-                                            .replace(/[^0-9.,]/g, '')
-                                            .replace(',', '.');
-
-                                        setData('minimum_down_payment', raw);
+                                        setData(
+                                            'minimum_down_payment',
+                                            normalizeDecimalInput(
+                                                e.target.value,
+                                            ),
+                                        );
                                     }}
                                 />
                                 {errors.minimum_down_payment && (
@@ -231,15 +278,16 @@ export default function ParameterVendorPage() {
 
                             <div>
                                 <label className={labelClassSingleRow}>
-                                    <FormattedMessage defaultMessage="Minimum Down Payment (amount) / Pax" />
+                                    <FormattedMessage defaultMessage="Minimum Down Payment Amount / Pax" />
                                 </label>
                                 <MoneyInput
                                     value={data.minimum_down_payment_value}
                                     className={inputClass}
+                                    disabled={hasPercentage}
                                     onChange={(raw) =>
                                         setData(
                                             'minimum_down_payment_value',
-                                            raw,
+                                            Number(raw || 0),
                                         )
                                     }
                                 />
@@ -261,11 +309,12 @@ export default function ParameterVendorPage() {
                                         className={inputClass}
                                         value={data.minimum_vat}
                                         onChange={(e) => {
-                                            const raw = e.target.value
-                                                .replace(/[^0-9.,]/g, '')
-                                                .replace(',', '.');
-
-                                            setData('minimum_vat', raw);
+                                            setData(
+                                                'minimum_vat',
+                                                normalizeDecimalInput(
+                                                    e.target.value,
+                                                ),
+                                            );
                                         }}
                                     />
                                     {errors.minimum_vat && (
@@ -291,7 +340,7 @@ export default function ParameterVendorPage() {
                                         }
                                     />
 
-                                    {errors.document_completed_deadline && (
+                                    {errors.full_payment_deadline && (
                                         <p className="mt-1 text-sm text-red-500">
                                             {errors.full_payment_deadline}
                                         </p>

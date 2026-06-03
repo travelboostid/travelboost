@@ -9,6 +9,7 @@ use App\Http\Middleware\SetAndUseAnonymousUserProps;
 use App\Http\Middleware\UseAffiliateProps;
 use App\Http\Middleware\UseAnalyticsMeasurementIdsProps;
 use App\Http\Middleware\UseCustomerProps;
+use App\Models\AffiliateProfile;
 use Illuminate\Http\Request;
 use Illuminate\Pipeline\Pipeline;
 use Illuminate\Support\Facades\Context;
@@ -50,7 +51,7 @@ class HomeDispatcherController extends Controller
         $type = match (true) {
             $affiliateBaseUrl === $request->getHost() => 'affiliate',
             Context::get('tenant') !== null => 'customer',
-            Context::get('affiliate') !== null => 'affiliate',
+            $this->usesAffiliateLanding(Context::get('affiliate')) => 'affiliate',
             default => 'main',
         };
 
@@ -70,5 +71,10 @@ class HomeDispatcherController extends Controller
                 app($controller),
                 $method,
             ]));
+    }
+
+    private function usesAffiliateLanding(?AffiliateProfile $affiliate): bool
+    {
+        return $affiliate !== null && in_array($affiliate->tier, ['master_affiliate', 'master-affiliate', 'partner'], true);
     }
 }

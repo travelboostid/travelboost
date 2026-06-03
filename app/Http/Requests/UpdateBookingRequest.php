@@ -17,12 +17,22 @@ class UpdateBookingRequest extends FormRequest
     {
         $booking = $this->route('booking');
 
-        return in_array($booking->status, [
+        $fullEditStatuses = [
             BookingStatus::RESERVED,
             BookingStatus::BOOKING_RESERVED,
             BookingStatus::AWAITING_PAYMENT,
             BookingStatus::WAITING_PAYMENT_APPROVAL,
-        ]);
+        ];
+
+        if ($this->routeIs('companies.dashboard.bookings.update')) {
+            return in_array($booking->status, $fullEditStatuses, true);
+        }
+
+        return in_array($booking->status, [
+            ...$fullEditStatuses,
+            BookingStatus::DOWN_PAYMENT,
+            BookingStatus::FULL_PAYMENT,
+        ], true);
     }
 
     /**
@@ -32,6 +42,8 @@ class UpdateBookingRequest extends FormRequest
      */
     public function rules(): array
     {
+        $booking = $this->route('booking');
+
         return [
             'contact_name' => ['required', 'string', 'max:255'],
             'contact_email' => ['required', 'email', 'max:255'],
@@ -47,7 +59,13 @@ class UpdateBookingRequest extends FormRequest
             'grand_total' => ['required', 'numeric', 'min:0'],
 
             'passengers' => ['required', 'array', 'min:1'],
-            'passengers.*.id' => ['nullable', 'integer', 'exists:booking_passengers,id'],
+            'passengers.*.id' => [
+                'nullable',
+                'integer',
+                Rule::exists('booking_passengers', 'id')
+                    ->where('booking_id', $booking?->id),
+            ],
+            'passengers.*.client_guest_id' => ['nullable', 'string', 'max:255'],
             'passengers.*.title' => ['nullable', 'string', 'max:20'],
             'passengers.*.first_name' => ['required', 'string', 'max:255'],
             'passengers.*.last_name' => ['nullable', 'string', 'max:255'],
@@ -76,6 +94,7 @@ class UpdateBookingRequest extends FormRequest
             'addons' => ['nullable', 'array'],
             'addons.*.name' => ['required_with:addons', 'string', 'max:255'],
             'addons.*.price' => ['required_with:addons', 'numeric', 'min:0'],
+            'addons.*.qty' => ['nullable', 'integer', 'min:1', 'max:999'],
         ];
     }
 

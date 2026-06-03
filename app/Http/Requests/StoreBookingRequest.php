@@ -44,6 +44,7 @@ class StoreBookingRequest extends FormRequest
             'payment_mode' => ['nullable', 'string', Rule::in(['manual', 'online'])],
             // Passengers
             'passengers' => ['required', 'array', 'min:1'],
+            'passengers.*.client_guest_id' => ['nullable', 'string', 'max:255'],
             'passengers.*.title' => ['nullable', 'string', 'max:20'],
             'passengers.*.first_name' => ['required', 'string', 'max:255'],
             'passengers.*.last_name' => ['nullable', 'string', 'max:255'],
@@ -78,6 +79,7 @@ class StoreBookingRequest extends FormRequest
             'addons' => ['nullable', 'array'],
             'addons.*.name' => ['required_with:addons', 'string', 'max:255'],
             'addons.*.price' => ['required_with:addons', 'numeric', 'min:0'],
+            'addons.*.qty' => ['nullable', 'integer', 'min:1', 'max:999'],
 
             // Expected totals from frontend
             'total_price' => ['required', 'numeric', 'min:0'],

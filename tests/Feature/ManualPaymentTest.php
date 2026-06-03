@@ -2,6 +2,7 @@
 
 use App\Enums\BookingStatus;
 use App\Enums\CompanyTeamStatus;
+use App\Enums\PaymentStatus;
 use App\Enums\VendorAgentPartnerStatus;
 use App\Models\Booking;
 use App\Models\Company;
@@ -174,7 +175,340 @@ test('agent payment mode records agent receiver context on manual payment proof'
         'payment_receiver_type' => 'agent',
         'payment_receiver_company_id' => $agent->id,
         'partnership_payment_mode' => 'agent',
+        'payment_flow_stage' => 'customer_to_agent',
+        'counts_toward_booking_total' => false,
+        'agent_review_status' => 'pending',
     ]);
+});
+
+test('agent accepts customer manual payment proof without finalizing agent collection booking', function () {
+    Storage::fake('public');
+
+    $customer = User::factory()->create();
+    $agentUser = User::factory()->create();
+    $vendor = Company::factory()->create([
+        'username' => 'agentproofvendor',
+        'type' => 'vendor',
+    ]);
+    $vendor->companySetting()->updateOrCreate([], [
+        'minimum_down_payment' => 30,
+    ]);
+    $agent = Company::factory()->create([
+        'username' => 'agentproofagent',
+        'type' => 'agent',
+    ]);
+    CompanyTeam::create([
+        'company_id' => $agent->id,
+        'user_id' => $agentUser->id,
+        'status' => CompanyTeamStatus::ACTIVE,
+        'is_owner' => true,
+        'accepted_at' => now(),
+    ]);
+    VendorAgentPartner::create([
+        'vendor_id' => $vendor->id,
+        'agent_id' => $agent->id,
+        'status' => VendorAgentPartnerStatus::ACTIVE,
+        'accepted_at' => now(),
+        'payment_mode' => 'agent',
+    ]);
+
+    $tour = Tour::factory()->create(['company_id' => $vendor->id]);
+    $booking = Booking::factory()->create([
+        'user_id' => $customer->id,
+        'vendor_id' => $vendor->id,
+        'agent_id' => $agent->id,
+        'tour_id' => $tour->id,
+        'status' => 'reserved',
+        'grand_total' => 1_000_000,
+    ]);
+
+    $this->actingAs($customer)->post("/bookings/{$booking->id}/manual-payment", [
+        'sender_bank_name' => 'BCA',
+        'sender_account_number' => '1234567890',
+        'transfer_amount' => 500_000,
+        'payment_type' => 'down_payment',
+        'payment_date' => '2026-05-01',
+        'proof' => UploadedFile::fake()->image('proof.jpg'),
+    ])->assertRedirect();
+
+    $customerPayment = $booking->fresh()->payments()->latest()->first();
+
+    $this->actingAs($agentUser)
+        ->post("/companies/{$agent->username}/dashboard/bookings/{$booking->id}/manual-payments/{$customerPayment->id}/accept")
+        ->assertRedirect();
+
+    $customerPayment->refresh();
+
+    expect($customerPayment->status)->toBe(PaymentStatus::PAID)
+        ->and(data_get($customerPayment->payload, 'payment_flow_stage'))->toBe('customer_to_agent')
+        ->and(data_get($customerPayment->payload, 'agent_review_status'))->toBe('approved')
+        ->and(data_get($customerPayment->payload, 'counts_toward_booking_total'))->toBeFalse()
+        ->and($booking->fresh()->status)->toBe(BookingStatus::WAITING_PAYMENT_APPROVAL);
+});
+
+test('customer online payment to agent stays waiting approval after gateway confirmation', function () {
+    $customer = User::factory()->create();
+    $vendor = Company::factory()->create([
+        'username' => 'onlineagentvendor',
+        'type' => 'vendor',
+    ]);
+    $vendor->companySetting()->updateOrCreate([], [
+        'minimum_down_payment' => 30,
+    ]);
+    $agent = Company::factory()->create([
+        'username' => 'onlineagent',
+        'type' => 'agent',
+    ]);
+    VendorAgentPartner::create([
+        'vendor_id' => $vendor->id,
+        'agent_id' => $agent->id,
+        'status' => VendorAgentPartnerStatus::ACTIVE,
+        'accepted_at' => now(),
+        'payment_mode' => 'agent',
+    ]);
+
+    $tour = Tour::factory()->create(['company_id' => $vendor->id]);
+    $booking = Booking::factory()->create([
+        'user_id' => $customer->id,
+        'vendor_id' => $vendor->id,
+        'agent_id' => $agent->id,
+        'tour_id' => $tour->id,
+        'status' => BookingStatus::BOOKING_RESERVED,
+        'payment_mode' => 'online',
+        'grand_total' => 1_000_000,
+    ]);
+
+    Mockery::mock('alias:Midtrans\Snap')
+        ->shouldReceive('getSnapToken')
+        ->once()
+        ->andReturn('agent-payment-token');
+
+    $this->actingAs($customer)
+        ->postJson("/bookings/{$booking->id}/online-payment", [
+            'payment_type' => 'down_payment',
+            'amount' => 300_000,
+        ])
+        ->assertOk()
+        ->assertJsonPath('payment.payload.payment_flow_stage', 'customer_to_agent');
+
+    $payment = $booking->fresh()->payments()->latest()->first();
+
+    Mockery::mock('alias:Midtrans\Transaction')
+        ->shouldReceive('status')
+        ->once()
+        ->andReturn((object) [
+            'order_id' => data_get($payment->payload, 'order_id'),
+            'transaction_status' => 'settlement',
+        ]);
+
+    $this->actingAs($customer)
+        ->postJson("/bookings/{$booking->id}/online-payment/{$payment->id}/confirm")
+        ->assertOk()
+        ->assertJsonPath('booking.status', BookingStatus::WAITING_PAYMENT_APPROVAL->value)
+        ->assertJsonPath('payment.status', PaymentStatus::PAID->value);
+
+    $payment->refresh();
+
+    expect(data_get($payment->payload, 'payment_flow_stage'))->toBe('customer_to_agent')
+        ->and(data_get($payment->payload, 'agent_review_status'))->toBe('approved')
+        ->and(data_get($payment->payload, 'counts_toward_booking_total'))->toBeFalse()
+        ->and($booking->fresh()->status)->toBe(BookingStatus::WAITING_PAYMENT_APPROVAL);
+});
+
+test('agent online payment to vendor remains waiting approval until vendor approves', function () {
+    $agentUser = User::factory()->create();
+    $vendor = Company::factory()->create([
+        'username' => 'agentonlinevendor',
+        'type' => 'vendor',
+    ]);
+    $vendor->companySetting()->updateOrCreate([], [
+        'minimum_down_payment' => 30,
+    ]);
+    $agent = Company::factory()->create([
+        'username' => 'agentonlinepayer',
+        'type' => 'agent',
+    ]);
+    CompanyTeam::create([
+        'company_id' => $agent->id,
+        'user_id' => $agentUser->id,
+        'status' => CompanyTeamStatus::ACTIVE,
+        'is_owner' => true,
+        'accepted_at' => now(),
+    ]);
+    VendorAgentPartner::create([
+        'vendor_id' => $vendor->id,
+        'agent_id' => $agent->id,
+        'status' => VendorAgentPartnerStatus::ACTIVE,
+        'accepted_at' => now(),
+        'payment_mode' => 'agent',
+    ]);
+
+    $tour = Tour::factory()->create(['company_id' => $vendor->id]);
+    $booking = Booking::factory()->create([
+        'vendor_id' => $vendor->id,
+        'agent_id' => $agent->id,
+        'tour_id' => $tour->id,
+        'status' => BookingStatus::WAITING_PAYMENT_APPROVAL,
+        'payment_mode' => 'manual',
+        'grand_total' => 1_000_000,
+    ]);
+    $customerPayment = $booking->payments()->create([
+        'owner_type' => User::class,
+        'owner_id' => $booking->user_id,
+        'provider' => 'manual',
+        'payment_method' => 'bank_transfer',
+        'amount' => 500_000,
+        'status' => PaymentStatus::PAID,
+        'paid_at' => now()->subMinute(),
+        'payload' => [
+            'booking_payment_type' => 'down_payment',
+            'payment_type' => 'down_payment',
+            'payment_flow_stage' => 'customer_to_agent',
+            'payment_receiver_type' => 'agent',
+            'payment_receiver_company_id' => $agent->id,
+            'partnership_payment_mode' => 'agent',
+            'agent_review_status' => 'approved',
+            'counts_toward_booking_total' => false,
+        ],
+    ]);
+
+    Mockery::mock('alias:Midtrans\Snap')
+        ->shouldReceive('getSnapToken')
+        ->once()
+        ->andReturn('agent-vendor-token');
+
+    $this->actingAs($agentUser)
+        ->postJson("/companies/{$agent->username}/dashboard/bookings/{$booking->id}/online-payment", [
+            'payment_type' => 'down_payment',
+            'amount' => 500_000,
+        ])
+        ->assertOk()
+        ->assertJsonPath('payment.payload.payment_flow_stage', 'agent_to_vendor')
+        ->assertJsonPath('payment.payload.linked_customer_payment_id', $customerPayment->id)
+        ->assertJsonPath('bookingPaymentResult.bookingStatus', BookingStatus::WAITING_PAYMENT_APPROVAL->value);
+
+    $agentVendorPayment = $booking->fresh()->payments
+        ->first(fn ($payment): bool => data_get($payment->payload, 'payment_flow_stage') === 'agent_to_vendor');
+
+    Mockery::mock('alias:Midtrans\Transaction')
+        ->shouldReceive('status')
+        ->once()
+        ->andReturn((object) [
+            'order_id' => data_get($agentVendorPayment->payload, 'order_id'),
+            'transaction_status' => 'settlement',
+        ]);
+
+    $this->actingAs($agentUser)
+        ->postJson("/companies/{$agent->username}/dashboard/bookings/{$booking->id}/online-payment/{$agentVendorPayment->id}/confirm")
+        ->assertOk()
+        ->assertJsonPath('booking.status', BookingStatus::WAITING_PAYMENT_APPROVAL->value)
+        ->assertJsonPath('payment.status', PaymentStatus::PAID->value);
+
+    $agentVendorPayment->refresh();
+
+    expect($booking->fresh()->status)->toBe(BookingStatus::WAITING_PAYMENT_APPROVAL)
+        ->and(data_get($agentVendorPayment->payload, 'payment_flow_stage'))->toBe('agent_to_vendor')
+        ->and(data_get($agentVendorPayment->payload, 'vendor_review_status'))->toBe('pending')
+        ->and(data_get($agentVendorPayment->payload, 'counts_toward_booking_total'))->toBeFalse();
+});
+
+test('agent online payment to vendor reuses active snap attempt', function () {
+    $agentUser = User::factory()->create();
+    $vendor = Company::factory()->create([
+        'username' => 'agentreusevendor',
+        'type' => 'vendor',
+    ]);
+    $agent = Company::factory()->create([
+        'username' => 'agentreusepayer',
+        'type' => 'agent',
+    ]);
+    CompanyTeam::create([
+        'company_id' => $agent->id,
+        'user_id' => $agentUser->id,
+        'status' => CompanyTeamStatus::ACTIVE,
+        'is_owner' => true,
+        'accepted_at' => now(),
+    ]);
+    VendorAgentPartner::create([
+        'vendor_id' => $vendor->id,
+        'agent_id' => $agent->id,
+        'status' => VendorAgentPartnerStatus::ACTIVE,
+        'accepted_at' => now(),
+        'payment_mode' => 'agent',
+    ]);
+
+    $tour = Tour::factory()->create(['company_id' => $vendor->id]);
+    $booking = Booking::factory()->create([
+        'vendor_id' => $vendor->id,
+        'agent_id' => $agent->id,
+        'tour_id' => $tour->id,
+        'status' => BookingStatus::WAITING_PAYMENT_APPROVAL,
+        'payment_mode' => 'online',
+        'grand_total' => 1_000_000,
+    ]);
+    $customerPayment = $booking->payments()->create([
+        'owner_type' => User::class,
+        'owner_id' => $booking->user_id,
+        'provider' => 'midtrans',
+        'payment_method' => 'snap',
+        'amount' => 500_000,
+        'status' => PaymentStatus::PAID,
+        'paid_at' => now()->subMinute(),
+        'payload' => [
+            'booking_payment_type' => 'down_payment',
+            'payment_type' => 'down_payment',
+            'payment_flow_stage' => 'customer_to_agent',
+            'payment_receiver_type' => 'agent',
+            'payment_receiver_company_id' => $agent->id,
+            'partnership_payment_mode' => 'agent',
+            'agent_review_status' => 'approved',
+            'counts_toward_booking_total' => false,
+            'order_id' => 'customer-agent-order',
+            'snap_token' => 'customer-agent-token',
+        ],
+    ]);
+    $agentVendorPayment = $booking->payments()->create([
+        'owner_type' => User::class,
+        'owner_id' => $agentUser->id,
+        'provider' => 'midtrans',
+        'payment_method' => 'snap',
+        'amount' => 500_000,
+        'status' => PaymentStatus::PENDING,
+        'payload' => [
+            'booking_payment_type' => 'down_payment',
+            'payment_type' => 'down_payment',
+            'payment_flow_stage' => 'agent_to_vendor',
+            'linked_customer_payment_id' => $customerPayment->id,
+            'payment_receiver_type' => 'vendor',
+            'payment_receiver_company_id' => $vendor->id,
+            'partnership_payment_mode' => 'agent',
+            'vendor_review_status' => 'pending',
+            'counts_toward_booking_total' => false,
+            'order_id' => 'agent-vendor-order',
+            'snap_token' => 'agent-vendor-token',
+            'snap_token_expires_at' => now()->addMinutes(30)->toISOString(),
+        ],
+    ]);
+
+    Mockery::mock('alias:Midtrans\Snap')
+        ->shouldReceive('getSnapToken')
+        ->never();
+
+    $this->actingAs($agentUser)
+        ->postJson("/companies/{$agent->username}/dashboard/bookings/{$booking->id}/online-payment", [
+            'payment_type' => 'down_payment',
+            'amount' => 500_000,
+        ])
+        ->assertOk()
+        ->assertJsonPath('payment.id', $agentVendorPayment->id)
+        ->assertJsonPath('payment.reused', true)
+        ->assertJsonPath('payment.payload.order_id', 'agent-vendor-order')
+        ->assertJsonPath('payment.payload.snap_token', 'agent-vendor-token');
+
+    expect($booking->fresh()->payments()
+        ->where('provider', 'midtrans')
+        ->where('status', PaymentStatus::PENDING)
+        ->count())->toBe(1);
 });
 
 test('manual payment proof requires payment type', function () {
@@ -336,7 +670,7 @@ test('customer can create an online booking payment with midtrans snap token', f
 
     $response = $this->actingAs($user)->postJson("/bookings/{$booking->id}/online-payment", [
         'payment_type' => 'down_payment',
-        'amount' => 200_000,
+        'amount' => 300_000,
     ]);
 
     $response->assertOk()
@@ -350,17 +684,135 @@ test('customer can create an online booking payment with midtrans snap token', f
         'payable_id' => $booking->id,
         'provider' => 'midtrans',
         'payment_method' => 'snap',
-        'amount' => 200_000,
+        'amount' => 300_000,
         'status' => 'pending',
     ]);
 
     expect($booking->fresh()->payment_mode)->toBe('online');
 });
 
+test('customer reuses active online booking payment attempt while hold is active', function () {
+    $user = User::factory()->create();
+    $vendor = Company::factory()->create(['type' => 'vendor']);
+    $vendor->companySetting()->updateOrCreate([], [
+        'minimum_down_payment' => 30,
+    ]);
+    $tour = Tour::factory()->create(['company_id' => $vendor->id]);
+    $booking = Booking::factory()->create([
+        'user_id' => $user->id,
+        'vendor_id' => $vendor->id,
+        'tour_id' => $tour->id,
+        'status' => BookingStatus::BOOKING_RESERVED,
+        'reserved_type' => 'system',
+        'reserved_expires_at' => now()->addMinutes(5),
+        'grand_total' => 1_000_000,
+    ]);
+
+    $payment = $booking->payments()->create([
+        'owner_type' => User::class,
+        'owner_id' => $user->id,
+        'provider' => 'midtrans',
+        'payment_method' => 'snap',
+        'amount' => 300_000,
+        'status' => 'pending',
+        'payload' => [
+            'booking_payment_type' => 'down_payment',
+            'payment_type' => 'down_payment',
+            'order_id' => 'old-booking-order',
+            'snap_token' => 'old-snap-token',
+            'snap_token_expires_at' => now()->addMinutes(30)->toISOString(),
+        ],
+    ]);
+
+    Mockery::mock('alias:Midtrans\Snap')
+        ->shouldReceive('getSnapToken')
+        ->never();
+
+    $response = $this->actingAs($user)->postJson("/bookings/{$booking->id}/online-payment", [
+        'payment_type' => 'down_payment',
+        'amount' => 300_000,
+    ]);
+
+    $response->assertOk()
+        ->assertJsonPath('payment.id', $payment->id)
+        ->assertJsonPath('payment.reused', true)
+        ->assertJsonPath('payment.payload.order_id', 'old-booking-order')
+        ->assertJsonPath('payment.payload.snap_token', 'old-snap-token')
+        ->assertJsonPath('bookingPaymentResult.bookingStatus', 'booking reserved')
+        ->assertJsonPath('bookingPaymentResult.paymentStatus', 'pending');
+
+    expect($booking->fresh()->status)->toBe(BookingStatus::BOOKING_RESERVED)
+        ->and($booking->fresh()->payments()->where('provider', 'midtrans')->where('status', PaymentStatus::PENDING)->count())->toBe(1);
+});
+
+test('customer creates new online booking payment when previous snap attempt is expired', function () {
+    $user = User::factory()->create();
+    $vendor = Company::factory()->create(['type' => 'vendor']);
+    $vendor->companySetting()->updateOrCreate([], [
+        'minimum_down_payment' => 30,
+    ]);
+    $tour = Tour::factory()->create(['company_id' => $vendor->id]);
+    $booking = Booking::factory()->create([
+        'user_id' => $user->id,
+        'vendor_id' => $vendor->id,
+        'tour_id' => $tour->id,
+        'status' => BookingStatus::BOOKING_RESERVED,
+        'reserved_type' => 'system',
+        'reserved_expires_at' => now()->addMinutes(5),
+        'grand_total' => 1_000_000,
+    ]);
+
+    $oldPayment = $booking->payments()->create([
+        'owner_type' => User::class,
+        'owner_id' => $user->id,
+        'provider' => 'midtrans',
+        'payment_method' => 'snap',
+        'amount' => 300_000,
+        'status' => PaymentStatus::PENDING,
+        'payload' => [
+            'booking_payment_type' => 'down_payment',
+            'payment_type' => 'down_payment',
+            'order_id' => 'expired-booking-order',
+            'snap_token' => 'expired-snap-token',
+            'snap_token_expires_at' => now()->subMinute()->toISOString(),
+        ],
+    ]);
+
+    Mockery::mock('alias:Midtrans\Snap')
+        ->shouldReceive('getSnapToken')
+        ->once()
+        ->andReturn('fresh-booking-snap-token');
+
+    $response = $this->actingAs($user)->postJson("/bookings/{$booking->id}/online-payment", [
+        'payment_type' => 'down_payment',
+        'amount' => 300_000,
+    ]);
+
+    $response->assertOk()
+        ->assertJsonPath('payment.reused', false)
+        ->assertJsonPath('payment.payload.snap_token', 'fresh-booking-snap-token')
+        ->assertJsonPath('bookingPaymentResult.paymentStatus', 'pending');
+
+    $oldPayment->refresh();
+    $newPayment = $booking->fresh()->payments()
+        ->where('provider', 'midtrans')
+        ->where('id', '!=', $oldPayment->id)
+        ->latest('id')
+        ->first();
+
+    expect($oldPayment->status)->toBe(PaymentStatus::FAILED)
+        ->and($newPayment->id)->not->toBe($oldPayment->id)
+        ->and(data_get($newPayment->payload, 'order_id'))->not->toBe('expired-booking-order')
+        ->and(data_get($newPayment->payload, 'snap_token_expires_at'))->not->toBeNull();
+});
+
 test('dashboard online full payment keeps down payment booking status until midtrans confirms', function () {
     $user = User::factory()->create();
     $vendorUser = User::factory()->create();
     $vendor = Company::factory()->create(['type' => 'vendor']);
+    $vendor->companySetting()->updateOrCreate([], [
+        'minimum_down_payment' => 30,
+    ]);
     CompanyTeam::create([
         'company_id' => $vendor->id,
         'user_id' => $vendorUser->id,
@@ -412,6 +864,104 @@ test('dashboard online full payment keeps down payment booking status until midt
 
     expect($booking->fresh()->status)->toBe(BookingStatus::DOWN_PAYMENT)
         ->and($booking->fresh()->payment_mode)->toBe('online');
+});
+
+test('dashboard online payment preserves waiting approval payment process status until midtrans confirms', function () {
+    $user = User::factory()->create();
+    $vendorUser = User::factory()->create();
+    $vendor = Company::factory()->create(['type' => 'vendor']);
+    $vendor->companySetting()->updateOrCreate([], [
+        'minimum_down_payment' => 30,
+    ]);
+    CompanyTeam::create([
+        'company_id' => $vendor->id,
+        'user_id' => $vendorUser->id,
+        'status' => CompanyTeamStatus::ACTIVE,
+        'is_owner' => true,
+        'accepted_at' => now(),
+    ]);
+
+    $tour = Tour::factory()->create(['company_id' => $vendor->id]);
+    $booking = Booking::factory()->create([
+        'user_id' => $user->id,
+        'vendor_id' => $vendor->id,
+        'tour_id' => $tour->id,
+        'status' => BookingStatus::WAITING_PAYMENT_APPROVAL,
+        'reserved_type' => 'payment_in_progress',
+        'payment_mode' => 'manual',
+        'grand_total' => 1_000_000,
+        'total_price' => 1_000_000,
+        'tax_amount' => 0,
+        'platform_fee' => 0,
+        'commission_amount' => 0,
+    ]);
+
+    Mockery::mock('alias:Midtrans\Snap')
+        ->shouldReceive('getSnapToken')
+        ->once()
+        ->andReturn('dashboard-wa-payment-token');
+
+    $response = $this->actingAs($vendorUser)
+        ->postJson("/companies/{$vendor->username}/dashboard/bookings/{$booking->id}/online-payment", [
+            'payment_type' => 'down_payment',
+            'amount' => 500_000,
+        ]);
+
+    $response->assertOk()
+        ->assertJsonPath('payment.payload.snap_token', 'dashboard-wa-payment-token')
+        ->assertJsonPath('bookingPaymentResult.bookingStatus', 'waiting payment approval')
+        ->assertJsonPath('bookingPaymentResult.paymentStatus', 'pending');
+
+    expect($booking->fresh()->status)->toBe(BookingStatus::WAITING_PAYMENT_APPROVAL)
+        ->and($booking->fresh()->reserved_type)->toBe('payment_in_progress')
+        ->and($booking->fresh()->payment_mode)->toBe('online');
+});
+
+test('dashboard full payment amount must cover finalizable remaining balance', function () {
+    $user = User::factory()->create();
+    $vendorUser = User::factory()->create();
+    $vendor = Company::factory()->create(['type' => 'vendor']);
+    CompanyTeam::create([
+        'company_id' => $vendor->id,
+        'user_id' => $vendorUser->id,
+        'status' => CompanyTeamStatus::ACTIVE,
+        'is_owner' => true,
+        'accepted_at' => now(),
+    ]);
+
+    $tour = Tour::factory()->create(['company_id' => $vendor->id]);
+    $booking = Booking::factory()->create([
+        'user_id' => $user->id,
+        'vendor_id' => $vendor->id,
+        'tour_id' => $tour->id,
+        'status' => BookingStatus::DOWN_PAYMENT,
+        'grand_total' => 1_000_000,
+        'total_price' => 1_000_000,
+        'tax_amount' => 0,
+        'platform_fee' => 0,
+        'commission_amount' => 0,
+    ]);
+    $booking->payments()->create([
+        'owner_type' => User::class,
+        'owner_id' => $user->id,
+        'provider' => 'midtrans',
+        'payment_method' => 'snap',
+        'amount' => 250_000,
+        'status' => PaymentStatus::PAID,
+        'payload' => ['payment_type' => 'down_payment'],
+        'paid_at' => now()->subDay(),
+    ]);
+
+    $response = $this->actingAs($vendorUser)
+        ->postJson("/companies/{$vendor->username}/dashboard/bookings/{$booking->id}/online-payment", [
+            'payment_type' => 'full_payment',
+            'amount' => 500_000,
+        ]);
+
+    $response->assertUnprocessable()
+        ->assertJsonValidationErrors('payment');
+
+    expect($booking->fresh()->payments()->count())->toBe(1);
 });
 
 test('customer online full payment keeps down payment booking status until midtrans confirms', function () {
@@ -487,6 +1037,62 @@ test('customer cannot create online payment after booking reservation expired', 
         ->and($booking->payments()->count())->toBe(0);
 });
 
+test('customer midtrans expired status fails the payment attempt without finalizing booking while hold is active', function () {
+    $user = User::factory()->create();
+    $vendor = Company::factory()->create(['type' => 'vendor']);
+    $tour = Tour::factory()->create(['company_id' => $vendor->id]);
+    $booking = Booking::factory()->create([
+        'user_id' => $user->id,
+        'vendor_id' => $vendor->id,
+        'tour_id' => $tour->id,
+        'status' => BookingStatus::BOOKING_RESERVED,
+        'payment_mode' => 'online',
+        'grand_total' => 1_000_000,
+        'reserved_type' => 'system',
+        'reserved_expires_at' => now()->addMinutes(5),
+    ]);
+
+    $payment = $booking->payments()->create([
+        'owner_type' => User::class,
+        'owner_id' => $user->id,
+        'provider' => 'midtrans',
+        'payment_method' => 'snap',
+        'amount' => 200_000,
+        'status' => 'pending',
+        'payload' => [
+            'payment_type' => 'down_payment',
+            'order_id' => 'expired-booking-order',
+            'request' => [
+                'transaction_details' => [
+                    'order_id' => 'expired-booking-order',
+                ],
+            ],
+        ],
+    ]);
+
+    Mockery::mock('alias:Midtrans\Transaction')
+        ->shouldReceive('status')
+        ->once()
+        ->with('expired-booking-order')
+        ->andReturn((object) [
+            'order_id' => 'expired-booking-order',
+            'transaction_status' => 'expire',
+        ]);
+
+    $response = $this->actingAs($user)
+        ->postJson("/bookings/{$booking->id}/online-payment/{$payment->id}/confirm");
+
+    $response->assertOk()
+        ->assertJsonPath('booking.status', 'booking reserved')
+        ->assertJsonPath('payment.status', 'failed')
+        ->assertJsonPath('bookingPaymentResult.bookingStatus', 'booking reserved')
+        ->assertJsonPath('bookingPaymentResult.paymentStatus', 'failed')
+        ->assertJsonPath('bookingPaymentResult.paidAmount', 0);
+
+    expect($booking->fresh()->status)->toBe(BookingStatus::BOOKING_RESERVED)
+        ->and($payment->fresh()->status)->toBe(PaymentStatus::FAILED);
+});
+
 test('midtrans webhook marks online booking payment as paid and updates booking status', function () {
     $user = User::factory()->create();
     $vendor = Company::factory()->create(['type' => 'vendor']);
@@ -523,6 +1129,46 @@ test('midtrans webhook marks online booking payment as paid and updates booking 
     expect($booking->fresh()->payment_mode)->toBe('online');
     expect($payment->fresh()->status->value)->toBe('paid');
     expect(data_get($payment->fresh()->payload, 'payment_type'))->toBe('down_payment');
+});
+
+test('midtrans webhook repairs already paid booking payment with stale awaiting payment status', function () {
+    $user = User::factory()->create();
+    $vendor = Company::factory()->create(['type' => 'vendor']);
+    $tour = Tour::factory()->create(['company_id' => $vendor->id]);
+    $booking = Booking::factory()->create([
+        'user_id' => $user->id,
+        'vendor_id' => $vendor->id,
+        'tour_id' => $tour->id,
+        'status' => BookingStatus::AWAITING_PAYMENT,
+        'payment_mode' => 'online',
+        'grand_total' => 1_000_000,
+        'reserved_expires_at' => now()->addMinutes(5),
+    ]);
+
+    $payment = $booking->payments()->create([
+        'owner_type' => User::class,
+        'owner_id' => $user->id,
+        'provider' => 'midtrans',
+        'payment_method' => 'snap',
+        'amount' => 200_000,
+        'status' => 'paid',
+        'paid_at' => now()->subMinute(),
+        'payload' => [
+            'payment_type' => 'down_payment',
+        ],
+    ]);
+
+    $response = $this->postJson('/webhooks/midtrans/notification', [
+        'order_id' => $payment->id.'-booking',
+        'transaction_status' => 'settlement',
+    ]);
+
+    $response->assertOk()
+        ->assertJsonPath('message', 'Payment already processed');
+
+    expect($booking->fresh()->status)->toBe(BookingStatus::DOWN_PAYMENT)
+        ->and($booking->fresh()->reserved_expires_at)->toBeNull()
+        ->and($payment->fresh()->status)->toBe(PaymentStatus::PAID);
 });
 
 test('customer can confirm successful midtrans booking payment after hold expiry and update booking status', function () {
@@ -909,6 +1555,161 @@ test('booking create refresh exposes approved manual down payment result', funct
         ->assertOk()
         ->assertJsonPath('bookingPaymentResult.bookingStatus', 'down payment')
         ->assertJsonPath('bookingPaymentResult.paymentStatus', 'paid');
+});
+
+test('booking create refresh excludes agent vendor settlement from paid amount', function () {
+    $user = User::factory()->create();
+    $vendor = Company::factory()->create([
+        'username' => 'agentcollectionpaidvendor',
+        'type' => 'vendor',
+    ]);
+    $agent = Company::factory()->create([
+        'username' => 'agentcollectionpaidagent',
+        'type' => 'agent',
+    ]);
+    VendorAgentPartner::create([
+        'vendor_id' => $vendor->id,
+        'agent_id' => $agent->id,
+        'status' => VendorAgentPartnerStatus::ACTIVE,
+        'accepted_at' => now(),
+        'payment_mode' => 'agent',
+    ]);
+    Domain::create([
+        'subdomain' => $vendor->username,
+        'owner_type' => Company::class,
+        'owner_id' => $vendor->id,
+        'domain_enabled' => true,
+        'subdomain_enabled' => true,
+    ]);
+
+    $tour = Tour::factory()->create([
+        'company_id' => $vendor->id,
+        'status' => 'active',
+    ]);
+    $schedule = TourSchedule::create([
+        'tour_id' => $tour->id,
+        'tour_code' => $tour->code,
+        'company_id' => $vendor->id,
+        'departure_date' => now()->addDays(20)->toDateString(),
+        'return_date' => now()->addDays(25)->toDateString(),
+        'is_active' => true,
+    ]);
+    TourAvailability::create([
+        'company_id' => $vendor->id,
+        'tour_id' => $tour->id,
+        'schedule_id' => $schedule->id,
+        'max_pax' => 10,
+        'available' => 10,
+    ]);
+    $booking = Booking::factory()->create([
+        'user_id' => $user->id,
+        'vendor_id' => $vendor->id,
+        'agent_id' => $agent->id,
+        'tour_id' => $tour->id,
+        'departure_date' => $schedule->departure_date,
+        'status' => BookingStatus::DOWN_PAYMENT,
+        'payment_mode' => 'manual',
+        'grand_total' => 1_000_000,
+    ]);
+    $customerPayment = $booking->payments()->create([
+        'owner_type' => User::class,
+        'owner_id' => $user->id,
+        'provider' => 'manual',
+        'payment_method' => 'bank_transfer',
+        'amount' => 250_000,
+        'status' => PaymentStatus::PAID,
+        'paid_at' => now()->subDay(),
+        'payload' => [
+            'payment_type' => 'down_payment',
+            'booking_payment_type' => 'down_payment',
+            'payment_flow_stage' => 'customer_to_agent',
+            'payment_receiver_type' => 'agent',
+            'payment_receiver_company_id' => $agent->id,
+            'partnership_payment_mode' => 'agent',
+            'agent_review_status' => 'approved',
+            'vendor_review_status' => 'approved',
+            'counts_toward_booking_total' => true,
+        ],
+    ]);
+    $booking->payments()->create([
+        'owner_type' => User::class,
+        'owner_id' => $user->id,
+        'provider' => 'manual',
+        'payment_method' => 'bank_transfer',
+        'amount' => 250_000,
+        'status' => PaymentStatus::PAID,
+        'paid_at' => now()->subDay(),
+        'payload' => [
+            'payment_type' => 'down_payment',
+            'booking_payment_type' => 'down_payment',
+            'payment_flow_stage' => 'agent_to_vendor',
+            'linked_customer_payment_id' => $customerPayment->id,
+            'payment_receiver_type' => 'vendor',
+            'payment_receiver_company_id' => $vendor->id,
+            'partnership_payment_mode' => 'agent',
+            'vendor_review_status' => 'approved',
+            'counts_toward_booking_total' => false,
+        ],
+    ]);
+
+    $response = $this->actingAs($user)->get(route('bookings.create', [
+        'username' => $vendor->username,
+        'tour' => $tour,
+        'date' => $schedule->departure_date,
+        'booking_number' => $booking->booking_number,
+    ]));
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->component('tours/bookings/create')
+        ->where('paidAmount', 250000)
+        ->where('remainingBalance', 750000)
+        ->where('bookingPaymentResult.paidAmount', 250000)
+        ->where('bookingPaymentResult.remainingBalance', 750000));
+});
+
+test('customer full payment amount must cover finalizable remaining balance', function () {
+    Storage::fake('public');
+
+    $user = User::factory()->create();
+    $vendor = Company::factory()->create(['type' => 'vendor']);
+    $tour = Tour::factory()->create(['company_id' => $vendor->id]);
+    $booking = Booking::factory()->create([
+        'user_id' => $user->id,
+        'vendor_id' => $vendor->id,
+        'tour_id' => $tour->id,
+        'status' => BookingStatus::DOWN_PAYMENT,
+        'grand_total' => 1_000_000,
+    ]);
+    $booking->payments()->create([
+        'owner_type' => User::class,
+        'owner_id' => $user->id,
+        'provider' => 'manual',
+        'payment_method' => 'bank_transfer',
+        'amount' => 250_000,
+        'status' => PaymentStatus::PAID,
+        'paid_at' => now()->subDay(),
+        'payload' => [
+            'payment_type' => 'down_payment',
+            'counts_toward_booking_total' => true,
+        ],
+    ]);
+
+    $response = $this->actingAs($user)
+        ->from("/bookings/{$booking->id}/manual-payment")
+        ->post("/bookings/{$booking->id}/manual-payment", [
+            'sender_bank_name' => 'BCA',
+            'sender_account_number' => '1234567890',
+            'transfer_amount' => 500_000,
+            'payment_type' => 'full_payment',
+            'payment_date' => '2026-05-01',
+            'proof' => UploadedFile::fake()->image('underpaid-full-payment.jpg'),
+        ]);
+
+    $response->assertSessionHasErrors('payment');
+
+    expect($booking->payments()->count())->toBe(1)
+        ->and(Storage::disk('public')->allFiles('payment-proofs'))->toBe([]);
 });
 
 test('booking create refresh exposes approved manual full payment result', function () {

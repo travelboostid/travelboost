@@ -1,3 +1,7 @@
+import {
+    ManualPaymentDialog,
+    type ManualPaymentData,
+} from '@/components/booking/ManualPaymentDialog';
 import CompanyDashboardLayout from '@/components/layouts/company-dashboard';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -41,7 +45,6 @@ import {
     flexRender,
     getCoreRowModel,
     getFilteredRowModel,
-    getPaginationRowModel,
     getSortedRowModel,
     useReactTable,
     type ColumnDef,
@@ -49,6 +52,7 @@ import {
     type SortingState,
     type VisibilityState,
 } from '@tanstack/react-table';
+import axios from 'axios';
 import dayjs from 'dayjs';
 import {
     AlertTriangleIcon,
@@ -92,7 +96,9 @@ type FollowupPayload = {
 
 type FollowupSummary = {
     payment_overdue: number;
+    payment_overdue_amount: number;
     payment_due_soon: number;
+    payment_due_soon_amount: number;
     documents_incomplete: number;
     documents_due_soon: number;
 };
@@ -113,6 +119,27 @@ type PaymentDetail = {
         status?: string | null;
         raw?: Record<string, unknown> | null;
     } | null;
+    receipt_group?: {
+        title: string;
+        detail: PaymentDetail;
+    }[];
+};
+
+type PaymentReviewItem = {
+    id: number;
+    provider: string | null;
+    payment_method: string | null;
+    status: string | null;
+    payment_flow_stage: string | null;
+    sender_bank_name: string | null;
+    sender_account_number: string | null;
+    transfer_amount: number;
+    amount?: number;
+    proof_path: string | null;
+    proof_url: string | null;
+    payment_type: string | null;
+    payment_date: string | null;
+    receipt?: PaymentDetail['receipt'];
 };
 
 type BookingResource = {
@@ -120,6 +147,7 @@ type BookingResource = {
     booking_number: string;
     contact_name: string | null;
     status: string;
+    reserved_type?: string | null;
     pax_adult: number;
     pax_child: number;
     pax_infant: number;
@@ -130,6 +158,10 @@ type BookingResource = {
     commission_amount: string | null;
     payment_receiver_type?: 'vendor' | 'agent' | null;
     payment_receiver_company_id?: number | null;
+    invoice_options?: {
+        type: 'vendor_to_customer' | 'vendor_to_agent' | 'agent_to_customer';
+        label: string;
+    }[];
     input_by?: {
         user_name: string;
         role_label: string;
@@ -146,6 +178,7 @@ type BookingResource = {
     can_cancel?: boolean;
     can_refund?: boolean;
     can_reorder?: boolean;
+    proforma_invoice_available?: boolean;
     down_payment_detail: PaymentDetail | null;
     full_payment_detail: PaymentDetail | null;
     departure_date: string | null;
@@ -154,17 +187,36 @@ type BookingResource = {
     vendor: { id: number; name: string } | null;
     agent: { id: number; name: string } | null;
     user: { id: number; name: string } | null;
+    payment_workflow?: {
+        mode: 'direct' | 'agent_collection';
+        stage:
+            | 'direct_payment'
+            | 'customer_payment_due'
+            | 'customer_review'
+            | 'agent_vendor_payment_due'
+            | 'vendor_review'
+            | 'complete'
+            | 'closed';
+        customer_payment: PaymentReviewItem | null;
+        agent_vendor_payment: PaymentReviewItem | null;
+        can_review_customer_payment: boolean;
+        can_pay_vendor: boolean;
+        can_review_agent_vendor_payment: boolean;
+        vendor_bank_info?: {
+            bankName: string;
+            accountName: string;
+            accountNumber: string;
+        } | null;
+    };
     can_review_manual_payment?: boolean;
-    manual_payment: {
-        id: number;
-        sender_bank_name: string | null;
-        sender_account_number: string | null;
-        transfer_amount: number;
-        proof_path: string | null;
-        proof_url: string | null;
-        payment_type: string | null;
-        payment_date: string | null;
-    } | null;
+    can_review_payment?: boolean;
+    manual_payment:
+        | (PaymentReviewItem & {
+              id: number;
+              customer_payment?: PaymentReviewItem | null;
+              agent_vendor_payment?: PaymentReviewItem | null;
+          })
+        | null;
 };
 
 type PageProps = {
@@ -173,6 +225,9 @@ type PageProps = {
         total: number;
         current_page: number;
         last_page: number;
+        per_page: number;
+        from: number | null;
+        to: number | null;
         links: { url: string | null; label: string; active: boolean }[];
     };
     followupSummary: FollowupSummary;
@@ -181,16 +236,22 @@ type PageProps = {
 const STATUS_TABS = [
     { label: 'ALL', fullLabel: 'All', value: '', style: undefined },
     {
+        label: 'WP',
+        fullLabel: 'Awaiting Payment',
+        value: 'awaiting payment',
+        style: 'bg-amber-100 text-amber-800',
+    },
+    {
         label: 'BR',
         fullLabel: 'Booking Reserved',
         value: 'reserved',
         style: 'bg-teal-100 text-teal-800',
     },
     {
-        label: 'WP',
-        fullLabel: 'Awaiting Payment',
-        value: 'awaiting payment',
-        style: 'bg-amber-100 text-amber-800',
+        label: 'EX',
+        fullLabel: 'Expired',
+        value: 'expired',
+        style: 'bg-gray-100 text-gray-800',
     },
     {
         label: 'WA',
@@ -211,12 +272,6 @@ const STATUS_TABS = [
         style: 'bg-green-100 text-green-800',
     },
     {
-        label: 'WL',
-        fullLabel: 'Waiting List',
-        value: 'waiting list',
-        style: 'bg-purple-100 text-purple-800',
-    },
-    {
         label: 'CA',
         fullLabel: 'Cancelled',
         value: 'cancelled',
@@ -229,10 +284,10 @@ const STATUS_TABS = [
         style: 'bg-orange-100 text-orange-800',
     },
     {
-        label: 'EX',
-        fullLabel: 'Expired',
-        value: 'expired',
-        style: 'bg-gray-100 text-gray-800',
+        label: 'WL',
+        fullLabel: 'Waiting List',
+        value: 'waiting list',
+        style: 'bg-purple-100 text-purple-800',
     },
 ] as const;
 
@@ -350,21 +405,13 @@ function FollowupCell({
     followup: FollowupPayload;
     details?: string | null;
 }) {
-    const deadlineText = followupDeadlineText(followup);
+    const deadlineText =
+        followup.state === 'completed' ? null : followupDeadlineText(followup);
 
     return (
-        <div className="min-w-[150px]">
-            <Badge
-                variant="secondary"
-                className={cn(
-                    'text-[10px] font-bold uppercase tracking-wider',
-                    followupBadgeClass(followup),
-                )}
-            >
-                {followup.label}
-            </Badge>
+        <div className="min-w-[150px] text-xs">
             {details && (
-                <p className="mt-1 text-xs font-medium text-slate-700 dark:text-slate-200">
+                <p className="font-medium text-slate-700 dark:text-slate-200">
                     {details}
                 </p>
             )}
@@ -373,6 +420,15 @@ function FollowupCell({
                     {deadlineText}
                 </p>
             )}
+            <Badge
+                variant="secondary"
+                className={cn(
+                    'mt-1 text-[10px] font-bold uppercase tracking-wider',
+                    followupBadgeClass(followup),
+                )}
+            >
+                {followup.label}
+            </Badge>
         </div>
     );
 }
@@ -390,44 +446,87 @@ function PaymentDetailCell({
 
     const paymentLabel =
         `${detail.method_label} to ${detail.receiver_label}`.toUpperCase();
+    const hasReceipt =
+        Boolean(detail.receipt) ||
+        Boolean(
+            detail.receipt_group?.some(
+                (section) => section.detail.receipt !== null,
+            ),
+        );
 
     return (
         <div className="min-w-[150px] text-xs">
+            <p className="font-bold tabular-nums text-slate-900 dark:text-slate-100">
+                {formatIDR(detail.amount)}
+            </p>
+            <div className="mt-0.5 flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400">
+                <span>
+                    {detail.payment_date
+                        ? dayjs(detail.payment_date).format('DD MMM YYYY')
+                        : '—'}
+                </span>
+                {hasReceipt && (
+                    <button
+                        type="button"
+                        className="whitespace-nowrap font-semibold text-primary underline-offset-2 hover:text-blue-600 hover:underline dark:hover:text-blue-400"
+                        onClick={(event) => {
+                            event.stopPropagation();
+                            onViewReceipt(detail);
+                        }}
+                    >
+                        View Receipt
+                    </button>
+                )}
+            </div>
             <Badge
                 variant="secondary"
-                className="bg-primary/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary dark:bg-primary/20"
+                className="mt-1 bg-primary/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary dark:bg-primary/20"
             >
                 {paymentLabel}
             </Badge>
-            <p className="mt-0.5 font-bold tabular-nums text-slate-900 dark:text-slate-100">
-                {formatIDR(detail.amount)}
-            </p>
-            <p className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">
-                {detail.payment_date
-                    ? dayjs(detail.payment_date).format('DD MMM YYYY')
-                    : '—'}
-            </p>
-            {detail.receipt && (
-                <button
-                    type="button"
-                    className="mt-1 text-[11px] font-semibold text-primary underline-offset-2 hover:text-blue-600 hover:underline dark:hover:text-blue-400"
-                    onClick={(event) => {
-                        event.stopPropagation();
-                        onViewReceipt(detail);
-                    }}
-                >
-                    View Receipt
-                </button>
-            )}
         </div>
     );
 }
 
-function FollowupSummaryCards({ summary }: { summary: FollowupSummary }) {
+function FollowupSummaryCards({
+    summary,
+    companyUsername,
+}: {
+    summary: FollowupSummary;
+    companyUsername: string;
+}) {
+    const activeFollowup =
+        typeof window === 'undefined'
+            ? ''
+            : (new URLSearchParams(window.location.search).get('followup') ??
+              '');
+    const applyFollowupFilter = (followup: string) => {
+        const params = new URLSearchParams(window.location.search);
+        params.delete('page');
+        params.delete('status');
+
+        if (activeFollowup === followup) {
+            params.delete('followup');
+        } else {
+            params.set('followup', followup);
+        }
+
+        const query = params.toString();
+        router.get(
+            `/companies/${companyUsername}/dashboard/bookings${query ? `?${query}` : ''}`,
+            {},
+            {
+                preserveScroll: true,
+                preserveState: true,
+            },
+        );
+    };
     const items = [
         {
             label: 'Payment overdue',
             value: summary.payment_overdue,
+            amount: summary.payment_overdue_amount,
+            followup: 'payment_overdue',
             icon: AlertTriangleIcon,
             className:
                 'border-red-100 bg-red-50 text-red-600 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300',
@@ -435,6 +534,8 @@ function FollowupSummaryCards({ summary }: { summary: FollowupSummary }) {
         {
             label: 'Payment due soon',
             value: summary.payment_due_soon,
+            amount: summary.payment_due_soon_amount,
+            followup: 'payment_due_soon',
             icon: CreditCardIcon,
             className:
                 'border-amber-100 bg-amber-50 text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-300',
@@ -442,6 +543,8 @@ function FollowupSummaryCards({ summary }: { summary: FollowupSummary }) {
         {
             label: 'Docs incomplete',
             value: summary.documents_incomplete,
+            amount: null,
+            followup: 'documents_incomplete',
             icon: FileCheckIcon,
             className:
                 'border-slate-200 bg-white text-slate-700 dark:border-slate-800 dark:bg-slate-950/70 dark:text-slate-200',
@@ -449,6 +552,8 @@ function FollowupSummaryCards({ summary }: { summary: FollowupSummary }) {
         {
             label: 'Docs due soon',
             value: summary.documents_due_soon,
+            amount: null,
+            followup: 'documents_due_soon',
             icon: CalendarClockIcon,
             className:
                 'border-sky-100 bg-sky-50 text-sky-700 dark:border-sky-900/60 dark:bg-sky-950/30 dark:text-sky-300',
@@ -459,13 +564,18 @@ function FollowupSummaryCards({ summary }: { summary: FollowupSummary }) {
         <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
             {items.map((item) => {
                 const Icon = item.icon;
+                const isActive = activeFollowup === item.followup;
 
                 return (
-                    <div
+                    <button
+                        type="button"
                         key={item.label}
+                        onClick={() => applyFollowupFilter(item.followup)}
                         className={cn(
-                            'flex items-center justify-between rounded-md border px-2.5 py-2 shadow-sm dark:shadow-none',
+                            'flex items-center justify-between rounded-md border px-2.5 py-2 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 dark:shadow-none',
                             item.className,
+                            isActive &&
+                                'ring-2 ring-primary/35 ring-offset-1 ring-offset-background',
                         )}
                     >
                         <div>
@@ -475,9 +585,14 @@ function FollowupSummaryCards({ summary }: { summary: FollowupSummary }) {
                             <p className="mt-0.5 text-lg font-bold tabular-nums">
                                 {item.value}
                             </p>
+                            {item.amount !== null && item.amount > 0 && (
+                                <p className="mt-0.5 text-[10px] font-semibold tabular-nums opacity-85">
+                                    {formatIDR(item.amount)}
+                                </p>
+                            )}
                         </div>
                         <Icon className="size-4 opacity-80" />
-                    </div>
+                    </button>
                 );
             })}
         </div>
@@ -512,6 +627,142 @@ function PaxCell({
     );
 }
 
+function reviewPaymentAmount(payment: PaymentReviewItem): number {
+    return Number(payment.transfer_amount ?? payment.amount ?? 0);
+}
+
+function reviewPaymentType(payment: PaymentReviewItem): string {
+    return (payment.payment_type ?? 'full_payment').replace(/_/g, ' ');
+}
+
+function reviewPaymentDetail(payment: PaymentReviewItem): PaymentDetail {
+    const receiptType = payment.provider === 'midtrans' ? 'online' : 'manual';
+
+    return {
+        method_label:
+            payment.provider === 'midtrans'
+                ? 'Online payment'
+                : 'Manual payment',
+        receiver_label:
+            payment.payment_flow_stage === 'agent_to_vendor'
+                ? 'vendor'
+                : 'agent',
+        amount: reviewPaymentAmount(payment),
+        payment_date: payment.payment_date,
+        booking_payment_type: payment.payment_type as
+            | 'down_payment'
+            | 'full_payment'
+            | null
+            | undefined,
+        receipt:
+            payment.receipt ??
+            (payment.proof_url || payment.proof_path
+                ? {
+                      type: receiptType,
+                      url: payment.proof_url,
+                      provider: payment.provider,
+                      method: payment.payment_method,
+                      status: payment.status,
+                  }
+                : null),
+    };
+}
+
+function PaymentReviewSection({
+    title,
+    payment,
+    onViewReceipt,
+}: {
+    title: string;
+    payment: PaymentReviewItem;
+    onViewReceipt?: (detail: PaymentDetail) => void;
+}) {
+    const amount = reviewPaymentAmount(payment);
+    const detail = reviewPaymentDetail(payment);
+    const isOnlinePayment = payment.provider === 'midtrans';
+    const senderLabel = isOnlinePayment ? 'Payment Channel' : 'Sender Bank';
+    const senderValue = isOnlinePayment
+        ? 'Midtrans Online Payment'
+        : (payment.sender_bank_name ?? '-');
+    const accountLabel = isOnlinePayment ? 'Reference' : 'Account Number';
+    const accountValue = isOnlinePayment
+        ? (detail.receipt?.order_id ?? 'Gateway transaction')
+        : (payment.sender_account_number ?? '-');
+
+    return (
+        <div className="space-y-3 rounded-lg border bg-muted/30 p-4 text-sm">
+            <div className="flex items-center justify-between gap-4 border-b pb-2">
+                <span className="font-semibold">{title}</span>
+                <Badge variant="outline" className="uppercase">
+                    {payment.provider === 'midtrans'
+                        ? 'Online payment'
+                        : 'Manual payment'}
+                </Badge>
+            </div>
+            <div className="flex justify-between gap-4">
+                <span className="text-muted-foreground">{senderLabel}</span>
+                <span className="text-right font-semibold">{senderValue}</span>
+            </div>
+            <div className="flex justify-between gap-4">
+                <span className="text-muted-foreground">{accountLabel}</span>
+                <span
+                    className={cn(
+                        'text-right font-semibold',
+                        !isOnlinePayment && 'font-mono',
+                    )}
+                >
+                    {accountValue}
+                </span>
+            </div>
+            <div className="flex justify-between gap-4">
+                <span className="text-muted-foreground">Transfer Amount</span>
+                <span className="text-right font-semibold">
+                    {formatIDR(amount)}
+                </span>
+            </div>
+            <div className="flex justify-between gap-4">
+                <span className="text-muted-foreground">Payment Type</span>
+                <span className="text-right font-semibold capitalize">
+                    {reviewPaymentType(payment).toLowerCase()}
+                </span>
+            </div>
+            <div className="flex justify-between gap-4">
+                <span className="text-muted-foreground">Payment Time</span>
+                <span className="text-right font-semibold">
+                    {payment.payment_date
+                        ? dayjs(payment.payment_date).format('DD MMM YYYY')
+                        : '-'}
+                </span>
+            </div>
+            <div className="flex justify-between gap-4 border-t pt-3">
+                <span className="text-muted-foreground">Receipt</span>
+                {payment.proof_url ? (
+                    <a
+                        href={payment.proof_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="font-semibold text-primary hover:underline"
+                    >
+                        View receipt
+                    </a>
+                ) : detail.receipt && onViewReceipt ? (
+                    <button
+                        type="button"
+                        className="font-semibold text-primary underline-offset-2 hover:text-blue-600 hover:underline dark:hover:text-blue-400"
+                        onClick={() => onViewReceipt(detail)}
+                    >
+                        View receipt
+                    </button>
+                ) : (
+                    <span className="text-right text-muted-foreground">
+                        {payment.proof_path ?? 'Gateway receipt'}
+                    </span>
+                )}
+            </div>
+        </div>
+    );
+}
+
 function RowActions({
     booking,
     companyUsername,
@@ -520,26 +771,89 @@ function RowActions({
     companyUsername: string;
 }) {
     const [reviewOpen, setReviewOpen] = React.useState(false);
+    const [reviewReceiptPayment, setReviewReceiptPayment] =
+        React.useState<PaymentDetail | null>(null);
+    const [manualPayVendorOpen, setManualPayVendorOpen] = React.useState(false);
+    const [paymentActionError, setPaymentActionError] = React.useState<
+        string | null
+    >(null);
+    const [snapActive, setSnapActive] = React.useState(false);
     const [actionDialog, setActionDialog] = React.useState<
         'cancel' | 'refund' | null
     >(null);
     const [actionReason, setActionReason] = React.useState('');
     const [processingAction, setProcessingAction] = React.useState<
-        'accept' | 'cancel' | 'refund' | 'reorder' | null
+        | 'accept'
+        | 'decline'
+        | 'cancel'
+        | 'refund'
+        | 'reorder'
+        | 'pay_vendor_manual'
+        | 'pay_vendor_online'
+        | null
     >(null);
-    const canReviewManualPayment =
+    const workflow = booking.payment_workflow;
+    const workflowCustomerPayment = workflow?.customer_payment ?? null;
+    const workflowAgentVendorPayment = workflow?.agent_vendor_payment ?? null;
+    const manualPayment = booking.manual_payment;
+    const customerPayment =
+        manualPayment?.customer_payment ??
+        workflowCustomerPayment ??
+        (manualPayment?.payment_flow_stage === 'customer_to_agent'
+            ? manualPayment
+            : null);
+    const agentVendorPayment =
+        manualPayment?.agent_vendor_payment ?? workflowAgentVendorPayment;
+    const canPayVendor = Boolean(workflow?.can_pay_vendor && customerPayment);
+    const canReviewPayment =
         booking.status === 'waiting payment approval' &&
         Boolean(booking.manual_payment) &&
-        Boolean(booking.can_review_manual_payment);
+        Boolean(
+            booking.can_review_payment ?? booking.can_review_manual_payment,
+        );
+    const canOpenPaymentReview = canReviewPayment || canPayVendor;
+    const isAgentCollectionWorkflow = workflow?.mode === 'agent_collection';
+    const canReviewCustomerPayment = Boolean(
+        isAgentCollectionWorkflow &&
+        workflow?.can_review_customer_payment &&
+        booking.manual_payment?.payment_flow_stage === 'customer_to_agent',
+    );
+    const canReviewAgentVendorPayment = Boolean(
+        isAgentCollectionWorkflow &&
+        workflow?.can_review_agent_vendor_payment &&
+        booking.manual_payment?.payment_flow_stage === 'agent_to_vendor',
+    );
+    const canReviewDirectPayment = Boolean(
+        !isAgentCollectionWorkflow &&
+        canReviewPayment &&
+        booking.manual_payment,
+    );
+    const canSubmitPaymentReviewDecision =
+        canReviewCustomerPayment ||
+        canReviewAgentVendorPayment ||
+        canReviewDirectPayment;
     const hasPendingActionRequest = Boolean(booking.pending_action_request);
     const canCancel = Boolean(booking.can_cancel) && !hasPendingActionRequest;
     const canRefund = Boolean(booking.can_refund) && !hasPendingActionRequest;
     const canReorder = Boolean(booking.can_reorder);
-    const canViewInvoice = booking.status === 'full payment';
+    const invoiceOptions = booking.invoice_options ?? [];
+    const showProformaInvoice = Boolean(booking.proforma_invoice_available);
     const manualPaymentId = booking.manual_payment?.id;
+    const isPayVendorFollowup =
+        booking.payment_followup?.action_label === 'Pay Vendor';
+    const editStep =
+        booking.payment_followup?.action_url && !isPayVendorFollowup
+            ? 'payment'
+            : booking.document_followup?.action_url
+              ? 'documents'
+              : null;
+    const editHref = `/companies/${companyUsername}/dashboard/bookings/${booking.id}/edit${
+        editStep ? `?step=${editStep}` : ''
+    }`;
+    const editLabel = 'Edit';
 
     React.useEffect(() => {
-        if (!canReviewManualPayment || !manualPaymentId) {
+        if (!canOpenPaymentReview || !manualPaymentId) {
             return;
         }
 
@@ -550,14 +864,39 @@ function RowActions({
         if (reviewPaymentId === String(manualPaymentId)) {
             setReviewOpen(true);
         }
-    }, [canReviewManualPayment, manualPaymentId]);
+    }, [canOpenPaymentReview, manualPaymentId]);
+
+    const handleReviewOpenChange = React.useCallback(
+        (open: boolean) => {
+            if (!open && snapActive) {
+                return;
+            }
+
+            setReviewOpen(open);
+        },
+        [snapActive],
+    );
 
     const submitManualPaymentDecision = () => {
-        if (!booking.manual_payment) return;
+        if (!booking.manual_payment || !canSubmitPaymentReviewDecision) return;
 
         setProcessingAction('accept');
         router.post(
-            `/companies/${companyUsername}/dashboard/bookings/${booking.id}/manual-payments/${booking.manual_payment.id}/accept`,
+            `/companies/${companyUsername}/dashboard/bookings/${booking.id}/payments/${booking.manual_payment.id}/approve`,
+            {},
+            {
+                preserveScroll: true,
+                onSuccess: () => setReviewOpen(false),
+                onFinish: () => setProcessingAction(null),
+            },
+        );
+    };
+    const submitPaymentDecline = () => {
+        if (!booking.manual_payment || !canSubmitPaymentReviewDecision) return;
+
+        setProcessingAction('decline');
+        router.post(
+            `/companies/${companyUsername}/dashboard/bookings/${booking.id}/payments/${booking.manual_payment.id}/decline`,
             {},
             {
                 preserveScroll: true,
@@ -593,6 +932,172 @@ function RowActions({
             },
         );
     };
+    const customerPaymentAmount = customerPayment
+        ? reviewPaymentAmount(customerPayment)
+        : 0;
+    const customerPaymentType =
+        (customerPayment?.payment_type as 'down_payment' | 'full_payment') ??
+        'full_payment';
+    const submitAgentVendorManualPayment = (data: ManualPaymentData) => {
+        if (!customerPayment || !data.proofFile) return;
+
+        setProcessingAction('pay_vendor_manual');
+        setPaymentActionError(null);
+
+        const formData = new FormData();
+        formData.append('sender_bank_name', data.senderBankName);
+        formData.append('sender_account_number', data.senderAccountNumber);
+        formData.append('transfer_amount', String(customerPaymentAmount));
+        formData.append('payment_type', customerPaymentType);
+        formData.append('payment_date', data.paymentDate);
+        formData.append('proof', data.proofFile);
+
+        router.post(
+            `/companies/${companyUsername}/dashboard/bookings/${booking.id}/manual-payment`,
+            formData,
+            {
+                forceFormData: true,
+                preserveScroll: true,
+                onSuccess: () => {
+                    setManualPayVendorOpen(false);
+                    setReviewOpen(false);
+                },
+                onError: (errors) => {
+                    setPaymentActionError(
+                        String(
+                            errors.payment ??
+                                errors.payment_type ??
+                                errors.transfer_amount ??
+                                'Payment could not be submitted.',
+                        ),
+                    );
+                },
+                onFinish: () => setProcessingAction(null),
+            },
+        );
+    };
+    const confirmAgentVendorOnlinePayment = (
+        paymentId: number | string | undefined,
+    ) => {
+        if (!paymentId) {
+            setProcessingAction(null);
+            return;
+        }
+
+        axios
+            .post(
+                `/companies/${companyUsername}/dashboard/bookings/${booking.id}/online-payment/${paymentId}/confirm`,
+                {},
+                {
+                    withCredentials: true,
+                    withXSRFToken: true,
+                },
+            )
+            .then((response) => {
+                const status = response.data?.payment?.status;
+
+                if (status === 'paid') {
+                    setReviewOpen(false);
+                    router.reload({ preserveScroll: true });
+                    return;
+                }
+
+                setPaymentActionError(
+                    'Payment is not completed yet. You can reopen Online Payment to continue the same attempt while it is active.',
+                );
+            })
+            .catch(() => {
+                setPaymentActionError(
+                    'Payment status could not be confirmed yet. You can reopen Pay Vendor and continue the same payment attempt.',
+                );
+            })
+            .finally(() => setProcessingAction(null));
+    };
+    const submitAgentVendorOnlinePayment = () => {
+        if (!customerPayment || customerPaymentAmount <= 0) return;
+
+        setProcessingAction('pay_vendor_online');
+        setPaymentActionError(null);
+
+        axios
+            .post(
+                `/companies/${companyUsername}/dashboard/bookings/${booking.id}/online-payment`,
+                {
+                    payment_type: customerPaymentType,
+                    amount: customerPaymentAmount,
+                },
+                {
+                    withCredentials: true,
+                    withXSRFToken: true,
+                },
+            )
+            .then((response) => {
+                const snapToken = response.data?.payment?.payload
+                    ?.snap_token as string | undefined;
+                const paymentId = response.data?.payment?.id as
+                    | number
+                    | string
+                    | undefined;
+                const snap = (window as any).snap;
+
+                if (!snapToken || typeof snap?.pay !== 'function') {
+                    setPaymentActionError(
+                        'Online payment is not available in this browser session. Please refresh and try again.',
+                    );
+                    setSnapActive(false);
+                    setProcessingAction(null);
+                    return;
+                }
+
+                setSnapActive(true);
+
+                try {
+                    snap.pay(snapToken, {
+                        onSuccess: () => {
+                            setSnapActive(false);
+                            confirmAgentVendorOnlinePayment(paymentId);
+                        },
+                        onPending: () => {
+                            setSnapActive(false);
+                            setPaymentActionError(
+                                'Payment is still pending. You can reopen Online Payment to continue the same attempt while it is active.',
+                            );
+                            setProcessingAction(null);
+                        },
+                        onError: () => {
+                            setSnapActive(false);
+                            setPaymentActionError(
+                                'Online payment could not be completed. Please try again.',
+                            );
+                            setProcessingAction(null);
+                        },
+                        onClose: () => {
+                            setSnapActive(false);
+                            setPaymentActionError(
+                                'Payment window closed. You can reopen Online Payment and continue the same attempt while it is active.',
+                            );
+                            setProcessingAction(null);
+                        },
+                    });
+                } catch {
+                    setSnapActive(false);
+                    setPaymentActionError(
+                        'Online payment could not be opened. Please try again.',
+                    );
+                    setProcessingAction(null);
+                }
+            })
+            .catch((error) => {
+                const message =
+                    error?.response?.data?.message ??
+                    error?.response?.data?.errors?.payment?.[0] ??
+                    'Online payment could not be started.';
+
+                setPaymentActionError(String(message));
+                setSnapActive(false);
+                setProcessingAction(null);
+            });
+    };
 
     return (
         <>
@@ -608,7 +1113,7 @@ function RowActions({
                     </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start">
-                    {canReviewManualPayment && (
+                    {canReviewPayment && (
                         <>
                             <DropdownMenuItem
                                 onSelect={(event) => {
@@ -622,27 +1127,19 @@ function RowActions({
                             <DropdownMenuSeparator />
                         </>
                     )}
-                    {booking.payment_followup?.action_url && (
-                        <DropdownMenuItem asChild>
-                            <Link href={booking.payment_followup.action_url}>
+                    {canPayVendor && (
+                        <>
+                            <DropdownMenuItem
+                                onSelect={(event) => {
+                                    event.preventDefault();
+                                    setReviewOpen(true);
+                                }}
+                            >
                                 <CreditCardIcon className="mr-2 h-4 w-4" />
-                                {booking.payment_followup.action_label ??
-                                    'Complete Payment'}
-                            </Link>
-                        </DropdownMenuItem>
-                    )}
-                    {booking.document_followup?.action_url && (
-                        <DropdownMenuItem asChild>
-                            <Link href={booking.document_followup.action_url}>
-                                <FileCheckIcon className="mr-2 h-4 w-4" />
-                                {booking.document_followup.action_label ??
-                                    'Complete Documents'}
-                            </Link>
-                        </DropdownMenuItem>
-                    )}
-                    {(booking.payment_followup?.action_url ||
-                        booking.document_followup?.action_url) && (
-                        <DropdownMenuSeparator />
+                                Pay Vendor
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                        </>
                     )}
                     <DropdownMenuItem asChild>
                         <Link
@@ -652,16 +1149,25 @@ function RowActions({
                             View Detail
                         </Link>
                     </DropdownMenuItem>
-                    {canViewInvoice && (
-                        <DropdownMenuItem asChild>
+                    {invoiceOptions.map((option) => (
+                        <DropdownMenuItem key={option.type} asChild>
                             <a
-                                href={`/companies/${companyUsername}/dashboard/bookings/${booking.id}/invoice`}
+                                href={`/companies/${companyUsername}/dashboard/bookings/${booking.id}/invoice?type=${option.type}`}
                                 target="_blank"
                                 rel="noreferrer"
                             >
                                 <FileTextIcon className="mr-2 h-4 w-4" />
-                                View Invoice
+                                {option.label}
                             </a>
+                        </DropdownMenuItem>
+                    ))}
+                    {showProformaInvoice && (
+                        <DropdownMenuItem
+                            disabled
+                            title="Proforma invoice will be available soon"
+                        >
+                            <FileTextIcon className="mr-2 h-4 w-4" />
+                            Proforma Invoice
                         </DropdownMenuItem>
                     )}
                     {canReorder && (
@@ -683,11 +1189,9 @@ function RowActions({
                     )}
                     <DropdownMenuSeparator />
                     <DropdownMenuItem asChild>
-                        <Link
-                            href={`/companies/${companyUsername}/dashboard/bookings/${booking.id}/edit`}
-                        >
+                        <Link href={editHref}>
                             <EditIcon className="mr-2 h-4 w-4" />
-                            Edit
+                            {editLabel}
                         </Link>
                     </DropdownMenuItem>
                     {(canCancel || canRefund || hasPendingActionRequest) && (
@@ -728,108 +1232,272 @@ function RowActions({
                 </DropdownMenuContent>
             </DropdownMenu>
 
-            <Dialog open={reviewOpen} onOpenChange={setReviewOpen}>
-                <DialogContent className="w-full max-w-md">
+            <Dialog
+                open={reviewOpen}
+                modal={!snapActive}
+                onOpenChange={handleReviewOpenChange}
+            >
+                <DialogContent
+                    className="w-full max-w-2xl"
+                    showCloseButton={!snapActive}
+                    onEscapeKeyDown={(event) => {
+                        if (snapActive) {
+                            event.preventDefault();
+                        }
+                    }}
+                    onInteractOutside={(event) => {
+                        if (snapActive) {
+                            event.preventDefault();
+                        }
+                    }}
+                >
                     <DialogHeader>
-                        <DialogTitle>Review Manual Payment</DialogTitle>
+                        <DialogTitle>
+                            {canPayVendor && !canSubmitPaymentReviewDecision
+                                ? 'Pay Vendor'
+                                : 'Review Payment'}
+                        </DialogTitle>
                         <DialogDescription>
-                            Verify the payment receipt before approving this
-                            booking payment.
+                            {canPayVendor && !canSubmitPaymentReviewDecision
+                                ? 'Review the customer receipt, then submit the agent-to-vendor settlement.'
+                                : 'Verify the payment receipt before approving this booking payment.'}
                         </DialogDescription>
                     </DialogHeader>
 
-                    {booking.manual_payment && (
-                        <div className="space-y-3 rounded-lg border bg-muted/30 p-4 text-sm">
-                            <div className="flex justify-between gap-4">
-                                <span className="text-muted-foreground">
-                                    Sender Bank
-                                </span>
-                                <span className="text-right font-semibold">
-                                    {booking.manual_payment.sender_bank_name ??
-                                        '—'}
-                                </span>
-                            </div>
-                            <div className="flex justify-between gap-4">
-                                <span className="text-muted-foreground">
-                                    Account Number
-                                </span>
-                                <span className="text-right font-mono font-semibold">
-                                    {booking.manual_payment
-                                        .sender_account_number ?? '—'}
-                                </span>
-                            </div>
-                            <div className="flex justify-between gap-4">
-                                <span className="text-muted-foreground">
-                                    Transfer Amount
-                                </span>
-                                <span className="text-right font-semibold">
-                                    {formatIDR(
-                                        booking.manual_payment.transfer_amount,
+                    {workflow?.mode === 'agent_collection' && (
+                        <div className="space-y-4">
+                            {customerPayment && (
+                                <PaymentReviewSection
+                                    title="Customer to Agent"
+                                    payment={customerPayment}
+                                    onViewReceipt={setReviewReceiptPayment}
+                                />
+                            )}
+
+                            {agentVendorPayment ? (
+                                <PaymentReviewSection
+                                    title="Agent to Vendor"
+                                    payment={agentVendorPayment}
+                                    onViewReceipt={setReviewReceiptPayment}
+                                />
+                            ) : canPayVendor ? (
+                                <div className="space-y-3 rounded-lg border bg-muted/30 p-4 text-sm">
+                                    <div className="flex items-center justify-between gap-4">
+                                        <div>
+                                            <p className="font-semibold">
+                                                Agent to Vendor
+                                            </p>
+                                            <p className="text-xs text-muted-foreground">
+                                                Submit the vendor settlement for
+                                                this verified customer payment.
+                                            </p>
+                                        </div>
+                                        <Badge
+                                            variant="outline"
+                                            className="uppercase"
+                                        >
+                                            {customerPayment
+                                                ? reviewPaymentType(
+                                                      customerPayment,
+                                                  )
+                                                : 'Payment'}
+                                        </Badge>
+                                    </div>
+                                    <div className="flex justify-between gap-4 border-t pt-3">
+                                        <span className="text-muted-foreground">
+                                            Amount
+                                        </span>
+                                        <span className="font-semibold">
+                                            {formatIDR(customerPaymentAmount)}
+                                        </span>
+                                    </div>
+                                    {paymentActionError && (
+                                        <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300">
+                                            {paymentActionError}
+                                        </p>
                                     )}
-                                </span>
-                            </div>
-                            <div className="flex justify-between gap-4">
-                                <span className="text-muted-foreground">
-                                    Payment Type
-                                </span>
-                                <span className="text-right font-semibold capitalize">
-                                    {(
-                                        booking.manual_payment.payment_type ??
-                                        'full_payment'
-                                    )
-                                        .replace(/_/g, ' ')
-                                        .toLowerCase()}
-                                </span>
-                            </div>
-                            <div className="flex justify-between gap-4">
-                                <span className="text-muted-foreground">
-                                    Payment Time
-                                </span>
-                                <span className="text-right font-semibold">
-                                    {booking.manual_payment.payment_date
-                                        ? dayjs(
-                                              booking.manual_payment
-                                                  .payment_date,
-                                          ).format('DD MMM YYYY')
-                                        : '—'}
-                                </span>
-                            </div>
-                            <div className="flex justify-between gap-4 border-t pt-3">
-                                <span className="text-muted-foreground">
-                                    Receipt
-                                </span>
-                                {booking.manual_payment.proof_url ? (
-                                    <a
-                                        href={booking.manual_payment.proof_url}
-                                        target="_blank"
-                                        rel="noreferrer"
-                                        className="font-semibold text-primary hover:underline"
-                                    >
-                                        View receipt
-                                    </a>
-                                ) : (
-                                    <span className="text-right text-muted-foreground">
-                                        {booking.manual_payment.proof_path ??
-                                            '—'}
-                                    </span>
-                                )}
-                            </div>
+                                    <div className="flex flex-wrap justify-end gap-2 pt-1">
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            disabled={processingAction !== null}
+                                            onClick={() =>
+                                                setManualPayVendorOpen(true)
+                                            }
+                                        >
+                                            Manual Transfer
+                                        </Button>
+                                        <Button
+                                            type="button"
+                                            disabled={processingAction !== null}
+                                            onClick={
+                                                submitAgentVendorOnlinePayment
+                                            }
+                                        >
+                                            {processingAction ===
+                                            'pay_vendor_online'
+                                                ? 'Opening...'
+                                                : 'Online Payment'}
+                                        </Button>
+                                    </div>
+                                </div>
+                            ) : null}
                         </div>
                     )}
 
-                    <DialogFooter>
-                        <Button
-                            type="button"
-                            disabled={processingAction !== null}
-                            onClick={submitManualPaymentDecision}
-                        >
-                            {processingAction === 'accept'
-                                ? 'Accepting...'
-                                : 'Accept'}
-                        </Button>
-                    </DialogFooter>
+                    {workflow?.mode !== 'agent_collection' &&
+                        booking.manual_payment &&
+                        !booking.manual_payment.agent_vendor_payment && (
+                            <div className="space-y-3 rounded-lg border bg-muted/30 p-4 text-sm">
+                                <div className="flex justify-between gap-4">
+                                    <span className="text-muted-foreground">
+                                        Sender Bank
+                                    </span>
+                                    <span className="text-right font-semibold">
+                                        {booking.manual_payment
+                                            .sender_bank_name ?? '—'}
+                                    </span>
+                                </div>
+                                <div className="flex justify-between gap-4">
+                                    <span className="text-muted-foreground">
+                                        Account Number
+                                    </span>
+                                    <span className="text-right font-mono font-semibold">
+                                        {booking.manual_payment
+                                            .sender_account_number ?? '—'}
+                                    </span>
+                                </div>
+                                <div className="flex justify-between gap-4">
+                                    <span className="text-muted-foreground">
+                                        Transfer Amount
+                                    </span>
+                                    <span className="text-right font-semibold">
+                                        {formatIDR(
+                                            booking.manual_payment
+                                                .transfer_amount,
+                                        )}
+                                    </span>
+                                </div>
+                                <div className="flex justify-between gap-4">
+                                    <span className="text-muted-foreground">
+                                        Payment Type
+                                    </span>
+                                    <span className="text-right font-semibold capitalize">
+                                        {(
+                                            booking.manual_payment
+                                                .payment_type ?? 'full_payment'
+                                        )
+                                            .replace(/_/g, ' ')
+                                            .toLowerCase()}
+                                    </span>
+                                </div>
+                                <div className="flex justify-between gap-4">
+                                    <span className="text-muted-foreground">
+                                        Payment Time
+                                    </span>
+                                    <span className="text-right font-semibold">
+                                        {booking.manual_payment.payment_date
+                                            ? dayjs(
+                                                  booking.manual_payment
+                                                      .payment_date,
+                                              ).format('DD MMM YYYY')
+                                            : '—'}
+                                    </span>
+                                </div>
+                                <div className="flex justify-between gap-4 border-t pt-3">
+                                    <span className="text-muted-foreground">
+                                        Receipt
+                                    </span>
+                                    {booking.manual_payment.proof_url ? (
+                                        <a
+                                            href={
+                                                booking.manual_payment.proof_url
+                                            }
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="font-semibold text-primary hover:underline"
+                                        >
+                                            View receipt
+                                        </a>
+                                    ) : (
+                                        <span className="text-right text-muted-foreground">
+                                            {booking.manual_payment
+                                                .proof_path ?? '—'}
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                    {workflow?.mode !== 'agent_collection' &&
+                        booking.manual_payment?.customer_payment &&
+                        booking.manual_payment.agent_vendor_payment && (
+                            <div className="space-y-4">
+                                <PaymentReviewSection
+                                    title="Customer to Agent"
+                                    payment={
+                                        booking.manual_payment.customer_payment
+                                    }
+                                />
+                                <PaymentReviewSection
+                                    title="Agent to Vendor"
+                                    payment={
+                                        booking.manual_payment
+                                            .agent_vendor_payment
+                                    }
+                                />
+                            </div>
+                        )}
+
+                    {canSubmitPaymentReviewDecision && (
+                        <DialogFooter>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                disabled={processingAction !== null}
+                                onClick={submitPaymentDecline}
+                            >
+                                {processingAction === 'decline'
+                                    ? 'Declining...'
+                                    : 'Decline'}
+                            </Button>
+                            <Button
+                                type="button"
+                                disabled={processingAction !== null}
+                                onClick={submitManualPaymentDecision}
+                            >
+                                {processingAction === 'accept'
+                                    ? 'Accepting...'
+                                    : 'Accept'}
+                            </Button>
+                        </DialogFooter>
+                    )}
                 </DialogContent>
             </Dialog>
+
+            <ManualPaymentDialog
+                open={manualPayVendorOpen}
+                onClose={() => setManualPayVendorOpen(false)}
+                onSubmit={submitAgentVendorManualPayment}
+                isSubmitting={processingAction === 'pay_vendor_manual'}
+                vendorBank={
+                    workflow?.vendor_bank_info ?? {
+                        bankName: '',
+                        accountName: '',
+                        accountNumber: '',
+                    }
+                }
+                amount={customerPaymentAmount}
+            />
+
+            <ReceiptDialog
+                payment={reviewReceiptPayment}
+                onOpenChange={(open) => {
+                    if (!open) {
+                        setReviewReceiptPayment(null);
+                    }
+                }}
+            />
 
             <Dialog
                 open={actionDialog !== null}
@@ -1088,20 +1756,10 @@ function buildColumns(
         },
         {
             id: 'payment_followup',
-            header: 'Payment Follow-up',
-            cell: ({ row }) => {
-                const followup = row.original.payment_followup;
-                const amountDue = Number(followup.amount_due ?? 0);
-
-                return (
-                    <FollowupCell
-                        followup={followup}
-                        details={
-                            amountDue > 0 ? formatIDR(amountDue) : undefined
-                        }
-                    />
-                );
-            },
+            header: 'Payment Status',
+            cell: ({ row }) => (
+                <FollowupCell followup={row.original.payment_followup} />
+            ),
             enableSorting: false,
         },
         {
@@ -1116,7 +1774,7 @@ function buildColumns(
                         followup={followup}
                         details={
                             missingCount > 0
-                                ? `${missingCount} passenger${missingCount === 1 ? '' : 's'} missing`
+                                ? `${missingCount} passenger${missingCount === 1 ? '' : 's'}`
                                 : undefined
                         }
                     />
@@ -1149,6 +1807,28 @@ function receiptPaymentTime(payment: PaymentDetail): string {
     );
 }
 
+function receiptRowsForPayment(payment: PaymentDetail): string[][] {
+    if (!payment.receipt) {
+        return [];
+    }
+
+    return [
+        ['Type', payment.receipt.type.toUpperCase()],
+        ['Method', payment.method_label],
+        ['Receiver', payment.receiver_label],
+        ['Amount', formatIDR(payment.amount)],
+        ['Payment Time', receiptPaymentTime(payment)],
+    ];
+}
+
+function paginationLabel(label: string): string {
+    return label
+        .replace('&laquo; Previous', 'Previous')
+        .replace('Next &raquo;', 'Next')
+        .replace('&laquo;', 'Previous')
+        .replace('&raquo;', 'Next');
+}
+
 function ReceiptDialog({
     payment,
     onOpenChange,
@@ -1157,20 +1837,15 @@ function ReceiptDialog({
     onOpenChange: (open: boolean) => void;
 }) {
     const receipt = payment?.receipt ?? null;
-    const receiptRows =
-        payment && receipt
-            ? [
-                  ['Type', receipt.type.toUpperCase()],
-                  ['Method', payment.method_label],
-                  ['Receiver', payment.receiver_label],
-                  ['Amount', formatIDR(payment.amount)],
-                  ['Payment Time', receiptPaymentTime(payment)],
-              ]
-            : [];
+    const receiptRows = payment ? receiptRowsForPayment(payment) : [];
+    const receiptGroup =
+        payment?.receipt_group?.filter((section) => section.detail.receipt) ??
+        [];
+    const hasReceiptGroup = receiptGroup.length > 0;
 
     return (
         <Dialog open={payment !== null} onOpenChange={onOpenChange}>
-            <DialogContent className="w-full max-w-md">
+            <DialogContent className="w-full max-w-lg">
                 <DialogHeader>
                     <DialogTitle>Payment Receipt</DialogTitle>
                     <DialogDescription>
@@ -1178,33 +1853,90 @@ function ReceiptDialog({
                     </DialogDescription>
                 </DialogHeader>
 
-                {payment && receipt && (
-                    <div className="space-y-3 text-sm">
-                        {receiptRows.map(([label, value]) => (
-                            <div
-                                key={label}
-                                className="flex justify-between gap-4"
-                            >
-                                <span className="text-muted-foreground">
-                                    {label}
-                                </span>
-                                <span className="text-right font-semibold">
-                                    {value}
-                                </span>
-                            </div>
-                        ))}
+                {hasReceiptGroup ? (
+                    <div className="space-y-4 text-sm">
+                        {receiptGroup.map((section) => {
+                            const sectionReceipt = section.detail.receipt;
+                            const sectionRows = receiptRowsForPayment(
+                                section.detail,
+                            );
 
-                        {receipt.type === 'manual' && receipt.url && (
-                            <a
-                                href={receipt.url}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="inline-flex text-sm font-semibold text-primary underline-offset-2 hover:text-blue-600 hover:underline dark:hover:text-blue-400"
-                            >
-                                Open uploaded receipt
-                            </a>
-                        )}
+                            return (
+                                <div
+                                    key={section.title}
+                                    className="space-y-3 rounded-lg border p-4"
+                                >
+                                    <div className="flex items-center justify-between gap-3 border-b pb-2">
+                                        <span className="font-semibold">
+                                            {section.title}
+                                        </span>
+                                        <Badge
+                                            variant="outline"
+                                            className="uppercase"
+                                        >
+                                            {sectionReceipt?.type ?? 'receipt'}
+                                        </Badge>
+                                    </div>
+
+                                    {sectionRows.map(([label, value]) => (
+                                        <div
+                                            key={`${section.title}-${label}`}
+                                            className="flex justify-between gap-4"
+                                        >
+                                            <span className="text-muted-foreground">
+                                                {label}
+                                            </span>
+                                            <span className="text-right font-semibold">
+                                                {value}
+                                            </span>
+                                        </div>
+                                    ))}
+
+                                    {sectionReceipt?.type === 'manual' &&
+                                        sectionReceipt.url && (
+                                            <a
+                                                href={sectionReceipt.url}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                className="inline-flex text-sm font-semibold text-primary underline-offset-2 hover:text-blue-600 hover:underline dark:hover:text-blue-400"
+                                            >
+                                                Open uploaded receipt
+                                            </a>
+                                        )}
+                                </div>
+                            );
+                        })}
                     </div>
+                ) : (
+                    payment &&
+                    receipt && (
+                        <div className="space-y-3 text-sm">
+                            {receiptRows.map(([label, value]) => (
+                                <div
+                                    key={label}
+                                    className="flex justify-between gap-4"
+                                >
+                                    <span className="text-muted-foreground">
+                                        {label}
+                                    </span>
+                                    <span className="text-right font-semibold">
+                                        {value}
+                                    </span>
+                                </div>
+                            ))}
+
+                            {receipt.type === 'manual' && receipt.url && (
+                                <a
+                                    href={receipt.url}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="inline-flex text-sm font-semibold text-primary underline-offset-2 hover:text-blue-600 hover:underline dark:hover:text-blue-400"
+                                >
+                                    Open uploaded receipt
+                                </a>
+                            )}
+                        </div>
+                    )
                 )}
             </DialogContent>
         </Dialog>
@@ -1267,7 +1999,6 @@ export default function Page({ data, followupSummary }: PageProps) {
         onGlobalFilterChange: setGlobalFilter,
         globalFilterFn: 'fuzzy' as any,
         getCoreRowModel: getCoreRowModel(),
-        getPaginationRowModel: getPaginationRowModel(),
         getSortedRowModel: getSortedRowModel(),
         getFilteredRowModel: getFilteredRowModel(),
         onColumnVisibilityChange: setColumnVisibility,
@@ -1314,7 +2045,8 @@ export default function Page({ data, followupSummary }: PageProps) {
                                                 params.forEach((v, k) => {
                                                     if (
                                                         k !== 'status' &&
-                                                        k !== 'page'
+                                                        k !== 'page' &&
+                                                        k !== 'followup'
                                                     ) {
                                                         query[k] = v;
                                                     }
@@ -1360,7 +2092,10 @@ export default function Page({ data, followupSummary }: PageProps) {
                     })}
                 </div>
 
-                <FollowupSummaryCards summary={followupSummary} />
+                <FollowupSummaryCards
+                    summary={followupSummary}
+                    companyUsername={company.username}
+                />
 
                 {/* ── Toolbar: search + view-columns ──────────────────── */}
                 <div className="order-first flex flex-col gap-2 rounded-xl border border-slate-200/80 bg-card/95 p-2 shadow-sm dark:border-slate-800 dark:bg-slate-950/80 sm:flex-row sm:items-center sm:justify-between">
@@ -1423,7 +2158,7 @@ export default function Page({ data, followupSummary }: PageProps) {
 
                 {/* ── Table card ──────────────────────────────────────── */}
                 <div className="rounded-xl border border-border bg-card shadow-sm w-full overflow-hidden dark:border-slate-800 dark:bg-slate-950/80 dark:shadow-none">
-                    <div className="w-full max-h-[65vh] overflow-auto relative [scrollbar-gutter:stable]">
+                    <div className="w-full overflow-x-auto overflow-y-visible relative [scrollbar-gutter:stable]">
                         <Table
                             unwrapped
                             className="w-full border-separate border-spacing-0 text-sm"
@@ -1514,33 +2249,38 @@ export default function Page({ data, followupSummary }: PageProps) {
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2">
                     <p className="text-sm text-muted-foreground bg-slate-50 px-3 py-1.5 rounded-md border border-slate-100 dark:bg-slate-950 dark:border-slate-800 dark:text-slate-400">
                         <span className="font-semibold text-foreground">
-                            {tableRows.length}
+                            {data.from ?? 0}
+                        </span>{' '}
+                        -{' '}
+                        <span className="font-semibold text-foreground">
+                            {data.to ?? 0}
                         </span>{' '}
                         of{' '}
                         <span className="font-semibold text-foreground">
-                            {table.getFilteredRowModel().rows.length}
+                            {data.total}
                         </span>{' '}
-                        booking(s) shown.
+                        booking(s)
                     </p>
-                    <div className="flex gap-2">
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => table.previousPage()}
-                            disabled={!table.getCanPreviousPage()}
-                            className="border-slate-200"
-                        >
-                            Previous
-                        </Button>
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => table.nextPage()}
-                            disabled={!table.getCanNextPage()}
-                            className="border-slate-200"
-                        >
-                            Next
-                        </Button>
+                    <div className="flex flex-wrap justify-center gap-2">
+                        {data.links.map((link, index) => (
+                            <Button
+                                key={`${link.label}-${index}`}
+                                variant={link.active ? 'default' : 'outline'}
+                                size="sm"
+                                onClick={() => {
+                                    if (link.url) {
+                                        router.visit(link.url, {
+                                            preserveScroll: true,
+                                            preserveState: true,
+                                        });
+                                    }
+                                }}
+                                disabled={!link.url}
+                                className="min-w-9 border-slate-200"
+                            >
+                                {paginationLabel(link.label)}
+                            </Button>
+                        ))}
                     </div>
                 </div>
             </div>

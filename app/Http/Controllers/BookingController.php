@@ -9,6 +9,7 @@ use App\Actions\Booking\SyncAvailabilityAction;
 use App\Enums\BookingStatus;
 use App\Enums\PaymentStatus;
 use App\Http\Requests\StoreBookingRequest;
+use App\Http\Requests\UpdateBookingRequest;
 use App\Models\Booking;
 use App\Models\BookingDocument;
 use App\Models\Payment;
@@ -18,10 +19,13 @@ use App\Models\TourAvailability;
 use App\Models\TourPrice;
 use App\Models\TourSchedule;
 use App\Models\User;
+use App\Services\BookingDownPaymentRuleService;
 use App\Services\BookingNumberService;
 use App\Services\BookingPaymentReceiverService;
+use App\Services\BookingPaymentWorkflowService;
 use App\Services\BookingPricingService;
 use App\Services\BookingService;
+use App\Services\ReusableMidtransBookingPaymentAttemptService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -51,8 +55,12 @@ class BookingController extends Controller
         $settings = $tour->company?->companySetting;
         $deadlineDays = (int) ($settings?->booking_deadline ?? 0);
         $bookingTimeLimitMinutes = $this->resolveBookingTimeLimitMinutes($tour);
-        $minimumDownPaymentPct = $this->minimumDownPaymentPct($settings?->minimum_down_payment);
-        $downPaymentAvailable = $minimumDownPaymentPct !== null;
+        $downPaymentRule = app(BookingDownPaymentRuleService::class)->resolveForSettings($settings);
+        $minimumDownPaymentPct = $downPaymentRule !== null
+            && $downPaymentRule['mode'] === BookingDownPaymentRuleService::MODE_GRAND_TOTAL_PERCENT
+            ? $downPaymentRule['percent']
+            : null;
+        $downPaymentAvailable = $downPaymentRule !== null;
         $cutoffDate = now()->addDays($deadlineDays)->toDateString();
 
         $tenant = request()->attributes->get('tenant');
@@ -91,6 +99,7 @@ class BookingController extends Controller
         $paymentReceiver = app(BookingPaymentReceiverService::class)
             ->resolveForTourAndTenant($tour, $tenant);
         $paymentReceiverSettings = $paymentReceiver['settings'];
+        $paymentReceiverPartnership = $paymentReceiver['partnership'];
         $existingBooking = null;
         $bookingConflict = null;
         $isResumingExistingBooking = false;
@@ -181,9 +190,7 @@ class BookingController extends Controller
         }
 
         $paidAmount = $existingBooking
-            ? (float) $existingBooking->payments()
-                ->where('status', PaymentStatus::PAID->value)
-                ->sum('amount')
+            ? app(BookingPaymentWorkflowService::class)->finalizablePaidAmount($existingBooking)
             : 0.0;
         $remainingBalance = $existingBooking
             ? max(0.0, (float) $existingBooking->grand_total - $paidAmount)
@@ -246,6 +253,7 @@ class BookingController extends Controller
             'bookingTimeLimitMinutes' => $bookingTimeLimitMinutes,
             'downPaymentAvailable' => $downPaymentAvailable,
             'minimumDownPaymentPct' => $minimumDownPaymentPct,
+            'downPaymentRule' => $downPaymentRule,
             'minimumVatPct' => (float) ($settings?->minimum_vat ?? 11),
             'platformFeePerPax' => app(BookingPricingService::class)->platformFeePerPax(),
             'vendorBankInfo' => [
@@ -255,11 +263,16 @@ class BookingController extends Controller
             ],
             'termConditions' => $settings?->term_conditions,
             'isResumingExistingBooking' => $isResumingExistingBooking,
+            'serverNow' => now()->toIso8601String(),
             'reservedExpiresAt' => $existingBooking?->reserved_expires_at?->toIso8601String(),
             'remainingHoldSeconds' => $this->remainingHoldSeconds($existingBooking),
             'paidAmount' => $paidAmount,
             'remainingBalance' => $remainingBalance,
             'fullPaymentAvailable' => $fullPaymentAvailable,
+            'paymentMethodAvailability' => [
+                'manual' => (bool) ($paymentReceiverPartnership?->manual_payment_enabled ?? true),
+                'online' => (bool) ($paymentReceiverPartnership?->online_payment_enabled ?? true),
+            ],
             'paymentUnavailableReason' => $paymentUnavailableReason,
             'bookingPaymentResult' => $bookingPaymentResult,
             'savedPassengers' => $user instanceof User
@@ -301,6 +314,31 @@ class BookingController extends Controller
         } catch (\Exception $e) {
             return back()->with('error', 'Failed to create booking: '.$e->getMessage());
         }
+    }
+
+    public function update(
+        UpdateBookingRequest $request,
+        string|Booking $usernameOrBooking,
+        BookingService $bookingService,
+        ?Booking $booking = null
+    ): RedirectResponse {
+        $booking = $booking ?? $usernameOrBooking;
+        abort_unless($booking instanceof Booking, 404);
+
+        abort_unless($request->user()?->id === $booking->user_id, 403);
+
+        abort_unless(in_array($booking->status, [
+            BookingStatus::RESERVED,
+            BookingStatus::BOOKING_RESERVED,
+            BookingStatus::AWAITING_PAYMENT,
+            BookingStatus::WAITING_PAYMENT_APPROVAL,
+            BookingStatus::DOWN_PAYMENT,
+            BookingStatus::FULL_PAYMENT,
+        ], true), 422);
+
+        $bookingService->updateBookingSnapshot($booking, $request->validated(), $request->user());
+
+        return back()->with('success', 'Booking updated successfully.');
     }
 
     /**
@@ -649,6 +687,8 @@ class BookingController extends Controller
 
         $payment = DB::transaction(function () use ($request, $booking, $validated): Payment {
             $paymentReceiver = app(BookingPaymentReceiverService::class)->resolveForBooking($booking);
+            $paymentWorkflowPayload = app(BookingPaymentWorkflowService::class)
+                ->initialPaymentPayload($paymentReceiver, (string) $validated['payment_type']);
             $proof = $request->file('proof');
             $path = $proof->store('payment-proofs', 'public');
 
@@ -663,11 +703,8 @@ class BookingController extends Controller
                     'sender_bank' => $validated['sender_bank_name'],
                     'sender_account' => $validated['sender_account_number'],
                     'proof_path' => $path,
-                    'payment_type' => $validated['payment_type'],
                     'payment_date' => Carbon::parse($validated['payment_date'])->toDateString(),
-                    'payment_receiver_type' => $paymentReceiver['receiver_type'],
-                    'payment_receiver_company_id' => $paymentReceiver['receiver_company']?->id,
-                    'partnership_payment_mode' => $paymentReceiver['payment_mode'],
+                    ...$paymentWorkflowPayload,
                 ],
             ]);
 
@@ -714,8 +751,36 @@ class BookingController extends Controller
             (string) $validated['payment_type']
         );
 
-        $payment = DB::transaction(function () use ($request, $booking, $validated) {
-            $paymentReceiver = app(BookingPaymentReceiverService::class)->resolveForBooking($booking);
+        $paymentReceiver = app(BookingPaymentReceiverService::class)->resolveForBooking($booking);
+        $paymentWorkflowPayload = app(BookingPaymentWorkflowService::class)
+            ->initialPaymentPayload($paymentReceiver, (string) $validated['payment_type']);
+        $reusableAttemptService = app(ReusableMidtransBookingPaymentAttemptService::class);
+        $reusablePayment = $reusableAttemptService->findReusableAttempt(
+            $booking,
+            get_class($request->user()),
+            $request->user()->id,
+            (string) $validated['payment_type'],
+            (float) $validated['amount'],
+            $paymentWorkflowPayload,
+        );
+
+        if ($reusablePayment) {
+            $booking->update([
+                'status' => $this->pendingOnlinePaymentBookingStatus($booking),
+                'payment_mode' => 'online',
+            ]);
+
+            return response()->json([
+                'payment' => [
+                    'id' => $reusablePayment->id,
+                    'payload' => $reusablePayment->payload,
+                    'reused' => true,
+                ],
+                'bookingPaymentResult' => $this->buildBookingPaymentResult($booking->fresh(), $reusablePayment->fresh()),
+            ]);
+        }
+
+        $payment = DB::transaction(function () use ($request, $booking, $validated, $paymentWorkflowPayload, $reusableAttemptService) {
             $payment = $booking->payments()->create([
                 'owner_type' => get_class($request->user()),
                 'owner_id' => $request->user()->id,
@@ -723,13 +788,7 @@ class BookingController extends Controller
                 'payment_method' => 'snap',
                 'amount' => $validated['amount'],
                 'status' => 'unpaid',
-                'payload' => [
-                    'booking_payment_type' => $validated['payment_type'],
-                    'payment_type' => $validated['payment_type'],
-                    'payment_receiver_type' => $paymentReceiver['receiver_type'],
-                    'payment_receiver_company_id' => $paymentReceiver['receiver_company']?->id,
-                    'partnership_payment_mode' => $paymentReceiver['payment_mode'],
-                ],
+                'payload' => $paymentWorkflowPayload,
             ]);
 
             $params = [
@@ -744,8 +803,10 @@ class BookingController extends Controller
                 'callbacks' => [
                     'finish' => url('/mybookings'),
                 ],
+                'expiry' => $reusableAttemptService->snapExpiryPayload(),
             ];
             $orderId = $params['transaction_details']['order_id'];
+            $snapTokenExpiresAt = $reusableAttemptService->newSnapTokenExpiresAt();
 
             try {
                 $snapToken = Snap::getSnapToken($params);
@@ -765,14 +826,11 @@ class BookingController extends Controller
             }
 
             $payload = [
-                'booking_payment_type' => $validated['payment_type'],
-                'payment_type' => $validated['payment_type'],
+                ...$paymentWorkflowPayload,
                 'order_id' => $orderId,
                 'snap_token' => $snapToken,
+                'snap_token_expires_at' => $snapTokenExpiresAt->toISOString(),
                 'request' => $params,
-                'payment_receiver_type' => $paymentReceiver['receiver_type'],
-                'payment_receiver_company_id' => $paymentReceiver['receiver_company']?->id,
-                'partnership_payment_mode' => $paymentReceiver['payment_mode'],
             ];
 
             if (! $snapToken) {
@@ -784,6 +842,7 @@ class BookingController extends Controller
             $payment->update([
                 'status' => 'pending',
                 'payload' => $payload,
+                'expired_at' => $snapTokenExpiresAt,
             ]);
 
             $booking->update([
@@ -801,6 +860,7 @@ class BookingController extends Controller
             'payment' => [
                 'id' => $payment->id,
                 'payload' => $payment->payload,
+                'reused' => false,
             ],
             'bookingPaymentResult' => $this->buildBookingPaymentResult($booking->fresh(), $payment->fresh()),
         ]);
@@ -829,7 +889,13 @@ class BookingController extends Controller
         }
 
         DB::transaction(function () use ($booking, $payment, $transactionStatus, $newStatus): void {
-            if ($newStatus === PaymentStatus::PAID) {
+            $paymentWorkflow = app(BookingPaymentWorkflowService::class);
+
+            if (
+                $newStatus === PaymentStatus::PAID
+                && ! $paymentWorkflow->isCustomerToAgentPayment($payment)
+                && ! $paymentWorkflow->isAgentToVendorPayment($payment)
+            ) {
                 app(FinalizeBookingPaymentAction::class)
                     ->assertCanFinalizeIncomingPaidPayment($booking->fresh(), $payment->fresh());
             }
@@ -841,7 +907,22 @@ class BookingController extends Controller
             ]);
 
             if ($newStatus === PaymentStatus::PAID) {
-                app(FinalizeBookingPaymentAction::class)->execute($booking->fresh(), $payment->fresh());
+                $freshPayment = $payment->fresh();
+
+                if ($paymentWorkflow->isCustomerToAgentPayment($freshPayment)) {
+                    $paymentWorkflow->markOnlineCustomerPaymentVerified($freshPayment);
+                    $booking->fresh()->update([
+                        'status' => BookingStatus::WAITING_PAYMENT_APPROVAL,
+                        'reserved_expires_at' => null,
+                    ]);
+                } elseif ($paymentWorkflow->isAgentToVendorPayment($freshPayment)) {
+                    $booking->fresh()->update([
+                        'status' => BookingStatus::WAITING_PAYMENT_APPROVAL,
+                        'reserved_expires_at' => null,
+                    ]);
+                } else {
+                    app(FinalizeBookingPaymentAction::class)->execute($booking->fresh(), $freshPayment);
+                }
             }
 
             app(NotifyBookingPaymentEventAction::class)->execute(
@@ -1015,6 +1096,8 @@ class BookingController extends Controller
     private function assertCustomerCanStartPayment(Booking $booking, float $incomingAmount, string $paymentType): void
     {
         $this->assertPaymentTypeAllowedForBooking($booking, $paymentType);
+        app(BookingDownPaymentRuleService::class)->assertIncomingDownPaymentAmount($booking, $incomingAmount, $paymentType);
+        $this->assertFullPaymentCoversRemainingBalance($booking, $incomingAmount, $paymentType);
 
         try {
             app(FinalizeBookingPaymentAction::class)
@@ -1024,6 +1107,25 @@ class BookingController extends Controller
                 'payment' => self::CUSTOMER_PAYMENT_UNAVAILABLE_MESSAGE,
             ]);
         }
+    }
+
+    private function assertFullPaymentCoversRemainingBalance(Booking $booking, float $incomingAmount, string $paymentType): void
+    {
+        if ($paymentType !== 'full_payment') {
+            return;
+        }
+
+        $freshBooking = $booking->fresh();
+        $paidAmount = app(BookingPaymentWorkflowService::class)->finalizablePaidAmount($freshBooking);
+        $remainingBalance = max(0.0, (float) $freshBooking->grand_total - $paidAmount);
+
+        if ($incomingAmount + 0.01 >= $remainingBalance) {
+            return;
+        }
+
+        throw ValidationException::withMessages([
+            'payment' => 'Full payment must cover the remaining booking balance.',
+        ]);
     }
 
     private function pendingOnlinePaymentBookingStatus(Booking $booking): BookingStatus
@@ -1046,43 +1148,12 @@ class BookingController extends Controller
             return;
         }
 
-        $tour->loadMissing('company.companySetting');
-        $minimumDownPaymentPct = $this->minimumDownPaymentPct($tour->company?->companySetting?->minimum_down_payment);
-
-        if ($minimumDownPaymentPct !== null) {
-            return;
-        }
-
-        throw ValidationException::withMessages([
-            'payment_type' => 'Down payment is unavailable for this tour. Please complete full payment.',
-        ]);
+        app(BookingDownPaymentRuleService::class)->assertPaymentTypeAvailableForTour($tour, $paymentType);
     }
 
     private function assertPaymentTypeAllowedForBooking(Booking $booking, string $paymentType): void
     {
-        if ($paymentType !== 'down_payment') {
-            return;
-        }
-
-        $booking->loadMissing('vendor.companySetting');
-        $minimumDownPaymentPct = $this->minimumDownPaymentPct($booking->vendor?->companySetting?->minimum_down_payment);
-
-        if ($minimumDownPaymentPct !== null) {
-            return;
-        }
-
-        throw ValidationException::withMessages([
-            'payment_type' => 'Down payment is unavailable for this tour. Please complete full payment.',
-        ]);
-    }
-
-    private function minimumDownPaymentPct(mixed $value): ?float
-    {
-        if (! is_numeric($value) || (float) $value <= 0) {
-            return null;
-        }
-
-        return (float) $value;
+        app(BookingDownPaymentRuleService::class)->assertPaymentTypeAvailableForBooking($booking, $paymentType);
     }
 
     /**
@@ -1195,9 +1266,7 @@ class BookingController extends Controller
     {
         $booking->loadMissing(['tour.image', 'payments']);
 
-        $paidAmount = (float) $booking->payments()
-            ->where('status', PaymentStatus::PAID->value)
-            ->sum('amount');
+        $paidAmount = app(BookingPaymentWorkflowService::class)->finalizablePaidAmount($booking);
         $grandTotal = (float) $booking->grand_total;
         $latestPayment = $payment ?? $booking->payments()
             ->latest()

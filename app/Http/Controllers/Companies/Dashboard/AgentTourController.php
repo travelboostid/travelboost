@@ -25,6 +25,7 @@ class AgentTourController extends Controller
                 'tour.schedules.availability',
                 'tour.schedules.prices.priceCategory',
                 'category',
+                'agentDocument',
             ])
             ->when($status !== 'all', function ($query) use ($status) {
                 return $query->where('status', $status);
@@ -47,9 +48,12 @@ class AgentTourController extends Controller
         $request->validate([
             'category_id' => 'nullable|exists:tour_categories,id',
             'status' => 'nullable|in:active,inactive',
+            'agent_document_id' => 'nullable|exists:medias,id',
         ]);
 
-        $agent_tour->update($request->only(['category_id', 'status']));
+        $data = $request->only(['category_id', 'status', 'agent_document_id']);
+
+        $agent_tour->update($data);
 
         return back();
     }

@@ -24,6 +24,8 @@ class StoreTourRequest extends FormRequest
      */
     public function rules(): array
     {
+        $company = $this->route('company');
+
         return [
             'code' => 'nullable|string|max:50|unique:tours,code',
             // 'name'         => 'required|string|max:255',
@@ -42,7 +44,11 @@ class StoreTourRequest extends FormRequest
             'country_id' => 'nullable|exists:countries,id',
             'destination' => 'nullable|string|max:100',
             'category_id' => 'nullable|exists:tour_categories,id',
-            'product_commission_category_id' => 'required|exists:product_commission_categories,id',
+            'product_commission_category_id' => [
+                'required',
+                Rule::exists('product_commission_categories', 'id')
+                    ->where('company_id', $company?->id),
+            ],
             'parent_id' => 'nullable|exists:tours,id',
             'image_id' => 'nullable|exists:medias,id',
             'document_id' => 'nullable|exists:medias,id',

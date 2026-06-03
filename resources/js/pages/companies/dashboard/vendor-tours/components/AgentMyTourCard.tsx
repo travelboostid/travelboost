@@ -10,6 +10,7 @@ import {
     IconCalendarEvent,
     IconPdf,
 } from '@tabler/icons-react';
+import { extractDocumentUrl } from '@/lib/utils';
 import { MessageSquareIcon } from 'lucide-react';
 import BaseTourCard from './BaseTourCard';
 
@@ -95,6 +96,28 @@ export default function AgentMyTourCard({
 
         onBook?.(normalizedTour);
     };
+    const agentDocument = tour.agent_document || tour.agentDocument;
+    const agentDocumentUrl =
+        tour.agent_document_url ||
+        (agentDocument ? extractDocumentUrl(agentDocument) : '');
+    const vendorDocumentUrl =
+        tour.vendor_document_url ||
+        (tour.document ? extractDocumentUrl(tour.document) : '');
+    const itineraryDocumentUrl =
+        tour.itinerary_document_url || agentDocumentUrl || vendorDocumentUrl;
+    const hasItinerary = Boolean(itineraryDocumentUrl);
+    const handleViewItinerary = () => {
+        if (itineraryDocumentUrl) {
+            window.open(
+                itineraryDocumentUrl,
+                '_blank',
+                'noopener,noreferrer',
+            );
+            return;
+        }
+
+        onViewBrochure?.();
+    };
 
     return (
         <BaseTourCard
@@ -133,7 +156,7 @@ export default function AgentMyTourCard({
                                 variant="default"
                                 size="sm"
                                 type="button"
-                                className="flex-1 rounded-xl h-9 shadow-sm bg-primary text-primary-foreground hover:scale-105 active:scale-95"
+                                className="h-9 flex-1 rounded-xl bg-primary text-primary-foreground shadow-sm hover:scale-105 active:scale-95"
                                 onClick={handleBookClick}
                             >
                                 <IconCalendarEvent size={18} />
@@ -148,9 +171,9 @@ export default function AgentMyTourCard({
                             <Button
                                 variant="secondary"
                                 size="sm"
-                                className="flex-1 rounded-xl bg-slate-100 dark:bg-slate-800 h-9 border-none text-slate-700 dark:text-slate-300"
-                                disabled={!tour.document}
-                                onClick={onViewBrochure}
+                                className="h-9 flex-1 rounded-xl border-none bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                                disabled={!hasItinerary}
+                                onClick={handleViewItinerary}
                             >
                                 <IconPdf size={18} />
                             </Button>
@@ -164,7 +187,7 @@ export default function AgentMyTourCard({
                             <Button
                                 variant="secondary"
                                 size="sm"
-                                className="flex-1 rounded-xl bg-slate-100 dark:bg-slate-800 h-9 border-none text-slate-700 dark:text-slate-300"
+                                className="h-9 flex-1 rounded-xl border-none bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300"
                                 disabled={startingChat}
                                 onClick={onChat}
                             >
@@ -184,8 +207,8 @@ export default function AgentMyTourCard({
                             <Button
                                 variant="secondary"
                                 size="sm"
-                                className="flex-1 rounded-xl bg-slate-100 dark:bg-slate-800 h-9 border-none text-slate-700 dark:text-slate-300"
-                                disabled={!tour.document}
+                                className="h-9 flex-1 rounded-xl border-none bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                                disabled={!hasItinerary}
                                 onClick={onShareFB}
                             >
                                 <IconBrandFacebook size={18} />

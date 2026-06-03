@@ -42,6 +42,8 @@ Route::middleware(['auth'])->group(function () {
         ->name('customer.bookings.reorder');
     Route::post('/bookings/{booking}/release-hold', [BookingController::class, 'releaseHold'])
         ->name('customer.bookings.release-hold');
+    Route::put('/bookings/{booking}', [BookingController::class, 'update'])
+        ->name('customer.bookings.update');
     Route::post('/bookings/{booking}/travel-documents', [BookingController::class, 'updateTravelDocuments'])
         ->name('customer.bookings.travel-documents');
     Route::get('/bookings/{booking}/payment-result', [BookingController::class, 'paymentResult'])

@@ -37,6 +37,7 @@ Route::domain('{username}.'.$appHost)->middleware(['use-customer-props',  'use-a
         Route::post('/bookings/{tour}/reserve', [BookingController::class, 'reserve'])->name('bookings.reserve');
         Route::post('/bookings/{tour}', [BookingController::class, 'store'])->name('bookings.store');
         Route::post('/bookings/{booking}/release-hold', [BookingController::class, 'releaseHold']);
+        Route::put('/bookings/{booking}', [BookingController::class, 'update']);
         Route::post('/bookings/{booking}/travel-documents', [BookingController::class, 'updateTravelDocuments']);
         Route::get('/bookings/{booking}/payment-result', [BookingController::class, 'paymentResult']);
         Route::post('/bookings/{booking}/manual-payment', [BookingController::class, 'storeManualPayment']);

@@ -7,6 +7,7 @@ import { useCompanyDashboardNavMainMenu } from './use-company-dashboard-nav-main
 export function NavMain({
     activeMenuIds,
     openMenuIds,
+    onNavigateAway,
 }: CompanyDashboardLayoutProps) {
     const { company } = usePageSharedDataProps();
     const menus = useCompanyDashboardNavMainMenu();
@@ -20,6 +21,7 @@ export function NavMain({
                 menu={menus as any}
                 activeMenuIds={activeMenuIds || []}
                 openMenuIds={openMenuIds || []}
+                onNavigateAway={onNavigateAway}
             />
         </SidebarGroup>
     );

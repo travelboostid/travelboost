@@ -28,6 +28,38 @@ import {
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
+const cleanRoomType = (roomType: string | null | undefined) => {
+    const normalized = String(roomType || '')
+        .replace(/\s*\([^)]*\)/g, '')
+        .trim();
+
+    return normalized || 'TBA';
+};
+
+const getRoomCapacity = (row: any) => {
+    const explicitCapacity = Number(row.room_capacity);
+
+    if (Number.isFinite(explicitCapacity) && explicitCapacity > 0) {
+        return explicitCapacity;
+    }
+
+    const roomType = String(row.room_type || '').toLowerCase();
+
+    if (roomType.includes('quad')) {
+        return 4;
+    }
+
+    if (roomType.includes('triple')) {
+        return 3;
+    }
+
+    if (roomType.includes('twin') || roomType.includes('double')) {
+        return 2;
+    }
+
+    return 1;
+};
+
 const TourAutocomplete = ({
     tours,
     value,
@@ -144,28 +176,62 @@ export default function RoomListing() {
     }, [tours, filters.tour_id]);
 
     const groupedData = useMemo(() => {
-        const groups: Record<string, Record<string, typeof roomData>> = {};
+        const groups: Record<
+            string,
+            Array<{ roomType: string; passengerList: typeof roomData }>
+        > = {};
+        const temporaryGroups: Record<string, Record<string, typeof roomData>> =
+            {};
 
         if (!roomData) {
             return groups;
         }
 
         roomData.forEach((row: any) => {
-            if (!groups[row.booking_number]) {
-                groups[row.booking_number] = {};
+            if (!temporaryGroups[row.booking_number]) {
+                temporaryGroups[row.booking_number] = {};
             }
 
-            const roomType = row.room_type || 'TBA';
+            const roomType = cleanRoomType(row.room_type);
 
-            if (!groups[row.booking_number][roomType]) {
-                groups[row.booking_number][roomType] = [];
+            if (!temporaryGroups[row.booking_number][roomType]) {
+                temporaryGroups[row.booking_number][roomType] = [];
             }
 
-            groups[row.booking_number][roomType].push(row);
+            temporaryGroups[row.booking_number][roomType].push(row);
+        });
+
+        Object.entries(temporaryGroups).forEach(([bookingNumber, roomTypes]) => {
+            groups[bookingNumber] = [];
+
+            Object.entries(roomTypes).forEach(([roomType, rows]) => {
+                const capacity = Math.max(1, getRoomCapacity(rows[0]));
+
+                for (let index = 0; index < rows.length; index += capacity) {
+                    groups[bookingNumber].push({
+                        roomType,
+                        passengerList: rows.slice(index, index + capacity),
+                    });
+                }
+            });
         });
 
         return groups;
     }, [roomData]);
+
+    const roomRecap = useMemo(() => {
+        const recap: Record<string, number> = {};
+
+        Object.values(groupedData).forEach((rooms) => {
+            rooms.forEach((room) => {
+                recap[room.roomType] = (recap[room.roomType] || 0) + 1;
+            });
+        });
+
+        return Object.entries(recap)
+            .sort(([first], [second]) => first.localeCompare(second))
+            .map(([roomType, count]) => ({ roomType, count }));
+    }, [groupedData]);
 
     const handlePrintNative = (event: React.MouseEvent) => {
         event.preventDefault();
@@ -209,6 +275,7 @@ export default function RoomListing() {
 
     let globalIndex = 1;
     let bookingCounter = 0;
+    let roomCounter = 0;
 
     return (
         <CompanyDashboardLayout
@@ -223,92 +290,86 @@ export default function RoomListing() {
                 id="print-area"
                 className="mx-auto w-full max-w-[1600px] p-4 print:m-0 print:max-w-none print:p-0 md:p-6 lg:p-8"
             >
-                <div className="mb-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 print:hidden">
-                    <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1.35fr)_minmax(260px,0.65fr)]">
-                        <div className="min-w-0">
-                            <div>
-                                <label className="mb-2 block text-xs font-black uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
-                                    Tour Product
-                                </label>
-                                <TourAutocomplete
-                                    tours={tours}
-                                    value={filters.tour_id || ''}
-                                    onChange={(value) =>
+                <div className="mb-6 rounded-[28px] border border-slate-200/80 bg-white p-4 shadow-[0_18px_45px_rgba(15,23,42,0.06)] dark:border-slate-800 dark:bg-slate-900 print:hidden md:p-5">
+                    <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(360px,0.48fr)] xl:items-end">
+                        <div className="min-w-0 rounded-2xl border border-slate-100 bg-slate-50/70 p-4 dark:border-slate-800 dark:bg-slate-950/40">
+                            <label className="mb-2 flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+                                <span className="h-1.5 w-1.5 rounded-full bg-[#cc3f8e]" />
+                                Tour Product
+                            </label>
+                            <TourAutocomplete
+                                tours={tours}
+                                value={filters.tour_id || ''}
+                                onChange={(value) =>
+                                    router.get(
+                                        window.location.pathname,
+                                        {
+                                            tour_id: value,
+                                            departure_date: '',
+                                        },
+                                        { preserveState: true },
+                                    )
+                                }
+                            />
+                        </div>
+
+                        <div className="min-w-0 rounded-2xl border border-slate-100 bg-slate-50/70 p-4 dark:border-slate-800 dark:bg-slate-950/40">
+                            <label className="mb-2 flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+                                <span className="h-1.5 w-1.5 rounded-full bg-slate-400 dark:bg-slate-500" />
+                                Departure Date
+                            </label>
+                            <div className="flex flex-col gap-2 sm:flex-row">
+                                <Select
+                                    value={filters.departure_date || undefined}
+                                    onValueChange={(value) =>
                                         router.get(
                                             window.location.pathname,
                                             {
-                                                tour_id: value,
-                                                departure_date: '',
+                                                ...filters,
+                                                departure_date: value,
                                             },
                                             { preserveState: true },
                                         )
                                     }
-                                />
-                            </div>
-                        </div>
-
-                        <div className="min-w-0">
-                            <div>
-                                <label className="mb-2 block text-xs font-black uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
-                                    Departure Date
-                                </label>
-                                <div className="flex gap-2">
-                                    <Select
-                                        value={
-                                            filters.departure_date || undefined
-                                        }
-                                        onValueChange={(value) =>
-                                            router.get(
-                                                window.location.pathname,
-                                                {
-                                                    ...filters,
-                                                    departure_date: value,
-                                                },
-                                                { preserveState: true },
-                                            )
-                                        }
-                                        disabled={!hasTourSelected}
-                                    >
-                                        <SelectTrigger className="h-11 rounded-xl bg-white dark:border-slate-700 dark:bg-slate-900 dark:text-white">
-                                            <SelectValue
-                                                placeholder={
-                                                    hasTourSelected
-                                                        ? 'Select departure date'
-                                                        : 'Select a tour product first'
-                                                }
-                                            />
-                                        </SelectTrigger>
-                                        <SelectContent className="dark:border-slate-700 dark:bg-slate-900">
-                                            {availableDates.map(
-                                                (date: string) => (
-                                                    <SelectItem
-                                                        key={date}
-                                                        value={date}
-                                                        className="dark:focus:bg-slate-800"
-                                                    >
-                                                        {dayjs(date).format(
-                                                            'DD MMM YYYY',
-                                                        )}
-                                                    </SelectItem>
-                                                ),
-                                            )}
-                                        </SelectContent>
-                                    </Select>
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        size="icon"
-                                        className="h-11 w-11 shrink-0 rounded-xl border-slate-200 bg-white text-slate-600 shadow-sm hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
-                                        onClick={handleResetFilters}
-                                        disabled={
-                                            !hasTourSelected &&
-                                            !hasDepartureSelected
-                                        }
-                                        title="Reset search"
-                                    >
-                                        <RotateCcwIcon size={16} />
-                                    </Button>
-                                </div>
+                                    disabled={!hasTourSelected}
+                                >
+                                    <SelectTrigger className="h-11 min-w-0 flex-1 rounded-xl border-slate-200 bg-white px-4 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-white">
+                                        <SelectValue
+                                            placeholder={
+                                                hasTourSelected
+                                                    ? 'Select departure date'
+                                                    : 'Select a tour product first'
+                                            }
+                                        />
+                                    </SelectTrigger>
+                                    <SelectContent className="dark:border-slate-700 dark:bg-slate-900">
+                                        {availableDates.map((date: string) => (
+                                            <SelectItem
+                                                key={date}
+                                                value={date}
+                                                className="dark:focus:bg-slate-800"
+                                            >
+                                                {dayjs(date).format(
+                                                    'DD MMM YYYY',
+                                                )}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    className="h-11 shrink-0 gap-2 rounded-xl border-slate-200 bg-white px-4 text-slate-700 shadow-sm hover:border-[#cc3f8e]/30 hover:bg-[#cc3f8e]/5 hover:text-[#cc3f8e] disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 sm:min-w-[112px]"
+                                    onClick={handleResetFilters}
+                                    disabled={
+                                        !hasTourSelected &&
+                                        !hasDepartureSelected
+                                    }
+                                    title="Reset search"
+                                >
+                                    <RotateCcwIcon size={16} />
+                                    <span>Reset</span>
+                                </Button>
                             </div>
                         </div>
                     </div>
@@ -400,6 +461,9 @@ export default function RoomListing() {
                                         <TableHead className="border-r border-slate-200 px-2 py-3 text-center text-[11px] font-bold uppercase text-slate-900 dark:border-slate-800 dark:text-slate-200 print:w-[8%]">
                                             Room Type
                                         </TableHead>
+                                        <TableHead className="min-w-[64px] border-r border-slate-200 px-2 py-3 text-center text-[11px] font-bold uppercase text-slate-900 dark:border-slate-800 dark:text-slate-200 print:w-[4%]">
+                                            Room No.
+                                        </TableHead>
                                         <TableHead className="min-w-[56px] border-r border-slate-200 px-2 py-3 text-center text-[11px] font-bold uppercase text-slate-900 dark:border-slate-800 dark:text-slate-200 print:w-[4%]">
                                             Room
                                         </TableHead>
@@ -449,21 +513,25 @@ export default function RoomListing() {
                                                     : 'bg-white dark:bg-slate-950';
 
                                             const totalPaxInBooking =
-                                                Object.values(
-                                                    roomGroups,
-                                                ).reduce(
+                                                roomGroups.reduce(
                                                     (count, rows) =>
-                                                        count + rows.length,
+                                                        count +
+                                                        rows.passengerList
+                                                            .length,
                                                     0,
                                                 );
 
-                                            return Object.entries(
-                                                roomGroups,
-                                            ).map(
+                                            return roomGroups.map(
                                                 (
-                                                    [roomType, passengerList],
+                                                    {
+                                                        roomType,
+                                                        passengerList,
+                                                    },
                                                     roomIndex,
                                                 ) => {
+                                                    const roomNumber =
+                                                        ++roomCounter;
+
                                                     return passengerList.map(
                                                         (
                                                             row: any,
@@ -493,7 +561,7 @@ export default function RoomListing() {
 
                                                             return (
                                                                 <TableRow
-                                                                    key={`${bookingNumber}-${roomType}-${passengerIndex}`}
+                                                                    key={`${bookingNumber}-${roomType}-${roomIndex}-${passengerIndex}`}
                                                                     className={`border-b border-slate-200 dark:border-slate-800 ${rowBgClass} ${isFirstInBooking ? 'border-t-2 border-t-slate-400 dark:border-t-slate-500 print-border-thick' : ''} break-inside-avoid hover:bg-slate-50 dark:hover:bg-slate-900/50`}
                                                                 >
                                                                     <TableCell className="border-r border-slate-200 p-2 text-center text-[12px] font-medium dark:border-slate-800 dark:text-slate-300">
@@ -516,6 +584,16 @@ export default function RoomListing() {
                                                                             >
                                                                                 {
                                                                                     roomType
+                                                                                }
+                                                                            </TableCell>
+                                                                            <TableCell
+                                                                                rowSpan={
+                                                                                    totalPaxInRoom
+                                                                                }
+                                                                                className="border-r border-slate-200 p-2 text-center align-middle text-[12px] font-bold dark:border-slate-800 dark:text-slate-200"
+                                                                            >
+                                                                                {
+                                                                                    roomNumber
                                                                                 }
                                                                             </TableCell>
                                                                             <TableCell
@@ -606,6 +684,31 @@ export default function RoomListing() {
                                 </TableBody>
                             </Table>
                         </div>
+                        {roomRecap.length > 0 && (
+                            <div className="border-t border-slate-200 p-4 dark:border-slate-800 print:border-t print:border-black print:p-3">
+                                <h3 className="mb-3 text-xs font-black uppercase tracking-[0.18em] text-slate-600 dark:text-slate-300 print:text-black">
+                                    Room Recap
+                                </h3>
+                                <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 print:grid-cols-3">
+                                    {roomRecap.map((item) => (
+                                        <div
+                                            key={item.roomType}
+                                            className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-900 print:border-none print:bg-transparent print:px-0 print:py-1"
+                                        >
+                                            <span className="font-medium text-slate-700 dark:text-slate-200 print:text-black">
+                                                {item.roomType}
+                                            </span>
+                                            <span className="font-bold text-slate-950 dark:text-white print:text-black">
+                                                {item.count}{' '}
+                                                {item.count === 1
+                                                    ? 'room'
+                                                    : 'rooms'}
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </div>
                 ) : (
                     <div className="rounded-3xl border-2 border-dashed border-slate-200 bg-slate-50 p-16 text-center text-slate-400 dark:border-slate-800 dark:bg-slate-900/50 dark:text-slate-600 print:hidden">
