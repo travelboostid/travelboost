@@ -37,7 +37,7 @@ beforeEach(function () {
             'platform_fee' => '30000',
             'commission_min' => '50000',
             'commission_mid' => '75000',
-            'commission_max' => '100000',
+            'commission_max' => '75000',
         ],
     ]);
 
@@ -355,6 +355,30 @@ test('insufficient vendor wallet blocks full payment finalization', function () 
 
     expect($booking->fresh()->status)->toBe(BookingStatus::WAITING_PAYMENT_APPROVAL)
         ->and((int) $vendor->wallet->fresh()->balance)->toBe(100_000)
+        ->and(Transaction::where('meta->booking_id', $booking->id)->count())->toBe(0);
+});
+
+test('vendor wallet must cover combined settlement obligations before any transfer', function () {
+    ['vendor' => $vendor, 'agent' => $agent, 'booking' => $booking, 'quote' => $quote] = createSettlementScenario(vendorBalance: 2_000_000);
+    $root = User::where('username', 'root')->firstOrFail();
+
+    $booking->payments()->create([
+        'owner_type' => User::class,
+        'owner_id' => $booking->user_id,
+        'provider' => 'manual',
+        'payment_method' => 'bank_transfer',
+        'amount' => $quote['grand_total'],
+        'status' => 'paid',
+        'payload' => ['payment_type' => 'full_payment'],
+    ]);
+
+    expect(fn () => app(FinalizeBookingPaymentAction::class)->execute($booking->fresh()))
+        ->toThrow(ValidationException::class);
+
+    expect($booking->fresh()->status)->toBe(BookingStatus::WAITING_PAYMENT_APPROVAL)
+        ->and((int) $vendor->wallet->fresh()->balance)->toBe(2_000_000)
+        ->and((int) ($agent->fresh()->wallet?->balance ?? 0))->toBe(0)
+        ->and((int) ($root->fresh()->wallet?->balance ?? 0))->toBe(0)
         ->and(Transaction::where('meta->booking_id', $booking->id)->count())->toBe(0);
 });
 

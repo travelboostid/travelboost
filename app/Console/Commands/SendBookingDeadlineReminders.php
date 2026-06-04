@@ -6,6 +6,7 @@ use App\Enums\BookingStatus;
 use App\Models\Booking;
 use App\Models\User;
 use App\Notifications\BookingDeadlineReminderNotification;
+use App\Services\BookingTravelDocumentService;
 use Carbon\CarbonImmutable;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
@@ -125,24 +126,7 @@ class SendBookingDeadlineReminders extends Command
 
     private function bookingNeedsTravelDocuments(Booking $booking): bool
     {
-        if ($booking->passengers->isEmpty()) {
-            return false;
-        }
-
-        return $booking->passengers->contains(function ($passenger): bool {
-            $category = strtolower((string) $passenger->price_category);
-
-            if (str_contains($category, 'infant')) {
-                return false;
-            }
-
-            return blank($passenger->passport_number)
-                || blank($passenger->passport_issue_date)
-                || blank($passenger->passport_expiry_date)
-                || blank($passenger->passport_file_path)
-                || blank($passenger->visa_number)
-                || blank($passenger->visa_file_path);
-        });
+        return app(BookingTravelDocumentService::class)->bookingNeedsTravelDocuments($booking);
     }
 
     private function reminderAlreadySent(Booking $booking, string $deadlineType, string $deadlineDate, int $offset): bool

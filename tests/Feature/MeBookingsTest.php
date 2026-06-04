@@ -264,11 +264,11 @@ test('my bookings hides continue and reorder actions after the vendor booking de
         ->where('bookings.data.0.booking_number', 'BKG-CLOSED-EXPIRED')
         ->where('bookings.data.0.can_reorder', false)
         ->where('bookings.data.0.booking_window_closed', true)
-        ->where('bookings.data.0.action_unavailable_reason', 'Booking window closed')
+        ->where('bookings.data.0.action_unavailable_reason', 'Booking is closed')
         ->where('bookings.data.1.booking_number', 'BKG-CLOSED-AWAITING')
         ->where('bookings.data.1.can_continue_booking', false)
         ->where('bookings.data.1.booking_window_closed', true)
-        ->where('bookings.data.1.action_unavailable_reason', 'Booking window closed'));
+        ->where('bookings.data.1.action_unavailable_reason', 'Booking is closed'));
 });
 
 test('my bookings shows reordered expired booking as awaiting payment continue action', function () {

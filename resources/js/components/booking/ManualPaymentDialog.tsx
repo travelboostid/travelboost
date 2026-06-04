@@ -29,6 +29,8 @@ const todayInputValue = new Date(
 )
     .toISOString()
     .slice(0, 10);
+const MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024;
+const MAX_ATTACHMENT_LABEL = '5 MB';
 
 type Props = {
     open: boolean;
@@ -58,6 +60,7 @@ export function ManualPaymentDialog({
         transferAmount: amount,
         proofFile: null,
     });
+    const [fileError, setFileError] = useState<string | null>(null);
     const fileRef = useRef<HTMLInputElement>(null);
 
     const update = <K extends keyof ManualPaymentData>(
@@ -72,6 +75,22 @@ export function ManualPaymentDialog({
         /^\d+$/.test(form.senderAccountNumber) &&
         amount > 0 &&
         form.proofFile !== null;
+
+    const handleProofFileChange = (
+        event: React.ChangeEvent<HTMLInputElement>,
+    ) => {
+        const file = event.target.files?.[0] ?? null;
+
+        if (file && file.size > MAX_ATTACHMENT_BYTES) {
+            setFileError(`Maximum file size is ${MAX_ATTACHMENT_LABEL}.`);
+            update('proofFile', null);
+            event.target.value = '';
+            return;
+        }
+
+        setFileError(null);
+        update('proofFile', file);
+    };
 
     return (
         <Dialog open={open} onOpenChange={(nextOpen) => !nextOpen && onClose()}>
@@ -172,17 +191,12 @@ export function ManualPaymentDialog({
                             type="file"
                             accept="image/*,.pdf"
                             className="hidden"
-                            onChange={(event) =>
-                                update(
-                                    'proofFile',
-                                    event.target.files?.[0] ?? null,
-                                )
-                            }
+                            onChange={handleProofFileChange}
                         />
                         {form.proofFile ? (
-                            <div className="flex items-center gap-2 rounded-lg border bg-muted/30 px-3 py-2">
+                            <div className="grid min-w-0 max-w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 rounded-lg border bg-muted/30 px-3 py-2">
                                 <FileTextIcon className="size-4 shrink-0 text-primary" />
-                                <span className="flex-1 truncate text-xs text-foreground">
+                                <span className="min-w-0 truncate text-xs text-foreground">
                                     {form.proofFile.name}
                                 </span>
                                 <button
@@ -207,6 +221,11 @@ export function ManualPaymentDialog({
                                 <UploadCloudIcon className="size-3.5" />
                                 Upload file
                             </button>
+                        )}
+                        {fileError && (
+                            <p className="text-xs text-destructive">
+                                {fileError}
+                            </p>
                         )}
                     </div>
                 </div>

@@ -109,6 +109,7 @@ type AddOn = {
     description: string;
     price: number | '';
     edit_status: boolean;
+    is_taxable: boolean;
 };
 
 type AddOnsState = {
@@ -788,6 +789,7 @@ export default function Page({ tour }: Props) {
                 description: item.description,
                 price: item.price,
                 edit_status: item.edit_status,
+                is_taxable: item.is_taxable ?? false,
             }));
         });
 
@@ -799,6 +801,7 @@ export default function Page({ tour }: Props) {
             description: '',
             price: 0,
             edit_status: false,
+            is_taxable: false,
         };
 
         setAddOns((prev) => ({
@@ -868,6 +871,7 @@ export default function Page({ tour }: Props) {
                     description: row.description,
                     price: row.price || 0,
                     edit_status: row.edit_status,
+                    is_taxable: row.is_taxable,
                 });
             });
         });
@@ -1157,6 +1161,7 @@ export default function Page({ tour }: Props) {
                             description: a.description,
                             price: a.price ?? 0,
                             edit_status: a.edit_status ?? false,
+                            is_taxable: a.is_taxable ?? false,
                         })),
                     ),
                 },
@@ -1172,6 +1177,7 @@ export default function Page({ tour }: Props) {
                     description: a.description,
                     price: a.price ?? 0,
                     edit_status: a.edit_status ?? false,
+                    is_taxable: a.is_taxable ?? false,
                 }));
             });
 
@@ -4248,7 +4254,7 @@ export default function Page({ tour }: Props) {
                                                                         >
                                                                             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                                                                                 {/* LEFT CONTENT */}
-                                                                                <div className="grid flex-1 grid-cols-1 gap-4 md:grid-cols-3">
+                                                                                <div className="grid flex-1 grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
                                                                                     {/* DESCRIPTION */}
                                                                                     <div className="space-y-2">
                                                                                         <Label className="text-xs uppercase tracking-wide text-muted-foreground">
@@ -4304,6 +4310,39 @@ export default function Page({ tour }: Props) {
                                                                                                 )
                                                                                             }
                                                                                         />
+                                                                                    </div>
+
+                                                                                    {/* TAXABLE */}
+                                                                                    <div className="space-y-2">
+                                                                                        <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+                                                                                            Included
+                                                                                            in
+                                                                                            PPN
+                                                                                        </Label>
+
+                                                                                        <div className="flex h-10 items-center rounded-xl border px-3">
+                                                                                            <label className="flex items-center gap-2 text-sm">
+                                                                                                <input
+                                                                                                    type="checkbox"
+                                                                                                    checked={
+                                                                                                        row.is_taxable
+                                                                                                    }
+                                                                                                    onChange={(
+                                                                                                        e,
+                                                                                                    ) =>
+                                                                                                        updateRow(
+                                                                                                            schedule.id,
+                                                                                                            index,
+                                                                                                            'is_taxable',
+                                                                                                            e
+                                                                                                                .target
+                                                                                                                .checked,
+                                                                                                        )
+                                                                                                    }
+                                                                                                />
+                                                                                                Taxable
+                                                                                            </label>
+                                                                                        </div>
                                                                                     </div>
 
                                                                                     {/* EDITABLE */}

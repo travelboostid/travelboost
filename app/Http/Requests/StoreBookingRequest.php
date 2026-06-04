@@ -65,6 +65,7 @@ class StoreBookingRequest extends FormRequest
             'passengers.*.visa_file_path' => ['nullable', 'string'],
             'passengers.*.price_category' => ['nullable', 'string', 'max:255'],
             'passengers.*.price_amount' => ['nullable', 'numeric'],
+            'passengers.*.note' => ['nullable', 'string', 'max:1000'],
 
             // Rooms
             'rooms' => ['nullable', 'array'],
@@ -80,6 +81,7 @@ class StoreBookingRequest extends FormRequest
             'addons.*.name' => ['required_with:addons', 'string', 'max:255'],
             'addons.*.price' => ['required_with:addons', 'numeric', 'min:0'],
             'addons.*.qty' => ['nullable', 'integer', 'min:1', 'max:999'],
+            'addons.*.is_taxable' => ['nullable', 'boolean'],
 
             // Expected totals from frontend
             'total_price' => ['required', 'numeric', 'min:0'],

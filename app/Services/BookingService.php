@@ -38,6 +38,7 @@ class BookingService
                 data_get($data, 'addons', []),
                 (float) ($tour->company?->companySetting?->minimum_vat ?? 11),
                 data_get($data, 'agent_id') !== null,
+                data_get($data, 'agent_id') ? (int) data_get($data, 'agent_id') : null,
             );
             $totals = app(BookingPricingService::class)->bookingTotalsFromQuote($quote);
 
@@ -136,6 +137,7 @@ class BookingService
                 data_get($data, 'addons', []),
                 (float) ($booking->vendor?->companySetting?->minimum_vat ?? $booking->tour?->company?->companySetting?->minimum_vat ?? 11),
                 $booking->agent_id !== null,
+                $booking->agent_id ? (int) $booking->agent_id : null,
             );
             $totals = app(BookingPricingService::class)->bookingTotalsFromQuote($quote);
 
