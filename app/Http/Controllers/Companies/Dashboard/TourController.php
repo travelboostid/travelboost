@@ -30,6 +30,8 @@ class TourController extends Controller
             ->with([
                 'availabilities.schedule',
                 'user',
+                'category',
+                'productCommissionCategory',
             ])
             ->orderBy('id', 'desc')
             ->get();
@@ -37,6 +39,11 @@ class TourController extends Controller
         return Inertia::render('companies/dashboard/tours/index', [
             'data' => $tours,
             'bookingDeadlineDays' => (int) ($company->companySetting?->booking_deadline ?? 0),
+            'productCommissionCategories' => $company->productCommissionCategories()
+                ->where('is_active', true)
+                ->orderBy('sort_order')
+                ->orderBy('category_name')
+                ->get(['id', 'category_name']),
         ]);
     }
 

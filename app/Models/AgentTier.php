@@ -37,4 +37,9 @@ class AgentTier extends Model
     {
         return $this->hasMany(TourCommissionRule::class);
     }
+
+    public function additionalCommissionRules(): HasMany
+    {
+        return $this->hasMany(TourCommissionAdditionalRule::class);
+    }
 }

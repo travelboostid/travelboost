@@ -4,15 +4,17 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class TourCommissionRule extends Model
+class TourCommissionAdditionalRule extends Model
 {
     protected $fillable = [
         'company_id',
-        'tour_id',
         'agent_tier_id',
         'product_commission_category_id',
+        'tour_id',
+        'tour_schedule_id',
+        'departure_date',
+        'scope_type',
         'commission_type',
         'commission_value',
         'is_active',
@@ -21,14 +23,10 @@ class TourCommissionRule extends Model
     protected function casts(): array
     {
         return [
+            'departure_date' => 'date',
             'commission_value' => 'decimal:2',
             'is_active' => 'boolean',
         ];
-    }
-
-    public function tour(): BelongsTo
-    {
-        return $this->belongsTo(Tour::class);
     }
 
     public function company(): BelongsTo
@@ -46,8 +44,13 @@ class TourCommissionRule extends Model
         return $this->belongsTo(ProductCommissionCategory::class);
     }
 
-    public function scheduleAdjustments(): HasMany
+    public function tour(): BelongsTo
     {
-        return $this->hasMany(TourCommissionRuleScheduleAdjustment::class);
+        return $this->belongsTo(Tour::class);
+    }
+
+    public function tourSchedule(): BelongsTo
+    {
+        return $this->belongsTo(TourSchedule::class);
     }
 }

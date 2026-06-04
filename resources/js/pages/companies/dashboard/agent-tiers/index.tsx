@@ -202,7 +202,7 @@ export default function Page({ tiers }: { tiers: AgentTier[] }) {
         <CompanyDashboardLayout
             breadcrumb={[
                 { title: 'Commission Setup' },
-                { title: 'Agent Tiers' },
+                { title: 'Agent Categories' },
             ]}
             openMenuIds={['commission-setup']}
             activeMenuIds={['commission-setup.agent-tiers']}

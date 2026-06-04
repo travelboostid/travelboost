@@ -77,6 +77,9 @@ Route::prefix('companies')->middleware(['use-analytics-measurement-ids-props'])-
         Route::resource('agent-registrations', AgentRegistrationController::class);
         Route::resource('agent-tiers', AgentTierController::class)->except(['create', 'show', 'edit']);
         Route::resource('product-commission-categories', ProductCommissionCategoryController::class)->except(['create', 'show', 'edit']);
+        Route::get('tour-commission-rules/additional', [TourCommissionRuleController::class, 'additional'])->name('tour-commission-rules.additional');
+        Route::put('tour-commission-rules/additional/{additionalRule}', [TourCommissionRuleController::class, 'updateAdditional'])->name('tour-commission-rules.additional.update');
+        Route::delete('tour-commission-rules/additional/{additionalRule}', [TourCommissionRuleController::class, 'destroyAdditional'])->name('tour-commission-rules.additional.destroy');
         Route::resource('tour-commission-rules', TourCommissionRuleController::class)->only(['index', 'store']);
         Route::middleware(['agent.subscription.active'])->resource('vendor-registrations', VendorRegistrationController::class);
         Route::middleware(['agent.subscription.active'])->post('vendor-registrations/register', [VendorRegistrationController::class, 'register'])->name('vendor-registrations.register');

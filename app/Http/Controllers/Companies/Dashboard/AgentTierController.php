@@ -89,7 +89,9 @@ class AgentTierController extends Controller
         abort_unless($company->type === CompanyType::VENDOR, 403);
         abort_unless($agent_tier->company_id === $company->id, 404);
 
-        $isUsed = $agent_tier->partners()->exists() || $agent_tier->commissionRules()->exists();
+        $isUsed = $agent_tier->partners()->exists()
+            || $agent_tier->commissionRules()->exists()
+            || $agent_tier->additionalCommissionRules()->exists();
 
         if ($isUsed) {
             return back()->withErrors([
