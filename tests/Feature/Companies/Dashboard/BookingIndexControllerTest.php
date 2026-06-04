@@ -2960,6 +2960,133 @@ test('vendor can update booking wizard data dynamically', function () {
         ->and((float) $booking->addons()->first()->price)->toBe(500_000.0);
 });
 
+test('vendor booking update rejects multiple dependent bed guests in one room', function () {
+    $vendor = Company::factory()->create(['type' => 'vendor']);
+
+    CompanyTeam::create([
+        'company_id' => $vendor->id,
+        'user_id' => $this->user->id,
+        'status' => CompanyTeamStatus::ACTIVE,
+        'is_owner' => true,
+        'accepted_at' => now(),
+    ]);
+
+    $tour = Tour::factory()->create(['company_id' => $vendor->id]);
+    $departureDate = now()->addDays(20)->toDateString();
+    TourSchedule::create([
+        'company_id' => $vendor->id,
+        'tour_id' => $tour->id,
+        'tour_code' => $tour->code,
+        'departure_date' => $departureDate,
+        'return_date' => now()->addDays(25)->toDateString(),
+        'is_active' => true,
+    ]);
+
+    $booking = Booking::factory()->create([
+        'vendor_id' => $vendor->id,
+        'tour_id' => $tour->id,
+        'departure_date' => $departureDate,
+        'status' => BookingStatus::RESERVED,
+        'pax_adult' => 1,
+        'pax_child' => 0,
+        'pax_infant' => 0,
+    ]);
+    $passenger = BookingPassenger::factory()->create([
+        'booking_id' => $booking->id,
+        'first_name' => 'Old',
+        'last_name' => 'Guest',
+        'price_category' => 'Adult Twin',
+        'price_amount' => 1_000_000,
+        'room_type' => 'Twin',
+    ]);
+
+    $response = $this->actingAs($this->user)
+        ->from("/companies/{$vendor->username}/dashboard/bookings/{$booking->id}/edit")
+        ->put("/companies/{$vendor->username}/dashboard/bookings/{$booking->id}", [
+            'contact_name' => 'Invalid Room Customer',
+            'contact_email' => 'invalid-room@example.test',
+            'contact_phone' => '08123456789',
+            'contact_notes' => null,
+            'pax_adult' => 3,
+            'pax_child' => 1,
+            'pax_infant' => 0,
+            'total_price' => 3_000_000,
+            'tax_amount' => 330_000,
+            'platform_fee' => 120_000,
+            'commission_amount' => 0,
+            'grand_total' => 3_450_000,
+            'passengers' => [
+                [
+                    'id' => $passenger->id,
+                    'title' => 'Mr',
+                    'first_name' => 'Base',
+                    'last_name' => 'One',
+                    'dob' => '1990-01-01',
+                    'pob' => 'Jakarta',
+                    'price_category' => 'Adult Twin',
+                    'price_amount' => 1_000_000,
+                    'room_type' => 'Twin',
+                    'room_number' => '1',
+                ],
+                [
+                    'title' => 'Mr',
+                    'first_name' => 'Base',
+                    'last_name' => 'Two',
+                    'dob' => '1991-01-01',
+                    'pob' => 'Jakarta',
+                    'price_category' => 'Adult Twin',
+                    'price_amount' => 1_000_000,
+                    'room_type' => 'Twin',
+                    'room_number' => '2',
+                ],
+                [
+                    'title' => 'Mr',
+                    'first_name' => 'Extra',
+                    'last_name' => 'Adult',
+                    'dob' => '1992-01-01',
+                    'pob' => 'Jakarta',
+                    'price_category' => 'Adult Extra Bed',
+                    'price_amount' => 500_000,
+                    'room_type' => 'Adult Extra Bed',
+                    'room_number' => '1',
+                ],
+                [
+                    'title' => 'Master',
+                    'first_name' => 'Child',
+                    'last_name' => 'Withbed',
+                    'dob' => '2016-01-01',
+                    'pob' => 'Jakarta',
+                    'price_category' => 'Child With Bed',
+                    'price_amount' => 500_000,
+                    'room_type' => 'Child With Extra Bed',
+                    'room_number' => '1',
+                ],
+            ],
+            'rooms' => [
+                [
+                    'room_type' => 'twin_extra_bed',
+                    'room_label' => 'Twin Room 1',
+                    'bed_layout' => [
+                        ['bedType' => 'twin_extra_bed', 'guestId' => 'adult-0'],
+                        ['bedType' => 'twin_extra_bed', 'guestId' => 'adult-2'],
+                        ['bedType' => 'twin_extra_bed', 'guestId' => 'child-0'],
+                    ],
+                ],
+                [
+                    'room_type' => 'twin',
+                    'room_label' => 'Twin Room 2',
+                    'bed_layout' => [
+                        ['bedType' => 'twin', 'guestId' => 'adult-1'],
+                    ],
+                ],
+            ],
+            'addons' => [],
+        ]);
+
+    $response->assertSessionHasErrors('passengers');
+    expect($booking->fresh()->pax_adult)->toBe(1);
+});
+
 test('booking edit exposes customer wizard payment props for dashboard', function () {
     $vendor = Company::factory()->create(['type' => 'vendor']);
     $vendor->companySetting()->create([

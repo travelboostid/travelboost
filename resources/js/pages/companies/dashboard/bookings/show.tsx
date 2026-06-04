@@ -488,6 +488,7 @@ function ReadOnlyWizard({
                                                 guests={guests}
                                                 rooms={rooms}
                                                 onRoomsChange={() => {}}
+                                                readOnly
                                             />
                                         )}
                                         {currentStep === 3 && (

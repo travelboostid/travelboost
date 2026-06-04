@@ -26,6 +26,11 @@ class BookingService
         $paymentMode = $this->resolvePaymentMode(data_get($data, 'payment_method'));
 
         return DB::transaction(function () use ($data, $user, $paymentMode, $tour) {
+            app(BookingRoomArrangementValidator::class)->validateRooms(
+                data_get($data, 'passengers', []),
+                is_array(data_get($data, 'rooms')) ? data_get($data, 'rooms') : []
+            );
+
             $quote = app(BookingPricingService::class)->quoteForBookingData(
                 $tour,
                 (string) data_get($data, 'departure_date'),
@@ -118,6 +123,11 @@ class BookingService
     {
         return DB::transaction(function () use ($booking, $data, $savedPassengerOwner): Booking {
             $booking->loadMissing(['tour.company.companySetting', 'vendor.companySetting']);
+
+            app(BookingRoomArrangementValidator::class)->validateRooms(
+                data_get($data, 'passengers', []),
+                is_array(data_get($data, 'rooms')) ? data_get($data, 'rooms') : []
+            );
 
             $quote = app(BookingPricingService::class)->quoteForBookingData(
                 $booking->tour,

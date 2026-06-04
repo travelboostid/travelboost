@@ -30,6 +30,7 @@ use App\Services\BookingNumberService;
 use App\Services\BookingPaymentReceiverService;
 use App\Services\BookingPaymentWorkflowService;
 use App\Services\BookingPricingService;
+use App\Services\BookingRoomArrangementValidator;
 use App\Services\BookingService;
 use App\Services\ReusableMidtransBookingPaymentAttemptService;
 use Illuminate\Database\Eloquent\Builder;
@@ -256,6 +257,7 @@ class DashboardBookingController extends Controller
         $agent = $this->resolveDashboardBookingAgent($company, $tour, data_get($data, 'agent_id'));
         $inputByRole = $this->currentCompanyRoleName($request->user(), $company);
         $bookingTimeLimitMinutes = $this->resolveBookingTimeLimitMinutes($tour);
+        app(BookingRoomArrangementValidator::class)->validatePassengerMix($data['passengers'] ?? []);
 
         $booking = DB::transaction(function () use ($request, $data, $tour, $owner, $agent, $inputByRole, $bookingTimeLimitMinutes, $company, $bookingNumberService): Booking {
             $bookingNumber = $this->resolveDashboardBookingNumber(data_get($data, 'booking_number'), $company, $bookingNumberService);
