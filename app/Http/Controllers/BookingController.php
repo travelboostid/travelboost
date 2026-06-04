@@ -190,9 +190,13 @@ class BookingController extends Controller
             $addOns = $this->buildAddOnOptions($tour, $schedule, $existingBooking);
         }
 
+        $paymentWorkflowService = app(BookingPaymentWorkflowService::class);
         $paidAmount = $existingBooking
-            ? app(BookingPaymentWorkflowService::class)->finalizablePaidAmount($existingBooking)
+            ? $paymentWorkflowService->finalizablePaidAmount($existingBooking)
             : 0.0;
+        $downPaymentPaidAt = $existingBooking
+            ? $this->downPaymentPaidAtForBooking($existingBooking, $paymentWorkflowService)
+            : null;
         $remainingBalance = $existingBooking
             ? max(0.0, (float) $existingBooking->grand_total - $paidAmount)
             : 0.0;
@@ -269,6 +273,7 @@ class BookingController extends Controller
             'remainingHoldSeconds' => $this->remainingHoldSeconds($existingBooking),
             'paidAmount' => $paidAmount,
             'remainingBalance' => $remainingBalance,
+            'downPaymentPaidAt' => $downPaymentPaidAt,
             'fullPaymentAvailable' => $fullPaymentAvailable,
             'paymentMethodAvailability' => [
                 'manual' => (bool) ($paymentReceiverPartnership?->manual_payment_enabled ?? true),
@@ -433,6 +438,7 @@ class BookingController extends Controller
                 [],
                 (float) ($tour->company?->companySetting?->minimum_vat ?? 11),
                 ! empty($data['agent_id']),
+                ! empty($data['agent_id']) ? (int) $data['agent_id'] : null,
             );
             $totals = app(BookingPricingService::class)->bookingTotalsFromQuote($quote);
 
@@ -1191,7 +1197,7 @@ class BookingController extends Controller
     }
 
     /**
-     * @return array<int, array{key: string, label: string, unitPrice: float, qty: int, hasQty: bool}>
+     * @return array<int, array{key: string, label: string, unitPrice: float, qty: int, hasQty: bool, isTaxable: bool}>
      */
     private function buildAddOnOptions(Tour $tour, TourSchedule $schedule, ?Booking $booking = null): array
     {
@@ -1217,6 +1223,7 @@ class BookingController extends Controller
                         ? (int) max(1, round((float) $savedAddon->price / max($unitPrice, 1)))
                         : ($addon->edit_status ? 0 : 1),
                     'hasQty' => (bool) $addon->edit_status,
+                    'isTaxable' => (bool) ($savedAddon?->is_taxable ?? $addon->is_taxable),
                 ];
             })
             ->values()
@@ -1238,6 +1245,7 @@ class BookingController extends Controller
                 'unitPrice' => (float) $bookingAddon->price,
                 'qty' => 1,
                 'hasQty' => true,
+                'isTaxable' => (bool) $bookingAddon->is_taxable,
             ];
         }
 
@@ -1293,6 +1301,26 @@ class BookingController extends Controller
             'remainingBalance' => max(0.0, $grandTotal - $paidAmount),
             'image' => $booking->tour?->image?->toArray(),
         ];
+    }
+
+    private function downPaymentPaidAtForBooking(Booking $booking, BookingPaymentWorkflowService $paymentWorkflowService): ?string
+    {
+        $payment = $paymentWorkflowService->finalizablePaidPayments($booking)
+            ->filter(fn (Payment $payment): bool => $payment->bookingPaymentType() === 'down_payment')
+            ->sortByDesc(fn (Payment $payment): string => (string) ($payment->paid_at ?? $payment->created_at))
+            ->first();
+
+        if (! $payment) {
+            return null;
+        }
+
+        $payloadPaymentDate = data_get($payment->payload, 'payment_date');
+
+        if (filled($payloadPaymentDate)) {
+            return Carbon::parse($payloadPaymentDate)->toDateString();
+        }
+
+        return ($payment->paid_at ?? $payment->created_at)?->toJSON();
     }
 
     private function resolvePaymentResultSchedule(Booking $booking): ?TourSchedule

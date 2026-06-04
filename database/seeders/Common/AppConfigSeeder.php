@@ -34,7 +34,7 @@ class AppConfigSeeder extends Seeder
                     'platform_fee' => '25000',
                     'commission_min' => '50000',
                     'commission_mid' => '75000',
-                    'commission_max' => '100000',
+                    'commission_max' => '75000',
                     'free_ai_credit' => '50000',
                     'free_ai_after_subscription' => '150000',
                     'affiliate_commission' => '15',

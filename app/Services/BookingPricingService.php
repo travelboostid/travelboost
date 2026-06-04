@@ -21,7 +21,7 @@ class BookingPricingService
 
     public const DEFAULT_TRAVELBOOST_COMMISSION_MID = 75_000;
 
-    public const DEFAULT_TRAVELBOOST_COMMISSION_MAX = 100_000;
+    public const DEFAULT_TRAVELBOOST_COMMISSION_MAX = 75_000;
 
     public const DEFAULT_PPN_RATE = 11;
 
@@ -69,6 +69,7 @@ class BookingPricingService
         array $addons = [],
         ?float $vatPct = null,
         bool $includeAgentCommission = true,
+        ?int $agentId = null,
     ): array {
         $tour->loadMissing('company.companySetting');
 
@@ -87,12 +88,15 @@ class BookingPricingService
         $travelboostBreakdown = [];
 
         $quotedPassengers = collect($passengers)
-            ->map(function (array $passenger, int $index) use ($tourPrices, &$subtotalGuests, &$discountedSubtotal, &$agentCommission, &$travelboostCommission, &$agentBreakdown, &$travelboostBreakdown): array {
+            ->map(function (array $passenger, int $index) use ($tour, $schedule, $tourPrices, $includeAgentCommission, $agentId, &$subtotalGuests, &$discountedSubtotal, &$agentCommission, &$travelboostCommission, &$agentBreakdown, &$travelboostBreakdown): array {
                 $categoryName = trim((string) data_get($passenger, 'price_category', ''));
                 $tourPrice = $this->matchTourPrice($tourPrices, $categoryName);
                 $originalPrice = $tourPrice ? (float) $tourPrice->price : (float) data_get($passenger, 'price_amount', 0);
                 $discountedPrice = $tourPrice ? $this->discountedPrice($tourPrice) : $originalPrice;
-                $passengerAgentCommission = $tourPrice ? $this->agentCommissionForPrice($tourPrice, $discountedPrice) : 0.0;
+                $agentCommissionResolution = $tourPrice && $includeAgentCommission
+                    ? app(AgentCommissionResolver::class)->resolve($tour, $schedule, $tourPrice, $discountedPrice, $agentId)
+                    : ['amount' => 0.0, 'breakdown' => ['source' => 'not_applicable']];
+                $passengerAgentCommission = (float) $agentCommissionResolution['amount'];
                 $passengerTravelboostCommission = $this->travelboostCommissionForPassengerPrice($discountedPrice);
 
                 $subtotalGuests += $originalPrice;
@@ -106,6 +110,7 @@ class BookingPricingService
                         'price_category' => $categoryName,
                         'price_amount' => $discountedPrice,
                         'commission_amount' => $passengerAgentCommission,
+                        'breakdown' => $agentCommissionResolution['breakdown'],
                     ];
                 }
 
@@ -127,14 +132,12 @@ class BookingPricingService
 
         $quotedAddons = $this->quoteAddons($tour, $schedule, $addons);
         $addonsTotal = (float) collect($quotedAddons)->sum('price');
+        $taxableAddonsTotal = (float) collect($quotedAddons)
+            ->filter(fn (array $addon): bool => (bool) ($addon['is_taxable'] ?? false))
+            ->sum('price');
         $promotionDiscount = max(0.0, $subtotalGuests - $discountedSubtotal);
-        $taxAmount = (float) round($discountedSubtotal * ($vatRate / 100));
+        $taxAmount = (float) round(($discountedSubtotal + $taxableAddonsTotal) * ($vatRate / 100));
         $grandTotal = $discountedSubtotal + $taxAmount + $platformFee + $addonsTotal;
-
-        if (! $includeAgentCommission) {
-            $agentCommission = 0.0;
-            $agentBreakdown = [];
-        }
 
         return [
             'subtotal_guests' => $subtotalGuests,
@@ -145,6 +148,7 @@ class BookingPricingService
             'tax_amount' => $taxAmount,
             'tax_rate' => $vatRate,
             'addons_total' => $addonsTotal,
+            'taxable_addons_total' => $taxableAddonsTotal,
             'agent_commission' => (float) $agentCommission,
             'travelboost_commission' => (float) $travelboostCommission,
             'grand_total' => (float) $grandTotal,
@@ -278,21 +282,6 @@ class BookingPricingService
         return $basePrice;
     }
 
-    private function agentCommissionForPrice(TourPrice $tourPrice, float $discountedPrice): float
-    {
-        $fixedCommission = (float) ($tourPrice->commission ?? 0);
-        if ($fixedCommission > 0) {
-            return $fixedCommission;
-        }
-
-        $commissionRate = (float) ($tourPrice->commission_rate ?? 0);
-        if ($commissionRate <= 0) {
-            return 0.0;
-        }
-
-        return (float) round($discountedPrice * ($commissionRate / 100));
-    }
-
     private function travelboostCommissionForPassengerPrice(float $priceAmount): float
     {
         if ($priceAmount <= 0) {
@@ -349,6 +338,7 @@ class BookingPricingService
                 return [
                     'name' => $name,
                     'price' => $matchedAddon ? $unitPrice * $quantity : $unitPrice,
+                    'is_taxable' => $matchedAddon ? (bool) $matchedAddon->is_taxable : (bool) data_get($addon, 'is_taxable', false),
                 ];
             })
             ->values()
@@ -360,6 +350,9 @@ class BookingPricingService
      */
     private function bookingSnapshotQuote(Booking $booking): array
     {
+        $schedule = $booking->tour
+            ? $this->resolveSchedule($booking->tour, $this->normalizeDate($booking->departure_date))
+            : null;
         $passengers = $booking->passengers
             ->values()
             ->map(fn ($passenger): array => $passenger->toArray())
@@ -367,7 +360,12 @@ class BookingPricingService
         $discountedSubtotal = (float) $booking->passengers->sum('price_amount');
         $subtotalGuests = (float) $booking->total_price;
         $addonsTotal = (float) $booking->addons->sum('price');
-        $grandTotal = $discountedSubtotal + (float) $booking->tax_amount + (float) $booking->platform_fee + $addonsTotal;
+        $taxableAddonsTotal = (float) $booking->addons
+            ->filter(fn ($addon): bool => (bool) $addon->is_taxable)
+            ->sum('price');
+        $taxRate = (float) ($booking->vendor?->companySetting?->minimum_vat ?? $booking->tour?->company?->companySetting?->minimum_vat ?? self::DEFAULT_PPN_RATE);
+        $taxAmount = (float) round(($discountedSubtotal + $taxableAddonsTotal) * ($taxRate / 100));
+        $grandTotal = $discountedSubtotal + $taxAmount + (float) $booking->platform_fee + $addonsTotal;
         $travelboostBreakdown = $booking->passengers
             ->values()
             ->map(function ($passenger, int $index): array {
@@ -384,7 +382,7 @@ class BookingPricingService
             ->values()
             ->all();
         $travelboostCommission = (float) collect($travelboostBreakdown)->sum('commission_amount');
-        $agentCommission = $booking->agent_id ? (float) $booking->commission_amount : 0.0;
+        [$agentCommission, $agentBreakdown] = $this->agentCommissionForBookingSnapshot($booking, $schedule);
 
         return [
             'source' => 'booking_snapshot',
@@ -393,30 +391,98 @@ class BookingPricingService
             'promotion_discount' => max(0.0, $subtotalGuests - $discountedSubtotal),
             'platform_fee' => (float) $booking->platform_fee,
             'platform_fee_per_pax' => $this->platformFeePerPax(),
-            'tax_amount' => (float) $booking->tax_amount,
-            'tax_rate' => (float) ($booking->vendor?->companySetting?->minimum_vat ?? $booking->tour?->company?->companySetting?->minimum_vat ?? self::DEFAULT_PPN_RATE),
+            'tax_amount' => $taxAmount,
+            'tax_rate' => $taxRate,
             'addons_total' => $addonsTotal,
+            'taxable_addons_total' => $taxableAddonsTotal,
             'agent_commission' => $agentCommission,
             'travelboost_commission' => $travelboostCommission,
             'grand_total' => (float) $grandTotal,
             'pax_count' => $booking->passengers->count(),
             'passengers' => $passengers,
             'addons' => $booking->addons->map->toArray()->all(),
-            'agent_commission_breakdown' => [
-                'source' => 'booking_snapshot',
-                'commission_amount' => $agentCommission,
-                'passengers' => $booking->passengers
-                    ->values()
-                    ->map(fn ($passenger, int $index): array => [
-                        'passenger_index' => $index,
-                        'price_category' => (string) $passenger->price_category,
-                        'price_amount' => (float) $passenger->price_amount,
-                    ])
-                    ->all(),
-            ],
+            'agent_commission_breakdown' => $agentBreakdown,
             'travelboost_commission_breakdown' => [
                 'source' => 'booking_snapshot',
                 'passengers' => $travelboostBreakdown,
+            ],
+        ];
+    }
+
+    /**
+     * @return array{0: float, 1: array<string, mixed>}
+     */
+    private function agentCommissionForBookingSnapshot(Booking $booking, ?TourSchedule $schedule): array
+    {
+        if (! $booking->agent_id || ! $booking->tour) {
+            return [0.0, ['source' => 'not_applicable', 'passengers' => []]];
+        }
+
+        if ((float) $booking->commission_amount > 0) {
+            return [
+                (float) $booking->commission_amount,
+                [
+                    'source' => 'booking_snapshot',
+                    'commission_amount' => (float) $booking->commission_amount,
+                    'passengers' => $booking->passengers
+                        ->values()
+                        ->map(fn ($passenger, int $index): array => [
+                            'passenger_index' => $index,
+                            'price_category' => (string) $passenger->price_category,
+                            'price_amount' => (float) $passenger->price_amount,
+                        ])
+                        ->all(),
+                ],
+            ];
+        }
+
+        $tourPrices = $this->tourPricesByCategory($booking->tour, $schedule);
+        $passengerBreakdowns = [];
+        $agentCommission = 0.0;
+
+        foreach ($booking->passengers->values() as $index => $passenger) {
+            $categoryName = (string) $passenger->price_category;
+            $tourPrice = $this->matchTourPrice($tourPrices, $categoryName);
+
+            if (! $tourPrice) {
+                continue;
+            }
+
+            $resolution = app(AgentCommissionResolver::class)->resolve(
+                $booking->tour,
+                $schedule,
+                $tourPrice,
+                (float) $passenger->price_amount,
+                (int) $booking->agent_id,
+            );
+            $amount = (float) $resolution['amount'];
+            $agentCommission += $amount;
+
+            if ($amount <= 0) {
+                continue;
+            }
+
+            $passengerBreakdowns[] = [
+                'passenger_index' => $index,
+                'price_category' => $categoryName,
+                'price_amount' => (float) $passenger->price_amount,
+                'commission_amount' => $amount,
+                'breakdown' => $resolution['breakdown'],
+            ];
+        }
+
+        $firstMatrixBreakdown = collect($passengerBreakdowns)
+            ->pluck('breakdown')
+            ->first(fn (array $breakdown): bool => ($breakdown['source'] ?? null) === 'commission_matrix');
+
+        return [
+            (float) $agentCommission,
+            [
+                'source' => $firstMatrixBreakdown ? 'commission_matrix' : 'booking_snapshot_recalculated',
+                'base_rule_amount' => (float) data_get($firstMatrixBreakdown, 'base_rule_amount', 0),
+                'schedule_adjustment_amount' => (float) data_get($firstMatrixBreakdown, 'schedule_adjustment_amount', 0),
+                'additional_rule_amount' => (float) data_get($firstMatrixBreakdown, 'additional_rule_amount', 0),
+                'passengers' => $passengerBreakdowns,
             ],
         ];
     }
@@ -436,6 +502,9 @@ class BookingPricingService
             'tax_amount' => (float) $booking->tax_amount,
             'tax_rate' => (float) ($booking->vendor?->companySetting?->minimum_vat ?? self::DEFAULT_PPN_RATE),
             'addons_total' => (float) $booking->addons->sum('price'),
+            'taxable_addons_total' => (float) $booking->addons
+                ->filter(fn ($addon): bool => (bool) $addon->is_taxable)
+                ->sum('price'),
             'agent_commission' => 0.0,
             'travelboost_commission' => 0.0,
             'grand_total' => (float) $booking->grand_total,

@@ -3473,3 +3473,179 @@ test('full payment booking with complete documents still allows dashboard docume
     expect($passenger->passport_number)->toBe('P456')
         ->and($passenger->visa_number)->toBe('V456');
 });
+
+test('booking index limits remaining balance to down payment and hides followups for terminal statuses', function () {
+    $vendor = Company::factory()->create(['type' => 'vendor']);
+
+    CompanyTeam::create([
+        'company_id' => $vendor->id,
+        'user_id' => $this->user->id,
+        'status' => CompanyTeamStatus::ACTIVE,
+        'is_owner' => true,
+        'accepted_at' => now(),
+    ]);
+
+    $tour = Tour::factory()->create(['company_id' => $vendor->id]);
+
+    Booking::factory()->create([
+        'vendor_id' => $vendor->id,
+        'tour_id' => $tour->id,
+        'status' => BookingStatus::DOWN_PAYMENT,
+        'booking_number' => 'BKG-REMAINING-DP',
+        'grand_total' => 1_000_000,
+    ]);
+
+    Booking::factory()->create([
+        'vendor_id' => $vendor->id,
+        'tour_id' => $tour->id,
+        'status' => BookingStatus::WAITING_PAYMENT_APPROVAL,
+        'booking_number' => 'BKG-REMAINING-WA',
+        'grand_total' => 1_000_000,
+    ]);
+
+    Booking::factory()->create([
+        'vendor_id' => $vendor->id,
+        'tour_id' => $tour->id,
+        'status' => BookingStatus::CANCELLED,
+        'booking_number' => 'BKG-TERMINAL-CA',
+        'grand_total' => 1_000_000,
+    ]);
+
+    Booking::factory()->create([
+        'vendor_id' => $vendor->id,
+        'tour_id' => $tour->id,
+        'status' => BookingStatus::REFUNDED,
+        'booking_number' => 'BKG-TERMINAL-RF',
+        'grand_total' => 1_000_000,
+    ]);
+
+    $response = $this->actingAs($this->user)
+        ->get("/companies/{$vendor->username}/dashboard/bookings?sort=booking_number");
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->where('data.data.0.booking_number', 'BKG-REMAINING-DP')
+        ->where('data.data.0.remaining_balance_visible', true)
+        ->where('data.data.1.booking_number', 'BKG-REMAINING-WA')
+        ->where('data.data.1.remaining_balance_visible', false)
+        ->where('data.data.2.booking_number', 'BKG-TERMINAL-CA')
+        ->where('data.data.2.payment_followup.state', 'not_applicable')
+        ->where('data.data.2.document_followup.state', 'not_applicable')
+        ->where('data.data.3.booking_number', 'BKG-TERMINAL-RF')
+        ->where('data.data.3.payment_followup.state', 'not_applicable')
+        ->where('data.data.3.document_followup.state', 'not_applicable'));
+});
+
+test('booking index exposes continue booking action for awaiting payment bookings', function () {
+    $vendor = Company::factory()->create(['type' => 'vendor']);
+
+    CompanyTeam::create([
+        'company_id' => $vendor->id,
+        'user_id' => $this->user->id,
+        'status' => CompanyTeamStatus::ACTIVE,
+        'is_owner' => true,
+        'accepted_at' => now(),
+    ]);
+
+    $tour = Tour::factory()->create(['company_id' => $vendor->id]);
+    $departureDate = now()->addMonth()->toDateString();
+
+    Booking::factory()->create([
+        'vendor_id' => $vendor->id,
+        'tour_id' => $tour->id,
+        'status' => BookingStatus::AWAITING_PAYMENT,
+        'booking_number' => 'BKG-CONTINUE-WP',
+        'departure_date' => $departureDate,
+    ]);
+
+    $response = $this->actingAs($this->user)
+        ->get("/companies/{$vendor->username}/dashboard/bookings");
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->where('data.data.0.continue_booking_url', "/companies/{$vendor->username}/dashboard/bookings/create/{$tour->id}?date={$departureDate}&booking_number=BKG-CONTINUE-WP"));
+});
+
+test('booking index exposes completed document detail links', function () {
+    Storage::fake('public');
+    Storage::disk('public')->put('travel-documents/passports/complete-passport.pdf', 'passport');
+    Storage::disk('public')->put('travel-documents/visas/complete-visa.pdf', 'visa');
+
+    $vendor = Company::factory()->create(['type' => 'vendor']);
+
+    CompanyTeam::create([
+        'company_id' => $vendor->id,
+        'user_id' => $this->user->id,
+        'status' => CompanyTeamStatus::ACTIVE,
+        'is_owner' => true,
+        'accepted_at' => now(),
+    ]);
+
+    $tour = Tour::factory()->create(['company_id' => $vendor->id]);
+    $booking = Booking::factory()->create([
+        'vendor_id' => $vendor->id,
+        'tour_id' => $tour->id,
+        'status' => BookingStatus::DOWN_PAYMENT,
+        'booking_number' => 'BKG-DOCS-COMPLETE',
+    ]);
+
+    BookingPassenger::create([
+        'booking_id' => $booking->id,
+        'title' => 'Ms',
+        'first_name' => 'Complete',
+        'last_name' => 'Docs',
+        'dob' => now()->subYears(30)->toDateString(),
+        'price_category' => 'Adult Twin',
+        'price_amount' => 1_000_000,
+        'passport_number' => 'P1234567',
+        'passport_issue_date' => now()->subYear()->toDateString(),
+        'passport_expiry_date' => now()->addYears(4)->toDateString(),
+        'passport_file_path' => 'travel-documents/passports/complete-passport.pdf',
+        'visa_number' => 'V1234567',
+        'visa_file_path' => 'travel-documents/visas/complete-visa.pdf',
+    ]);
+
+    $response = $this->actingAs($this->user)
+        ->get("/companies/{$vendor->username}/dashboard/bookings");
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->where('data.data.0.document_followup.state', 'completed')
+        ->where('data.data.0.document_followup.action_label', 'View Documents')
+        ->has('data.data.0.document_detail', 1)
+        ->where('data.data.0.document_detail.0.passenger_name', 'Complete Docs')
+        ->where('data.data.0.document_detail.0.passport_file_name', 'complete-passport.pdf')
+        ->where('data.data.0.document_detail.0.visa_file_name', 'complete-visa.pdf')
+        ->where('data.data.0.document_detail.0.passport_file_url', Storage::disk('public')->url('travel-documents/passports/complete-passport.pdf'))
+        ->where('data.data.0.document_detail.0.visa_file_url', Storage::disk('public')->url('travel-documents/visas/complete-visa.pdf')));
+});
+
+test('dashboard hold expiry resolution is idempotent after booking state changes', function () {
+    $vendor = Company::factory()->create(['type' => 'vendor']);
+
+    CompanyTeam::create([
+        'company_id' => $vendor->id,
+        'user_id' => $this->user->id,
+        'status' => CompanyTeamStatus::ACTIVE,
+        'is_owner' => true,
+        'accepted_at' => now(),
+    ]);
+
+    $tour = Tour::factory()->create(['company_id' => $vendor->id]);
+    $booking = Booking::factory()->create([
+        'vendor_id' => $vendor->id,
+        'tour_id' => $tour->id,
+        'status' => BookingStatus::WAITING_PAYMENT_APPROVAL,
+        'reserved_type' => 'payment_in_progress',
+        'reserved_expires_at' => null,
+    ]);
+
+    $this->actingAs($this->user)
+        ->post("/companies/{$vendor->username}/dashboard/bookings/{$booking->id}/resolve-hold-expiry", [
+            'resolution' => 'payment_in_progress',
+        ])
+        ->assertRedirect()
+        ->assertSessionHasNoErrors();
+
+    expect($booking->fresh()->status)->toBe(BookingStatus::WAITING_PAYMENT_APPROVAL);
+});

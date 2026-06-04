@@ -18,10 +18,13 @@ class TourAddOn extends Model
         'description',
         'price',
         'edit_status',
+        'is_taxable',
     ];
 
     protected $casts = [
         'price' => 'decimal:2',
+        'edit_status' => 'boolean',
+        'is_taxable' => 'boolean',
     ];
 
     // ================= RELATIONS =================

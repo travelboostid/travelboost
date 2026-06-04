@@ -32,7 +32,10 @@ import type {
     TravelDocumentEntry,
     VendorInfo,
 } from '@/types/booking';
-import { calculateBookingPricing } from '@/utils/booking-calculations';
+import {
+    calculateAddOnPricing,
+    calculateBookingPricing,
+} from '@/utils/booking-calculations';
 import { Head, router } from '@inertiajs/react';
 import axios from 'axios';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -118,6 +121,7 @@ type PageProps = {
     paymentUnavailableReason?: string | null;
     paidAmount?: number;
     remainingBalance?: number;
+    downPaymentPaidAt?: string | null;
     bookingSeatLimit?: number;
     vendorBankInfo?: {
         bankName: string;
@@ -269,6 +273,7 @@ export default function Page({
     paymentUnavailableReason = null,
     paidAmount = 0,
     remainingBalance = 0,
+    downPaymentPaidAt = null,
     bookingSeatLimit = 99,
     vendorBankInfo,
     editMode = 'readonly',
@@ -343,6 +348,7 @@ export default function Page({
             paymentUnavailableReason={paymentUnavailableReason}
             paidAmount={paidAmount}
             remainingBalance={remainingBalance}
+            downPaymentPaidAt={downPaymentPaidAt}
             bookingSeatLimit={bookingSeatLimit}
             vendorBankInfo={vendorBankInfo}
             editMode={editMode}
@@ -370,6 +376,7 @@ function EditableWizard({
     paymentUnavailableReason,
     paidAmount,
     remainingBalance,
+    downPaymentPaidAt,
     bookingSeatLimit,
     vendorBankInfo,
     editMode,
@@ -389,6 +396,7 @@ function EditableWizard({
     paymentUnavailableReason: string | null;
     paidAmount: number;
     remainingBalance: number;
+    downPaymentPaidAt: string | null;
     bookingSeatLimit: number;
     vendorBankInfo?: {
         bankName: string;
@@ -459,13 +467,13 @@ function EditableWizard({
             ),
         [selectedAddOns, guests.length],
     );
-    const selectedAddOnsTotal = useMemo(
+    const selectedAddOnPricing = useMemo(
         () =>
-            selectedAddOnsForPricing.reduce(
-                (sum, addon) => sum + addon.unitPrice * addon.qty,
-                0,
+            calculateAddOnPricing(
+                selectedAddOnsForPricing,
+                minimumVatPct ?? 11,
             ),
-        [selectedAddOnsForPricing],
+        [minimumVatPct, selectedAddOnsForPricing],
     );
     const roomsGuestFingerprint = useRef<string>(
         booking.rooms?.length
@@ -579,7 +587,10 @@ function EditableWizard({
             ),
         [guests, vendor, minimumVatPct, platformFeePerPax, tourPrices],
     );
-    const liveGrandTotal = pricing.totalPrice + selectedAddOnsTotal;
+    const liveGrandTotal =
+        pricing.totalPrice +
+        selectedAddOnPricing.addOnsTotal +
+        selectedAddOnPricing.addOnsVat;
     const bookingGrandTotal = Number(booking.grand_total ?? 0);
     const displayGrandTotal =
         isDocumentOnlyMode && bookingGrandTotal > 0
@@ -780,12 +791,17 @@ function EditableWizard({
                 name: addon.label,
                 price: addon.unitPrice * addon.qty,
                 qty: addon.qty,
+                is_taxable: addon.isTaxable ?? false,
             }));
-        const addOnsTotal = addOnRows.reduce(
-            (sum, item) => sum + item.price,
-            0,
+        const addOnPricing = calculateAddOnPricing(
+            addOnsForSave.filter((addon) => addon.qty > 0),
+            minimumVatPct ?? 11,
         );
-        const grandTotal = pricing.totalPrice + addOnsTotal;
+        const totalTaxAmount = pricing.ppn + addOnPricing.addOnsVat;
+        const grandTotal =
+            pricing.totalPrice +
+            addOnPricing.addOnsTotal +
+            addOnPricing.addOnsVat;
         const roomNumberByGuestId = getRoomNumberByGuestId(rooms);
 
         return {
@@ -797,7 +813,7 @@ function EditableWizard({
             pax_child: children,
             pax_infant: infants,
             total_price: pricing.subtotalGuests,
-            tax_amount: pricing.ppn,
+            tax_amount: totalTaxAmount,
             platform_fee: pricing.platformFee,
             commission_amount: pricing.agentCommission,
             grand_total: grandTotal,
@@ -1321,6 +1337,9 @@ function EditableWizard({
                                                 paidAmount={paidAmount}
                                                 remainingBalance={
                                                     remainingBalance
+                                                }
+                                                downPaymentPaidAt={
+                                                    downPaymentPaidAt
                                                 }
                                                 grandTotalOverride={
                                                     isDocumentOnlyMode &&

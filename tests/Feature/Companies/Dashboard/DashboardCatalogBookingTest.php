@@ -380,6 +380,65 @@ test('vendor dashboard booking create exposes only customers from eligible agent
         ->where('customerOptions.0.email', 'paid-agent-customer@example.test'));
 });
 
+test('dashboard booking create exposes saved passengers scoped to eligible agent customers', function () {
+    ['vendor' => $vendor, 'tour' => $tour, 'schedule' => $schedule] = createPricedDashboardTour();
+    $user = User::factory()->create();
+    attachDashboardUserToCompany($user, $vendor);
+    $paidAgent = createActiveDashboardAgentPartner($vendor, 2, ['name' => 'Paid Agent']);
+    $otherPaidAgent = createActiveDashboardAgentPartner($vendor, 2, ['name' => 'Other Paid Agent']);
+    $freeTrialAgent = createActiveDashboardAgentPartner($vendor, 1, ['name' => 'Free Trial Agent']);
+
+    $paidAgentCustomer = User::factory()->create([
+        'company_id' => $paidAgent->id,
+        'name' => 'Paid Agent Customer',
+        'email' => 'paid-agent-customer-saved@example.test',
+        'note' => 'Prefers aisle seats.',
+    ]);
+    $otherPaidAgentCustomer = User::factory()->create([
+        'company_id' => $otherPaidAgent->id,
+        'name' => 'Other Paid Agent Customer',
+        'email' => 'other-paid-agent-customer-saved@example.test',
+    ]);
+    $freeTrialCustomer = User::factory()->create([
+        'company_id' => $freeTrialAgent->id,
+        'name' => 'Free Trial Customer',
+        'email' => 'free-trial-customer-saved@example.test',
+    ]);
+
+    $paidAgentCustomer->savedPassengers()->create([
+        'first_name' => 'Paid',
+        'last_name' => 'Passenger',
+        'dob' => now()->subYears(30)->toDateString(),
+        'passport_number' => 'PAID-PASSPORT',
+    ]);
+    $otherPaidAgentCustomer->savedPassengers()->create([
+        'first_name' => 'Other',
+        'last_name' => 'Passenger',
+        'dob' => now()->subYears(30)->toDateString(),
+        'passport_number' => 'OTHER-PASSPORT',
+    ]);
+    $freeTrialCustomer->savedPassengers()->create([
+        'first_name' => 'Hidden',
+        'last_name' => 'Passenger',
+        'dob' => now()->subYears(30)->toDateString(),
+        'passport_number' => 'HIDDEN-PASSPORT',
+    ]);
+
+    $response = $this->actingAs($user)
+        ->get("/companies/{$vendor->username}/dashboard/bookings/create/{$tour->id}?date={$schedule->departure_date}");
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->component('tours/bookings/create')
+        ->has('savedPassengers', 2)
+        ->where('savedPassengers.0.firstName', 'Other')
+        ->where('savedPassengers.0.ownerCompanyId', $otherPaidAgent->id)
+        ->where('savedPassengers.1.firstName', 'Paid')
+        ->where('savedPassengers.1.ownerUserId', $paidAgentCustomer->id)
+        ->where('savedPassengers.1.ownerCompanyId', $paidAgent->id)
+        ->where('savedPassengers.1.customerNote', 'Prefers aisle seats.'));
+});
+
 test('vendor dashboard booking create only exposes active partners with paid subscription packages', function () {
     ['vendor' => $vendor, 'tour' => $tour, 'schedule' => $schedule] = createPricedDashboardTour();
     $user = User::factory()->create();
@@ -633,7 +692,7 @@ test('dashboard hold expiry can mark payment in progress as waiting payment appr
         ->and((int) $availability->fresh()->available)->toBe(8);
 });
 
-test('dashboard hold expiry rejects inaccessible and non reserved bookings', function () {
+test('dashboard hold expiry rejects inaccessible bookings and ignores non reserved bookings safely', function () {
     ['vendor' => $vendor, 'tour' => $tour, 'schedule' => $schedule] = createPricedDashboardTour();
     $otherVendor = Company::factory()->create(['type' => 'vendor']);
     $dashboardUser = User::factory()->create();
@@ -683,7 +742,7 @@ test('dashboard hold expiry rejects inaccessible and non reserved bookings', fun
         ->post("/companies/{$otherVendor->username}/dashboard/bookings/{$downPaymentBooking->id}/resolve-hold-expiry", [
             'resolution' => 'awaiting_payment',
         ])
-        ->assertStatus(422);
+        ->assertRedirect();
 });
 
 test('vendor dashboard booking reserve requires an active agent partner', function () {
@@ -770,6 +829,34 @@ test('dashboard booking store falls back to dashboard user when contact email ha
     expect($booking->user_id)->toBe($dashboardUser->id)
         ->and($booking->vendor_id)->toBe($vendor->id)
         ->and($booking->agent_id)->toBe($agent->id);
+});
+
+test('dashboard booking store persists passenger and contact notes', function () {
+    ['vendor' => $vendor, 'tour' => $tour, 'schedule' => $schedule] = createPricedDashboardTour();
+    $dashboardUser = User::factory()->create();
+    attachDashboardUserToCompany($dashboardUser, $vendor);
+    $agent = createActiveDashboardAgentPartner($vendor);
+    $payload = dashboardBookingPayload(
+        $tour,
+        $schedule,
+        $vendor,
+        $agent,
+        'note-customer@example.test',
+        'DASH-NOTES-001'
+    );
+    $payload['contact_notes'] = 'Customer prefers vegetarian meals.';
+    $payload['passengers'][0]['note'] = 'Window side seat.';
+
+    $this->actingAs($dashboardUser)
+        ->post("/companies/{$vendor->username}/dashboard/bookings/create/{$tour->id}", $payload)
+        ->assertRedirect()
+        ->assertSessionHasNoErrors();
+
+    $booking = Booking::query()->where('booking_number', 'DASH-NOTES-001')->firstOrFail();
+    $passenger = $booking->passengers()->firstOrFail();
+
+    expect($booking->contact_notes)->toBe('Customer prefers vegetarian meals.')
+        ->and($passenger->note)->toBe('Window side seat.');
 });
 
 test('vendor dashboard booking store requires an active agent partner', function () {
