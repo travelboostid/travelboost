@@ -437,6 +437,7 @@ class BookingIndexController extends Controller
         $isAgentToCustomerInvoice = $invoiceType === 'agent_to_customer';
         $isCustomerInvoice = ! $isVendorToAgentInvoice;
         $isProforma = $this->bookingStatusValue($booking) === BookingStatus::DOWN_PAYMENT->value;
+        $paidAmount = (float) $paidPayments->sum('amount');
         $invoiceGrandTotal = $isVendorToAgentInvoice
             ? $paymentDetailsTotal + $vatAmount
             : (float) $booking->grand_total;
@@ -446,9 +447,12 @@ class BookingIndexController extends Controller
         $issuer = $isAgentToCustomerInvoice
             ? $booking->agent
             : ($booking->vendor ?? $booking->tour?->company);
-        $customerAddress = $booking->user?->address;
         $billedTo = $isVendorToAgentInvoice ? ($booking->agent ?? $company) : null;
+        $customerName = $booking->contact_name ?: $booking->user?->name;
+        $customerEmail = $booking->contact_email ?: $booking->user?->email;
+        $customerPhone = $booking->contact_phone ?: $booking->user?->phone;
         $vatRate = $this->resolveInvoiceVatRate($booking);
+        $deadline = $this->deadlinePayload($booking, $this->vendorSettings($booking)?->full_payment_deadline);
         $filename = 'Invoice_'.$invoiceNumber.'.pdf';
 
         $pdf = Pdf::setOption(['isRemoteEnabled' => true])
@@ -456,17 +460,19 @@ class BookingIndexController extends Controller
                 'booking' => $booking,
                 'agent' => $issuer,
                 'logoSrc' => $this->resolveCompanyLogoSrc($issuer),
-                'customerName' => $billedTo?->name ?? ($booking->user?->name ?: $booking->contact_name),
-                'billedToName' => $billedTo?->name,
-                'billedToEmail' => $billedTo?->email,
-                'billedToPhone' => $billedTo?->customer_service_phone ?: $billedTo?->phone,
-                'billedToAddress' => $billedTo?->address ?? $customerAddress,
+                'customerName' => $billedTo?->name ?? $customerName,
+                'billedToName' => $billedTo?->name ?? $customerName,
+                'billedToEmail' => $billedTo?->email ?? $customerEmail,
+                'billedToPhone' => ($billedTo?->customer_service_phone ?: $billedTo?->phone) ?? $customerPhone,
+                'billedToAddress' => $isVendorToAgentInvoice ? $billedTo?->address : null,
                 'paymentDate' => $paymentDate,
+                'invoiceDate' => $booking->created_at,
+                'dueDate' => $deadline['date'] ?? null,
                 'returnDate' => $invoiceSchedule?->return_date,
-                'paidAmount' => (float) $paidPayments->sum('amount'),
+                'paidAmount' => $paidAmount,
                 'invoicePaidAmount' => $isVendorToAgentInvoice && ! $isProforma
                     ? $invoiceGrandTotal
-                    : (float) $paidPayments->sum('amount'),
+                    : $paidAmount,
                 'priceBreakdown' => $priceBreakdown,
                 'paymentDetails' => $paymentDetails,
                 'paymentDetailsTotal' => $paymentDetailsTotal,

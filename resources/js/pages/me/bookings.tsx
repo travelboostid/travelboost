@@ -886,7 +886,13 @@ function BookingCard({
                                                 type="button"
                                                 variant="outline"
                                                 aria-label="Print Proforma Invoice"
-                                                disabled
+                                                onClick={() =>
+                                                    window.open(
+                                                        `/mybookings/${booking.id}/invoice`,
+                                                        '_blank',
+                                                        'noopener,noreferrer',
+                                                    )
+                                                }
                                                 className="h-8 min-w-8 gap-1.5 rounded-lg px-2 text-[11px] sm:w-8 sm:flex-none sm:px-0"
                                             >
                                                 <FileTextIcon className="size-4" />

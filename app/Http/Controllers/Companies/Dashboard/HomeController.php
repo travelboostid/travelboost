@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Companies\Dashboard;
 
 use App\Enums\BookingStatus;
 use App\Enums\CompanyType;
+use App\Enums\VendorAgentPartnerStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Booking;
 use App\Models\Company;
@@ -63,6 +64,13 @@ class HomeController extends Controller
                 ->whereMonth('created_at', now()->month)
                 ->sum('amount'))
             : 0.0;
+        $yearlyCommission = $commissionQuery
+            ? abs((float) (clone $commissionQuery)
+                ->when(! $isVendor, fn ($query) => $query->where('amount', '>', 0))
+                ->when($isVendor, fn ($query) => $query->where('amount', '<', 0))
+                ->whereYear('created_at', now()->year)
+                ->sum('amount'))
+            : 0.0;
 
         $totalProfit = $isVendor ? max(0, $totalRevenue - $totalCommission) : $totalCommission;
 
@@ -71,9 +79,18 @@ class HomeController extends Controller
             ->whereMonth('created_at', now()->month)
             ->sum($salesAmountExpression);
 
+        $yearlyRevenue = (float) (clone $baseQuery)
+            ->whereYear('created_at', now()->year)
+            ->sum($salesAmountExpression);
+
         $monthlyProfit = $isVendor ? max(0, $monthlyRevenue - $monthlyCommission) : $monthlyCommission;
 
         $networkCount = (int) (clone $baseQuery)->distinct('user_id')->count('user_id');
+        $activeAgentsCount = $isVendor
+            ? $company->agentPartners()
+                ->where('status', VendorAgentPartnerStatus::ACTIVE)
+                ->count()
+            : 0;
 
         $credit = $company->aiCredit;
 
@@ -83,13 +100,21 @@ class HomeController extends Controller
                     'idr' => $totalRevenue,
                     'pax' => $totalPax,
                 ],
+                'monthly' => [
+                    'idr' => $monthlyRevenue,
+                ],
+                'yearly' => [
+                    'idr' => $yearlyRevenue,
+                ],
             ],
             'commission' => [
                 'total' => $totalProfit,
                 'monthly' => $monthlyProfit,
+                'yearly' => $isVendor ? $totalCommission : $yearlyCommission,
             ],
             'counters' => [
                 'customers' => $networkCount,
+                'active_agents' => $activeAgentsCount,
             ],
             'wallet' => [
                 'balance' => $walletBalance,
