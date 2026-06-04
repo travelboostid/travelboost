@@ -11,6 +11,8 @@ import Step2RoomConfiguration, {
     deserializeRoomsFromBooking,
     getRoomNumberByGuestId,
     serializeRoomsForBooking,
+    validateDependentBedPassengerMix,
+    validateRoomArrangement,
     type RoomConfig,
 } from '@/components/booking/Step2RoomConfiguration';
 import Step3TravelDocuments from '@/components/booking/Step3TravelDocuments';
@@ -1566,20 +1568,10 @@ export default function Page() {
         bookingSeatLimitValue !== null &&
         paxTakingSeats > bookingSeatLimitValue;
 
-    const extraBedGuests = guests.filter((g) =>
-        g.priceCategory?.toLowerCase().includes('extra bed'),
+    const dependentBedPassengerValidation = useMemo(
+        () => validateDependentBedPassengerMix(guests),
+        [guests],
     );
-    const hasValidBaseRoom = guests.some((g) => {
-        const priceCategory = g.priceCategory?.toLowerCase() ?? '';
-        const roomTypeDescription = g.roomTypeDescription?.toLowerCase() ?? '';
-
-        return (
-            !priceCategory.includes('extra bed') &&
-            (roomTypeDescription.includes('twin') ||
-                roomTypeDescription.includes('double'))
-        );
-    });
-    const extraBedValid = extraBedGuests.length === 0 || hasValidBaseRoom;
 
     const canProceedStep1 =
         contact.name.trim() !== '' &&
@@ -1592,7 +1584,7 @@ export default function Page() {
             selectedCustomerId !== null) &&
         guests.length > 0 &&
         !isAvailabilityExceeded &&
-        extraBedValid &&
+        dependentBedPassengerValidation.isValid &&
         hasRequiredAgentSelection &&
         guests.every((g) => {
             if (
@@ -1619,7 +1611,15 @@ export default function Page() {
             ...rooms.flatMap((r) => r.guestIds),
             ...rooms.flatMap((r) => r.sharingGuestIds ?? []),
         ];
-        return guests.every((g) => assignedGuestIds.includes(g.id));
+        const roomArrangementValidation = validateRoomArrangement(
+            rooms,
+            guests,
+        );
+
+        return (
+            roomArrangementValidation.isValid &&
+            guests.every((g) => assignedGuestIds.includes(g.id))
+        );
     }, [guests, rooms]);
 
     // ─── Submit ─────────────────────────────────────────────────────────
@@ -2702,11 +2702,11 @@ export default function Page() {
                                             )}
                                         {currentStep === 1 &&
                                             !isReadOnlyBookingMode &&
-                                            !extraBedValid && (
+                                            !dependentBedPassengerValidation.isValid && (
                                                 <span className="text-sm font-semibold text-destructive">
-                                                    "Extra Bed" can only be
-                                                    added with an Adult Twin or
-                                                    Adult Double room.
+                                                    {dependentBedPassengerValidation
+                                                        .issues[0]?.message ??
+                                                        'Adult Extra Bed and Child With Bed guests must share an Adult Twin or Adult Double room.'}
                                                 </span>
                                             )}
                                         {currentStep === 1 &&

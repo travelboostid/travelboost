@@ -9,6 +9,8 @@ import Step2RoomConfiguration, {
     deserializeRoomsFromBooking,
     getRoomNumberByGuestId,
     serializeRoomsForBooking,
+    validateDependentBedPassengerMix,
+    validateRoomArrangement,
     type RoomConfig,
 } from '@/components/booking/Step2RoomConfiguration';
 import Step3TravelDocuments from '@/components/booking/Step3TravelDocuments';
@@ -707,6 +709,10 @@ function EditableWizard({
     // ── Validation ─────────────────────────────────────────────────────
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const phoneRegex = /^\+?\d+$/;
+    const dependentBedPassengerValidation = useMemo(
+        () => validateDependentBedPassengerMix(guests),
+        [guests],
+    );
 
     const canProceedStep1 =
         contact.name.trim() !== '' &&
@@ -714,6 +720,7 @@ function EditableWizard({
         emailRegex.test(contact.email.trim()) &&
         contact.phone.trim() !== '' &&
         phoneRegex.test(contact.phone.trim()) &&
+        dependentBedPassengerValidation.isValid &&
         guests.length > 0 &&
         guests.every((g) => {
             if (
@@ -740,7 +747,15 @@ function EditableWizard({
             ...rooms.flatMap((r) => r.guestIds),
             ...rooms.flatMap((r) => r.sharingGuestIds ?? []),
         ];
-        return guests.every((g) => assignedGuestIds.includes(g.id));
+        const roomArrangementValidation = validateRoomArrangement(
+            rooms,
+            guests,
+        );
+
+        return (
+            roomArrangementValidation.isValid &&
+            guests.every((g) => assignedGuestIds.includes(g.id))
+        );
     }, [guests, rooms]);
     const isCurrentStepInvalid =
         (currentStep === 1 && !canProceedStep1) ||
@@ -1366,6 +1381,14 @@ function EditableWizard({
                                     <div />
                                 )}
                                 <div className="flex items-center gap-2">
+                                    {currentStep === 1 &&
+                                        !dependentBedPassengerValidation.isValid && (
+                                            <span className="max-w-sm text-right text-sm font-semibold text-destructive">
+                                                {dependentBedPassengerValidation
+                                                    .issues[0]?.message ??
+                                                    'Adult Extra Bed and Child With Bed guests must share an Adult Twin or Adult Double room.'}
+                                            </span>
+                                        )}
                                     {canSaveCurrentStep && (
                                         <Button
                                             type="button"

@@ -24,6 +24,7 @@ use App\Services\BookingNumberService;
 use App\Services\BookingPaymentReceiverService;
 use App\Services\BookingPaymentWorkflowService;
 use App\Services\BookingPricingService;
+use App\Services\BookingRoomArrangementValidator;
 use App\Services\BookingService;
 use App\Services\ReusableMidtransBookingPaymentAttemptService;
 use Illuminate\Http\JsonResponse;
@@ -382,7 +383,7 @@ class BookingController extends Controller
             ]);
         }
 
-        $this->validateExtraBedPassengers($data['passengers'] ?? []);
+        app(BookingRoomArrangementValidator::class)->validatePassengerMix($data['passengers'] ?? []);
 
         $bookingTimeLimitMinutes = $this->resolveBookingTimeLimitMinutes($tour);
 
@@ -1437,33 +1438,5 @@ class BookingController extends Controller
         }
 
         return $booking;
-    }
-
-    /**
-     * @param  array<int, array<string, mixed>>  $passengers
-     */
-    private function validateExtraBedPassengers(array $passengers): void
-    {
-        $extraBedPassengers = collect($passengers)->filter(function (array $passenger): bool {
-            return str_contains(strtolower((string) ($passenger['price_category'] ?? '')), 'extra bed');
-        });
-
-        if ($extraBedPassengers->isEmpty()) {
-            return;
-        }
-
-        $hasBaseRoom = collect($passengers)->contains(function (array $passenger): bool {
-            $priceCategory = strtolower((string) ($passenger['price_category'] ?? ''));
-            $roomType = strtolower((string) ($passenger['room_type'] ?? ''));
-
-            return ! str_contains($priceCategory, 'extra bed')
-                && (str_contains($roomType, 'twin') || str_contains($roomType, 'double'));
-        });
-
-        if (! $hasBaseRoom) {
-            throw ValidationException::withMessages([
-                'passengers' => '"Extra Bed" can only be added with an Adult Twin or Adult Double room.',
-            ]);
-        }
     }
 }

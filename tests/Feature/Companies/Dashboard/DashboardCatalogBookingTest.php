@@ -503,6 +503,53 @@ test('dashboard reserve without booking number creates one booking and reuses it
     expect($booking->fresh()->contact_phone)->toBe('0899999999');
 });
 
+test('dashboard reserve rejects more dependent bed passengers than twin or double base rooms', function () {
+    ['vendor' => $vendor, 'tour' => $tour, 'schedule' => $schedule] = createPricedDashboardTour();
+    $dashboardUser = User::factory()->create();
+    attachDashboardUserToCompany($dashboardUser, $vendor);
+    $agent = createActiveDashboardAgentPartner($vendor);
+
+    $payload = dashboardBookingPayload($tour, $schedule, $vendor, $agent);
+    $payload['pax_adult'] = 3;
+    $payload['passengers'] = [
+        [
+            'title' => 'Mr',
+            'first_name' => 'Base',
+            'last_name' => 'Twin',
+            'dob' => now()->subYears(30)->toDateString(),
+            'pob' => 'Jakarta',
+            'price_category' => 'Adult Twin',
+            'price_amount' => 1_000_000,
+            'room_type' => 'Twin',
+        ],
+        [
+            'title' => 'Mr',
+            'first_name' => 'Extra',
+            'last_name' => 'One',
+            'dob' => now()->subYears(30)->toDateString(),
+            'pob' => 'Jakarta',
+            'price_category' => 'Adult Extra Bed',
+            'price_amount' => 500_000,
+            'room_type' => 'Adult Extra Bed',
+        ],
+        [
+            'title' => 'Mr',
+            'first_name' => 'Extra',
+            'last_name' => 'Two',
+            'dob' => now()->subYears(30)->toDateString(),
+            'pob' => 'Jakarta',
+            'price_category' => 'Adult Extra Bed',
+            'price_amount' => 500_000,
+            'room_type' => 'Adult Extra Bed',
+        ],
+    ];
+
+    $this->actingAs($dashboardUser)
+        ->from("/companies/{$vendor->username}/dashboard/bookings/create/{$tour->id}")
+        ->post("/companies/{$vendor->username}/dashboard/bookings/create/{$tour->id}/reserve", $payload)
+        ->assertSessionHasErrors('passengers');
+});
+
 test('dashboard hold expiry can release a booking reserved hold back to awaiting payment', function () {
     ['vendor' => $vendor, 'tour' => $tour, 'schedule' => $schedule] = createPricedDashboardTour();
     $dashboardUser = User::factory()->create();
