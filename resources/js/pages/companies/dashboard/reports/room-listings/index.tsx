@@ -193,20 +193,33 @@ export default function RoomListing() {
             }
 
             const roomType = cleanRoomType(row.room_type);
+            const roomGroupKey = row.room_group_key
+                ? `${roomType}-${row.room_group_key}`
+                : roomType;
 
-            if (!temporaryGroups[row.booking_number][roomType]) {
-                temporaryGroups[row.booking_number][roomType] = [];
+            if (!temporaryGroups[row.booking_number][roomGroupKey]) {
+                temporaryGroups[row.booking_number][roomGroupKey] = [];
             }
 
-            temporaryGroups[row.booking_number][roomType].push(row);
+            temporaryGroups[row.booking_number][roomGroupKey].push(row);
         });
 
-        Object.entries(temporaryGroups).forEach(([bookingNumber, roomTypes]) => {
+        Object.entries(temporaryGroups).forEach(([bookingNumber, rooms]) => {
             groups[bookingNumber] = [];
 
-            Object.entries(roomTypes).forEach(([roomType, rows]) => {
-                const capacity = Math.max(1, getRoomCapacity(rows[0]));
+            Object.values(rooms).forEach((rows) => {
+                const roomType = cleanRoomType(rows[0]?.room_type);
 
+                if (rows.some((row: any) => row.room_group_key)) {
+                    groups[bookingNumber].push({
+                        roomType,
+                        passengerList: rows,
+                    });
+
+                    return;
+                }
+
+                const capacity = Math.max(1, getRoomCapacity(rows[0]));
                 for (let index = 0; index < rows.length; index += capacity) {
                     groups[bookingNumber].push({
                         roomType,
@@ -529,8 +542,12 @@ export default function RoomListing() {
                                                     },
                                                     roomIndex,
                                                 ) => {
-                                                    const roomNumber =
+                                                    const fallbackRoomNumber =
                                                         ++roomCounter;
+                                                    const roomNumber =
+                                                        passengerList[0]
+                                                            ?.room_number ||
+                                                        fallbackRoomNumber;
 
                                                     return passengerList.map(
                                                         (
@@ -608,7 +625,6 @@ export default function RoomListing() {
                                                                     <TableCell className="border-r border-slate-200 p-2 text-center text-[11px] dark:border-slate-800 dark:text-slate-300" />
                                                                     <TableCell className="border-r border-slate-200 p-2 text-[11px] italic leading-tight text-slate-500 dark:border-slate-800 dark:text-slate-400">
                                                                         {row.note ||
-                                                                            row.contact_notes ||
                                                                             '-'}
                                                                     </TableCell>
                                                                     <TableCell className="border-r border-slate-200 p-2 font-mono text-[12px] tracking-tighter dark:border-slate-800 dark:text-slate-300">

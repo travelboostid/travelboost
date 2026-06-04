@@ -158,6 +158,7 @@
             $isFirstInRoom = true;
             $roomPassengerCount = count($passengers);
             $roomCounter++;
+            $roomNumber = $roomGroup['room_number'] ?? $roomCounter;
           @endphp
           @foreach($passengers as $passenger)
             @php
@@ -180,13 +181,13 @@
 
               @if($isFirstInRoom)
                 <td rowspan="{{ $roomPassengerCount }}" style="{{ $cellStyle }} text-align: center; text-transform: uppercase; font-size: 7pt;">{{ $roomType }}</td>
-                <td rowspan="{{ $roomPassengerCount }}" style="{{ $cellStyle }} text-align: center; font-weight: 700;">{{ $roomCounter }}</td>
+                <td rowspan="{{ $roomPassengerCount }}" style="{{ $cellStyle }} text-align: center; font-weight: 700;">{{ $roomNumber }}</td>
                 <td rowspan="{{ $roomPassengerCount }}" style="{{ $cellStyle }} text-align: center;"></td>
               @endif
 
               <td style="{{ $cellStyle }} text-align: center;"></td>
               <td style="{{ $cellStyle }} text-align: center;"></td>
-              <td style="{{ $cellStyle }} font-size: 7pt; font-style: italic; color: #475569;">{{ $passenger->note ?: $bookingData['contact_notes'] ?: '-' }}</td>
+              <td style="{{ $cellStyle }} font-size: 7pt; font-style: italic; color: #475569;">{{ $passenger->note ?: '-' }}</td>
               <td style="{{ $cellStyle }} text-align: center; font-size: 8pt; mso-number-format: '\@'; font-family: monospace;">{{ $passenger->passport_number ?: '-' }}</td>
               <td style="{{ $cellStyle }} text-align: center; font-size: 8pt;">{{ $passenger->passport_issue_date ? \Carbon\Carbon::parse($passenger->passport_issue_date)->format('d/m/Y') : '-' }}</td>
               <td style="{{ $cellStyle }} text-align: center; font-size: 8pt; font-weight: 700;">{{ $passenger->passport_expiry_date ? \Carbon\Carbon::parse($passenger->passport_expiry_date)->format('d/m/Y') : '-' }}</td>
@@ -212,10 +213,16 @@
   @if(!empty($roomRecap))
   <table style="border-collapse: collapse; width: 100%; margin-top: 14px;">
     <tr>
+      @if($isExcel)
+        <td></td>
+      @endif
       <td colspan="2" style="font-weight: 700; text-transform: uppercase; color: #0f172a; padding: 6px 4px;">Room Recap</td>
     </tr>
     @foreach($roomRecap as $item)
       <tr>
+        @if($isExcel)
+          <td></td>
+        @endif
         <td style="width: 220px; padding: 4px; border: 1px solid #cbd5e1;">{{ $item['room_type'] }}</td>
         <td style="padding: 4px; border: 1px solid #cbd5e1; font-weight: 700;">{{ $item['count'] }} {{ $item['count'] === 1 ? 'room' : 'rooms' }}</td>
       </tr>
