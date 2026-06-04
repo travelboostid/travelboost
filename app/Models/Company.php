@@ -53,8 +53,8 @@ class Company extends Model
     {
         static::created(function ($company) {
             $company->wallet()->create([
-                'name' => 'Main Wallet',
-                'slug' => 'main',
+                'name' => config('wallet.wallet.default.name'),
+                'slug' => config('wallet.wallet.default.slug'),
                 'description' => 'Primary wallet for company transactions',
             ]);
             $company->settings()->create(config('travelboost.company_default_settings'));
