@@ -41,6 +41,11 @@ class ProductCommissionCategory extends Model
         return $this->hasMany(TourCommissionRule::class);
     }
 
+    public function additionalCommissionRules(): HasMany
+    {
+        return $this->hasMany(TourCommissionAdditionalRule::class);
+    }
+
     protected function name(): Attribute
     {
         return Attribute::make(

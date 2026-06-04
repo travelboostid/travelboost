@@ -837,7 +837,6 @@ function RowActions({
     const canRefund = Boolean(booking.can_refund) && !hasPendingActionRequest;
     const canReorder = Boolean(booking.can_reorder);
     const invoiceOptions = booking.invoice_options ?? [];
-    const showProformaInvoice = Boolean(booking.proforma_invoice_available);
     const manualPaymentId = booking.manual_payment?.id;
     const isPayVendorFollowup =
         booking.payment_followup?.action_label === 'Pay Vendor';
@@ -1161,15 +1160,6 @@ function RowActions({
                             </a>
                         </DropdownMenuItem>
                     ))}
-                    {showProformaInvoice && (
-                        <DropdownMenuItem
-                            disabled
-                            title="Proforma invoice will be available soon"
-                        >
-                            <FileTextIcon className="mr-2 h-4 w-4" />
-                            Proforma Invoice
-                        </DropdownMenuItem>
-                    )}
                     {canReorder && (
                         <>
                             <DropdownMenuSeparator />

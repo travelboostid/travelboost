@@ -151,6 +151,8 @@ class HomeController extends Controller
         $otherChargeAmount = (float) $booking->platform_fee;
         $vatRate = $this->resolveInvoiceVatRate($booking);
         $isProforma = $booking->status === BookingStatus::DOWN_PAYMENT;
+        $settings = $booking->vendor?->companySetting ?? $booking->tour?->company?->companySetting;
+        $dueDate = $this->buildDeadlinePayload($booking->departure_date, $settings?->full_payment_deadline)['date'] ?? null;
 
         $filename = 'Invoice_'.$booking->booking_number.'.pdf';
 
@@ -159,9 +161,14 @@ class HomeController extends Controller
                 'booking' => $booking,
                 'agent' => $agent,
                 'logoSrc' => $this->resolveCompanyLogoSrc($agent),
-                'customerName' => $booking->user?->name ?: $booking->contact_name,
-                'billedToAddress' => $booking->user?->address,
+                'customerName' => $booking->contact_name ?: $booking->user?->name,
+                'billedToName' => $booking->contact_name ?: $booking->user?->name,
+                'billedToEmail' => $booking->contact_email ?: $booking->user?->email,
+                'billedToPhone' => $booking->contact_phone ?: $booking->user?->phone,
+                'billedToAddress' => null,
                 'paymentDate' => $paymentDate,
+                'invoiceDate' => $booking->created_at,
+                'dueDate' => $dueDate,
                 'returnDate' => $invoiceSchedule?->return_date,
                 'paidAmount' => (float) $paidPayments->sum('amount'),
                 'priceBreakdown' => $priceBreakdown,

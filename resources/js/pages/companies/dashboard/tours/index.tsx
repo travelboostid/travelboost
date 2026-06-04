@@ -134,11 +134,11 @@ function RowActions({ tour }: { tour: TourResource }) {
         : 'https://placehold.co/800x400/e2e8f0/94a3b8?text=No+Image';
 
     return (
-        <div className="flex items-center justify-end">
+        <div className="flex items-center justify-center">
             <Dialog>
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <Button variant="ghost" size="icon" className="h-7 w-7">
                             <MoreVertical className="h-4 w-4" />
                         </Button>
                     </DropdownMenuTrigger>
@@ -383,6 +383,65 @@ function StatusCell({ row }: { row: any }) {
     );
 }
 
+function ProductCommissionCategoryCell({ row }: { row: any }) {
+    const { company } = usePageSharedDataProps();
+    const {
+        props: { productCommissionCategories = [] },
+    } = usePage<{
+        productCommissionCategories?: {
+            id: number;
+            category_name: string;
+        }[];
+    }>();
+    const tour = row.original;
+
+    const [value, setValue] = React.useState(
+        tour.product_commission_category_id?.toString() || 'none',
+    );
+
+    React.useEffect(() => {
+        setValue(tour.product_commission_category_id?.toString() || 'none');
+    }, [tour.product_commission_category_id]);
+
+    const handleChange = (val: string) => {
+        setValue(val);
+        router.put(
+            `/companies/${company.username}/dashboard/tours/${tour.id}`,
+            {
+                quick_update: true,
+                product_commission_category_id:
+                    val === 'none' ? null : Number(val),
+            },
+            {
+                preserveScroll: true,
+                preserveState: true,
+                onSuccess: () =>
+                    toast.success(
+                        'Product commission category updated successfully',
+                    ),
+            },
+        );
+    };
+
+    return (
+        <div onClick={(e) => e.stopPropagation()}>
+            <Select value={value} onValueChange={handleChange}>
+                <SelectTrigger className="w-[170px] h-9 text-xs border-slate-200 bg-white rounded-lg shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100">
+                    <SelectValue placeholder="Select PCC" />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl">
+                    <SelectItem value="none">No PCC</SelectItem>
+                    {productCommissionCategories.map((item) => (
+                        <SelectItem key={item.id} value={String(item.id)}>
+                            {item.category_name}
+                        </SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
+        </div>
+    );
+}
+
 function SortableHeader({
     column,
     title,
@@ -412,38 +471,21 @@ function SortableHeader({
 
 const getStickyActionColumnClassName = (columnId: string) =>
     columnId === 'actions'
-        ? 'sticky right-0 z-20 w-16 bg-white/95 shadow-[-12px_0_18px_-18px_rgba(15,23,42,0.7)] backdrop-blur dark:bg-slate-950/95 dark:shadow-[-12px_0_18px_-18px_rgba(0,0,0,0.9)]'
+        ? 'sticky left-0 z-20 w-[3.25rem] min-w-[3.25rem] max-w-[3.25rem] border-r border-border/70 bg-white/95 px-0 text-center shadow-[10px_0_14px_-16px_rgba(15,23,42,0.55)] backdrop-blur dark:bg-slate-950/95'
         : '';
 
 export const columns: ColumnDef<TourResource>[] = [
-    // {
-    //   id: 'select',
-    //   header: ({ table }) => (
-    //     <div className="px-2 flex items-center justify-center">
-    //       <Checkbox
-    //         checked={
-    //           table.getIsAllPageRowsSelected() ||
-    //           (table.getIsSomePageRowsSelected() && 'indeterminate')
-    //         }
-    //         onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-    //         aria-label="Select all"
-    //         className="border-slate-300 rounded data-[state=checked]:bg-primary"
-    //       />
-    //     </div>
-    //   ),
-    //   cell: ({ row }) => (
-    //     <div className="px-2 flex items-center justify-center">
-    //       <Checkbox
-    //         checked={row.getIsSelected()}
-    //         onCheckedChange={(value) => row.toggleSelected(!!value)}
-    //         aria-label="Select row"
-    //         className="border-slate-300 rounded data-[state=checked]:bg-primary"
-    //       />
-    //     </div>
-    //   ),
-    //   enableSorting: false,
-    //   enableHiding: false,
-    // },
+    {
+        id: 'actions',
+        header: () => (
+            <div className="px-1 text-center text-[11px] font-bold tracking-wider text-primary">
+                Actions
+            </div>
+        ),
+        cell: ({ row }) => <RowActions tour={row.original} />,
+        enableHiding: false,
+        enableSorting: false,
+    },
     {
         id: 'name',
         accessorFn: (row) => row.name,
@@ -501,14 +543,6 @@ export const columns: ColumnDef<TourResource>[] = [
         enableSorting: false,
     },
     {
-        id: 'category',
-        accessorFn: (row) => (row as any).category?.name,
-        header: ({ column }) => (
-            <SortableHeader column={column} title="Category" />
-        ),
-        cell: ({ row }) => <CategoryCell row={row} />,
-    },
-    {
         id: 'seats',
         accessorFn: (row: any) =>
             row.availabilities
@@ -551,6 +585,34 @@ export const columns: ColumnDef<TourResource>[] = [
         },
     },
     {
+        id: 'category',
+        accessorFn: (row) => (row as any).category?.name,
+        header: ({ column }) => (
+            <SortableHeader column={column} title="Category" />
+        ),
+        cell: ({ row }) => <CategoryCell row={row} />,
+    },
+    {
+        id: 'product_commission_category',
+        accessorFn: (row) =>
+            (row as any).product_commission_category?.category_name ||
+            (row as any).productCommissionCategory?.category_name,
+        header: ({ column }) => (
+            <SortableHeader
+                column={column}
+                title={
+                    <span className="inline-block text-left leading-tight">
+                        Product Comm.
+                        <br />
+                        Category
+                    </span>
+                }
+                className="justify-start"
+            />
+        ),
+        cell: ({ row }) => <ProductCommissionCategoryCell row={row} />,
+    },
+    {
         id: 'status',
         accessorFn: (row) => row.status,
         header: ({ column }) => (
@@ -570,18 +632,15 @@ export const columns: ColumnDef<TourResource>[] = [
             </div>
         ),
     },
-    {
-        id: 'actions',
-        header: '',
-        cell: ({ row }) => <RowActions tour={row.original} />,
-        enableHiding: false,
-        enableSorting: false,
-    },
 ];
 
 type PageProps = {
     data: any;
     bookingDeadlineDays?: number;
+    productCommissionCategories?: {
+        id: number;
+        category_name: string;
+    }[];
 };
 
 export default function Page({ data, bookingDeadlineDays = 0 }: PageProps) {
@@ -624,10 +683,16 @@ export default function Page({ data, bookingDeadlineDays = 0 }: PageProps) {
         const name = (row.original.name || '').toLowerCase();
         const vendor = (row.original.company?.name || '').toLowerCase();
         const category = (row.original.category?.name || '').toLowerCase();
+        const productCommissionCategory = (
+            row.original.product_commission_category?.category_name ||
+            row.original.productCommissionCategory?.category_name ||
+            ''
+        ).toLowerCase();
         return (
             name.includes(search) ||
             vendor.includes(search) ||
-            category.includes(search)
+            category.includes(search) ||
+            productCommissionCategory.includes(search)
         );
     };
 
@@ -756,19 +821,22 @@ export default function Page({ data, bookingDeadlineDays = 0 }: PageProps) {
                     </div>
                 </div>
 
-                <div className="rounded-2xl border border-slate-200 bg-white shadow-sm w-full overflow-hidden dark:border-slate-800 dark:bg-slate-950">
-                    <div className="w-full overflow-x-auto">
-                        <Table className="w-full text-sm">
-                            <TableHeader className="bg-slate-50/80 border-b border-slate-200 dark:border-slate-800 dark:bg-slate-900/80">
+                <div className="rounded-xl border border-border bg-card shadow-sm w-full overflow-hidden dark:border-slate-800 dark:bg-slate-950/80 dark:shadow-none">
+                    <div className="w-full max-h-[65vh] overflow-auto relative [scrollbar-gutter:stable]">
+                        <Table
+                            unwrapped
+                            className="w-full border-separate border-spacing-0 text-sm"
+                        >
+                            <TableHeader className="sticky top-0 z-40 bg-slate-50 dark:bg-slate-900/90 shadow-[0_1px_0_0_theme(colors.border)]">
                                 {table.getHeaderGroups().map((headerGroup) => (
                                     <TableRow
                                         key={headerGroup.id}
-                                        className="border-none hover:bg-transparent"
+                                        className="border-none bg-slate-50 hover:bg-slate-50 dark:bg-slate-900/90 dark:hover:bg-slate-900/90"
                                     >
                                         {headerGroup.headers.map((header) => (
                                             <TableHead
                                                 key={header.id}
-                                                className={`text-slate-600 font-bold h-14 px-4 whitespace-nowrap dark:text-slate-300 ${getStickyActionColumnClassName(header.column.id)}`}
+                                                className={`bg-slate-50 dark:bg-slate-900/90 text-primary font-bold h-12 px-3 whitespace-nowrap ${getStickyActionColumnClassName(header.column.id)} ${header.column.id === 'actions' ? 'rounded-tl-xl overflow-visible' : ''}`}
                                             >
                                                 {header.isPlaceholder
                                                     ? null
@@ -791,14 +859,14 @@ export default function Page({ data, bookingDeadlineDays = 0 }: PageProps) {
                                                 row.getIsSelected() &&
                                                 'selected'
                                             }
-                                            className="hover:bg-slate-50/80 transition-colors border-b border-slate-100 last:border-none dark:border-slate-800 dark:hover:bg-slate-900/70"
+                                            className="group border-none transition-colors hover:bg-slate-50 dark:hover:bg-slate-900/50"
                                         >
                                             {row
                                                 .getVisibleCells()
                                                 .map((cell) => (
                                                     <TableCell
                                                         key={cell.id}
-                                                        className={`py-4 px-4 ${getStickyActionColumnClassName(cell.column.id)}`}
+                                                        className={`border-b border-border py-3 px-3 ${getStickyActionColumnClassName(cell.column.id)} ${cell.column.id === 'actions' ? 'group-hover:bg-slate-50 dark:group-hover:bg-slate-900/50' : ''} ${cell.column.id === 'actions' && row.index === table.getRowModel().rows.length - 1 ? 'rounded-bl-xl' : ''}`}
                                                     >
                                                         {flexRender(
                                                             cell.column
@@ -813,20 +881,13 @@ export default function Page({ data, bookingDeadlineDays = 0 }: PageProps) {
                                     <TableRow>
                                         <TableCell
                                             colSpan={columns.length}
-                                            className="h-[400px] text-center"
+                                            className="h-32 text-center text-muted-foreground"
                                         >
-                                            <div className="flex flex-col items-center justify-center text-slate-500 dark:text-slate-400">
-                                                <div className="h-20 w-20 bg-slate-100 rounded-full flex items-center justify-center mb-4 dark:bg-slate-900">
-                                                    <Search className="h-8 w-8 text-slate-400 dark:text-slate-500" />
-                                                </div>
-                                                <p className="text-lg font-medium text-slate-900 mb-1 dark:text-slate-100">
-                                                    No tours found
-                                                </p>
-                                                <p className="text-sm">
-                                                    Try adjusting your search or
-                                                    filter to find what you're
-                                                    looking for.
-                                                </p>
+                                            <div className="flex flex-col items-center justify-center">
+                                                <span className="text-lg mb-1">
+                                                    📭
+                                                </span>
+                                                <p>No tours found.</p>
                                             </div>
                                         </TableCell>
                                     </TableRow>
@@ -836,13 +897,13 @@ export default function Page({ data, bookingDeadlineDays = 0 }: PageProps) {
                     </div>
                 </div>
 
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 px-2">
-                    <p className="text-sm font-medium text-slate-500 bg-white px-4 py-2 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">
-                        <span className="text-slate-900 dark:text-slate-100">
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2">
+                    <p className="text-sm text-muted-foreground bg-slate-50 px-3 py-1.5 rounded-md border border-slate-100 dark:bg-slate-950 dark:border-slate-800 dark:text-slate-400">
+                        <span className="font-semibold text-foreground">
                             {table.getFilteredSelectedRowModel().rows.length}
                         </span>{' '}
                         of{' '}
-                        <span className="text-slate-900 dark:text-slate-100">
+                        <span className="font-semibold text-foreground">
                             {table.getFilteredRowModel().rows.length}
                         </span>{' '}
                         row(s) selected.
@@ -852,7 +913,7 @@ export default function Page({ data, bookingDeadlineDays = 0 }: PageProps) {
                             variant="outline"
                             onClick={() => table.previousPage()}
                             disabled={!table.getCanPreviousPage()}
-                            className="rounded-xl border-slate-200 bg-white hover:bg-slate-50 shadow-sm px-6 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
+                            className="border-slate-200 px-6"
                         >
                             Previous
                         </Button>
@@ -860,7 +921,7 @@ export default function Page({ data, bookingDeadlineDays = 0 }: PageProps) {
                             variant="outline"
                             onClick={() => table.nextPage()}
                             disabled={!table.getCanNextPage()}
-                            className="rounded-xl border-slate-200 bg-white hover:bg-slate-50 shadow-sm px-6 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
+                            className="border-slate-200 px-6"
                         >
                             Next
                         </Button>
