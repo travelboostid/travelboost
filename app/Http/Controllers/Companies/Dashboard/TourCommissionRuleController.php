@@ -71,8 +71,7 @@ class TourCommissionRuleController extends Controller
                     'tour:id,code,name',
                     'tourSchedule:id,tour_id,departure_date,return_date',
                 ])
-                ->orderBy('scope_type')
-                ->orderBy('departure_date')
+                ->orderByDesc('created_at')
                 ->get(),
         ];
     }
