@@ -1,5 +1,11 @@
 import type { BookingPricing, GuestEntry, TourPrice } from '@/types/booking';
 
+type AddOnPricingItem = {
+    unitPrice: number;
+    qty: number;
+    isTaxable?: boolean;
+};
+
 function commissionForGuest(
     guest: GuestEntry,
     tourPrices: TourPrice[],
@@ -71,5 +77,27 @@ export function calculateBookingPricing(
         totalPrice,
         totalPayment,
         paxCount,
+    };
+}
+
+export function calculateAddOnPricing(
+    addOns: AddOnPricingItem[],
+    vatPct: number = 11,
+) {
+    const addOnsTotal = addOns.reduce(
+        (sum, addOn) => sum + addOn.unitPrice * addOn.qty,
+        0,
+    );
+    const taxableAddOnsTotal = addOns.reduce(
+        (sum, addOn) =>
+            addOn.isTaxable ? sum + addOn.unitPrice * addOn.qty : sum,
+        0,
+    );
+    const addOnsVat = Math.round(taxableAddOnsTotal * (vatPct / 100));
+
+    return {
+        addOnsTotal,
+        taxableAddOnsTotal,
+        addOnsVat,
     };
 }

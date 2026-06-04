@@ -57,6 +57,9 @@ export interface GuestEntry {
 
 export interface SavedPassengerOption {
     id: number;
+    ownerUserId?: number;
+    ownerCompanyId?: number | null;
+    customerNote?: string | null;
     title: string | null;
     firstName: string;
     lastName: string | null;
@@ -142,6 +145,7 @@ export interface DashboardCustomerOption {
     name: string;
     email: string;
     phone: string | null;
+    note?: string | null;
 }
 
 export interface BookingInputBy {

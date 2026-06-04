@@ -56,6 +56,7 @@ import axios from 'axios';
 import dayjs from 'dayjs';
 import {
     AlertTriangleIcon,
+    ArrowRightIcon,
     CalendarClockIcon,
     ChevronDown,
     CircleSlashIcon,
@@ -125,6 +126,14 @@ type PaymentDetail = {
     }[];
 };
 
+type DocumentDetail = {
+    passenger_name: string;
+    passport_file_url: string | null;
+    visa_file_url: string | null;
+    passport_file_name: string | null;
+    visa_file_name: string | null;
+};
+
 type PaymentReviewItem = {
     id: number;
     provider: string | null;
@@ -155,7 +164,10 @@ type BookingResource = {
     grand_total: string;
     paid_amount: number;
     remaining_balance: number;
+    remaining_balance_visible?: boolean;
     commission_amount: string | null;
+    continue_booking_url?: string | null;
+    document_detail?: DocumentDetail[];
     payment_receiver_type?: 'vendor' | 'agent' | null;
     payment_receiver_company_id?: number | null;
     invoice_options?: {
@@ -433,6 +445,10 @@ function FollowupCell({
     );
 }
 
+function NotApplicableCell() {
+    return <span className="text-slate-400">—</span>;
+}
+
 function PaymentDetailCell({
     detail,
     onViewReceipt,
@@ -485,6 +501,93 @@ function PaymentDetailCell({
                 {paymentLabel}
             </Badge>
         </div>
+    );
+}
+
+function DocumentsDialog({
+    bookingNumber,
+    documents,
+    onOpenChange,
+}: {
+    bookingNumber: string | null;
+    documents: DocumentDetail[];
+    onOpenChange: (open: boolean) => void;
+}) {
+    return (
+        <Dialog open={Boolean(bookingNumber)} onOpenChange={onOpenChange}>
+            <DialogContent className="w-full max-w-2xl">
+                <DialogHeader>
+                    <DialogTitle>Travel Documents</DialogTitle>
+                    <DialogDescription>
+                        {bookingNumber
+                            ? `Documents for booking ${bookingNumber}.`
+                            : 'Submitted travel documents.'}
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-3">
+                    {documents.length > 0 ? (
+                        documents.map((document, index) => (
+                            <div
+                                key={`${document.passenger_name}-${index}`}
+                                className="rounded-lg border bg-muted/30 p-4 text-sm"
+                            >
+                                <p className="font-semibold">
+                                    {document.passenger_name}
+                                </p>
+                                <div className="mt-3 grid gap-2 text-xs sm:grid-cols-2">
+                                    <div className="rounded-md border bg-background p-3">
+                                        <p className="font-semibold text-muted-foreground">
+                                            Passport
+                                        </p>
+                                        {document.passport_file_url ? (
+                                            <a
+                                                href={
+                                                    document.passport_file_url
+                                                }
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                className="mt-1 block truncate font-semibold text-primary hover:underline"
+                                            >
+                                                {document.passport_file_name ??
+                                                    'View passport'}
+                                            </a>
+                                        ) : (
+                                            <p className="mt-1 text-muted-foreground">
+                                                -
+                                            </p>
+                                        )}
+                                    </div>
+                                    <div className="rounded-md border bg-background p-3">
+                                        <p className="font-semibold text-muted-foreground">
+                                            Visa
+                                        </p>
+                                        {document.visa_file_url ? (
+                                            <a
+                                                href={document.visa_file_url}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                className="mt-1 block truncate font-semibold text-primary hover:underline"
+                                            >
+                                                {document.visa_file_name ??
+                                                    'View visa'}
+                                            </a>
+                                        ) : (
+                                            <p className="mt-1 text-muted-foreground">
+                                                -
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        ))
+                    ) : (
+                        <p className="rounded-lg border bg-muted/30 p-4 text-sm text-muted-foreground">
+                            No submitted documents are available.
+                        </p>
+                    )}
+                </div>
+            </DialogContent>
+        </Dialog>
     );
 }
 
@@ -683,11 +786,11 @@ function PaymentReviewSection({
     const senderLabel = isOnlinePayment ? 'Payment Channel' : 'Sender Bank';
     const senderValue = isOnlinePayment
         ? 'Midtrans Online Payment'
-        : (payment.sender_bank_name ?? '-');
+        : (payment.sender_bank_name ?? '—');
     const accountLabel = isOnlinePayment ? 'Reference' : 'Account Number';
     const accountValue = isOnlinePayment
         ? (detail.receipt?.order_id ?? 'Gateway transaction')
-        : (payment.sender_account_number ?? '-');
+        : (payment.sender_account_number ?? '—');
 
     return (
         <div className="space-y-3 rounded-lg border bg-muted/30 p-4 text-sm">
@@ -731,7 +834,7 @@ function PaymentReviewSection({
                 <span className="text-right font-semibold">
                     {payment.payment_date
                         ? dayjs(payment.payment_date).format('DD MMM YYYY')
-                        : '-'}
+                        : '—'}
                 </span>
             </div>
             <div className="flex justify-between gap-4 border-t pt-3">
@@ -837,7 +940,6 @@ function RowActions({
     const canRefund = Boolean(booking.can_refund) && !hasPendingActionRequest;
     const canReorder = Boolean(booking.can_reorder);
     const invoiceOptions = booking.invoice_options ?? [];
-    const showProformaInvoice = Boolean(booking.proforma_invoice_available);
     const manualPaymentId = booking.manual_payment?.id;
     const isPayVendorFollowup =
         booking.payment_followup?.action_label === 'Pay Vendor';
@@ -1149,6 +1251,14 @@ function RowActions({
                             View Detail
                         </Link>
                     </DropdownMenuItem>
+                    {booking.continue_booking_url && (
+                        <DropdownMenuItem asChild>
+                            <Link href={booking.continue_booking_url}>
+                                <ArrowRightIcon className="mr-2 h-4 w-4" />
+                                Continue Booking
+                            </Link>
+                        </DropdownMenuItem>
+                    )}
                     {invoiceOptions.map((option) => (
                         <DropdownMenuItem key={option.type} asChild>
                             <a
@@ -1161,15 +1271,6 @@ function RowActions({
                             </a>
                         </DropdownMenuItem>
                     ))}
-                    {showProformaInvoice && (
-                        <DropdownMenuItem
-                            disabled
-                            title="Proforma invoice will be available soon"
-                        >
-                            <FileTextIcon className="mr-2 h-4 w-4" />
-                            Proforma Invoice
-                        </DropdownMenuItem>
-                    )}
                     {canReorder && (
                         <>
                             <DropdownMenuSeparator />
@@ -1566,6 +1667,7 @@ function buildColumns(
     isAgent: boolean,
     companyUsername: string,
     onViewReceipt: (detail: PaymentDetail) => void,
+    onViewDocuments: (booking: BookingResource) => void,
 ): ColumnDef<BookingResource>[] {
     return [
         {
@@ -1718,16 +1820,20 @@ function buildColumns(
             header: 'Remaining',
             cell: ({ row }) => {
                 const remaining = row.original.remaining_balance;
-                const isSettled = remaining <= 0;
+                const shouldShowRemaining =
+                    row.original.remaining_balance_visible === true &&
+                    remaining > 0;
 
                 return (
                     <div
                         className={cn(
                             'tabular-nums whitespace-nowrap font-medium text-sm',
-                            isSettled ? 'text-emerald-600' : 'text-rose-600',
+                            shouldShowRemaining
+                                ? 'text-rose-600'
+                                : 'text-slate-400',
                         )}
                     >
-                        {isSettled ? '—' : formatIDR(remaining)}
+                        {shouldShowRemaining ? formatIDR(remaining) : '—'}
                     </div>
                 );
             },
@@ -1757,9 +1863,12 @@ function buildColumns(
         {
             id: 'payment_followup',
             header: 'Payment Status',
-            cell: ({ row }) => (
-                <FollowupCell followup={row.original.payment_followup} />
-            ),
+            cell: ({ row }) =>
+                row.original.payment_followup.state === 'not_applicable' ? (
+                    <NotApplicableCell />
+                ) : (
+                    <FollowupCell followup={row.original.payment_followup} />
+                ),
             enableSorting: false,
         },
         {
@@ -1768,16 +1877,36 @@ function buildColumns(
             cell: ({ row }) => {
                 const followup = row.original.document_followup;
                 const missingCount = Number(followup.missing_count ?? 0);
+                const documentDetails = row.original.document_detail ?? [];
+
+                if (followup.state === 'not_applicable') {
+                    return <NotApplicableCell />;
+                }
 
                 return (
-                    <FollowupCell
-                        followup={followup}
-                        details={
-                            missingCount > 0
-                                ? `${missingCount} passenger${missingCount === 1 ? '' : 's'}`
-                                : undefined
-                        }
-                    />
+                    <div className="space-y-1">
+                        {followup.state === 'completed' &&
+                            documentDetails.length > 0 && (
+                                <button
+                                    type="button"
+                                    className="text-xs font-semibold text-primary underline-offset-2 hover:underline"
+                                    onClick={(event) => {
+                                        event.stopPropagation();
+                                        onViewDocuments(row.original);
+                                    }}
+                                >
+                                    View Documents
+                                </button>
+                            )}
+                        <FollowupCell
+                            followup={followup}
+                            details={
+                                missingCount > 0
+                                    ? `${missingCount} passenger${missingCount === 1 ? '' : 's'}`
+                                    : undefined
+                            }
+                        />
+                    </div>
                 );
             },
             enableSorting: false,
@@ -1797,7 +1926,7 @@ function buildColumns(
 
 function receiptPaymentTime(payment: PaymentDetail): string {
     if (!payment.payment_date) {
-        return '-';
+        return '—';
     }
 
     return dayjs(payment.payment_date).format(
@@ -1952,13 +2081,32 @@ export default function Page({ data, followupSummary }: PageProps) {
     const isAgent = company.type === 'agent';
     const [receiptDialogPayment, setReceiptDialogPayment] =
         React.useState<PaymentDetail | null>(null);
+    const [documentsDialog, setDocumentsDialog] = React.useState<{
+        bookingNumber: string;
+        documents: DocumentDetail[];
+    } | null>(null);
     const handleViewReceipt = React.useCallback((detail: PaymentDetail) => {
         setReceiptDialogPayment(detail);
     }, []);
+    const handleViewDocuments = React.useCallback(
+        (booking: BookingResource) => {
+            setDocumentsDialog({
+                bookingNumber: booking.booking_number,
+                documents: booking.document_detail ?? [],
+            });
+        },
+        [],
+    );
 
     const columns = React.useMemo(
-        () => buildColumns(isAgent, company.username, handleViewReceipt),
-        [handleViewReceipt, isAgent, company.username],
+        () =>
+            buildColumns(
+                isAgent,
+                company.username,
+                handleViewReceipt,
+                handleViewDocuments,
+            ),
+        [handleViewDocuments, handleViewReceipt, isAgent, company.username],
     );
 
     const [sorting, setSorting] = React.useState<SortingState>([]);
@@ -2289,6 +2437,15 @@ export default function Page({ data, followupSummary }: PageProps) {
                 onOpenChange={(open) => {
                     if (!open) {
                         setReceiptDialogPayment(null);
+                    }
+                }}
+            />
+            <DocumentsDialog
+                bookingNumber={documentsDialog?.bookingNumber ?? null}
+                documents={documentsDialog?.documents ?? []}
+                onOpenChange={(open) => {
+                    if (!open) {
+                        setDocumentsDialog(null);
                     }
                 }}
             />

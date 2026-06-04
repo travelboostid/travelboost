@@ -1,15 +1,21 @@
 <?php
 
 use App\Enums\BookingStatus;
+use App\Models\AgentTier;
 use App\Models\AppConfig;
 use App\Models\Booking;
 use App\Models\Company;
 use App\Models\PriceCategory;
+use App\Models\ProductCommissionCategory;
 use App\Models\Tour;
 use App\Models\TourAddOn;
 use App\Models\TourAvailability;
+use App\Models\TourCommissionAdditionalRule;
+use App\Models\TourCommissionRule;
+use App\Models\TourCommissionRuleScheduleAdjustment;
 use App\Models\TourPrice;
 use App\Models\TourSchedule;
+use App\Models\VendorAgentPartner;
 use App\Services\BookingPricingService;
 use Database\Seeders\Common\RolePermissionSeeder;
 use Illuminate\Support\Facades\DB;
@@ -27,7 +33,7 @@ beforeEach(function () {
             'platform_fee' => '30000',
             'commission_min' => '50000',
             'commission_mid' => '75000',
-            'commission_max' => '100000',
+            'commission_max' => '75000',
         ],
     ]);
 });
@@ -179,6 +185,154 @@ test('booking pricing service multiplies matched addon unit price by submitted q
         ->and($quote['addons'][0]['price'])->toBe(1_000_000.0);
 });
 
+test('booking pricing service includes only taxable add ons in vat base', function () {
+    ['tour' => $tour, 'schedule' => $schedule] = createPricingScenario();
+
+    TourAddOn::create([
+        'company_id' => $tour->company_id,
+        'tour_id' => $tour->id,
+        'schedule_id' => $schedule->id,
+        'description' => 'Taxable visa',
+        'price' => 1_000_000,
+        'edit_status' => false,
+        'is_taxable' => true,
+    ]);
+    TourAddOn::create([
+        'company_id' => $tour->company_id,
+        'tour_id' => $tour->id,
+        'schedule_id' => $schedule->id,
+        'description' => 'Non taxable insurance',
+        'price' => 500_000,
+        'edit_status' => false,
+        'is_taxable' => false,
+    ]);
+
+    $quote = app(BookingPricingService::class)->quoteForBookingData($tour, $schedule->departure_date, [
+        ['first_name' => 'Adult', 'price_category' => 'Adult Single', 'price_amount' => 1],
+    ], [
+        ['name' => 'Taxable visa', 'qty' => 2],
+        ['name' => 'Non taxable insurance', 'qty' => 1],
+    ]);
+
+    expect($quote['addons_total'])->toBe(2_500_000.0)
+        ->and($quote['taxable_addons_total'])->toBe(2_000_000.0)
+        ->and($quote['tax_amount'])->toBe(1_540_000.0)
+        ->and($quote['grand_total'])->toBe(16_070_000.0)
+        ->and($quote['addons'][0]['is_taxable'])->toBeTrue()
+        ->and($quote['addons'][1]['is_taxable'])->toBeFalse();
+});
+
+test('booking pricing service resolves agent commission from tier matrix and schedule rules', function () {
+    ['vendor' => $vendor, 'tour' => $tour, 'schedule' => $schedule] = createPricingScenario();
+    $agent = Company::factory()->create(['type' => 'agent']);
+    $tier = AgentTier::create([
+        'company_id' => $vendor->id,
+        'name' => 'Gold',
+        'slug' => 'gold',
+        'sort_order' => 1,
+        'is_active' => true,
+    ]);
+    $category = ProductCommissionCategory::create([
+        'company_id' => $vendor->id,
+        'category_name' => 'Group Tour',
+        'slug' => 'group-tour',
+        'sort_order' => 1,
+        'is_active' => true,
+    ]);
+
+    $tour->forceFill(['product_commission_category_id' => $category->id])->save();
+    VendorAgentPartner::create([
+        'vendor_id' => $vendor->id,
+        'agent_id' => $agent->id,
+        'agent_tier_id' => $tier->id,
+        'status' => 'active',
+    ]);
+
+    $rule = TourCommissionRule::create([
+        'company_id' => $vendor->id,
+        'tour_id' => null,
+        'agent_tier_id' => $tier->id,
+        'product_commission_category_id' => $category->id,
+        'commission_type' => 'percent',
+        'commission_value' => 10,
+        'is_active' => true,
+    ]);
+    TourCommissionRuleScheduleAdjustment::create([
+        'tour_commission_rule_id' => $rule->id,
+        'tour_schedule_id' => $schedule->id,
+        'commission_type' => 'fixed',
+        'commission_value' => 250_000,
+    ]);
+    TourCommissionAdditionalRule::create([
+        'company_id' => $vendor->id,
+        'agent_tier_id' => $tier->id,
+        'product_commission_category_id' => $category->id,
+        'tour_id' => $tour->id,
+        'departure_date' => $schedule->departure_date,
+        'scope_type' => 'category_departure',
+        'commission_type' => 'percent',
+        'commission_value' => 5,
+        'is_active' => true,
+    ]);
+
+    $booking = Booking::factory()->create([
+        'vendor_id' => $vendor->id,
+        'agent_id' => $agent->id,
+        'tour_id' => $tour->id,
+        'departure_date' => $schedule->departure_date,
+        'total_price' => 10_000_000,
+        'tax_amount' => 1_100_000,
+        'platform_fee' => 30_000,
+        'commission_amount' => 0,
+        'grand_total' => 11_130_000,
+    ]);
+    $booking->passengers()->create([
+        'first_name' => 'Matrix',
+        'last_name' => 'Guest',
+        'price_category' => 'Adult Single',
+        'price_amount' => 10_000_000,
+    ]);
+
+    $quote = app(BookingPricingService::class)->quoteForBooking($booking);
+
+    expect($quote['agent_commission'])->toBe(1_750_000.0)
+        ->and($quote['agent_commission_breakdown']['source'])->toBe('commission_matrix')
+        ->and($quote['agent_commission_breakdown']['base_rule_amount'])->toBe(1_000_000.0)
+        ->and($quote['agent_commission_breakdown']['schedule_adjustment_amount'])->toBe(250_000.0)
+        ->and($quote['agent_commission_breakdown']['additional_rule_amount'])->toBe(500_000.0);
+});
+
+test('booking pricing fallback commission prioritizes tour price rate before fixed amount', function () {
+    ['tour' => $tour, 'schedule' => $schedule] = createPricingScenario();
+    $agent = Company::factory()->create([
+        'type' => 'agent',
+    ]);
+
+    TourPrice::query()
+        ->where('tour_code', $tour->code)
+        ->where('schedule_id', $schedule->id)
+        ->whereRelation('priceCategory', 'name', 'Adult Single')
+        ->update([
+            'commission' => 1_000_000,
+            'commission_rate' => 12,
+        ]);
+
+    $quote = app(BookingPricingService::class)->quoteForBookingData(
+        $tour,
+        $schedule->departure_date,
+        [
+            ['first_name' => 'Fallback', 'price_category' => 'Adult Single', 'price_amount' => 1],
+        ],
+        [],
+        null,
+        true,
+        $agent->id,
+    );
+
+    expect($quote['agent_commission'])->toBe(1_440_000.0)
+        ->and(data_get($quote, 'agent_commission_breakdown.0.breakdown.source'))->toBe('tour_price_percent');
+});
+
 test('booking snapshot quote includes persisted add ons without double counting stale grand total', function () {
     ['tour' => $tour, 'schedule' => $schedule, 'addOn' => $addOn] = createPricingScenario();
 
@@ -219,6 +373,41 @@ test('booking snapshot quote includes persisted add ons without double counting 
         ->and($currentSnapshotQuote['grand_total'])->toBe($quote['grand_total']);
 });
 
+test('booking snapshot quote recalculates vat from persisted taxable add ons', function () {
+    ['tour' => $tour, 'schedule' => $schedule, 'addOn' => $addOn] = createPricingScenario();
+
+    $addOn->forceFill(['is_taxable' => true])->save();
+
+    $quote = app(BookingPricingService::class)->quoteForBookingData($tour, $schedule->departure_date, [
+        ['first_name' => 'Adult', 'price_category' => 'Adult Single', 'price_amount' => 1],
+    ], [
+        ['name' => 'Airport transfer', 'qty' => 1],
+    ]);
+
+    $booking = Booking::factory()->create([
+        'vendor_id' => $tour->company_id,
+        'tour_id' => $tour->id,
+        'departure_date' => $schedule->departure_date,
+        'status' => BookingStatus::BOOKING_RESERVED,
+        'pax_adult' => 1,
+        'pax_child' => 0,
+        'pax_infant' => 0,
+        'total_price' => $quote['subtotal_guests'],
+        'tax_amount' => 1_320_000,
+        'platform_fee' => $quote['platform_fee'],
+        'commission_amount' => $quote['agent_commission'],
+        'grand_total' => 13_850_000,
+    ]);
+    $booking->passengers()->createMany($quote['passengers']);
+    $booking->addons()->createMany($quote['addons']);
+
+    $snapshotQuote = app(BookingPricingService::class)->quoteForBooking($booking->fresh());
+
+    expect($snapshotQuote['taxable_addons_total'])->toBe(500_000.0)
+        ->and($snapshotQuote['tax_amount'])->toBe(1_375_000.0)
+        ->and($snapshotQuote['grand_total'])->toBe(13_905_000.0);
+});
+
 test('booking pricing service calculates travelboost commission from admin tier parameters', function () {
     ['tour' => $tour, 'schedule' => $schedule] = createPricingScenario();
 
@@ -244,6 +433,18 @@ test('booking pricing service calculates travelboost commission from admin tier 
         ->and($quote['platform_fee_per_pax'])->toBe(30_000.0)
         ->and($quote['travelboost_commission'])->toBe(250_000.0)
         ->and($quote['travelboost_commission_breakdown'])->toHaveCount(4);
+});
+
+test('booking pricing service defaults high travelboost commission tier to seventy five thousand', function () {
+    ['tour' => $tour, 'schedule' => $schedule] = createPricingScenario();
+
+    AppConfig::where('key', 'admin')->delete();
+
+    $quote = app(BookingPricingService::class)->quoteForBookingData($tour, $schedule->departure_date, [
+        ['first_name' => 'High', 'price_category' => 'Custom High', 'price_amount' => 21_000_000],
+    ]);
+
+    expect($quote['travelboost_commission'])->toBe(75_000.0);
 });
 
 test('booking pricing service reads admin platform fee fallback', function () {

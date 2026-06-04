@@ -232,6 +232,71 @@ const getScheduleAdjustment = (rule: any, schedule: any) => {
     );
 };
 
+const toComparableDate = (value: any) =>
+    value ? String(value).slice(0, 10) : '';
+
+const getAdditionalCommissionRules = (
+    tour: any,
+    schedule: any,
+    partnership: any,
+) => {
+    const tierId = Number(
+        partnership?.agent_tier_id ??
+            partnership?.agentTier?.id ??
+            partnership?.agent_tier?.id ??
+            0,
+    );
+    const categoryId = Number(
+        tour.product_commission_category_id ??
+            tour.productCommissionCategory?.id ??
+            tour.product_commission_category?.id ??
+            0,
+    );
+    const scheduleId = Number(schedule?.id ?? 0);
+    const departureDate = toComparableDate(schedule?.departure_date);
+    const rules = Array.isArray(tour.additional_commission_rules)
+        ? tour.additional_commission_rules
+        : Array.isArray(tour.additionalCommissionRules)
+          ? tour.additionalCommissionRules
+          : [];
+
+    return rules.filter((rule: any) => {
+        const isActive = rule.is_active ?? rule.isActive ?? true;
+        const isRuleActive =
+            isActive === true ||
+            isActive === 1 ||
+            isActive === '1' ||
+            isActive === 'true';
+
+        if (
+            !isRuleActive ||
+            Number(rule.agent_tier_id ?? rule.agentTier?.id ?? 0) !== tierId
+        ) {
+            return false;
+        }
+
+        if (rule.scope_type === 'category_departure') {
+            return (
+                Number(
+                    rule.product_commission_category_id ??
+                        rule.productCommissionCategory?.id ??
+                        0,
+                ) === categoryId &&
+                toComparableDate(rule.departure_date) === departureDate
+            );
+        }
+
+        if (rule.scope_type === 'tour_schedule') {
+            return (
+                Number(rule.tour_schedule_id ?? rule.tourSchedule?.id ?? 0) ===
+                scheduleId
+            );
+        }
+
+        return false;
+    });
+};
+
 const getFallbackCommission = (price: any, currency = 'IDR') => {
     const commissionConfig =
         typeof price.commission === 'object' && price.commission !== null
@@ -294,40 +359,71 @@ const getCommissionDetails = (
         currency,
     );
     const adjustment = getScheduleAdjustment(rule, schedule);
-    const additional = adjustment
-        ? getCommissionComponent(
-              basePrice,
-              adjustment.commission_type ?? adjustment.commissionType,
-              adjustment.commission_value ?? adjustment.commissionValue,
-              currency,
-          )
-        : null;
+    const legacyAdditional = adjustment
+        ? [
+              getCommissionComponent(
+                  basePrice,
+                  adjustment.commission_type ?? adjustment.commissionType,
+                  adjustment.commission_value ?? adjustment.commissionValue,
+                  currency,
+              ),
+          ]
+        : [];
+    const additionalRules = getAdditionalCommissionRules(
+        tour,
+        schedule,
+        partnership,
+    );
+    const additionalComponents = [
+        ...legacyAdditional,
+        ...additionalRules.map((additionalRule: any) =>
+            getCommissionComponent(
+                basePrice,
+                additionalRule.commission_type ??
+                    additionalRule.commissionType,
+                additionalRule.commission_value ??
+                    additionalRule.commissionValue,
+                currency,
+            ),
+        ),
+    ].filter(Boolean);
 
-    if (!main && !additional) {
+    if (!main && additionalComponents.length === 0) {
         return {
             label: '-',
             detail: 'Commission matrix has no value for this tier and category.',
         };
     }
 
-    const totalAmount = (main?.amount ?? 0) + (additional?.amount ?? 0);
+    const totalAdditionalAmount = additionalComponents.reduce(
+        (total: number, component: any) => total + toNumber(component?.amount),
+        0,
+    );
+    const totalAmount = (main?.amount ?? 0) + totalAdditionalAmount;
+    const additionalLabels = additionalComponents
+        .map((component: any) => component?.label)
+        .filter(Boolean);
     const detail = [
         main ? `Base ${main.label}` : null,
-        additional ? `Additional ${additional.label}` : null,
+        additionalLabels.length
+            ? `Additional ${additionalLabels.join(' + ')}`
+            : null,
     ]
         .filter(Boolean)
         .join(' + ');
 
     return {
         label:
-            additional && totalAmount > 0
+            additionalComponents.length > 0 && totalAmount > 0
                 ? `${formatCurrency(totalAmount, currency)} (${[
                       main?.shortLabel,
-                      additional.shortLabel,
+                      ...additionalComponents.map(
+                          (component: any) => component?.shortLabel,
+                      ),
                   ]
                       .filter(Boolean)
                       .join(' + ')})`
-                : main?.label || additional?.label || '-',
+                : main?.label || additionalComponents[0]?.label || '-',
         detail: detail ? `Per pax: ${detail}` : null,
     };
 };

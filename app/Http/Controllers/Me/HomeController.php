@@ -15,6 +15,7 @@ use App\Models\TourPrice;
 use App\Models\TourSchedule;
 use App\Services\BookingPaymentReceiverService;
 use App\Services\BookingPaymentWorkflowService;
+use App\Services\BookingTravelDocumentService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -151,6 +152,8 @@ class HomeController extends Controller
         $otherChargeAmount = (float) $booking->platform_fee;
         $vatRate = $this->resolveInvoiceVatRate($booking);
         $isProforma = $booking->status === BookingStatus::DOWN_PAYMENT;
+        $settings = $booking->vendor?->companySetting ?? $booking->tour?->company?->companySetting;
+        $dueDate = $this->buildDeadlinePayload($booking->departure_date, $settings?->full_payment_deadline)['date'] ?? null;
 
         $filename = 'Invoice_'.$booking->booking_number.'.pdf';
 
@@ -159,9 +162,14 @@ class HomeController extends Controller
                 'booking' => $booking,
                 'agent' => $agent,
                 'logoSrc' => $this->resolveCompanyLogoSrc($agent),
-                'customerName' => $booking->user?->name ?: $booking->contact_name,
-                'billedToAddress' => $booking->user?->address,
+                'customerName' => $booking->contact_name ?: $booking->user?->name,
+                'billedToName' => $booking->contact_name ?: $booking->user?->name,
+                'billedToEmail' => $booking->contact_email ?: $booking->user?->email,
+                'billedToPhone' => $booking->contact_phone ?: $booking->user?->phone,
+                'billedToAddress' => null,
                 'paymentDate' => $paymentDate,
+                'invoiceDate' => $booking->created_at,
+                'dueDate' => $dueDate,
                 'returnDate' => $invoiceSchedule?->return_date,
                 'paidAmount' => (float) $paidPayments->sum('amount'),
                 'priceBreakdown' => $priceBreakdown,
@@ -239,7 +247,7 @@ class HomeController extends Controller
             'can_continue_booking' => $canContinueBooking && $isBookable,
             'can_reorder' => $canReorder && $isBookable,
             'booking_window_closed' => ! $isBookable,
-            'action_unavailable_reason' => $isBookable ? null : 'Booking window closed',
+            'action_unavailable_reason' => $isBookable ? null : 'Booking is closed',
         ];
     }
 
@@ -271,12 +279,7 @@ class HomeController extends Controller
             return false;
         }
 
-        return $booking->passengers->contains(fn ($passenger): bool => blank($passenger->passport_number)
-            || blank($passenger->passport_issue_date)
-            || blank($passenger->passport_expiry_date)
-            || blank($passenger->passport_file_path)
-            || blank($passenger->visa_number)
-            || blank($passenger->visa_file_path));
+        return app(BookingTravelDocumentService::class)->bookingNeedsTravelDocuments($booking);
     }
 
     private function buildDeadlinePayload(mixed $departureDate, mixed $daysBefore): ?array

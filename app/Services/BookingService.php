@@ -26,6 +26,11 @@ class BookingService
         $paymentMode = $this->resolvePaymentMode(data_get($data, 'payment_method'));
 
         return DB::transaction(function () use ($data, $user, $paymentMode, $tour) {
+            app(BookingRoomArrangementValidator::class)->validateRooms(
+                data_get($data, 'passengers', []),
+                is_array(data_get($data, 'rooms')) ? data_get($data, 'rooms') : []
+            );
+
             $quote = app(BookingPricingService::class)->quoteForBookingData(
                 $tour,
                 (string) data_get($data, 'departure_date'),
@@ -33,6 +38,7 @@ class BookingService
                 data_get($data, 'addons', []),
                 (float) ($tour->company?->companySetting?->minimum_vat ?? 11),
                 data_get($data, 'agent_id') !== null,
+                data_get($data, 'agent_id') ? (int) data_get($data, 'agent_id') : null,
             );
             $totals = app(BookingPricingService::class)->bookingTotalsFromQuote($quote);
 
@@ -119,6 +125,11 @@ class BookingService
         return DB::transaction(function () use ($booking, $data, $savedPassengerOwner): Booking {
             $booking->loadMissing(['tour.company.companySetting', 'vendor.companySetting']);
 
+            app(BookingRoomArrangementValidator::class)->validateRooms(
+                data_get($data, 'passengers', []),
+                is_array(data_get($data, 'rooms')) ? data_get($data, 'rooms') : []
+            );
+
             $quote = app(BookingPricingService::class)->quoteForBookingData(
                 $booking->tour,
                 $booking->departure_date,
@@ -126,6 +137,7 @@ class BookingService
                 data_get($data, 'addons', []),
                 (float) ($booking->vendor?->companySetting?->minimum_vat ?? $booking->tour?->company?->companySetting?->minimum_vat ?? 11),
                 $booking->agent_id !== null,
+                $booking->agent_id ? (int) $booking->agent_id : null,
             );
             $totals = app(BookingPricingService::class)->bookingTotalsFromQuote($quote);
 

@@ -113,6 +113,16 @@ class Company extends Model
         return $this->hasMany(ProductCommissionCategory::class);
     }
 
+    public function tourCommissionRules()
+    {
+        return $this->hasMany(TourCommissionRule::class);
+    }
+
+    public function tourCommissionAdditionalRules()
+    {
+        return $this->hasMany(TourCommissionAdditionalRule::class);
+    }
+
     public function settings()
     {
         return $this->hasOne(CompanySettings::class, 'company_id');

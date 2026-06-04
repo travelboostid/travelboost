@@ -167,6 +167,7 @@ class TourScheduleController extends Controller
                             [
                                 'price' => $addon['price'] ?? 0,
                                 'edit_status' => $addon['edit_status'] ?? false,
+                                'is_taxable' => $addon['is_taxable'] ?? false,
                             ]
                         );
                     }

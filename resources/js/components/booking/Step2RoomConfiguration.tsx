@@ -28,7 +28,7 @@ import {
     RefreshCwIcon,
     UserIcon,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
 // ─── Types ──────────────────────────────────────────────────────────────────────
@@ -204,10 +204,16 @@ const TRIPLE_BED_CATEGORIES = ['Adult Triple', 'Triple'];
 const QUAD_BED_CATEGORIES = ['Adult Quad', 'Quad'];
 const EXTRA_BED_CATEGORIES = ['Child With Bed', 'Adult Extra Bed'];
 
+const normalizeCategoryName = (value: string | null | undefined): string =>
+    (value ?? '').trim().toLowerCase().replace(/\s+/g, ' ');
+
 const isCategoryMatch = (
     priceCategory: string | null | undefined,
     categories: string[],
-) => categories.includes(priceCategory ?? '');
+) =>
+    categories
+        .map((category) => normalizeCategoryName(category))
+        .includes(normalizeCategoryName(priceCategory));
 
 const isNoBedCategory = (priceCategory: string | null | undefined): boolean =>
     NO_BED_CATEGORIES.includes((priceCategory ?? '').trim().toLowerCase());
@@ -501,8 +507,150 @@ const itemVariants = {
 
 // ─── Auto Recommendation Logic ──────────────────────────────────────────────────
 
+const DEPENDENT_BED_ROOM_TYPES: BedType[] = [
+    'double_extra_bed',
+    'twin_extra_bed',
+];
+
+export type RoomArrangementValidationIssue = {
+    message: string;
+};
+
+export type RoomArrangementValidationResult = {
+    isValid: boolean;
+    issues: RoomArrangementValidationIssue[];
+};
+
+const isEligibleDependentBaseCategory = (
+    priceCategory: string | null | undefined,
+): boolean =>
+    isCategoryMatch(priceCategory, [
+        ...DOUBLE_BED_CATEGORIES,
+        ...TWIN_BED_CATEGORIES,
+    ]);
+
 const isExtraBedCategory = (priceCategory: string | null | undefined) =>
-    EXTRA_BED_CATEGORIES.includes(priceCategory ?? '');
+    isCategoryMatch(priceCategory, EXTRA_BED_CATEGORIES);
+
+export function validateDependentBedPassengerMix(
+    guests: GuestEntry[],
+): RoomArrangementValidationResult {
+    const dependentBedGuests = guests.filter((guest) =>
+        isExtraBedCategory(guest.priceCategory),
+    );
+
+    if (dependentBedGuests.length === 0) {
+        return { isValid: true, issues: [] };
+    }
+
+    const eligibleBaseGuests = guests.filter((guest) =>
+        isEligibleDependentBaseCategory(guest.priceCategory),
+    );
+
+    if (
+        eligibleBaseGuests.length === 0 ||
+        dependentBedGuests.length > eligibleBaseGuests.length
+    ) {
+        return {
+            isValid: false,
+            issues: [
+                {
+                    message:
+                        'Adult Extra Bed and Child With Bed guests must share an Adult Twin or Adult Double room, with only one extra-bed guest per room.',
+                },
+            ],
+        };
+    }
+
+    return { isValid: true, issues: [] };
+}
+
+export function validateRoomArrangement(
+    rooms: RoomConfig[],
+    guests: GuestEntry[],
+): RoomArrangementValidationResult {
+    const issues: RoomArrangementValidationIssue[] = [
+        ...validateDependentBedPassengerMix(guests).issues,
+    ];
+    const dependentBedGuestIds = new Set(
+        guests
+            .filter((guest) => isExtraBedCategory(guest.priceCategory))
+            .map((guest) => guest.id),
+    );
+    const assignedDependentBedGuestIds = new Set<string>();
+
+    rooms.forEach((room) => {
+        const roomGuests = room.guestIds
+            .filter(Boolean)
+            .map((id) => guests.find((guest) => guest.id === id))
+            .filter(Boolean) as GuestEntry[];
+        const dependentBedGuests = roomGuests.filter((guest) =>
+            isExtraBedCategory(guest.priceCategory),
+        );
+
+        const invalidSharingGuests = (room.sharingGuestIds ?? [])
+            .filter((id) => dependentBedGuestIds.has(id))
+            .map((id) => guests.find((guest) => guest.id === id))
+            .filter(Boolean) as GuestEntry[];
+
+        if (invalidSharingGuests.length > 0) {
+            issues.push({
+                message: `${invalidSharingGuests
+                    .map((guest) =>
+                        [guest.firstName, guest.lastName]
+                            .filter(Boolean)
+                            .join(' '),
+                    )
+                    .filter(Boolean)
+                    .join(
+                        ', ',
+                    )} must be placed in an extra-bed slot, not in Sharing Guests.`,
+            });
+        }
+
+        if (dependentBedGuests.length === 0) {
+            return;
+        }
+
+        if (!DEPENDENT_BED_ROOM_TYPES.includes(room.type)) {
+            issues.push({
+                message: `${room.label}: Adult Extra Bed and Child With Bed can only be placed in an Adult Twin or Adult Double extra-bed room.`,
+            });
+        }
+
+        const hasEligibleBase = roomGuests.some((guest) =>
+            isEligibleDependentBaseCategory(guest.priceCategory),
+        );
+
+        if (!hasEligibleBase) {
+            issues.push({
+                message: `${room.label}: Extra-bed guests need an Adult Twin or Adult Double base guest in the same room.`,
+            });
+        }
+
+        if (dependentBedGuests.length > 1) {
+            issues.push({
+                message: `${room.label}: Only one Adult Extra Bed or Child With Bed guest is allowed per Twin/Double room.`,
+            });
+        }
+
+        dependentBedGuests.forEach((guest) =>
+            assignedDependentBedGuestIds.add(guest.id),
+        );
+    });
+
+    if (assignedDependentBedGuestIds.size < dependentBedGuestIds.size) {
+        issues.push({
+            message:
+                'Every Adult Extra Bed and Child With Bed guest must be assigned to an eligible Twin/Double extra-bed room.',
+        });
+    }
+
+    return {
+        isValid: issues.length === 0,
+        issues,
+    };
+}
 
 const getRoomTypeForOccupants = (guests: GuestEntry[]): BedType => {
     const categories = guests
@@ -653,15 +801,6 @@ export function autoRecommendRooms(guests: GuestEntry[]): RoomConfig[] {
         isCategoryMatch(g.priceCategory, ['Adult Extra Bed']),
     );
 
-    // Pair Adult Single with Child With Bed if possible
-    while (singles.length > 0 && childWithBed.length > 0) {
-        const single = singles.shift()!;
-        const cwb = childWithBed.shift()!;
-        rooms.push(makeRoom('single_extra_bed', [single.id, cwb.id]));
-    }
-
-    const extraBedOccupants = [...childWithBed, ...adultExtraBed];
-
     // Non-bed guests
     const noBedGuests = guests.filter((g) => isNoBedCategory(g.priceCategory));
 
@@ -688,65 +827,49 @@ export function autoRecommendRooms(guests: GuestEntry[]): RoomConfig[] {
         );
     }
 
-    const sharedGuests = [...doubles, ...twins, ...extraBedOccupants];
-    if (sharedGuests.length > 0) {
-        const R = Math.max(1, Math.floor(sharedGuests.length / 2));
-        const sharedRooms: RoomConfig[] = Array.from({ length: R }, () =>
-            makeRoom('double', []),
+    const assignedGuestIds = new Set(rooms.flatMap((room) => room.guestIds));
+    const dependentBedGuests = [...childWithBed, ...adultExtraBed];
+
+    const makeSharedRooms = (
+        baseGuests: GuestEntry[],
+        dependentGuests: GuestEntry[],
+        baseType: 'double' | 'twin',
+    ) => {
+        const baseQueue = [...baseGuests].filter(
+            (guest) => !assignedGuestIds.has(guest.id),
+        );
+        const dependentQueue = [...dependentGuests].filter(
+            (guest) => !assignedGuestIds.has(guest.id),
         );
 
-        sharedGuests.forEach((g, i) => {
-            const roomIdx = i % R;
-            const targetRoom = sharedRooms[roomIdx];
-            targetRoom.guestIds.push(g.id);
+        while (baseQueue.length > 0 && dependentQueue.length > 0) {
+            const baseGuest = baseQueue.shift()!;
+            const dependentGuest = dependentQueue.shift()!;
+            const roomType =
+                baseType === 'twin' ? 'twin_extra_bed' : 'double_extra_bed';
 
-            if (targetRoom.guestIds.length === 1) {
-                if (isCategoryMatch(g.priceCategory, TWIN_BED_CATEGORIES)) {
-                    targetRoom.type = 'twin';
-                } else {
-                    targetRoom.type = 'double';
-                }
-                targetRoom.capacity = BED_TYPES[targetRoom.type].capacity;
-            }
-        });
+            rooms.push(
+                makeRoom(roomType, [baseGuest.id, '', dependentGuest.id]),
+            );
+            assignedGuestIds.add(baseGuest.id);
+            assignedGuestIds.add(dependentGuest.id);
+        }
 
-        sharedRooms.forEach((r) => {
-            const hasExtraBedOccupant = r.guestIds.some((id) => {
-                const cat = guests.find((g) => g.id === id)?.priceCategory;
-                return isExtraBedCategory(cat);
-            });
+        for (let i = 0; i < baseQueue.length; i += 2) {
+            const roomGuests = baseQueue.slice(i, i + 2);
 
-            if (hasExtraBedOccupant) {
-                r.type =
-                    r.type === 'twin' ? 'twin_extra_bed' : 'double_extra_bed';
-                r.capacity = 3;
+            rooms.push(
+                makeRoom(
+                    baseType,
+                    roomGuests.map((g) => g.id),
+                ),
+            );
+            roomGuests.forEach((guest) => assignedGuestIds.add(guest.id));
+        }
+    };
 
-                // If there are only 2 guests (e.g., 1 Adult + 1 Child With Bed),
-                // we must shift the extra bed occupant to the 3rd slot (Extra Bed slot).
-                if (r.guestIds.length === 2) {
-                    const extraBedGuestId = r.guestIds.find((id) => {
-                        const cat = guests.find(
-                            (g) => g.id === id,
-                        )?.priceCategory;
-                        return isExtraBedCategory(cat);
-                    });
-                    const otherId = r.guestIds.find(
-                        (id) => id !== extraBedGuestId,
-                    );
-                    r.guestIds = [otherId || '', '', extraBedGuestId || ''];
-                } else if (r.guestIds.length === 1) {
-                    r.guestIds = ['', '', r.guestIds[0]];
-                }
-            } else if (r.guestIds.length === 3) {
-                r.type =
-                    r.type === 'twin' ? 'twin_extra_bed' : 'double_extra_bed';
-                r.capacity = 3;
-            } else {
-                r.capacity = 2;
-            }
-            rooms.push(r);
-        });
-    }
+    makeSharedRooms(twins, dependentBedGuests, 'twin');
+    makeSharedRooms(doubles, dependentBedGuests, 'double');
 
     // No-bed guests → share across rooms evenly
     noBedGuests.forEach((g, i) => {
@@ -902,6 +1025,16 @@ function BedArrangementModal({
                 }
             }
         }
+
+        const validation = validateRoomArrangement(proposedRooms, guests);
+
+        if (!validation.isValid) {
+            toast.error(
+                validation.issues[0]?.message ?? 'Invalid room arrangement.',
+            );
+            return false;
+        }
+
         return true;
     };
 
@@ -1502,6 +1635,10 @@ export default function Step2RoomConfiguration({
     const unassignedGuests = guests.filter(
         (g) => !assignedGuestIds.includes(g.id),
     );
+    const roomArrangementValidation = useMemo(
+        () => validateRoomArrangement(rooms, guests),
+        [guests, rooms],
+    );
 
     return (
         <motion.div
@@ -1540,6 +1677,35 @@ export default function Step2RoomConfiguration({
                                         .join(' ') || 'Unnamed guest'}
                                 </li>
                             ))}
+                        </ul>
+                    </div>
+                </motion.div>
+            )}
+
+            {!roomArrangementValidation.isValid && (
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="flex items-start gap-3 rounded-xl border border-destructive/20 bg-destructive/5 p-4"
+                >
+                    <AlertTriangleIcon className="mt-0.5 size-5 shrink-0 text-destructive" />
+                    <div className="text-sm">
+                        <p className="font-bold text-destructive">
+                            Invalid Room Arrangement
+                        </p>
+                        <p className="mt-1 leading-relaxed text-destructive/80">
+                            Adult Extra Bed and Child With Bed guests must share
+                            an Adult Twin or Adult Double room, with only one
+                            extra-bed guest per room.
+                        </p>
+                        <ul className="mt-2 list-inside list-disc text-xs text-destructive/70">
+                            {roomArrangementValidation.issues.map(
+                                (issue, index) => (
+                                    <li key={`${issue.message}-${index}`}>
+                                        {issue.message}
+                                    </li>
+                                ),
+                            )}
                         </ul>
                     </div>
                 </motion.div>

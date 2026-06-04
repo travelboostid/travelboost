@@ -21,7 +21,10 @@ import type {
     TravelDocumentEntry,
     VendorInfo,
 } from '@/types/booking';
-import { calculateBookingPricing } from '@/utils/booking-calculations';
+import {
+    calculateAddOnPricing,
+    calculateBookingPricing,
+} from '@/utils/booking-calculations';
 import { Head, router } from '@inertiajs/react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ArrowLeftIcon, InfoIcon } from 'lucide-react';
@@ -95,6 +98,7 @@ type PageProps = {
     platformFeePerPax?: number;
     paidAmount?: number;
     remainingBalance?: number;
+    downPaymentPaidAt?: string | null;
 };
 
 // ---------------------------------------------------------------------------
@@ -178,6 +182,7 @@ export default function Page({
     platformFeePerPax = 25_000,
     paidAmount = 0,
     remainingBalance = 0,
+    downPaymentPaidAt = null,
 }: PageProps) {
     const { company } = usePageSharedDataProps();
     const isAgent = company.type === 'agent';
@@ -193,6 +198,7 @@ export default function Page({
             platformFeePerPax={platformFeePerPax}
             paidAmount={paidAmount}
             remainingBalance={remainingBalance}
+            downPaymentPaidAt={downPaymentPaidAt}
             company={company}
             isAgent={isAgent}
         />
@@ -213,6 +219,7 @@ function ReadOnlyWizard({
     platformFeePerPax,
     paidAmount,
     remainingBalance,
+    downPaymentPaidAt,
     company,
     isAgent,
 }: {
@@ -225,6 +232,7 @@ function ReadOnlyWizard({
     platformFeePerPax: number;
     paidAmount: number;
     remainingBalance: number;
+    downPaymentPaidAt: string | null;
     company: any;
     isAgent: boolean;
 }) {
@@ -299,19 +307,17 @@ function ReadOnlyWizard({
             ),
         [initialAddOns, guests.length],
     );
-    const addOnsTotal = useMemo(
-        () =>
-            displayAddOns.reduce(
-                (sum, addon) => sum + addon.unitPrice * addon.qty,
-                0,
-            ),
-        [displayAddOns],
+    const addOnPricing = useMemo(
+        () => calculateAddOnPricing(displayAddOns, minimumVatPct ?? 11),
+        [displayAddOns, minimumVatPct],
     );
     const bookingGrandTotal = Number(booking.grand_total ?? 0);
     const displayGrandTotal =
         bookingGrandTotal > 0
             ? bookingGrandTotal
-            : pricing.totalPrice + addOnsTotal;
+            : pricing.totalPrice +
+              addOnPricing.addOnsTotal +
+              addOnPricing.addOnsVat;
 
     // ── Navigation ─────────────────────────────────────────────────────
     const goToStep = (step: WizardStepId) => {
@@ -447,8 +453,8 @@ function ReadOnlyWizard({
                                 />
                             </div>
 
-                            {/* Steps (Wrapped in pointer-events-none to prevent interaction) */}
-                            <div className="py-2 pointer-events-none opacity-90">
+                            {/* Steps are rendered read-only; document links remain clickable. */}
+                            <div className="py-2 opacity-90">
                                 <AnimatePresence mode="wait" custom={direction}>
                                     <motion.div
                                         key={`step-${currentStep}`}
@@ -481,6 +487,7 @@ function ReadOnlyWizard({
                                                 maxGuests={99}
                                                 departureDate={departureDate}
                                                 showAddAsGuest={false}
+                                                readOnly
                                             />
                                         )}
                                         {currentStep === 2 && (
@@ -488,6 +495,7 @@ function ReadOnlyWizard({
                                                 guests={guests}
                                                 rooms={rooms}
                                                 onRoomsChange={() => {}}
+                                                readOnly
                                             />
                                         )}
                                         {currentStep === 3 && (
@@ -498,6 +506,7 @@ function ReadOnlyWizard({
                                                 }
                                                 onTravelDocumentsChange={() => {}}
                                                 departureDate={departureDate}
+                                                readOnly
                                             />
                                         )}
                                         {currentStep === 4 && (
@@ -523,6 +532,9 @@ function ReadOnlyWizard({
                                                 paidAmount={paidAmount}
                                                 remainingBalance={
                                                     remainingBalance
+                                                }
+                                                downPaymentPaidAt={
+                                                    downPaymentPaidAt
                                                 }
                                                 grandTotalOverride={
                                                     displayGrandTotal
