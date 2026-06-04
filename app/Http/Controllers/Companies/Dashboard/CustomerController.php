@@ -7,6 +7,9 @@ use App\Http\Requests\UpdateCompanyTeamRequest;
 use App\Models\Company;
 use App\Models\CompanyTeam;
 use App\Models\User;
+use App\Notifications\CustomerCustomNotification;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 class CustomerController extends Controller
@@ -54,11 +57,44 @@ class CustomerController extends Controller
         ]);
     }
 
+    public function sendNotification(Request $request, Company $company, User $customer): RedirectResponse
+    {
+        abort_unless($this->customerBelongsToCompanyNetwork($company, $customer), 404);
+
+        $validated = $request->validate([
+            'title' => ['required', 'string', 'max:120'],
+            'message' => ['required', 'string', 'max:2000'],
+            'channel' => ['required', 'in:dashboard,email,both'],
+        ]);
+
+        $customer->notify(new CustomerCustomNotification(
+            title: $validated['title'],
+            message: $validated['message'],
+            channel: $validated['channel'],
+            senderCompany: $company,
+        ));
+
+        return back()->with('success', 'Notification sent successfully.');
+    }
+
     // Update a specific company team member's details
     public function update(UpdateCompanyTeamRequest $request, Company $company, CompanyTeam $member)
     {
         $member->update($request->validated()); // Update member with validated data
 
         return back(); // Redirect back to the previous page
+    }
+
+    private function customerBelongsToCompanyNetwork(Company $company, User $customer): bool
+    {
+        $agentIds = $company->agentPartners()
+            ->where('status', 'active')
+            ->pluck('agent_id');
+
+        if ((int) $customer->company_id === (int) $company->id) {
+            return true;
+        }
+
+        return $agentIds->contains(fn ($agentId) => (int) $agentId === (int) $customer->company_id);
     }
 }

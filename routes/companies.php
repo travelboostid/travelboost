@@ -145,6 +145,8 @@ Route::prefix('companies')->middleware(['use-analytics-measurement-ids-props'])-
         Route::post('teams/{team}/resend-invitation', [TeamController::class, 'resendInvitation'])->name('teams.resend-invitation');
         Route::resource('roles', RoleController::class);
         Route::resource('customers', CustomerController::class);
+        Route::post('customers/{customer}/send-notification', [CustomerController::class, 'sendNotification'])
+            ->name('customers.send-notification');
         Route::get('bookings', [BookingIndexController::class, 'index'])->name('bookings.index');
         Route::get('bookings/create/{tour}', [DashboardBookingController::class, 'create'])->name('bookings.create');
         Route::post('bookings/create/{tour}/reserve', [DashboardBookingController::class, 'reserve'])->name('bookings.create.reserve');
