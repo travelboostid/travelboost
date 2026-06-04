@@ -62,7 +62,7 @@ import { useMemo, useState } from 'react';
 
 type CommissionType = 'percent' | 'nominal';
 type SortDirection = 'asc' | 'desc';
-type AdditionalSortKey = 'tier' | 'scope' | 'commission';
+type AdditionalSortKey = 'created_at' | 'tier' | 'scope' | 'commission';
 type PageView = 'base' | 'additional';
 
 type Tier = {
@@ -107,6 +107,7 @@ type AdditionalRule = {
     scope_type: 'category_departure' | 'tour_schedule';
     commission_type: CommissionType;
     commission_value: string | number;
+    created_at?: string;
     tour?: {
         id: number;
         code: string;
@@ -518,9 +519,11 @@ function BaseMatrixPage({
 function CategoryDepartureDialog({
     tiers,
     categories,
+    additionalRules,
 }: {
     tiers: Tier[];
     categories: ProductCommissionCategory[];
+    additionalRules: AdditionalRule[];
 }) {
     const { company } = usePageSharedDataProps();
     const [open, setOpen] = useState(false);
@@ -540,8 +543,82 @@ function CategoryDepartureDialog({
     ]);
     const [nextRowKey, setNextRowKey] = useState(2);
     const [processing, setProcessing] = useState(false);
+    const getExistingDepartureRules = (
+        tierId: number | '',
+        categoryId: number | '',
+    ) => {
+        if (!tierId || !categoryId) {
+            return [];
+        }
+
+        return additionalRules
+            .filter(
+                (rule) =>
+                    rule.scope_type === 'category_departure' &&
+                    Number(rule.agent_tier_id) === Number(tierId) &&
+                    Number(rule.product_commission_category_id) ===
+                        Number(categoryId),
+            )
+            .sort((a, b) =>
+                formatInputDate(a.departure_date).localeCompare(
+                    formatInputDate(b.departure_date),
+                ),
+            );
+    };
+    const existingDepartureRules = getExistingDepartureRules(
+        selectedTierId,
+        selectedCategoryId,
+    );
 
     const validRows = rows.filter((row) => row.departure_date);
+    const findExistingDepartureRule = (departureDate: string) =>
+        existingDepartureRules.find(
+            (rule) => formatInputDate(rule.departure_date) === departureDate,
+        );
+
+    const buildDepartureRows = (rules: AdditionalRule[]): DepartureRow[] => {
+        if (rules.length === 0) {
+            return [
+                {
+                    key: 1,
+                    departure_date: '',
+                    commission_type: 'percent',
+                    commission_value: 0,
+                },
+            ];
+        }
+
+        return rules.map((rule, index) => ({
+            key: index + 1,
+            departure_date: formatInputDate(rule.departure_date),
+            commission_type: rule.commission_type,
+            commission_value: Number(rule.commission_value ?? 0),
+        }));
+    };
+
+    const setRowsFromExistingRules = (rules: AdditionalRule[]) => {
+        setRows(buildDepartureRows(rules));
+        setNextRowKey(Math.max(2, rules.length + 1));
+    };
+
+    const openDepartureDialog = () => {
+        setRowsFromExistingRules(existingDepartureRules);
+        setOpen(true);
+    };
+
+    const changeSelectedTier = (tierId: number) => {
+        setSelectedTierId(tierId);
+        setRowsFromExistingRules(
+            getExistingDepartureRules(tierId, selectedCategoryId),
+        );
+    };
+
+    const changeSelectedCategory = (categoryId: number) => {
+        setSelectedCategoryId(categoryId);
+        setRowsFromExistingRules(
+            getExistingDepartureRules(selectedTierId, categoryId),
+        );
+    };
 
     const addRow = () => {
         const key = nextRowKey;
@@ -640,7 +717,7 @@ function CategoryDepartureDialog({
                     </div>
                     <Button
                         type="button"
-                        onClick={() => setOpen(true)}
+                        onClick={openDepartureDialog}
                         className="h-11 w-full gap-2 rounded-2xl px-5 sm:w-auto sm:self-start"
                     >
                         <PlusCircleIcon className="h-4 w-4" />
@@ -669,7 +746,7 @@ function CategoryDepartureDialog({
                                 <Select
                                     value={String(selectedTierId)}
                                     onValueChange={(value) =>
-                                        setSelectedTierId(Number(value))
+                                        changeSelectedTier(Number(value))
                                     }
                                 >
                                     <SelectTrigger className="h-11 rounded-xl">
@@ -692,7 +769,7 @@ function CategoryDepartureDialog({
                                 <Select
                                     value={String(selectedCategoryId)}
                                     onValueChange={(value) =>
-                                        setSelectedCategoryId(Number(value))
+                                        changeSelectedCategory(Number(value))
                                     }
                                 >
                                     <SelectTrigger className="h-11 rounded-xl">
@@ -730,15 +807,38 @@ function CategoryDepartureDialog({
                                                 <Input
                                                     type="date"
                                                     value={row.departure_date}
-                                                    onChange={(event) =>
+                                                    onChange={(event) => {
+                                                        const departureDate =
+                                                            event.target.value;
+                                                        const existingRule =
+                                                            findExistingDepartureRule(
+                                                                departureDate,
+                                                            );
+
                                                         updateRow(row.key, {
                                                             departure_date:
-                                                                event.target
-                                                                    .value,
-                                                        })
-                                                    }
+                                                                departureDate,
+                                                            commission_type:
+                                                                existingRule?.commission_type ??
+                                                                row.commission_type,
+                                                            commission_value:
+                                                                existingRule
+                                                                    ? Number(
+                                                                          existingRule.commission_value ??
+                                                                              0,
+                                                                      )
+                                                                    : row.commission_value,
+                                                        });
+                                                    }}
                                                     className="h-10 rounded-xl"
                                                 />
+                                                {findExistingDepartureRule(
+                                                    row.departure_date,
+                                                ) && (
+                                                    <p className="mt-1 text-xs font-medium text-primary">
+                                                        Existing rule loaded
+                                                    </p>
+                                                )}
                                             </TableCell>
                                             <TableCell>
                                                 <CommissionFields
@@ -825,9 +925,11 @@ function CategoryDepartureDialog({
 function TourScheduleDialog({
     tiers,
     tours,
+    additionalRules,
 }: {
     tiers: Tier[];
     tours: Tour[];
+    additionalRules: AdditionalRule[];
 }) {
     const { company } = usePageSharedDataProps();
     const [open, setOpen] = useState(false);
@@ -839,17 +941,53 @@ function TourScheduleDialog({
     const [processing, setProcessing] = useState(false);
 
     const selectedRows = rows.filter((row) => row.checked);
+    const findExistingScheduleRule = (
+        scheduleId: number,
+        tierId: number | '' = selectedTierId,
+    ) =>
+        additionalRules.find(
+            (rule) =>
+                rule.scope_type === 'tour_schedule' &&
+                Number(rule.agent_tier_id) === Number(tierId) &&
+                Number(rule.tour_schedule_id) === Number(scheduleId),
+        );
+
+    const buildScheduleRows = (
+        tour: Tour,
+        tierId: number | '' = selectedTierId,
+    ): ScheduleRow[] =>
+        tour.schedules.map((schedule) => {
+            const existingRule = findExistingScheduleRule(schedule.id, tierId);
+
+            return {
+                id: schedule.id,
+                checked: Boolean(existingRule),
+                commission_type: existingRule?.commission_type ?? 'percent',
+                commission_value: existingRule
+                    ? Number(existingRule.commission_value ?? 0)
+                    : 0,
+            };
+        });
+
+    const openScheduleDialog = () => {
+        if (selectedTour) {
+            setRows(buildScheduleRows(selectedTour));
+        }
+
+        setOpen(true);
+    };
+
+    const changeSelectedTier = (tierId: number) => {
+        setSelectedTierId(tierId);
+
+        if (selectedTour) {
+            setRows(buildScheduleRows(selectedTour, tierId));
+        }
+    };
 
     const selectTour = (tour: Tour) => {
         setSelectedTour(tour);
-        setRows(
-            tour.schedules.map((schedule) => ({
-                id: schedule.id,
-                checked: false,
-                commission_type: 'percent',
-                commission_value: 0,
-            })),
-        );
+        setRows(buildScheduleRows(tour));
     };
 
     const updateRow = (id: number, values: Partial<ScheduleRow>) => {
@@ -913,7 +1051,7 @@ function TourScheduleDialog({
                     </div>
                     <Button
                         type="button"
-                        onClick={() => setOpen(true)}
+                        onClick={openScheduleDialog}
                         className="h-11 w-full gap-2 rounded-2xl px-5 sm:w-auto sm:self-start"
                     >
                         <PlusCircleIcon className="h-4 w-4" />
@@ -999,7 +1137,7 @@ function TourScheduleDialog({
                                             <Select
                                                 value={String(selectedTierId)}
                                                 onValueChange={(value) =>
-                                                    setSelectedTierId(
+                                                    changeSelectedTier(
                                                         Number(value),
                                                     )
                                                 }
@@ -1089,13 +1227,15 @@ function TourScheduleDialog({
                                                                                 schedule,
                                                                             )}
                                                                         </p>
-                                                                        <p className="mt-1 text-xs text-muted-foreground">
-                                                                            Schedule
-                                                                            ID:{' '}
-                                                                            {
-                                                                                schedule.id
-                                                                            }
-                                                                        </p>
+                                                                        {findExistingScheduleRule(
+                                                                            schedule.id,
+                                                                        ) && (
+                                                                            <p className="mt-1 text-xs font-medium text-primary">
+                                                                                Existing
+                                                                                rule
+                                                                                loaded
+                                                                            </p>
+                                                                        )}
                                                                     </TableCell>
                                                                     <TableCell>
                                                                         <CommissionFields
@@ -1490,8 +1630,8 @@ function AdditionalRulesTable({
     categories: ProductCommissionCategory[];
 }) {
     const { company } = usePageSharedDataProps();
-    const [sortKey, setSortKey] = useState<AdditionalSortKey>('tier');
-    const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+    const [sortKey, setSortKey] = useState<AdditionalSortKey>('created_at');
+    const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
     const [currentPage, setCurrentPage] = useState(1);
     const pageSize = 10;
     const tierMap = useMemo(
@@ -1517,6 +1657,12 @@ function AdditionalRulesTable({
 
                 if (sortKey === 'scope') {
                     return rule.scope_type;
+                }
+
+                if (sortKey === 'created_at') {
+                    return rule.created_at
+                        ? dayjs(rule.created_at).valueOf()
+                        : 0;
                 }
 
                 return Number(rule.commission_value ?? 0);
@@ -1712,8 +1858,13 @@ function AdditionalRulesPage({
                 <CategoryDepartureDialog
                     tiers={tiers}
                     categories={categories}
+                    additionalRules={additionalRules}
                 />
-                <TourScheduleDialog tiers={tiers} tours={tours} />
+                <TourScheduleDialog
+                    tiers={tiers}
+                    tours={tours}
+                    additionalRules={additionalRules}
+                />
             </div>
             <AdditionalRulesTable
                 rules={additionalRules}

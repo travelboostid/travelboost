@@ -58,6 +58,14 @@ export default function Inner({ children, onNavigateAway }: TenantLayoutProps) {
         }
         return { type: 'anonymous-user', id: anonymousUser.id || 0 };
     }, [auth, anonymousUser]);
+    const defaultLiveChatRecipient = tenantCompany?.id
+        ? {
+              actor: {
+                  type: 'company' as const,
+                  id: tenantCompany.id,
+              },
+          }
+        : null;
 
     return (
         <ChatContextProvider actor={actor}>
@@ -72,9 +80,7 @@ export default function Inner({ children, onNavigateAway }: TenantLayoutProps) {
                     {showFooter && <Footer />}
                 </div>
                 <FloatingChatWidget
-                    defaultLiveChatRecipient={{
-                        actor: { type: 'company', id: tenant.id },
-                    }}
+                    defaultLiveChatRecipient={defaultLiveChatRecipient}
                 />
             </FloatingChatWidgetContextProvider>
         </ChatContextProvider>

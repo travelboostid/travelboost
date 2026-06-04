@@ -20,9 +20,13 @@ import {
 
 type AgentProfileProps = {
     agent: any;
+    trigger?: React.ReactNode;
 };
 
-export default function AgentProfileModal({ agent }: AgentProfileProps) {
+export default function AgentProfileModal({
+    agent,
+    trigger,
+}: AgentProfileProps) {
     const getImageUrl = (mediaObj: any, fallbackStr?: string) => {
         if (fallbackStr) return fallbackStr;
         if (!mediaObj) return null;
@@ -61,14 +65,18 @@ export default function AgentProfileModal({ agent }: AgentProfileProps) {
     return (
         <Dialog>
             <DialogTrigger asChild>
-                <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-8 gap-1.5 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:text-blue-400 dark:hover:text-blue-300 dark:hover:bg-blue-900/30 dark:border-slate-800 dark:hover:border-blue-800/50"
-                >
-                    <EyeIcon className="w-3.5 h-3.5" />
-                    <span className="text-xs font-medium">View Profile</span>
-                </Button>
+                {trigger ?? (
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 gap-1.5 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:text-blue-400 dark:hover:text-blue-300 dark:hover:bg-blue-900/30 dark:border-slate-800 dark:hover:border-blue-800/50"
+                    >
+                        <EyeIcon className="w-3.5 h-3.5" />
+                        <span className="text-xs font-medium">
+                            View Profile
+                        </span>
+                    </Button>
+                )}
             </DialogTrigger>
             <DialogContent className="max-w-md overflow-y-auto max-h-[90vh] dark:bg-slate-900 dark:border-slate-800">
                 <DialogHeader>
