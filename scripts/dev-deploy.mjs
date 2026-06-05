@@ -92,9 +92,9 @@ function ssh(cmd) {
 
 // DEPLOY
 try {
-    console.log(`🚀 Deploying ${env}...`);
-
     const { env, branch, remotePath, buildPath, sshUser, sshHost } = CONFIG;
+
+    console.log(`🚀 Deploying ${env}...`);
 
     // --- 0. Pre-checks ---
     const envFile = fs.readFileSync('.env', 'utf-8');
