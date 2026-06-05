@@ -85,5 +85,11 @@
 
     "[csharp]": {
         "editor.defaultFormatter": "ms-dotnettools.csharp"
-    }
+    },
+    "intelephense.files.associations": ["*.php", "*.phtml"],
+    "intelephense.codeLens.implementations.enable": true,
+    "intelephense.codeLens.overrides.enable": true,
+    "intelephense.codeLens.references.enable": true,
+    "intelephense.codeLens.parent.enable": true,
+    "intelephense.codeLens.usages.enable": true
 }
