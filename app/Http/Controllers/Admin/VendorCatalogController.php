@@ -9,7 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Attributes\Controllers\Authorize;
 use Inertia\Inertia;
 
-#[Authorize('access-admin')]
+#[Authorize('access-admin-pages')]
 class VendorCatalogController extends Controller
 {
     /**

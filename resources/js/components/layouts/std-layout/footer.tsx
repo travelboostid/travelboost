@@ -103,7 +103,7 @@ export function Footer() {
                         <ul className="space-y-3">
                             <li>
                                 <Link
-                                    href="#"
+                                    href="/privacy"
                                     className="text-background/70 hover:text-background transition-colors text-sm"
                                 >
                                     Kebijakan Privasi
@@ -111,7 +111,7 @@ export function Footer() {
                             </li>
                             <li>
                                 <Link
-                                    href="#"
+                                    href="/terms-and-conditions"
                                     className="text-background/70 hover:text-background transition-colors text-sm"
                                 >
                                     Syarat & Ketentuan

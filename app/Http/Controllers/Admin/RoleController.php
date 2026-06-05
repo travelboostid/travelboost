@@ -12,7 +12,7 @@ use Illuminate\Routing\Attributes\Controllers\Authorize;
 use Illuminate\Support\Arr;
 use Inertia\Inertia;
 
-#[Authorize('access-admin')]
+#[Authorize('access-admin-pages')]
 class RoleController extends Controller
 {
     /**

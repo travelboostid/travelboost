@@ -10,7 +10,7 @@ use App\Models\Permission;
 use Illuminate\Routing\Attributes\Controllers\Authorize;
 use Inertia\Inertia;
 
-#[Authorize('access-admin')]
+#[Authorize('access-admin-pages')]
 class PermissionController extends Controller
 {
     /**

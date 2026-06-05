@@ -13,7 +13,7 @@ use Illuminate\Routing\Attributes\Controllers\Authorize;
 use Illuminate\Support\Carbon;
 use Inertia\Inertia;
 
-#[Authorize('access-admin')]
+#[Authorize('access-admin-pages')]
 class WithdrawalController extends Controller
 {
     public function index(IndexWithdrawalRequest $request)

@@ -9,7 +9,7 @@ use App\Models\AppConfig;
 use Illuminate\Routing\Attributes\Controllers\Authorize;
 use Inertia\Inertia;
 
-#[Authorize('access-admin')]
+#[Authorize('access-admin-pages')]
 class AppConfigController extends Controller
 {
     public function index()

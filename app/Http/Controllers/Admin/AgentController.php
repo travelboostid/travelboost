@@ -13,7 +13,7 @@ use Illuminate\Routing\Attributes\Controllers\Authorize;
 use Inertia\Inertia;
 use Inertia\Response;
 
-#[Authorize('access-admin')]
+#[Authorize('access-admin-pages')]
 class AgentController extends Controller
 {
     /**

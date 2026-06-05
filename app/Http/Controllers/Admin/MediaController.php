@@ -10,7 +10,7 @@ use Carbon\Carbon;
 use Illuminate\Routing\Attributes\Controllers\Authorize;
 use Inertia\Inertia;
 
-#[Authorize('access-admin')]
+#[Authorize('access-admin-pages')]
 class MediaController extends Controller
 {
     public function __construct(private KnowledgeBaseService $knowledgeBaseService) {}

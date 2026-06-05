@@ -73,8 +73,18 @@ class AppServiceProvider extends ServiceProvider
             return $redirectPath;
         });
 
-        Gate::define('access-admin', function (User $user) {
+        Gate::define('access-admin-pages', function (User $user) {
             return $user->hasRole('user:admin');
+        });
+        Gate::define('access-customer-pages', function (?User $user) {
+            $domain = Context::get('domain');
+
+            return $domain->owner instanceof Company;
+        });
+        Gate::define('access-company-pages', function (?User $user) {
+            $domain = Context::get('domain');
+
+            return $domain == null;
         });
 
         $this->configureDefaults();

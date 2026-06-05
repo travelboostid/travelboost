@@ -44,7 +44,7 @@ use App\Http\Controllers\Companies\Dashboard\WithdrawalController;
 use App\Http\Controllers\Companies\IndexController;
 use Illuminate\Support\Facades\Route;
 
-Route::prefix('companies')->middleware(['use-analytics-measurement-ids-props'])->name('companies.')->group(function () {
+Route::prefix('companies')->middleware(['can:access-company-pages', 'use-analytics-measurement-ids-props'])->name('companies.')->group(function () {
     Route::get('/', [IndexController::class, 'show'])->name('show');
     Route::middleware(['guest'])->group(function () {
         Route::get('/login', [AuthController::class, 'showLogin'])->name('login.show');

@@ -11,7 +11,7 @@ use Illuminate\Routing\Attributes\Controllers\Authorize;
 use Illuminate\Support\Carbon;
 use Inertia\Inertia;
 
-#[Authorize('access-admin')]
+#[Authorize('access-admin-pages')]
 class WalletTransactionController extends Controller
 {
     public function index(IndexWalletTransactionRequest $request)

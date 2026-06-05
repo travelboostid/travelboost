@@ -9,7 +9,7 @@ use Illuminate\Routing\Attributes\Controllers\Authorize;
 use Inertia\Inertia;
 use Inertia\Response;
 
-#[Authorize('access-admin')]
+#[Authorize('access-admin-pages')]
 class MasterAffiliateController extends Controller
 {
     public function index(): Response

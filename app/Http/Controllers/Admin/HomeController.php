@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Routing\Attributes\Controllers\Authorize;
 use Inertia\Inertia;
 
-#[Authorize('access-admin')]
+#[Authorize('access-admin-pages')]
 class HomeController extends Controller
 {
     /**
