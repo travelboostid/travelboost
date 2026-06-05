@@ -1478,7 +1478,7 @@ export default function Page({ tour }: Props) {
                                 <div className="overflow-hidden rounded-3xl border bg-card shadow-sm">
                                     <div className="border-b bg-muted/40 px-6 py-4">
                                         <h2 className="text-lg font-semibold">
-                                            Tour Cover
+                                            {data.code} {data.name}
                                         </h2>
 
                                         <p className="text-sm text-muted-foreground">
@@ -2032,8 +2032,14 @@ export default function Page({ tour }: Props) {
 
                         <TabsContent value="schedule">
                             <div className="space-y-4">
-                                <div className="flex flex-col gap-3 px-4 py-2 md:flex-row md:items-center md:justify-end">
-                                    <div className="flex items-center gap-3">
+                                <div className="flex flex-col gap-3 px-4 py-2 md:flex-row md:items-center md:justify-between">
+                                    <div>
+                                        <h2 className="text-lg font-semibold">
+                                            {data.code} {data.name}
+                                        </h2>
+                                    </div>
+
+                                    <div className="flex justify-end">
                                         <Button
                                             type="button"
                                             onClick={addSchedule}
@@ -3307,6 +3313,9 @@ export default function Page({ tour }: Props) {
 
                         <TabsContent value="availability">
                             <div className="space-y-4">
+                                <h2 className="text-lg font-semibold">
+                                    {data.code} {data.name}
+                                </h2>
                                 <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2">
                                     {/* LEFT */}
                                     <div className="flex flex-wrap items-center gap-3">
@@ -4110,6 +4119,9 @@ export default function Page({ tour }: Props) {
                         {/* ================= TAB 4 — ADD ONS ================= */}
                         <TabsContent value="addons">
                             <div className="space-y-4">
+                                <h2 className="text-lg font-semibold">
+                                    {data.code} {data.name}
+                                </h2>
                                 <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2">
                                     {/* LEFT */}
                                     <div className="flex flex-wrap items-center gap-2">
