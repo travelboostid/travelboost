@@ -18,6 +18,7 @@ Route::get('/about', [BaseHomeController::class, 'about'])->name('about');
 Route::get('/contact', [BaseHomeController::class, 'contact'])->name('contact');
 Route::get('/learn-more', [BaseHomeController::class, 'learnMore'])->name('learn-more');
 Route::get('/privacy', [BaseHomeController::class, 'privacy'])->name('privacy');
+Route::get('/terms-and-conditions', [BaseHomeController::class, 'termsAndConditions'])->name('terms-and-conditions');
 Route::get('/tours', [BaseHomeController::class, 'tours'])->name('tours');
 Route::redirect('/login', '/customers/login')->name('login');
 

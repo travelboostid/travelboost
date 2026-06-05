@@ -33,6 +33,11 @@ class HomeController extends Controller
         return Inertia::render('privacy/index');
     }
 
+    public function termsAndConditions(): Response
+    {
+        return Inertia::render('terms-and-conditions/index');
+    }
+
     public function tours(): Response
     {
         return app(TenantTourController::class)->index();
