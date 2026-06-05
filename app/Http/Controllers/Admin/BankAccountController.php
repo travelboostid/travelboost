@@ -8,11 +8,9 @@ use App\Http\Requests\Admin\UpdateBankAccountRequest;
 use App\Models\BankAccount;
 use App\Models\Company;
 use App\Models\User;
-use Illuminate\Routing\Attributes\Controllers\Authorize;
 use Illuminate\Support\Carbon;
 use Inertia\Inertia;
 
-#[Authorize('access-admin-pages')]
 class BankAccountController extends Controller
 {
     public function index(IndexBankAccountRequest $request)

@@ -73,7 +73,18 @@ class AppServiceProvider extends ServiceProvider
             return $redirectPath;
         });
 
+        // '?User' because the user is not always authenticated
+        Gate::define('access-from-main-domain', function (?User $user) {
+            $domain = Context::get('domain');
+
+            return $domain == null;
+        });
         Gate::define('access-admin-pages', function (User $user) {
+            $domain = Context::get('domain');
+            if ($domain != null) {
+                return false;
+            }
+
             return $user->hasRole('user:admin');
         });
         Gate::define('access-customer-pages', function (?User $user) {

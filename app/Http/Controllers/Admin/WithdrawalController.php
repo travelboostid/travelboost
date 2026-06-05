@@ -9,11 +9,9 @@ use App\Http\Requests\Admin\IndexWithdrawalRequest;
 use App\Http\Requests\Admin\UpdateWithdrawalRequest;
 use App\Jobs\ProcessAutoWithdrawalJob;
 use App\Models\Withdrawal;
-use Illuminate\Routing\Attributes\Controllers\Authorize;
 use Illuminate\Support\Carbon;
 use Inertia\Inertia;
 
-#[Authorize('access-admin-pages')]
 class WithdrawalController extends Controller
 {
     public function index(IndexWithdrawalRequest $request)

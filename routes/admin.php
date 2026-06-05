@@ -29,14 +29,14 @@ Route::prefix('admin')
     ->name('admin.')
     ->group(function () {
         Route::get('/', [IndexController::class, 'show'])->name('show');
-        Route::middleware(['guest'])->group(function () {
+        Route::middleware(['guest', 'can:access-from-main-domain'])->group(function () {
             Route::get('login', [AuthController::class, 'showLogin'])->name('login.show');
             Route::post('login', [AuthController::class, 'login'])->name('login.store');
             Route::get('register', [AuthController::class, 'showRegister'])->name('register.show');
             Route::post('register', [AuthController::class, 'register'])->name('register.store');
         });
 
-        Route::middleware(['auth'])->group(function () {
+        Route::middleware(['auth', 'can:access-admin-pages'])->group(function () {
             //
             Route::resource('app-configs', AppConfigController::class)->names('app-configs');
 
