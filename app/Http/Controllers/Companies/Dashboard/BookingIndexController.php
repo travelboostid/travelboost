@@ -21,11 +21,13 @@ use App\Models\TourAddOn;
 use App\Models\TourAvailability;
 use App\Models\TourPrice;
 use App\Models\TourSchedule;
+use App\Services\AgentCommissionResolver;
 use App\Services\BookingDownPaymentRuleService;
 use App\Services\BookingPaymentReceiverService;
 use App\Services\BookingPaymentWorkflowService;
 use App\Services\BookingPricingService;
 use App\Services\BookingService;
+use App\Services\BookingTravelDocumentService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -152,6 +154,9 @@ class BookingIndexController extends Controller
             $booking->input_by = $this->inputByPayload($booking);
             $booking->down_payment_detail = $this->paymentDetailPayload($booking, 'down_payment', $paymentReceiverService);
             $booking->full_payment_detail = $this->paymentDetailPayload($booking, 'full_payment', $paymentReceiverService);
+            $booking->remaining_balance_visible = $this->bookingStatusValue($booking) === BookingStatus::DOWN_PAYMENT->value;
+            $booking->continue_booking_url = $this->continueBookingUrl($company, $booking);
+            $booking->document_detail = app(BookingTravelDocumentService::class)->documentDetails($booking);
             $booking->payment_workflow = $paymentWorkflowService->workflowPayload($company, $booking);
             $reviewablePayment = $paymentWorkflowService->reviewablePaymentForCompany($company, $booking);
             $booking->manual_payment = $reviewablePayment
@@ -254,7 +259,7 @@ class BookingIndexController extends Controller
             'user:id,name',
             'inputByUser:id,name',
             'inputByCompany:id,name,type',
-            'passengers:id,booking_id,price_category,price_amount',
+            'passengers:id,booking_id,title,first_name,last_name,price_category,price_amount,passport_number,passport_issue_date,passport_expiry_date,passport_file_path,visa_number,visa_file_path',
             'payments',
             'actionRequests' => fn ($query) => $query->where('status', 'pending')->latest(),
         ];
@@ -437,6 +442,7 @@ class BookingIndexController extends Controller
         $isAgentToCustomerInvoice = $invoiceType === 'agent_to_customer';
         $isCustomerInvoice = ! $isVendorToAgentInvoice;
         $isProforma = $this->bookingStatusValue($booking) === BookingStatus::DOWN_PAYMENT->value;
+        $paidAmount = (float) $paidPayments->sum('amount');
         $invoiceGrandTotal = $isVendorToAgentInvoice
             ? $paymentDetailsTotal + $vatAmount
             : (float) $booking->grand_total;
@@ -446,9 +452,12 @@ class BookingIndexController extends Controller
         $issuer = $isAgentToCustomerInvoice
             ? $booking->agent
             : ($booking->vendor ?? $booking->tour?->company);
-        $customerAddress = $booking->user?->address;
         $billedTo = $isVendorToAgentInvoice ? ($booking->agent ?? $company) : null;
+        $customerName = $booking->contact_name ?: $booking->user?->name;
+        $customerEmail = $booking->contact_email ?: $booking->user?->email;
+        $customerPhone = $booking->contact_phone ?: $booking->user?->phone;
         $vatRate = $this->resolveInvoiceVatRate($booking);
+        $deadline = $this->deadlinePayload($booking, $this->vendorSettings($booking)?->full_payment_deadline);
         $filename = 'Invoice_'.$invoiceNumber.'.pdf';
 
         $pdf = Pdf::setOption(['isRemoteEnabled' => true])
@@ -456,17 +465,19 @@ class BookingIndexController extends Controller
                 'booking' => $booking,
                 'agent' => $issuer,
                 'logoSrc' => $this->resolveCompanyLogoSrc($issuer),
-                'customerName' => $billedTo?->name ?? ($booking->user?->name ?: $booking->contact_name),
-                'billedToName' => $billedTo?->name,
-                'billedToEmail' => $billedTo?->email,
-                'billedToPhone' => $billedTo?->customer_service_phone ?: $billedTo?->phone,
-                'billedToAddress' => $billedTo?->address ?? $customerAddress,
+                'customerName' => $billedTo?->name ?? $customerName,
+                'billedToName' => $billedTo?->name ?? $customerName,
+                'billedToEmail' => $billedTo?->email ?? $customerEmail,
+                'billedToPhone' => ($billedTo?->customer_service_phone ?: $billedTo?->phone) ?? $customerPhone,
+                'billedToAddress' => $isVendorToAgentInvoice ? $billedTo?->address : null,
                 'paymentDate' => $paymentDate,
+                'invoiceDate' => $booking->created_at,
+                'dueDate' => $deadline['date'] ?? null,
                 'returnDate' => $invoiceSchedule?->return_date,
-                'paidAmount' => (float) $paidPayments->sum('amount'),
+                'paidAmount' => $paidAmount,
                 'invoicePaidAmount' => $isVendorToAgentInvoice && ! $isProforma
                     ? $invoiceGrandTotal
-                    : (float) $paidPayments->sum('amount'),
+                    : $paidAmount,
                 'priceBreakdown' => $priceBreakdown,
                 'paymentDetails' => $paymentDetails,
                 'paymentDetailsTotal' => $paymentDetailsTotal,
@@ -895,6 +906,7 @@ class BookingIndexController extends Controller
                                 ? (int) max(1, round((float) $savedAddon->price / max($unitPrice, 1)))
                                 : ($addon->edit_status ? 0 : 1),
                             'hasQty' => (bool) $addon->edit_status,
+                            'isTaxable' => (bool) ($savedAddon?->is_taxable ?? $addon->is_taxable),
                         ];
                     })
                     ->values()
@@ -916,6 +928,7 @@ class BookingIndexController extends Controller
                         'unitPrice' => (float) $bookingAddon->price,
                         'qty' => 1,
                         'hasQty' => true,
+                        'isTaxable' => (bool) $bookingAddon->is_taxable,
                     ];
                 }
             }
@@ -930,6 +943,10 @@ class BookingIndexController extends Controller
         $paymentReceiverSettings = $paymentReceiver['settings'];
         $paymentWorkflowService = app(BookingPaymentWorkflowService::class);
         $paidAmount = $paymentWorkflowService->finalizablePaidAmount($booking);
+        $downPaymentPaidAt = $paymentWorkflowService->finalizablePaidPayments($booking)
+            ->filter(fn (Payment $payment): bool => $payment->bookingPaymentType() === 'down_payment')
+            ->sortByDesc(fn (Payment $payment): string => (string) ($payment->paid_at ?? $payment->created_at))
+            ->first();
         $remainingBalance = max(0.0, (float) $booking->grand_total - $paidAmount);
         $booking->commission_amount = $this->resolveCommissionAmount($booking);
         $booking->input_by = $this->inputByPayload($booking);
@@ -949,6 +966,7 @@ class BookingIndexController extends Controller
             'paymentUnavailableReason' => $paymentUnavailableReason,
             'paidAmount' => $paidAmount,
             'remainingBalance' => $remainingBalance,
+            'downPaymentPaidAt' => $downPaymentPaidAt ? $this->paymentDisplayDate($downPaymentPaidAt) : null,
             'bookingSeatLimit' => $this->bookingSeatLimit($booking),
             'vendorBankInfo' => [
                 'bankName' => $paymentReceiverSettings?->manual_bank_transfer ?? '',
@@ -1682,12 +1700,17 @@ class BookingIndexController extends Controller
 
     private function resolveCommissionAmount(Booking $booking): float
     {
-        $commissionAmount = (float) ($booking->commission_amount ?? 0);
+        $commissionAmount = (float) app(BookingPricingService::class)->quoteForBooking($booking)['agent_commission'];
 
         if ($commissionAmount > 0) {
             return $commissionAmount;
         }
 
+        return $this->fallbackTourPriceCommissionAmount($booking);
+    }
+
+    private function fallbackTourPriceCommissionAmount(Booking $booking): float
+    {
         $booking->loadMissing(['tour', 'passengers']);
 
         $schedule = TourSchedule::query()
@@ -1723,27 +1746,19 @@ class BookingIndexController extends Controller
                         return 0;
                     }
 
-                    return $this->commissionForTourPrice($tourPrice, (float) $passenger->price_amount);
+                    return $this->fallbackCommissionForTourPrice($tourPrice, (float) $passenger->price_amount);
                 });
         }
 
         $tourPrice = $tourPrices->first();
         $paxCount = (int) $booking->pax_adult + (int) $booking->pax_child;
 
-        return $this->commissionForTourPrice($tourPrice, (float) $tourPrice->price) * $paxCount;
+        return $this->fallbackCommissionForTourPrice($tourPrice, (float) $tourPrice->price) * $paxCount;
     }
 
-    private function commissionForTourPrice(TourPrice $tourPrice, float $priceAmount): float
+    private function fallbackCommissionForTourPrice(TourPrice $tourPrice, float $priceAmount): float
     {
-        if ((float) $tourPrice->commission > 0) {
-            return (float) $tourPrice->commission;
-        }
-
-        if ((float) $tourPrice->commission_rate <= 0) {
-            return 0;
-        }
-
-        return (float) round($priceAmount * ((float) $tourPrice->commission_rate / 100));
+        return (float) app(AgentCommissionResolver::class)->fallback($tourPrice, $priceAmount)['amount'];
     }
 
     private function categoryKey(string $categoryName): string
@@ -1852,34 +1867,17 @@ class BookingIndexController extends Controller
 
     private function bookingNeedsTravelDocuments(Booking $booking): bool
     {
-        return $this->missingDocumentPassengerCount($booking) > 0;
+        return app(BookingTravelDocumentService::class)->bookingNeedsTravelDocuments($booking);
     }
 
     private function missingDocumentPassengerCount(Booking $booking): int
     {
-        if ($booking->passengers->isEmpty()) {
-            return 0;
-        }
-
-        return $booking->passengers
-            ->filter(fn ($passenger): bool => $this->passengerNeedsTravelDocuments($passenger))
-            ->count();
+        return app(BookingTravelDocumentService::class)->missingPassengerCount($booking);
     }
 
     private function passengerNeedsTravelDocuments(mixed $passenger): bool
     {
-        $category = strtolower((string) $passenger->price_category);
-
-        if (str_contains($category, 'infant')) {
-            return false;
-        }
-
-        return blank($passenger->passport_number)
-            || blank($passenger->passport_issue_date)
-            || blank($passenger->passport_expiry_date)
-            || blank($passenger->passport_file_path)
-            || blank($passenger->visa_number)
-            || blank($passenger->visa_file_path);
+        return app(BookingTravelDocumentService::class)->passengerNeedsTravelDocuments($passenger);
     }
 
     /**
@@ -1996,6 +1994,7 @@ class BookingIndexController extends Controller
                 ...$basePayload,
                 'state' => 'completed',
                 'label' => 'Completed',
+                'action_label' => 'View Documents',
             ];
         }
 
@@ -2121,6 +2120,22 @@ class BookingIndexController extends Controller
             'date' => Carbon::parse($booking->departure_date)->toDateString(),
             'booking_number' => $booking->booking_number,
             'step' => 'payment',
+        ]);
+    }
+
+    private function continueBookingUrl(Company $company, Booking $booking): ?string
+    {
+        if ($this->bookingStatusValue($booking) !== BookingStatus::AWAITING_PAYMENT->value) {
+            return null;
+        }
+
+        if (! $booking->tour_id || ! $booking->departure_date || blank($booking->booking_number)) {
+            return null;
+        }
+
+        return route('companies.dashboard.bookings.create', [$company, $booking->tour_id], false).'?'.http_build_query([
+            'date' => Carbon::parse($booking->departure_date)->toDateString(),
+            'booking_number' => $booking->booking_number,
         ]);
     }
 

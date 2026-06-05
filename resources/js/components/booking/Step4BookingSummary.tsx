@@ -18,6 +18,7 @@ import type {
     GuestEntry,
     VendorInfo,
 } from '@/types/booking';
+import { calculateAddOnPricing } from '@/utils/booking-calculations';
 import { motion } from 'framer-motion';
 import {
     BanknoteIcon,
@@ -56,6 +57,7 @@ export type AddOnItem = {
     qty: number;
     tooltip?: string;
     hasQty?: boolean;
+    isTaxable?: boolean;
 };
 
 type Step4Props = {
@@ -97,6 +99,7 @@ type Step4Props = {
     showProformaInvoiceButton?: boolean;
     manualPaymentAvailable?: boolean;
     onlinePaymentAvailable?: boolean;
+    downPaymentPaidAt?: string | null;
 };
 
 // ─── Constants ───────────────────────────────────────────────────────────────────
@@ -105,6 +108,24 @@ type Step4Props = {
 
 const PAYMENT_UNAVAILABLE_MESSAGE =
     'Payment is temporarily unavailable. Please try again later or contact customer support.';
+
+function formatPaymentDate(value?: string | null): string | null {
+    if (!value) {
+        return null;
+    }
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+        return value;
+    }
+
+    return new Intl.DateTimeFormat('en-GB', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+    }).format(date);
+}
 
 export default function Step4BookingSummary({
     contact,
@@ -132,6 +153,7 @@ export default function Step4BookingSummary({
     showProformaInvoiceButton = false,
     manualPaymentAvailable = true,
     onlinePaymentAvailable = true,
+    downPaymentPaidAt = null,
 }: Step4Props) {
     const addOnsLocked = readOnly || addOnsReadOnly;
 
@@ -186,17 +208,31 @@ export default function Step4BookingSummary({
         return Array.from(map.values());
     }, [guests]);
 
-    const addOnsTotal = useMemo(
-        () => displayAddOns.reduce((sum, a) => sum + a.unitPrice * a.qty, 0),
+    const vatPct = minimumVatPct ?? 11;
+    const addOnPricing = useMemo(
+        () => calculateAddOnPricing(displayAddOns, vatPct),
+        [displayAddOns, vatPct],
+    );
+    const addOnsTotal = addOnPricing.addOnsTotal;
+    const taxableAddOnsTotal = addOnPricing.taxableAddOnsTotal;
+    const taxableAddOns = useMemo(
+        () =>
+            displayAddOns.filter(
+                (addon) => addon.isTaxable && addon.unitPrice * addon.qty > 0,
+            ),
         [displayAddOns],
     );
-
-    const vatPct = minimumVatPct ?? 11;
+    const nonTaxableAddOns = useMemo(
+        () => displayAddOns.filter((addon) => !addon.isTaxable),
+        [displayAddOns],
+    );
+    const nonTaxableAddOnsTotal = addOnsTotal - taxableAddOnsTotal;
+    const totalPpn = pricing.ppn + addOnPricing.addOnsVat;
     const hasGrandTotalOverride =
         grandTotalOverride !== null && grandTotalOverride !== undefined;
     const grandTotal = hasGrandTotalOverride
         ? grandTotalOverride
-        : pricing.totalPrice + addOnsTotal;
+        : pricing.totalPrice + addOnsTotal + addOnPricing.addOnsVat;
     const effectiveDownPaymentRule =
         downPaymentRule ??
         (minimumDownPaymentPct !== null && minimumDownPaymentPct !== undefined
@@ -214,11 +250,6 @@ export default function Step4BookingSummary({
         effectiveDownPaymentRule?.mode === 'per_pax_amount'
             ? effectiveDownPaymentRule.amount
             : 0;
-    const dpLabel = downPaymentAvailable
-        ? effectiveDownPaymentRule?.mode === 'per_pax_amount'
-            ? `Down Payment (${formatCurrency(perPaxDownPaymentAmount)} per pax)`
-            : `Down Payment (${dpPct}%)`
-        : 'Down Payment';
     const effectivePaymentType: PaymentType | null = forceBalancePayment
         ? 'full_payment'
         : paymentType;
@@ -247,6 +278,8 @@ export default function Step4BookingSummary({
         !manualPaymentAvailable && !onlinePaymentAvailable;
     const isPaymentSelectionMissing = !effectivePaymentType;
     const paymentControlsHidden = readOnly || hidePaymentControls;
+    const hasDownPayment = displayPaidAmount > 0 && displayRemainingBalance > 0;
+    const downPaymentPaidDate = formatPaymentDate(downPaymentPaidAt);
     const activePaymentAmountLabel = forceBalancePayment
         ? 'Remaining Balance'
         : effectivePaymentType === 'down_payment'
@@ -261,9 +294,9 @@ export default function Step4BookingSummary({
             : arePaymentMethodsUnavailable
               ? 'Payment methods are currently unavailable for this tour.'
               : null);
-    const paymentSummaryStack = (
-        <div className="space-y-1.5 lg:text-right">
-            <div>
+    const paymentDetailsPanel = (
+        <div className="space-y-4">
+            <div className="flex items-start justify-between gap-4">
                 <p className="text-[10px] font-semibold uppercase text-muted-foreground">
                     Grand Total
                 </p>
@@ -271,31 +304,102 @@ export default function Step4BookingSummary({
                     key={grandTotal}
                     initial={{ scale: 0.98 }}
                     animate={{ scale: 1 }}
-                    className="text-xl font-bold text-foreground"
+                    className="text-right text-xl font-bold text-foreground"
                 >
                     {formatCurrency(grandTotal)}
                 </motion.p>
             </div>
-            <div className="grid grid-cols-2 gap-3 border-t border-border/60 pt-1.5">
-                <div>
-                    <p className="text-[10px] font-semibold uppercase text-muted-foreground">
-                        Remaining Balance
-                    </p>
-                    <p className="text-sm font-bold text-red-600">
-                        {formatCurrency(displayRemainingBalance)}
-                    </p>
+            {hasDownPayment && (
+                <div className="space-y-3 border-t border-border/60 pt-4">
+                    <div className="flex items-start justify-between gap-4">
+                        <div>
+                            <p className="text-[10px] font-semibold uppercase text-muted-foreground">
+                                Down Payment
+                            </p>
+                            {downPaymentPaidDate && (
+                                <p className="mt-0.5 text-xs text-muted-foreground">
+                                    Paid on {downPaymentPaidDate}
+                                </p>
+                            )}
+                        </div>
+                        <p className="text-right text-sm font-bold text-emerald-600">
+                            {formatCurrency(displayPaidAmount)}
+                        </p>
+                    </div>
+                    <div className="flex items-start justify-between gap-4">
+                        <p className="text-[10px] font-semibold uppercase text-muted-foreground">
+                            Remaining Balance
+                        </p>
+                        <p className="text-right text-sm font-bold text-red-600">
+                            {formatCurrency(displayRemainingBalance)}
+                        </p>
+                    </div>
                 </div>
-                <div>
-                    <p className="text-[10px] font-semibold uppercase text-muted-foreground">
-                        Paid
-                    </p>
-                    <p className="text-sm font-bold text-emerald-600">
-                        {formatCurrency(displayPaidAmount)}
-                    </p>
-                </div>
-            </div>
+            )}
         </div>
     );
+    const paymentOptionSelector = !paymentControlsHidden ? (
+        <div className="space-y-4">
+            <p className="text-sm font-semibold text-foreground">
+                Select Payment Option
+            </p>
+            <div className="grid gap-2 sm:grid-cols-2">
+                <button
+                    type="button"
+                    aria-pressed={paymentType === 'down_payment'}
+                    className={cn(
+                        'h-11 rounded-md border px-4 text-sm font-medium transition-all',
+                        paymentType === 'down_payment'
+                            ? 'border-primary bg-primary text-primary-foreground shadow-sm'
+                            : 'border-border bg-background text-muted-foreground hover:text-foreground',
+                        (!downPaymentAvailable || forceBalancePayment) &&
+                            'cursor-not-allowed opacity-50',
+                    )}
+                    onClick={() => {
+                        if (downPaymentAvailable && !forceBalancePayment) {
+                            setPaymentType('down_payment');
+                        }
+                    }}
+                    disabled={!downPaymentAvailable || forceBalancePayment}
+                >
+                    Down Payment
+                </button>
+                <button
+                    type="button"
+                    aria-pressed={
+                        paymentType === 'full_payment' || forceBalancePayment
+                    }
+                    className={cn(
+                        'h-11 rounded-md border px-4 text-sm font-medium transition-all',
+                        paymentType === 'full_payment' || forceBalancePayment
+                            ? 'border-primary bg-primary text-primary-foreground shadow-sm'
+                            : 'border-border bg-background text-muted-foreground hover:text-foreground',
+                        isFullPaymentUnavailable &&
+                            'cursor-not-allowed opacity-50',
+                    )}
+                    onClick={() => {
+                        if (!isFullPaymentUnavailable) {
+                            setPaymentType('full_payment');
+                        }
+                    }}
+                    disabled={isFullPaymentUnavailable}
+                >
+                    Full Payment
+                </button>
+            </div>
+
+            {payAmount !== null && (
+                <div className="rounded-lg border bg-background px-4 py-3">
+                    <p className="text-[10px] font-semibold uppercase text-muted-foreground">
+                        {activePaymentAmountLabel}
+                    </p>
+                    <p className="mt-1 text-lg font-bold text-primary">
+                        {formatCurrency(payAmount)}
+                    </p>
+                </div>
+            )}
+        </div>
+    ) : null;
     const proformaInvoiceButton = showProformaInvoiceButton ? (
         <Tooltip>
             <TooltipTrigger asChild>
@@ -392,6 +496,81 @@ export default function Step4BookingSummary({
             data,
         );
     };
+    const paymentActionButton = !paymentControlsHidden ? (
+        <Popover
+            open={paymentPopoverOpen}
+            onOpenChange={(open) => {
+                if (
+                    !isCurrentPaymentUnavailable &&
+                    !isPaymentSelectionMissing
+                ) {
+                    setPaymentPopoverOpen(open);
+                }
+            }}
+        >
+            <PopoverTrigger asChild>
+                <Button
+                    type="button"
+                    size="lg"
+                    disabled={
+                        isSubmitting ||
+                        isCurrentPaymentUnavailable ||
+                        arePaymentMethodsUnavailable ||
+                        isPaymentSelectionMissing
+                    }
+                    className="gap-2 bg-[#1ebe5d] px-6 text-white shadow-lg hover:bg-[#19a34f]"
+                >
+                    {isSubmitting
+                        ? 'Processing...'
+                        : arePaymentMethodsUnavailable
+                          ? 'Payment Unavailable'
+                          : 'Pay Now!'}
+                </Button>
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-64 p-2" sideOffset={8}>
+                <p className="mb-2 px-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                    Select Payment Method
+                </p>
+                <div className="space-y-1">
+                    {manualPaymentAvailable && (
+                        <button
+                            type="button"
+                            className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors hover:bg-muted"
+                            onClick={() =>
+                                handlePaymentMethodSelect('manual_transfer')
+                            }
+                        >
+                            <BanknoteIcon className="size-5 text-emerald-600" />
+                            <div className="text-left">
+                                <p className="font-semibold">Manual Payment</p>
+                                <p className="text-xs text-muted-foreground">
+                                    Bank Transfer
+                                </p>
+                            </div>
+                        </button>
+                    )}
+                    {onlinePaymentAvailable && (
+                        <button
+                            type="button"
+                            className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors hover:bg-muted"
+                            onClick={() =>
+                                handlePaymentMethodSelect('midtrans')
+                            }
+                        >
+                            <CreditCardIcon className="size-5 text-blue-600" />
+                            <div className="text-left">
+                                <p className="font-semibold">Online Payment</p>
+                                <p className="text-xs text-muted-foreground">
+                                    Visa, Mastercard, Amex, QRIS, Virtual
+                                    Account
+                                </p>
+                            </div>
+                        </button>
+                    )}
+                </div>
+            </PopoverContent>
+        </Popover>
+    ) : null;
 
     return (
         <TooltipProvider delayDuration={200}>
@@ -496,10 +675,24 @@ export default function Step4BookingSummary({
                                                 </span>
                                             </div>
                                         )}
+                                        {taxableAddOns.map((addon) => (
+                                            <div
+                                                key={`taxable-${addon.key}`}
+                                                className="flex justify-between text-muted-foreground"
+                                            >
+                                                <span>{addon.label}</span>
+                                                <span className="font-medium text-foreground">
+                                                    {formatCurrency(
+                                                        addon.unitPrice *
+                                                            addon.qty,
+                                                    )}
+                                                </span>
+                                            </div>
+                                        ))}
                                         <div className="flex justify-between text-muted-foreground">
                                             <span>PPN ({vatPct}%)</span>
                                             <span className="font-medium text-foreground">
-                                                {formatCurrency(pricing.ppn)}
+                                                {formatCurrency(totalPpn)}
                                             </span>
                                         </div>
                                     </div>
@@ -535,7 +728,7 @@ export default function Step4BookingSummary({
                         </p>
 
                         <div className="space-y-2 text-sm">
-                            {displayAddOns.map((addon) => (
+                            {nonTaxableAddOns.map((addon) => (
                                 <motion.div
                                     key={addon.key}
                                     layout
@@ -622,220 +815,50 @@ export default function Step4BookingSummary({
                                     Add-ons Total
                                 </span>
                                 <span className="font-semibold">
-                                    {formatCurrency(addOnsTotal)}
+                                    {formatCurrency(nonTaxableAddOnsTotal)}
                                 </span>
                             </div>
                         </div>
                     </div>
 
                     {/* ─── Payment Selection ──────────────────────────────────────── */}
-                    {paymentControlsHidden && (
-                        <div className="p-4">
-                            <p className="mb-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                                Payment Summary
-                            </p>
-                            <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(210px,250px)]">
-                                <div className="hidden lg:block" />
-                                {paymentSummaryStack}
-                            </div>
-                            {proformaInvoiceButton && (
-                                <div className="mt-4 flex justify-end">
-                                    {proformaInvoiceButton}
-                                </div>
+                    <div className="p-4">
+                        <p className="mb-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                            Payment Option
+                        </p>
+
+                        <div
+                            className={cn(
+                                'grid gap-4 rounded-lg border bg-muted/20 p-4',
+                                !paymentControlsHidden &&
+                                    'lg:grid-cols-[minmax(0,1fr)_minmax(320px,0.9fr)] lg:items-start',
                             )}
-                        </div>
-                    )}
+                        >
+                            {paymentOptionSelector}
 
-                    {!paymentControlsHidden && (
-                        <div className="p-4">
-                            <p className="mb-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                                Payment Option
-                            </p>
-
-                            <div className="grid gap-3 rounded-lg border bg-muted/20 p-3 lg:grid-cols-[minmax(0,1fr)_minmax(210px,250px)] lg:items-start">
-                                <div>
-                                    {forceBalancePayment ? (
-                                        <div className="inline-flex rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground shadow-sm">
-                                            Balance Payment
-                                        </div>
-                                    ) : (
-                                        <div className="inline-flex items-center gap-1 rounded-md bg-muted/40 p-0.5">
-                                            <button
-                                                type="button"
-                                                className={cn(
-                                                    'rounded-md px-3 py-1.5 text-xs font-medium transition-all',
-                                                    paymentType ===
-                                                        'down_payment'
-                                                        ? 'bg-primary text-primary-foreground shadow-sm'
-                                                        : 'text-muted-foreground hover:text-foreground',
-                                                    !downPaymentAvailable &&
-                                                        'cursor-not-allowed opacity-50',
-                                                )}
-                                                onClick={() => {
-                                                    if (downPaymentAvailable) {
-                                                        setPaymentType(
-                                                            'down_payment',
-                                                        );
-                                                    }
-                                                }}
-                                                disabled={!downPaymentAvailable}
-                                            >
-                                                {dpLabel}
-                                            </button>
-                                            <button
-                                                type="button"
-                                                className={cn(
-                                                    'rounded-md px-3 py-1.5 text-xs font-medium transition-all',
-                                                    paymentType ===
-                                                        'full_payment'
-                                                        ? 'bg-primary text-primary-foreground shadow-sm'
-                                                        : 'text-muted-foreground hover:text-foreground',
-                                                    isFullPaymentUnavailable &&
-                                                        'cursor-not-allowed opacity-50',
-                                                )}
-                                                onClick={() => {
-                                                    if (
-                                                        !isFullPaymentUnavailable
-                                                    ) {
-                                                        setPaymentType(
-                                                            'full_payment',
-                                                        );
-                                                    }
-                                                }}
-                                                disabled={
-                                                    isFullPaymentUnavailable
-                                                }
-                                            >
-                                                Full Payment
-                                            </button>
-                                        </div>
-                                    )}
-
-                                    <div className="ml-1 mt-5 max-w-xs">
-                                        <p className="text-[10px] font-semibold uppercase text-muted-foreground">
-                                            {activePaymentAmountLabel}
-                                        </p>
-                                        <p
-                                            className={cn(
-                                                'text-sm font-bold',
-                                                payAmount === null
-                                                    ? 'text-muted-foreground'
-                                                    : 'text-primary',
-                                            )}
-                                        >
-                                            {payAmount === null
-                                                ? 'Select payment option'
-                                                : formatCurrency(payAmount)}
-                                        </p>
+                            <div
+                                className={cn(
+                                    'space-y-4',
+                                    !paymentControlsHidden &&
+                                        'lg:border-l lg:border-border/60 lg:pl-4',
+                                )}
+                            >
+                                {paymentDetailsPanel}
+                                {(proformaInvoiceButton ||
+                                    paymentActionButton) && (
+                                    <div className="flex flex-col-reverse gap-2 border-t border-border/60 pt-4 sm:flex-row sm:items-center sm:justify-end">
+                                        {proformaInvoiceButton}
+                                        {paymentActionButton}
                                     </div>
-                                </div>
-
-                                {paymentSummaryStack}
-                            </div>
-                            {paymentNotice && (
-                                <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">
-                                    {paymentNotice}
-                                </div>
-                            )}
-                        </div>
-                    )}
-
-                    {/* ─── Pay Now ────────────────────────────────────────────────── */}
-                    {!paymentControlsHidden && (
-                        <div className="p-4">
-                            <div className="flex flex-wrap justify-end gap-2">
-                                {proformaInvoiceButton}
-                                <Popover
-                                    open={paymentPopoverOpen}
-                                    onOpenChange={(open) => {
-                                        if (
-                                            !isCurrentPaymentUnavailable &&
-                                            !isPaymentSelectionMissing
-                                        ) {
-                                            setPaymentPopoverOpen(open);
-                                        }
-                                    }}
-                                >
-                                    <PopoverTrigger asChild>
-                                        <Button
-                                            type="button"
-                                            size="lg"
-                                            disabled={
-                                                isSubmitting ||
-                                                isCurrentPaymentUnavailable ||
-                                                arePaymentMethodsUnavailable ||
-                                                isPaymentSelectionMissing
-                                            }
-                                            className="gap-2 bg-[#1ebe5d] px-6 text-white shadow-lg hover:bg-[#19a34f]"
-                                        >
-                                            {isSubmitting
-                                                ? 'Processing...'
-                                                : arePaymentMethodsUnavailable
-                                                  ? 'Payment Unavailable'
-                                                  : isPaymentSelectionMissing
-                                                    ? 'Select Payment Option'
-                                                    : 'Pay Now!'}
-                                        </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent
-                                        align="end"
-                                        className="w-64 p-2"
-                                        sideOffset={8}
-                                    >
-                                        <p className="mb-2 px-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                                            Select Payment Method
-                                        </p>
-                                        <div className="space-y-1">
-                                            {manualPaymentAvailable && (
-                                                <button
-                                                    type="button"
-                                                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors hover:bg-muted"
-                                                    onClick={() =>
-                                                        handlePaymentMethodSelect(
-                                                            'manual_transfer',
-                                                        )
-                                                    }
-                                                >
-                                                    <BanknoteIcon className="size-5 text-emerald-600" />
-                                                    <div className="text-left">
-                                                        <p className="font-semibold">
-                                                            Manual Payment
-                                                        </p>
-                                                        <p className="text-xs text-muted-foreground">
-                                                            Bank Transfer
-                                                        </p>
-                                                    </div>
-                                                </button>
-                                            )}
-                                            {onlinePaymentAvailable && (
-                                                <button
-                                                    type="button"
-                                                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors hover:bg-muted"
-                                                    onClick={() =>
-                                                        handlePaymentMethodSelect(
-                                                            'midtrans',
-                                                        )
-                                                    }
-                                                >
-                                                    <CreditCardIcon className="size-5 text-blue-600" />
-                                                    <div className="text-left">
-                                                        <p className="font-semibold">
-                                                            Online Payment
-                                                        </p>
-                                                        <p className="text-xs text-muted-foreground">
-                                                            Visa, Mastercard,
-                                                            Amex, QRIS, Virtual
-                                                            Account
-                                                        </p>
-                                                    </div>
-                                                </button>
-                                            )}
-                                        </div>
-                                    </PopoverContent>
-                                </Popover>
+                                )}
                             </div>
                         </div>
-                    )}
+                        {paymentNotice && (
+                            <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">
+                                {paymentNotice}
+                            </div>
+                        )}
+                    </div>
                 </div>
                 <ManualPaymentDialog
                     open={manualDialogOpen}

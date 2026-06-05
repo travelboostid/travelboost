@@ -12,8 +12,8 @@ class WalletRepairSeeder extends Seeder
         User::all()->each(function ($user) {
             if (! $user->wallet) {
                 $user->wallet()->create([
-                    'name' => 'Main Wallet',
-                    'slug' => 'main',
+                    'name' => config('wallet.wallet.default.name'),
+                    'slug' => config('wallet.wallet.default.slug'),
                     'description' => 'Primary wallet for user transactions',
                 ]);
             }

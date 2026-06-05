@@ -17,12 +17,30 @@ import {
     UploadCloudIcon,
     XIcon,
 } from 'lucide-react';
-import { useCallback, useRef } from 'react';
+import { useCallback, useRef, useState } from 'react';
 
-const itemVariants = {
-    hidden: { opacity: 0, y: 14 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.22 } },
-};
+const MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024;
+const MAX_ATTACHMENT_LABEL = '5 MB';
+
+function storageUrlFromPath(path: string | null): string | null {
+    if (!path) {
+        return null;
+    }
+
+    if (path.startsWith('http://') || path.startsWith('https://')) {
+        return path;
+    }
+
+    if (path.startsWith('/storage/')) {
+        return path;
+    }
+
+    if (path.startsWith('storage/')) {
+        return `/${path}`;
+    }
+
+    return `/storage/${path.replace(/^\/+/, '')}`;
+}
 
 type Step3Props = {
     guests: GuestEntry[];
@@ -53,8 +71,14 @@ function TravelDocumentCard({
 }) {
     const passportInputRef = useRef<HTMLInputElement>(null);
     const visaInputRef = useRef<HTMLInputElement>(null);
+    const [fileErrors, setFileErrors] = useState<{
+        passportFile?: string;
+        visaFile?: string;
+    }>({});
 
     const isAdult = guestType === 'adult';
+    const passportFileUrl = storageUrlFromPath(doc.passportFilePath);
+    const visaFileUrl = storageUrlFromPath(doc.visaFilePath);
 
     const handleFileSelect = (
         field: 'passportFile' | 'visaFile',
@@ -67,9 +91,19 @@ function TravelDocumentCard({
 
         const file = e.target.files?.[0];
         if (file) {
+            if (file.size > MAX_ATTACHMENT_BYTES) {
+                setFileErrors((current) => ({
+                    ...current,
+                    [field]: `Maximum file size is ${MAX_ATTACHMENT_LABEL}.`,
+                }));
+                e.target.value = '';
+                return;
+            }
+
             const pathField =
                 field === 'passportFile' ? 'passportFilePath' : 'visaFilePath';
 
+            setFileErrors((current) => ({ ...current, [field]: undefined }));
             onChange({
                 ...doc,
                 [field]: file,
@@ -90,6 +124,7 @@ function TravelDocumentCard({
         }
 
         onChange({ ...doc, [field]: null, [nameField]: '', [pathField]: null });
+        setFileErrors((current) => ({ ...current, [field]: undefined }));
         if (inputRef.current) {
             inputRef.current.value = '';
         }
@@ -263,24 +298,36 @@ function TravelDocumentCard({
                         {doc.passportFileName ? (
                             <div className="flex min-w-0 max-w-full items-center gap-2 overflow-hidden rounded-lg border bg-muted/30 px-3 py-2">
                                 <FileTextIcon className="size-4 shrink-0 text-primary" />
-                                <span className="min-w-0 flex-1 truncate text-xs text-foreground">
-                                    {doc.passportFileName}
-                                </span>
-                                <button
-                                    type="button"
-                                    disabled={readOnly}
-                                    onClick={() =>
-                                        handleFileRemove(
-                                            'passportFile',
-                                            'passportFileName',
-                                            'passportFilePath',
-                                            passportInputRef,
-                                        )
-                                    }
-                                    className="shrink-0 rounded-full p-0.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:pointer-events-none disabled:opacity-40"
-                                >
-                                    <XIcon className="size-3.5" />
-                                </button>
+                                {passportFileUrl ? (
+                                    <a
+                                        href={passportFileUrl}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="min-w-0 flex-1 truncate text-xs font-semibold text-primary hover:underline"
+                                    >
+                                        {doc.passportFileName}
+                                    </a>
+                                ) : (
+                                    <span className="min-w-0 flex-1 truncate text-xs text-foreground">
+                                        {doc.passportFileName}
+                                    </span>
+                                )}
+                                {!readOnly && (
+                                    <button
+                                        type="button"
+                                        onClick={() =>
+                                            handleFileRemove(
+                                                'passportFile',
+                                                'passportFileName',
+                                                'passportFilePath',
+                                                passportInputRef,
+                                            )
+                                        }
+                                        className="shrink-0 rounded-full p-0.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                                    >
+                                        <XIcon className="size-3.5" />
+                                    </button>
+                                )}
                             </div>
                         ) : (
                             <button
@@ -294,6 +341,11 @@ function TravelDocumentCard({
                                 <UploadCloudIcon className="size-3.5 shrink-0" />
                                 <span className="truncate">Upload file</span>
                             </button>
+                        )}
+                        {fileErrors.passportFile && (
+                            <p className="text-[10px] text-destructive">
+                                {fileErrors.passportFile}
+                            </p>
                         )}
                     </div>
                 </div>
@@ -333,24 +385,36 @@ function TravelDocumentCard({
                         {doc.visaFileName ? (
                             <div className="flex min-w-0 max-w-full items-center gap-2 overflow-hidden rounded-lg border bg-muted/30 px-3 py-2">
                                 <FileTextIcon className="size-4 shrink-0 text-primary" />
-                                <span className="min-w-0 flex-1 truncate text-xs text-foreground">
-                                    {doc.visaFileName}
-                                </span>
-                                <button
-                                    type="button"
-                                    disabled={readOnly}
-                                    onClick={() =>
-                                        handleFileRemove(
-                                            'visaFile',
-                                            'visaFileName',
-                                            'visaFilePath',
-                                            visaInputRef,
-                                        )
-                                    }
-                                    className="shrink-0 rounded-full p-0.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:pointer-events-none disabled:opacity-40"
-                                >
-                                    <XIcon className="size-3.5" />
-                                </button>
+                                {visaFileUrl ? (
+                                    <a
+                                        href={visaFileUrl}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="min-w-0 flex-1 truncate text-xs font-semibold text-primary hover:underline"
+                                    >
+                                        {doc.visaFileName}
+                                    </a>
+                                ) : (
+                                    <span className="min-w-0 flex-1 truncate text-xs text-foreground">
+                                        {doc.visaFileName}
+                                    </span>
+                                )}
+                                {!readOnly && (
+                                    <button
+                                        type="button"
+                                        onClick={() =>
+                                            handleFileRemove(
+                                                'visaFile',
+                                                'visaFileName',
+                                                'visaFilePath',
+                                                visaInputRef,
+                                            )
+                                        }
+                                        className="shrink-0 rounded-full p-0.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                                    >
+                                        <XIcon className="size-3.5" />
+                                    </button>
+                                )}
                             </div>
                         ) : (
                             <button
@@ -362,6 +426,11 @@ function TravelDocumentCard({
                                 <UploadCloudIcon className="size-3.5 shrink-0" />
                                 <span className="truncate">Upload file</span>
                             </button>
+                        )}
+                        {fileErrors.visaFile && (
+                            <p className="text-[10px] text-destructive">
+                                {fileErrors.visaFile}
+                            </p>
                         )}
                     </div>
                 </div>

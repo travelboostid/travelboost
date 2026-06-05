@@ -234,14 +234,14 @@ function deadlineText(label: string, deadline?: DeadlineInfo | null) {
     const date = dayjs(deadline.date).format('DD MMM YYYY');
 
     if (deadline.is_overdue) {
-        return `${label} was due on ${date}`;
+        return `${label} overdue since ${date}`;
     }
 
     if (deadline.days_remaining === 0) {
-        return `${label} is due today`;
+        return `${label} due today (${date})`;
     }
 
-    return `${label} in ${deadline.days_remaining} day${
+    return `${label} due in ${deadline.days_remaining} day${
         deadline.days_remaining === 1 ? '' : 's'
     } (${date})`;
 }
@@ -636,12 +636,9 @@ function BookingCard({
             ? bookingDocumentsHref(booking)
             : null;
     const shouldShowProformaButton = status === 'down payment';
-    const paymentDeadline = deadlineText(
-        'Balance payment',
-        booking.payment_deadline,
-    );
+    const paymentDeadline = deadlineText('Payment', booking.payment_deadline);
     const documentDeadline = deadlineText(
-        'Travel documents',
+        'Documents',
         booking.document_deadline,
     );
     const shouldShowPaymentDeadline =
@@ -753,6 +750,15 @@ function BookingCard({
                             >
                                 {STATUS_LABELS[status] ?? booking.status}
                             </Badge>
+                            {booking.booking_window_closed &&
+                                booking.action_unavailable_reason && (
+                                    <DeadlineBadge
+                                        tone="closed"
+                                        label={
+                                            booking.action_unavailable_reason
+                                        }
+                                    />
+                                )}
                         </div>
                         <div className="grid gap-2 text-left">
                             <AmountStackItem
@@ -789,17 +795,6 @@ function BookingCard({
                                 )}
                             </div>
                         )}
-                        {booking.booking_window_closed &&
-                            booking.action_unavailable_reason && (
-                                <div className="grid max-w-full justify-items-start lg:justify-items-end">
-                                    <DeadlineBadge
-                                        tone="closed"
-                                        label={
-                                            booking.action_unavailable_reason
-                                        }
-                                    />
-                                </div>
-                            )}
                     </div>
                     <div
                         className={cn(
@@ -886,7 +881,13 @@ function BookingCard({
                                                 type="button"
                                                 variant="outline"
                                                 aria-label="Print Proforma Invoice"
-                                                disabled
+                                                onClick={() =>
+                                                    window.open(
+                                                        `/mybookings/${booking.id}/invoice`,
+                                                        '_blank',
+                                                        'noopener,noreferrer',
+                                                    )
+                                                }
                                                 className="h-8 min-w-8 gap-1.5 rounded-lg px-2 text-[11px] sm:w-8 sm:flex-none sm:px-0"
                                             >
                                                 <FileTextIcon className="size-4" />

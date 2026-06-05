@@ -18,8 +18,8 @@ class WalletTransactionsController extends Controller
 
         if (! $wallet) {
             $wallet = $user->wallet()->create([
-                'name' => 'Main Wallet',
-                'slug' => 'main',
+                'name' => config('wallet.wallet.default.name'),
+                'slug' => config('wallet.wallet.default.slug'),
                 'description' => 'Primary wallet for user transactions',
             ]);
         }

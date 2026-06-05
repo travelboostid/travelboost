@@ -96,6 +96,7 @@ class UpdateTourRequest extends FormRequest
             'schedules.*.add_ons.*.description' => ['nullable', 'string'],
             'schedules.*.add_ons.*.price' => ['nullable', 'numeric'],
             'schedules.*.add_ons.*.edit_status' => ['nullable', 'boolean'],
+            'schedules.*.add_ons.*.is_taxable' => ['nullable', 'boolean'],
         ];
     }
 
@@ -169,6 +170,7 @@ class UpdateTourRequest extends FormRequest
                                 ? (float) $addon['price']
                                 : 0,
                             'edit_status' => (bool) ($addon['edit_status'] ?? false),
+                            'is_taxable' => (bool) ($addon['is_taxable'] ?? false),
                         ];
                     })->values()->toArray(),
             ];

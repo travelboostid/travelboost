@@ -11,6 +11,8 @@ import Step2RoomConfiguration, {
     deserializeRoomsFromBooking,
     getRoomNumberByGuestId,
     serializeRoomsForBooking,
+    validateDependentBedPassengerMix,
+    validateRoomArrangement,
     type RoomConfig,
 } from '@/components/booking/Step2RoomConfiguration';
 import Step3TravelDocuments from '@/components/booking/Step3TravelDocuments';
@@ -42,7 +44,10 @@ import type {
     SavedPassengerOption,
     TravelDocumentEntry,
 } from '@/types/booking';
-import { calculateBookingPricing } from '@/utils/booking-calculations';
+import {
+    calculateAddOnPricing,
+    calculateBookingPricing,
+} from '@/utils/booking-calculations';
 import { router, usePage } from '@inertiajs/react';
 import axios from 'axios';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -60,6 +65,7 @@ import {
     useState,
     type ReactNode,
 } from 'react';
+import { toast } from 'sonner';
 
 const DEFAULT_TNC = `1. The price shown is valid only for the selected departure date.
 2. Full payment is required to secure your booking.
@@ -335,6 +341,7 @@ export default function Page() {
         remainingHoldSeconds,
         paidAmount,
         remainingBalance,
+        downPaymentPaidAt,
         downPaymentAvailable = true,
         fullPaymentAvailable = true,
         paymentMethodAvailability = {
@@ -400,8 +407,10 @@ export default function Page() {
         [company?.type, dashboardReturnUrl, isDashboardBooking],
     );
     const user = auth?.user;
-    const savedPassengerOptions = (savedPassengers ??
-        []) as SavedPassengerOption[];
+    const rawSavedPassengerOptions = useMemo(
+        () => (savedPassengers ?? []) as SavedPassengerOption[],
+        [savedPassengers],
+    );
     const rawSeatLimit = bookingSeatLimit ?? availability;
     const parsedSeatLimit =
         rawSeatLimit === null || rawSeatLimit === undefined
@@ -637,6 +646,30 @@ export default function Page() {
         requiresAgentSelection,
         selectedAgentId,
     ]);
+    const savedPassengerOptions = useMemo(() => {
+        if (!isDashboardBooking) {
+            return rawSavedPassengerOptions;
+        }
+
+        if (requiresAgentSelection && selectedAgentId === null) {
+            return [];
+        }
+
+        if (selectedAgentId === null) {
+            return rawSavedPassengerOptions;
+        }
+
+        return rawSavedPassengerOptions.filter((savedPassenger) => {
+            const ownerCompanyId = Number(savedPassenger.ownerCompanyId ?? 0);
+
+            return ownerCompanyId === 0 || ownerCompanyId === selectedAgentId;
+        });
+    }, [
+        isDashboardBooking,
+        rawSavedPassengerOptions,
+        requiresAgentSelection,
+        selectedAgentId,
+    ]);
     const [contact, setContact] = useState<BookingContact>({
         name:
             existingBooking?.contact_name ||
@@ -674,7 +707,7 @@ export default function Page() {
                 name: customer.name,
                 email: customer.email,
                 phone: customer.phone ?? '',
-                notes: contact.notes,
+                notes: customer.note ?? contact.notes,
             });
         },
         [contact.notes],
@@ -920,15 +953,18 @@ export default function Page() {
             ),
         [selectedAddOns, guests.length],
     );
-    const selectedAddOnsTotal = useMemo(
+    const selectedAddOnPricing = useMemo(
         () =>
-            selectedAddOnsForPricing.reduce(
-                (sum, addon) => sum + addon.unitPrice * addon.qty,
-                0,
+            calculateAddOnPricing(
+                selectedAddOnsForPricing,
+                minimumVatPct ?? 11,
             ),
-        [selectedAddOnsForPricing],
+        [minimumVatPct, selectedAddOnsForPricing],
     );
-    const computedGrandTotal = pricing.totalPrice + selectedAddOnsTotal;
+    const computedGrandTotal =
+        pricing.totalPrice +
+        selectedAddOnPricing.addOnsTotal +
+        selectedAddOnPricing.addOnsVat;
     const snapshotGrandTotal =
         Number(existingBooking?.grand_total ?? 0) > 0
             ? Number(existingBooking.grand_total)
@@ -1146,6 +1182,13 @@ export default function Page() {
                     onSuccess: () => {
                         setHoldExpiryDialogOpen(false);
                         router.visit(dashboardReturnUrl);
+                    },
+                    onError: () => {
+                        setHoldExpiryDialogOpen(false);
+                        toast.info(
+                            'Booking hold state has changed. Refreshing booking data.',
+                        );
+                        router.reload({ preserveScroll: true });
                     },
                     onFinish: () => setIsResolvingHoldExpiry(false),
                 },
@@ -1566,20 +1609,10 @@ export default function Page() {
         bookingSeatLimitValue !== null &&
         paxTakingSeats > bookingSeatLimitValue;
 
-    const extraBedGuests = guests.filter((g) =>
-        g.priceCategory?.toLowerCase().includes('extra bed'),
+    const dependentBedPassengerValidation = useMemo(
+        () => validateDependentBedPassengerMix(guests),
+        [guests],
     );
-    const hasValidBaseRoom = guests.some((g) => {
-        const priceCategory = g.priceCategory?.toLowerCase() ?? '';
-        const roomTypeDescription = g.roomTypeDescription?.toLowerCase() ?? '';
-
-        return (
-            !priceCategory.includes('extra bed') &&
-            (roomTypeDescription.includes('twin') ||
-                roomTypeDescription.includes('double'))
-        );
-    });
-    const extraBedValid = extraBedGuests.length === 0 || hasValidBaseRoom;
 
     const canProceedStep1 =
         contact.name.trim() !== '' &&
@@ -1592,7 +1625,7 @@ export default function Page() {
             selectedCustomerId !== null) &&
         guests.length > 0 &&
         !isAvailabilityExceeded &&
-        extraBedValid &&
+        dependentBedPassengerValidation.isValid &&
         hasRequiredAgentSelection &&
         guests.every((g) => {
             if (
@@ -1619,7 +1652,15 @@ export default function Page() {
             ...rooms.flatMap((r) => r.guestIds),
             ...rooms.flatMap((r) => r.sharingGuestIds ?? []),
         ];
-        return guests.every((g) => assignedGuestIds.includes(g.id));
+        const roomArrangementValidation = validateRoomArrangement(
+            rooms,
+            guests,
+        );
+
+        return (
+            roomArrangementValidation.isValid &&
+            guests.every((g) => assignedGuestIds.includes(g.id))
+        );
     }, [guests, rooms]);
 
     // ─── Submit ─────────────────────────────────────────────────────────
@@ -2044,12 +2085,17 @@ export default function Page() {
                 name: a.label,
                 price: a.unitPrice * a.qty,
                 qty: a.qty,
+                is_taxable: a.isTaxable ?? false,
             }));
-        const addOnsTotal = addOnRows.reduce(
-            (sum, item) => sum + item.price,
-            0,
+        const addOnPricing = calculateAddOnPricing(
+            addOnsForPayload.filter((a) => a.qty > 0),
+            minimumVatPct ?? 11,
         );
-        const grandTotal = pricing.totalPrice + addOnsTotal;
+        const totalTaxAmount = pricing.ppn + addOnPricing.addOnsVat;
+        const grandTotal =
+            pricing.totalPrice +
+            addOnPricing.addOnsTotal +
+            addOnPricing.addOnsVat;
         const roomNumberByGuestId = getRoomNumberByGuestId(rooms);
         const payload: Record<string, unknown> = {
             tour_id: tour.id,
@@ -2100,7 +2146,7 @@ export default function Page() {
             }),
             addons: addOnRows,
             total_price: pricing.subtotalGuests,
-            tax_amount: pricing.ppn,
+            tax_amount: totalTaxAmount,
             platform_fee: pricing.platformFee,
             commission_amount: pricing.agentCommission,
             grand_total: grandTotal,
@@ -2628,6 +2674,9 @@ export default function Page() {
                                                 remainingBalance={
                                                     displayRemainingBalance
                                                 }
+                                                downPaymentPaidAt={
+                                                    downPaymentPaidAt
+                                                }
                                                 grandTotalOverride={
                                                     shouldUseSnapshotTotals
                                                         ? snapshotGrandTotal
@@ -2702,11 +2751,11 @@ export default function Page() {
                                             )}
                                         {currentStep === 1 &&
                                             !isReadOnlyBookingMode &&
-                                            !extraBedValid && (
+                                            !dependentBedPassengerValidation.isValid && (
                                                 <span className="text-sm font-semibold text-destructive">
-                                                    "Extra Bed" can only be
-                                                    added with an Adult Twin or
-                                                    Adult Double room.
+                                                    {dependentBedPassengerValidation
+                                                        .issues[0]?.message ??
+                                                        'Adult Extra Bed and Child With Bed guests must share an Adult Twin or Adult Double room.'}
                                                 </span>
                                             )}
                                         {currentStep === 1 &&

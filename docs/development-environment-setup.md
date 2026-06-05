@@ -3,7 +3,7 @@
 ## System Requirements
 
 - **OS**: Windows, macOS, or Linux
-- **PHP**: ^8.5
+- **PHP**: ^8.5 (require additional extensions: imagick, gd, iconv, psql)
 - **Server**: LAMP, WAMP, XAMPP, Laravel Herd, or equivalent
 - **SSH**: Pre-installed on most systems; install if needed
 - **PostgreSQL**: v18 with pgvector extension
@@ -22,7 +22,7 @@ https://github.com/andreiramani/pgvector_pgsql_windows/releases
 
 ## VS Code
 
-VS Code is mandatory for this project.
+VS Code based editor is mandatory for this project. You can also use Cursor if you want.
 
 Download:
 

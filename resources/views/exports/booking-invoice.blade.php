@@ -20,7 +20,9 @@
     $paidAmount = (float) ($invoicePaidAmount ?? $paidAmount);
     $isProforma = (bool) ($isProforma ?? false);
     $invoiceTitle = $isProforma ? 'PROFORMA INVOICE' : 'INVOICE';
-    $invoiceStatus = $isProforma ? 'Proforma' : (($paidAmount >= $grandTotal) ? 'Paid' : 'Down Payment');
+    $invoiceStatus = $isProforma ? 'Down Payment' : (($paidAmount >= $grandTotal) ? 'Paid' : 'Down Payment');
+    $invoiceDate = $invoiceDate ?? $booking->created_at;
+    $remainingAmount = max(0, $grandTotal - $paidAmount);
     $paymentInstructions = collect($paymentInstructions ?? []);
 @endphp
 <!doctype html>
@@ -70,6 +72,7 @@
                        position: absolute;
                        right: 0;
                        bottom: -54px;
+                       display: {{ $isProforma ? 'none' : 'block' }};
                        border-top: 54px solid #c83b8b;
                        border-left: 178px solid transparent;
                    }
@@ -156,9 +159,14 @@
 
                    .invoice-word {
                        margin: 0;
-                       font-size: {{ $isProforma ? '12px' : '24px' }};
+                       font-size: {{ $isProforma ? '15px' : '22px' }};
                        font-weight: 700;
                        letter-spacing: 0.08em;
+                       line-height: {{ $isProforma ? '1.08' : '1.1' }};
+                   }
+
+                   .invoice-word span {
+                       display: block;
                    }
 
                    .invoice-number {
@@ -377,12 +385,12 @@
                    }
 
                    .summary-left {
-                       width: 50%;
+                       width: 44%;
                        padding-right: 12px;
                    }
 
                    .summary-right {
-                       width: 50%;
+                       width: 56%;
                        padding-left: 12px;
                    }
 
@@ -467,7 +475,6 @@
                        font-weight: 700;
                        letter-spacing: 0.18em;
                        text-transform: uppercase;
-                       transform: rotate(-2deg);
                    }
 
                    .stamp.proforma {
@@ -475,17 +482,13 @@
                        color: #b45309;
                    }
 
-                   .proforma-watermark {
-                       position: absolute;
-                       top: 44%;
-                       left: 7%;
-                       z-index: 0;
-                       color: rgba(200, 59, 139, 0.07);
-                       font-size: 58px;
+                   .stamp-date {
+                       margin-top: 8px;
+                       color: #667085;
+                       font-size: 9px;
                        font-weight: 700;
-                       letter-spacing: 0.12em;
+                       letter-spacing: 0.04em;
                        text-transform: uppercase;
-                       transform: rotate(-28deg);
                    }
 
                    .proforma-notice {
@@ -547,6 +550,15 @@
                        font-weight: 700;
                    }
 
+                   .payment-total.paid-amount {
+                       color: #15803d;
+                   }
+
+                   .payment-total.remaining-amount {
+                       color: #c83b8b;
+                       font-size: 18px;
+                   }
+
                    .footer {
                        display: table;
                        width: 100%;
@@ -570,9 +582,6 @@
 </head>
 <body>
     <div class="page">
-        @if ($isProforma)
-            <div class="proforma-watermark">Proforma</div>
-        @endif
         <div class="accent"></div>
 
         <div class="header">
@@ -603,15 +612,21 @@
                 </div>
             </div>
             <div class="invoice-title">
-                <h2 class="invoice-word">{{ $invoiceTitle }}</h2>
-                <div class="invoice-number">{{ $invoiceNumber }}</div>
+                <h2 class="invoice-word">
+                    @if ($isProforma)
+                        <span>PROFORMA</span>
+                        <span>INVOICE</span>
+                    @else
+                        {{ $invoiceTitle }}
+                    @endif
+                </h2>
             </div>
         </div>
 
         @if ($isProforma)
             <div class="proforma-notice">
                 <strong>Proforma Invoice Notice</strong>
-                This booking has not been fully paid. This document is issued for payment reference only and must not be used as proof of full settlement.
+                This booking is still in down payment status. This document is issued for payment reference only and must not be used as proof of full settlement.
             </div>
         @endif
 
@@ -619,9 +634,6 @@
             <div class="section-cell">
                 <p class="label">Billed To</p>
                 <p class="customer-name">{{ $billedName ?: '-' }}</p>
-                @if ($billedAddress)
-                    <div class="muted">{{ $billedAddress }}</div>
-                @endif
                 @if ($billedEmail)
                     <div class="muted">{{ $billedEmail }}</div>
                 @endif
@@ -633,12 +645,12 @@
                 <p class="label">Booking Summary</p>
                 <table class="info-table">
                     <tr>
-                        <td class="key">Payment Date</td>
-                        <td>{{ $formatDate($paymentDate) }}</td>
+                        <td class="key">Invoice Number</td>
+                        <td>{{ $invoiceNumber }}</td>
                     </tr>
                     <tr>
-                        <td class="key">Booking Date</td>
-                        <td>{{ $formatDate($booking->created_at) }}</td>
+                        <td class="key">Invoice Date</td>
+                        <td>{{ $formatDate($invoiceDate) }}</td>
                     </tr>
                 </table>
             </div>
@@ -741,6 +753,14 @@
 
         <div class="summary-grid">
             <div class="summary-left">
+                <div class="grand-box">
+                    <p class="grand-label">Grand Total</p>
+                    <div class="grand-amount">
+                        {{ $formatCurrency($grandTotal) }}
+                    </div>
+                </div>
+            </div>
+            <div class="summary-right">
                 <table class="summary-table">
                     <tr>
                         <td>Sub Total</td>
@@ -774,14 +794,6 @@
                     </tr>
                 </table>
             </div>
-            <div class="summary-right">
-                <div class="grand-box">
-                    <p class="grand-label">Grand Total</p>
-                    <div class="grand-amount">
-                        {{ $formatCurrency($grandTotal) }}
-                    </div>
-                </div>
-            </div>
         </div>
 
         @if ($isProforma && $paymentInstructions->isNotEmpty())
@@ -801,12 +813,28 @@
         <div class="paid-stamp">
             <div class="paid-left">
                 <span class="stamp {{ $isProforma ? 'proforma' : '' }}">{{ $invoiceStatus }}</span>
+                @unless($isProforma)
+                    <div class="stamp-date">
+                        Payment Date: {{ $formatDate($paymentDate) }}
+                    </div>
+                @endunless
             </div>
             <div class="paid-right">
-                <div class="muted">Total Paid</div>
-                <div class="payment-total">
-                    {{ $formatCurrency($paidAmount) }}
-                </div>
+                @if ($isProforma)
+                    <div class="muted">Paid Amount</div>
+                    <div class="payment-total paid-amount">
+                        {{ $formatCurrency($paidAmount) }}
+                    </div>
+                    <div class="muted" style="margin-top: 8px;">Remaining</div>
+                    <div class="payment-total remaining-amount">
+                        {{ $formatCurrency($remainingAmount) }}
+                    </div>
+                    @if (! empty($dueDate))
+                        <div class="muted" style="margin-top: 6px;">
+                            Due Date: {{ $formatDate($dueDate) }}
+                        </div>
+                    @endif
+                @endif
             </div>
         </div>
 

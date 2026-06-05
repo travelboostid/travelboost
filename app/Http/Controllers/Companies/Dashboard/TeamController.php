@@ -15,10 +15,12 @@ use App\Models\User;
 use App\Notifications\TeamAccountNotification;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
+use Throwable;
 
 class TeamController extends Controller
 {
@@ -269,9 +271,18 @@ class TeamController extends Controller
         array $details,
         ?string $closing = null,
     ): void {
-        Notification::route('mail', $email)->notify(
-            new TeamAccountNotification($company, $subject, $headline, $intro, $details, $closing)
-        );
+        try {
+            Notification::route('mail', $email)->notify(
+                new TeamAccountNotification($company, $subject, $headline, $intro, $details, $closing)
+            );
+        } catch (Throwable $exception) {
+            Log::warning('Unable to send team account notification.', [
+                'company_id' => $company->id,
+                'email' => $email,
+                'exception' => $exception::class,
+                'message' => $exception->getMessage(),
+            ]);
+        }
     }
 
     private function formatRoleName(?string $roleName): string

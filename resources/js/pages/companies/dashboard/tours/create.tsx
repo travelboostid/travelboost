@@ -690,55 +690,6 @@ export default function Page() {
                                             />
                                         </div>
 
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="product_commission_category_id">
-                                                Product Commission Category
-                                            </Label>
-                                            <Select
-                                                value={
-                                                    data.product_commission_category_id
-                                                        ? String(
-                                                              data.product_commission_category_id,
-                                                          )
-                                                        : 'none'
-                                                }
-                                                onValueChange={(val) =>
-                                                    setData(
-                                                        'product_commission_category_id',
-                                                        val === 'none'
-                                                            ? ''
-                                                            : Number(val),
-                                                    )
-                                                }
-                                            >
-                                                <SelectTrigger className="w-full">
-                                                    <SelectValue placeholder="Select commission category" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="none">
-                                                        No Category
-                                                    </SelectItem>
-                                                    {(
-                                                        productCommissionCategories ||
-                                                        []
-                                                    ).map((category) => (
-                                                        <SelectItem
-                                                            key={category.id}
-                                                            value={String(
-                                                                category.id,
-                                                            )}
-                                                        >
-                                                            {category.name}
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                            <InputError
-                                                message={
-                                                    errors.product_commission_category_id
-                                                }
-                                            />
-                                        </div>
                                     </div>
                                 </div>
 

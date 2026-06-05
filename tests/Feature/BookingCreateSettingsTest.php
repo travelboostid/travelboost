@@ -545,6 +545,134 @@ test('reserve rejects extra bed passengers without a twin or double base room', 
     $response->assertSessionHasErrors('passengers');
 });
 
+test('reserve rejects more dependent bed passengers than twin or double base rooms', function () {
+    ['user' => $user, 'company' => $company, 'tour' => $tour, 'schedule' => $schedule] = createBookingCreateScenario('dependentbedcapacityvendor');
+
+    $response = $this->actingAs($user)
+        ->from(route('bookings.create', [
+            'username' => $company->username,
+            'tour' => $tour,
+        ]))
+        ->post(route('bookings.reserve', [
+            'username' => $company->username,
+            'tour' => $tour,
+        ]), [
+            'tour_id' => $tour->id,
+            'departure_date' => $schedule->departure_date,
+            'pax_adult' => 3,
+            'pax_child' => 0,
+            'pax_infant' => 0,
+            'booking_number' => 'BKG-DEPENDENT-CAPACITY',
+            'vendor_id' => $company->id,
+            'passengers' => [
+                [
+                    'first_name' => 'Base',
+                    'last_name' => 'Twin',
+                    'price_category' => 'Adult Twin',
+                    'room_type' => 'Twin',
+                    'price_amount' => 1_000_000,
+                ],
+                [
+                    'first_name' => 'Extra',
+                    'last_name' => 'One',
+                    'price_category' => 'Adult Extra Bed',
+                    'room_type' => 'Adult Extra Bed',
+                    'price_amount' => 500_000,
+                ],
+                [
+                    'first_name' => 'Extra',
+                    'last_name' => 'Two',
+                    'price_category' => 'Adult Extra Bed',
+                    'room_type' => 'Adult Extra Bed',
+                    'price_amount' => 500_000,
+                ],
+            ],
+        ]);
+
+    $response->assertSessionHasErrors('passengers');
+});
+
+test('reserve rejects child with bed without a twin or double base room', function () {
+    ['user' => $user, 'company' => $company, 'tour' => $tour, 'schedule' => $schedule] = createBookingCreateScenario('childwithbedbasevendor');
+
+    $response = $this->actingAs($user)
+        ->from(route('bookings.create', [
+            'username' => $company->username,
+            'tour' => $tour,
+        ]))
+        ->post(route('bookings.reserve', [
+            'username' => $company->username,
+            'tour' => $tour,
+        ]), [
+            'tour_id' => $tour->id,
+            'departure_date' => $schedule->departure_date,
+            'pax_adult' => 1,
+            'pax_child' => 1,
+            'pax_infant' => 0,
+            'booking_number' => 'BKG-CHILD-WITH-BED-SINGLE',
+            'vendor_id' => $company->id,
+            'passengers' => [
+                [
+                    'first_name' => 'Adult',
+                    'last_name' => 'Single',
+                    'price_category' => 'Adult Single',
+                    'room_type' => 'Single',
+                    'price_amount' => 1_000_000,
+                ],
+                [
+                    'first_name' => 'Child',
+                    'last_name' => 'Withbed',
+                    'price_category' => 'Child With Bed',
+                    'room_type' => 'Child With Extra Bed',
+                    'price_amount' => 500_000,
+                ],
+            ],
+        ]);
+
+    $response->assertSessionHasErrors('passengers');
+});
+
+test('reserve allows one dependent bed passenger with one twin or double base room', function () {
+    ['user' => $user, 'company' => $company, 'tour' => $tour, 'schedule' => $schedule] = createBookingCreateScenario('validdependentbedvendor');
+
+    $response = $this->actingAs($user)
+        ->from(route('bookings.create', [
+            'username' => $company->username,
+            'tour' => $tour,
+        ]))
+        ->post(route('bookings.reserve', [
+            'username' => $company->username,
+            'tour' => $tour,
+        ]), [
+            'tour_id' => $tour->id,
+            'departure_date' => $schedule->departure_date,
+            'pax_adult' => 1,
+            'pax_child' => 1,
+            'pax_infant' => 0,
+            'booking_number' => 'BKG-VALID-DEPENDENT-BED',
+            'vendor_id' => $company->id,
+            'passengers' => [
+                [
+                    'first_name' => 'Base',
+                    'last_name' => 'Twin',
+                    'price_category' => 'Adult Twin',
+                    'room_type' => 'Twin',
+                    'price_amount' => 1_000_000,
+                ],
+                [
+                    'first_name' => 'Child',
+                    'last_name' => 'Withbed',
+                    'price_category' => 'Child With Bed',
+                    'room_type' => 'Child With Extra Bed',
+                    'price_amount' => 500_000,
+                ],
+            ],
+        ]);
+
+    $response->assertSessionHasNoErrors();
+    expect(Booking::where('booking_number', 'BKG-VALID-DEPENDENT-BED')->exists())->toBeTrue();
+});
+
 test('reserve stores server hold expiry using ten minute fallback when setting is empty', function () {
     $this->travelTo(now()->startOfSecond());
 
@@ -1526,6 +1654,78 @@ test('store persists room arrangement and travel document data', function () {
 
     Storage::disk('public')->assertExists($passenger->passport_file_path);
     Storage::disk('public')->assertExists($passenger->visa_file_path);
+});
+
+test('store rejects dependent bed passenger in non twin or double extra bed room', function () {
+    ['user' => $user, 'company' => $company, 'tour' => $tour] = createBookingCreateScenario('invalidstorearrangementvendor');
+    $tour->update(['promote_price' => 0]);
+
+    $response = $this->actingAs($user)
+        ->from(route('bookings.create', [
+            'username' => $company->username,
+            'tour' => $tour,
+        ]))
+        ->post(route('bookings.store', [
+            'username' => $company->username,
+            'tour' => $tour,
+        ]), [
+            'booking_number' => 'BKG-INVALID-ROOM-STORE',
+            'tour_id' => $tour->id,
+            'departure_date' => now()->addDays(20)->toDateString(),
+            'pax_adult' => 1,
+            'pax_child' => 1,
+            'pax_infant' => 0,
+            'vendor_id' => $company->id,
+            'contact_name' => 'Invalid Room',
+            'contact_email' => 'invalid-room@example.com',
+            'contact_phone' => '08123456789',
+            'payment_type' => 'full_payment',
+            'payment_method' => 'manual_transfer',
+            'passengers' => [
+                [
+                    'client_guest_id' => 'adult-0',
+                    'title' => 'Mr',
+                    'first_name' => 'Base',
+                    'last_name' => 'Twin',
+                    'dob' => '1990-01-01',
+                    'pob' => 'Jakarta',
+                    'price_category' => 'Adult Twin',
+                    'price_amount' => 1_000_000,
+                    'room_type' => 'Twin',
+                    'room_number' => '1',
+                ],
+                [
+                    'client_guest_id' => 'child-0',
+                    'title' => 'Master',
+                    'first_name' => 'Child',
+                    'last_name' => 'Withbed',
+                    'dob' => '2016-01-01',
+                    'pob' => 'Jakarta',
+                    'price_category' => 'Child With Bed',
+                    'price_amount' => 500_000,
+                    'room_type' => 'Child With Extra Bed',
+                    'room_number' => '1',
+                ],
+            ],
+            'rooms' => [
+                [
+                    'room_type' => 'single_extra_bed',
+                    'room_label' => 'Invalid Room 1',
+                    'bed_layout' => [
+                        ['bedType' => 'single_extra_bed', 'guestId' => 'adult-0'],
+                        ['bedType' => 'single_extra_bed', 'guestId' => 'child-0'],
+                    ],
+                ],
+            ],
+            'total_price' => 1_500_000,
+            'tax_amount' => 165_000,
+            'platform_fee' => 60_000,
+            'commission_amount' => 0,
+            'grand_total' => 1_725_000,
+        ]);
+
+    $response->assertSessionHasErrors('passengers');
+    expect(Booking::where('booking_number', 'BKG-INVALID-ROOM-STORE')->exists())->toBeFalse();
 });
 
 test('store auto saves submitted passengers with uploaded travel documents', function () {

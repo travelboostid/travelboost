@@ -33,6 +33,7 @@ class ProductionSeeder extends Seeder
             TourSeeder::class,
             CurrencySeeder::class,
             PriceCategorySeeder::class,
+            // GrandChinaTravelTourSeeder::class,
         ]);
     }
 }

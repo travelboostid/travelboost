@@ -30,7 +30,9 @@ use App\Services\BookingNumberService;
 use App\Services\BookingPaymentReceiverService;
 use App\Services\BookingPaymentWorkflowService;
 use App\Services\BookingPricingService;
+use App\Services\BookingRoomArrangementValidator;
 use App\Services\BookingService;
+use App\Services\BookingTravelDocumentService;
 use App\Services\ReusableMidtransBookingPaymentAttemptService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -104,6 +106,7 @@ class DashboardBookingController extends Controller
                     'unitPrice' => (float) $addon->price,
                     'qty' => $addon->edit_status ? 0 : 1,
                     'hasQty' => (bool) $addon->edit_status,
+                    'isTaxable' => (bool) $addon->is_taxable,
                 ])
                 ->values()
                 ->toArray();
@@ -208,7 +211,7 @@ class DashboardBookingController extends Controller
             ],
             'paymentUnavailableReason' => $paymentUnavailableReason,
             'bookingPaymentResult' => null,
-            'savedPassengers' => [],
+            'savedPassengers' => $this->savedPassengerOptionsForDashboardBooking($company, $schedule?->departure_date),
             'customerOptions' => $this->customerOptionsForDashboardBooking($company),
             'agentOptions' => $agentOptions,
             'requiresAgentSelection' => ($company->type->value ?? $company->type) === 'vendor',
@@ -256,6 +259,7 @@ class DashboardBookingController extends Controller
         $agent = $this->resolveDashboardBookingAgent($company, $tour, data_get($data, 'agent_id'));
         $inputByRole = $this->currentCompanyRoleName($request->user(), $company);
         $bookingTimeLimitMinutes = $this->resolveBookingTimeLimitMinutes($tour);
+        app(BookingRoomArrangementValidator::class)->validatePassengerMix($data['passengers'] ?? []);
 
         $booking = DB::transaction(function () use ($request, $data, $tour, $owner, $agent, $inputByRole, $bookingTimeLimitMinutes, $company, $bookingNumberService): Booking {
             $bookingNumber = $this->resolveDashboardBookingNumber(data_get($data, 'booking_number'), $company, $bookingNumberService);
@@ -296,6 +300,7 @@ class DashboardBookingController extends Controller
                 [],
                 (float) ($tour->company?->companySetting?->minimum_vat ?? BookingPricingService::DEFAULT_PPN_RATE),
                 $agent !== null,
+                $agent?->id,
             );
             $totals = app(BookingPricingService::class)->bookingTotalsFromQuote($quote);
             $reservedExpiresAt = $existingBooking?->status === BookingStatus::BOOKING_RESERVED
@@ -404,13 +409,14 @@ class DashboardBookingController extends Controller
         $booking = DB::transaction(function () use ($booking, $request): Booking {
             $lockedBooking = Booking::query()->whereKey($booking->id)->lockForUpdate()->firstOrFail();
 
-            abort_unless(
-                $lockedBooking->status === BookingStatus::BOOKING_RESERVED
+            $canResolveHold = $lockedBooking->status === BookingStatus::BOOKING_RESERVED
                 && $lockedBooking->reserved_type === 'system'
                 && $lockedBooking->reserved_expires_at !== null
-                && $lockedBooking->reserved_expires_at->lte(now()->addSeconds(5)),
-                422
-            );
+                && $lockedBooking->reserved_expires_at->lte(now()->addSeconds(5));
+
+            if (! $canResolveHold) {
+                return $lockedBooking->fresh();
+            }
 
             if ($request->validated('resolution') === 'payment_in_progress') {
                 $lockedBooking->update([
@@ -981,29 +987,110 @@ class DashboardBookingController extends Controller
      */
     private function customerOptionsForDashboardBooking(Company $company): Collection
     {
-        $companyType = $company->type->value ?? $company->type;
-
-        $customerCompanyIds = $companyType === 'vendor'
-            ? $company->agentPartners()
-                ->where('status', VendorAgentPartnerStatus::ACTIVE->value)
-                ->whereHas('agent.agentSubscription', fn (Builder $query): Builder => $this->eligibleAgentSubscriptionConstraint($query))
-                ->pluck('agent_id')
-            : collect([$company->id]);
-
         return User::query()
-            ->whereIn('company_id', $customerCompanyIds)
+            ->whereIn('company_id', $this->dashboardCustomerCompanyIds($company))
             ->whereNotNull('email')
             ->orderBy('name')
             ->limit(50)
-            ->get(['id', 'company_id', 'name', 'email', 'phone'])
+            ->get(['id', 'company_id', 'name', 'email', 'phone', 'note'])
             ->map(fn (User $user): array => [
                 'id' => $user->id,
                 'company_id' => $user->company_id,
                 'name' => $user->name,
                 'email' => $user->email,
                 'phone' => $user->phone,
+                'note' => $user->note,
             ])
             ->values();
+    }
+
+    /**
+     * @return Collection<int, int>
+     */
+    private function dashboardCustomerCompanyIds(Company $company): Collection
+    {
+        $companyType = $company->type->value ?? $company->type;
+
+        if ($companyType !== 'vendor') {
+            return collect([$company->id]);
+        }
+
+        return $company->agentPartners()
+            ->where('status', VendorAgentPartnerStatus::ACTIVE->value)
+            ->whereHas('agent.agentSubscription', fn (Builder $query): Builder => $this->eligibleAgentSubscriptionConstraint($query))
+            ->pluck('agent_id');
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function savedPassengerOptionsForDashboardBooking(Company $company, mixed $departureDate): array
+    {
+        return User::query()
+            ->whereIn('company_id', $this->dashboardCustomerCompanyIds($company))
+            ->whereHas('savedPassengers')
+            ->with(['savedPassengers' => fn ($query) => $query->latest('updated_at')])
+            ->orderBy('name')
+            ->limit(50)
+            ->get(['id', 'company_id', 'name', 'note'])
+            ->flatMap(function (User $user) use ($departureDate): Collection {
+                return $user->savedPassengers->map(fn ($passenger): array => [
+                    'id' => $passenger->id,
+                    'ownerUserId' => $user->id,
+                    'ownerCompanyId' => $user->company_id,
+                    'customerNote' => $user->note,
+                    'title' => $passenger->title,
+                    'firstName' => $passenger->first_name,
+                    'lastName' => $passenger->last_name,
+                    'dateOfBirth' => $passenger->dob?->toDateString(),
+                    'travelerType' => $this->resolveSavedPassengerTravelerType(
+                        $passenger->dob?->toDateString(),
+                        $departureDate,
+                    ),
+                    'placeOfBirth' => $passenger->pob,
+                    'passportNumber' => $passenger->passport_number,
+                    'passportIssueDate' => $passenger->passport_issue_date?->toDateString(),
+                    'passportExpiryDate' => $passenger->passport_expiry_date?->toDateString(),
+                    'visaNumber' => $passenger->visa_number,
+                    'passportFilePath' => $passenger->passport_file_path,
+                    'passportFileName' => app(BookingTravelDocumentService::class)->fileNameFromPath($passenger->passport_file_path),
+                    'visaFilePath' => $passenger->visa_file_path,
+                    'visaFileName' => app(BookingTravelDocumentService::class)->fileNameFromPath($passenger->visa_file_path),
+                ]);
+            })
+            ->sortByDesc(fn (array $passenger): int => (int) $passenger['id'])
+            ->values()
+            ->all();
+    }
+
+    private function resolveSavedPassengerTravelerType(?string $dateOfBirth, mixed $departureDate): ?string
+    {
+        if (! $dateOfBirth || ! $departureDate) {
+            return null;
+        }
+
+        try {
+            $dob = Carbon::parse($dateOfBirth);
+            $departure = Carbon::parse($departureDate);
+        } catch (Throwable) {
+            return null;
+        }
+
+        if ($dob->greaterThan($departure)) {
+            return null;
+        }
+
+        $age = (int) $dob->diffInYears($departure);
+
+        if ($age < 2) {
+            return 'infant';
+        }
+
+        if ($age < 12) {
+            return 'child';
+        }
+
+        return 'adult';
     }
 
     /**
@@ -1240,24 +1327,7 @@ class DashboardBookingController extends Controller
 
     private function bookingNeedsTravelDocuments(Booking $booking): bool
     {
-        if ($booking->passengers->isEmpty()) {
-            return false;
-        }
-
-        return $booking->passengers->contains(function ($passenger): bool {
-            $category = strtolower((string) $passenger->price_category);
-
-            if (str_contains($category, 'infant')) {
-                return false;
-            }
-
-            return blank($passenger->passport_number)
-                || blank($passenger->passport_issue_date)
-                || blank($passenger->passport_expiry_date)
-                || blank($passenger->passport_file_path)
-                || blank($passenger->visa_number)
-                || blank($passenger->visa_file_path);
-        });
+        return app(BookingTravelDocumentService::class)->bookingNeedsTravelDocuments($booking);
     }
 
     private function ensureBookingNotExpired(Booking $booking): Booking

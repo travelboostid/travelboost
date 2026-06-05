@@ -14,12 +14,14 @@ class BookingAddon extends Model
         'booking_id',
         'name',
         'price',
+        'is_taxable',
     ];
 
     protected function casts(): array
     {
         return [
             'price' => 'decimal:2',
+            'is_taxable' => 'boolean',
         ];
     }
 

@@ -19,6 +19,7 @@ class TourAddOnController extends Controller
             'add_ons.*.description' => ['required', 'string', 'max:255'],
             'add_ons.*.price' => ['nullable', 'numeric'],
             'add_ons.*.edit_status' => ['boolean'],
+            'add_ons.*.is_taxable' => ['boolean'],
         ]);
 
         $companyId = $company->id;
@@ -70,6 +71,7 @@ class TourAddOnController extends Controller
                     [
                         'price' => $item['price'] ?? 0,
                         'edit_status' => $item['edit_status'] ?? false,
+                        'is_taxable' => $item['is_taxable'] ?? false,
                     ]
                 );
             }

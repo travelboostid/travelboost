@@ -3,13 +3,69 @@ import fs from 'fs';
 import process from 'process';
 
 // CONFIGS
-const CONFIG = {
+const DEV_CONFIG = {
+    env: 'development',
     branch: 'dev',
     sshUser: 'travelboost',
     sshHost: '103.127.138.76',
     remotePath: '~/travelboost',
     buildPath: 'public/build',
 };
+
+const MAIN_CONFIG = {
+    env: 'production',
+    branch: 'main',
+    sshUser: 'travelboost',
+    sshHost: '103.93.163.174',
+    remotePath: '~/travelboost',
+    buildPath: 'public/build',
+};
+
+function showHelp() {
+    console.log(`
+Usage:
+  node deploy.mjs -c <dev|main>
+  node deploy.mjs --config <dev|main>
+
+Options:
+  -c, --config   Deployment target
+  -h, --help     Show this help
+`);
+}
+
+function parseArgs() {
+    const args = process.argv.slice(2);
+
+    if (args.includes('-h') || args.includes('--help')) {
+        showHelp();
+        process.exit(0);
+    }
+
+    let configName = 'dev';
+
+    for (let i = 0; i < args.length; i++) {
+        if (args[i] === '-c' || args[i] === '--config') {
+            configName = args[i + 1];
+            break;
+        }
+    }
+
+    switch (configName) {
+        case 'dev':
+            return DEV_CONFIG;
+
+        case 'main':
+            return MAIN_CONFIG;
+
+        default:
+            console.error(
+                `❌ Invalid config "${configName}". Expected "dev" or "main".`,
+            );
+            process.exit(1);
+    }
+}
+
+const CONFIG = parseArgs();
 
 // HELPERS
 function run(cmd, options = {}) {
@@ -36,14 +92,14 @@ function ssh(cmd) {
 
 // DEPLOY
 try {
-    console.log('🚀 Deploying...');
+    const { env, branch, remotePath, buildPath, sshUser, sshHost } = CONFIG;
 
-    const { branch, remotePath, buildPath, sshUser, sshHost } = CONFIG;
+    console.log(`🚀 Deploying ${env}...`);
 
     // --- 0. Pre-checks ---
-    const env = fs.readFileSync('.env', 'utf-8');
+    const envFile = fs.readFileSync('.env', 'utf-8');
 
-    assert(env.includes('APP_ENV=development'), 'APP_ENV must be development');
+    assert(envFile.includes(`APP_ENV=${env}`), `APP_ENV must be ${env}`);
 
     // --- 1. Git safety checks ---
     const currentBranch = getOutput('git rev-parse --abbrev-ref HEAD');

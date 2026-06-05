@@ -299,7 +299,7 @@ class RoomListingController extends Controller
         $bookings = Booking::query()
             ->where('vendor_id', $company->id)
             ->whereIn('status', ['full payment'])
-            ->with('passengers')
+            ->with(['passengers', 'rooms'])
             ->where('tour_id', $tourId)
             ->whereDate('departure_date', $departureDate)
             ->orderBy('booking_number')
@@ -311,7 +311,7 @@ class RoomListingController extends Controller
             $groupedData[$booking->booking_number] = [
                 'contact_phone' => $booking->contact_phone,
                 'contact_notes' => $booking->contact_notes,
-                'rooms' => $this->buildRoomGroups($booking->passengers),
+                'rooms' => $this->buildRoomGroups($booking->passengers, $booking->rooms),
                 'total_pax' => $booking->passengers->count(),
             ];
         }
@@ -333,7 +333,7 @@ class RoomListingController extends Controller
         $bookings = Booking::query()
             ->where('vendor_id', $company->id)
             ->whereIn('status', ['full payment'])
-            ->with(['passengers', 'agent:id,name'])
+            ->with(['passengers', 'rooms', 'agent:id,name'])
             ->where('tour_id', $tourId)
             ->whereDate('departure_date', $departureDate)
             ->orderBy('booking_number')
@@ -342,45 +342,111 @@ class RoomListingController extends Controller
         $roomData = [];
 
         foreach ($bookings as $booking) {
-            $passengers = $booking->passengers
-                ->sortBy(function ($passenger) {
-                    return [$this->normalizeRoomType($passenger->room_type), $passenger->first_name];
-                })
-                ->values();
+            $roomGroups = $this->buildRoomGroups($booking->passengers, $booking->rooms);
 
-            foreach ($passengers as $passenger) {
-                $roomData[] = [
-                    'booking_number' => $booking->booking_number,
-                    'agent_name' => $booking->agent ? $booking->agent->name : 'Direct',
-                    'contact_phone' => $booking->contact_phone,
-                    'contact_notes' => $booking->contact_notes,
-                    'title' => $passenger->title,
-                    'first_name' => $passenger->first_name,
-                    'last_name' => $passenger->last_name,
-                    'gender' => $passenger->gender,
-                    'dob' => $passenger->dob ? $passenger->dob->format('Y-m-d') : null,
-                    'pob' => $passenger->pob,
-                    'passport_number' => $passenger->passport_number,
-                    'passport_issue_date' => $passenger->passport_issue_date
-                      ? $passenger->passport_issue_date->format('Y-m-d')
-                      : null,
-                    'passport_expiry_date' => $passenger->passport_expiry_date
-                      ? $passenger->passport_expiry_date->format('Y-m-d')
-                      : null,
-                    'room_type' => $this->normalizeRoomType($passenger->room_type),
-                    'room_capacity' => $this->roomCapacity($passenger->room_type),
-                    'room_number' => $passenger->room_number,
-                    'price_category' => $passenger->price_category,
-                    'visa_number' => $passenger->visa_number,
-                    'note' => $passenger->note,
-                ];
+            foreach ($roomGroups as $roomIndex => $roomGroup) {
+                $passengers = collect($roomGroup['passengers'])->values();
+
+                foreach ($passengers as $passenger) {
+                    $roomData[] = [
+                        'booking_number' => $booking->booking_number,
+                        'agent_name' => $booking->agent ? $booking->agent->name : 'Direct',
+                        'contact_phone' => $booking->contact_phone,
+                        'contact_notes' => $booking->contact_notes,
+                        'title' => $passenger->title,
+                        'first_name' => $passenger->first_name,
+                        'last_name' => $passenger->last_name,
+                        'gender' => $passenger->gender,
+                        'dob' => $passenger->dob ? $passenger->dob->format('Y-m-d') : null,
+                        'pob' => $passenger->pob,
+                        'passport_number' => $passenger->passport_number,
+                        'passport_issue_date' => $passenger->passport_issue_date
+                          ? $passenger->passport_issue_date->format('Y-m-d')
+                          : null,
+                        'passport_expiry_date' => $passenger->passport_expiry_date
+                          ? $passenger->passport_expiry_date->format('Y-m-d')
+                          : null,
+                        'room_type' => $roomGroup['room_type'],
+                        'room_capacity' => max(1, $passengers->count()),
+                        'room_number' => $roomGroup['room_number'] ?? (string) ($roomIndex + 1),
+                        'room_group_key' => $roomGroup['room_key'] ?? "room-{$roomIndex}",
+                        'price_category' => $passenger->price_category,
+                        'visa_number' => $passenger->visa_number,
+                        'note' => $passenger->note,
+                    ];
+                }
             }
         }
 
         return $roomData;
     }
 
-    private function buildRoomGroups($passengers): array
+    private function buildRoomGroups($passengers, $rooms = null): array
+    {
+        $passengers = collect($passengers)->values();
+        $roomGroups = $this->buildRoomGroupsFromArrangements($passengers, $rooms);
+
+        if ($roomGroups === []) {
+            return $this->buildFallbackRoomGroups($passengers);
+        }
+
+        $assignedPassengerIds = collect($roomGroups)
+            ->flatMap(fn (array $roomGroup) => collect($roomGroup['passengers'])->pluck('id'))
+            ->filter()
+            ->map(fn ($id) => (int) $id)
+            ->all();
+
+        $remainingPassengers = $passengers
+            ->reject(fn ($passenger) => in_array((int) $passenger->id, $assignedPassengerIds, true))
+            ->values();
+
+        if ($remainingPassengers->isNotEmpty()) {
+            return array_merge($roomGroups, $this->buildFallbackRoomGroups($remainingPassengers));
+        }
+
+        return $roomGroups;
+    }
+
+    private function buildRoomGroupsFromArrangements($passengers, $rooms): array
+    {
+        $roomGroups = [];
+        $passengersById = $passengers->keyBy(fn ($passenger) => (string) $passenger->id);
+
+        collect($rooms)
+            ->values()
+            ->each(function ($room, int $roomIndex) use (&$roomGroups, $passengersById): void {
+                $guestIds = collect($room->bed_layout ?? [])
+                    ->map(fn ($bed) => data_get($bed, 'guestId'))
+                    ->filter(fn ($guestId) => filled($guestId))
+                    ->map(fn ($guestId) => (string) $guestId)
+                    ->unique()
+                    ->values();
+
+                if ($guestIds->isEmpty()) {
+                    return;
+                }
+
+                $roomPassengers = $guestIds
+                    ->map(fn (string $guestId) => $passengersById->get($guestId))
+                    ->filter()
+                    ->values();
+
+                if ($roomPassengers->isEmpty()) {
+                    return;
+                }
+
+                $roomGroups[] = [
+                    'room_type' => $this->normalizeRoomType($room->room_type ?: $roomPassengers->first()?->room_type),
+                    'room_number' => $this->roomNumberFromLabel($room->room_label, $roomIndex + 1),
+                    'room_key' => "arrangement-{$roomIndex}",
+                    'passengers' => $roomPassengers,
+                ];
+            });
+
+        return $roomGroups;
+    }
+
+    private function buildFallbackRoomGroups($passengers): array
     {
         $roomGroups = [];
 
@@ -395,9 +461,10 @@ class RoomListingController extends Controller
                 $roomPassengers
                     ->values()
                     ->chunk($capacity)
-                    ->each(function ($chunk) use (&$roomGroups, $roomType): void {
+                    ->each(function ($chunk, int $chunkIndex) use (&$roomGroups, $roomType): void {
                         $roomGroups[] = [
                             'room_type' => $roomType,
+                            'room_key' => "fallback-{$roomType}-{$chunkIndex}",
                             'passengers' => $chunk,
                         ];
                     });
@@ -406,11 +473,33 @@ class RoomListingController extends Controller
         return $roomGroups;
     }
 
+    private function roomNumberFromLabel(?string $roomLabel, int $fallback): string
+    {
+        $label = trim((string) $roomLabel);
+
+        if ($label === '') {
+            return (string) $fallback;
+        }
+
+        if (preg_match('/\d+/', $label, $matches)) {
+            return $matches[0];
+        }
+
+        return $label;
+    }
+
     private function normalizeRoomType(?string $roomType): string
     {
         $normalized = trim((string) preg_replace('/\s*\([^)]*\)/', '', $roomType ?? ''));
 
-        return $normalized !== '' ? $normalized : 'TBA';
+        return match (strtolower($normalized)) {
+            'single' => 'Single Room',
+            'twin' => 'Twin Room',
+            'double' => 'Double Room',
+            'triple' => 'Triple Room',
+            'quad' => 'Quad Room',
+            default => $normalized !== '' ? $normalized : 'TBA',
+        };
     }
 
     private function roomCapacity(?string $roomType): int

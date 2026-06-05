@@ -2960,6 +2960,133 @@ test('vendor can update booking wizard data dynamically', function () {
         ->and((float) $booking->addons()->first()->price)->toBe(500_000.0);
 });
 
+test('vendor booking update rejects multiple dependent bed guests in one room', function () {
+    $vendor = Company::factory()->create(['type' => 'vendor']);
+
+    CompanyTeam::create([
+        'company_id' => $vendor->id,
+        'user_id' => $this->user->id,
+        'status' => CompanyTeamStatus::ACTIVE,
+        'is_owner' => true,
+        'accepted_at' => now(),
+    ]);
+
+    $tour = Tour::factory()->create(['company_id' => $vendor->id]);
+    $departureDate = now()->addDays(20)->toDateString();
+    TourSchedule::create([
+        'company_id' => $vendor->id,
+        'tour_id' => $tour->id,
+        'tour_code' => $tour->code,
+        'departure_date' => $departureDate,
+        'return_date' => now()->addDays(25)->toDateString(),
+        'is_active' => true,
+    ]);
+
+    $booking = Booking::factory()->create([
+        'vendor_id' => $vendor->id,
+        'tour_id' => $tour->id,
+        'departure_date' => $departureDate,
+        'status' => BookingStatus::RESERVED,
+        'pax_adult' => 1,
+        'pax_child' => 0,
+        'pax_infant' => 0,
+    ]);
+    $passenger = BookingPassenger::factory()->create([
+        'booking_id' => $booking->id,
+        'first_name' => 'Old',
+        'last_name' => 'Guest',
+        'price_category' => 'Adult Twin',
+        'price_amount' => 1_000_000,
+        'room_type' => 'Twin',
+    ]);
+
+    $response = $this->actingAs($this->user)
+        ->from("/companies/{$vendor->username}/dashboard/bookings/{$booking->id}/edit")
+        ->put("/companies/{$vendor->username}/dashboard/bookings/{$booking->id}", [
+            'contact_name' => 'Invalid Room Customer',
+            'contact_email' => 'invalid-room@example.test',
+            'contact_phone' => '08123456789',
+            'contact_notes' => null,
+            'pax_adult' => 3,
+            'pax_child' => 1,
+            'pax_infant' => 0,
+            'total_price' => 3_000_000,
+            'tax_amount' => 330_000,
+            'platform_fee' => 120_000,
+            'commission_amount' => 0,
+            'grand_total' => 3_450_000,
+            'passengers' => [
+                [
+                    'id' => $passenger->id,
+                    'title' => 'Mr',
+                    'first_name' => 'Base',
+                    'last_name' => 'One',
+                    'dob' => '1990-01-01',
+                    'pob' => 'Jakarta',
+                    'price_category' => 'Adult Twin',
+                    'price_amount' => 1_000_000,
+                    'room_type' => 'Twin',
+                    'room_number' => '1',
+                ],
+                [
+                    'title' => 'Mr',
+                    'first_name' => 'Base',
+                    'last_name' => 'Two',
+                    'dob' => '1991-01-01',
+                    'pob' => 'Jakarta',
+                    'price_category' => 'Adult Twin',
+                    'price_amount' => 1_000_000,
+                    'room_type' => 'Twin',
+                    'room_number' => '2',
+                ],
+                [
+                    'title' => 'Mr',
+                    'first_name' => 'Extra',
+                    'last_name' => 'Adult',
+                    'dob' => '1992-01-01',
+                    'pob' => 'Jakarta',
+                    'price_category' => 'Adult Extra Bed',
+                    'price_amount' => 500_000,
+                    'room_type' => 'Adult Extra Bed',
+                    'room_number' => '1',
+                ],
+                [
+                    'title' => 'Master',
+                    'first_name' => 'Child',
+                    'last_name' => 'Withbed',
+                    'dob' => '2016-01-01',
+                    'pob' => 'Jakarta',
+                    'price_category' => 'Child With Bed',
+                    'price_amount' => 500_000,
+                    'room_type' => 'Child With Extra Bed',
+                    'room_number' => '1',
+                ],
+            ],
+            'rooms' => [
+                [
+                    'room_type' => 'twin_extra_bed',
+                    'room_label' => 'Twin Room 1',
+                    'bed_layout' => [
+                        ['bedType' => 'twin_extra_bed', 'guestId' => 'adult-0'],
+                        ['bedType' => 'twin_extra_bed', 'guestId' => 'adult-2'],
+                        ['bedType' => 'twin_extra_bed', 'guestId' => 'child-0'],
+                    ],
+                ],
+                [
+                    'room_type' => 'twin',
+                    'room_label' => 'Twin Room 2',
+                    'bed_layout' => [
+                        ['bedType' => 'twin', 'guestId' => 'adult-1'],
+                    ],
+                ],
+            ],
+            'addons' => [],
+        ]);
+
+    $response->assertSessionHasErrors('passengers');
+    expect($booking->fresh()->pax_adult)->toBe(1);
+});
+
 test('booking edit exposes customer wizard payment props for dashboard', function () {
     $vendor = Company::factory()->create(['type' => 'vendor']);
     $vendor->companySetting()->create([
@@ -3345,4 +3472,180 @@ test('full payment booking with complete documents still allows dashboard docume
     $passenger->refresh();
     expect($passenger->passport_number)->toBe('P456')
         ->and($passenger->visa_number)->toBe('V456');
+});
+
+test('booking index limits remaining balance to down payment and hides followups for terminal statuses', function () {
+    $vendor = Company::factory()->create(['type' => 'vendor']);
+
+    CompanyTeam::create([
+        'company_id' => $vendor->id,
+        'user_id' => $this->user->id,
+        'status' => CompanyTeamStatus::ACTIVE,
+        'is_owner' => true,
+        'accepted_at' => now(),
+    ]);
+
+    $tour = Tour::factory()->create(['company_id' => $vendor->id]);
+
+    Booking::factory()->create([
+        'vendor_id' => $vendor->id,
+        'tour_id' => $tour->id,
+        'status' => BookingStatus::DOWN_PAYMENT,
+        'booking_number' => 'BKG-REMAINING-DP',
+        'grand_total' => 1_000_000,
+    ]);
+
+    Booking::factory()->create([
+        'vendor_id' => $vendor->id,
+        'tour_id' => $tour->id,
+        'status' => BookingStatus::WAITING_PAYMENT_APPROVAL,
+        'booking_number' => 'BKG-REMAINING-WA',
+        'grand_total' => 1_000_000,
+    ]);
+
+    Booking::factory()->create([
+        'vendor_id' => $vendor->id,
+        'tour_id' => $tour->id,
+        'status' => BookingStatus::CANCELLED,
+        'booking_number' => 'BKG-TERMINAL-CA',
+        'grand_total' => 1_000_000,
+    ]);
+
+    Booking::factory()->create([
+        'vendor_id' => $vendor->id,
+        'tour_id' => $tour->id,
+        'status' => BookingStatus::REFUNDED,
+        'booking_number' => 'BKG-TERMINAL-RF',
+        'grand_total' => 1_000_000,
+    ]);
+
+    $response = $this->actingAs($this->user)
+        ->get("/companies/{$vendor->username}/dashboard/bookings?sort=booking_number");
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->where('data.data.0.booking_number', 'BKG-REMAINING-DP')
+        ->where('data.data.0.remaining_balance_visible', true)
+        ->where('data.data.1.booking_number', 'BKG-REMAINING-WA')
+        ->where('data.data.1.remaining_balance_visible', false)
+        ->where('data.data.2.booking_number', 'BKG-TERMINAL-CA')
+        ->where('data.data.2.payment_followup.state', 'not_applicable')
+        ->where('data.data.2.document_followup.state', 'not_applicable')
+        ->where('data.data.3.booking_number', 'BKG-TERMINAL-RF')
+        ->where('data.data.3.payment_followup.state', 'not_applicable')
+        ->where('data.data.3.document_followup.state', 'not_applicable'));
+});
+
+test('booking index exposes continue booking action for awaiting payment bookings', function () {
+    $vendor = Company::factory()->create(['type' => 'vendor']);
+
+    CompanyTeam::create([
+        'company_id' => $vendor->id,
+        'user_id' => $this->user->id,
+        'status' => CompanyTeamStatus::ACTIVE,
+        'is_owner' => true,
+        'accepted_at' => now(),
+    ]);
+
+    $tour = Tour::factory()->create(['company_id' => $vendor->id]);
+    $departureDate = now()->addMonth()->toDateString();
+
+    Booking::factory()->create([
+        'vendor_id' => $vendor->id,
+        'tour_id' => $tour->id,
+        'status' => BookingStatus::AWAITING_PAYMENT,
+        'booking_number' => 'BKG-CONTINUE-WP',
+        'departure_date' => $departureDate,
+    ]);
+
+    $response = $this->actingAs($this->user)
+        ->get("/companies/{$vendor->username}/dashboard/bookings");
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->where('data.data.0.continue_booking_url', "/companies/{$vendor->username}/dashboard/bookings/create/{$tour->id}?date={$departureDate}&booking_number=BKG-CONTINUE-WP"));
+});
+
+test('booking index exposes completed document detail links', function () {
+    Storage::fake('public');
+    Storage::disk('public')->put('travel-documents/passports/complete-passport.pdf', 'passport');
+    Storage::disk('public')->put('travel-documents/visas/complete-visa.pdf', 'visa');
+
+    $vendor = Company::factory()->create(['type' => 'vendor']);
+
+    CompanyTeam::create([
+        'company_id' => $vendor->id,
+        'user_id' => $this->user->id,
+        'status' => CompanyTeamStatus::ACTIVE,
+        'is_owner' => true,
+        'accepted_at' => now(),
+    ]);
+
+    $tour = Tour::factory()->create(['company_id' => $vendor->id]);
+    $booking = Booking::factory()->create([
+        'vendor_id' => $vendor->id,
+        'tour_id' => $tour->id,
+        'status' => BookingStatus::DOWN_PAYMENT,
+        'booking_number' => 'BKG-DOCS-COMPLETE',
+    ]);
+
+    BookingPassenger::create([
+        'booking_id' => $booking->id,
+        'title' => 'Ms',
+        'first_name' => 'Complete',
+        'last_name' => 'Docs',
+        'dob' => now()->subYears(30)->toDateString(),
+        'price_category' => 'Adult Twin',
+        'price_amount' => 1_000_000,
+        'passport_number' => 'P1234567',
+        'passport_issue_date' => now()->subYear()->toDateString(),
+        'passport_expiry_date' => now()->addYears(4)->toDateString(),
+        'passport_file_path' => 'travel-documents/passports/complete-passport.pdf',
+        'visa_number' => 'V1234567',
+        'visa_file_path' => 'travel-documents/visas/complete-visa.pdf',
+    ]);
+
+    $response = $this->actingAs($this->user)
+        ->get("/companies/{$vendor->username}/dashboard/bookings");
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->where('data.data.0.document_followup.state', 'completed')
+        ->where('data.data.0.document_followup.action_label', 'View Documents')
+        ->has('data.data.0.document_detail', 1)
+        ->where('data.data.0.document_detail.0.passenger_name', 'Complete Docs')
+        ->where('data.data.0.document_detail.0.passport_file_name', 'complete-passport.pdf')
+        ->where('data.data.0.document_detail.0.visa_file_name', 'complete-visa.pdf')
+        ->where('data.data.0.document_detail.0.passport_file_url', Storage::disk('public')->url('travel-documents/passports/complete-passport.pdf'))
+        ->where('data.data.0.document_detail.0.visa_file_url', Storage::disk('public')->url('travel-documents/visas/complete-visa.pdf')));
+});
+
+test('dashboard hold expiry resolution is idempotent after booking state changes', function () {
+    $vendor = Company::factory()->create(['type' => 'vendor']);
+
+    CompanyTeam::create([
+        'company_id' => $vendor->id,
+        'user_id' => $this->user->id,
+        'status' => CompanyTeamStatus::ACTIVE,
+        'is_owner' => true,
+        'accepted_at' => now(),
+    ]);
+
+    $tour = Tour::factory()->create(['company_id' => $vendor->id]);
+    $booking = Booking::factory()->create([
+        'vendor_id' => $vendor->id,
+        'tour_id' => $tour->id,
+        'status' => BookingStatus::WAITING_PAYMENT_APPROVAL,
+        'reserved_type' => 'payment_in_progress',
+        'reserved_expires_at' => null,
+    ]);
+
+    $this->actingAs($this->user)
+        ->post("/companies/{$vendor->username}/dashboard/bookings/{$booking->id}/resolve-hold-expiry", [
+            'resolution' => 'payment_in_progress',
+        ])
+        ->assertRedirect()
+        ->assertSessionHasNoErrors();
+
+    expect($booking->fresh()->status)->toBe(BookingStatus::WAITING_PAYMENT_APPROVAL);
 });

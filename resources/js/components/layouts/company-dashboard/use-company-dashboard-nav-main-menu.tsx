@@ -452,7 +452,9 @@ export function useCompanyDashboardNavMainMenu() {
             items: [
                 {
                     id: 'commission-setup.agent-tiers',
-                    title: <FormattedMessage defaultMessage="Agent Tiers" />,
+                    title: (
+                        <FormattedMessage defaultMessage="Agent Categories" />
+                    ),
                     urlOrAction: `/companies/${company.username}/dashboard/agent-tiers`,
                     shouldDisplay: (roles, permissions) =>
                         roles.includes('user:vendor') &&
@@ -461,7 +463,7 @@ export function useCompanyDashboardNavMainMenu() {
                 {
                     id: 'commission-setup.product-categories',
                     title: (
-                        <FormattedMessage defaultMessage="Commission Categories" />
+                        <FormattedMessage defaultMessage="Product Categories" />
                     ),
                     urlOrAction: `/companies/${company.username}/dashboard/product-commission-categories`,
                     shouldDisplay: (roles, permissions) =>
@@ -474,6 +476,16 @@ export function useCompanyDashboardNavMainMenu() {
                         <FormattedMessage defaultMessage="Tour Commission Rules" />
                     ),
                     urlOrAction: `/companies/${company.username}/dashboard/tour-commission-rules`,
+                    shouldDisplay: (roles, permissions) =>
+                        roles.includes('user:vendor') &&
+                        permissions.includes('company-settings.query'),
+                },
+                {
+                    id: 'commission-setup.additional-rules',
+                    title: (
+                        <FormattedMessage defaultMessage="Additional Commission" />
+                    ),
+                    urlOrAction: `/companies/${company.username}/dashboard/tour-commission-rules/additional`,
                     shouldDisplay: (roles, permissions) =>
                         roles.includes('user:vendor') &&
                         permissions.includes('company-settings.query'),

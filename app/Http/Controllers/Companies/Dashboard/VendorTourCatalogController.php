@@ -9,6 +9,8 @@ use App\Models\AgentTour;
 use App\Models\Company;
 use App\Models\Tour;
 use App\Models\TourCategory;
+use App\Models\TourCommissionAdditionalRule;
+use App\Models\TourCommissionRule;
 use App\Models\VendorAgentPartner;
 use App\Notifications\TourAgentPromotionNotification;
 use Inertia\Inertia;
@@ -92,6 +94,15 @@ class VendorTourCatalogController extends Controller
             ->unique('tour_id')
             ->keyBy('tour_id');
         $copiedTourIds = $copiedAgentTours->keys();
+        $globalCommissionRules = TourCommissionRule::query()
+            ->where('company_id', $vendor->id)
+            ->whereNull('tour_id')
+            ->where('is_active', true)
+            ->get();
+        $additionalCommissionRules = TourCommissionAdditionalRule::query()
+            ->where('company_id', $vendor->id)
+            ->where('is_active', true)
+            ->get();
 
         $tours = $tours
             ->merge($agentTours)
@@ -109,7 +120,7 @@ class VendorTourCatalogController extends Controller
                 'schedules.availability',
                 'schedules.prices.priceCategory',
             ])
-            ->map(function ($tour) use ($copiedTourIds, $company, $copiedAgentTours, $username) {
+            ->map(function ($tour) use ($copiedTourIds, $company, $copiedAgentTours, $username, $globalCommissionRules, $additionalCommissionRules) {
                 $tour->has_copied = $copiedTourIds->contains($tour->id);
                 $tour->schedules?->each(function ($schedule): void {
                     $schedule->setAttribute('price', $this->lowestDiscountedSchedulePrice($schedule->prices));
@@ -117,6 +128,25 @@ class VendorTourCatalogController extends Controller
 
                 $copiedAgentTour = $copiedAgentTours->get($tour->id);
                 $tour->agent_status = $copiedAgentTour?->status;
+                $scheduleIds = $tour->schedules?->pluck('id')->all() ?? [];
+                $tour->setRelation(
+                    'commissionRules',
+                    $globalCommissionRules
+                        ->where('product_commission_category_id', $tour->product_commission_category_id)
+                        ->values()
+                );
+                $tour->setAttribute(
+                    'additional_commission_rules',
+                    $additionalCommissionRules
+                        ->filter(function ($rule) use ($tour, $scheduleIds): bool {
+                            if ($rule->scope_type === 'category_departure') {
+                                return (int) $rule->product_commission_category_id === (int) $tour->product_commission_category_id;
+                            }
+
+                            return in_array((int) $rule->tour_schedule_id, $scheduleIds, true);
+                        })
+                        ->values()
+                );
 
                 if (
                     $company->type === CompanyType::AGENT
