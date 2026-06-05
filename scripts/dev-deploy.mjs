@@ -4,6 +4,7 @@ import process from 'process';
 
 // CONFIGS
 const DEV_CONFIG = {
+    env: 'development',
     branch: 'dev',
     sshUser: 'travelboost',
     sshHost: '103.127.138.76',
@@ -12,6 +13,7 @@ const DEV_CONFIG = {
 };
 
 const MAIN_CONFIG = {
+    env: 'production',
     branch: 'main',
     sshUser: 'travelboost',
     sshHost: '103.93.163.174',
@@ -90,14 +92,14 @@ function ssh(cmd) {
 
 // DEPLOY
 try {
-    console.log('🚀 Deploying...');
+    console.log(`🚀 Deploying ${env}...`);
 
-    const { branch, remotePath, buildPath, sshUser, sshHost } = CONFIG;
+    const { env, branch, remotePath, buildPath, sshUser, sshHost } = CONFIG;
 
     // --- 0. Pre-checks ---
-    const env = fs.readFileSync('.env', 'utf-8');
+    const envFile = fs.readFileSync('.env', 'utf-8');
 
-    assert(env.includes('APP_ENV=development'), 'APP_ENV must be development');
+    assert(envFile.includes(`APP_ENV=${env}`), `APP_ENV must be ${env}`);
 
     // --- 1. Git safety checks ---
     const currentBranch = getOutput('git rev-parse --abbrev-ref HEAD');
