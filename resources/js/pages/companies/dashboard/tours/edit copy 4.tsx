@@ -1520,9 +1520,16 @@ export default function Page({ tour }: Props) {
 
                                         <div className="flex items-center gap-2">
                                             <span className="text-sm font-medium">
-                                                Input By :{' '}
-                                                {tour.user?.name || '-'}
+                                                Status :
                                             </span>
+
+                                            <Input
+                                                className="w-48"
+                                                value={status}
+                                                onChange={(e) =>
+                                                    setStatus(e.target.value)
+                                                }
+                                            />
                                         </div>
                                     </div>
                                     {/* BODY */}
@@ -2011,6 +2018,21 @@ export default function Page({ tour }: Props) {
                                                 </div>
                                             </div>
                                         </div>
+                                    </div>
+                                </div>
+
+                                {/* Created By */}
+                                <div className="grid gap-2">
+                                    <Label>Input By</Label>
+
+                                    <div className="rounded-xl border bg-muted/30 px-4 py-3">
+                                        <div className="font-medium">
+                                            {tour.user?.name || '-'}
+                                        </div>
+
+                                        {/* <div className="text-sm text-muted-foreground">
+                                            User ID: {tour.user?.id || '-'}
+                                        </div> */}
                                     </div>
                                 </div>
                             </div>
