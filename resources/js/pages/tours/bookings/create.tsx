@@ -985,6 +985,9 @@ export default function Page() {
         (isReadOnlyBookingMode && existingBooking?.booking_number
             ? existingBooking.booking_number
             : null);
+    const proformaInvoiceUrl = existingBooking?.id
+        ? `/mybookings/${existingBooking.id}/invoice`
+        : null;
     const selectedSchedule = useMemo(() => {
         const schedules = Array.isArray(tour?.schedules) ? tour.schedules : [];
 
@@ -2712,6 +2715,9 @@ export default function Page() {
                                                 }
                                                 showProformaInvoiceButton={
                                                     showProformaInvoiceButton
+                                                }
+                                                proformaInvoiceUrl={
+                                                    proformaInvoiceUrl
                                                 }
                                             />
                                         )}
