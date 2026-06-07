@@ -122,9 +122,15 @@ function formatPaymentDate(value?: string | null): string | null {
 
     return new Intl.DateTimeFormat('en-GB', {
         day: '2-digit',
-        month: 'short',
+        month: '2-digit',
         year: 'numeric',
     }).format(date);
+}
+
+function formatPercentageValue(value: number): string {
+    return new Intl.NumberFormat('en-US', {
+        maximumFractionDigits: 2,
+    }).format(value);
 }
 
 export default function Step4BookingSummary({
@@ -279,11 +285,21 @@ export default function Step4BookingSummary({
     const isPaymentSelectionMissing = !effectivePaymentType;
     const paymentControlsHidden = readOnly || hidePaymentControls;
     const hasDownPayment = displayPaidAmount > 0 && displayRemainingBalance > 0;
+    const isBalancePaymentMode = hasDownPayment || forceBalancePayment;
+    const showPaymentOptionSelector =
+        !paymentControlsHidden && !isBalancePaymentMode;
+    const showPaymentPanelColumns = !paymentControlsHidden;
     const downPaymentPaidDate = formatPaymentDate(downPaymentPaidAt);
+    const downPaymentAmountLabel =
+        effectiveDownPaymentRule?.mode === 'grand_total_percent'
+            ? `DP Amount (${formatPercentageValue(effectiveDownPaymentRule.percent)}%)`
+            : effectiveDownPaymentRule?.mode === 'per_pax_amount'
+              ? `DP Amount (${formatCurrency(effectiveDownPaymentRule.amount)} / pax)`
+              : 'DP Amount';
     const activePaymentAmountLabel = forceBalancePayment
         ? 'Remaining Balance'
         : effectivePaymentType === 'down_payment'
-          ? 'DP Amount'
+          ? downPaymentAmountLabel
           : effectivePaymentType === 'full_payment'
             ? 'Full Payment Amount'
             : 'Payment Amount';
@@ -304,7 +320,7 @@ export default function Step4BookingSummary({
                     key={grandTotal}
                     initial={{ scale: 0.98 }}
                     animate={{ scale: 1 }}
-                    className="text-right text-xl font-bold text-foreground"
+                    className="text-right text-2xl font-extrabold text-foreground sm:text-3xl"
                 >
                     {formatCurrency(grandTotal)}
                 </motion.p>
@@ -313,14 +329,16 @@ export default function Step4BookingSummary({
                 <div className="space-y-3 border-t border-border/60 pt-4">
                     <div className="flex items-start justify-between gap-4">
                         <div>
-                            <p className="text-[10px] font-semibold uppercase text-muted-foreground">
-                                Down Payment
-                            </p>
-                            {downPaymentPaidDate && (
-                                <p className="mt-0.5 text-xs text-muted-foreground">
-                                    Paid on {downPaymentPaidDate}
+                            <div className="flex flex-wrap items-center gap-2">
+                                <p className="text-[10px] font-semibold uppercase text-muted-foreground">
+                                    Down Payment
                                 </p>
-                            )}
+                                {downPaymentPaidDate && (
+                                    <span className="rounded-full bg-primary px-2 py-0.5 text-[10px] font-semibold leading-none text-primary-foreground">
+                                        {downPaymentPaidDate}
+                                    </span>
+                                )}
+                            </div>
                         </div>
                         <p className="text-right text-sm font-bold text-emerald-600">
                             {formatCurrency(displayPaidAmount)}
@@ -338,68 +356,90 @@ export default function Step4BookingSummary({
             )}
         </div>
     );
-    const paymentOptionSelector = !paymentControlsHidden ? (
-        <div className="space-y-4">
-            <p className="text-sm font-semibold text-foreground">
-                Select Payment Option
-            </p>
-            <div className="grid gap-2 sm:grid-cols-2">
-                <button
-                    type="button"
-                    aria-pressed={paymentType === 'down_payment'}
-                    className={cn(
-                        'h-11 rounded-md border px-4 text-sm font-medium transition-all',
-                        paymentType === 'down_payment'
-                            ? 'border-primary bg-primary text-primary-foreground shadow-sm'
-                            : 'border-border bg-background text-muted-foreground hover:text-foreground',
-                        (!downPaymentAvailable || forceBalancePayment) &&
-                            'cursor-not-allowed opacity-50',
-                    )}
-                    onClick={() => {
-                        if (downPaymentAvailable && !forceBalancePayment) {
-                            setPaymentType('down_payment');
+    const renderPaymentOptionSelector = () =>
+        showPaymentOptionSelector ? (
+            <div className="space-y-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Select Payment Option
+                </p>
+                <div className="grid gap-2 sm:grid-cols-2">
+                    <button
+                        type="button"
+                        aria-pressed={paymentType === 'down_payment'}
+                        className={cn(
+                            'h-10 rounded-md border px-3 text-sm font-medium transition-all',
+                            paymentType === 'down_payment'
+                                ? 'border-primary bg-primary text-primary-foreground shadow-sm'
+                                : 'border-border bg-background text-muted-foreground hover:text-foreground',
+                            (!downPaymentAvailable || forceBalancePayment) &&
+                                'cursor-not-allowed opacity-50',
+                        )}
+                        onClick={() => {
+                            if (downPaymentAvailable && !forceBalancePayment) {
+                                setPaymentType('down_payment');
+                            }
+                        }}
+                        disabled={!downPaymentAvailable || forceBalancePayment}
+                    >
+                        Down Payment
+                    </button>
+                    <button
+                        type="button"
+                        aria-pressed={
+                            paymentType === 'full_payment' ||
+                            forceBalancePayment
                         }
-                    }}
-                    disabled={!downPaymentAvailable || forceBalancePayment}
-                >
-                    Down Payment
-                </button>
-                <button
-                    type="button"
-                    aria-pressed={
-                        paymentType === 'full_payment' || forceBalancePayment
-                    }
-                    className={cn(
-                        'h-11 rounded-md border px-4 text-sm font-medium transition-all',
-                        paymentType === 'full_payment' || forceBalancePayment
-                            ? 'border-primary bg-primary text-primary-foreground shadow-sm'
-                            : 'border-border bg-background text-muted-foreground hover:text-foreground',
-                        isFullPaymentUnavailable &&
-                            'cursor-not-allowed opacity-50',
-                    )}
-                    onClick={() => {
-                        if (!isFullPaymentUnavailable) {
-                            setPaymentType('full_payment');
-                        }
-                    }}
-                    disabled={isFullPaymentUnavailable}
-                >
-                    Full Payment
-                </button>
-            </div>
-
-            {payAmount !== null && (
-                <div className="rounded-lg border bg-background px-4 py-3">
-                    <p className="text-[10px] font-semibold uppercase text-muted-foreground">
-                        {activePaymentAmountLabel}
-                    </p>
-                    <p className="mt-1 text-lg font-bold text-primary">
-                        {formatCurrency(payAmount)}
-                    </p>
+                        className={cn(
+                            'h-10 rounded-md border px-3 text-sm font-medium transition-all',
+                            paymentType === 'full_payment' ||
+                                forceBalancePayment
+                                ? 'border-primary bg-primary text-primary-foreground shadow-sm'
+                                : 'border-border bg-background text-muted-foreground hover:text-foreground',
+                            isFullPaymentUnavailable &&
+                                'cursor-not-allowed opacity-50',
+                        )}
+                        onClick={() => {
+                            if (!isFullPaymentUnavailable) {
+                                setPaymentType('full_payment');
+                            }
+                        }}
+                        disabled={isFullPaymentUnavailable}
+                    >
+                        Full Payment
+                    </button>
                 </div>
-            )}
-        </div>
-    ) : null;
+
+                {(payAmount !== null || paymentActionButton) && (
+                    <div
+                        className={cn(
+                            'grid gap-2',
+                            !hasDownPayment && 'sm:grid-cols-2',
+                        )}
+                    >
+                        {payAmount !== null && (
+                            <div className="rounded-lg border bg-background px-3 py-2">
+                                <p className="text-[10px] font-semibold uppercase text-muted-foreground">
+                                    {activePaymentAmountLabel}
+                                </p>
+                                <p className="mt-0.5 text-base font-bold text-primary">
+                                    {formatCurrency(payAmount)}
+                                </p>
+                            </div>
+                        )}
+                        {!hasDownPayment && paymentActionButton && (
+                            <div
+                                className={cn(
+                                    'flex items-end justify-end',
+                                    payAmount === null && 'sm:col-start-2',
+                                )}
+                            >
+                                {paymentActionButton}
+                            </div>
+                        )}
+                    </div>
+                )}
+            </div>
+        ) : null;
     const proformaInvoiceButton = showProformaInvoiceButton ? (
         <Tooltip>
             <TooltipTrigger asChild>
@@ -823,32 +863,34 @@ export default function Step4BookingSummary({
 
                     {/* ─── Payment Selection ──────────────────────────────────────── */}
                     <div className="p-4">
-                        <p className="mb-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                            Payment Option
-                        </p>
-
                         <div
                             className={cn(
-                                'grid gap-4 rounded-lg border bg-muted/20 p-4',
-                                !paymentControlsHidden &&
+                                'grid gap-4 rounded-lg border bg-muted/20 p-4 sm:p-5',
+                                showPaymentPanelColumns &&
                                     'lg:grid-cols-[minmax(0,1fr)_minmax(320px,0.9fr)] lg:items-start',
                             )}
                         >
-                            {paymentOptionSelector}
+                            {renderPaymentOptionSelector()}
+                            {!showPaymentOptionSelector &&
+                                showPaymentPanelColumns && (
+                                    <div className="hidden lg:block" />
+                                )}
 
                             <div
                                 className={cn(
                                     'space-y-4',
-                                    !paymentControlsHidden &&
+                                    showPaymentPanelColumns &&
                                         'lg:border-l lg:border-border/60 lg:pl-4',
                                 )}
                             >
                                 {paymentDetailsPanel}
                                 {(proformaInvoiceButton ||
-                                    paymentActionButton) && (
+                                    (isBalancePaymentMode &&
+                                        paymentActionButton)) && (
                                     <div className="flex flex-col-reverse gap-2 border-t border-border/60 pt-4 sm:flex-row sm:items-center sm:justify-end">
                                         {proformaInvoiceButton}
-                                        {paymentActionButton}
+                                        {isBalancePaymentMode &&
+                                            paymentActionButton}
                                     </div>
                                 )}
                             </div>
