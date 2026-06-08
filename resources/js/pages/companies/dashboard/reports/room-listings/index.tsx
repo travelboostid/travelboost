@@ -180,8 +180,10 @@ export default function RoomListing() {
             string,
             Array<{ roomType: string; passengerList: typeof roomData }>
         > = {};
-        const temporaryGroups: Record<string, Record<string, typeof roomData>> =
-            {};
+        const temporaryGroups: Record<
+            string,
+            Record<string, typeof roomData>
+        > = {};
 
         if (!roomData) {
             return groups;
@@ -536,10 +538,7 @@ export default function RoomListing() {
 
                                             return roomGroups.map(
                                                 (
-                                                    {
-                                                        roomType,
-                                                        passengerList,
-                                                    },
+                                                    { roomType, passengerList },
                                                     roomIndex,
                                                 ) => {
                                                     const fallbackRoomNumber =

@@ -7,8 +7,9 @@ use App\Notifications\AffiliateReferralRegistrationNotification;
 use App\Notifications\AffiliateRegistrationWelcomeNotification;
 use App\Notifications\AffiliateReviewStatusNotification;
 use Illuminate\Notifications\Messages\MailMessage;
+use Tests\TestCase;
 
-uses(Tests\TestCase::class);
+uses(TestCase::class);
 
 it('builds the expected referral registration payloads', function () {
     $partnerUser = new User(['name' => 'Partner One', 'email' => 'partner@example.com']);

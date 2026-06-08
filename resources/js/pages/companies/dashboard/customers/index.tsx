@@ -192,10 +192,14 @@ function CustomerActions({ customer }: { customer: CustomerRow }) {
                         <DropdownMenuItem
                             onSelect={(event) => {
                                 event.preventDefault();
-                                router.get(historyUrl, {}, {
-                                    preserveState: false,
-                                    preserveScroll: false,
-                                });
+                                router.get(
+                                    historyUrl,
+                                    {},
+                                    {
+                                        preserveState: false,
+                                        preserveScroll: false,
+                                    },
+                                );
                             }}
                             className="cursor-pointer"
                         >
@@ -227,10 +231,17 @@ function CustomerActions({ customer }: { customer: CustomerRow }) {
                         <DetailRow label="Full Name" value={customer.name} />
                         <DetailRow
                             label="Username"
-                            value={customer.username ? `@${customer.username}` : '-'}
+                            value={
+                                customer.username
+                                    ? `@${customer.username}`
+                                    : '-'
+                            }
                         />
                         <DetailRow label="Email" value={customer.email} />
-                        <DetailRow label="Phone Number" value={customer.phone} />
+                        <DetailRow
+                            label="Phone Number"
+                            value={customer.phone}
+                        />
                         <DetailRow
                             label="Gender"
                             value={
@@ -257,7 +268,9 @@ function CustomerActions({ customer }: { customer: CustomerRow }) {
                         />
                         <DetailRow
                             label="Agent"
-                            value={customer.company?.name ?? 'Direct Registration'}
+                            value={
+                                customer.company?.name ?? 'Direct Registration'
+                            }
                         />
                         <DetailRow
                             label="Join Date"

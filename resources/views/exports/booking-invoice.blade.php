@@ -610,7 +610,9 @@
         @if ($isProforma)
             <div class="proforma-notice">
                 <strong>Proforma Invoice Notice</strong>
-                This booking is still in down payment status. This document is issued for payment reference only and must not be used as proof of full settlement.
+                This booking is still in down payment status. This document is
+                issued for payment reference only and must not be used as proof
+                of full settlement.
             </div>
         @endif
 
@@ -797,8 +799,11 @@
 
         <div class="paid-stamp">
             <div class="paid-left">
-                <span class="stamp {{ $isProforma ? 'proforma' : '' }}">{{ $invoiceStatus }}</span>
-                @unless($isProforma)
+                <span
+                    class="stamp {{ $isProforma ? 'proforma' : '' }}"
+                    >{{ $invoiceStatus }}</span
+                >
+                @unless ($isProforma)
                     <div class="stamp-date">
                         Payment Date: {{ $formatDate($paymentDate) }}
                     </div>
@@ -810,12 +815,12 @@
                     <div class="payment-total paid-amount">
                         {{ $formatCurrency($paidAmount) }}
                     </div>
-                    <div class="muted" style="margin-top: 8px;">Remaining</div>
+                    <div class="muted" style="margin-top: 8px">Remaining</div>
                     <div class="payment-total remaining-amount">
                         {{ $formatCurrency($remainingAmount) }}
                     </div>
                     @if (! empty($dueDate))
-                        <div class="muted" style="margin-top: 6px;">
+                        <div class="muted" style="margin-top: 6px">
                             Due Date: {{ $formatDate($dueDate) }}
                         </div>
                     @endif

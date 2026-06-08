@@ -379,8 +379,7 @@ const getCommissionDetails = (
         ...additionalRules.map((additionalRule: any) =>
             getCommissionComponent(
                 basePrice,
-                additionalRule.commission_type ??
-                    additionalRule.commissionType,
+                additionalRule.commission_type ?? additionalRule.commissionType,
                 additionalRule.commission_value ??
                     additionalRule.commissionValue,
                 currency,
