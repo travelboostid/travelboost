@@ -66,7 +66,7 @@ class AuthController extends Controller
         $domain = Context::get('domain');
 
         $affiliate = null;
-        if ($domain && $domain->owner_type === AffiliateProfile::class) {
+        if ($domain?->owner instanceof AffiliateProfile) {
             $profile = $domain->owner;
             $user = $profile->user;
             $affiliate = [
