@@ -18,23 +18,39 @@
         </include>
     </source>
     <php>
-<env name="APP_ENV" value="testing"/>
+    <env name="APP_ENV" value="testing"/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="BROADCAST_CONNECTION" value="null"/>
         <env name="CACHE_STORE" value="array"/>
-        <env name="CACHE_DRIVER" value="array"/> 
-        <env name="WALLET_CACHE_DRIVER" value="array"/>
-        <env name="WALLET_LOCK_DRIVER" value="array"/>
-        <env name="DB_CONNECTION" value="pgsql"/>
+        <env name="CACHE_DRIVER" value="array"/>
+        <env name="SESSION_DRIVER" value="array"/>
+        <env name="QUEUE_CONNECTION" value="sync"/>
+        <env name="MAIL_MAILER" value="array"/>
+        <env name="LOG_CHANNEL" value="null"/> <env name="DB_CONNECTION" value="pgsql"/>
         <env name="DB_HOST" value="127.0.0.1"/>
         <env name="DB_PORT" value="5432"/>
         <env name="DB_DATABASE" value="testing"/>
         <env name="DB_USERNAME" value="postgres"/>
         <env name="DB_PASSWORD" value="password"/>
-        <env name="MAIL_MAILER" value="array"/>
-        <env name="QUEUE_CONNECTION" value="sync"/>
-        <env name="SESSION_DRIVER" value="array"/>
+        <env name="WALLET_MATH_SCALE" value="0"/>
+        <env name="WALLET_CACHE_DRIVER" value="array"/>
+        <env name="WALLET_CACHE_TTL" value="86400"/> <env name="WALLET_LOCK_DRIVER" value="array"/>
+        <env name="WALLET_LOCK_TTL" value="1"/> <env name="WALLET_TRANSACTION_TABLE_NAME" value="transactions"/> <env name="WALLET_TRANSFER_TABLE_NAME" value="transfers"/>
+        <env name="WALLET_WALLET_TABLE_NAME" value="wallets"/>
+        <env name="OPENAI_API_KEY" value="mock-openai-key"/>
+        <env name="MISTRAL_API_KEY" value="mock-mistral-key"/>
+        <env name="OPENROUTER_API_KEY" value="mock-openrouter-key"/>
+        <env name="MIDTRANS_SERVER_KEY" value="mock-midtrans-server"/>
+        <env name="MIDTRANS_CLIENT_KEY" value="mock-midtrans-client"/>
+        <env name="PRISMALINK_MERCHANT_ID" value="mock-merchant-id"/>
+        <env name="PRISMALINK_MERCHANT_KEY_ID" value="mock-key-id"/>
+        <env name="PRISMALINK_SECRET_KEY" value="mock-secret-key"/>
+        <env name="GOOGLE_CLIENT_ID" value="mock-google-client"/>
+        <env name="GOOGLE_CLIENT_SECRET" value="mock-google-secret"/>
+        <env name="AWS_ACCESS_KEY_ID" value="mock-aws-key"/>
+        <env name="AWS_SECRET_ACCESS_KEY" value="mock-aws-secret"/>
+        <env name="AWS_BUCKET" value="mock-bucket"/>
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
