@@ -62,5 +62,10 @@ jobs:
             - name: Build Assets
               run: npm run build
 
+            - name: Enable pgvector extension
+              env:
+                  PGPASSWORD: password
+              run: psql -h 127.0.0.1 -U postgres -d testing -c "CREATE EXTENSION IF NOT EXISTS vector;"
+
             - name: Tests
               run: ./vendor/bin/pest
