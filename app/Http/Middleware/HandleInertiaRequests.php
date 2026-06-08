@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\AppConfig;
 use App\Models\Company;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
@@ -39,6 +40,10 @@ class HandleInertiaRequests extends Middleware
             ],
             'customerUnreadNotificationsCount' => $request->user()?->unreadNotifications()->count() ?? 0,
             'affiliateUnreadNotificationsCount' => $request->user()?->unreadNotifications()->count() ?? 0,
+            'travelboostWhatsapp' => fn (): ?string => data_get(
+                AppConfig::query()->where('key', 'admin')->first()?->value,
+                'wa_cs'
+            ),
         ];
     }
 }

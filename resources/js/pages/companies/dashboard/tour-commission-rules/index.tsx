@@ -43,7 +43,7 @@ import {
 } from '@/components/ui/table';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { cn } from '@/lib/utils';
-import { router, useForm } from '@inertiajs/react';
+import { router } from '@inertiajs/react';
 import dayjs from 'dayjs';
 import {
     ArrowUpDown,
@@ -58,7 +58,7 @@ import {
     SearchIcon,
     TrashIcon,
 } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 type CommissionType = 'percent' | 'nominal';
 type SortDirection = 'asc' | 'desc';
@@ -95,6 +95,11 @@ type Rule = {
     product_commission_category_id: number;
     commission_type: CommissionType;
     commission_value: string | number;
+};
+
+type BaseRuleDraft = {
+    commission_type: CommissionType;
+    commission_value: number;
 };
 
 type AdditionalRule = {
@@ -320,32 +325,48 @@ function CommissionFields({
     );
 }
 
+function baseRuleKey(tierId: number, categoryId: number): string {
+    return `${tierId}-${categoryId}`;
+}
+
+function baseRuleDraft(rule?: Rule): BaseRuleDraft {
+    return {
+        commission_type: rule?.commission_type ?? 'percent',
+        commission_value: Number(rule?.commission_value ?? 0),
+    };
+}
+
+function baseRuleDraftChanged(
+    draft?: BaseRuleDraft,
+    initial?: BaseRuleDraft,
+): boolean {
+    if (!draft || !initial) {
+        return false;
+    }
+
+    return (
+        draft.commission_type !== initial.commission_type ||
+        Number(draft.commission_value) !== Number(initial.commission_value)
+    );
+}
+
 function BaseRuleRow({
     tier,
     category,
-    rule,
+    draft,
+    isDirty,
+    isProcessing,
+    onChange,
+    onSave,
 }: {
     tier: Tier;
     category: ProductCommissionCategory;
-    rule?: Rule;
+    draft: BaseRuleDraft;
+    isDirty: boolean;
+    isProcessing: boolean;
+    onChange: (draft: BaseRuleDraft) => void;
+    onSave: () => void;
 }) {
-    const { company } = usePageSharedDataProps();
-    const form = useForm({
-        rule_type: 'base',
-        agent_tier_id: tier.id,
-        product_commission_category_id: category.id,
-        commission_type: rule?.commission_type ?? 'percent',
-        commission_value: Number(rule?.commission_value ?? 0),
-        is_active: true,
-    });
-
-    const submit = () => {
-        form.post(
-            `/companies/${company.username}/dashboard/tour-commission-rules`,
-            { preserveScroll: true },
-        );
-    };
-
     return (
         <TableRow className="border-slate-100 hover:bg-slate-50/80 dark:border-slate-800 dark:hover:bg-slate-900/70">
             <TableCell className="min-w-[180px] font-semibold text-slate-800 dark:text-slate-100">
@@ -356,13 +377,13 @@ function BaseRuleRow({
             </TableCell>
             <TableCell>
                 <CommissionFields
-                    type={form.data.commission_type as CommissionType}
-                    value={Number(form.data.commission_value)}
+                    type={draft.commission_type}
+                    value={draft.commission_value}
                     onTypeChange={(value) =>
-                        form.setData('commission_type', value)
+                        onChange({ ...draft, commission_type: value })
                     }
                     onValueChange={(value) =>
-                        form.setData('commission_value', value)
+                        onChange({ ...draft, commission_value: value })
                     }
                 />
             </TableCell>
@@ -370,8 +391,8 @@ function BaseRuleRow({
                 <Button
                     type="button"
                     size="sm"
-                    onClick={submit}
-                    disabled={form.processing}
+                    onClick={onSave}
+                    disabled={!isDirty || isProcessing}
                     className="h-10 gap-2 rounded-xl px-4"
                 >
                     <SaveIcon className="h-4 w-4" />
@@ -391,8 +412,14 @@ function BaseMatrixPage({
     categories: ProductCommissionCategory[];
     rules: Rule[];
 }) {
+    const { company } = usePageSharedDataProps();
     const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
     const [currentPage, setCurrentPage] = useState(1);
+    const [drafts, setDrafts] = useState<Record<string, BaseRuleDraft>>({});
+    const [rowProcessingKey, setRowProcessingKey] = useState<string | null>(
+        null,
+    );
+    const [bulkProcessing, setBulkProcessing] = useState(false);
     const pageSize = 10;
     const sortedTiers = useMemo(() => {
         return [...tiers].sort((a, b) => {
@@ -405,27 +432,119 @@ function BaseMatrixPage({
             categories.map((category) => ({ tier, category })),
         );
     }, [categories, sortedTiers]);
+    const ruleMap = useMemo(() => {
+        return new Map(
+            rules.map((rule) => [
+                baseRuleKey(
+                    Number(rule.agent_tier_id),
+                    Number(rule.product_commission_category_id),
+                ),
+                rule,
+            ]),
+        );
+    }, [rules]);
+    const initialDrafts = useMemo(() => {
+        return Object.fromEntries(
+            tableRows.map(({ tier, category }) => {
+                const key = baseRuleKey(tier.id, category.id);
+
+                return [key, baseRuleDraft(ruleMap.get(key))];
+            }),
+        ) as Record<string, BaseRuleDraft>;
+    }, [ruleMap, tableRows]);
+    const dirtyRows = useMemo(() => {
+        return tableRows.filter(({ tier, category }) => {
+            const key = baseRuleKey(tier.id, category.id);
+
+            return baseRuleDraftChanged(drafts[key], initialDrafts[key]);
+        });
+    }, [drafts, initialDrafts, tableRows]);
     const totalPages = Math.max(1, Math.ceil(tableRows.length / pageSize));
     const safeCurrentPage = Math.min(currentPage, totalPages);
     const visibleRows = tableRows.slice(
         (safeCurrentPage - 1) * pageSize,
         safeCurrentPage * pageSize,
     );
-    const ruleMap = useMemo(() => {
-        return new Map(
-            rules.map((rule) => [
-                `${rule.agent_tier_id}-${rule.product_commission_category_id}`,
-                rule,
-            ]),
+
+    useEffect(() => {
+        setDrafts(initialDrafts);
+    }, [initialDrafts]);
+
+    const updateDraft = (
+        tier: Tier,
+        category: ProductCommissionCategory,
+        draft: BaseRuleDraft,
+    ) => {
+        const key = baseRuleKey(tier.id, category.id);
+
+        setDrafts((currentDrafts) => ({
+            ...currentDrafts,
+            [key]: draft,
+        }));
+    };
+
+    const saveRow = (tier: Tier, category: ProductCommissionCategory) => {
+        const key = baseRuleKey(tier.id, category.id);
+        const draft = drafts[key];
+
+        if (!draft || !baseRuleDraftChanged(draft, initialDrafts[key])) {
+            return;
+        }
+
+        router.post(
+            `/companies/${company.username}/dashboard/tour-commission-rules`,
+            {
+                rule_type: 'base',
+                agent_tier_id: tier.id,
+                product_commission_category_id: category.id,
+                commission_type: draft.commission_type,
+                commission_value: draft.commission_value,
+                is_active: true,
+            },
+            {
+                preserveScroll: true,
+                onStart: () => setRowProcessingKey(key),
+                onFinish: () => setRowProcessingKey(null),
+            },
         );
-    }, [rules]);
+    };
+
+    const saveAll = () => {
+        if (dirtyRows.length === 0) {
+            return;
+        }
+
+        router.post(
+            `/companies/${company.username}/dashboard/tour-commission-rules`,
+            {
+                rule_type: 'base',
+                base_items: dirtyRows.map(({ tier, category }) => {
+                    const key = baseRuleKey(tier.id, category.id);
+                    const draft =
+                        drafts[key] ?? initialDrafts[key] ?? baseRuleDraft();
+
+                    return {
+                        agent_tier_id: tier.id,
+                        product_commission_category_id: category.id,
+                        commission_type: draft.commission_type,
+                        commission_value: draft.commission_value,
+                    };
+                }),
+            },
+            {
+                preserveScroll: true,
+                onStart: () => setBulkProcessing(true),
+                onFinish: () => setBulkProcessing(false),
+            },
+        );
+    };
 
     return (
         <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-950">
-            <div className="flex flex-col gap-4 border-b border-slate-100 p-5 dark:border-slate-800 md:flex-row md:items-center md:justify-between">
-                <div className="max-w-3xl">
+            <div className="flex flex-col gap-4 border-b border-slate-100 p-5 dark:border-slate-800 md:flex-row md:items-start md:justify-between">
+                <div className="max-w-3xl self-start">
                     <h2 className="text-base font-semibold text-slate-950 dark:text-slate-100">
-                        Base Commission Matrix
+                        Base Commission
                     </h2>
                     <p className="mt-1 text-sm leading-6 text-muted-foreground">
                         One row controls the base commission for every tour
@@ -433,23 +552,35 @@ function BaseMatrixPage({
                         tier.
                     </p>
                 </div>
-                <div className="grid grid-cols-2 gap-3 sm:min-w-[360px]">
-                    <div className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 text-sm dark:border-slate-800 dark:bg-slate-900">
-                        <span className="block text-xs uppercase tracking-[0.16em] text-muted-foreground">
-                            Agent Tiers
-                        </span>
-                        <span className="mt-1 block text-xl font-semibold text-slate-950 dark:text-slate-100">
-                            {tiers.length}
-                        </span>
+                <div className="flex flex-col gap-3 sm:min-w-[560px] lg:min-w-[620px]">
+                    <div className="grid grid-cols-[0.92fr_1.08fr] gap-3">
+                        <div className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 text-sm dark:border-slate-800 dark:bg-slate-900">
+                            <span className="block text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+                                Agent Category
+                            </span>
+                            <span className="mt-1 block text-xl font-semibold text-slate-950 dark:text-slate-100">
+                                {tiers.length}
+                            </span>
+                        </div>
+                        <div className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 text-sm dark:border-slate-800 dark:bg-slate-900">
+                            <span className="block text-[10px] uppercase tracking-[0.14em] text-muted-foreground whitespace-nowrap">
+                                Product Comm. Categories
+                            </span>
+                            <span className="mt-1 block text-xl font-semibold text-slate-950 dark:text-slate-100">
+                                {categories.length}
+                            </span>
+                        </div>
                     </div>
-                    <div className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 text-sm dark:border-slate-800 dark:bg-slate-900">
-                        <span className="block text-xs uppercase tracking-[0.16em] text-muted-foreground">
-                            Product Comm. Categories
-                        </span>
-                        <span className="mt-1 block text-xl font-semibold text-slate-950 dark:text-slate-100">
-                            {categories.length}
-                        </span>
-                    </div>
+                    <Button
+                        type="button"
+                        onClick={saveAll}
+                        disabled={dirtyRows.length === 0 || bulkProcessing}
+                        className="h-10 gap-2 rounded-xl"
+                    >
+                        <SaveIcon className="h-4 w-4" />
+                        Save Changes
+                        {dirtyRows.length > 0 ? ` (${dirtyRows.length})` : ''}
+                    </Button>
                 </div>
             </div>
             <div className="overflow-x-auto">
@@ -492,16 +623,39 @@ function BaseMatrixPage({
                                 </TableCell>
                             </TableRow>
                         ) : (
-                            visibleRows.map(({ tier, category }) => (
-                                <BaseRuleRow
-                                    key={`${tier.id}-${category.id}`}
-                                    tier={tier}
-                                    category={category}
-                                    rule={ruleMap.get(
-                                        `${tier.id}-${category.id}`,
-                                    )}
-                                />
-                            ))
+                            visibleRows.map(({ tier, category }) => {
+                                const key = baseRuleKey(tier.id, category.id);
+                                const draft =
+                                    drafts[key] ??
+                                    initialDrafts[key] ??
+                                    baseRuleDraft();
+                                const isDirty = baseRuleDraftChanged(
+                                    draft,
+                                    initialDrafts[key],
+                                );
+
+                                return (
+                                    <BaseRuleRow
+                                        key={key}
+                                        tier={tier}
+                                        category={category}
+                                        draft={draft}
+                                        isDirty={isDirty}
+                                        isProcessing={
+                                            bulkProcessing ||
+                                            rowProcessingKey === key
+                                        }
+                                        onChange={(nextDraft) =>
+                                            updateDraft(
+                                                tier,
+                                                category,
+                                                nextDraft,
+                                            )
+                                        }
+                                        onSave={() => saveRow(tier, category)}
+                                    />
+                                );
+                            })
                         )}
                     </TableBody>
                 </Table>
@@ -1731,7 +1885,7 @@ function AdditionalRulesTable({
                                 <SortableHeader
                                     onClick={() => updateSort('scope')}
                                 >
-                                    Rule Type
+                                    Commission Type
                                 </SortableHeader>
                             </TableHead>
                             <TableHead>Product Tour and Date</TableHead>

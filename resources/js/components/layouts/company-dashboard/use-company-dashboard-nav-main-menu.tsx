@@ -268,7 +268,7 @@ export function useCompanyDashboardNavMainMenu() {
         },
         {
             id: 'marketings',
-            title: <FormattedMessage defaultMessage="Marketings & Socmeds" />,
+            title: <FormattedMessage defaultMessage="Marketings" />,
             urlOrAction: '#',
             icon: BoltIcon,
             items: [
@@ -306,17 +306,17 @@ export function useCompanyDashboardNavMainMenu() {
                         : `/companies/${company.username}/dashboard/analytics`,
                     disabled: isMarketingDisabled,
                 },
-                {
-                    id: 'marketings.budgeting',
-                    title: renderTitle(
-                        <FormattedMessage defaultMessage="Promotion Budgetting" />,
-                        isMarketingDisabled,
-                    ),
-                    urlOrAction: isMarketingDisabled
-                        ? (handleLockedClick as any)
-                        : '#',
-                    disabled: isMarketingDisabled,
-                },
+                // {
+                //     id: 'marketings.budgeting',
+                //     title: renderTitle(
+                //         <FormattedMessage defaultMessage="Promotion Budgetting" />,
+                //         isMarketingDisabled,
+                //     ),
+                //     urlOrAction: isMarketingDisabled
+                //         ? (handleLockedClick as any)
+                //         : '#',
+                //     disabled: isMarketingDisabled,
+                // },
             ],
             shouldDisplay: (roles, _permissions) =>
                 roles.includes('user:agent'),
@@ -473,7 +473,7 @@ export function useCompanyDashboardNavMainMenu() {
                 {
                     id: 'commission-setup.tour-rules',
                     title: (
-                        <FormattedMessage defaultMessage="Tour Commission Rules" />
+                        <FormattedMessage defaultMessage="Base Commission" />
                     ),
                     urlOrAction: `/companies/${company.username}/dashboard/tour-commission-rules`,
                     shouldDisplay: (roles, permissions) =>
