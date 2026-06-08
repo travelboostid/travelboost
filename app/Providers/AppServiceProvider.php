@@ -95,7 +95,17 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('access-company-pages', function (?User $user) {
             $domain = Context::get('domain');
 
-            return $domain == null;
+            if ($domain == null) {
+                return true;
+            }
+
+            return $domain->owner instanceof AffiliateProfile
+                && request()->routeIs(
+                    'companies.login.show',
+                    'companies.login.store',
+                    'companies.register.show',
+                    'companies.register.store',
+                );
         });
 
         $this->configureDefaults();
