@@ -24,15 +24,13 @@ export default function SelectProductCommissionCategory({
     categories = [],
 }: Props) {
     return (
-        <Select
-            value={value ? String(value) : undefined}
-            onValueChange={onChange}
-        >
+        <Select value={value ? String(value) : '0'} onValueChange={onChange}>
             <SelectTrigger className="w-full">
                 <SelectValue placeholder="Select Product Commission Category" />
             </SelectTrigger>
 
             <SelectContent>
+                <SelectItem value="0">No Category</SelectItem>
                 {categories.map((item) => (
                     <SelectItem key={item.id} value={String(item.id)}>
                         {item.category_name}
