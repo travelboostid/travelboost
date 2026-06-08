@@ -3441,6 +3441,57 @@ test('customer can update travel documents without changing booking status or to
             ->where('savedPassengers.0.visaFilePath', $updatedPassenger->visa_file_path));
 });
 
+test('customer travel document updates clear removed file paths', function () {
+    ['user' => $user, 'company' => $company, 'tour' => $tour, 'schedule' => $schedule] = createBookingCreateScenario('documentremovevendor');
+
+    $booking = Booking::factory()->create([
+        'user_id' => $user->id,
+        'vendor_id' => $company->id,
+        'tour_id' => $tour->id,
+        'departure_date' => $schedule->departure_date,
+        'status' => BookingStatus::DOWN_PAYMENT,
+    ]);
+    $passenger = $booking->passengers()->create([
+        'first_name' => 'Document',
+        'last_name' => 'Removed',
+        'pob' => 'Jakarta',
+        'price_category' => 'Adult Twin',
+        'price_amount' => 1_000_000,
+        'passport_number' => 'P1234567',
+        'passport_issue_date' => '2024-01-01',
+        'passport_expiry_date' => '2030-01-01',
+        'passport_file_path' => 'travel-documents/passports/old-passport.pdf',
+        'visa_number' => 'VISA-123',
+        'visa_file_path' => 'travel-documents/visas/old-visa.pdf',
+    ]);
+
+    $this->actingAs($user)
+        ->post("/bookings/{$booking->id}/travel-documents", [
+            'passengers' => [
+                [
+                    'id' => $passenger->id,
+                    'passport_number' => 'P1234567',
+                    'passport_issue_date' => '2024-01-01',
+                    'passport_expiry_date' => '2030-01-01',
+                    'visa_number' => 'VISA-123',
+                ],
+            ],
+        ])
+        ->assertRedirect();
+
+    $updatedPassenger = $passenger->fresh();
+    $savedPassenger = SavedPassenger::query()
+        ->where('user_id', $user->id)
+        ->where('first_name', 'Document')
+        ->where('last_name', 'Removed')
+        ->firstOrFail();
+
+    expect($updatedPassenger->passport_file_path)->toBeNull()
+        ->and($updatedPassenger->visa_file_path)->toBeNull()
+        ->and($savedPassenger->passport_file_path)->toBeNull()
+        ->and($savedPassenger->visa_file_path)->toBeNull();
+});
+
 test('customer can update travel documents from tenant subdomain route', function () {
     Storage::fake('public');
 
