@@ -2,8 +2,10 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\AffiliateProfile;
 use App\Models\AppConfig;
 use App\Models\Company;
+use App\Models\Domain;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -44,6 +46,38 @@ class HandleInertiaRequests extends Middleware
                 AppConfig::query()->where('key', 'admin')->first()?->value,
                 'wa_cs'
             ),
+            'affiliatePageUrl' => fn (): ?string => $this->resolveAffiliatePageUrl($request),
         ];
+    }
+
+    private function resolveAffiliatePageUrl(Request $request): ?string
+    {
+        $profile = $request->user()?->affiliateProfile;
+
+        if (! $profile instanceof AffiliateProfile) {
+            return null;
+        }
+
+        $domain = Domain::query()
+            ->whereIn('owner_type', ['affiliate', AffiliateProfile::class])
+            ->where('owner_id', $profile->id)
+            ->first();
+
+        if (! $domain) {
+            return null;
+        }
+
+        if ($domain->domain_enabled && filled($domain->domain)) {
+            return $request->getScheme().'://'.$domain->domain;
+        }
+
+        if ($domain->subdomain_enabled && filled($domain->subdomain)) {
+            $port = $request->getPort();
+            $portSuffix = in_array($port, [80, 443], true) ? '' : ':'.$port;
+
+            return $request->getScheme().'://'.$domain->subdomain.'.'.env('APP_HOST', 'localhost').$portSuffix;
+        }
+
+        return null;
     }
 }
