@@ -109,7 +109,6 @@ type AddOn = {
     description: string;
     price: number | '';
     edit_status: boolean;
-    is_taxable: boolean;
 };
 
 type AddOnsState = {
@@ -789,7 +788,6 @@ export default function Page({ tour }: Props) {
                 description: item.description,
                 price: item.price,
                 edit_status: item.edit_status,
-                is_taxable: item.is_taxable ?? false,
             }));
         });
 
@@ -801,7 +799,6 @@ export default function Page({ tour }: Props) {
             description: '',
             price: 0,
             edit_status: false,
-            is_taxable: false,
         };
 
         setAddOns((prev) => ({
@@ -871,7 +868,6 @@ export default function Page({ tour }: Props) {
                     description: row.description,
                     price: row.price || 0,
                     edit_status: row.edit_status,
-                    is_taxable: row.is_taxable,
                 });
             });
         });
@@ -1161,7 +1157,6 @@ export default function Page({ tour }: Props) {
                             description: a.description,
                             price: a.price ?? 0,
                             edit_status: a.edit_status ?? false,
-                            is_taxable: a.is_taxable ?? false,
                         })),
                     ),
                 },
@@ -1177,7 +1172,6 @@ export default function Page({ tour }: Props) {
                     description: a.description,
                     price: a.price ?? 0,
                     edit_status: a.edit_status ?? false,
-                    is_taxable: a.is_taxable ?? false,
                 }));
             });
 
@@ -1478,7 +1472,7 @@ export default function Page({ tour }: Props) {
                                 <div className="overflow-hidden rounded-3xl border bg-card shadow-sm">
                                     <div className="border-b bg-muted/40 px-6 py-4">
                                         <h2 className="text-lg font-semibold">
-                                            {data.code} {data.name}
+                                            Tour Cover
                                         </h2>
 
                                         <p className="text-sm text-muted-foreground">
@@ -1526,9 +1520,16 @@ export default function Page({ tour }: Props) {
 
                                         <div className="flex items-center gap-2">
                                             <span className="text-sm font-medium">
-                                                Input By :{' '}
-                                                {tour.user?.name || '-'}
+                                                Status :
                                             </span>
+
+                                            <Input
+                                                className="w-48"
+                                                value={status}
+                                                onChange={(e) =>
+                                                    setStatus(e.target.value)
+                                                }
+                                            />
                                         </div>
                                     </div>
                                     {/* BODY */}
@@ -2019,6 +2020,21 @@ export default function Page({ tour }: Props) {
                                         </div>
                                     </div>
                                 </div>
+
+                                {/* Created By */}
+                                <div className="grid gap-2">
+                                    <Label>Input By</Label>
+
+                                    <div className="rounded-xl border bg-muted/30 px-4 py-3">
+                                        <div className="font-medium">
+                                            {tour.user?.name || '-'}
+                                        </div>
+
+                                        {/* <div className="text-sm text-muted-foreground">
+                                            User ID: {tour.user?.id || '-'}
+                                        </div> */}
+                                    </div>
+                                </div>
                             </div>
                             <div className="flex justify-start pt-6 border-t">
                                 <Button type="submit" disabled={processing}>
@@ -2032,14 +2048,8 @@ export default function Page({ tour }: Props) {
 
                         <TabsContent value="schedule">
                             <div className="space-y-4">
-                                <div className="flex flex-col gap-3 px-4 py-2 md:flex-row md:items-center md:justify-between">
-                                    <div>
-                                        <h2 className="text-lg font-semibold">
-                                            {data.code} {data.name}
-                                        </h2>
-                                    </div>
-
-                                    <div className="flex justify-end">
+                                <div className="flex flex-col gap-3 px-4 py-2 md:flex-row md:items-center md:justify-end">
+                                    <div className="flex items-center gap-3">
                                         <Button
                                             type="button"
                                             onClick={addSchedule}
@@ -3313,9 +3323,6 @@ export default function Page({ tour }: Props) {
 
                         <TabsContent value="availability">
                             <div className="space-y-4">
-                                <h2 className="text-lg font-semibold">
-                                    {data.code} {data.name}
-                                </h2>
                                 <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2">
                                     {/* LEFT */}
                                     <div className="flex flex-wrap items-center gap-3">
@@ -4119,9 +4126,6 @@ export default function Page({ tour }: Props) {
                         {/* ================= TAB 4 — ADD ONS ================= */}
                         <TabsContent value="addons">
                             <div className="space-y-4">
-                                <h2 className="text-lg font-semibold">
-                                    {data.code} {data.name}
-                                </h2>
                                 <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2">
                                     {/* LEFT */}
                                     <div className="flex flex-wrap items-center gap-2">
@@ -4261,7 +4265,7 @@ export default function Page({ tour }: Props) {
                                                                         >
                                                                             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                                                                                 {/* LEFT CONTENT */}
-                                                                                <div className="grid flex-1 grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+                                                                                <div className="grid flex-1 grid-cols-1 gap-4 md:grid-cols-3">
                                                                                     {/* DESCRIPTION */}
                                                                                     <div className="space-y-2">
                                                                                         <Label className="text-xs uppercase tracking-wide text-muted-foreground">
@@ -4317,39 +4321,6 @@ export default function Page({ tour }: Props) {
                                                                                                 )
                                                                                             }
                                                                                         />
-                                                                                    </div>
-
-                                                                                    {/* TAXABLE */}
-                                                                                    <div className="space-y-2">
-                                                                                        <Label className="text-xs uppercase tracking-wide text-muted-foreground">
-                                                                                            Included
-                                                                                            in
-                                                                                            PPN
-                                                                                        </Label>
-
-                                                                                        <div className="flex h-10 items-center rounded-xl border px-3">
-                                                                                            <label className="flex items-center gap-2 text-sm">
-                                                                                                <input
-                                                                                                    type="checkbox"
-                                                                                                    checked={
-                                                                                                        row.is_taxable
-                                                                                                    }
-                                                                                                    onChange={(
-                                                                                                        e,
-                                                                                                    ) =>
-                                                                                                        updateRow(
-                                                                                                            schedule.id,
-                                                                                                            index,
-                                                                                                            'is_taxable',
-                                                                                                            e
-                                                                                                                .target
-                                                                                                                .checked,
-                                                                                                        )
-                                                                                                    }
-                                                                                                />
-                                                                                                Taxable
-                                                                                            </label>
-                                                                                        </div>
                                                                                     </div>
 
                                                                                     {/* EDITABLE */}

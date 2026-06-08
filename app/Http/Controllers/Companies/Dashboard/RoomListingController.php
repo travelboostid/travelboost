@@ -307,11 +307,21 @@ class RoomListingController extends Controller
 
         $groupedData = [];
 
+        $globalRoomNumber = 0;
+
         foreach ($bookings as $booking) {
+            $rooms = collect($this->buildRoomGroups($booking->passengers, $booking->rooms))
+                ->map(function (array $roomGroup) use (&$globalRoomNumber): array {
+                    $roomGroup['room_number'] = (string) (++$globalRoomNumber);
+
+                    return $roomGroup;
+                })
+                ->all();
+
             $groupedData[$booking->booking_number] = [
                 'contact_phone' => $booking->contact_phone,
                 'contact_notes' => $booking->contact_notes,
-                'rooms' => $this->buildRoomGroups($booking->passengers, $booking->rooms),
+                'rooms' => $rooms,
                 'total_pax' => $booking->passengers->count(),
             ];
         }
@@ -341,11 +351,14 @@ class RoomListingController extends Controller
 
         $roomData = [];
 
+        $globalRoomNumber = 0;
+
         foreach ($bookings as $booking) {
             $roomGroups = $this->buildRoomGroups($booking->passengers, $booking->rooms);
 
             foreach ($roomGroups as $roomIndex => $roomGroup) {
                 $passengers = collect($roomGroup['passengers'])->values();
+                $displayRoomNumber = (string) (++$globalRoomNumber);
 
                 foreach ($passengers as $passenger) {
                     $roomData[] = [
@@ -368,7 +381,7 @@ class RoomListingController extends Controller
                           : null,
                         'room_type' => $roomGroup['room_type'],
                         'room_capacity' => max(1, $passengers->count()),
-                        'room_number' => $roomGroup['room_number'] ?? (string) ($roomIndex + 1),
+                        'room_number' => $displayRoomNumber,
                         'room_group_key' => $roomGroup['room_key'] ?? "room-{$roomIndex}",
                         'price_category' => $passenger->price_category,
                         'visa_number' => $passenger->visa_number,

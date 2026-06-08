@@ -418,13 +418,13 @@ export default function Landing() {
                             </a>
                             <div className="flex flex-col gap-3 pt-4 border-t border-border">
                                 <a
-                                    href="/login"
+                                    href="/affiliate/login"
                                     className="text-center font-bold py-2 bg-muted rounded-lg"
                                 >
                                     {t.navLogin}
                                 </a>
                                 <a
-                                    href="/register"
+                                    href="/affiliate/register"
                                     className="text-center font-bold py-2 bg-primary text-primary-foreground rounded-lg"
                                 >
                                     {t.navRegister}
@@ -471,7 +471,7 @@ export default function Landing() {
                             </p>
                             <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
                                 <a
-                                    href="/register"
+                                    href="/affiliate/register"
                                     className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-4 rounded-xl font-semibold shadow-lg shadow-primary/20 transition-all active:scale-95 flex justify-center items-center gap-2"
                                 >
                                     {t.heroBtn1} <ArrowRight size={18} />
@@ -750,7 +750,7 @@ export default function Landing() {
                                     {t.ctaDesc}
                                 </p>
                                 <a
-                                    href="/register"
+                                    href="/affiliate/register"
                                     className="inline-block bg-background text-primary hover:bg-muted px-10 py-5 rounded-2xl font-bold transition-all active:scale-95 shadow-xl text-lg"
                                 >
                                     {t.ctaBtn}

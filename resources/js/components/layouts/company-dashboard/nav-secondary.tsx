@@ -1,11 +1,12 @@
 import { useLocale } from '@/components/locale-context';
 import { SidebarGroup, SidebarGroupLabel } from '@/components/ui/sidebar';
 import { LOCALES } from '@/config/locale';
+import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import {
     HelpCircleIcon,
     LanguagesIcon,
     MoonIcon,
-    Share2Icon,
+    PhoneCallIcon,
     SunIcon,
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
@@ -15,12 +16,29 @@ import {
     type MenuItem,
 } from '../components/sidebar-menu-renderer';
 
+function whatsappUrl(phone?: string | null) {
+    const digits = (phone || '').replace(/\D/g, '');
+
+    if (!digits) {
+        return '#';
+    }
+
+    const normalizedPhone = digits.startsWith('0')
+        ? `62${digits.slice(1)}`
+        : digits;
+
+    return `https://wa.me/${normalizedPhone}`;
+}
+
 export function NavSecondary({
     onNavigateAway,
 }: {
     onNavigateAway?: (href: string) => void;
 }) {
     const { locale, setLocale } = useLocale();
+    const { travelboostWhatsapp } = usePageSharedDataProps() as {
+        travelboostWhatsapp?: string | null;
+    };
     const localeInfo = useMemo(() => {
         return (
             LOCALES.find((l) => l.code === locale) ||
@@ -32,15 +50,13 @@ export function NavSecondary({
         return [
             {
                 title: 'Help',
-                urlOrAction: 'https://wa.me/6289654401230',
-                target: '_blank',
+                urlOrAction: '#',
                 icon: HelpCircleIcon,
             },
             {
-                title: 'Tell a Friend',
-                urlOrAction:
-                    'https://wa.me/?text=Halo, ikuti TravelBoost untuk mendapatkan kemudahan dalam merencanakan perjalananmu! Kunjungi https://travelboost.co.id sekarang juga!',
-                icon: Share2Icon,
+                title: 'Contact TravelBoost',
+                urlOrAction: whatsappUrl(travelboostWhatsapp),
+                icon: PhoneCallIcon,
                 target: '_blank',
             },
             {
@@ -73,7 +89,7 @@ export function NavSecondary({
                 })),
             },
         ] as MenuItem[];
-    }, [resolvedTheme, setTheme, localeInfo, setLocale]);
+    }, [resolvedTheme, setTheme, localeInfo, setLocale, travelboostWhatsapp]);
     return (
         <SidebarGroup className="gap-1.5 px-2 group-data-[collapsible=icon]:hidden">
             <SidebarGroupLabel className="px-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">

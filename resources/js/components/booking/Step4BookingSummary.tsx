@@ -97,6 +97,7 @@ type Step4Props = {
     paymentUnavailableReason?: string | null;
     paymentErrorMessage?: string | null;
     showProformaInvoiceButton?: boolean;
+    proformaInvoiceUrl?: string | null;
     manualPaymentAvailable?: boolean;
     onlinePaymentAvailable?: boolean;
     downPaymentPaidAt?: string | null;
@@ -157,6 +158,7 @@ export default function Step4BookingSummary({
     paymentUnavailableReason = null,
     paymentErrorMessage = null,
     showProformaInvoiceButton = false,
+    proformaInvoiceUrl = null,
     manualPaymentAvailable = true,
     onlinePaymentAvailable = true,
     downPaymentPaidAt = null,
@@ -443,21 +445,38 @@ export default function Step4BookingSummary({
     const proformaInvoiceButton = showProformaInvoiceButton ? (
         <Tooltip>
             <TooltipTrigger asChild>
-                <span className="inline-flex">
-                    <Button
-                        type="button"
-                        variant="outline"
-                        size="lg"
-                        disabled
-                        className="gap-2"
-                    >
-                        <ReceiptIcon className="size-4" />
-                        Proforma Invoice
+                {proformaInvoiceUrl ? (
+                    <Button variant="outline" size="lg" className="gap-2" asChild>
+                        <a
+                            href={proformaInvoiceUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                        >
+                            <ReceiptIcon className="size-4" />
+                            Proforma Invoice
+                        </a>
                     </Button>
-                </span>
+                ) : (
+                    <span className="inline-flex">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="lg"
+                            disabled
+                            className="gap-2"
+                        >
+                            <ReceiptIcon className="size-4" />
+                            Proforma Invoice
+                        </Button>
+                    </span>
+                )}
             </TooltipTrigger>
             <TooltipContent>
-                <p>Proforma invoice will be available soon</p>
+                <p>
+                    {proformaInvoiceUrl
+                        ? 'Open proforma invoice in a new tab'
+                        : 'Proforma invoice is not available yet'}
+                </p>
             </TooltipContent>
         </Tooltip>
     ) : null;

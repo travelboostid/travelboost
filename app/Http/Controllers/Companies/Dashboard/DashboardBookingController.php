@@ -25,6 +25,7 @@ use App\Models\TourPrice;
 use App\Models\TourSchedule;
 use App\Models\User;
 use App\Models\VendorAgentPartner;
+use App\Services\BookingContactPaymentEmailService;
 use App\Services\BookingDownPaymentRuleService;
 use App\Services\BookingNumberService;
 use App\Services\BookingPaymentReceiverService;
@@ -779,6 +780,9 @@ class DashboardBookingController extends Controller
                 $payment->fresh()
             );
         });
+
+        app(BookingContactPaymentEmailService::class)
+            ->sendOnlinePaymentConfirmedIfEligible($booking->fresh(), $payment->fresh());
 
         return response()->json([
             'booking' => [

@@ -3,15 +3,12 @@
 namespace Database\Seeders\Production;
 
 use Database\Seeders\Common\AppConfigSeeder;
-use Database\Seeders\Common\CompanySeeder;
 use Database\Seeders\Common\ContinentSeeder;
 use Database\Seeders\Common\CountrySeeder;
 use Database\Seeders\Common\CurrencySeeder;
 use Database\Seeders\Common\PriceCategorySeeder;
 use Database\Seeders\Common\RegionSeeder;
 use Database\Seeders\Common\RolePermissionSeeder;
-use Database\Seeders\Common\TourSeeder;
-use Database\Seeders\Common\UserSeeder;
 use Illuminate\Database\Seeder;
 
 class ProductionSeeder extends Seeder
@@ -24,16 +21,17 @@ class ProductionSeeder extends Seeder
         $this->call([
             AppConfigSeeder::class,
             RolePermissionSeeder::class,
-            UserSeeder::class,
-            CompanySeeder::class,
+            ProductionUserSeeder::class,
             ProductionCompanySeeder::class,
+            ProductionAgentSubscriptionSeeder::class,
+            ProductionAffiliateSeeder::class,
             ContinentSeeder::class,
             RegionSeeder::class,
             CountrySeeder::class,
-            TourSeeder::class,
             CurrencySeeder::class,
             PriceCategorySeeder::class,
-            // GrandChinaTravelTourSeeder::class,
+            GrandChinaTravelTourSeeder::class,
+            IslamicChinaTravelTourSeeder::class,
         ]);
     }
 }
