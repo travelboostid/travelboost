@@ -91,6 +91,7 @@ type Step4Props = {
     };
     readOnly?: boolean;
     hidePaymentControls?: boolean;
+    preservePaymentPanelColumns?: boolean;
     addOnsReadOnly?: boolean;
     downPaymentAvailable?: boolean;
     fullPaymentAvailable?: boolean;
@@ -152,6 +153,7 @@ export default function Step4BookingSummary({
     vendorBankInfo,
     readOnly = false,
     hidePaymentControls = false,
+    preservePaymentPanelColumns = false,
     addOnsReadOnly = false,
     downPaymentAvailable = true,
     fullPaymentAvailable = true,
@@ -290,7 +292,8 @@ export default function Step4BookingSummary({
     const isBalancePaymentMode = hasDownPayment || forceBalancePayment;
     const showPaymentOptionSelector =
         !paymentControlsHidden && !isBalancePaymentMode;
-    const showPaymentPanelColumns = !paymentControlsHidden;
+    const showPaymentPanelColumns =
+        !paymentControlsHidden || preservePaymentPanelColumns;
     const downPaymentPaidDate = formatPaymentDate(downPaymentPaidAt);
     const downPaymentAmountLabel =
         effectiveDownPaymentRule?.mode === 'grand_total_percent'
@@ -446,7 +449,12 @@ export default function Step4BookingSummary({
         <Tooltip>
             <TooltipTrigger asChild>
                 {proformaInvoiceUrl ? (
-                    <Button variant="outline" size="lg" className="gap-2" asChild>
+                    <Button
+                        variant="outline"
+                        size="lg"
+                        className="gap-2"
+                        asChild
+                    >
                         <a
                             href={proformaInvoiceUrl}
                             target="_blank"

@@ -2690,6 +2690,9 @@ export default function Page() {
                                                 }
                                                 vendorBankInfo={vendorBankInfo}
                                                 readOnly={isReviewMode}
+                                                preservePaymentPanelColumns={
+                                                    isReviewMode
+                                                }
                                                 addOnsReadOnly={
                                                     shouldUseSnapshotTotals
                                                 }
