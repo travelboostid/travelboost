@@ -4,8 +4,7 @@
  * Travelboost
  * OpenAPI spec version: 0.0.1
  */
-import type { MediasDestroy200Message } from './mediasDestroy200Message';
 
 export type MediasDestroy200 = {
-    message: MediasDestroy200Message;
+    message: 'Media deleted';
 };

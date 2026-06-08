@@ -8,6 +8,7 @@
 export type GetPaymentsStatus =
     (typeof GetPaymentsStatus)[keyof typeof GetPaymentsStatus];
 
+// eslint-disable-next-line @typescript-eslint/no-redeclare
 export const GetPaymentsStatus = {
     pending: 'pending',
     paid: 'paid',

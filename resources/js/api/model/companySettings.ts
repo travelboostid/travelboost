@@ -35,4 +35,5 @@ export interface CompanySettings {
     updated_at: CompanySettingsUpdatedAt;
     full_payment_deadline: number;
     document_completed_deadline: number;
+    minimum_down_payment_value: string;
 }

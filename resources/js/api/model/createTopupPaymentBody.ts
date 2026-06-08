@@ -12,4 +12,5 @@ export type CreateTopupPaymentBody = {
     owner_id: CreateTopupPaymentBodyOwnerId;
     /** @minimum 100000 */
     amount: number;
+    payment_method_id: number;
 };

@@ -8,6 +8,7 @@
 export type CreateTopupPaymentBodyOwnerType =
     (typeof CreateTopupPaymentBodyOwnerType)[keyof typeof CreateTopupPaymentBodyOwnerType];
 
+// eslint-disable-next-line @typescript-eslint/no-redeclare
 export const CreateTopupPaymentBodyOwnerType = {
     user: 'user',
     company: 'company',

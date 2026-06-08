@@ -7,6 +7,7 @@
 
 export type TourStatus = (typeof TourStatus)[keyof typeof TourStatus];
 
+// eslint-disable-next-line @typescript-eslint/no-redeclare
 export const TourStatus = {
     active: 'active',
     inactive: 'inactive',

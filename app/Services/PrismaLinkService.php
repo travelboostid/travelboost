@@ -25,6 +25,10 @@ class PrismaLinkService
 
     private const PRODUCTION_BASE_URL = 'https://api3.plink.co.id/gateway/v2';
 
+    private const SANDBOX_WEB_BASE_URL = 'https://secure2-staging.plink.co.id';
+
+    private const PRODUCTION_WEB_BASE_URL = 'https://secure3.plink.co.id';
+
     private const SUBMIT_TRANSACTION_ENDPOINT = '/payment/integration/transaction/api/submit-trx';
 
     private const CHECK_STATUS_ENDPOINT = '/payment/integration/transaction/api/inquiry-transaction';
@@ -32,6 +36,20 @@ class PrismaLinkService
     private const INTEGRATION_TYPE_PAYMENT_PAGE = '01';
 
     private const SUCCESS_RESPONSE_CODE = 'PL000';
+
+    private const MAX_MERCHANT_REF_NO_LENGTH = 24;
+
+    private const MAX_INVOICE_NUMBER_LENGTH = 16;
+
+    private const MAX_PRODUCT_DETAILS_LENGTH = 97;
+
+    private const MAX_USER_IP_ADDRESS_LENGTH = 15;
+
+    private const MAX_USER_NAME_LENGTH = 40;
+
+    private const MAX_USER_EMAIL_LENGTH = 40;
+
+    private const MAX_REMARKS_LENGTH = 100;
 
     /**
      * @param  array{
@@ -47,6 +65,7 @@ class PrismaLinkService
      *     user_phone_number?: string,
      *     remarks?: string,
      *     payment_method?: string,
+     *     bank_id?: string,
      *     validity?: string,
      *     va_name?: string,
      *     backend_callback_url?: string,
@@ -64,14 +83,14 @@ class PrismaLinkService
             'transaction_currency' => 'IDR',
             'merchant_key_id' => (string) config('prismalink.merchant_key_id', ''),
             'merchant_id' => (string) config('prismalink.merchant_id', ''),
-            'merchant_ref_no' => $params['merchant_ref_no'],
+            'merchant_ref_no' => $this->normalizeMerchantRefNo($params['merchant_ref_no']),
             'backend_callback_url' => $params['backend_callback_url'] ?? (string) config('prismalink.backend_callback_url', ''),
             'frontend_callback_url' => $params['frontend_callback_url'] ?? (string) config('prismalink.frontend_callback_url', ''),
-            'user_id' => $params['user_id'],
-            'user_device_id' => $params['user_device_id'],
-            'user_ip_address' => $params['user_ip_address'],
-            'product_details' => json_encode($params['product_details'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
-            'invoice_number' => $params['invoice_number'],
+            'user_id' => $this->truncateField((string) $params['user_id'], 40),
+            'user_device_id' => $this->truncateField((string) $params['user_device_id'], 100),
+            'user_ip_address' => $this->normalizeUserIpAddress($params['user_ip_address']),
+            'product_details' => $this->encodeProductDetails($params['product_details']),
+            'invoice_number' => $this->normalizeInvoiceNumber($params['invoice_number']),
             'transaction_amount' => (int) $params['transaction_amount'],
             'transaction_date_time' => $this->formatDateTime($now),
             'integration_type' => self::INTEGRATION_TYPE_PAYMENT_PAGE,
@@ -79,11 +98,11 @@ class PrismaLinkService
         ];
 
         if (isset($params['user_name'])) {
-            $body['user_name'] = $params['user_name'];
+            $body['user_name'] = $this->truncateField((string) $params['user_name'], self::MAX_USER_NAME_LENGTH);
         }
 
         if (isset($params['user_email'])) {
-            $body['user_email'] = $params['user_email'];
+            $body['user_email'] = $this->truncateField((string) $params['user_email'], self::MAX_USER_EMAIL_LENGTH);
         }
 
         if (isset($params['user_phone_number'])) {
@@ -91,11 +110,15 @@ class PrismaLinkService
         }
 
         if (isset($params['remarks'])) {
-            $body['remarks'] = $params['remarks'];
+            $body['remarks'] = $this->truncateField((string) $params['remarks'], self::MAX_REMARKS_LENGTH);
         }
 
         if (isset($params['payment_method'])) {
             $body['payment_method'] = $params['payment_method'];
+        }
+
+        if (isset($params['bank_id'])) {
+            $body['bank_id'] = (string) $params['bank_id'];
         }
 
         if (isset($params['va_name'])) {
@@ -106,7 +129,7 @@ class PrismaLinkService
 
         if (! $this->isSuccessResponse($response)) {
             throw new PrismaLinkException(
-                $response['response_message'] ?? 'PrismaLink submit transaction failed',
+                $this->formatErrorMessage($response, 'PrismaLink submit transaction failed'),
                 $response['response_code'] ?? null,
                 $response,
             );
@@ -132,7 +155,7 @@ class PrismaLinkService
 
         if (! $this->isSuccessResponse($response)) {
             throw new PrismaLinkException(
-                $response['response_message'] ?? 'PrismaLink check transaction status failed',
+                $this->formatErrorMessage($response, 'PrismaLink check transaction status failed'),
                 $response['response_code'] ?? null,
                 $response,
             );
@@ -179,9 +202,149 @@ class PrismaLinkService
         return $at->format('Y-m-d H:i:s.v O');
     }
 
+    public function normalizeMerchantRefNo(string $merchantRefNo): string
+    {
+        $normalized = trim($merchantRefNo);
+
+        if ($normalized === '') {
+            throw new PrismaLinkException('PrismaLink merchant_ref_no is required');
+        }
+
+        return $this->truncateField($normalized, self::MAX_MERCHANT_REF_NO_LENGTH);
+    }
+
+    public function normalizeInvoiceNumber(string $invoiceNumber): string
+    {
+        $normalized = trim($invoiceNumber);
+
+        if ($normalized === '') {
+            throw new PrismaLinkException('PrismaLink invoice_number is required');
+        }
+
+        return $this->truncateField($normalized, self::MAX_INVOICE_NUMBER_LENGTH);
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $productDetails
+     */
+    public function encodeProductDetails(array $productDetails): string
+    {
+        if ($productDetails === []) {
+            throw new PrismaLinkException('PrismaLink product_details is required');
+        }
+
+        $item = $productDetails[0];
+        $normalizedItem = [
+            'item_code' => $this->truncateField((string) ($item['item_code'] ?? 'item'), 12),
+            'item_title' => $this->truncateField((string) ($item['item_title'] ?? 'Item'), 24),
+            'quantity' => (int) ($item['quantity'] ?? 1),
+            'total' => (string) (int) ($item['total'] ?? 0),
+            'currency' => $this->truncateField((string) ($item['currency'] ?? 'IDR'), 3),
+        ];
+
+        $encoded = json_encode([$normalizedItem], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+        while (strlen((string) $encoded) > self::MAX_PRODUCT_DETAILS_LENGTH && strlen($normalizedItem['item_title']) > 1) {
+            $normalizedItem['item_title'] = $this->truncateField(
+                $normalizedItem['item_title'],
+                strlen($normalizedItem['item_title']) - 1,
+            );
+            $encoded = json_encode([$normalizedItem], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        }
+
+        while (strlen((string) $encoded) > self::MAX_PRODUCT_DETAILS_LENGTH && strlen($normalizedItem['item_code']) > 1) {
+            $normalizedItem['item_code'] = $this->truncateField(
+                $normalizedItem['item_code'],
+                strlen($normalizedItem['item_code']) - 1,
+            );
+            $encoded = json_encode([$normalizedItem], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        }
+
+        if (strlen((string) $encoded) > self::MAX_PRODUCT_DETAILS_LENGTH) {
+            throw new PrismaLinkException('PrismaLink product_details exceeds maximum length of 97 characters');
+        }
+
+        return (string) $encoded;
+    }
+
+    public function normalizeUserIpAddress(?string $ip): string
+    {
+        $ip = trim((string) ($ip ?? '127.0.0.1'));
+
+        if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) !== false) {
+            return $this->truncateField($ip, self::MAX_USER_IP_ADDRESS_LENGTH);
+        }
+
+        return '127.0.0.1';
+    }
+
+    public function buildMerchantRefNo(int $paymentId): string
+    {
+        return substr(
+            'PL'.str_pad((string) $paymentId, 10, '0', STR_PAD_LEFT).substr(uniqid(), -12),
+            0,
+            self::MAX_MERCHANT_REF_NO_LENGTH,
+        );
+    }
+
+    public function parsePaymentIdFromMerchantRefNo(string $merchantRefNo): ?int
+    {
+        $merchantRefNo = trim($merchantRefNo);
+
+        if ($merchantRefNo === '') {
+            return null;
+        }
+
+        if (str_starts_with($merchantRefNo, 'PL') && strlen($merchantRefNo) >= 12) {
+            $paymentId = (int) ltrim(substr($merchantRefNo, 2, 10), '0');
+
+            return $paymentId > 0 ? $paymentId : null;
+        }
+
+        if (str_contains($merchantRefNo, '-')) {
+            $legacyPaymentId = strstr($merchantRefNo, '-', true);
+
+            return is_numeric($legacyPaymentId) ? (int) $legacyPaymentId : null;
+        }
+
+        return is_numeric($merchantRefNo) ? (int) $merchantRefNo : null;
+    }
+
     public function buildMac(string $body): string
     {
         return hash_hmac('sha256', $body, (string) config('prismalink.secret_key', ''));
+    }
+
+    public function resolvePaymentPageUrl(?string $paymentPageUrl): ?string
+    {
+        if (! is_string($paymentPageUrl) || trim($paymentPageUrl) === '') {
+            return null;
+        }
+
+        $paymentPageUrl = trim($paymentPageUrl);
+        $webBaseUrl = rtrim($this->webBaseUrl(), '/');
+
+        if (str_starts_with($paymentPageUrl, 'http://') || str_starts_with($paymentPageUrl, 'https://')) {
+            $parts = parse_url($paymentPageUrl);
+
+            if (! is_array($parts) || ! isset($parts['host'])) {
+                return $paymentPageUrl;
+            }
+
+            if (str_contains((string) $parts['host'], 'plink.co.id')) {
+                return $paymentPageUrl;
+            }
+
+            $path = ($parts['path'] ?? '').(isset($parts['query']) ? '?'.$parts['query'] : '');
+
+            if ($path === '' || ! str_contains($path, 'paymentpage') && ! str_contains($path, 'directdebit')) {
+                return $paymentPageUrl;
+            }
+
+            return $webBaseUrl.(str_starts_with($path, '/') ? $path : '/'.$path);
+        }
+
+        return $webBaseUrl.(str_starts_with($paymentPageUrl, '/') ? $paymentPageUrl : '/'.$paymentPageUrl);
     }
 
     private function baseUrl(): string
@@ -189,6 +352,19 @@ class PrismaLinkService
         return config('prismalink.is_production')
             ? self::PRODUCTION_BASE_URL
             : self::SANDBOX_BASE_URL;
+    }
+
+    private function webBaseUrl(): string
+    {
+        $configured = config('prismalink.web_base_url');
+
+        if (is_string($configured) && $configured !== '') {
+            return $configured;
+        }
+
+        return config('prismalink.is_production')
+            ? self::PRODUCTION_WEB_BASE_URL
+            : self::SANDBOX_WEB_BASE_URL;
     }
 
     /**
@@ -236,6 +412,42 @@ class PrismaLinkService
             throw new PrismaLinkException('PrismaLink API returned an invalid response');
         }
 
+        if (($decoded['response_code'] ?? '') === 'PL001') {
+            Log::warning('PrismaLink API returned INVALID_PARAMETER', [
+                'endpoint' => $endpoint,
+                'response' => $decoded,
+                'request_lengths' => [
+                    'merchant_ref_no' => strlen((string) ($body['merchant_ref_no'] ?? '')),
+                    'invoice_number' => strlen((string) ($body['invoice_number'] ?? '')),
+                    'product_details' => strlen((string) ($body['product_details'] ?? '')),
+                    'user_ip_address' => strlen((string) ($body['user_ip_address'] ?? '')),
+                ],
+            ]);
+        }
+
         return $decoded;
+    }
+
+    /**
+     * @param  array<string, mixed>  $response
+     */
+    private function formatErrorMessage(array $response, string $fallback): string
+    {
+        $message = trim((string) ($response['response_message'] ?? $fallback));
+
+        if (filled($response['response_description'] ?? null)) {
+            $message .= ': '.trim((string) $response['response_description']);
+        }
+
+        return $message;
+    }
+
+    private function truncateField(string $value, int $maxLength): string
+    {
+        if ($maxLength <= 0) {
+            return '';
+        }
+
+        return mb_substr($value, 0, $maxLength);
     }
 }

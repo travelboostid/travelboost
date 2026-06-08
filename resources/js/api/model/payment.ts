@@ -5,6 +5,7 @@
  * OpenAPI spec version: 0.0.1
  */
 import type { PaymentCreatedAt } from './paymentCreatedAt';
+import type { PaymentExpiredAt } from './paymentExpiredAt';
 import type { PaymentPaidAt } from './paymentPaidAt';
 import type { PaymentPayload } from './paymentPayload';
 import type { PaymentPaymentMethod } from './paymentPaymentMethod';
@@ -22,6 +23,7 @@ export interface Payment {
     amount: string;
     status: PaymentStatus;
     payload: PaymentPayload;
+    expired_at: PaymentExpiredAt;
     paid_at: PaymentPaidAt;
     created_at: PaymentCreatedAt;
     updated_at: PaymentUpdatedAt;

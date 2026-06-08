@@ -5,7 +5,9 @@ use App\Http\Controllers\CaddyController;
 use App\Http\Controllers\Google\GoogleAuthController;
 use App\Http\Controllers\HomeController as BaseHomeController;
 use App\Http\Controllers\HomeDispatcherController;
+use App\Http\Controllers\PrismaLinkCallbackController;
 use App\Http\Controllers\Webhooks\MidtransWebhookController;
+use App\Http\Controllers\Webhooks\PrismaLinkWebhookController;
 use App\Http\Middleware\DomainResolver;
 use Illuminate\Support\Facades\Route;
 use Laravolt\Indonesia\Models\City;
@@ -42,8 +44,17 @@ Route::middleware(['auth'])->group(function () {
 });
 
 Route::prefix('webhooks')->group(function () {
-    Route::middleware(['web'])->group(function () {
-        Route::post('midtrans/notification', [MidtransWebhookController::class, 'handleNotification']);
+    Route::prefix('midtrans')->group(function () {
+        Route::middleware(['web'])->group(function () {
+            Route::post('notification', [MidtransWebhookController::class, 'handleNotification']);
+        });
+    });
+    Route::prefix('prismalink')->middleware(['web'])->group(function () {
+        Route::get('frontend-callback', PrismaLinkCallbackController::class)
+            ->name('prismalink.frontend-callback');
+        Route::post('backend-callback', [PrismaLinkWebhookController::class, 'backendCallback'])
+            ->name('prismalink.backend-callback');
+        Route::post('callback', [PrismaLinkWebhookController::class, 'backendCallback']);
     });
 });
 

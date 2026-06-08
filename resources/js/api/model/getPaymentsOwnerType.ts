@@ -8,6 +8,7 @@
 export type GetPaymentsOwnerType =
     (typeof GetPaymentsOwnerType)[keyof typeof GetPaymentsOwnerType];
 
+// eslint-disable-next-line @typescript-eslint/no-redeclare
 export const GetPaymentsOwnerType = {
     user: 'user',
     company: 'company',
