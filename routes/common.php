@@ -122,50 +122,50 @@ Route::middleware('guest')->group(function () {
             ? redirect()->route('login')->with('status', __($status))
             : back()->withErrors(['email' => __($status)]);
     })->name('password.update');
-
-    Route::get('/verify-email', function (Request $request) {
-        if ($request->user()?->hasVerifiedEmail()) {
-            return redirect()->route('dashboard', absolute: false);
-        }
-
-        return Inertia::render('auth/verify-email', [
-            'status' => $request->session()->get('status'),
-        ]);
-    })->middleware('auth')->name('verification.notice');
-
-    Route::post('/email/verification-notification', function (Request $request) {
-        if ($request->user()?->hasVerifiedEmail()) {
-            return redirect()->route('dashboard', absolute: false);
-        }
-
-        $request->user()?->sendEmailVerificationNotification();
-
-        return back()->with('status', 'verification-link-sent');
-    })->middleware('auth')->name('verification.send');
-
-    Route::get('/verify-email/{id}/{hash}', function (Request $request) {
-        $user = $request->user();
-
-        abort_unless($user, 403);
-        abort_unless(hash_equals((string) $request->route('id'), (string) $user->getKey()), 403);
-        abort_unless(hash_equals((string) $request->route('hash'), sha1($user->getEmailForVerification())), 403);
-
-        if (! $user->hasVerifiedEmail()) {
-            $user->markEmailAsVerified();
-            event(new Verified($user));
-        }
-
-        return redirect()->route('dashboard', absolute: false).'?verified=1';
-    })->middleware(['auth', 'signed'])->name('verification.verify');
-
-    Route::get('/two-factor-challenge', function (Request $request) {
-        if (! $request->session()->has('login.id')) {
-            return redirect()->route('login');
-        }
-
-        return Inertia::render('auth/two-factor-challenge');
-    })->name('two-factor.login');
 });
+
+Route::get('/two-factor-challenge', function (Request $request) {
+    if (! $request->session()->has('login.id')) {
+        return redirect()->route('login');
+    }
+
+    return Inertia::render('auth/two-factor-challenge');
+})->name('two-factor.login');
+
+Route::get('/verify-email', function (Request $request) {
+    if ($request->user()?->hasVerifiedEmail()) {
+        return redirect()->route('dashboard', absolute: false);
+    }
+
+    return Inertia::render('auth/verify-email', [
+        'status' => $request->session()->get('status'),
+    ]);
+})->middleware('auth')->name('verification.notice');
+
+Route::post('/email/verification-notification', function (Request $request) {
+    if ($request->user()?->hasVerifiedEmail()) {
+        return redirect()->route('dashboard', absolute: false);
+    }
+
+    $request->user()?->sendEmailVerificationNotification();
+
+    return redirect()->route('home')->with('status', 'verification-link-sent');
+})->middleware('auth')->name('verification.send');
+
+Route::get('/verify-email/{id}/{hash}', function (Request $request) {
+    $user = $request->user();
+
+    abort_unless($user, 403);
+    abort_unless(hash_equals((string) $request->route('id'), (string) $user->getKey()), 403);
+    abort_unless(hash_equals((string) $request->route('hash'), sha1($user->getEmailForVerification())), 403);
+
+    if (! $user->hasVerifiedEmail()) {
+        $user->markEmailAsVerified();
+        event(new Verified($user));
+    }
+
+    return redirect(route('dashboard', absolute: false).'?verified=1');
+})->middleware(['auth', 'signed'])->name('verification.verify');
 
 Route::post('/logout', function (Request $request) {
     Auth::logout();
