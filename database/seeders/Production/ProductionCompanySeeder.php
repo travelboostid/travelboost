@@ -5,10 +5,12 @@ namespace Database\Seeders\Production;
 use App\Enums\CompanyTeamStatus;
 use App\Enums\CompanyType;
 use App\Enums\UserStatus;
+use App\Enums\VendorAgentPartnerStatus;
 use App\Models\Company;
 use App\Models\CompanyTeam;
 use App\Models\Role;
 use App\Models\User;
+use App\Models\VendorAgentPartner;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
@@ -21,12 +23,14 @@ class ProductionCompanySeeder extends Seeder
                 'name' => 'Grand China Travel',
                 'username' => 'grandchinatravel',
                 'email' => 'grandchinatravel@travelboost.co.id',
+                'phone' => '6281230001001',
                 'password' => env('GRAND_CHINA_TRAVEL_PASSWORD', 'grandchinatravel'),
             ],
             [
                 'name' => 'Islamic China Travel',
                 'username' => 'islamicchinatravel',
                 'email' => 'islamicchinatravel@travelboost.co.id',
+                'phone' => '6281230001002',
                 'password' => env('ISLAMIC_CHINA_TRAVEL_PASSWORD', 'islamicchinatravel'),
             ],
         ];
@@ -38,7 +42,7 @@ class ProductionCompanySeeder extends Seeder
                     'name' => $vendor['name'],
                     'email' => $vendor['email'],
                     'address' => 'Jakarta',
-                    'phone' => '',
+                    'phone' => $vendor['phone'],
                     'status' => UserStatus::ACTIVE,
                     'password' => Hash::make($vendor['password']),
                 ]
@@ -53,7 +57,8 @@ class ProductionCompanySeeder extends Seeder
                     'name' => $vendor['name'],
                     'email' => $vendor['email'],
                     'address' => 'Jakarta',
-                    'phone' => '',
+                    'phone' => $vendor['phone'],
+                    'customer_service_phone' => $vendor['phone'],
                 ]
             );
 
@@ -83,6 +88,68 @@ class ProductionCompanySeeder extends Seeder
                 ->firstOrFail();
 
             $user->addRole($superadmin);
+        }
+
+        $john = User::query()->where('username', 'john')->first();
+
+        if ($john) {
+            $company = Company::query()->firstOrCreate(
+                ['username' => 'john'],
+                [
+                    'type' => CompanyType::AGENT,
+                    'name' => 'John Company',
+                    'email' => $john->email,
+                    'address' => 'Jakarta',
+                    'phone' => '0123456789',
+                    'customer_service_phone' => '0123456789',
+                ]
+            );
+
+            $company->domain()->updateOrCreate(
+                [],
+                [
+                    'subdomain' => 'john',
+                    'domain_enabled' => true,
+                    'subdomain_enabled' => true,
+                ]
+            );
+
+            CompanyTeam::query()->updateOrCreate(
+                [
+                    'company_id' => $company->id,
+                    'user_id' => $john->id,
+                ],
+                [
+                    'status' => CompanyTeamStatus::ACTIVE,
+                    'is_owner' => true,
+                    'accepted_at' => now(),
+                ]
+            );
+
+            $superadmin = Role::query()
+                ->where('name', "company:{$company->id}:superadmin")
+                ->firstOrFail();
+
+            $john->addRole($superadmin);
+
+            Company::query()
+                ->whereIn('username', ['grandchinatravel', 'islamicchinatravel'])
+                ->each(function (Company $vendor) use ($company): void {
+                    VendorAgentPartner::query()->updateOrCreate(
+                        [
+                            'vendor_id' => $vendor->id,
+                            'agent_id' => $company->id,
+                        ],
+                        [
+                            'status' => VendorAgentPartnerStatus::ACTIVE,
+                            'applied_at' => now(),
+                            'accepted_at' => now(),
+                            'show_vendor_name' => true,
+                            'manual_payment_enabled' => true,
+                            'online_payment_enabled' => true,
+                        ]
+                    );
+                });
         }
     }
 }

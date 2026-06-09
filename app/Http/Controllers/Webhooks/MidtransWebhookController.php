@@ -19,6 +19,7 @@ use App\Models\Payment;
 use App\Models\User;
 use App\Notifications\AffiliateAgentSubscriptionNotification;
 use App\Notifications\AgentSubscriptionActivatedNotification;
+use App\Services\BookingContactPaymentEmailService;
 use App\Services\BookingPaymentWorkflowService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -50,6 +51,7 @@ class MidtransWebhookController extends Controller
 
         if ($this->isAlreadyProcessed($payment)) {
             $this->reconcileAlreadyProcessedBookingPayment($payment);
+            $this->sendBookingContactOnlinePaymentConfirmation($payment);
 
             return response()->json(['message' => 'Payment already processed']);
         }
@@ -84,6 +86,8 @@ class MidtransWebhookController extends Controller
                 $this->notifyBookingPaymentEvent($payment->fresh(), $newStatus);
             }
         });
+
+        $this->sendBookingContactOnlinePaymentConfirmation($payment);
 
         return response()->json(['message' => 'Webhook processed']);
     }
@@ -140,6 +144,24 @@ class MidtransWebhookController extends Controller
             $payment->payable->fresh(),
             $payment->fresh()
         );
+    }
+
+    private function sendBookingContactOnlinePaymentConfirmation(Payment $payment): void
+    {
+        $payment = $payment->fresh();
+
+        if (! $payment || $payment->payable_type !== Booking::class) {
+            return;
+        }
+
+        $payment->load('payable');
+
+        if (! $payment->payable instanceof Booking) {
+            return;
+        }
+
+        app(BookingContactPaymentEmailService::class)
+            ->sendOnlinePaymentConfirmedIfEligible($payment->payable->fresh(), $payment);
     }
 
     private function mapMidtransStatus($midtransStatus)

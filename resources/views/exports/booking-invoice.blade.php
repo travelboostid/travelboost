@@ -16,7 +16,6 @@
     $vatAmount = (float) $booking->tax_amount;
     $grandTotal = (float) ($invoiceGrandTotal ?? $booking->grand_total);
     $invoiceNumber = $invoiceNumber ?? $booking->booking_number;
-    $discountAmount = (float) $discountAmount;
     $paidAmount = (float) ($invoicePaidAmount ?? $paidAmount);
     $isProforma = (bool) ($isProforma ?? false);
     $invoiceTitle = $isProforma ? 'PROFORMA INVOICE' : 'INVOICE';
@@ -24,6 +23,8 @@
     $invoiceDate = $invoiceDate ?? $booking->created_at;
     $remainingAmount = max(0, $grandTotal - $paidAmount);
     $paymentInstructions = collect($paymentInstructions ?? []);
+    $platformFeeAmount = (float) ($platformFeeAmount ?? 0);
+    $nonTaxableAddonSummaryRows = collect($nonTaxableAddonSummaryRows ?? []);
 @endphp
 <!doctype html>
 <html lang="en">
@@ -65,16 +66,6 @@
                        width: 178px;
                        height: 88px;
                        background: #c83b8b;
-                   }
-
-                   .accent:after {
-                       content: "";
-                       position: absolute;
-                       right: 0;
-                       bottom: -54px;
-                       display: {{ $isProforma ? 'none' : 'block' }};
-                       border-top: 54px solid #c83b8b;
-                       border-left: 178px solid transparent;
                    }
 
                    .header {
@@ -159,7 +150,7 @@
 
                    .invoice-word {
                        margin: 0;
-                       font-size: {{ $isProforma ? '15px' : '22px' }};
+                       font-size: {{ $isProforma ? '17px' : '24px' }};
                        font-weight: 700;
                        letter-spacing: 0.08em;
                        line-height: {{ $isProforma ? '1.08' : '1.1' }};
@@ -169,14 +160,11 @@
                        display: block;
                    }
 
-                   .invoice-number {
-                       margin-top: 6px;
-                       font-size: 9px;
+                   .invoice-meta-value {
+                       color: #111827;
+                       font-size: 11px;
                        font-weight: 700;
-                       letter-spacing: 0.04em;
-                       line-height: 1.25;
-                       text-transform: uppercase;
-                       word-break: break-word;
+                       line-height: 1.35;
                    }
 
                    .section-grid {
@@ -419,10 +407,6 @@
                        font-weight: 700;
                    }
 
-                   .summary-table tr.discount td.amount {
-                       color: #c83b8b;
-                   }
-
                    .grand-box {
                        padding: 12px 14px;
                        background: #c83b8b;
@@ -626,7 +610,9 @@
         @if ($isProforma)
             <div class="proforma-notice">
                 <strong>Proforma Invoice Notice</strong>
-                This booking is still in down payment status. This document is issued for payment reference only and must not be used as proof of full settlement.
+                This booking is still in down payment status. This document is
+                issued for payment reference only and must not be used as proof
+                of full settlement.
             </div>
         @endif
 
@@ -642,11 +628,10 @@
                 @endif
             </div>
             <div class="section-cell right">
-                <p class="label">Booking Summary</p>
                 <table class="info-table">
                     <tr>
                         <td class="key">Invoice Number</td>
-                        <td>{{ $invoiceNumber }}</td>
+                        <td class="invoice-meta-value">{{ $invoiceNumber }}</td>
                     </tr>
                     <tr>
                         <td class="key">Invoice Date</td>
@@ -775,17 +760,19 @@
                         </td>
                     </tr>
                     <tr>
-                        <td>Other Charges</td>
+                        <td>Platform Fee</td>
                         <td class="amount">
-                            {{ $formatCurrency($otherChargeAmount) }}
+                            {{ $formatCurrency($platformFeeAmount) }}
                         </td>
                     </tr>
-                    <tr class="discount">
-                        <td>Discount</td>
-                        <td class="amount">
-                            {{ $discountAmount > 0 ? '-'.$formatCurrency($discountAmount) : $formatCurrency(0) }}
-                        </td>
-                    </tr>
+                    @foreach ($nonTaxableAddonSummaryRows as $addonSummary)
+                        <tr>
+                            <td>{{ $addonSummary['label'] }}</td>
+                            <td class="amount">
+                                {{ $formatCurrency($addonSummary['amount']) }}
+                            </td>
+                        </tr>
+                    @endforeach
                     <tr class="total">
                         <td>Grand Total</td>
                         <td class="amount">
@@ -812,8 +799,11 @@
 
         <div class="paid-stamp">
             <div class="paid-left">
-                <span class="stamp {{ $isProforma ? 'proforma' : '' }}">{{ $invoiceStatus }}</span>
-                @unless($isProforma)
+                <span
+                    class="stamp {{ $isProforma ? 'proforma' : '' }}"
+                    >{{ $invoiceStatus }}</span
+                >
+                @unless ($isProforma)
                     <div class="stamp-date">
                         Payment Date: {{ $formatDate($paymentDate) }}
                     </div>
@@ -825,12 +815,12 @@
                     <div class="payment-total paid-amount">
                         {{ $formatCurrency($paidAmount) }}
                     </div>
-                    <div class="muted" style="margin-top: 8px;">Remaining</div>
+                    <div class="muted" style="margin-top: 8px">Remaining</div>
                     <div class="payment-total remaining-amount">
                         {{ $formatCurrency($remainingAmount) }}
                     </div>
                     @if (! empty($dueDate))
-                        <div class="muted" style="margin-top: 6px;">
+                        <div class="muted" style="margin-top: 6px">
                             Due Date: {{ $formatDate($dueDate) }}
                         </div>
                     @endif

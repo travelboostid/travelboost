@@ -5,12 +5,12 @@ import {
     TooltipContent,
     TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { extractDocumentUrl } from '@/lib/utils';
 import {
     IconBrandFacebook,
     IconCalendarEvent,
     IconPdf,
 } from '@tabler/icons-react';
-import { extractDocumentUrl } from '@/lib/utils';
 import { MessageSquareIcon } from 'lucide-react';
 import BaseTourCard from './BaseTourCard';
 
@@ -108,11 +108,7 @@ export default function AgentMyTourCard({
     const hasItinerary = Boolean(itineraryDocumentUrl);
     const handleViewItinerary = () => {
         if (itineraryDocumentUrl) {
-            window.open(
-                itineraryDocumentUrl,
-                '_blank',
-                'noopener,noreferrer',
-            );
+            window.open(itineraryDocumentUrl, '_blank', 'noopener,noreferrer');
             return;
         }
 

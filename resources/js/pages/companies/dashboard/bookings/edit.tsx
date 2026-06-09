@@ -282,6 +282,10 @@ export default function Page({
     const { company } = usePageSharedDataProps();
     const isAgent = company.type === 'agent';
     const canOpenWizard = editMode === 'full' || editMode === 'documents';
+    const proformaInvoiceUrl =
+        booking.status === 'down payment'
+            ? `/companies/${company.username}/dashboard/bookings/${booking.id}/invoice`
+            : null;
 
     // ── Non-editable guard ───────────────────────────────────────────
     if (!canOpenWizard) {
@@ -355,6 +359,7 @@ export default function Page({
             canEditDocuments={canEditDocuments}
             company={company}
             isAgent={isAgent}
+            proformaInvoiceUrl={proformaInvoiceUrl}
         />
     );
 }
@@ -383,6 +388,7 @@ function EditableWizard({
     canEditDocuments,
     company,
     isAgent,
+    proformaInvoiceUrl,
 }: {
     booking: BookingData;
     tourPrices: TourPrice[];
@@ -407,6 +413,7 @@ function EditableWizard({
     canEditDocuments: boolean;
     company: any;
     isAgent: boolean;
+    proformaInvoiceUrl: string | null;
 }) {
     const departureDate = booking.departure_date?.split('T')[0] ?? '';
 
@@ -1377,6 +1384,9 @@ function EditableWizard({
                                                 showProformaInvoiceButton={
                                                     booking.status ===
                                                     'down payment'
+                                                }
+                                                proformaInvoiceUrl={
+                                                    proformaInvoiceUrl
                                                 }
                                             />
                                         )}

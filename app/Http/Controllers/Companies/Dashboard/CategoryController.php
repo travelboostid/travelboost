@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreTourCategoryRequest;
 use App\Http\Requests\UpdateTourCategoryRequest;
 use App\Models\Company;
+use App\Models\Tour;
 use App\Models\TourCategory;
 use Inertia\Inertia;
 
@@ -50,7 +51,7 @@ class CategoryController extends Controller
 
     public function destroy(Company $company, TourCategory $category)
     {
-        $usedInTours = \App\Models\Tour::query()
+        $usedInTours = Tour::query()
             ->where('category_id', $category->id)
             ->exists();
 

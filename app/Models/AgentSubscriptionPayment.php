@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Notifications\CommissionReceivedNotification;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
@@ -112,7 +113,7 @@ class AgentSubscriptionPayment extends Model
                         $user = User::find($profile->user_id);
                         if ($user) {
                             $user->depositFloat($commissionAmount, ['description' => 'Agent Subscription Commission']);
-                            $user->notify(new \App\Notifications\CommissionReceivedNotification($company->name, $commissionAmount, $tier));
+                            $user->notify(new CommissionReceivedNotification($company->name, $commissionAmount, $tier));
                         }
                     }
 

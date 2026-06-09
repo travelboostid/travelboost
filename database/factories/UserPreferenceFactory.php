@@ -2,10 +2,11 @@
 
 namespace Database\Factories;
 
+use App\Models\UserPreference;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\UserPreference>
+ * @extends Factory<UserPreference>
  */
 class UserPreferenceFactory extends Factory
 {

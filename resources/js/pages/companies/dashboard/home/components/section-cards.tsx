@@ -74,9 +74,7 @@ export function SectionCards({ stats, company }: any) {
                                   type="button"
                                   onClick={() =>
                                       setRevenuePeriod(
-                                          option.value as
-                                              | 'monthly'
-                                              | 'yearly',
+                                          option.value as 'monthly' | 'yearly',
                                       )
                                   }
                                   className={`rounded-full px-2.5 py-1 text-[10px] font-semibold transition ${
@@ -138,9 +136,7 @@ export function SectionCards({ stats, company }: any) {
                                   type="button"
                                   onClick={() =>
                                       setRevenuePeriod(
-                                          option.value as
-                                              | 'monthly'
-                                              | 'yearly',
+                                          option.value as 'monthly' | 'yearly',
                                       )
                                   }
                                   className={`rounded-full px-2.5 py-1 text-[10px] font-semibold transition ${
@@ -182,9 +178,7 @@ export function SectionCards({ stats, company }: any) {
                                   type="button"
                                   onClick={() =>
                                       setCommissionPeriod(
-                                          option.value as
-                                              | 'monthly'
-                                              | 'yearly',
+                                          option.value as 'monthly' | 'yearly',
                                       )
                                   }
                                   className={`rounded-full px-2.5 py-1 text-[10px] font-semibold transition ${

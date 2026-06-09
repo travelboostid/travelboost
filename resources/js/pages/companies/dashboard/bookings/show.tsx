@@ -186,6 +186,10 @@ export default function Page({
 }: PageProps) {
     const { company } = usePageSharedDataProps();
     const isAgent = company.type === 'agent';
+    const proformaInvoiceUrl =
+        booking.status === 'down payment'
+            ? `/companies/${company.username}/dashboard/bookings/${booking.id}/invoice`
+            : null;
 
     return (
         <ReadOnlyWizard
@@ -201,6 +205,7 @@ export default function Page({
             downPaymentPaidAt={downPaymentPaidAt}
             company={company}
             isAgent={isAgent}
+            proformaInvoiceUrl={proformaInvoiceUrl}
         />
     );
 }
@@ -222,6 +227,7 @@ function ReadOnlyWizard({
     downPaymentPaidAt,
     company,
     isAgent,
+    proformaInvoiceUrl,
 }: {
     booking: BookingData;
     tourPrices: TourPrice[];
@@ -235,6 +241,7 @@ function ReadOnlyWizard({
     downPaymentPaidAt: string | null;
     company: any;
     isAgent: boolean;
+    proformaInvoiceUrl: string | null;
 }) {
     const departureDate = booking.departure_date?.split('T')[0] ?? '';
 
@@ -544,6 +551,9 @@ function ReadOnlyWizard({
                                                 showProformaInvoiceButton={
                                                     booking.status ===
                                                     'down payment'
+                                                }
+                                                proformaInvoiceUrl={
+                                                    proformaInvoiceUrl
                                                 }
                                             />
                                         )}

@@ -3,27 +3,37 @@ name: tests
 on:
     push:
         branches:
-            - develop
+            - dev
             - main
-            - master
-            - workos
     pull_request:
         branches:
-            - develop
+            - dev
             - main
-            - master
-            - workos
 
 jobs:
     ci:
         runs-on: ubuntu-latest
+        services:
+            postgres:
+                image: ankane/pgvector:latest
+                env:
+                    POSTGRES_DB: testing
+                    POSTGRES_USER: postgres
+                    POSTGRES_PASSWORD: password
+                ports:
+                    - 5432:5432
+                options: >-
+                    --health-cmd pg_isready
+                    --health-interval 10s
+                    --health-timeout 5s
+                    --health-retries 5
         strategy:
             matrix:
-                php-version: ['8.4', '8.5']
+                php-version: ['8.5']
 
         steps:
             - name: Checkout code
-              uses: actions/checkout@v6
+              uses: actions/checkout@v4
 
             - name: Setup PHP
               uses: shivammathur/setup-php@v2
@@ -40,17 +50,22 @@ jobs:
             - name: Install Node Dependencies
               run: npm i
 
-            - name: Install Dependencies
-              run: composer install --no-interaction --prefer-dist --optimize-autoloader
-
             - name: Copy Environment File
               run: cp .env.example .env
+
+            - name: Install Dependencies
+              run: composer install --no-interaction --prefer-dist --optimize-autoloader
 
             - name: Generate Application Key
               run: php artisan key:generate
 
             - name: Build Assets
               run: npm run build
+
+            - name: Enable pgvector extension
+              env:
+                  PGPASSWORD: password
+              run: psql -h 127.0.0.1 -U postgres -d testing -c "CREATE EXTENSION IF NOT EXISTS vector;"
 
             - name: Tests
               run: ./vendor/bin/pest

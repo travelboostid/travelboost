@@ -4,6 +4,7 @@ namespace App\Events;
 
 use App\Http\Resources\ChatMessageResource;
 use App\Models\ChatMessage;
+use App\Models\Company;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PrivateChannel;
@@ -29,7 +30,7 @@ class ChatMessageCreated implements ShouldBroadcast
      * Get the channels the event should broadcast on.
      * Broadcasts to both room channel (for chat updates) and user channels (for notifications).
      *
-     * @return array<int, \Illuminate\Broadcasting\PrivateChannel>
+     * @return array<int, PrivateChannel>
      */
     public function broadcastOn(): array
     {
@@ -46,7 +47,7 @@ class ChatMessageCreated implements ShouldBroadcast
             } elseif ($member->member_type === 'anonymous-user') {
                 $channels[] = new Channel("anonymous-users.{$member->member_id}");
             } elseif ($member->member_type === 'company') {
-                /** @var \App\Models\Company $company */
+                /** @var Company $company */
                 $company = $member->member;
                 $teams = $company->teams()->get(); // Assuming a company has many users
                 foreach ($teams as $team) {

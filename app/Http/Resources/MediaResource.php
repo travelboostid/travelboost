@@ -3,10 +3,11 @@
 namespace App\Http\Resources;
 
 use App\Models\ImageMediaData;
+use App\Models\Media;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
-/** @mixin \App\Models\Media */
+/** @mixin Media */
 class MediaResource extends JsonResource
 {
     public function toArray(Request $request): array
