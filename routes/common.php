@@ -147,6 +147,14 @@ Route::middleware('guest')->group(function () {
         return back()->with('status', 'verification-link-sent');
     })->middleware('auth')->name('verification.send');
 
+    Route::get('/two-factor-challenge', function (Request $request) {
+        if (! $request->session()->has('login.id')) {
+            return redirect()->route('login');
+        }
+
+        return Inertia::render('auth/two-factor-challenge');
+    })->name('two-factor.login');
+
     Route::get('/verify-email/{id}/{hash}', function (Request $request) {
         $user = $request->user();
 
@@ -161,14 +169,6 @@ Route::middleware('guest')->group(function () {
 
         return redirect()->route('dashboard').'?verified=1';
     })->middleware(['auth', 'signed'])->name('verification.verify');
-
-    Route::get('/two-factor-challenge', function (Request $request) {
-        if (! $request->session()->has('login.id')) {
-            return redirect()->route('login');
-        }
-
-        return Inertia::render('auth/two-factor-challenge');
-    })->name('two-factor.login');
 });
 
 Route::post('/logout', function (Request $request) {
@@ -185,9 +185,6 @@ Route::middleware(['auth'])->group(function () {
     Route::patch('/profile', [MeProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [MeProfileController::class, 'destroy'])->name('profile.destroy');
     Route::get('/two-factor', [MeTwoFactorAuthenticationController::class, 'show'])->name('two-factor.show');
-    Route::get('/password/confirm', function () {
-        return Inertia::render('auth/confirm-password');
-    })->name('password.confirm');
     Route::get('/mybookings/{booking}/invoice', [MeHomeController::class, 'bookingInvoice'])
         ->name('home.bookings.invoice');
 
