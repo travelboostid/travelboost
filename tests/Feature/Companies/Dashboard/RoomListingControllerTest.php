@@ -117,6 +117,6 @@ test('room listing loads rows after both tour and departure date are selected', 
         ->component('companies/dashboard/reports/room-listings/index')
         ->has('roomData', 1)
         ->where('roomData.0.first_name', 'John')
-        ->where('roomData.0.room_type', 'Twin')
+        ->where('roomData.0.room_type', 'Twin Room')
         ->where('roomData.0.note', 'Near elevator'));
 });

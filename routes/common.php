@@ -6,6 +6,7 @@ use App\Http\Controllers\Google\GoogleAuthController;
 use App\Http\Controllers\HomeController as BaseHomeController;
 use App\Http\Controllers\HomeDispatcherController;
 use App\Http\Controllers\Me\HomeController as MeHomeController;
+use App\Http\Controllers\Me\Settings\PasswordController as MePasswordController;
 use App\Http\Controllers\Me\Settings\ProfileController as MeProfileController;
 use App\Http\Controllers\Me\Settings\TwoFactorAuthenticationController as MeTwoFactorAuthenticationController;
 use App\Http\Controllers\Webhooks\MidtransWebhookController;
@@ -16,6 +17,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -39,16 +41,40 @@ Route::middleware('guest')->group(function () {
     })->name('login');
 
     Route::post('/login', function (Request $request) {
+        $email = (string) $request->input('email');
+        $throttleKey = md5('login'.implode('|', [$email, $request->ip()]));
+
+        if (RateLimiter::tooManyAttempts($throttleKey, 5)) {
+            return response('Too many login attempts.', 429);
+        }
+
         $validated = $request->validate([
             'email' => ['required', 'email'],
             'password' => ['required', 'string'],
         ]);
 
+        if (Auth::validate($validated)) {
+            $user = User::where('email', $validated['email'])->first();
+
+            if ($user?->two_factor_secret && $user->two_factor_confirmed_at) {
+                RateLimiter::clear($throttleKey);
+                $request->session()->put([
+                    'login.id' => $user->getKey(),
+                    'login.remember' => $request->boolean('remember'),
+                ]);
+
+                return redirect()->route('two-factor.login');
+            }
+        }
+
         if (Auth::attempt($validated, $request->boolean('remember'))) {
+            RateLimiter::clear($throttleKey);
             $request->session()->regenerate();
 
-            return redirect()->intended(route('dashboard'));
+            return redirect()->intended(route('dashboard', absolute: false));
         }
+
+        RateLimiter::hit($throttleKey);
 
         return back()->withErrors([
             'email' => __('auth.failed'),
@@ -78,7 +104,7 @@ Route::middleware('guest')->group(function () {
         Auth::login($user);
         $request->session()->regenerate();
 
-        return redirect()->intended(route('dashboard'));
+        return redirect()->intended(route('dashboard', absolute: false));
     })->name('register.store');
 
     Route::get('/forgot-password', function () {
@@ -125,7 +151,7 @@ Route::middleware('guest')->group(function () {
 });
 
 Route::get('/two-factor-challenge', function (Request $request) {
-    if (! $request->session()->has('login.id')) {
+    if (! $request->session()->has('login.id') && ! $request->user()) {
         return redirect()->route('login');
     }
 
@@ -134,7 +160,7 @@ Route::get('/two-factor-challenge', function (Request $request) {
 
 Route::get('/verify-email', function (Request $request) {
     if ($request->user()?->hasVerifiedEmail()) {
-        return redirect()->route('dashboard', absolute: false);
+        return redirect(route('dashboard', absolute: false));
     }
 
     return Inertia::render('auth/verify-email', [
@@ -144,7 +170,7 @@ Route::get('/verify-email', function (Request $request) {
 
 Route::post('/email/verification-notification', function (Request $request) {
     if ($request->user()?->hasVerifiedEmail()) {
-        return redirect()->route('dashboard', absolute: false);
+        return redirect(route('dashboard', absolute: false));
     }
 
     $request->user()?->sendEmailVerificationNotification();
@@ -180,6 +206,10 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/profile', [MeProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [MeProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [MeProfileController::class, 'destroy'])->name('profile.destroy');
+    Route::get('/password', [MePasswordController::class, 'edit'])->name('user-password.edit');
+    Route::put('/password', [MePasswordController::class, 'update'])
+        ->middleware('throttle:6,1')
+        ->name('user-password.update');
     Route::get('/two-factor', [MeTwoFactorAuthenticationController::class, 'show'])->name('two-factor.show');
     Route::get('/mybookings/{booking}/invoice', [MeHomeController::class, 'bookingInvoice'])
         ->name('home.bookings.invoice');
