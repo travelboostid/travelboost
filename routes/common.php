@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 use App\Http\Controllers\BookingController;
 use App\Http\Controllers\CaddyController;
@@ -6,21 +6,17 @@ use App\Http\Controllers\Google\GoogleAuthController;
 use App\Http\Controllers\HomeController as BaseHomeController;
 use App\Http\Controllers\HomeDispatcherController;
 use App\Http\Controllers\Me\HomeController as MeHomeController;
-use App\Http\Controllers\Me\Settings\PasswordController as MePasswordController;
 use App\Http\Controllers\Me\Settings\ProfileController as MeProfileController;
 use App\Http\Controllers\Me\Settings\TwoFactorAuthenticationController as MeTwoFactorAuthenticationController;
 use App\Http\Controllers\Webhooks\MidtransWebhookController;
 use App\Http\Middleware\DomainResolver;
 use App\Models\User;
 use Illuminate\Auth\Events\Verified;
-use Illuminate\Auth\Notifications\ResetPassword;
-use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Laravolt\Indonesia\Models\City;
@@ -126,10 +122,6 @@ Route::middleware('guest')->group(function () {
             ? redirect()->route('login')->with('status', __($status))
             : back()->withErrors(['email' => __($status)]);
     })->name('password.update');
-
-    Route::get('/confirm-password', function () {
-        return Inertia::render('auth/confirm-password');
-    })->name('password.confirm');
 
     Route::get('/verify-email', function (Request $request) {
         if ($request->user()?->hasVerifiedEmail()) {
