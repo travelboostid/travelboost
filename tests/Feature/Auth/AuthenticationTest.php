@@ -40,7 +40,7 @@ test('users with two factor enabled are redirected to two factor challenge', fun
         'two_factor_confirmed_at' => now(),
     ])->save();
 
-    $response = $this->post(route('login'), [
+    $response = $this->post(route('login.store'), [
         'email' => $user->email,
         'password' => 'password',
     ]);
