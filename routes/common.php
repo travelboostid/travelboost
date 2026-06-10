@@ -178,6 +178,10 @@ Route::post('/email/verification-notification', function (Request $request) {
     return redirect()->route('home')->with('status', 'verification-link-sent');
 })->middleware('auth')->name('verification.send');
 
+Route::get('/confirm-password', function () {
+    return Inertia::render('auth/confirm-password');
+})->middleware('auth')->name('password.confirm');
+
 Route::get('/verify-email/{id}/{hash}', function (Request $request) {
     $user = $request->user();
 

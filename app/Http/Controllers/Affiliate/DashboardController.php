@@ -128,7 +128,8 @@ class DashboardController extends Controller
                     ->where('type', 'agent')
                     ->whereIn('referred_by', $referrerIds)
                     ->whereHas('agentSubscription', function ($query): void {
-                        $query->whereNotNull('package_id')->where('package_id', '!=', 1);
+                        $query->whereNotNull('package_id')
+                            ->where('ended_at', '>', now());
                     })
                     ->count();
 

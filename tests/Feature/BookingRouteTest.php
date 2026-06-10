@@ -20,6 +20,7 @@ test('tenant subdomain booking create route is accessible for authenticated user
 
     Domain::create([
         'subdomain' => 'testcompany',
+        'subdomain_enabled' => true,
         'owner_type' => Company::class,
         'owner_id' => $company->id,
     ]);
@@ -45,6 +46,7 @@ test('tenant subdomain booking create route redirects unauthenticated users', fu
 
     Domain::create([
         'subdomain' => 'testcompany2',
+        'subdomain_enabled' => true,
         'owner_type' => Company::class,
         'owner_id' => $company->id,
     ]);
