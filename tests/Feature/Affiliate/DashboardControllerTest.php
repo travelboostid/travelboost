@@ -68,6 +68,6 @@ test('affiliate dashboard returns subscribed agent conversion data for network p
         ->where('networkPerformance.0.name', $affiliate->name.' (Affiliate)')
         ->where('networkPerformance.0.total_agents', 4)
         ->where('networkPerformance.0.subscribed_agents', 1)
-        ->where('networkPerformance.0.conversion', 25.0)
+        ->where('networkPerformance.0.conversion', fn (int|float $conversion): bool => (float) $conversion === 25.0)
         ->where('networkPerformance.0.status', 'Approved'));
 });

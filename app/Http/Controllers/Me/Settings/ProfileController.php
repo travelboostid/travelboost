@@ -31,6 +31,7 @@ class ProfileController extends Controller
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
         $validated = $request->validated();
+        $validated['username'] = $validated['username'] ?? $request->user()->username;
         $validated['phone'] = $validated['phone'] ?? '';
         $request->user()->fill($validated);
 
@@ -40,7 +41,7 @@ class ProfileController extends Controller
 
         $request->user()->save();
 
-        return to_route('me.profile.edit');
+        return to_route($request->routeIs('me.*') ? 'me.profile.edit' : 'profile.edit');
     }
 
     /**
@@ -57,6 +58,6 @@ class ProfileController extends Controller
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return redirect('/');
+        return redirect()->route('home');
     }
 }

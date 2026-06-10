@@ -4,6 +4,13 @@ use App\Models\Company;
 use App\Models\Domain;
 use App\Models\Tour;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
+
+beforeEach(function () {
+    DB::table('continents')->insertOrIgnore(['id' => 1, 'name' => 'Asia']);
+    DB::table('regions')->insertOrIgnore(['id' => 1, 'name' => 'Southeast Asia', 'continent_id' => 1]);
+    DB::table('countries')->insertOrIgnore(['id' => 1, 'name' => 'Indonesia', 'continent_id' => 1, 'region_id' => 1]);
+});
 
 test('tenant subdomain booking create route is accessible for authenticated users', function () {
     $user = User::factory()->create();
@@ -13,6 +20,7 @@ test('tenant subdomain booking create route is accessible for authenticated user
 
     Domain::create([
         'subdomain' => 'testcompany',
+        'subdomain_enabled' => true,
         'owner_type' => Company::class,
         'owner_id' => $company->id,
     ]);
@@ -38,6 +46,7 @@ test('tenant subdomain booking create route redirects unauthenticated users', fu
 
     Domain::create([
         'subdomain' => 'testcompany2',
+        'subdomain_enabled' => true,
         'owner_type' => Company::class,
         'owner_id' => $company->id,
     ]);
