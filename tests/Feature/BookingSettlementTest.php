@@ -469,12 +469,11 @@ test('customer manual full payment is blocked before proof is stored when vendor
         ->and((int) $vendor->wallet->fresh()->balance)->toBe(100_000);
 });
 
-test('customer online full payment is blocked before snap payment is created when vendor wallet cannot settle commissions', function () {
+test('customer online full payment is blocked before core api payment is created when vendor wallet cannot settle commissions', function () {
     ['customer' => $customer, 'vendor' => $vendor, 'booking' => $booking, 'quote' => $quote] = createSettlementScenario(vendorBalance: 100_000);
 
-    Mockery::mock('alias:Midtrans\Snap')
-        ->shouldReceive('getSnapToken')
-        ->andReturn('blocked-token');
+    mockMidtransCoreApiCharge();
+    $paymentMethod = createMidtransBcaPaymentMethod();
 
     $booking->update([
         'status' => BookingStatus::BOOKING_RESERVED,
@@ -484,6 +483,7 @@ test('customer online full payment is blocked before snap payment is created whe
         ->postJson("/bookings/{$booking->id}/online-payment", [
             'payment_type' => 'full_payment',
             'amount' => $quote['grand_total'],
+            'payment_method_id' => $paymentMethod->id,
         ]);
 
     $response->assertUnprocessable()
@@ -498,10 +498,8 @@ test('customer online down payment remains available when vendor wallet cannot s
     ['customer' => $customer, 'vendor' => $vendor, 'booking' => $booking, 'quote' => $quote] = createSettlementScenario(vendorBalance: 100_000);
     $downPaymentAmount = (float) ceil($quote['grand_total'] * 0.3);
 
-    Mockery::mock('alias:Midtrans\Snap')
-        ->shouldReceive('getSnapToken')
-        ->once()
-        ->andReturn('down-payment-token');
+    mockMidtransCoreApiCharge();
+    $paymentMethod = createMidtransBcaPaymentMethod();
 
     $booking->update([
         'status' => BookingStatus::BOOKING_RESERVED,
@@ -511,24 +509,26 @@ test('customer online down payment remains available when vendor wallet cannot s
         ->postJson("/bookings/{$booking->id}/online-payment", [
             'payment_type' => 'down_payment',
             'amount' => $downPaymentAmount,
+            'payment_method_id' => $paymentMethod->id,
         ]);
 
     $response->assertOk()
-        ->assertJsonPath('payment.payload.snap_token', 'down-payment-token');
+        ->assertJsonPath('payment.payload.va_number', '80777100123456');
 
     expect($booking->payments()->count())->toBe(1)
         ->and($booking->fresh()->status)->toBe(BookingStatus::BOOKING_RESERVED)
         ->and((int) $vendor->wallet->fresh()->balance)->toBe(100_000);
 });
 
-test('customer online payment returns validation error when midtrans snap token request fails', function () {
+test('customer online payment returns validation error when midtrans core api charge fails', function () {
     ['customer' => $customer, 'booking' => $booking, 'quote' => $quote] = createSettlementScenario(vendorBalance: 100_000);
     $downPaymentAmount = (float) ceil($quote['grand_total'] * 0.3);
 
-    Mockery::mock('alias:Midtrans\Snap')
-        ->shouldReceive('getSnapToken')
+    Mockery::mock('alias:Midtrans\CoreApi')
+        ->shouldReceive('charge')
         ->once()
-        ->andThrow(new RuntimeException('CURL Error: Failed to connect to app.sandbox.midtrans.com'));
+        ->andThrow(new RuntimeException('CURL Error: Failed to connect to api.sandbox.midtrans.com'));
+    $paymentMethod = createMidtransBcaPaymentMethod();
 
     $booking->update([
         'status' => BookingStatus::BOOKING_RESERVED,
@@ -538,6 +538,7 @@ test('customer online payment returns validation error when midtrans snap token 
         ->postJson("/bookings/{$booking->id}/online-payment", [
             'payment_type' => 'down_payment',
             'amount' => $downPaymentAmount,
+            'payment_method_id' => $paymentMethod->id,
         ]);
 
     $response->assertUnprocessable()
@@ -553,10 +554,11 @@ test('customer can submit manual payment after online provider is unavailable', 
     ['customer' => $customer, 'booking' => $booking, 'quote' => $quote] = createSettlementScenario(vendorBalance: 100_000);
     $downPaymentAmount = (float) ceil($quote['grand_total'] * 0.3);
 
-    Mockery::mock('alias:Midtrans\Snap')
-        ->shouldReceive('getSnapToken')
+    Mockery::mock('alias:Midtrans\CoreApi')
+        ->shouldReceive('charge')
         ->once()
-        ->andThrow(new RuntimeException('CURL Error: Failed to connect to app.sandbox.midtrans.com'));
+        ->andThrow(new RuntimeException('CURL Error: Failed to connect to api.sandbox.midtrans.com'));
+    $paymentMethod = createMidtransBcaPaymentMethod();
 
     $booking->update([
         'status' => BookingStatus::BOOKING_RESERVED,
@@ -566,6 +568,7 @@ test('customer can submit manual payment after online provider is unavailable', 
         ->postJson("/bookings/{$booking->id}/online-payment", [
             'payment_type' => 'down_payment',
             'amount' => $downPaymentAmount,
+            'payment_method_id' => $paymentMethod->id,
         ]);
 
     $onlineResponse->assertUnprocessable()
@@ -634,14 +637,14 @@ test('customer balance payment is blocked when it would finalize full payment wi
         'payload' => ['payment_type' => 'down_payment'],
     ]);
 
-    Mockery::mock('alias:Midtrans\Snap')
-        ->shouldReceive('getSnapToken')
-        ->andReturn('blocked-token');
+    mockMidtransCoreApiCharge();
+    $paymentMethod = createMidtransBcaPaymentMethod();
 
     $response = $this->actingAs($customer)
         ->postJson("/bookings/{$booking->id}/online-payment", [
             'payment_type' => 'full_payment',
             'amount' => $quote['grand_total'] - 1_000_000,
+            'payment_method_id' => $paymentMethod->id,
         ]);
 
     $response->assertUnprocessable()

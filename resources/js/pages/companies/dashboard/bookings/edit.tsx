@@ -22,9 +22,11 @@ import Step4BookingSummary, {
 } from '@/components/booking/Step4BookingSummary';
 import WizardStepIndicator from '@/components/booking/WizardStepIndicator';
 import CompanyDashboardLayout from '@/components/layouts/company-dashboard';
+import { PaymentMethodDialog } from '@/components/payment/payment-method-dialog';
 import { Button } from '@/components/ui/button';
 import type { WizardStepId } from '@/constants/booking';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
+import { openOnlinePayment } from '@/lib/open-online-payment';
 import type {
     BookingContact,
     GuestEntry,
@@ -787,6 +789,14 @@ function EditableWizard({
 
     // ── Save (replaces Pay Now) ────────────────────────────────────────
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [paymentMethodDialogOpen, setPaymentMethodDialogOpen] =
+        useState(false);
+    const [pendingOnlinePayment, setPendingOnlinePayment] = useState<{
+        paymentType: PaymentType;
+        finalAmount: number;
+        addOns: AddOnItem[];
+        manualData?: ManualPaymentData;
+    } | null>(null);
     const [paymentErrorMessage, setPaymentErrorMessage] = useState<
         string | null
     >(null);
@@ -1034,6 +1044,7 @@ function EditableWizard({
     const submitOnlinePayment = (
         paymentType: PaymentType,
         finalAmount: number,
+        paymentMethodId: number,
     ) => {
         axios
             .post(
@@ -1041,6 +1052,7 @@ function EditableWizard({
                 {
                     payment_type: paymentType,
                     amount: finalAmount,
+                    payment_method_id: paymentMethodId,
                 },
                 {
                     withCredentials: true,
@@ -1048,28 +1060,42 @@ function EditableWizard({
                 },
             )
             .then((response) => {
-                const snapToken = response.data?.payment?.payload
-                    ?.snap_token as string | undefined;
                 const paymentId = response.data?.payment?.id as
                     | number
                     | string
                     | undefined;
-                const snap = (window as any).snap;
+                const payload = response.data?.payment?.payload as
+                    | Record<string, unknown>
+                    | undefined;
 
-                if (!snapToken || typeof snap?.pay !== 'function') {
+                if (!payload?.order_id) {
                     setPaymentErrorMessage(
-                        'Online payment is not available in this browser session. Please refresh and try again.',
+                        'Online payment could not be started. Please try again.',
                     );
                     setIsSubmitting(false);
                     return;
                 }
 
-                snap.pay(snapToken, {
-                    onSuccess: () => confirmOnlinePayment(paymentId),
-                    onPending: () => setIsSubmitting(false),
-                    onError: () => setIsSubmitting(false),
-                    onClose: () => setIsSubmitting(false),
-                });
+                openOnlinePayment(
+                    {
+                        id: paymentId,
+                        status: 'pending',
+                        provider: 'midtrans',
+                        amount: finalAmount,
+                        payload,
+                    },
+                    {
+                        onPaid: () => confirmOnlinePayment(paymentId),
+                        onComplete: () => setIsSubmitting(false),
+                        reloadOnPaid: false,
+                        statusCheck: paymentId
+                            ? {
+                                  url: `/companies/${company.username}/dashboard/bookings/${booking.id}/online-payment/${paymentId}/confirm`,
+                                  method: 'POST',
+                              }
+                            : undefined,
+                    },
+                );
             })
             .catch((error) => {
                 const message =
@@ -1081,6 +1107,50 @@ function EditableWizard({
                 setIsSubmitting(false);
             });
     };
+    const proceedWithOnlinePayment = (
+        paymentMethodId: number,
+        pending: NonNullable<typeof pendingOnlinePayment>,
+    ) => {
+        const { paymentType, finalAmount, addOns } = pending;
+
+        if (editMode !== 'full') {
+            submitOnlinePayment(paymentType, finalAmount, paymentMethodId);
+            return;
+        }
+
+        let startedPayment = false;
+
+        router.put(
+            `/companies/${company.username}/dashboard/bookings/${booking.id}`,
+            buildBookingSnapshotPayload(addOns) as any,
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    startedPayment = true;
+                    submitOnlinePayment(
+                        paymentType,
+                        finalAmount,
+                        paymentMethodId,
+                    );
+                },
+                onError: (errors) => {
+                    const message =
+                        errors.payment ??
+                        errors.payment_type ??
+                        errors.transfer_amount;
+
+                    if (message) {
+                        setPaymentErrorMessage(String(message));
+                    }
+                },
+                onFinish: () => {
+                    if (!startedPayment) {
+                        setIsSubmitting(false);
+                    }
+                },
+            },
+        );
+    };
     const handlePayment = (
         paymentType: PaymentType,
         paymentMethod: PaymentMethod,
@@ -1091,13 +1161,23 @@ function EditableWizard({
         setIsSubmitting(true);
         setPaymentErrorMessage(null);
 
+        if (paymentMethod === 'midtrans') {
+            setPendingOnlinePayment({
+                paymentType,
+                finalAmount,
+                addOns,
+                manualData,
+            });
+            setPaymentMethodDialogOpen(true);
+            return;
+        }
+
         if (editMode !== 'full') {
             if (paymentMethod === 'manual_transfer') {
                 submitManualPayment(paymentType, finalAmount, manualData);
                 return;
             }
 
-            submitOnlinePayment(paymentType, finalAmount);
             return;
         }
 
@@ -1117,10 +1197,7 @@ function EditableWizard({
                             finalAmount,
                             manualData,
                         );
-                        return;
                     }
-
-                    submitOnlinePayment(paymentType, finalAmount);
                 },
                 onError: (errors) => {
                     setPaymentErrorMessage(
@@ -1475,6 +1552,33 @@ function EditableWizard({
                     </div>
                 </div>
             </div>
+
+            <PaymentMethodDialog
+                open={paymentMethodDialogOpen}
+                onOpenChange={(open) => {
+                    setPaymentMethodDialogOpen(open);
+
+                    if (!open) {
+                        setPendingOnlinePayment(null);
+                        setIsSubmitting(false);
+                    }
+                }}
+                description={
+                    pendingOnlinePayment
+                        ? `Select how you want to pay Rp ${pendingOnlinePayment.finalAmount.toLocaleString('id-ID')}`
+                        : undefined
+                }
+                loading={isSubmitting}
+                onConfirm={(methodId) => {
+                    if (!pendingOnlinePayment) {
+                        return;
+                    }
+
+                    setPaymentMethodDialogOpen(false);
+                    proceedWithOnlinePayment(methodId, pendingOnlinePayment);
+                    setPendingOnlinePayment(null);
+                }}
+            />
         </CompanyDashboardLayout>
     );
 }

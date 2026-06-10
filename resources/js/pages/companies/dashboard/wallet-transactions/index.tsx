@@ -1,324 +1,323 @@
-import { index } from '@/actions/App/Http/Controllers/Companies/Dashboard/WalletTransactionsController';
+import { index as walletTransactionsIndex } from '@/actions/App/Http/Controllers/Companies/Dashboard/WalletTransactionsController';
 import CompanyDashboardLayout from '@/components/layouts/company-dashboard';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card';
 import {
     Popover,
     PopoverContent,
     PopoverTrigger,
 } from '@/components/ui/popover';
+import WalletSelectorApplet, {
+    buildWalletQueryParams,
+    type WalletOption,
+} from '@/components/wallet/wallet-selector-applet';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
-import { Head, router } from '@inertiajs/react';
+import { cn } from '@/lib/utils';
+import { index as walletsIndex } from '@/routes/companies/dashboard/wallets';
+import { Head, Link, router } from '@inertiajs/react';
 import { format } from 'date-fns';
 import dayjs from 'dayjs';
-import { ArrowDownLeft, ArrowUpRight, CalendarIcon } from 'lucide-react';
-import { useState } from 'react';
+import {
+    ArrowLeftIcon,
+    ArrowRightIcon,
+    CalendarIcon,
+    ReceiptTextIcon,
+} from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
 import type { DateRange } from 'react-day-picker';
-import EmptyWalletTransactions from './empty-wallet-transactions';
+import { FormattedMessage } from 'react-intl';
+import PeriodSummary from './components/period-summary';
+import TransactionList, {
+    type WalletTransaction,
+} from './components/transaction-list';
 
-// Type definitions for better type safety
-type TransactionType = 'all' | 'in' | 'out';
+export type TransactionTypeFilter = 'all' | 'income' | 'expense';
 
-interface Transaction {
-    id: number;
-    description: string;
-    date: string;
-    amount: number;
-    type: 'in' | 'out';
-    icon: any; // Replace with actual icon type
-}
-
-interface TransactionsPageProps {
-    from?: string;
-    to?: string;
+type TransactionsPageProps = {
+    filters: {
+        wallet: string;
+        from: string;
+        to: string;
+        type: TransactionTypeFilter;
+    };
+    wallet: WalletOption;
+    wallets: WalletOption[];
     transaction_count: number;
     income_amount: number;
     expense_amount: number;
-    transactions: Transaction[];
+    transactions: WalletTransaction[];
+};
+
+const TYPE_FILTERS: Array<{
+    id: TransactionTypeFilter;
+    label: React.ReactNode;
+}> = [
+    { id: 'all', label: <FormattedMessage defaultMessage="All" /> },
+    { id: 'income', label: <FormattedMessage defaultMessage="Income" /> },
+    { id: 'expense', label: <FormattedMessage defaultMessage="Expenses" /> },
+];
+
+function buildFilterParams(
+    filters: TransactionsPageProps['filters'],
+    overrides: Partial<TransactionsPageProps['filters']> = {},
+): Record<string, string> {
+    const next = { ...filters, ...overrides };
+    const params: Record<string, string> = {
+        from: next.from,
+        to: next.to,
+    };
+
+    if (next.type !== 'all') {
+        params.type = next.type;
+    }
+
+    return buildWalletQueryParams(next.wallet, params);
 }
 
 export default function TransactionsPage({
-    from,
-    to,
+    filters,
+    wallet,
+    wallets,
     transaction_count,
     income_amount,
     expense_amount,
     transactions,
 }: TransactionsPageProps) {
     const { company } = usePageSharedDataProps();
-    // State for transaction type filter (frontend only)
-    const [transactionTypeFilter, setTransactionTypeFilter] =
-        useState<TransactionType>('all');
+    const [calendarMonths, setCalendarMonths] = useState(1);
 
-    // State for date range with initial values from props
-    const [dateRange, setDateRange] = useState<DateRange | undefined>(() => {
-        if (!from && !to) return undefined;
+    const dateRange = useMemo<DateRange>(
+        () => ({
+            from: dayjs(filters.from).toDate(),
+            to: dayjs(filters.to).toDate(),
+        }),
+        [filters.from, filters.to],
+    );
 
-        return {
-            from: from ? dayjs(from).toDate() : undefined,
-            to: to ? dayjs(to).toDate() : undefined,
+    const periodLabel = `${dayjs(filters.from).format('DD MMM YYYY')} – ${dayjs(filters.to).format('DD MMM YYYY')}`;
+
+    const hasNonDefaultType = filters.type !== 'all';
+
+    useEffect(() => {
+        const mediaQuery = window.matchMedia('(min-width: 768px)');
+        const updateMonths = () => {
+            setCalendarMonths(mediaQuery.matches ? 2 : 1);
         };
-    });
 
-    // Filter transactions based on selected type (frontend filtering)
-    const filteredTransactions = transactions.filter((transaction: any) => {
-        if (transactionTypeFilter === 'in')
-            return transaction.type === 'income';
-        if (transactionTypeFilter === 'out')
-            return transaction.type === 'expense';
-        return true; // all
-    });
+        updateMonths();
+        mediaQuery.addEventListener('change', updateMonths);
 
-    // Update URL query parameters when date range changes
-    const updateDateRangeQuery = (range: DateRange | undefined) => {
-        if (!range?.from && !range?.to) {
-            // If no date range is selected, remove the query parameters
-            router.get(
-                index({ company: company.username }),
-                {},
-                {
-                    preserveState: true,
-                    replace: true,
-                },
-            );
+        return () => {
+            mediaQuery.removeEventListener('change', updateMonths);
+        };
+    }, []);
+
+    const visitWithFilters = (
+        overrides: Partial<TransactionsPageProps['filters']> = {},
+    ) => {
+        router.get(
+            walletTransactionsIndex({ company: company.username }),
+            buildFilterParams(filters, overrides),
+            {
+                preserveState: true,
+                replace: true,
+            },
+        );
+    };
+
+    const handleDateRangeChange = (range: DateRange | undefined) => {
+        if (!range?.from) {
             return;
         }
 
-        const params: Record<string, string> = {};
-
-        if (range?.from) {
-            params.from = dayjs(range.from).format('YYYY-MM-DD');
-        }
-
-        if (range?.to) {
-            params.to = dayjs(range.to).format('YYYY-MM-DD');
-        }
-
-        router.get(index({ company: company.username }), params, {
-            preserveState: true,
-            replace: true,
+        visitWithFilters({
+            from: dayjs(range.from).format('YYYY-MM-DD'),
+            to: dayjs(range.to ?? range.from).format('YYYY-MM-DD'),
         });
     };
 
-    // Handle date range selection with debouncing
-    const handleDateRangeChange = (range: DateRange | undefined) => {
-        setDateRange(range);
-        updateDateRangeQuery(range);
-    };
-
-    // Format date range display text
-    const getDateRangeDisplayText = (range: DateRange | undefined): string => {
-        if (!range?.from) {
-            return 'Select date range';
-        }
-
-        if (range.to) {
-            return `${format(range.from, 'MMM dd, yyyy')} - ${format(range.to, 'MMM dd, yyyy')}`;
-        }
-
-        return format(range.from, 'MMM dd, yyyy');
-    };
-
-    // Transaction type filter buttons configuration
-    const transactionTypeFilters = [
-        { id: 'all' as const, label: 'All Transactions' },
-        { id: 'in' as const, label: 'Income' },
-        { id: 'out' as const, label: 'Expenses' },
-    ];
+    const dateLabel =
+        dateRange.from && dateRange.to
+            ? `${format(dateRange.from, 'MMM d, yyyy')} – ${format(dateRange.to, 'MMM d, yyyy')}`
+            : format(dateRange.from!, 'MMM d, yyyy');
 
     return (
         <CompanyDashboardLayout
             activeMenuIds={['funds.wallet-transactions']}
             openMenuIds={['funds']}
             breadcrumb={[{ title: 'Funds' }, { title: 'Wallet Transactions' }]}
+            applet={
+                <WalletSelectorApplet
+                    wallets={wallets}
+                    selectedSlug={wallet.slug}
+                    href={walletTransactionsIndex({
+                        company: company.username,
+                    })}
+                    queryParams={buildFilterParams(filters)}
+                />
+            }
         >
             <Head title="Wallet Transactions" />
 
-            <div className="max-w-4xl grid gap-8 p-4 mx-auto">
-                {/* Summary Statistics Section */}
-                <section>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <Card className="bg-linear-to-t from-secondary/5 to-card shadow-xs dark:bg-card">
-                            <CardContent>
-                                <p className="text-sm text-muted-foreground mb-2">
-                                    Total Transactions
-                                </p>
-                                <p
-                                    className={`text-2xl font-bold text-foreground`}
-                                >
-                                    {transaction_count.toString()}
-                                </p>
-                            </CardContent>
-                        </Card>
-                        <Card className="bg-linear-to-t from-primary/5 to-card shadow-xs dark:bg-card">
-                            <CardContent>
-                                <p className="text-sm text-muted-foreground mb-2">
-                                    Total Income
-                                </p>
-                                <p
-                                    className={`text-2xl font-bold text-primary`}
-                                >
-                                    {`+${formatIDR(income_amount)}`}
-                                </p>
-                            </CardContent>
-                        </Card>
-                        <Card className="bg-linear-to-t from-destructive/5 to-card shadow-xs dark:bg-card">
-                            <CardContent>
-                                <p className="text-sm text-muted-foreground mb-2">
-                                    Total Expenses
-                                </p>
-                                <p
-                                    className={`text-2xl font-bold text-destructive`}
-                                >
-                                    {`-${formatIDR(expense_amount)}`}
-                                </p>
-                            </CardContent>
-                        </Card>
-                    </div>
-                </section>
-
-                {/* Filters Section */}
-                <section className="mb-6">
-                    <div className="flex flex-wrap items-center gap-3">
-                        {/* Date Range Picker */}
-                        <Popover>
-                            <PopoverTrigger asChild>
-                                <Button
-                                    variant="outline"
-                                    className="gap-2 font-normal"
-                                >
-                                    <CalendarIcon className="w-4 h-4" />
-                                    {getDateRangeDisplayText(dateRange)}
-                                </Button>
-                            </PopoverTrigger>
-                            <PopoverContent
-                                className="w-auto p-0"
-                                align="start"
+            <div className="mx-auto w-full max-w-6xl space-y-6 p-4 sm:p-6">
+                <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                    <div className="space-y-1">
+                        <Button
+                            asChild
+                            variant="ghost"
+                            size="sm"
+                            className="-ml-2 mb-1 h-8 gap-1.5 px-2 text-muted-foreground"
+                        >
+                            <Link
+                                href={walletsIndex({
+                                    company: company.username,
+                                    query: buildWalletQueryParams(wallet.slug),
+                                })}
                             >
-                                <Calendar
-                                    mode="range"
-                                    defaultMonth={dateRange?.from}
-                                    selected={dateRange}
-                                    onSelect={handleDateRangeChange}
-                                    numberOfMonths={2}
-                                    className="rounded-md border"
-                                />
-                            </PopoverContent>
-                        </Popover>
-
-                        {/* Transaction Type Filters */}
-                        <div className="flex gap-2">
-                            {transactionTypeFilters.map((filter) => (
-                                <Button
-                                    key={filter.id}
-                                    onClick={() =>
-                                        setTransactionTypeFilter(filter.id)
-                                    }
-                                    variant={
-                                        transactionTypeFilter === filter.id
-                                            ? 'default'
-                                            : 'outline'
-                                    }
-                                    className={
-                                        transactionTypeFilter === filter.id
-                                            ? 'bg-primary hover:bg-primary/90'
-                                            : ''
-                                    }
-                                >
-                                    {filter.label}
-                                </Button>
-                            ))}
+                                <ArrowLeftIcon className="size-4" />
+                                <FormattedMessage defaultMessage="Back to wallet" />
+                            </Link>
+                        </Button>
+                        <div className="flex items-center gap-2.5">
+                            <div className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                                <ReceiptTextIcon className="size-5" />
+                            </div>
+                            <div>
+                                <h1 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
+                                    <FormattedMessage defaultMessage="Wallet transactions" />
+                                </h1>
+                                <p className="text-sm text-muted-foreground">
+                                    <FormattedMessage defaultMessage="Review income, expenses, and activity for the selected period." />
+                                </p>
+                            </div>
                         </div>
                     </div>
-                </section>
+                </header>
 
-                {/* Transactions List Section */}
-                <section>
-                    <Card className="border shadow-md">
-                        <CardHeader className="pb-4">
-                            <CardTitle className="text-lg flex items-center gap-2">
-                                {
-                                    transactionTypeFilters.find(
-                                        (f) => f.id === transactionTypeFilter,
-                                    )?.label
-                                }
-                                <span className="text-sm font-normal text-muted-foreground">
-                                    ({filteredTransactions.length} transactions)
-                                </span>
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <TransactionsList
-                                transactions={filteredTransactions}
-                            />
-                        </CardContent>
-                    </Card>
-                </section>
+                <PeriodSummary
+                    incomeAmount={income_amount}
+                    expenseAmount={expense_amount}
+                    transactionCount={transaction_count}
+                    periodLabel={periodLabel}
+                />
+
+                <Card className="border shadow-sm">
+                    <CardHeader className="gap-4 border-b pb-4">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                            <div className="flex items-start gap-3">
+                                <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground">
+                                    <ReceiptTextIcon className="size-4" />
+                                </div>
+                                <div>
+                                    <CardTitle className="text-lg">
+                                        <FormattedMessage defaultMessage="Activity" />
+                                    </CardTitle>
+                                    <CardDescription>
+                                        <FormattedMessage
+                                            defaultMessage="{count} results · latest 50 shown"
+                                            values={{
+                                                count: transactions.length,
+                                            }}
+                                        />
+                                    </CardDescription>
+                                </div>
+                            </div>
+                            <Button
+                                asChild
+                                variant="ghost"
+                                size="sm"
+                                className="hidden shrink-0 sm:inline-flex"
+                            >
+                                <Link
+                                    href={walletsIndex({
+                                        company: company.username,
+                                        query: buildWalletQueryParams(
+                                            wallet.slug,
+                                        ),
+                                    })}
+                                >
+                                    <FormattedMessage defaultMessage="Wallet overview" />
+                                    <ArrowRightIcon className="size-4" />
+                                </Link>
+                            </Button>
+                        </div>
+
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                    <Button
+                                        variant="outline"
+                                        className="h-10 w-full justify-start gap-2 font-normal sm:w-auto"
+                                    >
+                                        <CalendarIcon className="size-4 shrink-0" />
+                                        <span className="truncate">
+                                            {dateLabel}
+                                        </span>
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent
+                                    className="w-auto p-0"
+                                    align="start"
+                                >
+                                    <Calendar
+                                        mode="range"
+                                        defaultMonth={dateRange.from}
+                                        selected={dateRange}
+                                        onSelect={handleDateRangeChange}
+                                        numberOfMonths={calendarMonths}
+                                    />
+                                </PopoverContent>
+                            </Popover>
+
+                            <div className="inline-flex w-full rounded-lg border bg-muted/30 p-1 sm:w-auto">
+                                {TYPE_FILTERS.map((filter) => {
+                                    const isActive = filters.type === filter.id;
+
+                                    return (
+                                        <Button
+                                            key={filter.id}
+                                            type="button"
+                                            size="sm"
+                                            variant={
+                                                isActive ? 'default' : 'ghost'
+                                            }
+                                            className={cn(
+                                                'h-8 flex-1 rounded-md px-4 sm:flex-none',
+                                                !isActive &&
+                                                    'text-muted-foreground hover:text-foreground',
+                                            )}
+                                            onClick={() =>
+                                                visitWithFilters({
+                                                    type: filter.id,
+                                                })
+                                            }
+                                        >
+                                            {filter.label}
+                                        </Button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    </CardHeader>
+
+                    <CardContent className="pt-5">
+                        <TransactionList
+                            transactions={transactions}
+                            showClearFilters={hasNonDefaultType}
+                            onClearFilters={() =>
+                                visitWithFilters({ type: 'all' })
+                            }
+                        />
+                    </CardContent>
+                </Card>
             </div>
         </CompanyDashboardLayout>
     );
 }
-
-function TransactionsList({ transactions }: any) {
-    if (transactions.length === 0) {
-        return <EmptyWalletTransactions />;
-    }
-
-    return (
-        <div className="space-y-3">
-            {transactions.map((transaction: any) => {
-                const amountColor =
-                    transaction.type === 'income'
-                        ? 'text-primary'
-                        : 'text-destructive';
-                const amountSign = transaction.type === 'income' ? '+' : '-';
-                const Icon =
-                    transaction.type === 'income'
-                        ? ArrowUpRight
-                        : ArrowDownLeft;
-
-                return (
-                    <div
-                        key={transaction.id}
-                        className="flex items-center justify-between p-4 rounded-lg hover:bg-secondary/50 transition-colors group"
-                    >
-                        <div className="flex items-center gap-4">
-                            <div
-                                className={`p-3 rounded-full ${
-                                    transaction.type === 'income'
-                                        ? 'bg-primary/10 text-primary'
-                                        : 'bg-destructive/10 text-destructive'
-                                } group-hover:scale-105 transition-transform`}
-                            >
-                                <Icon className="w-5 h-5" />
-                            </div>
-                            <div>
-                                <p className="font-medium text-foreground">
-                                    {transaction.meta?.description || '-'}
-                                </p>
-                                <p className="text-sm text-muted-foreground">
-                                    {dayjs(transaction.date).format(
-                                        'MMM DD, YYYY',
-                                    )}
-                                </p>
-                            </div>
-                        </div>
-                        <div className={`font-semibold ${amountColor}`}>
-                            {amountSign}
-                            {formatIDR(Math.abs(transaction.amount))}
-                        </div>
-                    </div>
-                );
-            })}
-        </div>
-    );
-}
-
-// Helper function
-export const formatIDR = (value: number) =>
-    new Intl.NumberFormat('id-ID', {
-        style: 'currency',
-        currency: 'IDR',
-        minimumFractionDigits: 0,
-    }).format(value);

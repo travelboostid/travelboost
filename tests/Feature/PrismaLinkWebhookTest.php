@@ -48,7 +48,9 @@ test('prismalink webhook settles wallet topup using pl merchant ref format', fun
         ->assertJsonPath('ack', true);
 
     expect($payment->fresh()->status)->toBe(PaymentStatus::PAID)
-        ->and((int) $company->wallet->fresh()->balance)->toBe($initialBalance + 100_000);
+        ->and((int) $company->wallet->fresh()->balance)->toBe($initialBalance + 100_000)
+        ->and(data_get($payment->fresh()->payload, 'transaction_status'))->toBe('SETLD')
+        ->and(data_get($payment->fresh()->payload, 'prismalink_notification'))->toBeNull();
 });
 
 test('prismalink frontend callback redirects to companies index', function () {

@@ -10,7 +10,9 @@ use Illuminate\Support\Carbon;
 
 class ReusableMidtransBookingPaymentAttemptService
 {
-    private const SNAP_TOKEN_LIFETIME_MINUTES = 180;
+    public function __construct(
+        private readonly MidtransService $midtransService,
+    ) {}
 
     /**
      * @param  array<string, mixed>  $paymentWorkflowPayload
@@ -28,7 +30,6 @@ class ReusableMidtransBookingPaymentAttemptService
 
         return $booking->payments()
             ->where('provider', 'midtrans')
-            ->where('payment_method', 'snap')
             ->where('owner_type', $ownerType)
             ->where('owner_id', $ownerId)
             ->whereIn('status', [PaymentStatus::UNPAID->value, PaymentStatus::PENDING->value])
@@ -45,25 +46,22 @@ class ReusableMidtransBookingPaymentAttemptService
                     return false;
                 }
 
-                return filled(data_get($payment->payload, 'snap_token'))
-                    && filled(data_get($payment->payload, 'order_id'));
+                return filled(data_get($payment->payload, 'order_id'))
+                    && $this->hasPaymentInstructions($payment);
             });
     }
 
     /**
      * @return array{unit: string, duration: int}
      */
-    public function snapExpiryPayload(): array
+    public function chargeExpiryPayload(): array
     {
-        return [
-            'unit' => 'minutes',
-            'duration' => self::SNAP_TOKEN_LIFETIME_MINUTES,
-        ];
+        return $this->midtransService->chargeExpiryPayload();
     }
 
-    public function newSnapTokenExpiresAt(): CarbonInterface
+    public function newChargeExpiresAt(): CarbonInterface
     {
-        return now()->addMinutes(self::SNAP_TOKEN_LIFETIME_MINUTES);
+        return $this->midtransService->newChargeExpiresAt();
     }
 
     private function attemptMatches(
@@ -97,11 +95,23 @@ class ReusableMidtransBookingPaymentAttemptService
         return true;
     }
 
+    private function hasPaymentInstructions(Payment $payment): bool
+    {
+        $payload = $payment->payload ?? [];
+
+        if (filled(data_get($payload, 'instruction_type'))) {
+            return true;
+        }
+
+        return filled(data_get($payload, 'snap_token'));
+    }
+
     private function attemptHasExpired(Payment $payment): bool
     {
-        $snapTokenExpiresAt = data_get($payment->payload, 'snap_token_expires_at');
+        $legacyExpiresAt = data_get($payment->payload, 'snap_token_expires_at')
+            ?? data_get($payment->payload, 'charge_expires_at');
 
-        if (filled($snapTokenExpiresAt) && Carbon::parse((string) $snapTokenExpiresAt)->isPast()) {
+        if (filled($legacyExpiresAt) && Carbon::parse((string) $legacyExpiresAt)->isPast()) {
             return true;
         }
 
@@ -113,7 +123,7 @@ class ReusableMidtransBookingPaymentAttemptService
         $payment->update([
             'status' => PaymentStatus::FAILED,
             'payload' => array_merge($payment->payload ?? [], [
-                'snap_token_expired_at' => now()->toISOString(),
+                'charge_expired_at' => now()->toISOString(),
             ]),
         ]);
     }

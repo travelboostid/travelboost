@@ -1,3 +1,4 @@
+import { usePaymentMethods } from '@/api/payment/payment-method';
 import { PaymentMethodList } from '@/components/payment/payment-method-list';
 import {
     AlertDialog,
@@ -10,6 +11,8 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
+import { findPaymentMethodById } from '@/lib/payment-method-ui';
+import { CreditCardIcon, ShieldCheckIcon } from 'lucide-react';
 import { useState } from 'react';
 
 type PaymentMethodDialogProps = {
@@ -18,6 +21,8 @@ type PaymentMethodDialogProps = {
     description?: React.ReactNode;
     loading?: boolean;
     onConfirm: (methodId: number) => void;
+    title?: string;
+    confirmLabel?: string;
 };
 
 export function PaymentMethodDialog({
@@ -26,12 +31,21 @@ export function PaymentMethodDialog({
     description,
     loading = false,
     onConfirm,
+    title = 'Choose payment method',
+    confirmLabel = 'Continue to payment',
 }: PaymentMethodDialogProps) {
     const [selectedMethodId, setSelectedMethodId] = useState<number | null>(
         null,
     );
+    const paymentMethods = usePaymentMethods();
+    const methods = paymentMethods.data?.data ?? [];
+    const selectedMethod = findPaymentMethodById(methods, selectedMethodId);
 
     const handleOpenChange = (nextOpen: boolean) => {
+        if (!nextOpen && loading) {
+            return;
+        }
+
         onOpenChange(nextOpen);
 
         if (!nextOpen) {
@@ -39,7 +53,7 @@ export function PaymentMethodDialog({
         }
     };
 
-    const handlePay = () => {
+    const handleConfirm = () => {
         if (selectedMethodId === null || loading) {
             return;
         }
@@ -49,34 +63,77 @@ export function PaymentMethodDialog({
 
     return (
         <AlertDialog open={open} onOpenChange={handleOpenChange}>
-            <AlertDialogContent className="flex max-h-[min(85vh,720px)] flex-col gap-4 overflow-hidden sm:max-w-sm">
-                <AlertDialogHeader className="shrink-0">
-                    <AlertDialogTitle>Choose payment method</AlertDialogTitle>
-                    {description ? (
-                        <AlertDialogDescription>
-                            {description}
-                        </AlertDialogDescription>
-                    ) : null}
+            <AlertDialogContent className="flex max-h-[min(92vh,760px)] flex-col gap-0 overflow-hidden p-0 sm:max-w-lg">
+                <AlertDialogHeader className="space-y-3 border-b px-6 py-5 text-left">
+                    <div className="flex items-start gap-3">
+                        <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                            <CreditCardIcon className="size-5" />
+                        </div>
+                        <div className="min-w-0 space-y-1">
+                            <AlertDialogTitle className="text-lg leading-snug">
+                                {title}
+                            </AlertDialogTitle>
+                            <AlertDialogDescription asChild>
+                                <div className="space-y-1 text-sm leading-relaxed text-muted-foreground">
+                                    {description ?? (
+                                        <p>
+                                            Pick how you want to pay. You will
+                                            see transfer or scan instructions on
+                                            the next step.
+                                        </p>
+                                    )}
+                                </div>
+                            </AlertDialogDescription>
+                        </div>
+                    </div>
                 </AlertDialogHeader>
 
-                <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+                <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
                     <PaymentMethodList
                         selectedMethodId={selectedMethodId}
                         onSelect={setSelectedMethodId}
                     />
                 </div>
 
-                <AlertDialogFooter className="shrink-0">
-                    <AlertDialogCancel disabled={loading}>
-                        Cancel
-                    </AlertDialogCancel>
+                <AlertDialogFooter className="flex-col gap-3 border-t bg-muted/20 px-6 py-4 sm:flex-col sm:justify-start">
+                    {selectedMethod ? (
+                        <div className="w-full rounded-lg border bg-background px-3 py-2.5 text-sm">
+                            <p className="text-xs text-muted-foreground">
+                                Selected method
+                            </p>
+                            <p className="font-medium text-foreground">
+                                {selectedMethod.name}
+                            </p>
+                        </div>
+                    ) : (
+                        <p className="w-full text-center text-xs text-muted-foreground">
+                            Select a payment method to continue.
+                        </p>
+                    )}
 
-                    <Button
-                        disabled={loading || selectedMethodId === null}
-                        onClick={handlePay}
-                    >
-                        {loading && <Spinner />} Pay
-                    </Button>
+                    <div className="flex w-full flex-col-reverse gap-2 sm:flex-row sm:items-stretch">
+                        <AlertDialogCancel
+                            disabled={loading}
+                            className="mt-0 h-11 w-full sm:flex-1"
+                        >
+                            Cancel
+                        </AlertDialogCancel>
+                        <Button
+                            type="button"
+                            size="lg"
+                            className="h-11 w-full sm:flex-1"
+                            disabled={loading || selectedMethodId === null}
+                            onClick={handleConfirm}
+                        >
+                            {loading ? <Spinner /> : null}
+                            {confirmLabel}
+                        </Button>
+                    </div>
+
+                    <p className="flex w-full items-center justify-center gap-1.5 text-center text-[11px] text-muted-foreground">
+                        <ShieldCheckIcon className="size-3.5 shrink-0" />
+                        Payments are processed securely by our payment partners.
+                    </p>
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>

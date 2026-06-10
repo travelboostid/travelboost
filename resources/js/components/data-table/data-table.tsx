@@ -17,6 +17,8 @@ interface DataTableProps<TData> extends React.ComponentProps<'div'> {
     table: TanstackTable<TData>;
     actionBar?: React.ReactNode;
     renderEmptyState?: (() => React.ReactNode) | React.ReactNode;
+    tableContainerClassName?: string;
+    paginationClassName?: string;
 }
 
 export function DataTable<TData>({
@@ -25,6 +27,8 @@ export function DataTable<TData>({
     children,
     className,
     renderEmptyState,
+    tableContainerClassName,
+    paginationClassName,
     ...props
 }: DataTableProps<TData>) {
     return (
@@ -36,7 +40,12 @@ export function DataTable<TData>({
             {...props}
         >
             {children}
-            <div className="overflow-hidden rounded-md border">
+            <div
+                className={cn(
+                    'overflow-hidden rounded-md border',
+                    tableContainerClassName,
+                )}
+            >
                 <Table>
                     <TableHeader>
                         {table.getHeaderGroups().map((headerGroup) => (
@@ -106,7 +115,7 @@ export function DataTable<TData>({
                     </TableBody>
                 </Table>
             </div>
-            <div className="flex flex-col gap-2.5">
+            <div className={cn('flex flex-col gap-2.5', paginationClassName)}>
                 <DataTablePagination table={table} />
                 {actionBar &&
                     table.getFilteredSelectedRowModel().rows.length > 0 &&

@@ -77,6 +77,75 @@ class Payment extends Model
     }
 
     /**
+     * @var list<string>
+     */
+    private const MIDTRANS_NOTIFICATION_FIELDS = [
+        'transaction_status',
+        'transaction_id',
+        'order_id',
+        'payment_type',
+        'fraud_status',
+        'status_code',
+        'settlement_time',
+        'status_message',
+    ];
+
+    /**
+     * @var list<string>
+     */
+    private const PRISMALINK_NOTIFICATION_FIELDS = [
+        'payment_status',
+        'transaction_status',
+        'payment_date',
+        'bank_ref_no',
+        'plink_ref_no',
+        'payment_method',
+        'merchant_ref_no',
+        'transaction_amount',
+        'validity',
+        'bank_id',
+    ];
+
+    /**
+     * @var list<string>
+     */
+    private const LEGACY_GATEWAY_PAYLOAD_KEYS = [
+        'midtrans',
+        'prismalink',
+        'prismalink_notification',
+        'request',
+    ];
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
+    public static function gatewayNotificationData(array $payload): array
+    {
+        $flat = self::onlyGatewayFields($payload);
+
+        if ($flat !== []) {
+            return $flat;
+        }
+
+        foreach (['midtrans', 'prismalink', 'prismalink_notification'] as $legacyKey) {
+            $legacyPayload = data_get($payload, $legacyKey);
+
+            if (! is_array($legacyPayload)) {
+                continue;
+            }
+
+            $legacyFlat = self::onlyGatewayFields($legacyPayload);
+
+            if ($legacyFlat !== []) {
+                return $legacyFlat;
+            }
+        }
+
+        return [];
+    }
+
+    /**
      * @param  array<string, mixed>  $payload
      * @param  array<string, mixed>  $midtransPayload
      * @return array<string, mixed>
@@ -92,11 +161,8 @@ class Payment extends Model
                 : null;
         }
 
-        $existingMidtransPayload = data_get($payload, 'midtrans');
-        $payload['midtrans'] = array_merge(
-            is_array($existingMidtransPayload) ? $existingMidtransPayload : [],
-            $midtransPayload
-        );
+        $payload = self::mergeGatewayFields($payload, $midtransPayload, self::MIDTRANS_NOTIFICATION_FIELDS);
+        $payload = self::stripLegacyGatewayPayloadKeys($payload);
 
         if ($bookingPaymentType !== null) {
             $payload['booking_payment_type'] = $bookingPaymentType;
@@ -113,11 +179,61 @@ class Payment extends Model
      */
     public static function mergePrismaLinkPayload(array $payload, array $prismaLinkPayload): array
     {
-        $existingNotification = data_get($payload, 'prismalink_notification');
-        $payload['prismalink_notification'] = array_merge(
-            is_array($existingNotification) ? $existingNotification : [],
-            $prismaLinkPayload
-        );
+        $payload = self::mergeGatewayFields($payload, $prismaLinkPayload, self::PRISMALINK_NOTIFICATION_FIELDS);
+        $payload = self::stripLegacyGatewayPayloadKeys($payload);
+
+        return $payload;
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @param  list<string>  $fields
+     * @return array<string, mixed>
+     */
+    private static function onlyGatewayFields(array $payload, array $fields = []): array
+    {
+        $fields = $fields === [] ? array_merge(self::MIDTRANS_NOTIFICATION_FIELDS, self::PRISMALINK_NOTIFICATION_FIELDS) : $fields;
+        $selected = [];
+
+        foreach ($fields as $field) {
+            if (! array_key_exists($field, $payload) || $payload[$field] === null || $payload[$field] === '') {
+                continue;
+            }
+
+            if ($field === 'payment_type' && in_array($payload[$field], self::BOOKING_PAYMENT_TYPES, true)) {
+                continue;
+            }
+
+            $selected[$field] = $payload[$field];
+        }
+
+        return $selected;
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @param  array<string, mixed>  $notification
+     * @param  list<string>  $fields
+     * @return array<string, mixed>
+     */
+    private static function mergeGatewayFields(array $payload, array $notification, array $fields): array
+    {
+        foreach (self::onlyGatewayFields($notification, $fields) as $field => $value) {
+            $payload[$field] = $value;
+        }
+
+        return $payload;
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
+    private static function stripLegacyGatewayPayloadKeys(array $payload): array
+    {
+        foreach (self::LEGACY_GATEWAY_PAYLOAD_KEYS as $legacyKey) {
+            unset($payload[$legacyKey]);
+        }
 
         return $payload;
     }

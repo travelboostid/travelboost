@@ -1735,18 +1735,17 @@ class BookingIndexController extends Controller
             return null;
         }
 
-        $midtransPayload = data_get($payment->payload, 'midtrans');
-        $rawPayload = is_array($midtransPayload) ? $midtransPayload : ($payment->payload ?? []);
+        $gateway = Payment::gatewayNotificationData($payment->payload ?? []);
 
         return [
             'type' => 'online',
             'url' => null,
             'provider' => $payment->provider,
-            'method' => (string) (data_get($rawPayload, 'payment_type') ?: $payment->payment_method),
-            'order_id' => data_get($payment->payload, 'order_id') ?: data_get($rawPayload, 'order_id'),
-            'transaction_id' => data_get($rawPayload, 'transaction_id'),
-            'status' => data_get($rawPayload, 'transaction_status') ?: $payment->status->value,
-            'raw' => $rawPayload,
+            'method' => (string) (data_get($gateway, 'payment_type') ?: $payment->payment_method),
+            'order_id' => data_get($payment->payload, 'order_id') ?: data_get($gateway, 'order_id'),
+            'transaction_id' => data_get($gateway, 'transaction_id'),
+            'status' => data_get($gateway, 'transaction_status') ?: $payment->status->value,
+            'raw' => null,
         ];
     }
 

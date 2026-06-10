@@ -4,64 +4,126 @@ namespace App\Http\Controllers\Companies\Dashboard;
 
 use App\Http\Controllers\Controller;
 use App\Models\Company;
+use App\Models\Wallet;
 use Bavix\Wallet\Models\Transaction;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Attributes\Controllers\Authorize;
 use Illuminate\Support\Carbon;
 use Inertia\Inertia;
 
 class WalletTransactionsController extends Controller
 {
+    #[Authorize('view', 'company')]
     public function index(Request $request, Company $company)
     {
-        $wallet = $company->wallet; // Retrieve the company's wallet
-
-        // define date range for filtering transactions
-        $from = $request->input('from')
-          ? Carbon::parse($request->input('from'))->startOfDay() // Start date
-          : now()->subMonth()->startOfDay(); // Default to one month ago
-
-        $to = $request->input('to')
-          ? Carbon::parse($request->input('to'))->endOfDay() // End date
-          : now()->endOfDay(); // Default to today
-
-        // Base query for transactions within the date range
-        $query = $wallet->transactions()
-            ->whereBetween('created_at', [$from, $to]); // Filter transactions by date range
-
-        // Calculate statistics
-        $transactionCount = (clone $query)->count(); // Count total transactions
-
-        $incomeAmount = (clone $query)
-            ->where('amount', '>', 0) // Filter for income transactions
-            ->sum('amount'); // Sum income amounts
-
-        $expenseAmount = abs(
-            (clone $query)
-                ->where('amount', '<', 0) // Filter for expense transactions
-                ->sum('amount') // Sum expense amounts
+        abort_unless(
+            $request->user()->isAbleTo('wallet-transaction.query', "company:{$company->id}"),
+            403
         );
 
-        // transactions list with pagination (latest 50 transactions)
-        $transactions = (clone $query)
-            ->latest() // Get latest transactions
-            ->take(50) // Limit to 50 transactions
+        $wallet = $this->resolveWallet($company, $request->query('wallet'));
+
+        $from = $request->filled('from')
+            ? Carbon::parse($request->input('from'))->startOfDay()
+            : now()->subMonth()->startOfDay();
+
+        $to = $request->filled('to')
+            ? Carbon::parse($request->input('to'))->endOfDay()
+            : now()->endOfDay();
+
+        $type = $request->input('type', 'all');
+        if (! in_array($type, ['all', 'income', 'expense'], true)) {
+            $type = 'all';
+        }
+
+        $periodQuery = $wallet->transactions()
+            ->whereBetween('created_at', [$from, $to]);
+
+        $transactionCount = (clone $periodQuery)->count();
+
+        $incomeAmount = (clone $periodQuery)
+            ->where('amount', '>', 0)
+            ->sum('amount');
+
+        $expenseAmount = abs(
+            (clone $periodQuery)
+                ->where('amount', '<', 0)
+                ->sum('amount')
+        );
+
+        $listQuery = (clone $periodQuery)
+            ->when($type === 'income', fn (Builder $query) => $query->where('amount', '>', 0))
+            ->when($type === 'expense', fn (Builder $query) => $query->where('amount', '<', 0));
+
+        $transactions = $listQuery
+            ->latest()
+            ->take(50)
             ->get()
             ->map(fn (Transaction $t) => [
                 'id' => $t->id,
-                'type' => $t->amount > 0 ? 'income' : 'expense', // Determine transaction type
-                'amount' => abs($t->amount), // Use absolute value for amount
-                'meta' => $t->meta, // Transaction metadata
-                'confirmed' => $t->confirmed, // Confirmation status
-                'created_at' => $t->created_at, // Transaction creation date
+                'type' => $t->amount > 0 ? 'income' : 'expense',
+                'amount' => abs($t->amount),
+                'meta' => $t->meta,
+                'confirmed' => $t->confirmed,
+                'created_at' => $t->created_at,
             ]);
 
         return Inertia::render('companies/dashboard/wallet-transactions/index', [
-            'from' => $from->toDateString(), // Format start date
-            'to' => $to->toDateString(), // Format end date
-            'transaction_count' => $transactionCount, // Total transaction count
-            'income_amount' => $incomeAmount, // Total income amount
-            'expense_amount' => $expenseAmount, // Total expense amount
-            'transactions' => $transactions, // List of transactions
+            'filters' => [
+                'wallet' => $wallet->slug,
+                'from' => $from->toDateString(),
+                'to' => $to->toDateString(),
+                'type' => $type,
+            ],
+            'wallet' => [
+                'id' => $wallet->id,
+                'name' => $wallet->name,
+                'slug' => $wallet->slug,
+                'description' => $wallet->description,
+                'balance' => $wallet->balance,
+            ],
+            'wallets' => $this->walletOptions($company),
+            'transaction_count' => $transactionCount,
+            'income_amount' => $incomeAmount,
+            'expense_amount' => $expenseAmount,
+            'transactions' => $transactions,
         ]);
+    }
+
+    private function resolveWallet(Company $company, ?string $slug): Wallet
+    {
+        $defaultSlug = (string) config('wallet.wallet.default.slug', 'main');
+        $slug = filled($slug) ? $slug : $defaultSlug;
+
+        /** @var Wallet|null $wallet */
+        $wallet = $company->wallets()->where('slug', $slug)->first();
+
+        abort_unless($wallet instanceof Wallet, 404);
+
+        return $wallet;
+    }
+
+    /**
+     * @return list<array{id: int, name: string, slug: string, description: string|null, balance: int|float|string, is_default: bool}>
+     */
+    private function walletOptions(Company $company): array
+    {
+        $defaultSlug = (string) config('wallet.wallet.default.slug', 'main');
+
+        return $company->wallets()
+            ->orderByRaw('CASE WHEN slug = ? THEN 0 ELSE 1 END', [$defaultSlug])
+            ->orderBy('name')
+            ->get()
+            ->map(fn (Wallet $wallet) => [
+                'id' => $wallet->id,
+                'name' => $wallet->name,
+                'slug' => $wallet->slug,
+                'description' => $wallet->description,
+                'balance' => $wallet->balance,
+                'is_default' => $wallet->slug === $defaultSlug,
+            ])
+            ->values()
+            ->all();
     }
 }

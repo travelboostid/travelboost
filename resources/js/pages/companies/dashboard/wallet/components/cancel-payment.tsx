@@ -12,18 +12,19 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
+import { refreshWalletPage } from '@/lib/refresh-wallet-page';
 import { router } from '@inertiajs/react';
 
 export default function CancelPayment({ payment }: { payment: any }) {
     const { company } = usePageSharedDataProps();
     const handleCancel = () => {
-        router.put(
+        router.post(
             cancel({ company: company.username, payment: payment.id }),
             {},
             {
                 preserveScroll: true,
                 onSuccess: () => {
-                    // optional: toast / notification
+                    refreshWalletPage();
                 },
             },
         );

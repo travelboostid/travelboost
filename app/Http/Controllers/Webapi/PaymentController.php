@@ -3,16 +3,22 @@
 namespace App\Http\Controllers\Webapi;
 
 use App\Enums\PaymentMethodStatus;
+use App\Enums\PaymentStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\PaymentIndexRequest;
 use App\Http\Resources\PaymentResource;
 use App\Models\AgentSubscriptionPackage;
 use App\Models\AgentSubscriptionPayment;
 use App\Models\AiCreditTopupPayment;
+use App\Models\Booking;
+use App\Models\Company;
 use App\Models\Payment;
 use App\Models\PaymentMethod;
 use App\Models\User;
 use App\Models\WalletTopupPayment;
+use App\Services\MidtransException;
+use App\Services\MidtransService;
+use App\Services\PaymentGatewayStatusSyncService;
 use App\Services\PrismaLinkException;
 use App\Services\PrismaLinkService;
 use Illuminate\Http\JsonResponse;
@@ -21,15 +27,14 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
-use Midtrans\Snap;
 use Throwable;
 
 class PaymentController extends Controller
 {
-    private const SNAP_TOKEN_LIFETIME_MINUTES = 180;
-
     public function __construct(
         private readonly PrismaLinkService $prismaLinkService,
+        private readonly MidtransService $midtransService,
+        private readonly PaymentGatewayStatusSyncService $paymentGatewayStatusSyncService,
     ) {}
 
     /**
@@ -76,6 +81,43 @@ class PaymentController extends Controller
     }
 
     /**
+     * Sync payment status from the gateway.
+     *
+     * @operationId syncPaymentStatus
+     */
+    public function syncStatus(Payment $payment): JsonResponse|PaymentResource
+    {
+        $user = Auth::user();
+
+        if (! $user instanceof User) {
+            abort(401);
+        }
+
+        $this->authorizePaymentAccess($user, $payment);
+
+        try {
+            $result = $this->paymentGatewayStatusSyncService->sync($payment);
+        } catch (Throwable $exception) {
+            Log::warning('Payment status sync failed', [
+                'payment_id' => $payment->id,
+                'message' => $exception->getMessage(),
+            ]);
+
+            return response()->json([
+                'message' => 'Payment status could not be checked right now. Please try again shortly.',
+            ], 422);
+        }
+
+        return (new PaymentResource($result['payment']))->additional([
+            'meta' => [
+                'previous_status' => $result['previous_status'],
+                'changed' => $result['changed'],
+                'transaction_status' => $result['transaction_status'],
+            ],
+        ]);
+    }
+
+    /**
      * Create wallet topup payment
      *
      * @operationId createTopupPayment
@@ -103,6 +145,19 @@ class PaymentController extends Controller
             return response()->json([
                 'message' => 'Selected payment method is not available.',
             ], 422);
+        }
+
+        $owner = $validated['owner_type'] === 'company'
+            ? Company::query()->findOrFail($validated['owner_id'])
+            : $user;
+
+        $existingPendingTopup = $this->findPendingWalletTopupPayment($owner, $user);
+
+        if ($existingPendingTopup) {
+            return response()->json([
+                'message' => 'You already have a pending wallet top-up. Complete or cancel it before starting a new one.',
+                'existing_payment' => (new PaymentResource($existingPendingTopup))->resolve($request),
+            ], 409);
         }
 
         $topup = WalletTopupPayment::create([
@@ -289,6 +344,18 @@ class PaymentController extends Controller
                 'response_code' => $exception->responseCode,
                 'response_description' => data_get($exception->response, 'response_description'),
             ], 422);
+        } catch (MidtransException $exception) {
+            Log::warning('Midtrans payment initiation failed', [
+                'payment_id' => $payment->id,
+                'provider' => $payment->provider,
+                'message' => $exception->getMessage(),
+                'status_code' => $exception->statusCode,
+            ]);
+
+            return response()->json([
+                'message' => $exception->getMessage(),
+                'status_code' => $exception->statusCode,
+            ], 422);
         } catch (Throwable $exception) {
             Log::warning('Payment gateway initiation failed', [
                 'payment_id' => $payment->id,
@@ -315,43 +382,23 @@ class PaymentController extends Controller
      */
     private function initiateMidtransPayment(Payment $payment, User $user, array $context): void
     {
-        $params = [
-            'transaction_details' => [
-                'order_id' => $payment->id.'-'.uniqid(),
-                'gross_amount' => (int) $payment->amount,
-            ],
-            'customer_details' => [
-                'first_name' => $user->name,
-                'email' => $user->email,
-            ],
-            'callbacks' => [
-                'finish' => $context['finish_url'],
-            ],
-            'expiry' => [
-                'unit' => 'minutes',
-                'duration' => self::SNAP_TOKEN_LIFETIME_MINUTES,
-            ],
-        ];
-
         $selectedPaymentMethod = $context['selected_payment_method'] ?? null;
-        $enabledPayments = $selectedPaymentMethod instanceof PaymentMethod
-            ? $this->midtransEnabledPaymentsFromMeta($selectedPaymentMethod->meta)
-            : $this->midtransEnabledPayments($payment->payment_method);
 
-        if ($enabledPayments !== null) {
-            $params['enabled_payments'] = $enabledPayments;
+        if (! $selectedPaymentMethod instanceof PaymentMethod) {
+            throw new \RuntimeException('Midtrans payment method is required.');
         }
 
-        $snapToken = Snap::getSnapToken($params);
+        $chargePayload = $this->midtransService->charge(
+            $payment,
+            $selectedPaymentMethod,
+            $user,
+            $context['finish_url'],
+        );
 
         $payment->update([
             'status' => 'pending',
-            'payload' => [
-                'order_id' => $params['transaction_details']['order_id'],
-                'snap_token' => $snapToken,
-                'request' => $params,
-            ],
-            'expired_at' => now()->addMinutes(self::SNAP_TOKEN_LIFETIME_MINUTES),
+            'payload' => array_merge($payment->payload ?? [], $chargePayload),
+            'expired_at' => $this->midtransService->newChargeExpiresAt(),
         ]);
     }
 
@@ -410,18 +457,21 @@ class PaymentController extends Controller
             ? Carbon::parse((string) $response['validity'])
             : now()->addHours($validityHours);
 
+        $instructionPayload = $this->prismaLinkService->extractInstructions(
+            $response,
+            $payment->payment_method,
+            $bankId,
+        );
+
         $payment->update([
             'status' => 'pending',
-            'payload' => [
+            'payload' => array_merge([
                 'merchant_ref_no' => $merchantRefNo,
                 'plink_ref_no' => $response['plink_ref_no'] ?? null,
-                'payment_page_url' => $this->prismaLinkService->resolvePaymentPageUrl(
-                    isset($response['payment_page_url']) ? (string) $response['payment_page_url'] : null,
-                ),
                 'transaction_status' => $response['transaction_status'] ?? null,
                 'validity' => $response['validity'] ?? null,
-                'prismalink' => $response,
-            ],
+                'charge_expires_at' => $expiredAt->toISOString(),
+            ], $instructionPayload),
             'expired_at' => $expiredAt,
         ]);
     }
@@ -442,38 +492,6 @@ class PaymentController extends Controller
         return route('prismalink.frontend-callback', absolute: true);
     }
 
-    /**
-     * @return list<string>|null
-     */
-    private function midtransEnabledPayments(?string $method): ?array
-    {
-        if ($method === null) {
-            return null;
-        }
-
-        $paymentMethod = PaymentMethod::query()
-            ->where('provider', 'midtrans')
-            ->where('method', $method)
-            ->first();
-
-        return $this->midtransEnabledPaymentsFromMeta($paymentMethod?->meta);
-    }
-
-    /**
-     * @param  array<string, mixed>|null  $meta
-     * @return list<string>|null
-     */
-    private function midtransEnabledPaymentsFromMeta(?array $meta): ?array
-    {
-        $enabledPayments = data_get($meta, 'enabled_payments');
-
-        if (! is_array($enabledPayments) || $enabledPayments === []) {
-            return null;
-        }
-
-        return array_values(array_map(strval(...), $enabledPayments));
-    }
-
     private function prismaLinkPaymentMethodCode(?string $method): ?string
     {
         if ($method !== null && str_ends_with($method, '_va')) {
@@ -482,6 +500,7 @@ class PaymentController extends Controller
 
         return match ($method) {
             'credit-card' => 'CC',
+            'qr', 'qris' => 'QR',
             default => null,
         };
     }
@@ -500,5 +519,90 @@ class PaymentController extends Controller
         $bankId = trim((string) $bankId);
 
         return $bankId !== '' ? $bankId : null;
+    }
+
+    private function authorizePaymentAccess(User $user, Payment $payment): void
+    {
+        if ($this->userOwnsPayment($user, $payment)) {
+            return;
+        }
+
+        if ($this->userCanAccessBookingPayment($user, $payment)) {
+            return;
+        }
+
+        abort(403);
+    }
+
+    private function userOwnsPayment(User $user, Payment $payment): bool
+    {
+        if (in_array($payment->owner_type, [User::class, 'user'], true)) {
+            return (int) $payment->owner_id === $user->id;
+        }
+
+        if (! in_array($payment->owner_type, [Company::class, 'company'], true)) {
+            return false;
+        }
+
+        $company = Company::query()->find($payment->owner_id);
+
+        if (! $company) {
+            return false;
+        }
+
+        return $company->teams()->where('user_id', $user->id)->exists();
+    }
+
+    private function userCanAccessBookingPayment(User $user, Payment $payment): bool
+    {
+        if ($payment->payable_type !== Booking::class) {
+            return false;
+        }
+
+        $payment->loadMissing('payable');
+
+        if (! $payment->payable instanceof Booking) {
+            return false;
+        }
+
+        if ((int) $payment->payable->user_id === $user->id) {
+            return true;
+        }
+
+        $booking = $payment->payable;
+
+        if ($booking->vendor_id) {
+            $vendor = Company::query()->find($booking->vendor_id);
+
+            if ($vendor && $vendor->teams()->where('user_id', $user->id)->exists()) {
+                return true;
+            }
+        }
+
+        if ($booking->agent_id) {
+            $agent = Company::query()->find($booking->agent_id);
+
+            if ($agent && $agent->teams()->where('user_id', $user->id)->exists()) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function findPendingWalletTopupPayment(Company|User $owner, User $user): ?Payment
+    {
+        return Payment::query()
+            ->whereMorphedTo('owner', $owner)
+            ->whereMorphedTo('payable', WalletTopupPayment::class)
+            ->whereIn('status', [PaymentStatus::PENDING, PaymentStatus::UNPAID])
+            ->whereIn(
+                'payable_id',
+                WalletTopupPayment::query()
+                    ->select('id')
+                    ->where('user_id', $user->id)
+            )
+            ->latest()
+            ->first();
     }
 }
