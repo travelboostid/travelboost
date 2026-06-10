@@ -13,24 +13,24 @@ import dayjs from 'dayjs';
 import { CalendarIcon, CircleDashedIcon, TextIcon } from 'lucide-react';
 import { useMemo } from 'react';
 import { EmptyProducts } from './components/empty-products';
+import { TourProductRowActions } from './components/tour-product-row-actions';
+import type {
+    AdminTourProductRow,
+    PaginatedTourProducts,
+} from './components/tour-product-types';
+import { TourProductsTableActionBar } from './components/tour-products-table-action-bar';
 
 const STATUS_OPTIONS = [
     { label: 'Active', value: 'active' },
     { label: 'Inactive', value: 'inactive' },
 ];
 
-type TourProductsPageProps = {
-    data: {
-        data: any[];
-        total: number;
-        per_page: number;
-        current_page: number;
-        last_page: number;
-    };
-};
-
-export default function TourProductsPage({ data }: TourProductsPageProps) {
-    const columns = useMemo<ColumnDef<any>[]>(
+export default function TourProductsPage({
+    data,
+}: {
+    data: PaginatedTourProducts;
+}) {
+    const columns = useMemo<ColumnDef<AdminTourProductRow>[]>(
         () => [
             {
                 id: 'select',
@@ -104,7 +104,7 @@ export default function TourProductsPage({ data }: TourProductsPageProps) {
                     <DataTableColumnHeader column={column} label="Vendor" />
                 ),
                 cell: ({ row }) => (
-                    <div>{row.original.company?.name ?? '-'}</div>
+                    <div>{row.original.company?.name ?? '—'}</div>
                 ),
                 meta: {
                     label: 'Vendor',
@@ -134,12 +134,12 @@ export default function TourProductsPage({ data }: TourProductsPageProps) {
             },
             {
                 id: 'category',
-                accessorFn: (row) => row.category?.name ?? '-',
+                accessorFn: (row) => row.category?.name ?? '—',
                 header: ({ column }) => (
                     <DataTableColumnHeader column={column} label="Category" />
                 ),
                 cell: ({ row }) => (
-                    <div>{row.original.category?.name ?? '-'}</div>
+                    <div>{row.original.category?.name ?? '—'}</div>
                 ),
                 enableSorting: false,
             },
@@ -154,7 +154,20 @@ export default function TourProductsPage({ data }: TourProductsPageProps) {
                 ),
                 cell: ({ row }) => (
                     <div className="max-w-32 truncate">
-                        {row.original.destination}
+                        {row.original.destination || '—'}
+                    </div>
+                ),
+                enableSorting: false,
+            },
+            {
+                id: 'schedules_count',
+                accessorKey: 'schedules_count',
+                header: ({ column }) => (
+                    <DataTableColumnHeader column={column} label="Schedules" />
+                ),
+                cell: ({ cell }) => (
+                    <div className="text-sm font-medium">
+                        {cell.getValue<number>()}
                     </div>
                 ),
                 enableSorting: false,
@@ -164,13 +177,11 @@ export default function TourProductsPage({ data }: TourProductsPageProps) {
                 cell: ({ row }) => {
                     const { src } = extractImageSrc(row.original.image as any);
                     return (
-                        <div>
-                            <img
-                                src={src}
-                                className="aspect-video w-16 rounded object-cover"
-                                alt={row.original.name}
-                            />
-                        </div>
+                        <img
+                            src={src}
+                            className="aspect-video w-16 rounded object-cover"
+                            alt={row.original.name}
+                        />
                     );
                 },
                 enableSorting: false,
@@ -188,6 +199,7 @@ export default function TourProductsPage({ data }: TourProductsPageProps) {
                             variant={
                                 status === 'active' ? 'default' : 'secondary'
                             }
+                            className="capitalize"
                         >
                             {status}
                         </Badge>
@@ -195,7 +207,6 @@ export default function TourProductsPage({ data }: TourProductsPageProps) {
                 },
                 meta: {
                     label: 'Status',
-                    placeholder: 'Search status...',
                     variant: 'multiSelect',
                     options: STATUS_OPTIONS,
                     icon: CircleDashedIcon,
@@ -218,7 +229,6 @@ export default function TourProductsPage({ data }: TourProductsPageProps) {
                 ),
                 meta: {
                     label: 'Created date',
-                    placeholder: 'Search created date...',
                     variant: 'dateRange',
                     icon: CalendarIcon,
                 },
@@ -227,8 +237,10 @@ export default function TourProductsPage({ data }: TourProductsPageProps) {
             },
             {
                 id: 'actions',
-                enableHiding: false,
-                cell: ({ row }) => <div></div>,
+                cell: ({ row }) => (
+                    <TourProductRowActions tour={row.original} />
+                ),
+                size: 40,
             },
         ],
         [],
@@ -258,7 +270,11 @@ export default function TourProductsPage({ data }: TourProductsPageProps) {
             openMenuIds={['tours']}
             breadcrumb={[{ title: 'Tours' }, { title: 'Products' }]}
         >
-            <DataTable table={table} renderEmptyState={<EmptyProducts />}>
+            <DataTable
+                table={table}
+                renderEmptyState={<EmptyProducts />}
+                actionBar={<TourProductsTableActionBar table={table} />}
+            >
                 <DataTableToolbar table={table} />
             </DataTable>
         </AdminDashboardLayout>

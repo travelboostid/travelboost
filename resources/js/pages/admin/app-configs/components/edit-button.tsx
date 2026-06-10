@@ -1,36 +1,102 @@
-import {
-    AlertDialog,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogFooter,
-    AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
-
-import { Field, FieldError, FieldLabel } from '@/components/ui/field';
-import { Input } from '@/components/ui/input';
+import { DialogTrigger } from '@/components/ui/dialog';
+import {
+    Field,
+    FieldDescription,
+    FieldError,
+    FieldLabel,
+} from '@/components/ui/field';
+import { Separator } from '@/components/ui/separator';
+import { Textarea } from '@/components/ui/textarea';
 import { index, update } from '@/routes/admin/app-configs';
-import { json } from '@codemirror/lang-json';
 import { router, useForm } from '@inertiajs/react';
-import CodeMirror from '@uiw/react-codemirror';
 import { PencilIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
+import { AppConfigDialogShell } from './app-config-dialog-shell';
+import { AppConfigFormSection } from './app-config-form-section';
+import { hasJsonSchema } from './app-config-schema-form';
+import { AppConfigSchemaSection } from './app-config-schema-section';
+import {
+    AppConfigValueEditor,
+    type AppConfigEditMode,
+} from './app-config-value-editor';
 
-export default function EditButton({ data }: { data: any }) {
+type AppConfigRow = {
+    id: number;
+    key: string;
+    description: string | null;
+    schema?: Record<string, unknown> | null;
+    value?: Record<string, unknown> | null;
+};
+
+function stringifySchema(schema: Record<string, unknown> | null | undefined) {
+    return JSON.stringify(schema ?? {}, null, 2);
+}
+
+export default function EditButton({ data }: { data: AppConfigRow }) {
     const [open, setOpen] = useState(false);
+    const [editMode, setEditMode] = useState<AppConfigEditMode>('form');
+    const [schemaOpen, setSchemaOpen] = useState(false);
+    const [schemaJson, setSchemaJson] = useState(stringifySchema(data.schema));
+    const [activeSchema, setActiveSchema] = useState(data.schema ?? null);
+    const [schemaRevision, setSchemaRevision] = useState(0);
+    const [configValue, setConfigValue] = useState<Record<string, unknown>>(
+        data.value ?? {},
+    );
 
     const form = useForm({
-        key: data.key,
-        description: data.description,
-        value: data.value ? JSON.stringify(data.value, null, 2) : '',
+        description: data.description ?? '',
     });
 
+    const schemaAvailable = hasJsonSchema(activeSchema);
+
+    const handleSchemaChange = (nextSchemaJson: string) => {
+        setSchemaJson(nextSchemaJson);
+
+        try {
+            const parsed = JSON.parse(nextSchemaJson) as Record<
+                string,
+                unknown
+            >;
+
+            if (hasJsonSchema(parsed)) {
+                setActiveSchema(parsed);
+                setSchemaRevision((current) => current + 1);
+            }
+        } catch {
+            // Wait for valid JSON before refreshing the generated form.
+        }
+    };
+
     const handleSubmit = () => {
-        form.transform((data) => ({
-            ...data,
-            value: data.value ? JSON.parse(data.value) : null,
+        let parsedSchema: Record<string, unknown> | null = null;
+
+        try {
+            parsedSchema = schemaJson
+                ? (JSON.parse(schemaJson) as Record<string, unknown>)
+                : null;
+        } catch {
+            toast.error('Schema must be valid JSON');
+            setSchemaOpen(true);
+            return;
+        }
+
+        if (parsedSchema && !hasJsonSchema(parsedSchema)) {
+            toast.error(
+                'Schema must be a JSON Schema object with a type field',
+            );
+            setSchemaOpen(true);
+            return;
+        }
+
+        form.transform(() => ({
+            description: form.data.description,
+            schema: parsedSchema,
+            value: configValue,
         }));
-        form.put(update(data.id).url, {
+
+        form.put(update({ app_config: data.id }).url, {
             onSuccess: () => {
                 router.push(index());
             },
@@ -38,41 +104,54 @@ export default function EditButton({ data }: { data: any }) {
     };
 
     useEffect(() => {
-        if (!open) return;
+        if (!open) {
+            return;
+        }
+
         form.setData({
-            key: data.key,
-            description: data.description,
-            value: data.value ? JSON.stringify(data.value, null, 2) : '',
+            description: data.description ?? '',
         });
+        setConfigValue(data.value ?? {});
+        setSchemaJson(stringifySchema(data.schema));
+        setActiveSchema(data.schema ?? null);
+        setSchemaRevision((current) => current + 1);
+        setSchemaOpen(false);
+        setEditMode(hasJsonSchema(data.schema) ? 'form' : 'json');
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open]);
 
     return (
-        <AlertDialog open={open} onOpenChange={setOpen}>
-            <AlertDialogTrigger asChild>
-                <Button size="icon" variant="outline">
-                    <PencilIcon />
-                </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-                <form className="space-y-8">
+        <AppConfigDialogShell
+            open={open}
+            onOpenChange={setOpen}
+            title="Edit app config"
+            description="Update the description, schema, or stored value for this configuration."
+            configKey={data.key}
+            onSubmit={handleSubmit}
+            submitLabel="Save changes"
+            processing={form.processing}
+            wide
+            trigger={
+                <DialogTrigger asChild>
+                    <Button size="icon" variant="outline">
+                        <PencilIcon />
+                    </Button>
+                </DialogTrigger>
+            }
+        >
+            <div className="space-y-6">
+                <AppConfigFormSection
+                    title="Description"
+                    description="Human-readable summary shown in the admin table."
+                >
                     <Field>
-                        <FieldLabel htmlFor="key">Key</FieldLabel>
-                        <Input
-                            id="key"
-                            placeholder="key"
-                            value={form.data.key}
-                            disabled
-                        />
-                        <FieldError>{form.errors.key}</FieldError>
-                    </Field>
-                    <Field>
-                        <FieldLabel htmlFor="description">
+                        <FieldLabel htmlFor={`description-${data.id}`}>
                             Description
                         </FieldLabel>
-                        <Input
-                            id="description"
-                            placeholder="Description"
+                        <Textarea
+                            id={`description-${data.id}`}
+                            placeholder="What this config controls…"
+                            rows={2}
                             value={form.data.description}
                             onChange={(e) =>
                                 form.setData('description', e.target.value)
@@ -80,30 +159,46 @@ export default function EditButton({ data }: { data: any }) {
                         />
                         <FieldError>{form.errors.description}</FieldError>
                     </Field>
-                    <Field>
-                        <FieldLabel htmlFor="value">Initial Value</FieldLabel>
-                        <CodeMirror
-                            value={form.data.value}
-                            height="200px"
-                            extensions={[json()]}
-                            onChange={(val) => form.setData('value', val)}
-                        />
-                        <FieldError>{form.errors.value}</FieldError>
-                    </Field>
-                </form>
-                <AlertDialogFooter>
-                    <AlertDialogCancel disabled={form.processing}>
-                        Cancel
-                    </AlertDialogCancel>
-                    <Button
-                        type="button"
-                        onClick={handleSubmit}
-                        disabled={form.processing}
-                    >
-                        Save
-                    </Button>
-                </AlertDialogFooter>
-            </AlertDialogContent>
-        </AlertDialog>
+                </AppConfigFormSection>
+
+                <Separator />
+
+                <AppConfigSchemaSection
+                    open={schemaOpen}
+                    onOpenChange={setSchemaOpen}
+                    value={schemaJson}
+                    onChange={handleSchemaChange}
+                    error={form.errors.schema}
+                />
+
+                <Separator />
+
+                <AppConfigFormSection
+                    title="Value"
+                    description={
+                        schemaAvailable
+                            ? 'Edit fields with the generated form or switch to raw JSON.'
+                            : 'No valid schema — edit the value as JSON, or fix the schema above.'
+                    }
+                >
+                    <AppConfigValueEditor
+                        key={`edit-${data.id}-${schemaRevision}`}
+                        schema={activeSchema}
+                        value={configValue}
+                        mode={editMode}
+                        onModeChange={setEditMode}
+                        onChange={setConfigValue}
+                    />
+                    {!schemaAvailable ? (
+                        <FieldDescription>
+                            Expand JSON Schema and ensure it includes a{' '}
+                            <code className="text-xs">type</code> field to
+                            enable the form editor.
+                        </FieldDescription>
+                    ) : null}
+                    <FieldError>{form.errors.value}</FieldError>
+                </AppConfigFormSection>
+            </div>
+        </AppConfigDialogShell>
     );
 }

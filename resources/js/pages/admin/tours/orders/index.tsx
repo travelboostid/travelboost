@@ -1,43 +1,45 @@
+import { adminSearchResourceOwners } from '@/api/misc/misc';
 import { DataTable } from '@/components/data-table/data-table';
 import { DataTableColumnHeader } from '@/components/data-table/data-table-column-header';
 import { DataTableToolbar } from '@/components/data-table/data-table-toolbar';
 import AdminDashboardLayout from '@/components/layouts/admin-dashboard';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { useDataTable } from '@/hooks/use-data-table';
-import type { Column, ColumnDef } from '@tanstack/react-table';
+import { formatIDR } from '@/lib/utils';
+import type { Option } from '@/types/data-table';
+import type { ColumnDef } from '@tanstack/react-table';
 import dayjs from 'dayjs';
-import { MoreHorizontal, Text } from 'lucide-react';
+import { CalendarIcon, CircleDashedIcon, TextIcon } from 'lucide-react';
 import { useMemo } from 'react';
+import { BookingStatusBadge } from './components/booking-status-badge';
 import { EmptyOrders } from './components/empty-orders';
+import { TourOrderRowActions } from './components/tour-order-row-actions';
+import type {
+    AdminTourOrderRow,
+    PaginatedTourOrders,
+} from './components/tour-order-types';
+import { TourOrdersTableActionBar } from './components/tour-orders-table-action-bar';
 
-type OrderResource = {
-    id: number;
-    invoice_number: string;
-    customer_name: string;
-    vendor_name: string;
-    tour_name: string;
-    total_amount: number;
-    status: string;
-    created_at: string;
-};
+const STATUS_OPTIONS = [
+    { label: 'Awaiting payment', value: 'awaiting payment' },
+    { label: 'Booking reserved', value: 'booking reserved' },
+    { label: 'Reserved', value: 'reserved' },
+    { label: 'Manual reserved', value: 'manual reserved' },
+    { label: 'Waiting payment approval', value: 'waiting payment approval' },
+    { label: 'Down payment', value: 'down payment' },
+    { label: 'Full payment', value: 'full payment' },
+    { label: 'Waiting list', value: 'waiting list' },
+    { label: 'Cancelled', value: 'cancelled' },
+    { label: 'Refunded', value: 'refunded' },
+    { label: 'Expired', value: 'expired' },
+];
 
-type PageProps = {
-    data: {
-        data: OrderResource[];
-        total: number;
-    };
-};
-
-export default function Page({ data }: PageProps) {
-    const columns = useMemo<ColumnDef<OrderResource>[]>(
+export default function TourOrdersPage({
+    data,
+}: {
+    data: PaginatedTourOrders;
+}) {
+    const columns = useMemo<ColumnDef<AdminTourOrderRow>[]>(
         () => [
             {
                 id: 'select',
@@ -61,138 +63,235 @@ export default function Page({ data }: PageProps) {
                         aria-label="Select row"
                     />
                 ),
-                size: 32,
-                enableSorting: true,
+                enableSorting: false,
                 enableHiding: false,
             },
             {
-                id: 'invoice_number',
-                accessorKey: 'invoice_number',
-                header: ({
-                    column,
-                }: {
-                    column: Column<OrderResource, unknown>;
-                }) => <DataTableColumnHeader column={column} label="Invoice" />,
-                cell: ({ cell }) => (
-                    <div className="font-mono text-xs">
-                        {cell.getValue<string>()}
+                id: 'booking_number',
+                accessorKey: 'booking_number',
+                header: ({ column }) => (
+                    <DataTableColumnHeader column={column} label="Booking" />
+                ),
+                cell: ({ row }) => (
+                    <div className="space-y-0.5">
+                        <div className="font-mono text-xs">
+                            {row.original.booking_number}
+                        </div>
+                        {row.original.invoice_number ? (
+                            <div className="font-mono text-[10px] text-muted-foreground">
+                                {row.original.invoice_number}
+                            </div>
+                        ) : null}
                     </div>
                 ),
                 meta: {
-                    label: 'Invoice',
-                    placeholder: 'Search invoice...',
+                    label: 'Booking',
+                    placeholder: 'Search booking no...',
                     variant: 'text',
-                    icon: Text,
+                    icon: TextIcon,
                 },
+                enableSorting: true,
                 enableColumnFilter: true,
             },
             {
-                id: 'customer_name',
-                accessorKey: 'customer_name',
-                header: ({
-                    column,
-                }: {
-                    column: Column<OrderResource, unknown>;
-                }) => (
+                id: 'contact_name',
+                accessorKey: 'contact_name',
+                header: ({ column }) => (
                     <DataTableColumnHeader column={column} label="Customer" />
                 ),
-                cell: ({ cell }) => <div>{cell.getValue<string>()}</div>,
+                cell: ({ row }) => (
+                    <div className="max-w-40 truncate">
+                        {row.original.contact_name || '—'}
+                    </div>
+                ),
                 meta: {
                     label: 'Customer',
                     placeholder: 'Search customer...',
                     variant: 'text',
-                    icon: Text,
+                    icon: TextIcon,
                 },
+                enableSorting: false,
                 enableColumnFilter: true,
             },
             {
-                id: 'vendor_name',
-                accessorKey: 'vendor_name',
-                header: ({
-                    column,
-                }: {
-                    column: Column<OrderResource, unknown>;
-                }) => <DataTableColumnHeader column={column} label="Vendor" />,
-                cell: ({ cell }) => <div>{cell.getValue<string>()}</div>,
-            },
-            {
-                id: 'tour_name',
-                accessorKey: 'tour_name',
-                header: ({
-                    column,
-                }: {
-                    column: Column<OrderResource, unknown>;
-                }) => <DataTableColumnHeader column={column} label="Tour" />,
-                cell: ({ cell }) => (
-                    <div className="max-w-48 truncate font-medium">
-                        {cell.getValue<string>()}
+                id: 'vendor',
+                accessorFn: (row) => row.vendor?.name ?? '—',
+                header: ({ column }) => (
+                    <DataTableColumnHeader column={column} label="Vendor" />
+                ),
+                cell: ({ row }) => (
+                    <div className="max-w-36 truncate">
+                        {row.original.vendor?.name ?? '—'}
                     </div>
                 ),
+                meta: {
+                    label: 'Vendor',
+                    variant: 'multiSelect',
+                    options: async (query, currentValues) => {
+                        const response = await adminSearchResourceOwners({
+                            types: 'company',
+                            keyword: query,
+                            include_ids: Array.from(currentValues)
+                                .map((v) => `company:${v}`)
+                                .join(','),
+                        } as any);
+
+                        const companies = response.data.companies as any[];
+
+                        return companies.map(
+                            (company) =>
+                                ({
+                                    label: company.name,
+                                    value: company.id.toString(),
+                                }) as Option,
+                        );
+                    },
+                    icon: CircleDashedIcon,
+                },
+                enableSorting: false,
+                enableColumnFilter: true,
             },
             {
-                id: 'total_amount',
-                accessorKey: 'total_amount',
-                header: ({
-                    column,
-                }: {
-                    column: Column<OrderResource, unknown>;
-                }) => <DataTableColumnHeader column={column} label="Amount" />,
-                cell: ({ cell }) => (
+                id: 'agent',
+                accessorFn: (row) => row.agent?.name ?? '—',
+                header: ({ column }) => (
+                    <DataTableColumnHeader column={column} label="Agent" />
+                ),
+                cell: ({ row }) => (
+                    <div className="max-w-36 truncate">
+                        {row.original.agent?.name ?? '—'}
+                    </div>
+                ),
+                meta: {
+                    label: 'Agent',
+                    variant: 'multiSelect',
+                    options: async (query, currentValues) => {
+                        const response = await adminSearchResourceOwners({
+                            types: 'company',
+                            keyword: query,
+                            include_ids: Array.from(currentValues)
+                                .map((v) => `company:${v}`)
+                                .join(','),
+                        } as any);
+
+                        const companies = response.data.companies as any[];
+
+                        return companies.map(
+                            (company) =>
+                                ({
+                                    label: company.name,
+                                    value: company.id.toString(),
+                                }) as Option,
+                        );
+                    },
+                    icon: CircleDashedIcon,
+                },
+                enableSorting: false,
+                enableColumnFilter: true,
+            },
+            {
+                id: 'tour',
+                accessorFn: (row) => row.tour?.name ?? '—',
+                header: ({ column }) => (
+                    <DataTableColumnHeader column={column} label="Tour" />
+                ),
+                cell: ({ row }) => (
+                    <div className="max-w-44 truncate font-medium">
+                        {row.original.tour?.name ?? '—'}
+                    </div>
+                ),
+                enableSorting: false,
+            },
+            {
+                id: 'departure_date',
+                accessorKey: 'departure_date',
+                header: ({ column }) => (
+                    <DataTableColumnHeader column={column} label="Departure" />
+                ),
+                cell: ({ row }) => (
+                    <div className="text-muted-foreground">
+                        {row.original.departure_date
+                            ? dayjs(row.original.departure_date).format(
+                                  'DD MMM YYYY',
+                              )
+                            : '—'}
+                    </div>
+                ),
+                meta: {
+                    label: 'Departure',
+                    variant: 'dateRange',
+                    icon: CalendarIcon,
+                },
+                enableSorting: true,
+                enableColumnFilter: true,
+            },
+            {
+                id: 'grand_total',
+                accessorKey: 'grand_total',
+                header: ({ column }) => (
+                    <DataTableColumnHeader column={column} label="Total" />
+                ),
+                cell: ({ row }) => (
                     <div className="font-medium tabular-nums">
-                        Rp {cell.getValue<number>()?.toLocaleString('id-ID')}
+                        {formatIDR(row.original.grand_total)}
                     </div>
                 ),
+                enableSorting: true,
+            },
+            {
+                id: 'paid_amount',
+                accessorKey: 'paid_amount',
+                header: ({ column }) => (
+                    <DataTableColumnHeader column={column} label="Paid" />
+                ),
+                cell: ({ row }) => (
+                    <div className="tabular-nums text-muted-foreground">
+                        {formatIDR(row.original.paid_amount)}
+                    </div>
+                ),
+                enableSorting: false,
             },
             {
                 id: 'status',
                 accessorKey: 'status',
-                header: ({
-                    column,
-                }: {
-                    column: Column<OrderResource, unknown>;
-                }) => <DataTableColumnHeader column={column} label="Status" />,
-                cell: ({ cell }) => (
-                    <Badge variant="secondary">{cell.getValue<string>()}</Badge>
+                header: ({ column }) => (
+                    <DataTableColumnHeader column={column} label="Status" />
                 ),
+                cell: ({ row }) => (
+                    <BookingStatusBadge status={row.original.status} />
+                ),
+                meta: {
+                    label: 'Status',
+                    variant: 'multiSelect',
+                    options: STATUS_OPTIONS,
+                    icon: CircleDashedIcon,
+                },
+                enableSorting: true,
+                enableColumnFilter: true,
             },
             {
                 id: 'created_at',
                 accessorKey: 'created_at',
-                header: ({
-                    column,
-                }: {
-                    column: Column<OrderResource, unknown>;
-                }) => (
-                    <DataTableColumnHeader column={column} label="Order Date" />
+                header: ({ column }) => (
+                    <DataTableColumnHeader column={column} label="Ordered" />
                 ),
-                cell: ({ cell }) => (
+                cell: ({ row }) => (
                     <div className="text-muted-foreground">
-                        {dayjs(cell.getValue<string>()).format('DD MMM YYYY')}
+                        {dayjs(row.original.created_at).format('DD MMM YYYY')}
                     </div>
                 ),
+                meta: {
+                    label: 'Order date',
+                    variant: 'dateRange',
+                    icon: CalendarIcon,
+                },
+                enableSorting: true,
+                enableColumnFilter: true,
             },
             {
                 id: 'actions',
-                cell: function Cell() {
-                    return (
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon">
-                                    <MoreHorizontal className="h-4 w-4" />
-                                    <span className="sr-only">Open menu</span>
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                                <DropdownMenuItem>View Detail</DropdownMenuItem>
-                                <DropdownMenuItem>Approve</DropdownMenuItem>
-                                <DropdownMenuItem variant="destructive">
-                                    Reject
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                    );
-                },
-                size: 32,
+                cell: ({ row }) => <TourOrderRowActions order={row.original} />,
+                size: 40,
             },
         ],
         [],
@@ -203,10 +302,10 @@ export default function Page({ data }: PageProps) {
             perPage: 'per_page',
             page: 'page',
         },
-        data: data?.data ?? [],
+        data: data.data,
         columns,
-        pageCount: 1,
-        rowCount: data?.total ?? 0,
+        pageCount: data.last_page,
+        rowCount: data.total,
         shallow: false,
         initialState: {
             sorting: [{ id: 'id', desc: true }],
@@ -218,9 +317,15 @@ export default function Page({ data }: PageProps) {
     return (
         <AdminDashboardLayout
             containerClassName="p-4"
+            activeMenuIds={['tours', 'tours.orders']}
+            openMenuIds={['tours']}
             breadcrumb={[{ title: 'Tours' }, { title: 'Orders' }]}
         >
-            <DataTable table={table} renderEmptyState={<EmptyOrders />}>
+            <DataTable
+                table={table}
+                renderEmptyState={<EmptyOrders />}
+                actionBar={<TourOrdersTableActionBar table={table} />}
+            >
                 <DataTableToolbar table={table} />
             </DataTable>
         </AdminDashboardLayout>

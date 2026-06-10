@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\AdminTourScheduleController;
 use App\Http\Controllers\Admin\AffiliateController;
 use App\Http\Controllers\Admin\AgentController;
 use App\Http\Controllers\Admin\AiUsageLogController;
@@ -16,6 +17,7 @@ use App\Http\Controllers\Admin\PaymentController;
 use App\Http\Controllers\Admin\PermissionController;
 use App\Http\Controllers\Admin\ProfileController;
 use App\Http\Controllers\Admin\RoleController;
+use App\Http\Controllers\Admin\TourOrderController;
 use App\Http\Controllers\Admin\TourProductController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\VendorCatalogController;
@@ -39,7 +41,6 @@ Route::prefix('admin')
         Route::middleware(['auth', 'can:access-admin-pages'])->group(function () {
             //
             Route::resource('app-configs', AppConfigController::class)->names('app-configs');
-
             Route::get(
                 'settings/app-config-admin',
                 [AppConfigAdminController::class, 'index']
@@ -55,17 +56,27 @@ Route::prefix('admin')
 
             // 3. Database — Vendors, Agents, Customers, Users
             Route::prefix('database')->name('database.')->group(function () {
+                Route::get('vendors/export-csv', [VendorController::class, 'exportAsCsv'])->name('vendors.export-csv');
+                Route::put('vendors/bulk-update', [VendorController::class, 'bulkUpdate'])->name('vendors.bulk-update');
+                Route::get('agents/export-csv', [AgentController::class, 'exportAsCsv'])->name('agents.export-csv');
+                Route::put('agents/bulk-update', [AgentController::class, 'bulkUpdate'])->name('agents.bulk-update');
                 Route::resource('vendors', VendorController::class)->names('vendors');
                 Route::resource('agents', AgentController::class)->names('agents');
+                Route::get('affiliates/export-csv', [AffiliateController::class, 'exportAsCsv'])->name('affiliates.export-csv');
+                Route::put('affiliates/bulk-update', [AffiliateController::class, 'bulkUpdate'])->name('affiliates.bulk-update');
                 Route::get('affiliates', [AffiliateController::class, 'index'])->name('affiliates');
+                Route::get('master-affiliates/export-csv', [MasterAffiliateController::class, 'exportAsCsv'])->name('master-affiliates.export-csv');
+                Route::put('master-affiliates/bulk-update', [MasterAffiliateController::class, 'bulkUpdate'])->name('master-affiliates.bulk-update');
                 Route::get('master-affiliates', [MasterAffiliateController::class, 'index'])->name('master-affiliates');
 
                 Route::put('users/bulk-update', [UserController::class, 'bulkUpdate'])->name('users.bulk-update');
                 Route::get('users/export-csv', [UserController::class, 'exportAsCsv'])->name('users.export-csv');
+                Route::put('users/{user}/password', [UserController::class, 'updatePassword'])->name('users.password.update');
                 Route::resource('users', UserController::class)->names('users');
                 Route::resource('permissions', PermissionController::class)->names('permissions');
                 Route::resource('roles', RoleController::class)->names('roles');
                 Route::resource('knowledge-bases', KnowledgeBaseController::class)->names('knowledge-bases');
+                Route::get('medias/export-csv', [MediaController::class, 'exportAsCsv'])->name('medias.export-csv');
                 Route::resource('medias', MediaController::class)->names('medias');
                 Route::post('medias/{media}/trigger-generate-knowledge-base', [MediaController::class, 'triggerGenerateKnowledgeBase'])->name('medias.trigger-generate-knowledge-base');
                 Route::resource('ai-usage-logs', AiUsageLogController::class)->names('ai-usage-logs');
@@ -80,14 +91,17 @@ Route::prefix('admin')
 
             // 4. Tour
             Route::prefix('tours')->name('tours.')->group(function () {
+                Route::get('products/export-csv', [TourProductController::class, 'exportAsCsv'])->name('products.export-csv');
+                Route::put('products/bulk-update', [TourProductController::class, 'bulkUpdate'])->name('products.bulk-update');
                 Route::get('products', [TourProductController::class, 'index'])->name('products');
                 Route::get('products/{tour}/edit', [TourProductController::class, 'edit'])->name('products.edit');
                 Route::put('products/{tour}', [TourProductController::class, 'update'])->name('products.update');
+                Route::post('products/{tour}/schedules', [AdminTourScheduleController::class, 'store'])->name('products.schedules.store');
+                Route::delete('products/{tour}/schedules/{schedule}', [AdminTourScheduleController::class, 'destroy'])->name('products.schedules.destroy');
                 Route::delete('products/{tour}', [TourProductController::class, 'destroy'])->name('products.destroy');
                 Route::get('vendor-catalogs', [VendorCatalogController::class, 'index'])->name('vendor-catalogs');
-                Route::get('orders', function () {
-                    return inertia('admin/tours/orders/index');
-                })->name('orders');
+                Route::get('orders/export-csv', [TourOrderController::class, 'exportAsCsv'])->name('orders.export-csv');
+                Route::get('orders', [TourOrderController::class, 'index'])->name('orders');
             });
 
             // 8. Reports

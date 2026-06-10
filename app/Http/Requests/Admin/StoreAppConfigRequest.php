@@ -7,17 +7,27 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class StoreAppConfigRequest extends FormRequest
 {
-    /**
-     * Determine if the user is authorized to make this request.
-     */
     public function authorize(): bool
     {
         return true;
     }
 
+    protected function prepareForValidation(): void
+    {
+        $value = $this->input('value');
+        $schema = $this->input('schema');
+
+        $this->merge([
+            'value' => is_string($value)
+                ? json_decode($value, true)
+                : $value,
+            'schema' => is_string($schema)
+                ? json_decode($schema, true)
+                : $schema,
+        ]);
+    }
+
     /**
-     * Get the validation rules that apply to the request.
-     *
      * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
@@ -25,7 +35,8 @@ class StoreAppConfigRequest extends FormRequest
         return [
             'key' => 'required|string|unique:app_configs,key',
             'description' => 'nullable|string',
-            'value' => 'nullable|json',
+            'schema' => 'nullable|array',
+            'value' => 'nullable|array',
         ];
     }
 }

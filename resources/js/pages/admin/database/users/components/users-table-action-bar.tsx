@@ -9,18 +9,16 @@ import {
     ActionBarSelection,
     ActionBarSeparator,
 } from '@/components/ui/action-bar';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { bulkUpdate } from '@/routes/admin/database/users';
 import { router } from '@inertiajs/react';
 import type { Table } from '@tanstack/react-table';
-import { CheckCircle2, Download, X } from 'lucide-react';
+import { Download, X } from 'lucide-react';
 import * as React from 'react';
 import { toast } from 'sonner';
+import {
+    BulkStatusWithNoteDialog,
+    BulkUpdateMenu,
+} from '../../shared/bulk-update-actions';
 
 const USER_STATUS_OPTIONS = [
     { label: 'Active', value: 'active' },
@@ -45,25 +43,28 @@ export function UsersTableActionBar({ table }: UsersTableActionBarProps) {
         [table],
     );
 
-    const handleBulkStatusUpdate = (status: string) => {
+    const handleBulkUpdate = (
+        payload: { status: string; note?: string | null },
+        successMessage: string,
+    ) => {
         const selectedIds = rows.map((row) => row.original.id);
+
         router.put(
             bulkUpdate.url(),
             {
                 ids: selectedIds,
-                status: status,
+                status: payload.status,
+                ...(payload.note ? { note: payload.note } : {}),
             },
             {
                 preserveScroll: true,
                 onBefore: () => setUpdating(true),
                 onFinish: () => setUpdating(false),
                 onSuccess: () => {
-                    toast.success(
-                        `Status updated to ${status} for ${selectedIds.length} user(s) successfully`,
-                    );
+                    toast.success(successMessage);
                 },
                 onError: () => {
-                    toast.error('Failed to update user status');
+                    toast.error('Failed to update users');
                 },
             },
         );
@@ -81,27 +82,29 @@ export function UsersTableActionBar({ table }: UsersTableActionBarProps) {
             </ActionBarSelection>
             <ActionBarSeparator />
             <ActionBarGroup>
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild disabled={updating}>
-                        <ActionBarItem>
-                            <CheckCircle2 />
-                            Status
-                        </ActionBarItem>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent>
-                        {USER_STATUS_OPTIONS.map((status) => (
-                            <DropdownMenuItem
-                                key={status.value}
-                                className="capitalize"
-                                onClick={() =>
-                                    handleBulkStatusUpdate(status.value)
-                                }
-                            >
-                                {status.label}
-                            </DropdownMenuItem>
-                        ))}
-                    </DropdownMenuContent>
-                </DropdownMenu>
+                <BulkUpdateMenu
+                    disabled={updating}
+                    options={USER_STATUS_OPTIONS}
+                    onSelect={(status) =>
+                        handleBulkUpdate(
+                            { status },
+                            `Status updated to ${status} for ${rows.length} user(s)`,
+                        )
+                    }
+                />
+
+                <BulkStatusWithNoteDialog
+                    disabled={updating}
+                    selectedCount={rows.length}
+                    entityLabel="user"
+                    statusOptions={USER_STATUS_OPTIONS}
+                    onSubmit={({ status, note }) =>
+                        handleBulkUpdate(
+                            { status, note: note || null },
+                            `Status updated to ${status} for ${rows.length} user(s)`,
+                        )
+                    }
+                />
 
                 <ActionBarItem asChild>
                     <a

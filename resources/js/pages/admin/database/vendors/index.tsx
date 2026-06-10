@@ -1,33 +1,24 @@
-import type { Company } from '@/api/model';
 import { DataTable } from '@/components/data-table/data-table';
 import { DataTableColumnHeader } from '@/components/data-table/data-table-column-header';
 import { DataTableToolbar } from '@/components/data-table/data-table-toolbar';
 import AdminDashboardLayout from '@/components/layouts/admin-dashboard';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { useDataTable } from '@/hooks/use-data-table';
-import type { Column, ColumnDef } from '@tanstack/react-table';
+import { edit } from '@/routes/admin/database/vendors';
+import type { ColumnDef } from '@tanstack/react-table';
 import dayjs from 'dayjs';
-import { MoreHorizontal, Text } from 'lucide-react';
+import { CalendarIcon, Text } from 'lucide-react';
 import { useMemo } from 'react';
+import { CompaniesTableActionBar } from '../shared/companies-table-action-bar';
+import { CompanyRowActions } from '../shared/company-row-actions';
+import type {
+    AdminCompanyRow,
+    PaginatedCompanies,
+} from '../shared/company-types';
 import { EmptyVendors } from './components/empty-vendors';
 
-type PageProps = {
-    data: {
-        data: Company[];
-        total: number;
-    };
-};
-
-export default function Page({ data }: PageProps) {
-    const columns = useMemo<ColumnDef<Company>[]>(
+export default function VendorsPage({ data }: { data: PaginatedCompanies }) {
+    const columns = useMemo<ColumnDef<AdminCompanyRow>[]>(
         () => [
             {
                 id: 'select',
@@ -52,17 +43,21 @@ export default function Page({ data }: PageProps) {
                     />
                 ),
                 size: 32,
-                enableSorting: true,
                 enableHiding: false,
             },
             {
                 id: 'name',
                 accessorKey: 'name',
-                header: ({ column }: { column: Column<Company, unknown> }) => (
+                header: ({ column }) => (
                     <DataTableColumnHeader column={column} label="Name" />
                 ),
-                cell: ({ cell }) => (
-                    <div>{cell.getValue<Company['name']>()}</div>
+                cell: ({ row }) => (
+                    <div className="min-w-[160px]">
+                        <div className="font-medium">{row.original.name}</div>
+                        <div className="text-xs text-muted-foreground">
+                            @{row.original.username}
+                        </div>
+                    </div>
                 ),
                 meta: {
                     label: 'Name',
@@ -73,13 +68,30 @@ export default function Page({ data }: PageProps) {
                 enableColumnFilter: true,
             },
             {
+                id: 'username',
+                accessorKey: 'username',
+                header: ({ column }) => (
+                    <DataTableColumnHeader column={column} label="Username" />
+                ),
+                cell: ({ cell }) => (
+                    <div className="text-sm">@{cell.getValue<string>()}</div>
+                ),
+                meta: {
+                    label: 'Username',
+                    placeholder: 'Search usernames...',
+                    variant: 'text',
+                    icon: Text,
+                },
+                enableColumnFilter: true,
+            },
+            {
                 id: 'email',
                 accessorKey: 'email',
-                header: ({ column }: { column: Column<Company, unknown> }) => (
+                header: ({ column }) => (
                     <DataTableColumnHeader column={column} label="Email" />
                 ),
                 cell: ({ cell }) => (
-                    <div>{cell.getValue<Company['email']>()}</div>
+                    <div className="text-sm">{cell.getValue<string>()}</div>
                 ),
                 meta: {
                     label: 'Email',
@@ -92,80 +104,110 @@ export default function Page({ data }: PageProps) {
             {
                 id: 'phone',
                 accessorKey: 'phone',
-                header: ({ column }: { column: Column<Company, unknown> }) => (
+                header: ({ column }) => (
                     <DataTableColumnHeader column={column} label="Phone" />
                 ),
-                cell: ({ cell }) => <div>{cell.getValue<string>()}</div>,
+                cell: ({ cell }) => (
+                    <div className="text-sm">
+                        {cell.getValue<string>() || '—'}
+                    </div>
+                ),
+                meta: {
+                    label: 'Phone',
+                    placeholder: 'Search phone...',
+                    variant: 'text',
+                    icon: Text,
+                },
+                enableColumnFilter: true,
             },
             {
-                id: 'status',
-                accessorKey: 'status',
-                header: ({ column }: { column: Column<Company, unknown> }) => (
-                    <DataTableColumnHeader column={column} label="Status" />
+                id: 'customer_service_phone',
+                accessorKey: 'customer_service_phone',
+                header: ({ column }) => (
+                    <DataTableColumnHeader column={column} label="CS Phone" />
                 ),
                 cell: ({ cell }) => (
-                    <Badge variant="secondary">
-                        {cell.getValue<string>() ?? 'active'}
-                    </Badge>
+                    <div className="text-sm">
+                        {cell.getValue<string>() || '—'}
+                    </div>
                 ),
+            },
+            {
+                id: 'address',
+                accessorKey: 'address',
+                header: ({ column }) => (
+                    <DataTableColumnHeader column={column} label="Address" />
+                ),
+                cell: ({ cell }) => (
+                    <div className="max-w-[220px] truncate text-sm">
+                        {cell.getValue<string>() || '—'}
+                    </div>
+                ),
+                meta: {
+                    label: 'Address',
+                    placeholder: 'Search address...',
+                    variant: 'text',
+                    icon: Text,
+                },
+                enableColumnFilter: true,
             },
             {
                 id: 'created_at',
                 accessorKey: 'created_at',
-                header: ({ column }: { column: Column<Company, unknown> }) => (
+                header: ({ column }) => (
                     <DataTableColumnHeader column={column} label="Join Date" />
                 ),
                 cell: ({ cell }) => {
-                    const createdAt = cell.getValue<Company['created_at']>();
+                    const createdAt = cell.getValue<string | null>();
 
                     return (
-                        <div className="flex items-center gap-1">
-                            {dayjs(createdAt).format('DD MMM YYYY')}
+                        <div className="text-sm">
+                            {createdAt
+                                ? dayjs(createdAt).format('DD MMM YYYY')
+                                : '—'}
                         </div>
                     );
                 },
+                meta: {
+                    label: 'Join Date',
+                    placeholder: 'Search join date...',
+                    variant: 'dateRange',
+                    icon: CalendarIcon,
+                },
+                enableColumnFilter: true,
             },
             {
                 id: 'actions',
-                cell: function Cell() {
-                    return (
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon">
-                                    <MoreHorizontal className="h-4 w-4" />
-                                    <span className="sr-only">Open menu</span>
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                                <DropdownMenuItem>View Detail</DropdownMenuItem>
-                                <DropdownMenuItem>Verify</DropdownMenuItem>
-                                <DropdownMenuItem variant="destructive">
-                                    Suspend
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                    );
-                },
-                size: 32,
+                cell: ({ row }) => (
+                    <CompanyRowActions
+                        company={row.original}
+                        entityLabel="Vendor"
+                        editHref={edit({ vendor: row.original.id }).url}
+                    />
+                ),
+                size: 40,
             },
         ],
         [],
     );
 
     const { table } = useDataTable({
-        enableClientFiltering: true,
         queryKeys: {
             perPage: 'per_page',
             page: 'page',
         },
         data: data.data,
         columns,
-        pageCount: 1,
+        pageCount: data.last_page,
         rowCount: data.total,
         shallow: false,
         initialState: {
-            sorting: [{ id: 'id', desc: true }],
+            sorting: [{ id: 'created_at', desc: true }],
             columnPinning: { right: ['actions'] },
+            columnVisibility: {
+                username: false,
+                address: false,
+            },
         },
         getRowId: (row) => row.id.toString(),
     });
@@ -173,10 +215,18 @@ export default function Page({ data }: PageProps) {
     return (
         <AdminDashboardLayout
             containerClassName="p-4"
+            activeMenuIds={['database', 'database.vendors']}
+            openMenuIds={['database']}
             breadcrumb={[{ title: 'Database' }, { title: 'Vendor' }]}
         >
-            <DataTable table={table} renderEmptyState={<EmptyVendors />}>
-                <DataTableToolbar table={table} searchMode="global" />
+            <DataTable
+                table={table}
+                renderEmptyState={<EmptyVendors />}
+                actionBar={
+                    <CompaniesTableActionBar table={table} entity="vendor" />
+                }
+            >
+                <DataTableToolbar table={table} />
             </DataTable>
         </AdminDashboardLayout>
     );

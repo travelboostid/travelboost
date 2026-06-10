@@ -4,17 +4,15 @@ import { DataTableColumnHeader } from '@/components/data-table/data-table-column
 import { DataTableToolbar } from '@/components/data-table/data-table-toolbar';
 import AdminDashboardLayout from '@/components/layouts/admin-dashboard';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useDataTable } from '@/hooks/use-data-table';
-import { edit } from '@/routes/admin/database/users';
 import type { Option } from '@/types/data-table';
-import { Link } from '@inertiajs/react';
 import type { ColumnDef } from '@tanstack/react-table';
 import dayjs from 'dayjs';
-import { CalendarIcon, CircleDashedIcon, PencilIcon, Text } from 'lucide-react';
+import { CalendarIcon, CircleDashedIcon, Text } from 'lucide-react';
 import { useMemo } from 'react';
 import { EmptyUsers } from './components/empty-users';
+import { UserRowActions } from './components/user-row-actions';
 import { UsersTableActionBar } from './components/users-table-action-bar';
 
 const STATUS_OPTIONS = [
@@ -205,20 +203,8 @@ export default function UsersPage({ data, userRoles }: UsersPageProps) {
             },
             {
                 id: 'actions',
-                cell: ({ row }) => {
-                    return (
-                        <Link href={edit({ user: row.original.id }).url}>
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                className="rounded-full"
-                            >
-                                <PencilIcon className="size-4" />
-                            </Button>
-                        </Link>
-                    );
-                },
-                size: 32,
+                cell: ({ row }) => <UserRowActions user={row.original} />,
+                size: 40,
             },
         ],
         [USER_ROLE_OPTIONS],

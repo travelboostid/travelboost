@@ -3,168 +3,59 @@ import { DataTableColumnHeader } from '@/components/data-table/data-table-column
 import { DataTableToolbar } from '@/components/data-table/data-table-toolbar';
 import AdminDashboardLayout from '@/components/layouts/admin-dashboard';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogHeader,
-    DialogTitle,
-    DialogTrigger,
-} from '@/components/ui/dialog';
 import { useDataTable } from '@/hooks/use-data-table';
-import type { Column, ColumnDef } from '@tanstack/react-table';
+import type { ColumnDef } from '@tanstack/react-table';
 import dayjs from 'dayjs';
-import { Ban, Text } from 'lucide-react';
+import { Ban, CalendarIcon, CircleDashedIcon, Text } from 'lucide-react';
 import { useMemo } from 'react';
+import {
+    AffiliateStatusBadge,
+    MasterAffiliateRowActions,
+} from '../shared/affiliate-row-actions';
+import type {
+    AdminMasterAffiliateRow,
+    NetworkPerson,
+    PaginatedMasterAffiliates,
+} from '../shared/affiliate-types';
+import { AffiliatesTableActionBar } from '../shared/affiliates-table-action-bar';
 
-type NetworkPerson = {
-    id: number;
-    name?: string | null;
-    email?: string | null;
-    referral_code?: string | null;
-    status?: string | null;
-    user_status?: string | null;
-    is_inactive?: boolean;
-};
+const STATUS_OPTIONS = [
+    { label: 'Pending', value: 'pending' },
+    { label: 'Approved', value: 'approved' },
+    { label: 'Rejected', value: 'rejected' },
+    { label: 'Suspended', value: 'suspended' },
+];
 
-type InvitedAffiliate = {
-    id: number;
-    name?: string | null;
-    email?: string | null;
-    referral_code?: string | null;
-    status?: string | null;
-    is_inactive?: boolean;
-};
-
-type MasterAffiliateRow = {
-    id: number;
-    name?: string | null;
-    email?: string | null;
-    phone?: string | null;
-    referral_code?: string | null;
-    status?: string | null;
-    user_status?: string | null;
-    is_inactive?: boolean;
-    partner?: NetworkPerson | null;
-    invited_affiliates_count: number;
-    invited_affiliates: InvitedAffiliate[];
-    created_at?: string | null;
-};
-
-type PageProps = {
-    data: {
-        data: MasterAffiliateRow[];
-        total: number;
-    };
-};
-
-function InactiveIcon({ inactive }: { inactive?: boolean }) {
-    if (!inactive) {
+function InactiveIcon({ person }: { person?: NetworkPerson | null }) {
+    if (!person?.is_inactive) {
         return null;
     }
 
-    return <Ban className="h-3.5 w-3.5 text-rose-500" aria-hidden="true" />;
+    return <Ban className="size-3.5 text-rose-500" aria-hidden="true" />;
 }
 
-function PersonCell({ person }: { person?: NetworkPerson | null }) {
+function PersonName({ person }: { person?: NetworkPerson | null }) {
     if (!person) {
-        return <span className="text-sm text-slate-400">-</span>;
+        return <span className="text-sm text-muted-foreground">—</span>;
     }
 
     return (
-        <div className="flex min-w-[150px] items-center gap-2">
-            <span className="truncate text-sm font-medium text-slate-900 dark:text-slate-100">
-                {person.name || '-'}
+        <div className="flex min-w-[120px] items-center gap-2">
+            <span className="truncate text-sm font-medium">
+                {person.name || '—'}
             </span>
-            <InactiveIcon inactive={person.is_inactive} />
+            <InactiveIcon person={person} />
         </div>
     );
 }
 
-function StatusBadge({ status }: { status?: string | null }) {
-    const value = status || 'pending';
-
-    return (
-        <Badge
-            variant={value === 'approved' ? 'secondary' : 'outline'}
-            className="capitalize"
-        >
-            {value.replace(/_/g, ' ')}
-        </Badge>
-    );
-}
-
-function InvitedAffiliatesDialog({ row }: { row: MasterAffiliateRow }) {
-    return (
-        <Dialog>
-            <DialogTrigger asChild>
-                <Button
-                    variant="ghost"
-                    className="h-8 px-2 text-sm font-medium text-primary hover:text-primary"
-                >
-                    {row.invited_affiliates_count}
-                </Button>
-            </DialogTrigger>
-            <DialogContent className="max-h-[85vh] overflow-hidden sm:max-w-2xl">
-                <DialogHeader>
-                    <DialogTitle>Invited Affiliates</DialogTitle>
-                    <DialogDescription>
-                        Affiliates invited by{' '}
-                        {row.name || 'this master affiliate'}.
-                    </DialogDescription>
-                </DialogHeader>
-                <div className="max-h-[60vh] overflow-y-auto rounded-md border">
-                    {row.invited_affiliates.length > 0 ? (
-                        <div className="divide-y">
-                            {row.invited_affiliates.map((affiliate) => (
-                                <div
-                                    key={affiliate.id}
-                                    className="flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:justify-between"
-                                >
-                                    <div className="min-w-0">
-                                        <div className="flex items-center gap-2">
-                                            <span className="truncate text-sm font-medium text-slate-900 dark:text-slate-100">
-                                                {affiliate.name || '-'}
-                                            </span>
-                                            <InactiveIcon
-                                                inactive={affiliate.is_inactive}
-                                            />
-                                        </div>
-                                        <div className="truncate text-xs text-slate-500">
-                                            {affiliate.email || '-'}
-                                        </div>
-                                    </div>
-                                    <div className="flex flex-wrap items-center gap-2">
-                                        {affiliate.referral_code && (
-                                            <Badge
-                                                variant="secondary"
-                                                className="font-mono text-[11px]"
-                                            >
-                                                {affiliate.referral_code}
-                                            </Badge>
-                                        )}
-                                        <StatusBadge
-                                            status={affiliate.status}
-                                        />
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    ) : (
-                        <div className="p-6 text-center text-sm text-slate-500">
-                            No invited affiliates yet.
-                        </div>
-                    )}
-                </div>
-            </DialogContent>
-        </Dialog>
-    );
-}
+type PageProps = {
+    data: PaginatedMasterAffiliates;
+};
 
 export default function Page({ data }: PageProps) {
-    const columns = useMemo<ColumnDef<MasterAffiliateRow>[]>(
+    const columns = useMemo<ColumnDef<AdminMasterAffiliateRow>[]>(
         () => [
             {
                 id: 'select',
@@ -192,13 +83,9 @@ export default function Page({ data }: PageProps) {
                 enableHiding: false,
             },
             {
-                id: 'master_affiliate',
+                id: 'name',
                 accessorKey: 'name',
-                header: ({
-                    column,
-                }: {
-                    column: Column<MasterAffiliateRow, unknown>;
-                }) => (
+                header: ({ column }) => (
                     <DataTableColumnHeader
                         column={column}
                         label="Master Affiliate"
@@ -207,22 +94,27 @@ export default function Page({ data }: PageProps) {
                 cell: ({ row }) => (
                     <div className="min-w-[220px] space-y-1">
                         <div className="flex items-center gap-2">
-                            <span className="font-medium text-slate-900 dark:text-slate-100">
-                                {row.original.name || '-'}
+                            <span className="font-medium">
+                                {row.original.name || '—'}
                             </span>
-                            <InactiveIcon inactive={row.original.is_inactive} />
+                            {row.original.is_inactive ? (
+                                <Ban
+                                    className="size-3.5 text-rose-500"
+                                    aria-hidden="true"
+                                />
+                            ) : null}
                         </div>
-                        <div className="truncate text-xs text-slate-500">
-                            {row.original.email || '-'}
+                        <div className="truncate text-xs text-muted-foreground">
+                            {row.original.email || '—'}
                         </div>
-                        {row.original.referral_code && (
+                        {row.original.referral_code ? (
                             <Badge
-                                variant="secondary"
+                                variant="outline"
                                 className="font-mono text-[11px]"
                             >
                                 {row.original.referral_code}
                             </Badge>
-                        )}
+                        ) : null}
                     </div>
                 ),
                 meta: {
@@ -236,79 +128,93 @@ export default function Page({ data }: PageProps) {
             {
                 id: 'partner',
                 accessorFn: (row) => row.partner?.name || '',
-                header: ({
-                    column,
-                }: {
-                    column: Column<MasterAffiliateRow, unknown>;
-                }) => <DataTableColumnHeader column={column} label="Partner" />,
-                cell: ({ row }) => <PersonCell person={row.original.partner} />,
+                header: ({ column }) => (
+                    <DataTableColumnHeader column={column} label="Partner" />
+                ),
+                cell: ({ row }) => <PersonName person={row.original.partner} />,
+                enableSorting: false,
             },
             {
                 id: 'invited_affiliates_count',
                 accessorKey: 'invited_affiliates_count',
-                header: ({
-                    column,
-                }: {
-                    column: Column<MasterAffiliateRow, unknown>;
-                }) => (
+                header: ({ column }) => (
                     <DataTableColumnHeader
                         column={column}
                         label="Invited Affiliates"
                     />
                 ),
-                cell: ({ row }) => (
-                    <InvitedAffiliatesDialog row={row.original} />
+                cell: ({ cell }) => (
+                    <div className="min-w-[110px] text-sm font-medium">
+                        {cell.getValue<number>()}
+                    </div>
                 ),
             },
             {
                 id: 'status',
                 accessorKey: 'status',
-                header: ({
-                    column,
-                }: {
-                    column: Column<MasterAffiliateRow, unknown>;
-                }) => <DataTableColumnHeader column={column} label="Status" />,
-                cell: ({ row }) => <StatusBadge status={row.original.status} />,
+                header: ({ column }) => (
+                    <DataTableColumnHeader column={column} label="Status" />
+                ),
+                cell: ({ row }) => (
+                    <AffiliateStatusBadge status={row.original.status} />
+                ),
+                meta: {
+                    label: 'Status',
+                    variant: 'multiSelect',
+                    options: STATUS_OPTIONS,
+                    icon: CircleDashedIcon,
+                },
+                enableColumnFilter: true,
             },
             {
                 id: 'created_at',
                 accessorKey: 'created_at',
-                header: ({
-                    column,
-                }: {
-                    column: Column<MasterAffiliateRow, unknown>;
-                }) => (
+                header: ({ column }) => (
                     <DataTableColumnHeader column={column} label="Join Date" />
                 ),
                 cell: ({ cell }) => {
                     const createdAt = cell.getValue<string | null>();
 
                     return (
-                        <div className="min-w-[110px] text-sm text-slate-700 dark:text-slate-300">
+                        <div className="text-sm">
                             {createdAt
                                 ? dayjs(createdAt).format('DD MMM YYYY')
-                                : '-'}
+                                : '—'}
                         </div>
                     );
                 },
+                meta: {
+                    label: 'Join Date',
+                    placeholder: 'Search join date...',
+                    variant: 'dateRange',
+                    icon: CalendarIcon,
+                },
+                enableColumnFilter: true,
+            },
+            {
+                id: 'actions',
+                cell: ({ row }) => (
+                    <MasterAffiliateRowActions masterAffiliate={row.original} />
+                ),
+                size: 40,
             },
         ],
         [],
     );
 
     const { table } = useDataTable({
-        enableClientFiltering: true,
         queryKeys: {
             perPage: 'per_page',
             page: 'page',
         },
         data: data.data,
         columns,
-        pageCount: 1,
+        pageCount: data.last_page,
         rowCount: data.total,
         shallow: false,
         initialState: {
             sorting: [{ id: 'created_at', desc: true }],
+            columnPinning: { right: ['actions'] },
         },
         getRowId: (row) => row.id.toString(),
     });
@@ -316,17 +222,25 @@ export default function Page({ data }: PageProps) {
     return (
         <AdminDashboardLayout
             containerClassName="p-4"
+            activeMenuIds={['database', 'database.master-affiliates']}
+            openMenuIds={['database']}
             breadcrumb={[{ title: 'Database' }, { title: 'Master Affiliate' }]}
         >
             <DataTable
                 table={table}
                 renderEmptyState={
-                    <div className="py-8 text-sm text-slate-500">
+                    <div className="py-8 text-sm text-muted-foreground">
                         No master affiliates found.
                     </div>
                 }
+                actionBar={
+                    <AffiliatesTableActionBar
+                        table={table}
+                        entity="master-affiliate"
+                    />
+                }
             >
-                <DataTableToolbar table={table} searchMode="global" />
+                <DataTableToolbar table={table} />
             </DataTable>
         </AdminDashboardLayout>
     );

@@ -11,9 +11,12 @@ import dayjs from 'dayjs';
 import { CalendarIcon, CircleDashedIcon, TextIcon } from 'lucide-react';
 import { useMemo } from 'react';
 import { AddMediaButton } from './components/add-media-button';
-import DeleteButton from './components/delete-button';
 import { EmptyMedias } from './components/empty-medias';
-import GenerateKnowledgeBaseButton from './components/generate-knowledge-base-button';
+import {
+    type AdminMediaRow,
+    MediaRowActions,
+} from './components/media-row-actions';
+import { MediasTableActionBar } from './components/medias-table-action-bar';
 
 const TYPE_OPTIONS = [
     { label: 'Image', value: 'image' },
@@ -31,7 +34,7 @@ const SUBTYPE_OPTIONS = [
 
 type MediasPageProps = {
     data: {
-        data: any[];
+        data: AdminMediaRow[];
         total: number;
         per_page: number;
         current_page: number;
@@ -40,7 +43,7 @@ type MediasPageProps = {
 };
 
 export default function MediasPage({ data }: MediasPageProps) {
-    const columns = useMemo<ColumnDef<any>[]>(
+    const columns = useMemo<ColumnDef<AdminMediaRow>[]>(
         () => [
             {
                 id: 'select',
@@ -74,7 +77,7 @@ export default function MediasPage({ data }: MediasPageProps) {
                 header: ({ column }) => (
                     <DataTableColumnHeader column={column} label="Owner" />
                 ),
-                cell: ({ row }) => <div>{row.original.owner?.name ?? '-'}</div>,
+                cell: ({ row }) => <div>{row.original.owner?.name ?? '—'}</div>,
                 meta: {
                     label: 'Owner',
                     variant: 'multiSelect',
@@ -108,7 +111,7 @@ export default function MediasPage({ data }: MediasPageProps) {
                 header: ({ column }) => (
                     <DataTableColumnHeader column={column} label="Name" />
                 ),
-                cell: ({ cell }) => <div>{cell.getValue<any>()}</div>,
+                cell: ({ cell }) => <div>{cell.getValue<string>()}</div>,
                 meta: {
                     label: 'Name',
                     placeholder: 'Search names...',
@@ -124,7 +127,9 @@ export default function MediasPage({ data }: MediasPageProps) {
                 header: ({ column }) => (
                     <DataTableColumnHeader column={column} label="Type" />
                 ),
-                cell: ({ cell }) => <div>{cell.getValue<any>()}</div>,
+                cell: ({ cell }) => (
+                    <div className="capitalize">{cell.getValue<string>()}</div>
+                ),
                 meta: {
                     label: 'Type',
                     variant: 'multiSelect',
@@ -140,7 +145,7 @@ export default function MediasPage({ data }: MediasPageProps) {
                 header: ({ column }) => (
                     <DataTableColumnHeader column={column} label="Subtype" />
                 ),
-                cell: ({ cell }) => <div>{cell.getValue<any>()}</div>,
+                cell: ({ cell }) => <div>{cell.getValue<string>()}</div>,
                 meta: {
                     label: 'Subtype',
                     variant: 'multiSelect',
@@ -157,7 +162,7 @@ export default function MediasPage({ data }: MediasPageProps) {
                     <DataTableColumnHeader column={column} label="Created at" />
                 ),
                 cell: ({ cell }) => {
-                    const createdAt = cell.getValue<any>();
+                    const createdAt = cell.getValue<string>();
 
                     return (
                         <div className="flex items-center gap-1">
@@ -175,19 +180,8 @@ export default function MediasPage({ data }: MediasPageProps) {
             },
             {
                 id: 'actions',
-                cell: ({ row }) => {
-                    return (
-                        <div className="flex gap-1">
-                            <DeleteButton data={row.original} />
-                            {row.original.subtype === 'tour-document' && (
-                                <GenerateKnowledgeBaseButton
-                                    data={row.original}
-                                />
-                            )}
-                        </div>
-                    );
-                },
-                size: 32,
+                cell: ({ row }) => <MediaRowActions media={row.original} />,
+                size: 40,
             },
         ],
         [],
@@ -218,7 +212,11 @@ export default function MediasPage({ data }: MediasPageProps) {
             breadcrumb={[{ title: 'Database' }, { title: 'Media' }]}
             applet={<AddMediaButton afterUpload={() => router.reload()} />}
         >
-            <DataTable table={table} renderEmptyState={<EmptyMedias />}>
+            <DataTable
+                table={table}
+                renderEmptyState={<EmptyMedias />}
+                actionBar={<MediasTableActionBar table={table} />}
+            >
                 <DataTableToolbar table={table} />
             </DataTable>
         </AdminDashboardLayout>

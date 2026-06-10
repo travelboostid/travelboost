@@ -14,10 +14,10 @@ export function EmptyOrders() {
                 <EmptyMedia variant="icon">
                     <IconFolderCode />
                 </EmptyMedia>
-                <EmptyTitle>No Data Available</EmptyTitle>
+                <EmptyTitle>No orders found</EmptyTitle>
                 <EmptyDescription>
-                    There are no orders to display. Please check back later or
-                    change your filters.
+                    Tour bookings will appear here. Try adjusting your filters
+                    if you expected results.
                 </EmptyDescription>
             </EmptyHeader>
         </Empty>

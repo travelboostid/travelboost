@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\BulkUpdateUserRequest;
 use App\Http\Requests\Admin\IndexUserRequest;
+use App\Http\Requests\Admin\UpdateUserPasswordRequest;
 use App\Http\Requests\Admin\UpdateUserRequest;
 use App\Models\Role;
 use App\Models\User;
@@ -15,9 +16,6 @@ use Inertia\Inertia;
 
 class UserController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
     public function index(IndexUserRequest $request)
     {
         $userRoles = Role::whereLike('name', 'user:%')->pluck('name')->toArray();
@@ -78,40 +76,61 @@ class UserController extends Controller
         ]);
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
     public function edit(string $id)
     {
-        $user = User::with(['companies', 'roles'])->findOrFail($id);
+        $user = User::with(['companies', 'roles', 'photo', 'company'])->findOrFail($id);
+        $userRoles = Role::whereLike('name', 'user:%')
+            ->orderBy('name')
+            ->get(['name', 'display_name']);
 
         return Inertia::render('admin/database/users/edit', [
             'user' => $user,
+            'userRoles' => $userRoles,
         ]);
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
     public function update(UpdateUserRequest $request, User $user)
     {
         $validated = $request->validated();
+        $roles = $validated['roles'] ?? null;
+        unset($validated['roles']);
+
         $user->update($validated);
 
+        if ($roles !== null) {
+            $this->syncUserIdentityRoles($user, $roles);
+        }
+
         return back()->with('success', 'User updated successfully.');
+    }
+
+    public function updatePassword(UpdateUserPasswordRequest $request, User $user)
+    {
+        $user->update([
+            'password' => $request->validated('password'),
+        ]);
+
+        return back()->with('success', 'Password updated successfully.');
     }
 
     public function bulkUpdate(BulkUpdateUserRequest $request)
     {
         $validated = $request->validated();
+        $payload = ['status' => $validated['status']];
+
+        if (filled($validated['note'] ?? null)) {
+            $payload['note'] = $validated['note'];
+        }
+
         $users = User::whereIn('id', $validated['ids'])->get();
-        DB::transaction(function () use ($users, $validated) {
+
+        DB::transaction(function () use ($users, $payload): void {
             foreach ($users as $user) {
-                $user->update($validated);
+                $user->update($payload);
             }
         });
 
-        return back()->with('success', 'User updated successfully.');
+        return back()->with('success', 'Users updated successfully.');
     }
 
     public function exportAsCsv(Request $request)
@@ -165,11 +184,30 @@ class UserController extends Controller
         );
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
     public function destroy(string $id)
     {
         //
+    }
+
+    /**
+     * @param  list<string>  $roles
+     */
+    private function syncUserIdentityRoles(User $user, array $roles): void
+    {
+        $existingUserRoles = $user->roles()
+            ->where('name', 'like', 'user:%')
+            ->pluck('name')
+            ->all();
+
+        $toRemove = array_diff($existingUserRoles, $roles);
+        $toAdd = array_diff($roles, $existingUserRoles);
+
+        if ($toRemove !== []) {
+            $user->removeRoles($toRemove);
+        }
+
+        if ($toAdd !== []) {
+            $user->addRoles($toAdd);
+        }
     }
 }
