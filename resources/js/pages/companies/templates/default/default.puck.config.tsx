@@ -68,28 +68,64 @@ import type { Hero5ComponentProps } from './blocks/hero-5';
 import { Hero5ComponentConfig } from './blocks/hero-5';
 import type { Hero6ComponentProps } from './blocks/hero-6';
 import { Hero6ComponentConfig } from './blocks/hero-6';
+import {
+    ImageCollageComponentConfig,
+    type ImageCollageComponentProps,
+} from './blocks/image-collage';
+import {
+    LocationMapComponentConfig,
+    type LocationMapComponentProps,
+} from './blocks/location-map';
 import type { LogoCloudComponentProps } from './blocks/logo-cloud';
 import { LogoCloudComponentConfig } from './blocks/logo-cloud';
+import {
+    MarqueeStripComponentConfig,
+    type MarqueeStripComponentProps,
+} from './blocks/marquee-strip';
 import type { PricingComponentProps } from './blocks/pricing';
 import { PricingComponentConfig } from './blocks/pricing';
+import {
+    PromoBannerComponentConfig,
+    type PromoBannerComponentProps,
+} from './blocks/promo-banner';
 import {
     QuoteBlockComponentConfig,
     type QuoteBlockComponentProps,
 } from './blocks/quote-block';
 import {
+    ScrollShowcaseComponentConfig,
+    type ScrollShowcaseComponentProps,
+} from './blocks/scroll-showcase';
+import {
+    ShowcaseTabsComponentConfig,
+    type ShowcaseTabsComponentProps,
+} from './blocks/showcase-tabs';
+import {
     SplitContentComponentConfig,
     type SplitContentComponentProps,
 } from './blocks/split-content';
+import {
+    SpotlightComponentConfig,
+    type SpotlightComponentProps,
+} from './blocks/spotlight';
 import type { StatsComponentProps } from './blocks/stats';
 import { StatsComponentConfig } from './blocks/stats';
 import { StepsComponentConfig, type StepsComponentProps } from './blocks/steps';
 import { TeamComponentConfig, type TeamComponentProps } from './blocks/team';
+import {
+    TestimonialWallComponentConfig,
+    type TestimonialWallComponentProps,
+} from './blocks/testimonial-wall';
 import type { TestimonialsComponentProps } from './blocks/testimonials';
 import { TestimonialsComponentConfig } from './blocks/testimonials';
 import {
     TimelineComponentConfig,
     type TimelineComponentProps,
 } from './blocks/timeline';
+import {
+    TrustBadgesComponentConfig,
+    type TrustBadgesComponentProps,
+} from './blocks/trust-badges';
 import {
     VideoSectionComponentConfig,
     type VideoSectionComponentProps,
@@ -132,6 +168,15 @@ type DefaultThemePuckProps = {
     Comparison: WithLayoutComponentProps<ComparisonComponentProps>;
     QuoteBlock: WithLayoutComponentProps<QuoteBlockComponentProps>;
     VideoSection: WithLayoutComponentProps<VideoSectionComponentProps>;
+    MarqueeStrip: WithLayoutComponentProps<MarqueeStripComponentProps>;
+    ShowcaseTabs: WithLayoutComponentProps<ShowcaseTabsComponentProps>;
+    Spotlight: WithLayoutComponentProps<SpotlightComponentProps>;
+    TrustBadges: WithLayoutComponentProps<TrustBadgesComponentProps>;
+    ScrollShowcase: WithLayoutComponentProps<ScrollShowcaseComponentProps>;
+    ImageCollage: WithLayoutComponentProps<ImageCollageComponentProps>;
+    TestimonialWall: WithLayoutComponentProps<TestimonialWallComponentProps>;
+    LocationMap: WithLayoutComponentProps<LocationMapComponentProps>;
+    PromoBanner: PromoBannerComponentProps;
 } & BasePuckProps;
 
 const DefaultThemePuckConfig = {
@@ -144,6 +189,21 @@ const DefaultThemePuckConfig = {
         features: {
             title: '✨ Features',
             components: ['Features', 'Features2', 'Features3', 'Features4'],
+        },
+        showcase: {
+            title: '🔥 Showcase',
+            defaultExpanded: true,
+            components: [
+                'Spotlight',
+                'ShowcaseTabs',
+                'ScrollShowcase',
+                'MarqueeStrip',
+                'ImageCollage',
+                'LocationMap',
+                'TrustBadges',
+                'TestimonialWall',
+                'PromoBanner',
+            ],
         },
         content: {
             title: '📄 Content',
@@ -168,7 +228,15 @@ const DefaultThemePuckConfig = {
         },
         conversion: {
             title: '🚀 Call to Action',
-            components: ['Cta', 'Cta2', 'Cta3', 'Cta4', 'Pricing', 'Faq'],
+            components: [
+                'PromoBanner',
+                'Cta',
+                'Cta2',
+                'Cta3',
+                'Cta4',
+                'Pricing',
+                'Faq',
+            ],
         },
         typography: {
             title: '✏️ Typography',
@@ -230,6 +298,19 @@ const DefaultThemePuckConfig = {
         Comparison: withLayoutComponentConfig(ComparisonComponentConfig),
         QuoteBlock: withLayoutComponentConfig(QuoteBlockComponentConfig),
         VideoSection: withLayoutComponentConfig(VideoSectionComponentConfig),
+        MarqueeStrip: withLayoutComponentConfig(MarqueeStripComponentConfig),
+        ShowcaseTabs: withLayoutComponentConfig(ShowcaseTabsComponentConfig),
+        Spotlight: withLayoutComponentConfig(SpotlightComponentConfig),
+        TrustBadges: withLayoutComponentConfig(TrustBadgesComponentConfig),
+        ScrollShowcase: withLayoutComponentConfig(
+            ScrollShowcaseComponentConfig,
+        ),
+        ImageCollage: withLayoutComponentConfig(ImageCollageComponentConfig),
+        TestimonialWall: withLayoutComponentConfig(
+            TestimonialWallComponentConfig,
+        ),
+        LocationMap: withLayoutComponentConfig(LocationMapComponentConfig),
+        PromoBanner: PromoBannerComponentConfig,
     },
     root: {
         fields: {
