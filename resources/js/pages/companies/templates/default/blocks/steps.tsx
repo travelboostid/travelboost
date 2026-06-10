@@ -1,24 +1,28 @@
 import type { ComponentConfig } from '@puckeditor/core';
+import {
+    ContentSection,
+    contentHeaderFields,
+    contentStyleDefaults,
+    contentStyleFields,
+    type ContentStyleProps,
+} from '../../components/content-shared';
 
-export type StepsComponentProps = {
+export type StepsComponentProps = ContentStyleProps & {
+    badge: string;
     header: string;
     description: string;
     steps: { title: string; description: string }[];
 };
 
 export const StepsComponentConfig: ComponentConfig<StepsComponentProps> = {
-    label: 'Steps',
+    label: 'Process Steps',
     fields: {
-        header: { label: 'Header', type: 'text', contentEditable: true },
-        description: {
-            label: 'Description',
-            type: 'richtext',
-            contentEditable: true,
-        },
+        ...contentHeaderFields(),
+        ...contentStyleFields,
         steps: {
             label: 'Steps',
             type: 'array',
-            max: 5,
+            max: 6,
             arrayFields: {
                 title: { label: 'Title', type: 'text', contentEditable: true },
                 description: {
@@ -27,41 +31,14 @@ export const StepsComponentConfig: ComponentConfig<StepsComponentProps> = {
                     contentEditable: true,
                 },
             },
-            getItemSummary: (item) => item.title || 'Item',
+            getItemSummary: (item) => item.title || 'Step',
         },
-    },
-    render: ({ header, description, steps }) => (
-        <section className="px-4 py-20 sm:px-6 lg:px-8">
-            <div className="mx-auto max-w-7xl">
-                <div className="mb-16 text-center">
-                    <h2 className="mb-4 text-4xl font-bold text-foreground">
-                        {header}
-                    </h2>
-                    <p className="text-lg text-muted-foreground">
-                        {description}
-                    </p>
-                </div>
-                <div className="grid gap-8 md:grid-cols-4">
-                    {steps.map((step, i) => (
-                        <div key={i} className="text-center">
-                            <div className="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-2xl font-bold text-primary">
-                                {String(i + 1).padStart(2, '0')}
-                            </div>
-                            <h3 className="mb-2 text-lg font-semibold text-foreground">
-                                {step.title}
-                            </h3>
-                            <p className="text-muted-foreground">
-                                {step.description}
-                            </p>
-                        </div>
-                    ))}
-                </div>
-            </div>
-        </section>
-    ),
+    } as ComponentConfig<StepsComponentProps>['fields'],
     defaultProps: {
-        header: 'Why Choose Us',
+        badge: 'How It Works',
+        header: 'Plan Your Trip in 4 Easy Steps',
         description: 'Everything you need for the perfect journey',
+        ...contentStyleDefaults,
         steps: [
             {
                 title: 'Choose Destination',
@@ -81,4 +58,40 @@ export const StepsComponentConfig: ComponentConfig<StepsComponentProps> = {
             },
         ],
     },
+    render: ({
+        badge,
+        header,
+        description,
+        steps,
+        padding,
+        align,
+        background,
+        maxWidth,
+    }) => (
+        <ContentSection
+            badge={badge}
+            header={header}
+            description={description}
+            align={align}
+            padding={padding}
+            background={background}
+            maxWidth={maxWidth}
+        >
+            <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+                {steps.map((step, i) => (
+                    <div key={i} className="relative text-center">
+                        <div className="mb-4 inline-flex size-16 items-center justify-center rounded-2xl bg-primary/10 text-2xl font-bold text-primary">
+                            {String(i + 1).padStart(2, '0')}
+                        </div>
+                        <h3 className="mb-2 text-lg font-semibold text-foreground">
+                            {step.title}
+                        </h3>
+                        <p className="text-sm leading-relaxed text-muted-foreground">
+                            {step.description}
+                        </p>
+                    </div>
+                ))}
+            </div>
+        </ContentSection>
+    ),
 };

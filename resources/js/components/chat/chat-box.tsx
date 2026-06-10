@@ -1,43 +1,45 @@
 import { type ChatMessageResource } from '@/api/model';
 import { cn } from '@/lib/utils';
-import { useEffect, useRef, useState } from 'react';
+import { useChatStore } from '@/stores/chat/chat-store';
+import { useCallback, useEffect, useRef } from 'react';
 import { useInView } from 'react-intersection-observer';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import {
+    ChatEmptyConversation,
+    ChatErrorPanel,
+    ChatLoadMoreIndicator,
+    ChatMessagesSkeleton,
+} from './chat-status';
 import RenderAttachment from './render-attachment';
 import {
-    useChatContext,
+    useChatActor,
+    useClearRoomError,
     useLoadMessages,
     useLoadRoom,
     useRoomMessages,
+    useRoomPagination,
 } from './state';
 
-/**
- * Renders a single chat message with styling based on sender type.
- * Displays message content with markdown support and optional attachments.
- */
 function ChatMessage({ message }: { message: ChatMessageResource }) {
-    const { actor } = useChatContext();
+    const actor = useChatActor();
     const mine =
         message.sender_type === actor?.type && message.sender_id === actor?.id;
 
     return (
-        <div
-            key={message.id}
-            className={`flex ${mine ? 'justify-end' : 'justify-start'}`}
-        >
+        <div className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
             <div
-                className={`flex max-w-11/12 flex-col gap-2 rounded-lg px-4 py-3 ${
+                className={`flex max-w-11/12 flex-col gap-2 rounded-2xl px-4 py-3 ${
                     mine
-                        ? 'rounded-br-none bg-primary text-primary-foreground'
-                        : 'rounded-bl-none border border-border bg-card text-foreground'
+                        ? 'rounded-br-sm bg-primary text-primary-foreground'
+                        : 'rounded-bl-sm border border-border bg-card text-foreground'
                 }`}
             >
-                <p className="text-sm leading-relaxed space-y-1.5">
+                <div className="text-sm leading-relaxed space-y-1.5">
                     <MessageContentRenderer message={message} />
-                </p>
+                </div>
                 {message.attachment_data && !message.is_bot && (
-                    <div className="rounded-lg border bg-background/10 p-2 space-y-2">
+                    <div className="space-y-2 rounded-lg border bg-background/10 p-2">
                         <div className="text-xs opacity-80">Attached</div>
                         <div className="text-sm">
                             <RenderAttachment
@@ -52,9 +54,6 @@ function ChatMessage({ message }: { message: ChatMessageResource }) {
     );
 }
 
-/**
- * Renders the message content as markdown.
- */
 export function MessageContentRenderer({
     message,
 }: {
@@ -65,8 +64,8 @@ export function MessageContentRenderer({
             remarkPlugins={[remarkGfm]}
             components={{
                 table: ({ children }) => (
-                    <div className="border w-full overflow-x-auto">
-                        <table className="w-full  min-w-75 text-sm border-collapse">
+                    <div className="w-full overflow-x-auto border">
+                        <table className="w-full min-w-75 border-collapse text-sm">
                             {children}
                         </table>
                     </div>
@@ -107,11 +106,6 @@ export function MessageContentRenderer({
     );
 }
 
-/**
- * Chat message container with infinite scroll pagination support.
- * Automatically loads older messages when the top of the conversation is visible.
- * Scrolls to the latest message whenever new messages are loaded.
- */
 export default function ChatBox({
     roomId,
     className,
@@ -122,57 +116,106 @@ export default function ChatBox({
     const scrollAnchorRef = useRef<HTMLDivElement>(null);
     const loadMessages = useLoadMessages();
     const loadRoom = useLoadRoom();
+    const clearRoomError = useClearRoomError();
     const messages = useRoomMessages(roomId);
-    const [nextCursor, setNextCursor] = useState<string | null>(null);
+    const { nextCursor, isLoading, error, hasLoaded } =
+        useRoomPagination(roomId);
+    const resetRoomPagination = useChatStore(
+        (state) => state.resetRoomPagination,
+    );
     const lastMessageId = messages?.[messages.length - 1]?.id;
+    const isInitialLoading = isLoading && !hasLoaded;
+    const isLoadingOlder = isLoading && hasLoaded;
 
-    /**
-     * Scrolls the conversation to the bottom using smooth behavior.
-     */
-    const scrollToBottom = () => {
-        scrollAnchorRef.current?.scrollIntoView({ behavior: 'smooth' });
-    };
+    const scrollToBottom = useCallback(
+        (behavior: ScrollBehavior = 'smooth') => {
+            scrollAnchorRef.current?.scrollIntoView({ behavior });
+        },
+        [],
+    );
 
-    // Intersection observer to detect when the top of the message list is visible
     const { ref, inView } = useInView({
-        /* Optional options */
         threshold: 0,
     });
 
-    /**
-     * Loads the chat room and fetches messages when the top becomes visible.
-     * Pagination is handled via cursor-based loading for better performance.
-     */
-    useEffect(() => {
-        if (!inView || nextCursor === '') return;
-        loadRoom(roomId);
-        loadMessages(roomId, {
-            cursor: nextCursor,
-        }).then((result) => {
-            setNextCursor(result?.meta?.next_cursor || '');
-        });
-    }, [loadMessages, loadRoom, roomId, inView, nextCursor]);
+    const fetchMessages = useCallback(async () => {
+        if (!inView || isLoading || nextCursor === '' || error) {
+            return;
+        }
 
-    /**
-     * Automatically scrolls to the latest message when the messages list updates.
-     */
+        try {
+            await loadRoom(roomId);
+            await loadMessages(roomId, {
+                cursor: nextCursor,
+            });
+        } catch {
+            // Error state is stored in the chat store.
+        }
+    }, [error, inView, isLoading, loadMessages, loadRoom, nextCursor, roomId]);
+
     useEffect(() => {
-        scrollToBottom();
-    }, [lastMessageId]);
+        resetRoomPagination(roomId);
+    }, [roomId, resetRoomPagination]);
+
+    useEffect(() => {
+        void fetchMessages();
+    }, [fetchMessages]);
+
+    useEffect(() => {
+        if (lastMessageId) {
+            scrollToBottom(hasLoaded ? 'smooth' : 'auto');
+        }
+    }, [hasLoaded, lastMessageId, scrollToBottom]);
+
+    const handleRetry = () => {
+        clearRoomError(roomId);
+    };
+
+    if (isInitialLoading) {
+        return <ChatMessagesSkeleton className={className} />;
+    }
+
+    if (error && !hasLoaded) {
+        return (
+            <ChatErrorPanel
+                title="Could not load messages"
+                message={error}
+                onRetry={handleRetry}
+                className={className}
+            />
+        );
+    }
 
     return (
         <div
             className={cn(
-                'mx-auto w-full overflow-y-auto px-4 py-8 sm:px-6 lg:px-8',
+                'mx-auto w-full overflow-y-auto px-4 py-6 sm:px-6',
                 className,
             )}
         >
-            <div ref={ref}></div>
-            <div className="gap-6 flex flex-col">
-                {(messages || []).map((message) => (
-                    <ChatMessage key={message.id} message={message} />
-                ))}
-            </div>
+            <div ref={ref} />
+            {isLoadingOlder && <ChatLoadMoreIndicator />}
+            {error && hasLoaded && (
+                <div className="mb-4 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive">
+                    <div>{error}</div>
+                    <button
+                        type="button"
+                        className="mt-1 font-medium underline underline-offset-2"
+                        onClick={handleRetry}
+                    >
+                        Try again
+                    </button>
+                </div>
+            )}
+            {hasLoaded && messages.length === 0 ? (
+                <ChatEmptyConversation />
+            ) : (
+                <div className="flex flex-col gap-4">
+                    {messages.map((message) => (
+                        <ChatMessage key={message.id} message={message} />
+                    ))}
+                </div>
+            )}
             <div ref={scrollAnchorRef} />
         </div>
     );

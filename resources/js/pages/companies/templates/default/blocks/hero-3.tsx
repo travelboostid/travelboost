@@ -14,7 +14,7 @@ export type Hero3ComponentProps = {
 };
 
 export const Hero3ComponentConfig: ComponentConfig<Hero3ComponentProps> = {
-    label: 'Hero 3',
+    label: 'Fullscreen Background',
     fields: {
         backgroundUrl: {
             label: 'Background Image',
