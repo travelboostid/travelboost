@@ -144,8 +144,8 @@ class DashboardController extends Controller
                     'total_agents' => $totalAgents,
                     'subscribed_agents' => $subscribedAgents,
                     'conversion' => $totalAgents > 0
-                      ? round(($subscribedAgents / $totalAgents) * 100, 2)
-                      : 0,
+                      ? (float) round(($subscribedAgents / $totalAgents) * 100, 2)
+                      : 0.0,
                     'status' => ucfirst($profile->status),
                 ];
             })
