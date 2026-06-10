@@ -20,7 +20,7 @@ use Laratrust\Contracts\LaratrustUser;
 use Laratrust\Traits\HasRolesAndPermissions;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 
-class User extends Authenticatable implements Customer, LaratrustUser, Wallet, MustVerifyEmailContract
+class User extends Authenticatable implements Customer, LaratrustUser, MustVerifyEmailContract, Wallet
 {
     use CanPay, HasBankAccounts, HasFactory, HasRolesAndPermissions, HasWallet, HasWallets, MustVerifyEmailTrait, Notifiable, TwoFactorAuthenticatable;
 

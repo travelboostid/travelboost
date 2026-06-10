@@ -1,6 +1,8 @@
+import type { PaymentResource } from '@/api/model/paymentResource';
+
 type OnlinePayment = {
-    provider?: string;
-    payload?: Record<string, unknown> | null;
+    provider?: PaymentResource['provider'];
+    payload?: PaymentResource['payload'];
 };
 
 type OnlinePaymentCallbacks = {
@@ -57,8 +59,13 @@ export function openOnlinePayment(
         window.location.reload();
     };
 
+    const payload = payment.payload as
+        | Record<string, unknown>
+        | null
+        | undefined;
+
     if (payment.provider === 'prismalink') {
-        const rawUrl = payment.payload?.payment_page_url as string | undefined;
+        const rawUrl = payload?.payment_page_url as string | undefined;
 
         if (rawUrl) {
             window.location.href = resolvePrismaLinkPaymentPageUrl(rawUrl);
@@ -67,7 +74,7 @@ export function openOnlinePayment(
         return;
     }
 
-    const snapToken = payment.payload?.snap_token as string | undefined;
+    const snapToken = payload?.snap_token as string | undefined;
     const snap = (
         window as { snap?: { pay: (token: string, options: object) => void } }
     ).snap;
