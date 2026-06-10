@@ -8,6 +8,7 @@
 export type OpenChatRequestSenderType =
     (typeof OpenChatRequestSenderType)[keyof typeof OpenChatRequestSenderType];
 
+// eslint-disable-next-line @typescript-eslint/no-redeclare
 export const OpenChatRequestSenderType = {
     user: 'user',
     company: 'company',

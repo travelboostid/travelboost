@@ -8,6 +8,7 @@
 export type WithdrawalStatus =
     (typeof WithdrawalStatus)[keyof typeof WithdrawalStatus];
 
+// eslint-disable-next-line @typescript-eslint/no-redeclare
 export const WithdrawalStatus = {
     pending: 'pending',
     processing: 'processing',

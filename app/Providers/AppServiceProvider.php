@@ -11,6 +11,7 @@ use App\Models\Media;
 use App\Models\User;
 use App\Models\WalletTopupPayment;
 use App\Services\KnowledgeBaseService;
+use App\Services\PrismaLinkService;
 use Carbon\CarbonImmutable;
 use Illuminate\Auth\Middleware\Authenticate;
 use Illuminate\Database\Eloquent\Relations\Relation;
@@ -35,6 +36,9 @@ class AppServiceProvider extends ServiceProvider
         });
         $this->app->singleton(KnowledgeBaseService::class, function () {
             return new KnowledgeBaseService;
+        });
+        $this->app->singleton(PrismaLinkService::class, function () {
+            return new PrismaLinkService;
         });
     }
 

@@ -6,6 +6,7 @@ use Database\Seeders\Common\AppConfigSeeder;
 use Database\Seeders\Common\ContinentSeeder;
 use Database\Seeders\Common\CountrySeeder;
 use Database\Seeders\Common\CurrencySeeder;
+use Database\Seeders\Common\PaymentMethodSeeder;
 use Database\Seeders\Common\PriceCategorySeeder;
 use Database\Seeders\Common\RegionSeeder;
 use Database\Seeders\Common\RolePermissionSeeder;
@@ -20,6 +21,7 @@ class ProductionSeeder extends Seeder
     {
         $this->call([
             AppConfigSeeder::class,
+            PaymentMethodSeeder::class,
             RolePermissionSeeder::class,
             ProductionUserSeeder::class,
             ProductionCompanySeeder::class,

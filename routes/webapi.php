@@ -14,6 +14,7 @@ use App\Http\Controllers\Webapi\GeoProvinceController;
 use App\Http\Controllers\Webapi\GeoVillageController;
 use App\Http\Controllers\Webapi\MediaController;
 use App\Http\Controllers\Webapi\PaymentController;
+use App\Http\Controllers\Webapi\PaymentMethodController;
 use App\Http\Controllers\Webapi\RegionController;
 use App\Http\Controllers\Webapi\TourCategoryController;
 use App\Http\Controllers\Webapi\TourController;
@@ -43,6 +44,7 @@ Route::prefix('webapi')->group(function () {
         Route::apiResource('categories', TourCategoryController::class);
         Route::get('companies/{company}/settings', [CompanyController::class, 'showSettings']);
         Route::put('companies/{company}/settings', [CompanyController::class, 'updateSettings']);
+        Route::get('payment-methods', [PaymentMethodController::class, 'index']);
         Route::post('payments/create-topup-payment', [PaymentController::class, 'createTopupPayment']);
         Route::post('payments/create-agent-subscription-payment', [PaymentController::class, 'createAgentSubscriptionPayment']);
         Route::post('payments/create-ai-credit-topup-payment', [PaymentController::class, 'createAiCreditTopupPayment']);
@@ -66,6 +68,7 @@ Route::prefix('webapi')->group(function () {
         Route::apiResource('chat/rooms.messages', ChatMessageController::class)->shallow(); // Messages nested under rooms
         Route::apiResource('chat/rooms', ChatRoomController::class);
         Route::post('chat/rooms/open', [ChatRoomController::class, 'open']);
+        Route::get('payment-methods', [PaymentMethodController::class, 'index']);
         Route::post('payments/create-topup-payment', [PaymentController::class, 'createTopupPayment']);
         Route::post('payments/create-agent-subscription-payment', [PaymentController::class, 'createAgentSubscriptionPayment']);
     });

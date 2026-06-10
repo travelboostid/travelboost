@@ -7,6 +7,7 @@
 
 export type CompanyType = (typeof CompanyType)[keyof typeof CompanyType];
 
+// eslint-disable-next-line @typescript-eslint/no-redeclare
 export const CompanyType = {
     agent: 'agent',
     vendor: 'vendor',

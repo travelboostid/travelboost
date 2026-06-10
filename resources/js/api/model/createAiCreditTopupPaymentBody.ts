@@ -4,9 +4,11 @@
  * Travelboost
  * OpenAPI spec version: 0.0.1
  */
+import type { CreateAiCreditTopupPaymentBodyProvider } from './createAiCreditTopupPaymentBodyProvider';
 
 export type CreateAiCreditTopupPaymentBody = {
     company_id: number;
     /** @minimum 1000 */
     amount: number;
+    provider?: CreateAiCreditTopupPaymentBodyProvider;
 };

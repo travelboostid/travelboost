@@ -6,7 +6,6 @@
  */
 import type { CompanyCityId } from './companyCityId';
 import type { CompanyCreatedAt } from './companyCreatedAt';
-import type { CompanyDistrict } from './companyDistrict';
 import type { CompanyDistrictId } from './companyDistrictId';
 import type { CompanyIdentityCardId } from './companyIdentityCardId';
 import type { CompanyIdentityNumber } from './companyIdentityNumber';
@@ -20,7 +19,6 @@ import type { CompanyReferredBy } from './companyReferredBy';
 import type { CompanyRememberToken } from './companyRememberToken';
 import type { CompanyType } from './companyType';
 import type { CompanyUpdatedAt } from './companyUpdatedAt';
-import type { CompanyVillage } from './companyVillage';
 import type { CompanyVillageId } from './companyVillageId';
 
 export interface Company {
@@ -36,10 +34,6 @@ export interface Company {
     city_id: CompanyCityId;
     district_id: CompanyDistrictId;
     village_id: CompanyVillageId;
-    province: string;
-    city: string;
-    district: CompanyDistrict;
-    village: CompanyVillage;
     postal_code: CompanyPostalCode;
     identity_number: CompanyIdentityNumber;
     note: CompanyNote;

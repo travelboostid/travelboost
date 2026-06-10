@@ -8,6 +8,7 @@
 export type StoreMediaRequestType =
     (typeof StoreMediaRequestType)[keyof typeof StoreMediaRequestType];
 
+// eslint-disable-next-line @typescript-eslint/no-redeclare
 export const StoreMediaRequestType = {
     image: 'image',
     document: 'document',

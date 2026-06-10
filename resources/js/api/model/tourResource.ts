@@ -16,11 +16,13 @@ import type { TourResourceCreatedAt } from './tourResourceCreatedAt';
 import type { TourResourceDescription } from './tourResourceDescription';
 import type { TourResourceDocumentId } from './tourResourceDocumentId';
 import type { TourResourceImageId } from './tourResourceImageId';
+import type { TourResourceProductCommissionCategoryId } from './tourResourceProductCommissionCategoryId';
 import type { TourResourcePromoteNote } from './tourResourcePromoteNote';
 import type { TourResourcePromoteTitle } from './tourResourcePromoteTitle';
 import type { TourResourceRegionId } from './tourResourceRegionId';
 import type { TourResourceRegionName } from './tourResourceRegionName';
 import type { TourResourceUpdatedAt } from './tourResourceUpdatedAt';
+import type { TourResourceUserId } from './tourResourceUserId';
 import type { TourStatus } from './tourStatus';
 
 export interface TourResource {
@@ -51,6 +53,8 @@ export interface TourResource {
     continent_id: TourResourceContinentId;
     region_id: TourResourceRegionId;
     country_id: TourResourceCountryId;
+    user_id: TourResourceUserId;
+    product_commission_category_id: TourResourceProductCommissionCategoryId;
     category?: TourCategory;
     image?: Media;
     document?: Media;
