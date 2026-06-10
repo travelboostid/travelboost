@@ -41,7 +41,6 @@ Route::prefix('admin')
         Route::middleware(['auth', 'can:access-admin-pages'])->group(function () {
             //
             Route::resource('app-configs', AppConfigController::class)->names('app-configs');
-
             Route::get(
                 'settings/app-config-admin',
                 [AppConfigAdminController::class, 'index']
