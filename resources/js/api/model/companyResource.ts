@@ -6,7 +6,6 @@
  */
 import type { CompanyResourceCityId } from './companyResourceCityId';
 import type { CompanyResourceCreatedAt } from './companyResourceCreatedAt';
-import type { CompanyResourceDistrict } from './companyResourceDistrict';
 import type { CompanyResourceDistrictId } from './companyResourceDistrictId';
 import type { CompanyResourceIdentityCardId } from './companyResourceIdentityCardId';
 import type { CompanyResourceIdentityNumber } from './companyResourceIdentityNumber';
@@ -19,7 +18,6 @@ import type { CompanyResourceProvinceId } from './companyResourceProvinceId';
 import type { CompanyResourceReferredBy } from './companyResourceReferredBy';
 import type { CompanyResourceRememberToken } from './companyResourceRememberToken';
 import type { CompanyResourceUpdatedAt } from './companyResourceUpdatedAt';
-import type { CompanyResourceVillage } from './companyResourceVillage';
 import type { CompanyResourceVillageId } from './companyResourceVillageId';
 import type { CompanyType } from './companyType';
 
@@ -36,10 +34,6 @@ export interface CompanyResource {
     city_id: CompanyResourceCityId;
     district_id: CompanyResourceDistrictId;
     village_id: CompanyResourceVillageId;
-    province: string;
-    city: string;
-    district: CompanyResourceDistrict;
-    village: CompanyResourceVillage;
     postal_code: CompanyResourcePostalCode;
     identity_number: CompanyResourceIdentityNumber;
     note: CompanyResourceNote;

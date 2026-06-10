@@ -7,11 +7,9 @@ use App\Http\Requests\Admin\IndexWalletTransactionRequest;
 use App\Models\Company;
 use App\Models\Transaction;
 use App\Models\User;
-use Illuminate\Routing\Attributes\Controllers\Authorize;
 use Illuminate\Support\Carbon;
 use Inertia\Inertia;
 
-#[Authorize('access-admin')]
 class WalletTransactionController extends Controller
 {
     public function index(IndexWalletTransactionRequest $request)

@@ -3,10 +3,8 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Routing\Attributes\Controllers\Authorize;
 use Inertia\Inertia;
 
-#[Authorize('access-admin')]
 class HomeController extends Controller
 {
     /**

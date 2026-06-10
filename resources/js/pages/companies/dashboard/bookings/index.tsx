@@ -887,7 +887,6 @@ function RowActions({
     const [actionReason, setActionReason] = React.useState('');
     const [processingAction, setProcessingAction] = React.useState<
         | 'accept'
-        | 'decline'
         | 'cancel'
         | 'refund'
         | 'reorder'
@@ -985,20 +984,6 @@ function RowActions({
         setProcessingAction('accept');
         router.post(
             `/companies/${companyUsername}/dashboard/bookings/${booking.id}/payments/${booking.manual_payment.id}/approve`,
-            {},
-            {
-                preserveScroll: true,
-                onSuccess: () => setReviewOpen(false),
-                onFinish: () => setProcessingAction(null),
-            },
-        );
-    };
-    const submitPaymentDecline = () => {
-        if (!booking.manual_payment || !canSubmitPaymentReviewDecision) return;
-
-        setProcessingAction('decline');
-        router.post(
-            `/companies/${companyUsername}/dashboard/bookings/${booking.id}/payments/${booking.manual_payment.id}/decline`,
             {},
             {
                 preserveScroll: true,
@@ -1224,7 +1209,7 @@ function RowActions({
                                 }}
                             >
                                 <FileTextIcon className="mr-2 h-4 w-4" />
-                                Review Payment
+                                Payment Approval
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                         </>
@@ -1356,7 +1341,7 @@ function RowActions({
                         <DialogTitle>
                             {canPayVendor && !canSubmitPaymentReviewDecision
                                 ? 'Pay Vendor'
-                                : 'Review Payment'}
+                                : 'Payment Approval'}
                         </DialogTitle>
                         <DialogDescription>
                             {canPayVendor && !canSubmitPaymentReviewDecision
@@ -1554,22 +1539,12 @@ function RowActions({
                         <DialogFooter>
                             <Button
                                 type="button"
-                                variant="outline"
-                                disabled={processingAction !== null}
-                                onClick={submitPaymentDecline}
-                            >
-                                {processingAction === 'decline'
-                                    ? 'Declining...'
-                                    : 'Decline'}
-                            </Button>
-                            <Button
-                                type="button"
                                 disabled={processingAction !== null}
                                 onClick={submitManualPaymentDecision}
                             >
                                 {processingAction === 'accept'
-                                    ? 'Accepting...'
-                                    : 'Accept'}
+                                    ? 'Approving...'
+                                    : 'Approve'}
                             </Button>
                         </DialogFooter>
                     )}

@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Route;
 
 $appHost = env('APP_HOST', 'localhost');
 Route::prefix('customers')
-    ->middleware(['use-customer-props', 'set-and-use-anonymous-user-props', 'use-analytics-measurement-ids-props'])
+    ->middleware(['can:access-customer-pages', 'use-customer-props', 'set-and-use-anonymous-user-props', 'use-analytics-measurement-ids-props'])
     ->name('customers.')
     ->group(function () {
         Route::middleware(['guest'])->group(function () {
@@ -22,7 +22,7 @@ Route::prefix('customers')
             Route::post('register', [AuthController::class, 'register'])->name('register.store');
         });
     });
-Route::domain('{username}.'.$appHost)->middleware(['use-customer-props',  'use-analytics-measurement-ids-props'])->group(function () {
+Route::domain('{username}.'.$appHost)->middleware(['can:access-customer-pages', 'use-customer-props',  'use-analytics-measurement-ids-props'])->group(function () {
     Route::get('/tours', [TourController::class, 'index']);
     Route::get('/mybookings', [MeHomeController::class, 'bookings']);
     Route::get('/mybookings/{booking}/invoice', function (Request $request, string $username, Booking $booking): HttpResponse {

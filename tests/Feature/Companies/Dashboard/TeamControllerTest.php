@@ -8,10 +8,7 @@ use App\Models\CompanyTeam;
 use App\Models\User;
 use App\Notifications\TeamAccountNotification;
 use Database\Seeders\Common\RolePermissionSeeder;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
-
-uses(Tests\TestCase::class, RefreshDatabase::class);
 
 beforeEach(function () {
     $this->withoutVite();

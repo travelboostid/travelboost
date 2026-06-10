@@ -6,6 +6,7 @@ use App\Enums\CompanyTeamStatus;
 use App\Events\CompanyTeamCreated;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class CompanyTeam extends Model
 {
@@ -51,13 +52,13 @@ class CompanyTeam extends Model
         'created' => CompanyTeamCreated::class,
     ];
 
-    /** @return \Illuminate\Database\Eloquent\Relations\BelongsTo */
+    /** @return BelongsTo */
     public function company()
     {
         return $this->belongsTo(Company::class);
     }
 
-    /** @return \Illuminate\Database\Eloquent\Relations\BelongsTo */
+    /** @return BelongsTo */
     public function user()
     {
         return $this->belongsTo(User::class, 'user_id');

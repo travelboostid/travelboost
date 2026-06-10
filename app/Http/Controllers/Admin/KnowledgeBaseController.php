@@ -7,11 +7,9 @@ use App\Http\Requests\Admin\IndexKnowledgeBaseRequest;
 use App\Models\KnowledgeBase;
 use App\Models\Media;
 use Illuminate\Http\Request;
-use Illuminate\Routing\Attributes\Controllers\Authorize;
 use Illuminate\Support\Carbon;
 use Inertia\Inertia;
 
-#[Authorize('access-admin')]
 class KnowledgeBaseController extends Controller
 {
     /**

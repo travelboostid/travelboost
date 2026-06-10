@@ -8,6 +8,7 @@
 export type GetWithdrawalsOwnerType =
     (typeof GetWithdrawalsOwnerType)[keyof typeof GetWithdrawalsOwnerType];
 
+// eslint-disable-next-line @typescript-eslint/no-redeclare
 export const GetWithdrawalsOwnerType = {
     user: 'user',
     company: 'company',

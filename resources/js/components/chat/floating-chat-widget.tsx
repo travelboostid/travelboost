@@ -55,16 +55,16 @@ export default function FloatingChatWidget({
             <div
                 ref={containerRef}
                 className={cn(
-                    'pointer-events-none fixed right-3 bottom-4 z-50 flex flex-col items-end gap-3 sm:right-5 sm:bottom-5',
+                    'pointer-events-none fixed right-0 bottom-8 z-50 flex items-end gap-2 sm:bottom-10',
                     open && 'hidden',
                 )}
             >
                 <div
                     className={cn(
-                        'origin-bottom-right flex flex-col gap-2.5 rounded-[1.75rem] border border-white/70 bg-white/80 p-2 shadow-xl shadow-slate-950/10 backdrop-blur-xl transition-all duration-300 ease-out dark:border-slate-700/70 dark:bg-slate-950/80',
+                        'origin-right flex gap-2 rounded-l-2xl border border-r-0 border-white/70 bg-white/90 p-2 shadow-xl shadow-slate-950/10 backdrop-blur-xl transition-all duration-300 ease-out dark:border-slate-700/70 dark:bg-slate-950/90',
                         isExpanded
-                            ? 'pointer-events-auto translate-y-0 scale-100 opacity-100'
-                            : 'pointer-events-none translate-y-8 scale-90 opacity-0',
+                            ? 'pointer-events-auto translate-x-0 scale-100 opacity-100'
+                            : 'pointer-events-none translate-x-8 scale-95 opacity-0',
                     )}
                 >
                     <StartWhatsappChatButton />
@@ -74,10 +74,10 @@ export default function FloatingChatWidget({
                 <button
                     onClick={() => setIsExpanded(!isExpanded)}
                     className={cn(
-                        'pointer-events-auto group relative z-50 flex h-14 w-14 items-center justify-center rounded-2xl border border-white/70 text-white transition-all duration-300 sm:h-[3.75rem] sm:w-[3.75rem]',
+                        'pointer-events-auto group relative z-50 flex h-16 w-12 items-center justify-center rounded-l-2xl border border-r-0 border-white/70 text-white transition-all duration-300 sm:h-[4.5rem]',
                         isExpanded
                             ? 'bg-slate-950 shadow-lg shadow-slate-950/20 dark:bg-slate-800'
-                            : 'floating-chat-glow bg-linear-to-br from-primary via-pink-500 to-rose-500 hover:-translate-y-1 hover:shadow-2xl hover:shadow-pink-500/30',
+                            : 'floating-chat-glow bg-linear-to-b from-primary via-pink-500 to-rose-500 hover:-translate-x-1 hover:shadow-2xl hover:shadow-pink-500/30',
                     )}
                     aria-label={
                         isExpanded ? 'Close chat options' : 'Open chat options'

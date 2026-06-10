@@ -106,6 +106,22 @@ class Payment extends Model
         return $payload;
     }
 
+    /**
+     * @param  array<string, mixed>  $payload
+     * @param  array<string, mixed>  $prismaLinkPayload
+     * @return array<string, mixed>
+     */
+    public static function mergePrismaLinkPayload(array $payload, array $prismaLinkPayload): array
+    {
+        $existingNotification = data_get($payload, 'prismalink_notification');
+        $payload['prismalink_notification'] = array_merge(
+            is_array($existingNotification) ? $existingNotification : [],
+            $prismaLinkPayload
+        );
+
+        return $payload;
+    }
+
     public function scopeWhereOwnerIn(
         Builder $query,
         array $owners

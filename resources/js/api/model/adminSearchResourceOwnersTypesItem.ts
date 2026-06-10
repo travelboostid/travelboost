@@ -8,6 +8,7 @@
 export type AdminSearchResourceOwnersTypesItem =
     (typeof AdminSearchResourceOwnersTypesItem)[keyof typeof AdminSearchResourceOwnersTypesItem];
 
+// eslint-disable-next-line @typescript-eslint/no-redeclare
 export const AdminSearchResourceOwnersTypesItem = {
     user: 'user',
     company: 'company',

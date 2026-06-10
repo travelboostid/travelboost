@@ -5,11 +5,9 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\IndexWalletRequest;
 use App\Models\Wallet;
-use Illuminate\Routing\Attributes\Controllers\Authorize;
 use Illuminate\Support\Carbon;
 use Inertia\Inertia;
 
-#[Authorize('access-admin')]
 class WalletController extends Controller
 {
     public function index(IndexWalletRequest $request)

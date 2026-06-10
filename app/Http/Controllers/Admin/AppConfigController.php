@@ -6,10 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreAppConfigRequest;
 use App\Http\Requests\Admin\UpdateAppConfigRequest;
 use App\Models\AppConfig;
-use Illuminate\Routing\Attributes\Controllers\Authorize;
 use Inertia\Inertia;
 
-#[Authorize('access-admin')]
 class AppConfigController extends Controller
 {
     public function index()

@@ -21,6 +21,7 @@ use App\Models\TourAddOn;
 use App\Models\TourAvailability;
 use App\Models\TourPrice;
 use App\Models\TourSchedule;
+use App\Notifications\BookingPaymentReviewStatusNotification;
 use App\Services\AgentCommissionResolver;
 use App\Services\BookingDownPaymentRuleService;
 use App\Services\BookingPaymentReceiverService;
@@ -36,6 +37,7 @@ use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
@@ -425,7 +427,13 @@ class BookingIndexController extends Controller
         $paymentDate = $paidPayments->last()?->paid_at ?? $paidPayments->last()?->created_at;
         $invoiceSchedule = $this->resolveInvoiceSchedule($booking);
         $priceBreakdown = $this->buildInvoicePriceBreakdown($booking);
-        $paymentDetails = $this->buildInvoicePaymentDetails($booking);
+        $taxableAddonRows = $booking->addons
+            ->filter(fn ($addon): bool => (bool) $addon->is_taxable)
+            ->values();
+        $nonTaxableAddonRows = $booking->addons
+            ->filter(fn ($addon): bool => ! $addon->is_taxable)
+            ->values();
+        $paymentDetails = $this->buildInvoicePaymentDetails($booking, $taxableAddonRows);
         $paymentDetailsTotal = (float) collect($paymentDetails)->sum('amount');
         $vatAmount = (float) $booking->tax_amount;
         $paymentReceiver = app(BookingPaymentReceiverService::class)->resolveForBooking($booking);
@@ -482,8 +490,14 @@ class BookingIndexController extends Controller
                 'paymentDetails' => $paymentDetails,
                 'paymentDetailsTotal' => $paymentDetailsTotal,
                 'vatRate' => $vatRate,
-                'otherChargeAmount' => $isCustomerInvoice ? (float) $booking->platform_fee : 0,
-                'discountAmount' => 0,
+                'platformFeeAmount' => $isCustomerInvoice ? (float) $booking->platform_fee : 0,
+                'nonTaxableAddonSummaryRows' => $nonTaxableAddonRows
+                    ->map(fn ($addon): array => [
+                        'label' => $addon->name ?: 'Add-on',
+                        'amount' => (float) $addon->price,
+                    ])
+                    ->values()
+                    ->all(),
                 'invoiceGrandTotal' => $invoiceGrandTotal,
                 'invoiceNumber' => $invoiceNumber,
                 'isProforma' => $isProforma,
@@ -569,6 +583,8 @@ class BookingIndexController extends Controller
             app(FinalizeBookingPaymentAction::class)->execute($booking->fresh(), $payment->fresh());
             app(NotifyBookingPaymentEventAction::class)->execute($booking->fresh(), 'manual_payment_accepted', $payment->fresh());
         });
+
+        $this->sendBookingContactPaymentReviewEmail($company, $booking->fresh(['tour', 'user']), $payment->fresh(), 'accepted');
 
         return back()->with('success', 'Payment accepted.');
     }
@@ -828,8 +844,144 @@ class BookingIndexController extends Controller
         });
 
         app(SyncAvailabilityAction::class)->executeForBooking($booking->fresh());
+        $this->sendBookingContactPaymentReviewEmail($company, $booking->fresh(['tour', 'user']), $payment->fresh(), 'declined');
 
         return back()->with('success', 'Manual payment declined and booking cancelled.');
+    }
+
+    private function sendBookingContactPaymentReviewEmail(Company $company, Booking $booking, Payment $payment, string $decision): void
+    {
+        $recipientEmail = $booking->contact_email;
+
+        if (! filled($recipientEmail)) {
+            return;
+        }
+
+        $attachment = $decision === 'accepted'
+            ? $this->buildBookingContactInvoiceAttachment($company, $booking)
+            : null;
+
+        try {
+            Notification::route('mail', $recipientEmail)
+                ->notify(new BookingPaymentReviewStatusNotification(
+                    $booking,
+                    $payment,
+                    $company,
+                    $decision,
+                    $attachment['data'] ?? null,
+                    $attachment['name'] ?? null,
+                ));
+        } catch (\Throwable $exception) {
+            report($exception);
+        }
+    }
+
+    /**
+     * @return array{data: string, name: string}|null
+     */
+    private function buildBookingContactInvoiceAttachment(Company $company, Booking $booking): ?array
+    {
+        if (! in_array($this->bookingStatusValue($booking), self::INVOICEABLE_STATUSES, true)) {
+            return null;
+        }
+
+        $booking->loadMissing([
+            'user',
+            'agent.photo',
+            'agent.companySetting',
+            'vendor.photo',
+            'vendor.companySetting',
+            'tour.company.companySetting',
+            'passengers',
+            'addons',
+            'payments',
+        ]);
+        $booking = app(BookingPricingService::class)->reconcileSnapshotTotals($booking);
+
+        $paidPayments = $booking->payments
+            ->filter(fn (Payment $payment): bool => $payment->status === PaymentStatus::PAID)
+            ->sortBy(fn (Payment $payment): string => (string) ($payment->paid_at ?? $payment->created_at))
+            ->values();
+
+        if ($paidPayments->isEmpty()) {
+            return null;
+        }
+
+        $paymentReceiver = app(BookingPaymentReceiverService::class)->resolveForBooking($booking);
+        $invoiceType = collect($this->invoiceOptions($company, $booking, $paymentReceiver['payment_mode']))
+            ->pluck('type')
+            ->first(fn (string $type): bool => in_array($type, ['agent_to_customer', 'vendor_to_customer'], true));
+
+        if (! $invoiceType) {
+            return null;
+        }
+
+        $paymentDate = $paidPayments->last()?->paid_at ?? $paidPayments->last()?->created_at;
+        $invoiceSchedule = $this->resolveInvoiceSchedule($booking);
+        $priceBreakdown = $this->buildInvoicePriceBreakdown($booking);
+        $taxableAddonRows = $booking->addons
+            ->filter(fn ($addon): bool => (bool) $addon->is_taxable)
+            ->values();
+        $nonTaxableAddonRows = $booking->addons
+            ->filter(fn ($addon): bool => ! $addon->is_taxable)
+            ->values();
+        $paymentDetails = $this->buildInvoicePaymentDetails($booking, $taxableAddonRows);
+        $paymentDetailsTotal = (float) collect($paymentDetails)->sum('amount');
+        $vatAmount = (float) $booking->tax_amount;
+        $isProforma = $this->bookingStatusValue($booking) === BookingStatus::DOWN_PAYMENT->value;
+        $paidAmount = (float) $paidPayments->sum('amount');
+        $invoiceGrandTotal = (float) $booking->grand_total;
+        $invoiceNumber = $booking->booking_number;
+        $issuer = $invoiceType === 'agent_to_customer'
+            ? $booking->agent
+            : ($booking->vendor ?? $booking->tour?->company);
+        $customerName = $booking->contact_name ?: $booking->user?->name;
+        $customerEmail = $booking->contact_email ?: $booking->user?->email;
+        $customerPhone = $booking->contact_phone ?: $booking->user?->phone;
+        $vatRate = $this->resolveInvoiceVatRate($booking);
+        $deadline = $this->deadlinePayload($booking, $this->vendorSettings($booking)?->full_payment_deadline);
+        $filename = ($isProforma ? 'Proforma_Invoice_' : 'Invoice_').$invoiceNumber.'.pdf';
+
+        $pdf = Pdf::setOption(['isRemoteEnabled' => true])
+            ->loadView('exports.booking-invoice', [
+                'booking' => $booking,
+                'agent' => $issuer,
+                'logoSrc' => $this->resolveCompanyLogoSrc($issuer),
+                'customerName' => $customerName,
+                'billedToName' => $customerName,
+                'billedToEmail' => $customerEmail,
+                'billedToPhone' => $customerPhone,
+                'billedToAddress' => null,
+                'paymentDate' => $paymentDate,
+                'invoiceDate' => $booking->created_at,
+                'dueDate' => $deadline['date'] ?? null,
+                'returnDate' => $invoiceSchedule?->return_date,
+                'paidAmount' => $paidAmount,
+                'priceBreakdown' => $priceBreakdown,
+                'paymentDetails' => $paymentDetails,
+                'paymentDetailsTotal' => $paymentDetailsTotal,
+                'vatRate' => $vatRate,
+                'platformFeeAmount' => (float) $booking->platform_fee,
+                'nonTaxableAddonSummaryRows' => $nonTaxableAddonRows
+                    ->map(fn ($addon): array => [
+                        'label' => $addon->name ?: 'Add-on',
+                        'amount' => (float) $addon->price,
+                    ])
+                    ->values()
+                    ->all(),
+                'invoiceGrandTotal' => $invoiceGrandTotal,
+                'invoiceNumber' => $invoiceNumber,
+                'isProforma' => $isProforma,
+                'paymentInstructions' => $isProforma
+                    ? $this->proformaPaymentInstructions($issuer, $invoiceType)
+                    : [],
+            ])
+            ->setPaper('A4', 'portrait');
+
+        return [
+            'data' => $pdf->output(),
+            'name' => $filename,
+        ];
     }
 
     /**
@@ -1015,7 +1167,7 @@ class BookingIndexController extends Controller
             ->all();
     }
 
-    private function buildInvoicePaymentDetails(Booking $booking): array
+    private function buildInvoicePaymentDetails(Booking $booking, ?Collection $taxableAddons = null): array
     {
         $schedule = $this->resolveInvoiceSchedule($booking);
 
@@ -1048,7 +1200,7 @@ class BookingIndexController extends Controller
             })
             ->values();
 
-        $addonRows = $booking->addons
+        $addonRows = ($taxableAddons ?? $booking->addons)
             ->map(fn ($addon): array => [
                 'description' => $addon->name ?: 'Add-on',
                 'quantity' => 1,

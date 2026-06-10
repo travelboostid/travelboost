@@ -7,11 +7,9 @@ use App\Http\Controllers\Controller;
 use App\Models\AffiliateProfile;
 use App\Models\Company;
 use App\Models\User;
-use Illuminate\Routing\Attributes\Controllers\Authorize;
 use Inertia\Inertia;
 use Inertia\Response;
 
-#[Authorize('access-admin')]
 class AffiliateController extends Controller
 {
     public function index(): Response

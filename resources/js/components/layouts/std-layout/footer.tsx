@@ -1,155 +1,177 @@
-//import Link from "next/link";
 import { Link } from '@inertiajs/react';
-import { Plane } from 'lucide-react';
+import { Building2, Mail, MapPin, Phone } from 'lucide-react';
 
 export function Footer() {
     return (
-        <footer className="bg-foreground text-background py-16">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-12">
-                    <div className="md:col-span-1">
-                        <Link href="/" className="flex items-center gap-2 mb-6">
-                            <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
-                                <Plane className="w-6 h-6 text-primary-foreground" />
-                            </div>
-                            <span className="text-xl font-bold">
-                                TravelBoost
-                            </span>
+        <footer className="bg-foreground py-16 text-background">
+            <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+                <div className="grid grid-cols-1 gap-12 lg:grid-cols-[1.2fr_0.8fr_0.8fr]">
+                    <div>
+                        <Link href="/" className="mb-6 inline-flex">
+                            <img
+                                src="/images/logo/hori-wt.png"
+                                alt="TravelBoost"
+                                className="h-12 w-auto object-contain"
+                            />
                         </Link>
-                        <p className="text-background/70 text-sm leading-relaxed">
-                            Platform promosi agen perjalanan terbaik untuk
-                            memberdayakan bisnis Anda.
+                        <p className="text-sm leading-relaxed text-background/70">
+                            Platform promosi agen perjalanan untuk membantu
+                            vendor dan agent mengelola distribusi produk,
+                            momentum promosi, dan komunikasi bisnis dengan lebih
+                            rapi.
                         </p>
+                        <div className="mt-6 flex items-start gap-3 text-sm text-background/70">
+                            <Building2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                            <div>
+                                <p className="font-medium text-background">
+                                    PT Erasoft Teknologi Indonessia
+                                </p>
+                                <p className="mt-1 leading-relaxed">
+                                    Jl. Alaydrus No.37, RT.8/RW.2, Petojo
+                                    Utara, Kecamatan Gambir, Kota Jakarta
+                                    Pusat, Daerah Khusus Ibukota Jakarta 10130
+                                </p>
+                            </div>
+                        </div>
                     </div>
 
                     <div>
-                        <h3 className="font-semibold mb-4">Produk</h3>
+                        <h3 className="mb-4 font-semibold">Navigation</h3>
                         <ul className="space-y-3">
                             <li>
                                 <Link
-                                    href="/learn-more"
-                                    className="text-background/70 hover:text-background transition-colors text-sm"
+                                    href="/#features"
+                                    className="text-sm text-background/70 transition-colors hover:text-background"
                                 >
                                     Fitur
                                 </Link>
                             </li>
                             <li>
                                 <Link
-                                    href="/pricing"
-                                    className="text-background/70 hover:text-background transition-colors text-sm"
+                                    href="/#benefits"
+                                    className="text-sm text-background/70 transition-colors hover:text-background"
                                 >
-                                    Harga
+                                    Benefits
                                 </Link>
                             </li>
                             <li>
                                 <Link
-                                    href="/#integration"
-                                    className="text-background/70 hover:text-background transition-colors text-sm"
+                                    href="/#testimonials"
+                                    className="text-sm text-background/70 transition-colors hover:text-background"
                                 >
-                                    Integrasi
+                                    Testimonials
                                 </Link>
                             </li>
                             <li>
                                 <Link
-                                    href="#"
-                                    className="text-background/70 hover:text-background transition-colors text-sm"
+                                    href="/#get-started"
+                                    className="text-sm text-background/70 transition-colors hover:text-background"
                                 >
-                                    FAQ
+                                    Get Started
+                                </Link>
+                            </li>
+                            <li>
+                                <Link
+                                    href="/#contact"
+                                    className="text-sm text-background/70 transition-colors hover:text-background"
+                                >
+                                    Contact
                                 </Link>
                             </li>
                         </ul>
                     </div>
 
                     <div>
-                        <h3 className="font-semibold mb-4">Perusahaan</h3>
-                        <ul className="space-y-3">
-                            <li>
-                                <Link
-                                    href="#"
-                                    className="text-background/70 hover:text-background transition-colors text-sm"
-                                >
-                                    Tentang Kami
-                                </Link>
-                            </li>
-                            <li>
-                                <Link
-                                    href="#"
-                                    className="text-background/70 hover:text-background transition-colors text-sm"
-                                >
-                                    Blog
-                                </Link>
-                            </li>
-                            <li>
-                                <Link
-                                    href="#"
-                                    className="text-background/70 hover:text-background transition-colors text-sm"
-                                >
-                                    Karir
-                                </Link>
-                            </li>
-                            <li>
-                                <Link
-                                    href="#"
-                                    className="text-background/70 hover:text-background transition-colors text-sm"
-                                >
-                                    Kontak
-                                </Link>
-                            </li>
-                        </ul>
-                    </div>
-
-                    <div>
-                        <h3 className="font-semibold mb-4">Legal</h3>
-                        <ul className="space-y-3">
-                            <li>
-                                <Link
-                                    href="#"
-                                    className="text-background/70 hover:text-background transition-colors text-sm"
-                                >
-                                    Kebijakan Privasi
-                                </Link>
-                            </li>
-                            <li>
-                                <Link
-                                    href="#"
-                                    className="text-background/70 hover:text-background transition-colors text-sm"
-                                >
-                                    Syarat & Ketentuan
-                                </Link>
-                            </li>
-                            <li>
-                                <Link
-                                    href="#"
-                                    className="text-background/70 hover:text-background transition-colors text-sm"
-                                >
-                                    Kebijakan Cookie
-                                </Link>
-                            </li>
-                        </ul>
+                        <h3 className="mb-4 font-semibold">Support</h3>
+                        <div className="space-y-4">
+                            <a
+                                href="mailto:support@travelboost.co.id"
+                                className="flex items-center gap-3 text-sm text-background/70 transition-colors hover:text-background"
+                            >
+                                <Mail className="h-4 w-4 text-primary" />
+                                <span>support@travelboost.co.id</span>
+                            </a>
+                            <a
+                                href="tel:0216349318"
+                                className="flex items-center gap-3 text-sm text-background/70 transition-colors hover:text-background"
+                            >
+                                <Phone className="h-4 w-4 text-primary" />
+                                <span>0216349318</span>
+                            </a>
+                            <div className="flex items-start gap-3 text-sm text-background/70">
+                                <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                                <p>
+                                    Dukungan untuk diskusi produk, onboarding,
+                                    dan partnership tersedia melalui email dan
+                                    telepon pada jam kerja.
+                                </p>
+                            </div>
+                            <div className="rounded-2xl border border-background/15 bg-background/[0.04] p-4">
+                                <p className="text-xs uppercase tracking-[0.22em] text-background/50">
+                                    Supported by
+                                </p>
+                                <div className="mt-4 flex flex-wrap items-center gap-6">
+                                    <img
+                                        src="/images/logo/partner/astindo.png"
+                                        alt="ASTINDO"
+                                        className="h-9 w-auto object-contain"
+                                    />
+                                    <img
+                                        src="/images/logo/partner/prismalink.png"
+                                        alt="Prismalink"
+                                        className="h-8 w-auto object-contain"
+                                    />
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                <div className="mt-12 pt-8 border-t border-background/20">
-                    <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-                        <p className="text-background/70 text-sm">
-                            © 2026 TravelBoost. All rights reserved.
-                        </p>
+                <div className="mt-12 border-t border-background/20 pt-8">
+                    <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+                        <div className="space-y-3">
+                            <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+                                <Link
+                                    href="/privacy"
+                                    className="text-sm text-background/70 transition-colors hover:text-background"
+                                >
+                                    Kebijakan Privasi
+                                </Link>
+                                <Link
+                                    href="/terms-and-conditions"
+                                    className="text-sm text-background/70 transition-colors hover:text-background"
+                                >
+                                    Syarat & Ketentuan
+                                </Link>
+                                <Link
+                                    href="#"
+                                    className="text-sm text-background/70 transition-colors hover:text-background"
+                                >
+                                    Kebijakan Cookie
+                                </Link>
+                            </div>
+                            <p className="text-sm text-background/70">
+                                Copyright 2026 TravelBoost. All rights
+                                reserved.
+                            </p>
+                        </div>
+
                         <div className="flex items-center gap-6">
                             <Link
                                 href="#"
-                                className="text-background/70 hover:text-background transition-colors text-sm"
+                                className="text-sm text-background/70 transition-colors hover:text-background"
                             >
                                 Instagram
                             </Link>
                             <Link
                                 href="#"
-                                className="text-background/70 hover:text-background transition-colors text-sm"
+                                className="text-sm text-background/70 transition-colors hover:text-background"
                             >
                                 Facebook
                             </Link>
                             <Link
                                 href="#"
-                                className="text-background/70 hover:text-background transition-colors text-sm"
+                                className="text-sm text-background/70 transition-colors hover:text-background"
                             >
                                 LinkedIn
                             </Link>

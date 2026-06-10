@@ -16,7 +16,7 @@ class DashboardController extends Controller
 {
     public function index(Request $request): Response
     {
-        /** @var \App\Models\User $user */
+        /** @var User $user */
         $user = Auth::user();
 
         $profile = $user->affiliateProfile;
@@ -128,7 +128,8 @@ class DashboardController extends Controller
                     ->where('type', 'agent')
                     ->whereIn('referred_by', $referrerIds)
                     ->whereHas('agentSubscription', function ($query): void {
-                        $query->whereNotNull('package_id')->where('package_id', '!=', 1);
+                        $query->whereNotNull('package_id')
+                            ->where('ended_at', '>', now());
                     })
                     ->count();
 
@@ -143,8 +144,8 @@ class DashboardController extends Controller
                     'total_agents' => $totalAgents,
                     'subscribed_agents' => $subscribedAgents,
                     'conversion' => $totalAgents > 0
-                      ? round(($subscribedAgents / $totalAgents) * 100, 2)
-                      : 0,
+                      ? (float) round(($subscribedAgents / $totalAgents) * 100, 2)
+                      : 0.0,
                     'status' => ucfirst($profile->status),
                 ];
             })

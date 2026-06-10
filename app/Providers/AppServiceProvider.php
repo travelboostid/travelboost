@@ -11,6 +11,7 @@ use App\Models\Media;
 use App\Models\User;
 use App\Models\WalletTopupPayment;
 use App\Services\KnowledgeBaseService;
+use App\Services\PrismaLinkService;
 use Carbon\CarbonImmutable;
 use Illuminate\Auth\Middleware\Authenticate;
 use Illuminate\Database\Eloquent\Relations\Relation;
@@ -35,6 +36,9 @@ class AppServiceProvider extends ServiceProvider
         });
         $this->app->singleton(KnowledgeBaseService::class, function () {
             return new KnowledgeBaseService;
+        });
+        $this->app->singleton(PrismaLinkService::class, function () {
+            return new PrismaLinkService;
         });
     }
 
@@ -73,8 +77,39 @@ class AppServiceProvider extends ServiceProvider
             return $redirectPath;
         });
 
-        Gate::define('access-admin', function (User $user) {
+        // '?User' because the user is not always authenticated
+        Gate::define('access-from-main-domain', function (?User $user) {
+            $domain = Context::get('domain');
+
+            return $domain == null;
+        });
+        Gate::define('access-admin-pages', function (User $user) {
+            $domain = Context::get('domain');
+            if ($domain != null) {
+                return false;
+            }
+
             return $user->hasRole('user:admin');
+        });
+        Gate::define('access-customer-pages', function (?User $user) {
+            $domain = Context::get('domain');
+
+            return $domain->owner instanceof Company;
+        });
+        Gate::define('access-company-pages', function (?User $user) {
+            $domain = Context::get('domain');
+
+            if ($domain == null) {
+                return true;
+            }
+
+            return $domain->owner instanceof AffiliateProfile
+                && request()->routeIs(
+                    'companies.login.show',
+                    'companies.login.store',
+                    'companies.register.show',
+                    'companies.register.store',
+                );
         });
 
         $this->configureDefaults();

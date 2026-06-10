@@ -10,6 +10,8 @@ use Bavix\Wallet\Interfaces\Wallet;
 use Bavix\Wallet\Traits\CanPay;
 use Bavix\Wallet\Traits\HasWallet;
 use Bavix\Wallet\Traits\HasWallets;
+use Illuminate\Auth\MustVerifyEmail as MustVerifyEmailTrait;
+use Illuminate\Contracts\Auth\MustVerifyEmail as MustVerifyEmailContract;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -18,9 +20,9 @@ use Laratrust\Contracts\LaratrustUser;
 use Laratrust\Traits\HasRolesAndPermissions;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 
-class User extends Authenticatable implements Customer, LaratrustUser, Wallet
+class User extends Authenticatable implements Customer, LaratrustUser, MustVerifyEmailContract, Wallet
 {
-    use CanPay, HasBankAccounts, HasFactory, HasRolesAndPermissions, HasWallet, HasWallets, Notifiable, TwoFactorAuthenticatable;
+    use CanPay, HasBankAccounts, HasFactory, HasRolesAndPermissions, HasWallet, HasWallets, MustVerifyEmailTrait, Notifiable, TwoFactorAuthenticatable;
 
     protected $fillable = [
         'name',
@@ -65,9 +67,9 @@ class User extends Authenticatable implements Customer, LaratrustUser, Wallet
 
     protected $with = ['affiliateProfile', 'roles'];
 
-    protected static function booted()
+    protected static function booted(): void
     {
-        static::created(function ($user) {
+        static::created(function (self $user): void {
             $user->wallet()->create([
                 'name' => 'Main Wallet',
                 'slug' => 'main',

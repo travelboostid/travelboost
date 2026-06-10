@@ -1,21 +1,24 @@
+import { ApiError } from '@/api/api-instance';
 import { useCreateTopupPayment } from '@/api/payment/payment';
-import { Button } from '@/components/ui/button';
+import { PaymentMethodDialog } from '@/components/payment/payment-method-dialog';
 import {
-    Dialog,
-    DialogClose,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-    DialogTrigger,
-} from '@/components/ui/dialog';
+    AlertDialog,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import { Button } from '@/components/ui/button';
 import { Field, FieldGroup } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Spinner } from '@/components/ui/spinner';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
+import { openOnlinePayment } from '@/lib/open-online-payment';
 import { useState } from 'react';
+import { toast } from 'sonner';
 
 const PRESET_AMOUNTS = [100_000, 200_000, 500_000, 1_000_000];
 const MIN_AMOUNT = 100_000;
@@ -25,95 +28,138 @@ type TopupDialogProps = {
 };
 
 export function TopupDialog({ children }: TopupDialogProps) {
-    const [open, setOpen] = useState(false);
+    const [amountDialogOpen, setAmountDialogOpen] = useState(false);
+    const [methodDialogOpen, setMethodDialogOpen] = useState(false);
     const [amount, setAmount] = useState<number | null>(null);
-    const [ongoing, setOngoing] = useState(false);
-    const isValid = amount !== null && amount >= MIN_AMOUNT;
+    const isValidAmount = amount !== null && amount >= MIN_AMOUNT;
     const { company } = usePageSharedDataProps();
     const topup = useCreateTopupPayment();
-    const handleTopup = () => {
-        if (!isValid || ongoing) return;
+
+    const resetAmountDialog = () => {
+        setAmount(null);
+    };
+
+    const handleAmountDialogOpenChange = (nextOpen: boolean) => {
+        setAmountDialogOpen(nextOpen);
+
+        if (!nextOpen) {
+            resetAmountDialog();
+        }
+    };
+
+    const handleContinueToMethods = () => {
+        if (!isValidAmount) {
+            return;
+        }
+
+        setAmountDialogOpen(false);
+        setMethodDialogOpen(true);
+    };
+
+    const handleTopup = (methodId: number) => {
+        if (!isValidAmount || topup.isPending) {
+            return;
+        }
 
         topup.mutate(
-            { data: { amount, owner_type: 'company', owner_id: company.id } },
+            {
+                data: {
+                    amount,
+                    owner_type: 'company',
+                    owner_id: company.id,
+                    payment_method_id: methodId,
+                },
+            },
             {
                 onSuccess: (payment) => {
-                    setOpen(false);
-                    const snapToken = (payment.data.payload as any)
-                        ?.snap_token as string;
-                    (window as any).snap.pay(snapToken, {
-                        onSuccess: () => window.location.reload(),
-                        onError: () => window.location.reload(),
-                        onClose: () => window.location.reload(),
-                    });
+                    setMethodDialogOpen(false);
+                    resetAmountDialog();
+                    openOnlinePayment(payment.data);
+                },
+                onError: (error) => {
+                    const message =
+                        error instanceof ApiError
+                            ? error.message
+                            : 'Failed to create payment. Please try again.';
+
+                    toast.error(message);
                 },
             },
         );
     };
 
-    const loaading = topup.isPending || ongoing;
-
     return (
-        <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>{children}</DialogTrigger>
+        <>
+            <AlertDialog
+                open={amountDialogOpen}
+                onOpenChange={handleAmountDialogOpenChange}
+            >
+                <AlertDialogTrigger asChild>{children}</AlertDialogTrigger>
 
-            <DialogContent className="sm:max-w-sm">
-                <DialogHeader>
-                    <DialogTitle>Top up wallet</DialogTitle>
-                    <DialogDescription>
-                        Choose an amount or enter a custom value (minimum Rp
-                        100.000)
-                    </DialogDescription>
-                </DialogHeader>
+                <AlertDialogContent className="sm:max-w-sm">
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Top up wallet</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Choose an amount or enter a custom value (minimum Rp
+                            100.000)
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
 
-                {/* Preset amounts */}
-                <div className="grid grid-cols-2 gap-2">
-                    {PRESET_AMOUNTS.map((preset) => (
+                    <div className="grid grid-cols-2 gap-2">
+                        {PRESET_AMOUNTS.map((preset) => (
+                            <Button
+                                key={preset}
+                                type="button"
+                                variant={
+                                    amount === preset ? 'default' : 'outline'
+                                }
+                                onClick={() => setAmount(preset)}
+                            >
+                                Rp {preset.toLocaleString('id-ID')}
+                            </Button>
+                        ))}
+                    </div>
+
+                    <FieldGroup className="mt-4">
+                        <Field>
+                            <Label htmlFor="custom-amount">Custom amount</Label>
+                            <Input
+                                id="custom-amount"
+                                type="number"
+                                min={MIN_AMOUNT}
+                                placeholder="Minimum 100000"
+                                value={amount ?? ''}
+                                onChange={(e) =>
+                                    setAmount(
+                                        e.target.value
+                                            ? Number(e.target.value)
+                                            : null,
+                                    )
+                                }
+                            />
+                        </Field>
+                    </FieldGroup>
+
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+
                         <Button
-                            key={preset}
-                            type="button"
-                            variant={amount === preset ? 'default' : 'outline'}
-                            onClick={() => setAmount(preset)}
+                            disabled={!isValidAmount}
+                            onClick={handleContinueToMethods}
                         >
-                            Rp {preset.toLocaleString('id-ID')}
+                            Continue
                         </Button>
-                    ))}
-                </div>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
 
-                {/* Custom amount */}
-                <FieldGroup className="mt-4">
-                    <Field>
-                        <Label htmlFor="custom-amount">Custom amount</Label>
-                        <Input
-                            id="custom-amount"
-                            type="number"
-                            min={MIN_AMOUNT}
-                            placeholder="Minimum 100000"
-                            value={amount ?? ''}
-                            onChange={(e) =>
-                                setAmount(
-                                    e.target.value
-                                        ? Number(e.target.value)
-                                        : null,
-                                )
-                            }
-                        />
-                    </Field>
-                </FieldGroup>
-
-                <DialogFooter>
-                    <DialogClose asChild>
-                        <Button variant="outline">Cancel</Button>
-                    </DialogClose>
-
-                    <Button
-                        disabled={!isValid || loaading}
-                        onClick={handleTopup}
-                    >
-                        {loaading && <Spinner />} Topup
-                    </Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
+            <PaymentMethodDialog
+                open={methodDialogOpen}
+                onOpenChange={setMethodDialogOpen}
+                description={`Select how you want to pay Rp ${amount?.toLocaleString('id-ID') ?? '0'}`}
+                loading={topup.isPending}
+                onConfirm={handleTopup}
+            />
+        </>
     );
 }

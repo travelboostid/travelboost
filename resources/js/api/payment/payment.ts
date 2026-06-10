@@ -30,6 +30,7 @@ import type {
     CreateTopupPaymentBody,
     GetPayments200,
     GetPaymentsParams,
+    ModelNotFoundExceptionResponse,
     ValidationExceptionResponse,
 } from '.././model';
 
@@ -202,7 +203,7 @@ export function useGetPayments<
 }
 
 /**
- * @summary Create wallet topup payment (Midtrans Snap)
+ * @summary Create wallet topup payment
  */
 export const createTopupPayment = (
     createTopupPaymentBody: CreateTopupPaymentBody,
@@ -222,7 +223,7 @@ export const createTopupPayment = (
 };
 
 export const getCreateTopupPaymentMutationOptions = <
-    TError = ValidationExceptionResponse,
+    TError = ModelNotFoundExceptionResponse | ValidationExceptionResponse,
     TContext = unknown,
 >(options?: {
     mutation?: UseMutationOptions<
@@ -263,13 +264,15 @@ export type CreateTopupPaymentMutationResult = NonNullable<
     Awaited<ReturnType<typeof createTopupPayment>>
 >;
 export type CreateTopupPaymentMutationBody = CreateTopupPaymentBody;
-export type CreateTopupPaymentMutationError = ValidationExceptionResponse;
+export type CreateTopupPaymentMutationError =
+    | ModelNotFoundExceptionResponse
+    | ValidationExceptionResponse;
 
 /**
- * @summary Create wallet topup payment (Midtrans Snap)
+ * @summary Create wallet topup payment
  */
 export const useCreateTopupPayment = <
-    TError = ValidationExceptionResponse,
+    TError = ModelNotFoundExceptionResponse | ValidationExceptionResponse,
     TContext = unknown,
 >(
     options?: {

@@ -9,11 +9,9 @@ use App\Models\AffiliateProfile;
 use App\Models\Company;
 use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Routing\Attributes\Controllers\Authorize;
 use Inertia\Inertia;
 use Inertia\Response;
 
-#[Authorize('access-admin')]
 class AgentController extends Controller
 {
     /**

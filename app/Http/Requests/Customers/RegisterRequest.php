@@ -2,9 +2,12 @@
 
 namespace App\Http\Requests\Customers;
 
+use App\Models\Company;
 use App\Support\Rules\UserRules;
+use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Context;
+use Illuminate\Validation\ValidationException;
 
 class RegisterRequest extends FormRequest
 {
@@ -32,7 +35,7 @@ class RegisterRequest extends FormRequest
     /**
      * Get the validation rules that apply to the request.
      *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
@@ -50,7 +53,7 @@ class RegisterRequest extends FormRequest
 
     protected function failedAuthorization()
     {
-        throw \Illuminate\Validation\ValidationException::withMessages([
+        throw ValidationException::withMessages([
             'email' => 'Registration is not allowed.',
         ]);
     }
@@ -58,7 +61,7 @@ class RegisterRequest extends FormRequest
     private function getCompanyIdFromDomain()
     {
         $domain = Context::get('domain');
-        if ($domain && $domain->owner instanceof \App\Models\Company) {
+        if ($domain && $domain->owner instanceof Company) {
             return $domain->owner_id;
         }
 

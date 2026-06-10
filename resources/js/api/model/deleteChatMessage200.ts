@@ -4,8 +4,7 @@
  * Travelboost
  * OpenAPI spec version: 0.0.1
  */
-import type { DeleteChatMessage200Message } from './deleteChatMessage200Message';
 
 export type DeleteChatMessage200 = {
-    message: DeleteChatMessage200Message;
+    message: 'Message deleted';
 };

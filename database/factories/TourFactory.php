@@ -26,9 +26,9 @@ class TourFactory extends Factory
                 TourStatus::ACTIVE,
                 TourStatus::INACTIVE,
             ]),
-            'continent_id' => 1,
-            'region_id' => 1,
-            'country_id' => 1,
+            'continent_id' => null,
+            'region_id' => null,
+            'country_id' => null,
             'destination' => fake()->city(),
 
             'category_id' => null,

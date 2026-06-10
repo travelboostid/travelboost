@@ -420,14 +420,23 @@ export default function Page() {
                                 {/* Code */}
                                 <div className="rounded-3xl border bg-card shadow-sm overflow-hidden">
                                     {/* HEADER */}
-                                    <div className="border-b bg-muted/40 px-6 py-4">
-                                        <h2 className="text-lg font-semibold">
-                                            Basic Information
-                                        </h2>
+                                    <div className="flex items-start justify-between border-b bg-muted/40 px-6 py-4">
+                                        <div>
+                                            <h2 className="text-lg font-semibold">
+                                                Basic Information
+                                            </h2>
 
-                                        <p className="text-sm text-muted-foreground">
-                                            Main information about your tour
-                                        </p>
+                                            <p className="text-sm text-muted-foreground">
+                                                Main information about your tour
+                                            </p>
+                                        </div>
+
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-sm font-medium">
+                                                Input By :{' '}
+                                                {auth.user?.name || '-'}
+                                            </span>
+                                        </div>
                                     </div>
                                     {/* BODY */}
                                     <div className="grid grid-cols-1 gap-5 p-6 md:grid-cols-2">
@@ -689,7 +698,6 @@ export default function Page() {
                                                 message={errors.category_id}
                                             />
                                         </div>
-
                                     </div>
                                 </div>
 
@@ -930,20 +938,6 @@ export default function Page() {
                                                 </div>
                                             </div>
                                         </div>
-                                    </div>
-                                </div>
-                                {/* Created By */}
-                                <div className="grid gap-2">
-                                    <Label>Input By</Label>
-
-                                    <div className="rounded-xl border bg-muted/30 px-4 py-3">
-                                        <div className="font-medium">
-                                            {auth.user?.name || '-'}
-                                        </div>
-
-                                        {/* <div className="text-sm text-muted-foreground">
-                                            User ID: {auth.user?.id || '-'}
-                                        </div> */}
                                     </div>
                                 </div>
                             </div>

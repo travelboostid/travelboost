@@ -96,7 +96,7 @@ const toDateString = (date: Date) => {
 const getBookingDeadlineDays = (tour: any): number =>
     Number(
         tour?.company?.company_setting?.booking_deadline ??
-        tour?.company?.companySetting?.booking_deadline ??
+            tour?.company?.companySetting?.booking_deadline ??
             0,
     );
 

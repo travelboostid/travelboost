@@ -11,10 +11,8 @@ use App\Models\User;
 use Carbon\Carbon;
 use DB;
 use Illuminate\Http\Request;
-use Illuminate\Routing\Attributes\Controllers\Authorize;
 use Inertia\Inertia;
 
-#[Authorize('access-admin')]
 class UserController extends Controller
 {
     /**

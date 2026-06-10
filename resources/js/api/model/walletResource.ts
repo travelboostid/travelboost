@@ -8,7 +8,6 @@ import type { WalletResourceCurrency } from './walletResourceCurrency';
 import type { WalletResourceDescription } from './walletResourceDescription';
 import type { WalletResourceHolder } from './walletResourceHolder';
 import type { WalletResourceLinks } from './walletResourceLinks';
-import type { WalletResourceMeta } from './walletResourceMeta';
 import type { WalletResourceStatus } from './walletResourceStatus';
 import type { WalletResourceTotalWithdrawals } from './walletResourceTotalWithdrawals';
 import type { WalletResourceTransactionCount } from './walletResourceTransactionCount';
@@ -26,7 +25,7 @@ export interface WalletResource {
     balance: string;
     balance_int: string;
     balance_formatted: string;
-    meta: WalletResourceMeta;
+    meta: unknown[];
     currency: WalletResourceCurrency;
     status: WalletResourceStatus;
     type: WalletResourceType;

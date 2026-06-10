@@ -10,11 +10,8 @@ use App\Models\Tour;
 use App\Models\TourSchedule;
 use App\Models\User;
 use Database\Seeders\Common\RolePermissionSeeder;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia as Assert;
-
-uses(Tests\TestCase::class, RefreshDatabase::class);
 
 beforeEach(function () {
     $this->withoutVite();
@@ -120,6 +117,6 @@ test('room listing loads rows after both tour and departure date are selected', 
         ->component('companies/dashboard/reports/room-listings/index')
         ->has('roomData', 1)
         ->where('roomData.0.first_name', 'John')
-        ->where('roomData.0.room_type', 'Twin')
+        ->where('roomData.0.room_type', 'Twin Room')
         ->where('roomData.0.note', 'Near elevator'));
 });
