@@ -3474,6 +3474,58 @@ test('full payment booking with complete documents still allows dashboard docume
         ->and($passenger->visa_number)->toBe('V456');
 });
 
+test('dashboard document updates clear removed file paths', function () {
+    $vendor = Company::factory()->create(['type' => 'vendor']);
+
+    CompanyTeam::create([
+        'company_id' => $vendor->id,
+        'user_id' => $this->user->id,
+        'status' => CompanyTeamStatus::ACTIVE,
+        'is_owner' => true,
+        'accepted_at' => now(),
+    ]);
+
+    $tour = Tour::factory()->create(['company_id' => $vendor->id]);
+    $booking = Booking::factory()->create([
+        'vendor_id' => $vendor->id,
+        'tour_id' => $tour->id,
+        'status' => BookingStatus::FULL_PAYMENT,
+    ]);
+    $passenger = BookingPassenger::create([
+        'booking_id' => $booking->id,
+        'title' => 'Mr',
+        'first_name' => 'Remove',
+        'last_name' => 'Docs',
+        'dob' => now()->subYears(30)->toDateString(),
+        'pob' => 'Jakarta',
+        'price_category' => 'Adult Twin',
+        'price_amount' => 1_000_000,
+        'passport_number' => 'P123',
+        'passport_issue_date' => now()->subYear()->toDateString(),
+        'passport_expiry_date' => now()->addYears(4)->toDateString(),
+        'passport_file_path' => 'travel-documents/passports/old-passport.pdf',
+        'visa_number' => 'V123',
+        'visa_file_path' => 'travel-documents/visas/old-visa.pdf',
+    ]);
+
+    $this->actingAs($this->user)
+        ->post("/companies/{$vendor->username}/dashboard/bookings/{$booking->id}/travel-documents", [
+            'passengers' => [[
+                'id' => $passenger->id,
+                'passport_number' => 'P123',
+                'passport_issue_date' => now()->subYear()->toDateString(),
+                'passport_expiry_date' => now()->addYears(4)->toDateString(),
+                'visa_number' => 'V123',
+            ]],
+        ])
+        ->assertRedirect();
+
+    $passenger->refresh();
+
+    expect($passenger->passport_file_path)->toBeNull()
+        ->and($passenger->visa_file_path)->toBeNull();
+});
+
 test('booking index limits remaining balance to down payment and hides followups for terminal statuses', function () {
     $vendor = Company::factory()->create(['type' => 'vendor']);
 

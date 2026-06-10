@@ -38,13 +38,13 @@ export default function StartLiveChatButton({
                 <Button
                     disabled={loading}
                     onClick={handleClick}
-                    className="h-[3.25rem] w-[3.25rem] rounded-2xl border border-white/70 bg-white text-slate-900 shadow-sm shadow-slate-950/10 transition-all hover:-translate-y-0.5 hover:bg-slate-50 hover:shadow-lg dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:hover:bg-slate-800"
+                    className="h-11 w-11 rounded-xl border border-white/70 bg-white text-slate-900 shadow-sm shadow-slate-950/10 transition-all hover:-translate-x-0.5 hover:bg-slate-50 hover:shadow-lg dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:hover:bg-slate-800"
                 >
                     <MessageSquareIcon className="h-5 w-5" />
                 </Button>
             </TooltipTrigger>
 
-            <TooltipContent side="left">
+            <TooltipContent side="top">
                 <p>Ask AI</p>
             </TooltipContent>
         </Tooltip>

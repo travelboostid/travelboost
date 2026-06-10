@@ -28,6 +28,19 @@ class AffiliateProfile extends Model
 
     protected $appends = ['photo_url', 'identity_card_url'];
 
+    protected static function booted(): void
+    {
+        static::creating(function (self $profile): void {
+            if (blank($profile->referral_code) && $profile->user_id) {
+                $user = $profile->relationLoaded('user') ? $profile->user : User::find($profile->user_id);
+
+                if ($user) {
+                    $profile->referral_code = $user->username ?: $user->email ?: 'affiliate-'.$user->id;
+                }
+            }
+        });
+    }
+
     public function user()
     {
         return $this->belongsTo(User::class);
@@ -70,7 +83,7 @@ class AffiliateProfile extends Model
         return Attribute::make(
             get: function () {
                 $files = collect($this->identityCard?->data['files'] ?? []);
-                $file = $files->first(); // Mengambil resolusi gambar pertama
+                $file = $files->first();
 
                 return data_get($file, 'url');
             }

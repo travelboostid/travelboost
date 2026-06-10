@@ -90,7 +90,12 @@ class TourCommissionRuleController extends Controller
 
         $data = $request->validate([
             'rule_type' => ['required', Rule::in(['base', 'category_departure', 'tour_schedule'])],
-            'agent_tier_id' => ['required', Rule::in($agentTierIds)],
+            'base_items' => ['nullable', 'array'],
+            'base_items.*.agent_tier_id' => ['required_with:base_items', 'integer', Rule::in($agentTierIds)],
+            'base_items.*.product_commission_category_id' => ['required_with:base_items', 'integer', Rule::in($categoryIds)],
+            'base_items.*.commission_type' => ['required_with:base_items', Rule::in(['percent', 'nominal'])],
+            'base_items.*.commission_value' => ['nullable', 'numeric', 'min:0'],
+            'agent_tier_id' => ['nullable', Rule::in($agentTierIds)],
             'product_commission_category_id' => ['nullable', Rule::in($categoryIds)],
             'tour_id' => ['nullable', Rule::in($tourIds)],
             'tour_schedule_id' => ['nullable', Rule::in($scheduleIds)],
@@ -109,7 +114,32 @@ class TourCommissionRuleController extends Controller
         ]);
 
         if ($data['rule_type'] === 'base') {
+            $baseItems = collect($data['base_items'] ?? []);
+
+            if ($baseItems->isNotEmpty()) {
+                DB::transaction(function () use ($baseItems, $company): void {
+                    $baseItems->each(function (array $item) use ($company): void {
+                        TourCommissionRule::query()->updateOrCreate(
+                            [
+                                'company_id' => $company->id,
+                                'tour_id' => null,
+                                'agent_tier_id' => $item['agent_tier_id'],
+                                'product_commission_category_id' => $item['product_commission_category_id'],
+                            ],
+                            [
+                                'commission_type' => $item['commission_type'],
+                                'commission_value' => $item['commission_value'] ?? 0,
+                                'is_active' => true,
+                            ]
+                        );
+                    });
+                });
+
+                return back();
+            }
+
             abort_unless($data['product_commission_category_id'] ?? null, 422);
+            abort_unless($data['agent_tier_id'] ?? null, 422);
             abort_unless($data['commission_type'] ?? null, 422);
 
             TourCommissionRule::query()->updateOrCreate(
@@ -130,6 +160,7 @@ class TourCommissionRuleController extends Controller
         }
 
         if ($data['rule_type'] === 'category_departure') {
+            abort_unless($data['agent_tier_id'] ?? null, 422);
             abort_unless($data['product_commission_category_id'] ?? null, 422);
 
             $departureItems = collect($data['departure_items'] ?? []);
@@ -183,6 +214,7 @@ class TourCommissionRuleController extends Controller
         }
 
         abort_unless($data['tour_id'] ?? null, 422);
+        abort_unless($data['agent_tier_id'] ?? null, 422);
 
         $scheduleItems = collect($data['schedule_items'] ?? []);
 

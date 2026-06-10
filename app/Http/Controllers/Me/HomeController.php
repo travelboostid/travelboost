@@ -147,9 +147,15 @@ class HomeController extends Controller
         $agent = $paymentReceiver['receiver_company'] ?? $booking->vendor ?? $booking->tour?->company;
         $invoiceSchedule = $this->resolveInvoiceSchedule($booking);
         $priceBreakdown = $this->buildInvoicePriceBreakdown($booking);
-        $paymentDetails = $this->buildInvoicePaymentDetails($booking);
+        $taxableAddonRows = $booking->addons
+            ->filter(fn ($addon): bool => (bool) $addon->is_taxable)
+            ->values();
+        $nonTaxableAddonRows = $booking->addons
+            ->filter(fn ($addon): bool => ! $addon->is_taxable)
+            ->values();
+        $paymentDetails = $this->buildInvoicePaymentDetails($booking, $taxableAddonRows);
         $paymentDetailsTotal = (float) collect($paymentDetails)->sum('amount');
-        $otherChargeAmount = (float) $booking->platform_fee;
+        $platformFeeAmount = (float) $booking->platform_fee;
         $vatRate = $this->resolveInvoiceVatRate($booking);
         $isProforma = $booking->status === BookingStatus::DOWN_PAYMENT;
         $settings = $booking->vendor?->companySetting ?? $booking->tour?->company?->companySetting;
@@ -176,8 +182,14 @@ class HomeController extends Controller
                 'paymentDetails' => $paymentDetails,
                 'paymentDetailsTotal' => $paymentDetailsTotal,
                 'vatRate' => $vatRate,
-                'otherChargeAmount' => $otherChargeAmount,
-                'discountAmount' => 0,
+                'platformFeeAmount' => $platformFeeAmount,
+                'nonTaxableAddonSummaryRows' => $nonTaxableAddonRows
+                    ->map(fn ($addon): array => [
+                        'label' => $addon->name ?: 'Add-on',
+                        'amount' => (float) $addon->price,
+                    ])
+                    ->values()
+                    ->all(),
                 'isProforma' => $isProforma,
                 'paymentInstructions' => $isProforma
                     ? $this->proformaPaymentInstructions($agent)
@@ -347,7 +359,7 @@ class HomeController extends Controller
             ->all();
     }
 
-    private function buildInvoicePaymentDetails(Booking $booking): array
+    private function buildInvoicePaymentDetails(Booking $booking, ?Collection $taxableAddons = null): array
     {
         $schedule = $this->resolveInvoiceSchedule($booking);
 
@@ -380,7 +392,7 @@ class HomeController extends Controller
             })
             ->values();
 
-        $addonRows = $booking->addons
+        $addonRows = ($taxableAddons ?? $booking->addons)
             ->map(fn ($addon): array => [
                 'description' => $addon->name ?: 'Add-on',
                 'quantity' => 1,

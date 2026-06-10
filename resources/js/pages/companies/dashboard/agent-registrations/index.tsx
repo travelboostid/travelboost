@@ -112,8 +112,7 @@ const STATUS_TABS = [
 
 const statusStyles: Record<string, string> = {
     active: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300',
-    suspended:
-        'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300',
+    suspended: 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300',
     rejected:
         'bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-300',
     pending:
@@ -412,9 +411,8 @@ export default function Page({ data, agentTiers }: PageProps) {
         React.useState<VisibilityState>({});
     const [rowSelection, setRowSelection] = React.useState({});
     const [globalFilter, setGlobalFilter] = React.useState('');
-    const [activeStatus, setActiveStatus] = React.useState<
-        (typeof STATUS_TABS)[number]['value']
-    >('all');
+    const [activeStatus, setActiveStatus] =
+        React.useState<(typeof STATUS_TABS)[number]['value']>('all');
 
     const filteredData = React.useMemo(() => {
         if (activeStatus === 'all') {
@@ -805,7 +803,9 @@ export default function Page({ data, agentTiers }: PageProps) {
                                     <button
                                         key={tab.value}
                                         type="button"
-                                        onClick={() => setActiveStatus(tab.value)}
+                                        onClick={() =>
+                                            setActiveStatus(tab.value)
+                                        }
                                         className={`rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-wider transition-all ${
                                             isActive
                                                 ? 'border-primary/30 bg-primary/10 text-primary dark:border-primary/40 dark:bg-primary/20'

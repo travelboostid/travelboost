@@ -7,12 +7,9 @@ use App\Notifications\AffiliateReferralRegistrationNotification;
 use App\Notifications\AffiliateRegistrationWelcomeNotification;
 use App\Notifications\AffiliateReviewStatusNotification;
 use Database\Seeders\Common\RolePermissionSeeder;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
-
-uses(Tests\TestCase::class, RefreshDatabase::class);
 
 beforeEach(function () {
     $this->withoutVite();

@@ -2,482 +2,1600 @@
 
 namespace Database\Seeders\Production;
 
-use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
-
-class GrandChinaTravelTourSeeder extends Seeder
+class GrandChinaTravelTourSeeder extends ProductionTourCatalogSeeder
 {
-    public function run(): void
+    protected function vendorUsername(): string
     {
-        $company = DB::table('companies')
-            ->where('username', 'grandchinatravel')
-            ->first();
-
-        if (! $company) {
-            $this->command->warn("Company 'grandchinatravel' not found. Skipping Grand China Travel tour seeding.");
-
-            return;
-        }
-
-        $continent = DB::table('continents')->where('name', 'Asia')->first();
-        $region = DB::table('regions')->where('name', 'East Asia')->first();
-        $country = DB::table('countries')->where('name', 'China')->first();
-
-        if (! $continent || ! $region || ! $country) {
-            $this->command->warn('Asia, East Asia, or China reference data is missing. Skipping Grand China Travel tour seeding.');
-
-            return;
-        }
-
-        DB::transaction(function () use ($company, $continent, $region, $country): void {
-            $commissionCategoryId = $this->seedCommissionCategory((int) $company->id);
-            $priceCategoryIds = $this->seedPriceCategories((int) $company->id);
-
-            foreach ($this->tours() as $tourData) {
-                $tourId = $this->seedTour(
-                    (int) $company->id,
-                    (int) $continent->id,
-                    (int) $region->id,
-                    (int) $country->id,
-                    $commissionCategoryId,
-                    $tourData
-                );
-
-                foreach ($tourData['schedules'] as $scheduleData) {
-                    $this->seedSchedule(
-                        (int) $company->id,
-                        $tourId,
-                        $tourData['code'],
-                        $priceCategoryIds,
-                        $tourData['price_sets'][$scheduleData['price_set']],
-                        $tourData['add_ons'],
-                        $scheduleData
-                    );
-                }
-            }
-        });
-
-        $this->command->info('5 Grand China Travel tours seeded with schedules, availability, pricing, and add-ons.');
+        return 'grandchinatravel';
     }
 
-    private function seedCommissionCategory(int $companyId): int
+    protected function tours(): array
     {
-        $slug = Str::slug('Promo Umum');
-        $category = DB::table('product_commission_categories')
-            ->where('company_id', $companyId)
-            ->where('slug', $slug)
-            ->first();
-
-        if ($category) {
-            DB::table('product_commission_categories')
-                ->where('id', $category->id)
-                ->update([
-                    'category_name' => 'Promo Umum',
-                    'description' => 'General promotional tour products.',
-                    'is_active' => true,
-                    'updated_at' => now(),
-                ]);
-
-            return (int) $category->id;
-        }
-
-        return (int) DB::table('product_commission_categories')->insertGetId([
-            'company_id' => $companyId,
-            'category_name' => 'Promo Umum',
-            'description' => 'General promotional tour products.',
-            'slug' => $slug,
-            'sort_order' => 4,
-            'is_active' => true,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
-    }
-
-    private function seedPriceCategories(int $companyId): array
-    {
-        $categories = [
-            'shared' => [
-                'name' => 'Adult/Child Twin Share/Child Extra Bed',
-                'room_type' => 'Adult Twin',
-                'description' => 'Adult or child twin share and child extra bed.',
-            ],
-            'child_no_bed' => [
-                'name' => 'Child No Bed',
-                'room_type' => 'Child No Bed',
-                'description' => 'Child without bed.',
-            ],
-            'single_supplement' => [
-                'name' => 'Single Supplement',
-                'room_type' => 'Adult Single',
-                'description' => 'Single room supplement.',
-            ],
-        ];
-
-        $categoryIds = [];
-
-        foreach ($categories as $key => $category) {
-            $existingCategory = DB::table('price_categories')
-                ->where('company_id', $companyId)
-                ->where('name', $category['name'])
-                ->first();
-
-            if ($existingCategory) {
-                DB::table('price_categories')
-                    ->where('id', $existingCategory->id)
-                    ->update([
-                        'room_type' => $category['room_type'],
-                        'description' => $category['description'],
-                        'updated_at' => now(),
-                    ]);
-
-                $categoryIds[$key] = (int) $existingCategory->id;
-
-                continue;
-            }
-
-            $categoryIds[$key] = (int) DB::table('price_categories')->insertGetId([
-                'company_id' => $companyId,
-                'name' => $category['name'],
-                'room_type' => $category['room_type'],
-                'description' => $category['description'],
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-        }
-
-        return $categoryIds;
-    }
-
-    private function seedTour(
-        int $companyId,
-        int $continentId,
-        int $regionId,
-        int $countryId,
-        int $commissionCategoryId,
-        array $tourData
-    ): int {
-        $tour = DB::table('tours')
-            ->where('company_id', $companyId)
-            ->where('code', $tourData['code'])
-            ->first();
-
-        $values = [
-            'name' => $tourData['name'],
-            'description' => $tourData['description'],
-            'duration_days' => $tourData['duration_days'],
-            'status' => 'active',
-            'destination' => $tourData['destination'],
-            'continent_name' => 'Asia',
-            'region_name' => 'East Asia',
-            'country_name' => 'China',
-            'showprice' => $tourData['showprice'],
-            'earlybird' => 0,
-            'earlybird_note' => '',
-            'currency' => 'IDR',
-            'promoprice' => 0,
-            'promote_price' => 0,
-            'continent_id' => $continentId,
-            'region_id' => $regionId,
-            'country_id' => $countryId,
-            'product_commission_category_id' => $commissionCategoryId,
-            'updated_at' => now(),
-        ];
-
-        if ($tour) {
-            DB::table('tours')
-                ->where('id', $tour->id)
-                ->update($values);
-
-            return (int) $tour->id;
-        }
-
-        return (int) DB::table('tours')->insertGetId([
-            ...$values,
-            'code' => $tourData['code'],
-            'company_id' => $companyId,
-            'category_id' => null,
-            'image_id' => null,
-            'document_id' => null,
-            'created_at' => now(),
-        ]);
-    }
-
-    private function seedSchedule(
-        int $companyId,
-        int $tourId,
-        string $tourCode,
-        array $priceCategoryIds,
-        array $prices,
-        array $addOns,
-        array $scheduleData
-    ): void {
-        $schedule = DB::table('tour_schedules')
-            ->where('tour_id', $tourId)
-            ->where('departure_date', $scheduleData['departure_date'])
-            ->first();
-
-        $values = [
-            'tour_code' => $tourCode,
-            'company_id' => $companyId,
-            'return_date' => $scheduleData['return_date'],
-            'is_active' => true,
-            'note' => null,
-            'updated_at' => now(),
-        ];
-
-        if ($schedule) {
-            DB::table('tour_schedules')
-                ->where('id', $schedule->id)
-                ->update($values);
-
-            $scheduleId = (int) $schedule->id;
-        } else {
-            $scheduleId = (int) DB::table('tour_schedules')->insertGetId([
-                ...$values,
-                'tour_id' => $tourId,
-                'departure_date' => $scheduleData['departure_date'],
-                'created_at' => now(),
-            ]);
-        }
-
-        foreach ($prices as $category => $price) {
-            DB::table('tour_prices')->updateOrInsert(
-                [
-                    'schedule_id' => $scheduleId,
-                    'price_category_id' => $priceCategoryIds[$category],
-                ],
-                [
-                    'company_id' => $companyId,
-                    'tour_code' => $tourCode,
-                    'currency' => 'IDR',
-                    'price' => $price,
-                    'promotion_rate' => 0,
-                    'promotion' => 0,
-                    'commission_rate' => 0,
-                    'commission' => 0,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]
-            );
-        }
-
-        foreach ($addOns as $description => $price) {
-            DB::table('tour_add_ons')->updateOrInsert(
-                [
-                    'company_id' => $companyId,
-                    'schedule_id' => $scheduleId,
-                    'description' => $description,
-                ],
-                [
-                    'tour_id' => $tourId,
-                    'price' => $price,
-                    'edit_status' => false,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]
-            );
-        }
-
-        $availability = DB::table('tour_availabilities')
-            ->where('company_id', $companyId)
-            ->where('tour_id', $tourId)
-            ->where('schedule_id', $scheduleId)
-            ->exists();
-
-        if (! $availability) {
-            DB::table('tour_availabilities')->insert([
-                'company_id' => $companyId,
-                'tour_id' => $tourId,
-                'schedule_id' => $scheduleId,
-                'max_pax' => 24,
-                'RS' => 0,
-                'WP' => 0,
-                'WPA' => 0,
-                'DP' => 0,
-                'FP' => 0,
-                'WA' => 0,
-                'BRS' => 0,
-                'CA' => 0,
-                'RF' => 0,
-                'EX' => 0,
-                'WL' => 0,
-                'available' => 24,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-        }
-    }
-
-    private function tours(): array
-    {
-        $nanjingSchedules = [
-            ['departure_date' => '2026-05-09', 'return_date' => '2026-05-16', 'price_set' => 'standard'],
-            ['departure_date' => '2026-05-16', 'return_date' => '2026-05-23', 'price_set' => 'standard'],
-            ['departure_date' => '2026-05-23', 'return_date' => '2026-05-30', 'price_set' => 'standard'],
-            ['departure_date' => '2026-05-30', 'return_date' => '2026-06-06', 'price_set' => 'standard'],
-            ['departure_date' => '2026-06-06', 'return_date' => '2026-06-13', 'price_set' => 'regular'],
-            ['departure_date' => '2026-06-13', 'return_date' => '2026-06-20', 'price_set' => 'regular'],
-            ['departure_date' => '2026-09-05', 'return_date' => '2026-09-12', 'price_set' => 'regular'],
-            ['departure_date' => '2026-09-12', 'return_date' => '2026-09-19', 'price_set' => 'regular'],
-            ['departure_date' => '2026-10-10', 'return_date' => '2026-10-17', 'price_set' => 'regular'],
-            ['departure_date' => '2026-06-20', 'return_date' => '2026-06-27', 'price_set' => 'peak'],
-            ['departure_date' => '2026-06-27', 'return_date' => '2026-07-04', 'price_set' => 'peak'],
-        ];
-
-        $nanjingPriceSets = [
-            'standard' => [
-                'shared' => 10980000,
-                'child_no_bed' => 10680000,
-                'single_supplement' => 2300000,
-            ],
-            'regular' => [
-                'shared' => 11280000,
-                'child_no_bed' => 10980000,
-                'single_supplement' => 2300000,
-            ],
-            'peak' => [
-                'shared' => 12080000,
-                'child_no_bed' => 11780000,
-                'single_supplement' => 2300000,
-            ],
-        ];
-
-        $nanjingAddOns = [
-            'Visa Group' => 980000,
-            'Tipping' => 850000,
-        ];
-
         return [
             [
                 'code' => 'GCT-01-001',
                 'name' => '8D Lingshan Wangxian Valley',
-                'description' => 'Lingshan Wangxian Valley.',
+                'description' => 'Lingshan Wangxian Valley',
                 'duration_days' => 8,
-                'destination' => 'Jakarta - Wuhan - Jiujiang - Wuyuan',
-                'showprice' => 19380000,
-                'schedules' => [
-                    ['departure_date' => '2026-06-08', 'return_date' => '2026-06-15', 'price_set' => 'standard'],
-                    ['departure_date' => '2026-09-07', 'return_date' => '2026-09-14', 'price_set' => 'standard'],
-                    ['departure_date' => '2026-09-14', 'return_date' => '2026-09-22', 'price_set' => 'standard'],
-                    ['departure_date' => '2026-10-12', 'return_date' => '2026-10-20', 'price_set' => 'standard'],
-                    ['departure_date' => '2026-06-15', 'return_date' => '2026-06-22', 'price_set' => 'peak'],
-                    ['departure_date' => '2026-06-22', 'return_date' => '2026-07-01', 'price_set' => 'peak'],
-                    ['departure_date' => '2026-09-21', 'return_date' => '2026-09-29', 'price_set' => 'peak'],
+                'continent' => 'Asia',
+                'country' => 'China',
+                'region' => 'East Asia',
+                'destination' => 'Jakarta - Wuhan - Jiujang - Wuyuan',
+                'product_commission_category' => 'Umum',
+                'showprice' => 13380000,
+                'add_ons' => [
+                    'Visa Grup' => 980000,
+                    'Tipping' => 900000,
+                    'Airport Tax' => 3000000,
                 ],
                 'price_sets' => [
-                    'standard' => [
-                        'shared' => 13380000,
-                        'child_no_bed' => 13080000,
-                        'single_supplement' => 3000000,
+                    [
+                        'departures' => 'JUN : 1, 8, 15 JUL: 6, 13, 20, 21, 27, 28 AUG: 3, 4, 10, 11, 17, 18, 24, 25, 31 SEP: 7, 14, 21 OCT: 12, 19, 26',
+                        'availability' => 24,
+                        'prices' => [
+                            'Adult Single' => 16500000,
+                            'Adult Double' => 12900000,
+                            'Adult Twin' => 12900000,
+                            'Adult Extra Bed' => 12900000,
+                            'Child With Bed' => 12900000,
+                            'Child No Bed' => 10965000,
+                            'Infant' => 0,
+                        ],
                     ],
-                    'peak' => [
-                        'shared' => 14180000,
-                        'child_no_bed' => 15880000,
-                        'single_supplement' => 3000000,
+                    [
+                        'departures' => 'JUNI : 29',
+                        'availability' => 24,
+                        'prices' => [
+                            'Adult Single' => 17500000,
+                            'Adult Double' => 13900000,
+                            'Adult Twin' => 13900000,
+                            'Adult Extra Bed' => 13900000,
+                            'Child With Bed' => 13900000,
+                            'Child No Bed' => 11815000,
+                            'Infant' => 0,
+                        ],
                     ],
-                ],
-                'add_ons' => [
-                    'Visa Group' => 980000,
-                    'Tipping' => 900000,
+                    [
+                        'departures' => 'JUNI : 22',
+                        'availability' => 24,
+                        'prices' => [
+                            'Adult Single' => 18500000,
+                            'Adult Double' => 14900000,
+                            'Adult Twin' => 14900000,
+                            'Adult Extra Bed' => 14900000,
+                            'Child With Bed' => 14900000,
+                            'Child No Bed' => 12665000,
+                            'Infant' => 0,
+                        ],
+                    ],
                 ],
             ],
             [
                 'code' => 'GCT-01-002',
-                'name' => '6D Wuhan',
-                'description' => '6D Wuhan - Xiantao - Yichang.',
+                'name' => '6D WUHAN YIANTAO YICHANG',
+                'description' => 'WUHAN YIANTAO YICHANG',
                 'duration_days' => 6,
-                'destination' => 'Jakarta - Wuhan - Xiantao - Yichang',
-                'showprice' => 14580000,
-                'schedules' => [
-                    ['departure_date' => '2026-06-05', 'return_date' => '2026-06-11', 'price_set' => 'standard'],
-                    ['departure_date' => '2026-06-12', 'return_date' => '2026-06-18', 'price_set' => 'standard'],
-                    ['departure_date' => '2026-09-04', 'return_date' => '2026-09-10', 'price_set' => 'standard'],
-                    ['departure_date' => '2026-09-11', 'return_date' => '2026-09-17', 'price_set' => 'standard'],
-                    ['departure_date' => '2026-09-14', 'return_date' => '2026-09-20', 'price_set' => 'standard'],
-                    ['departure_date' => '2026-06-19', 'return_date' => '2026-06-25', 'price_set' => 'peak'],
-                    ['departure_date' => '2026-06-26', 'return_date' => '2026-07-02', 'price_set' => 'peak'],
-                    ['departure_date' => '2026-10-09', 'return_date' => '2026-10-15', 'price_set' => 'peak'],
+                'continent' => 'Asia',
+                'country' => 'China',
+                'region' => 'East Asia',
+                'destination' => 'JAKARTA - WUHAN - XIANTAO - YICHANG',
+                'product_commission_category' => 'Umum',
+                'showprice' => 9780000,
+                'add_ons' => [
+                    'Visa Grup' => 980000,
+                    'Tipping' => 650000,
+                    'Airport Tax' => 3000000,
                 ],
                 'price_sets' => [
-                    'standard' => [
-                        'shared' => 9780000,
-                        'child_no_bed' => 9480000,
-                        'single_supplement' => 1800000,
+                    [
+                        'departures' => 'JUN : 5, 12 SEPT : 04, 14',
+                        'availability' => 24,
+                        'prices' => [
+                            'Adult Single' => 11580000,
+                            'Adult Double' => 9780000,
+                            'Adult Twin' => 9780000,
+                            'Adult Extra Bed' => 9780000,
+                            'Child With Bed' => 9780000,
+                            'Child No Bed' => 9480000,
+                            'Infant' => 0,
+                        ],
                     ],
-                    'peak' => [
-                        'shared' => 10780000,
-                        'child_no_bed' => 10480000,
-                        'single_supplement' => 1600000,
+                    [
+                        'departures' => 'JUNI : 19, 26',
+                        'availability' => 24,
+                        'prices' => [
+                            'Adult Single' => 17500000,
+                            'Adult Double' => 10480000,
+                            'Adult Twin' => 10480000,
+                            'Adult Extra Bed' => 10480000,
+                            'Child With Bed' => 10480000,
+                            'Child No Bed' => 11815000,
+                            'Infant' => 0,
+                        ],
                     ],
-                ],
-                'add_ons' => [
-                    'Visa Group' => 980000,
-                    'Tipping' => 650000,
+                    [
+                        'departures' => 'OKT : 09',
+                        'availability' => 24,
+                        'prices' => [
+                            'Adult Single' => 12380000,
+                            'Adult Double' => 14900000,
+                            'Adult Twin' => 14900000,
+                            'Adult Extra Bed' => 14900000,
+                            'Child With Bed' => 14900000,
+                            'Child No Bed' => 12665000,
+                            'Infant' => 0,
+                        ],
+                    ],
                 ],
             ],
             [
                 'code' => 'GCT-01-003',
-                'name' => '8D Wuhan - Xiantao - Xianning - Yichang - Qichun',
-                'description' => '8D Wuhan - Xiantao - Xianning - Yichang - Qichun.',
+                'name' => '8D WUHAN XIANTAO XIANNING YICHANG QICHUN',
+                'description' => 'WUHAN YIANTAO YICHANG',
                 'duration_days' => 8,
-                'destination' => 'Jakarta - Wuhan - Xiantao - Xianning - Yichang - Qichun',
-                'showprice' => 16180000,
-                'schedules' => [
-                    ['departure_date' => '2026-05-11', 'return_date' => '2026-05-18', 'price_set' => 'standard'],
-                    ['departure_date' => '2026-05-18', 'return_date' => '2026-05-25', 'price_set' => 'standard'],
-                    ['departure_date' => '2026-05-25', 'return_date' => '2026-06-02', 'price_set' => 'standard'],
-                    ['departure_date' => '2026-06-08', 'return_date' => '2026-06-16', 'price_set' => 'regular'],
-                    ['departure_date' => '2026-09-07', 'return_date' => '2026-09-14', 'price_set' => 'regular'],
-                    ['departure_date' => '2026-09-14', 'return_date' => '2026-09-21', 'price_set' => 'regular'],
-                    ['departure_date' => '2026-10-12', 'return_date' => '2026-10-19', 'price_set' => 'regular'],
-                    ['departure_date' => '2026-06-15', 'return_date' => '2026-06-22', 'price_set' => 'peak'],
-                    ['departure_date' => '2026-06-22', 'return_date' => '2026-06-29', 'price_set' => 'peak'],
-                    ['departure_date' => '2026-09-21', 'return_date' => '2026-09-28', 'price_set' => 'peak'],
+                'continent' => 'Asia',
+                'country' => 'China',
+                'region' => 'East Asia',
+                'destination' => 'JAKARTA-WUHAN - XIANTAO - XIANNING - YICHANG - QICHUN',
+                'product_commission_category' => 'Umum',
+                'showprice' => 12280000,
+                'add_ons' => [
+                    'Visa Grup' => 980000,
+                    'Tipping' => 850000,
+                    'Airport Tax' => 3000000,
                 ],
                 'price_sets' => [
-                    'standard' => [
-                        'shared' => 10980000,
-                        'child_no_bed' => 10680000,
-                        'single_supplement' => 2200000,
+                    [
+                        'departures' => 'JUN : 08 SEPT : 07, 14',
+                        'availability' => 24,
+                        'prices' => [
+                            'Adult Single' => 14480000,
+                            'Adult Double' => 12280000,
+                            'Adult Twin' => 12280000,
+                            'Adult Extra Bed' => 12280000,
+                            'Child With Bed' => 12280000,
+                            'Child No Bed' => 11980000,
+                            'Infant' => 0,
+                        ],
                     ],
-                    'regular' => [
-                        'shared' => 12280000,
-                        'child_no_bed' => 11980000,
-                        'single_supplement' => 2200000,
+                    [
+                        'departures' => 'OKT : 12',
+                        'availability' => 24,
+                        'prices' => [
+                            'Adult Single' => 14480000,
+                            'Adult Double' => 12280000,
+                            'Adult Twin' => 12280000,
+                            'Adult Extra Bed' => 12280000,
+                            'Child With Bed' => 12280000,
+                            'Child No Bed' => 11980000,
+                            'Infant' => 0,
+                        ],
                     ],
-                    'peak' => [
-                        'shared' => 13180000,
-                        'child_no_bed' => 12880000,
-                        'single_supplement' => 2200000,
+                    [
+                        'departures' => 'JUN : 15, 22 SEPT : 21',
+                        'availability' => 24,
+                        'prices' => [
+                            'Adult Single' => 15480000,
+                            'Adult Double' => 13180000,
+                            'Adult Twin' => 13180000,
+                            'Adult Extra Bed' => 13180000,
+                            'Child With Bed' => 13180000,
+                            'Child No Bed' => 12880000,
+                            'Infant' => 0,
+                        ],
                     ],
-                ],
-                'add_ons' => [
-                    'Visa Group' => 980000,
-                    'Tipping' => 850000,
                 ],
             ],
             [
                 'code' => 'GCT-02-001',
-                'name' => '8D Nanjing Wuyuan Wangxian Valley',
-                'description' => 'Nanjing - Wuyuan - Wangxian Valley - Shenxianju - Hangzhou - Shanghai.',
+                'name' => '8D NANJING WUYUAN WANGXIAN VALLEY',
+                'description' => 'NANJING WUYUAN WANGXIAN VALLEY',
                 'duration_days' => 8,
-                'destination' => 'Jakarta - Nanjing - Wuyuan - Wangxian Valley - Shenxianju - Hangzhou - Shanghai',
-                'showprice' => 16280000,
-                'schedules' => $nanjingSchedules,
-                'price_sets' => $nanjingPriceSets,
-                'add_ons' => $nanjingAddOns,
+                'continent' => 'Asia',
+                'country' => 'China',
+                'region' => 'East Asia',
+                'destination' => 'JAKARTA-NANJING WUYUAN WANGXIAN VALLEY SHENXIANJU HANGZHOU SHANGHAI',
+                'product_commission_category' => 'Umum',
+                'showprice' => 11280000,
+                'add_ons' => [
+                    'Visa Grup' => 980000,
+                    'Tipping' => 850000,
+                    'Airport Tax' => 3000000,
+                ],
+                'price_sets' => [
+                    [
+                        'departures' => 'JUN : 13 SEPT : 05, 12',
+                        'availability' => 24,
+                        'prices' => [
+                            'Adult Single' => 13580000,
+                            'Adult Double' => 11280000,
+                            'Adult Twin' => 11280000,
+                            'Adult Extra Bed' => 11280000,
+                            'Child With Bed' => 11280000,
+                            'Child No Bed' => 10980000,
+                            'Infant' => 0,
+                        ],
+                    ],
+                    [
+                        'departures' => 'OKT : 10',
+                        'availability' => 24,
+                        'prices' => [
+                            'Adult Single' => 13580000,
+                            'Adult Double' => 11280000,
+                            'Adult Twin' => 11280000,
+                            'Adult Extra Bed' => 11280000,
+                            'Child With Bed' => 11280000,
+                            'Child No Bed' => 10980000,
+                            'Infant' => 0,
+                        ],
+                    ],
+                    [
+                        'departures' => 'JUN : 20, 27',
+                        'availability' => 24,
+                        'prices' => [
+                            'Adult Single' => 14380000,
+                            'Adult Double' => 12080000,
+                            'Adult Twin' => 12080000,
+                            'Adult Extra Bed' => 12080000,
+                            'Child With Bed' => 12080000,
+                            'Child No Bed' => 11780000,
+                            'Infant' => 0,
+                        ],
+                    ],
+                ],
             ],
             [
                 'code' => 'GCT-02-002',
-                'name' => '8D Nanjing Huangshan Wuyuan Shangrao Hangzhou Shanghai',
-                'description' => 'Nanjing - Huangshan - Wuyuan - Shangrao - Hangzhou - Shanghai.',
+                'name' => '8D NANJING WUYUAN WANGXIAN VALLEY',
+                'description' => 'NANJING HUANGSHAN WUYUAN SHANGRAO HANGZHOU SHANGHAI',
                 'duration_days' => 8,
-                'destination' => 'Jakarta - Nanjing - Huangshan - Wuyuan - Shangrao - Hangzhou - Shanghai',
-                'showprice' => 16280000,
-                'schedules' => $nanjingSchedules,
-                'price_sets' => $nanjingPriceSets,
-                'add_ons' => $nanjingAddOns,
+                'continent' => 'Asia',
+                'country' => 'China',
+                'region' => 'East Asia',
+                'destination' => 'JAKARTA-NANJING HUANGSHAN WUYUAN SHANGRAO HANGZHOU SHANGHAI',
+                'product_commission_category' => 'Umum',
+                'showprice' => 11280000,
+                'add_ons' => [
+                    'Visa Grup' => 980000,
+                    'Tipping' => 850000,
+                    'Airport Tax' => 3000000,
+                ],
+                'price_sets' => [
+                    [
+                        'departures' => 'JUN : 13 SEPT : 05, 12',
+                        'availability' => 24,
+                        'prices' => [
+                            'Adult Single' => 13580000,
+                            'Adult Double' => 11280000,
+                            'Adult Twin' => 11280000,
+                            'Adult Extra Bed' => 11280000,
+                            'Child With Bed' => 11280000,
+                            'Child No Bed' => 10980000,
+                            'Infant' => 0,
+                        ],
+                    ],
+                    [
+                        'departures' => 'OKT : 10',
+                        'availability' => 24,
+                        'prices' => [
+                            'Adult Single' => 13580000,
+                            'Adult Double' => 11280000,
+                            'Adult Twin' => 11280000,
+                            'Adult Extra Bed' => 11280000,
+                            'Child With Bed' => 11280000,
+                            'Child No Bed' => 10980000,
+                            'Infant' => 0,
+                        ],
+                    ],
+                    [
+                        'departures' => 'JUN : 20, 27',
+                        'availability' => 24,
+                        'prices' => [
+                            'Adult Single' => 14380000,
+                            'Adult Double' => 12080000,
+                            'Adult Twin' => 12080000,
+                            'Adult Extra Bed' => 12080000,
+                            'Child With Bed' => 12080000,
+                            'Child No Bed' => 11780000,
+                            'Infant' => 0,
+                        ],
+                    ],
+                ],
+            ],
+            [
+                'code' => 'GCT-02-003',
+                'name' => '8D NANJING WUXI SUZHOU SHANGHAI HANGZHOU',
+                'description' => 'NANJING WUXI SUZHOU SHANGHAI HANGZHOU',
+                'duration_days' => 8,
+                'continent' => 'Asia',
+                'country' => 'China',
+                'region' => 'East Asia',
+                'destination' => 'JAKARTA- NANJING WUXI SUZHOU SHANGHAI HANGZHOU',
+                'product_commission_category' => 'Umum',
+                'showprice' => 9280000,
+                'add_ons' => [
+                    'Visa Grup' => 980000,
+                    'Tipping' => 850000,
+                    'Airport Tax' => 3000000,
+                ],
+                'price_sets' => [
+                    [
+                        'departures' => 'JUN : 11 SEPT : 03, 10, 17',
+                        'availability' => 24,
+                        'prices' => [
+                            'Adult Single' => 11380000,
+                            'Adult Double' => 9280000,
+                            'Adult Twin' => 9280000,
+                            'Adult Extra Bed' => 9280000,
+                            'Child With Bed' => 9280000,
+                            'Child No Bed' => 8980000,
+                            'Infant' => 0,
+                        ],
+                    ],
+                    [
+                        'departures' => 'OKT : 15, 22',
+                        'availability' => 24,
+                        'prices' => [
+                            'Adult Single' => 11380000,
+                            'Adult Double' => 9280000,
+                            'Adult Twin' => 9280000,
+                            'Adult Extra Bed' => 9280000,
+                            'Child With Bed' => 9280000,
+                            'Child No Bed' => 8980000,
+                            'Infant' => 0,
+                        ],
+                    ],
+                    [
+                        'departures' => 'JUN : 18, 25 OKT : 08',
+                        'availability' => 24,
+                        'prices' => [
+                            'Adult Single' => 12180000,
+                            'Adult Double' => 10080000,
+                            'Adult Twin' => 10080000,
+                            'Adult Extra Bed' => 10080000,
+                            'Child With Bed' => 10080000,
+                            'Child No Bed' => 9780000,
+                            'Infant' => 0,
+                        ],
+                    ],
+                ],
+            ],
+            [
+                'code' => 'GCT-02-004',
+                'name' => '6D NANJING WUXI SUZHOU SHANGHAI HANGZHOU',
+                'description' => 'NANJING WUXI SUZHOU SHANGHAI HANGZHOU',
+                'duration_days' => 6,
+                'continent' => 'Asia',
+                'country' => 'China',
+                'region' => 'East Asia',
+                'destination' => 'JAKARTA- NANJING WUXI SUZHOU SHANGHAI HANGZHOU',
+                'product_commission_category' => 'Umum',
+                'showprice' => 7380000,
+                'add_ons' => [
+                    'Visa Grup' => 980000,
+                    'Tipping' => 650000,
+                    'Airport Tax' => 3000000,
+                ],
+                'price_sets' => [
+                    [
+                        'departures' => 'JUN : 13 SEPT : 05, 12, 19',
+                        'availability' => 24,
+                        'prices' => [
+                            'Adult Single' => 9180000,
+                            'Adult Double' => 7380000,
+                            'Adult Twin' => 7380000,
+                            'Adult Extra Bed' => 7380000,
+                            'Child With Bed' => 7380000,
+                            'Child No Bed' => 7180000,
+                            'Infant' => 0,
+                        ],
+                    ],
+                    [
+                        'departures' => 'OKT : 10',
+                        'availability' => 24,
+                        'prices' => [
+                            'Adult Single' => 9180000,
+                            'Adult Double' => 7380000,
+                            'Adult Twin' => 7380000,
+                            'Adult Extra Bed' => 7380000,
+                            'Child With Bed' => 7380000,
+                            'Child No Bed' => 7180000,
+                            'Infant' => 0,
+                        ],
+                    ],
+                    [
+                        'departures' => 'JUN : 20, 27',
+                        'availability' => 24,
+                        'prices' => [
+                            'Adult Single' => 9880000,
+                            'Adult Double' => 8080000,
+                            'Adult Twin' => 8080000,
+                            'Adult Extra Bed' => 8080000,
+                            'Child With Bed' => 8080000,
+                            'Child No Bed' => 7880000,
+                            'Infant' => 0,
+                        ],
+                    ],
+                ],
+            ],
+            [
+                'code' => 'GCT-02-005',
+                'name' => '6D NANJING HUANGSHAN HANGZHOU SHANGHAI',
+                'description' => 'NANJING HUANGSHAN HANGZHOU SHANGHAI',
+                'duration_days' => 6,
+                'continent' => 'Asia',
+                'country' => 'China',
+                'region' => 'East Asia',
+                'destination' => 'JAKARTA- NANJING HUANGSHAN HANGZHOU SHANGHAI',
+                'product_commission_category' => 'Umum',
+                'showprice' => 8180000,
+                'add_ons' => [
+                    'Visa Grup' => 980000,
+                    'Tipping' => 650000,
+                    'Airport Tax' => 3000000,
+                ],
+                'price_sets' => [
+                    [
+                        'departures' => 'SEPT : 03, 10, 17 OKT : 15, 22',
+                        'availability' => 24,
+                        'prices' => [
+                            'Adult Single' => 9980000,
+                            'Adult Double' => 8180000,
+                            'Adult Twin' => 8180000,
+                            'Adult Extra Bed' => 8180000,
+                            'Child With Bed' => 8180000,
+                            'Child No Bed' => 7980000,
+                            'Infant' => 0,
+                        ],
+                    ],
+                    [
+                        'departures' => 'JUN : 18, 25',
+                        'availability' => 24,
+                        'prices' => [
+                            'Adult Single' => 10880000,
+                            'Adult Double' => 9080000,
+                            'Adult Twin' => 9080000,
+                            'Adult Extra Bed' => 9080000,
+                            'Child With Bed' => 9080000,
+                            'Child No Bed' => 8680000,
+                            'Infant' => 0,
+                        ],
+                    ],
+                    [
+                        'departures' => 'OKT : 08',
+                        'availability' => 24,
+                        'prices' => [
+                            'Adult Single' => 10880000,
+                            'Adult Double' => 9080000,
+                            'Adult Twin' => 9080000,
+                            'Adult Extra Bed' => 9080000,
+                            'Child With Bed' => 9080000,
+                            'Child No Bed' => 8680000,
+                            'Infant' => 0,
+                        ],
+                    ],
+                ],
+            ],
+            [
+                'code' => 'GCT-03-001',
+                'name' => '9D GANSU TOUR',
+                'description' => 'DUNHUANG - JIAYUGUAN - JIUQUAN - SUNAN - ZHANGYE',
+                'duration_days' => 9,
+                'continent' => 'Asia',
+                'country' => 'China',
+                'region' => 'East Asia',
+                'destination' => 'JAKARTA-DUNHUANG - JIAYUGUAN - JIUQUAN - SUNAN - ZHANGYE',
+                'product_commission_category' => 'Umum',
+                'showprice' => 12900000,
+                'add_ons' => [
+                    'Visa Grup' => 980000,
+                    'Tipping' => 850000,
+                    'Airport Tax' => 3000000,
+                ],
+                'price_sets' => [
+                    [
+                        'departures' => 'SEPT : 30',
+                        'availability' => 24,
+                        'prices' => [
+                            'Adult Single' => 15700000,
+                            'Adult Double' => 12900000,
+                            'Adult Twin' => 12900000,
+                            'Adult Extra Bed' => 12900000,
+                            'Child With Bed' => 12900000,
+                            'Child No Bed' => 10115000,
+                            'Infant' => 0,
+                        ],
+                    ],
+                ],
+            ],
+            [
+                'code' => 'GCT-04-001',
+                'name' => '9D INNER MONGOLIA',
+                'description' => 'ORDOS - HOHHOT - ORDOS GRASSLAND',
+                'duration_days' => 9,
+                'continent' => 'Asia',
+                'country' => 'China',
+                'region' => 'East Asia',
+                'destination' => 'JAKARTA-ORDOS - HOHHOT - ORDOS GRASSLAND',
+                'product_commission_category' => 'Umum',
+                'showprice' => 10900000,
+                'add_ons' => [
+                    'Visa Grup' => 980000,
+                    'Tipping' => 850000,
+                    'Airport Tax' => 3000000,
+                ],
+                'price_sets' => [
+                    [
+                        'departures' => 'START JAKARTA : JUNI 01, SEPT 03, OCT 01',
+                        'availability' => 24,
+                        'prices' => [
+                            'Adult Single' => 13700000,
+                            'Adult Double' => 10900000,
+                            'Adult Twin' => 10900000,
+                            'Adult Extra Bed' => 10900000,
+                            'Child With Bed' => 10900000,
+                            'Child No Bed' => 9265000,
+                            'Infant' => 0,
+                        ],
+                    ],
+                    [
+                        'departures' => 'START MEDAN : JUN 04, OCT 01,08',
+                        'availability' => 24,
+                        'prices' => [
+                            'Adult Single' => 13700000,
+                            'Adult Double' => 10900000,
+                            'Adult Twin' => 10900000,
+                            'Adult Extra Bed' => 10900000,
+                            'Child With Bed' => 10900000,
+                            'Child No Bed' => 9265000,
+                            'Infant' => 0,
+                        ],
+                    ],
+                ],
+            ],
+            [
+                'code' => 'GCT-05-001',
+                'name' => '8D KUNMING GUIZHOU',
+                'description' => 'ORDOS - HOHHOT - ORDOS GRASSLAND',
+                'duration_days' => 8,
+                'continent' => 'Asia',
+                'country' => 'China',
+                'region' => 'East Asia',
+                'destination' => 'JAKARTA-KUNMING - XINGYI - ANSHUN - DUYUN - DUSHAN - KAILI',
+                'product_commission_category' => 'Umum',
+                'showprice' => 10900000,
+                'add_ons' => [
+                    'Visa Grup' => 980000,
+                    'Tipping' => 748000,
+                    'Airport Tax' => 3000000,
+                ],
+                'price_sets' => [
+                    [
+                        'departures' => 'LOW SEASON JUN: 1, 4, 6, 8, 11, 13, 15 SEP: 3, 5, 8, 10, 12, 15, 17, 19, 22, 24, 26, 29 OCT: 1, 3, 6, 8, 10, 13, 15, 17, 20, 22, 24, 27, 29, 31',
+                        'availability' => 24,
+                        'prices' => [
+                            'Adult Single' => 13700000,
+                            'Adult Double' => 10900000,
+                            'Adult Twin' => 10900000,
+                            'Adult Extra Bed' => 10900000,
+                            'Child With Bed' => 10900000,
+                            'Child No Bed' => 9265000,
+                            'Infant' => 0,
+                        ],
+                    ],
+                    [
+                        'departures' => 'NOV : 3, 5, 7, 10, 12, 14, 17, 19, 21, 24, 26, 28 DEC : 1, 3, 5, 8, 10, 12, 15',
+                        'availability' => 24,
+                        'prices' => [
+                            'Adult Single' => 13700000,
+                            'Adult Double' => 10900000,
+                            'Adult Twin' => 10900000,
+                            'Adult Extra Bed' => 10900000,
+                            'Child With Bed' => 10900000,
+                            'Child No Bed' => 9265000,
+                            'Infant' => 0,
+                        ],
+                    ],
+                    [
+                        'departures' => 'HIGH SEASON JUN: 18, 20, 22, 25, 27',
+                        'availability' => 24,
+                        'prices' => [
+                            'Adult Single' => 13700000,
+                            'Adult Double' => 10900000,
+                            'Adult Twin' => 10900000,
+                            'Adult Extra Bed' => 10900000,
+                            'Child With Bed' => 10900000,
+                            'Child No Bed' => 9265000,
+                            'Infant' => 0,
+                        ],
+                    ],
+                ],
+            ],
+            [
+                'code' => 'GCT-05-002',
+                'name' => '8D KUNMING LAOS',
+                'description' => 'KUNMING -MOJIANG - PU\'ER - XISHUANGBANNA - LUANG PRABANG',
+                'duration_days' => 8,
+                'continent' => 'Asia',
+                'country' => 'China',
+                'region' => 'East Asia',
+                'destination' => 'JAKARTA-KUNMING -MOJIANG - PU\'ER - XISHUANGBANNA - LUANG PRABANG',
+                'product_commission_category' => 'Umum',
+                'showprice' => 14900000,
+                'add_ons' => [
+                    'Visa Grup' => 980000,
+                    'Tipping' => 748000,
+                    'Airport Tax' => 3000000,
+                ],
+                'price_sets' => [
+                    [
+                        'departures' => 'LOW SEASON JUN: 1, 4, 6, 8, 11, 13, 15 SEP: 3, 5, 8, 10, 12, 15, 17, 19, 22, 24, 26, 29 OCT: 1, 3, 6, 8, 10, 13, 15, 17, 20, 22, 24, 27, 29, 31',
+                        'availability' => 24,
+                        'prices' => [
+                            'Adult Single' => 18500000,
+                            'Adult Double' => 10900000,
+                            'Adult Twin' => 10900000,
+                            'Adult Extra Bed' => 10900000,
+                            'Child With Bed' => 10900000,
+                            'Child No Bed' => 12665000,
+                            'Infant' => 0,
+                        ],
+                    ],
+                    [
+                        'departures' => 'NOV : 3, 5, 7, 10, 12, 14, 17, 19, 21, 24, 26, 28 DEC : 1, 3, 5, 8, 10, 12, 15',
+                        'availability' => 24,
+                        'prices' => [
+                            'Adult Single' => 18500000,
+                            'Adult Double' => 14900000,
+                            'Adult Twin' => 14900000,
+                            'Adult Extra Bed' => 14900000,
+                            'Child With Bed' => 14900000,
+                            'Child No Bed' => 12665000,
+                            'Infant' => 0,
+                        ],
+                    ],
+                    [
+                        'departures' => 'HIGH SEASON JUN: 18, 20, 22, 25, 27',
+                        'availability' => 24,
+                        'prices' => [
+                            'Adult Single' => 19500000,
+                            'Adult Double' => 15900000,
+                            'Adult Twin' => 15900000,
+                            'Adult Extra Bed' => 15900000,
+                            'Child With Bed' => 15900000,
+                            'Child No Bed' => 13515000,
+                            'Infant' => 0,
+                        ],
+                    ],
+                ],
+            ],
+            [
+                'code' => 'GCT-05-003',
+                'name' => '8D KUNMING DALI LIJIANG SHANGRILA',
+                'description' => 'KUNMING - DALI - LIJIANG - SHANGRILA - BALAGEZONG',
+                'duration_days' => 8,
+                'continent' => 'Asia',
+                'country' => 'China',
+                'region' => 'East Asia',
+                'destination' => 'JAKARTA-KUNMING - DALI - LIJIANG - SHANGRILA - BALAGEZONG',
+                'product_commission_category' => 'Umum',
+                'showprice' => 11900000,
+                'add_ons' => [
+                    'Visa Grup' => 980000,
+                    'Tipping' => 748000,
+                    'Airport Tax' => 3000000,
+                ],
+                'price_sets' => [
+                    [
+                        'departures' => 'LOW SEASON JUN: 1, 4, 6, 8, 11, 13, 15 SEP: 3, 5, 8, 10, 12, 15, 17, 19, 22, 24, 26, 29 OCT: 1, 3, 6, 8, 10, 13, 15, 17, 20, 22, 24, 27, 29, 31',
+                        'availability' => 24,
+                        'prices' => [
+                            'Adult Single' => 14700000,
+                            'Adult Double' => 11900000,
+                            'Adult Twin' => 11900000,
+                            'Adult Extra Bed' => 11900000,
+                            'Child With Bed' => 11900000,
+                            'Child No Bed' => 10115000,
+                            'Infant' => 0,
+                        ],
+                    ],
+                    [
+                        'departures' => 'NOV : 3, 5, 7, 10, 12, 14, 17, 19, 21, 24, 26, 28 DEC : 1, 3, 5, 8, 10, 12, 15',
+                        'availability' => 24,
+                        'prices' => [
+                            'Adult Single' => 14700000,
+                            'Adult Double' => 11900000,
+                            'Adult Twin' => 11900000,
+                            'Adult Extra Bed' => 11900000,
+                            'Child With Bed' => 11900000,
+                            'Child No Bed' => 10115000,
+                            'Infant' => 0,
+                        ],
+                    ],
+                    [
+                        'departures' => 'HIGH SEASON JUN: 18, 20, 22, 25, 27',
+                        'availability' => 24,
+                        'prices' => [
+                            'Adult Single' => 15700000,
+                            'Adult Double' => 12900000,
+                            'Adult Twin' => 12900000,
+                            'Adult Extra Bed' => 12900000,
+                            'Child With Bed' => 12900000,
+                            'Child No Bed' => 10965000,
+                            'Infant' => 0,
+                        ],
+                    ],
+                ],
+            ],
+            [
+                'code' => 'GCT-05-004',
+                'name' => '8D KUNMING ZHANGJIAJIE',
+                'description' => 'KUNMING - HUAIHUA - FENGHUANG - ZHANGJIAJIE',
+                'duration_days' => 8,
+                'continent' => 'Asia',
+                'country' => 'China',
+                'region' => 'East Asia',
+                'destination' => 'JAKARTA-KUNMING - HUAIHUA - FENGHUANG - ZHANGJIAJIE',
+                'product_commission_category' => 'Umum',
+                'showprice' => 11900000,
+                'add_ons' => [
+                    'Visa Grup' => 980000,
+                    'Tipping' => 748000,
+                    'Airport Tax' => 3000000,
+                ],
+                'price_sets' => [
+                    [
+                        'departures' => 'LOW SEASON JUN: 1, 4, 6, 8, 11, 13, 15 SEP: 3, 5, 8, 10, 12, 15, 17, 19, 22, 24, 26, 29 OCT: 1, 3, 6, 8, 10, 13, 15, 17, 20, 22, 24, 27, 29, 31',
+                        'availability' => 24,
+                        'prices' => [
+                            'Adult Single' => 14700000,
+                            'Adult Double' => 11900000,
+                            'Adult Twin' => 11900000,
+                            'Adult Extra Bed' => 11900000,
+                            'Child With Bed' => 11900000,
+                            'Child No Bed' => 10115000,
+                            'Infant' => 0,
+                        ],
+                    ],
+                    [
+                        'departures' => 'NOV : 3, 5, 7, 10, 12, 14, 17, 19, 21, 24, 26, 28 DEC : 1, 3, 5, 8, 10, 12, 15',
+                        'availability' => 24,
+                        'prices' => [
+                            'Adult Single' => 14700000,
+                            'Adult Double' => 11900000,
+                            'Adult Twin' => 11900000,
+                            'Adult Extra Bed' => 11900000,
+                            'Child With Bed' => 11900000,
+                            'Child No Bed' => 10115000,
+                            'Infant' => 0,
+                        ],
+                    ],
+                    [
+                        'departures' => 'HIGH SEASON JUN: 18, 20, 22, 25, 27',
+                        'availability' => 24,
+                        'prices' => [
+                            'Adult Single' => 15700000,
+                            'Adult Double' => 12900000,
+                            'Adult Twin' => 12900000,
+                            'Adult Extra Bed' => 12900000,
+                            'Child With Bed' => 12900000,
+                            'Child No Bed' => 10965000,
+                            'Infant' => 0,
+                        ],
+                    ],
+                ],
+            ],
+            [
+                'code' => 'GCT-05-005',
+                'name' => '8D KUNMING CHONGQING WULONG',
+                'description' => 'KUNMING - CHONGQING - WULONG',
+                'duration_days' => 8,
+                'continent' => 'Asia',
+                'country' => 'China',
+                'region' => 'East Asia',
+                'destination' => 'JAKARTA-KUNMING - CHONGQING - WULONG',
+                'product_commission_category' => 'Umum',
+                'showprice' => 11900000,
+                'add_ons' => [
+                    'Visa Grup' => 980000,
+                    'Tipping' => 748000,
+                    'Airport Tax' => 3000000,
+                ],
+                'price_sets' => [
+                    [
+                        'departures' => 'LOW SEASON JUN: 1, 4, 6, 8, 11, 13, 15 SEP: 3, 5, 8, 10, 12, 15, 17, 19, 22, 24, 26, 29 OCT: 1, 3, 6, 8, 10, 13, 15, 17, 20, 22, 24, 27, 29, 31',
+                        'availability' => 24,
+                        'prices' => [
+                            'Adult Single' => 14700000,
+                            'Adult Double' => 11900000,
+                            'Adult Twin' => 11900000,
+                            'Adult Extra Bed' => 11900000,
+                            'Child With Bed' => 11900000,
+                            'Child No Bed' => 10115000,
+                            'Infant' => 0,
+                        ],
+                    ],
+                    [
+                        'departures' => 'NOV : 3, 5, 7, 10, 12, 14, 17, 19, 21, 24, 26, 28 DEC : 1, 3, 5, 8, 10, 12, 15',
+                        'availability' => 24,
+                        'prices' => [
+                            'Adult Single' => 14700000,
+                            'Adult Double' => 11900000,
+                            'Adult Twin' => 11900000,
+                            'Adult Extra Bed' => 11900000,
+                            'Child With Bed' => 11900000,
+                            'Child No Bed' => 10115000,
+                            'Infant' => 0,
+                        ],
+                    ],
+                    [
+                        'departures' => 'HIGH SEASON JUN: 18, 20, 22, 25, 27',
+                        'availability' => 24,
+                        'prices' => [
+                            'Adult Single' => 15700000,
+                            'Adult Double' => 12900000,
+                            'Adult Twin' => 12900000,
+                            'Adult Extra Bed' => 12900000,
+                            'Child With Bed' => 12900000,
+                            'Child No Bed' => 10965000,
+                            'Infant' => 0,
+                        ],
+                    ],
+                ],
+            ],
+            [
+                'code' => 'GCT-05-006',
+                'name' => '8D SHANGRILA',
+                'description' => 'KUNMING - DALI - LIJIANG - SHANGRILA',
+                'duration_days' => 8,
+                'continent' => 'Asia',
+                'country' => 'China',
+                'region' => 'East Asia',
+                'destination' => 'JAKARTA-KUNMING - DALI - LIJIANG - SHANGRILA',
+                'product_commission_category' => 'Umum',
+                'showprice' => 10900000,
+                'add_ons' => [
+                    'Visa Grup' => 980000,
+                    'Tipping' => 748000,
+                    'Airport Tax' => 3000000,
+                ],
+                'price_sets' => [
+                    [
+                        'departures' => 'LOW SEASON JUN: 1, 4, 6, 8, 11, 13, 15 SEP: 3, 5, 8, 10, 12, 15, 17, 19, 22, 24, 26, 29 OCT: 1, 3, 6, 8, 10, 13, 15, 17, 20, 22, 24, 27, 29, 31',
+                        'availability' => 24,
+                        'prices' => [
+                            'Adult Single' => 13700000,
+                            'Adult Double' => 10900000,
+                            'Adult Twin' => 10900000,
+                            'Adult Extra Bed' => 10900000,
+                            'Child With Bed' => 10900000,
+                            'Child No Bed' => 9265000,
+                            'Infant' => 0,
+                        ],
+                    ],
+                    [
+                        'departures' => 'NOV : 3, 5, 7, 10, 12, 14, 17, 19, 21, 24, 26, 28 DEC : 1, 3, 5, 8, 10, 12, 15',
+                        'availability' => 24,
+                        'prices' => [
+                            'Adult Single' => 13700000,
+                            'Adult Double' => 10900000,
+                            'Adult Twin' => 10900000,
+                            'Adult Extra Bed' => 10900000,
+                            'Child With Bed' => 10900000,
+                            'Child No Bed' => 9265000,
+                            'Infant' => 0,
+                        ],
+                    ],
+                    [
+                        'departures' => 'HIGH SEASON JUN: 18, 20, 22, 25, 27',
+                        'availability' => 24,
+                        'prices' => [
+                            'Adult Single' => 14700000,
+                            'Adult Double' => 11900000,
+                            'Adult Twin' => 11900000,
+                            'Adult Extra Bed' => 11900000,
+                            'Child With Bed' => 11900000,
+                            'Child No Bed' => 10115000,
+                            'Infant' => 0,
+                        ],
+                    ],
+                ],
+            ],
+            [
+                'code' => 'GCT-06-001',
+                'name' => '9D XI\'AN TERRACOTTA WARRIORS',
+                'description' => 'CHONGQING XI\'AN',
+                'duration_days' => 9,
+                'continent' => 'Asia',
+                'country' => 'China',
+                'region' => 'East Asia',
+                'destination' => 'JAKARTA-CHONGQING XI\'AN',
+                'product_commission_category' => 'Umum',
+                'showprice' => 13900000,
+                'add_ons' => [
+                    'Visa Grup' => 980000,
+                    'Tipping' => 782000,
+                    'Airport Tax' => 3000000,
+                ],
+                'price_sets' => [
+                    [
+                        'departures' => 'LOW SEASON JUN: 12, 14, 16 JUL: 10, 12, 17, 19, 24, 25, 26, 31 AUG: 1, 2, 7, 8, 9, 14, 15, 16, 21, 22, 23, 28, 29, 30 SEP: 1, 3, 4, 5, 6, 8, 10, 11, 12, 13, 15, 17, 18, 19, 20, 22, 24, 25 OCT: 9, 10, 11, 13, 15, 16, 17, 18, 20, 22, 23, 24, 25, 27, 29, 30, 31',
+                        'availability' => 24,
+                        'prices' => [
+                            'Adult Single' => 16700000,
+                            'Adult Double' => 13900000,
+                            'Adult Twin' => 13900000,
+                            'Adult Extra Bed' => 13900000,
+                            'Child With Bed' => 13900000,
+                            'Child No Bed' => 10965000,
+                            'Infant' => 0,
+                        ],
+                    ],
+                    [
+                        'departures' => 'HIGH SEASON JUN: 18, 19, 20, 30 JUL: 2, 3, 5',
+                        'availability' => 24,
+                        'prices' => [
+                            'Adult Single' => 17700000,
+                            'Adult Double' => 14900000,
+                            'Adult Twin' => 14900000,
+                            'Adult Extra Bed' => 14900000,
+                            'Child With Bed' => 14900000,
+                            'Child No Bed' => 11815000,
+                            'Infant' => 0,
+                        ],
+                    ],
+                    [
+                        'departures' => 'HIGH SEASON JUN: 21, 23, 25, 26, 27, 28',
+                        'availability' => 24,
+                        'prices' => [
+                            'Adult Single' => 18700000,
+                            'Adult Double' => 15900000,
+                            'Adult Twin' => 15900000,
+                            'Adult Extra Bed' => 15900000,
+                            'Child With Bed' => 15900000,
+                            'Child No Bed' => 12665000,
+                            'Infant' => 0,
+                        ],
+                    ],
+                ],
+            ],
+            [
+                'code' => 'GCT-06-002',
+                'name' => '9D XI\'AN GANQUAN CANYON',
+                'description' => '9D XI\'AN GANQUAN CANYON',
+                'duration_days' => 9,
+                'continent' => 'Asia',
+                'country' => 'China',
+                'region' => 'East Asia',
+                'destination' => 'JAKARTA- XI\'AN GANQUAN CANYON',
+                'product_commission_category' => 'Umum',
+                'showprice' => 15900000,
+                'add_ons' => [
+                    'Visa Grup' => 980000,
+                    'Tipping' => 782000,
+                    'Airport Tax' => 3000000,
+                ],
+                'price_sets' => [
+                    [
+                        'departures' => 'LOW SEASON JUN: 12, 14, 16 JUL: 10, 12, 17, 19, 24, 25, 26, 31 AUG: 1, 2, 7, 8, 9, 14, 15, 16, 21, 22, 23, 28, 29, 30 SEP: 1, 3, 4, 5, 6, 8, 10, 11, 12, 13, 15, 17, 18, 19, 20, 22, 24, 25 OCT: 9, 10, 11, 13, 15, 16, 17, 18, 20, 22, 23, 24, 25, 27, 29, 30, 31',
+                        'availability' => 24,
+                        'prices' => [
+                            'Adult Single' => 18700000,
+                            'Adult Double' => 15900000,
+                            'Adult Twin' => 15900000,
+                            'Adult Extra Bed' => 15900000,
+                            'Child With Bed' => 15900000,
+                            'Child No Bed' => 13515000,
+                            'Infant' => 0,
+                        ],
+                    ],
+                    [
+                        'departures' => 'HIGH SEASON JUN: 18, 19, 20, 30 JUL: 2, 3, 5',
+                        'availability' => 24,
+                        'prices' => [
+                            'Adult Single' => 19700000,
+                            'Adult Double' => 16900000,
+                            'Adult Twin' => 16900000,
+                            'Adult Extra Bed' => 16900000,
+                            'Child With Bed' => 16900000,
+                            'Child No Bed' => 14365000,
+                            'Infant' => 0,
+                        ],
+                    ],
+                    [
+                        'departures' => 'HIGH SEASON JUN: 21, 23, 25, 26, 27, 28',
+                        'availability' => 24,
+                        'prices' => [
+                            'Adult Single' => 20700000,
+                            'Adult Double' => 17900000,
+                            'Adult Twin' => 17900000,
+                            'Adult Extra Bed' => 17900000,
+                            'Child With Bed' => 17900000,
+                            'Child No Bed' => 15215000,
+                            'Infant' => 0,
+                        ],
+                    ],
+                ],
+            ],
+            [
+                'code' => 'GCT-06-003',
+                'name' => '11D JIUZHAIGOU BIPENGGOU SIGUNIANG CHENGDU',
+                'description' => 'JIUZHAIGOU BIPENGGOU SIGUNIANG CHENGDU',
+                'duration_days' => 11,
+                'continent' => 'Asia',
+                'country' => 'China',
+                'region' => 'East Asia',
+                'destination' => 'JAKARTA- JIUZHAIGOU BIPENGGOU SIGUNIANG CHENGDU',
+                'product_commission_category' => 'Umum',
+                'showprice' => 13900000,
+                'add_ons' => [
+                    'Visa Grup' => 980000,
+                    'Tipping' => 986000,
+                    'Airport Tax' => 3000000,
+                ],
+                'price_sets' => [
+                    [
+                        'departures' => 'LOW SEASON JUN: 15 JUL: 6, 13, 20, 21, 27, 28 AUG: 3, 4, 10, 11, 17, 18, 24, 25, 31 SEP: 7, 14, 21 OCT: 12, 19, 26',
+                        'availability' => 24,
+                        'prices' => [
+                            'Adult Single' => 17700000,
+                            'Adult Double' => 13900000,
+                            'Adult Twin' => 13900000,
+                            'Adult Extra Bed' => 13900000,
+                            'Child With Bed' => 13900000,
+                            'Child No Bed' => 11815000,
+                            'Infant' => 0,
+                        ],
+                    ],
+                    [
+                        'departures' => 'HIGH SEASON JUN: 29',
+                        'availability' => 24,
+                        'prices' => [
+                            'Adult Single' => 18700000,
+                            'Adult Double' => 14900000,
+                            'Adult Twin' => 14900000,
+                            'Adult Extra Bed' => 14900000,
+                            'Child With Bed' => 14900000,
+                            'Child No Bed' => 12665000,
+                            'Infant' => 0,
+                        ],
+                    ],
+                    [
+                        'departures' => 'HIGH SEASON JUN: 22',
+                        'availability' => 24,
+                        'prices' => [
+                            'Adult Single' => 19700000,
+                            'Adult Double' => 15900000,
+                            'Adult Twin' => 15900000,
+                            'Adult Extra Bed' => 15900000,
+                            'Child With Bed' => 15900000,
+                            'Child No Bed' => 13215000,
+                            'Infant' => 0,
+                        ],
+                    ],
+                ],
+            ],
+            [
+                'code' => 'GCT-06-004',
+                'name' => '11D JIUZHAIGOU BIPENGGOU SIGUNIANG CHENGDU11D JIUZHAIGOU BIPENGGOU SIGUNIANG CHENGDU',
+                'description' => 'JIUZHAIGOU BIPENGGOU SIGUNIANG CHENGDU11D JIUZHAIGOU BIPENGGOU SIGUNIANG CHENGDU',
+                'duration_days' => 11,
+                'continent' => 'Asia',
+                'country' => 'China',
+                'region' => 'East Asia',
+                'destination' => 'JAKARTA- CHONGQING - ZHANGJIAJIE - CHENGDU - JIUZHAIGOU',
+                'product_commission_category' => 'Umum',
+                'showprice' => 15900000,
+                'add_ons' => [
+                    'Visa Grup' => 980000,
+                    'Tipping' => 986000,
+                    'Airport Tax' => 3000000,
+                ],
+                'price_sets' => [
+                    [
+                        'departures' => 'LOW SEASON JUN: 15 JUL: 6, 13, 20, 21, 27, 28 AUG: 3, 4, 10, 11, 17, 18, 24, 25, 31 SEP: 7, 14, 21 OCT: 12, 19, 26',
+                        'availability' => 24,
+                        'prices' => [
+                            'Adult Single' => 19500000,
+                            'Adult Double' => 15900000,
+                            'Adult Twin' => 15900000,
+                            'Adult Extra Bed' => 15900000,
+                            'Child With Bed' => 15900000,
+                            'Child No Bed' => 13515000,
+                            'Infant' => 0,
+                        ],
+                    ],
+                    [
+                        'departures' => 'HIGH SEASON JUN: 29',
+                        'availability' => 24,
+                        'prices' => [
+                            'Adult Single' => 20700000,
+                            'Adult Double' => 16900000,
+                            'Adult Twin' => 16900000,
+                            'Adult Extra Bed' => 16900000,
+                            'Child With Bed' => 16900000,
+                            'Child No Bed' => 14365000,
+                            'Infant' => 0,
+                        ],
+                    ],
+                    [
+                        'departures' => 'HIGH SEASON JUN: 22',
+                        'availability' => 24,
+                        'prices' => [
+                            'Adult Single' => 21700000,
+                            'Adult Double' => 17900000,
+                            'Adult Twin' => 17900000,
+                            'Adult Extra Bed' => 17900000,
+                            'Child With Bed' => 17900000,
+                            'Child No Bed' => 15215000,
+                            'Infant' => 0,
+                        ],
+                    ],
+                ],
+            ],
+            [
+                'code' => 'GCT-06-005',
+                'name' => '11D CHONGQING WULONG ZHANGJIAJIE',
+                'description' => 'CHONGQING WULONG ZHANGJIAJIE CHENGDU',
+                'duration_days' => 11,
+                'continent' => 'Asia',
+                'country' => 'China',
+                'region' => 'East Asia',
+                'destination' => 'JAKARTA- CHONGQING WULONG ZHANGJIAJIE',
+                'product_commission_category' => 'Umum',
+                'showprice' => 12900000,
+                'add_ons' => [
+                    'Visa Grup' => 980000,
+                    'Tipping' => 986000,
+                    'Airport Tax' => 3000000,
+                ],
+                'price_sets' => [
+                    [
+                        'departures' => 'LOW SEASON JUN: 15 JUL: 6, 13, 20, 21, 27, 28 AUG: 3, 4, 10, 11, 17, 18, 24, 25, 31 SEP: 7, 14, 21 OCT: 12, 19, 26',
+                        'availability' => 24,
+                        'prices' => [
+                            'Adult Single' => 19500000,
+                            'Adult Double' => 15900000,
+                            'Adult Twin' => 15900000,
+                            'Adult Extra Bed' => 15900000,
+                            'Child With Bed' => 15900000,
+                            'Child No Bed' => 13515000,
+                            'Infant' => 0,
+                        ],
+                    ],
+                    [
+                        'departures' => 'HIGH SEASON JUN: 29',
+                        'availability' => 24,
+                        'prices' => [
+                            'Adult Single' => 20700000,
+                            'Adult Double' => 16900000,
+                            'Adult Twin' => 16900000,
+                            'Adult Extra Bed' => 16900000,
+                            'Child With Bed' => 16900000,
+                            'Child No Bed' => 14365000,
+                            'Infant' => 0,
+                        ],
+                    ],
+                    [
+                        'departures' => 'HIGH SEASON JUN: 22',
+                        'availability' => 24,
+                        'prices' => [
+                            'Adult Single' => 21700000,
+                            'Adult Double' => 17900000,
+                            'Adult Twin' => 17900000,
+                            'Adult Extra Bed' => 17900000,
+                            'Child With Bed' => 17900000,
+                            'Child No Bed' => 15215000,
+                            'Infant' => 0,
+                        ],
+                    ],
+                ],
+            ],
+            [
+                'code' => 'GCT-06-006',
+                'name' => 'CHONGQING - EMEISHAN CITY - DUJIANGYAN - JIUZHAIGOU - CHENGDU',
+                'description' => 'CHONGQING - EMEISHAN CITY - DUJIANGYAN - JIUZHAIGOU - CHENGDU',
+                'duration_days' => 11,
+                'continent' => 'Asia',
+                'country' => 'China',
+                'region' => 'East Asia',
+                'destination' => 'JAKARTA- CHONGQING - EMEISHAN CITY - DUJIANGYAN - JIUZHAIGOU - CHENGDU',
+                'product_commission_category' => 'Umum',
+                'showprice' => 13900000,
+                'add_ons' => [
+                    'Visa Grup' => 980000,
+                    'Tipping' => 986000,
+                    'Airport Tax' => 3000000,
+                ],
+                'price_sets' => [
+                    [
+                        'departures' => 'LOW SEASON JUN: 15 JUL: 6, 13, 20, 21, 27, 28 AUG: 3, 4, 10, 11, 17, 18, 24, 25, 31 SEP: 7, 14, 21 OCT: 12, 19, 26',
+                        'availability' => 24,
+                        'prices' => [
+                            'Adult Single' => 17500000,
+                            'Adult Double' => 13900000,
+                            'Adult Twin' => 13900000,
+                            'Adult Extra Bed' => 13900000,
+                            'Child With Bed' => 13900000,
+                            'Child No Bed' => 11815000,
+                            'Infant' => 0,
+                        ],
+                    ],
+                    [
+                        'departures' => 'HIGH SEASON JUN: 29',
+                        'availability' => 24,
+                        'prices' => [
+                            'Adult Single' => 18500000,
+                            'Adult Double' => 14900000,
+                            'Adult Twin' => 14900000,
+                            'Adult Extra Bed' => 14900000,
+                            'Child With Bed' => 14900000,
+                            'Child No Bed' => 12665000,
+                            'Infant' => 0,
+                        ],
+                    ],
+                    [
+                        'departures' => 'HIGH SEASON JUN: 22',
+                        'availability' => 24,
+                        'prices' => [
+                            'Adult Single' => 19500000,
+                            'Adult Double' => 15900000,
+                            'Adult Twin' => 15900000,
+                            'Adult Extra Bed' => 15900000,
+                            'Child With Bed' => 15900000,
+                            'Child No Bed' => 13515000,
+                            'Infant' => 0,
+                        ],
+                    ],
+                ],
+            ],
+            [
+                'code' => 'GCT-06-007',
+                'name' => '11D JIUZHAIGOU BIPENGGOU MUONIGOU',
+                'description' => 'JIUZHAIGOU BIPENGGOU MUONIGOU',
+                'duration_days' => 11,
+                'continent' => 'Asia',
+                'country' => 'China',
+                'region' => 'East Asia',
+                'destination' => 'JAKARTA- CHONGQING - CHENGDU - JIUZHAIGOU - MAOXIAN - BIPENGGOU - DUJIANGYAN',
+                'product_commission_category' => 'Umum',
+                'showprice' => 12900000,
+                'add_ons' => [
+                    'Visa Grup' => 980000,
+                    'Tipping' => 986000,
+                    'Airport Tax' => 3000000,
+                ],
+                'price_sets' => [
+                    [
+                        'departures' => 'LOW SEASON JUN: 15 JUL: 6, 13, 20, 21, 27, 28 AUG: 3, 4, 10, 11, 17, 18, 24, 25, 31 SEP: 7, 14, 21 OCT: 12, 19, 26',
+                        'availability' => 24,
+                        'prices' => [
+                            'Adult Single' => 16500000,
+                            'Adult Double' => 12900000,
+                            'Adult Twin' => 12900000,
+                            'Adult Extra Bed' => 12900000,
+                            'Child With Bed' => 12900000,
+                            'Child No Bed' => 10965000,
+                            'Infant' => 0,
+                        ],
+                    ],
+                    [
+                        'departures' => 'HIGH SEASON JUN: 29',
+                        'availability' => 24,
+                        'prices' => [
+                            'Adult Single' => 17500000,
+                            'Adult Double' => 13900000,
+                            'Adult Twin' => 13900000,
+                            'Adult Extra Bed' => 13900000,
+                            'Child With Bed' => 13900000,
+                            'Child No Bed' => 11815000,
+                            'Infant' => 0,
+                        ],
+                    ],
+                    [
+                        'departures' => 'HIGH SEASON JUN: 22',
+                        'availability' => 24,
+                        'prices' => [
+                            'Adult Single' => 18500000,
+                            'Adult Double' => 14900000,
+                            'Adult Twin' => 14900000,
+                            'Adult Extra Bed' => 14900000,
+                            'Child With Bed' => 14900000,
+                            'Child No Bed' => 12665000,
+                            'Infant' => 0,
+                        ],
+                    ],
+                ],
+            ],
+            [
+                'code' => 'GCT-06-008',
+                'name' => '11D CHENGDU KANGDING BIPENGGOU',
+                'description' => 'CHENGDU KANGDING BIPENGGOU',
+                'duration_days' => 11,
+                'continent' => 'Asia',
+                'country' => 'China',
+                'region' => 'East Asia',
+                'destination' => 'JAKARTA- CHONGQING - CHENGDU - BIPENGGOU - MT SIGUNIANG - DANBA - KANGDING',
+                'product_commission_category' => 'Umum',
+                'showprice' => 13900000,
+                'add_ons' => [
+                    'Visa Grup' => 980000,
+                    'Tipping' => 986000,
+                    'Airport Tax' => 3000000,
+                ],
+                'price_sets' => [
+                    [
+                        'departures' => 'LOW SEASON JUN: 15 JUL: 6, 13, 20, 21, 27, 28 AUG: 3, 4, 10, 11, 17, 18, 24, 25, 31 SEP: 7, 14, 21 OCT: 12, 19, 26',
+                        'availability' => 24,
+                        'prices' => [
+                            'Adult Single' => 17500000,
+                            'Adult Double' => 13900000,
+                            'Adult Twin' => 13900000,
+                            'Adult Extra Bed' => 13900000,
+                            'Child With Bed' => 13900000,
+                            'Child No Bed' => 11815000,
+                            'Infant' => 0,
+                        ],
+                    ],
+                    [
+                        'departures' => 'HIGH SEASON JUN: 29',
+                        'availability' => 24,
+                        'prices' => [
+                            'Adult Single' => 18500000,
+                            'Adult Double' => 14900000,
+                            'Adult Twin' => 14900000,
+                            'Adult Extra Bed' => 14900000,
+                            'Child With Bed' => 14900000,
+                            'Child No Bed' => 12665000,
+                            'Infant' => 0,
+                        ],
+                    ],
+                    [
+                        'departures' => 'HIGH SEASON JUN: 22',
+                        'availability' => 24,
+                        'prices' => [
+                            'Adult Single' => 19500000,
+                            'Adult Double' => 15900000,
+                            'Adult Twin' => 15900000,
+                            'Adult Extra Bed' => 15900000,
+                            'Child With Bed' => 15900000,
+                            'Child No Bed' => 13515000,
+                            'Infant' => 0,
+                        ],
+                    ],
+                ],
+            ],
+            [
+                'code' => 'GCT-06-009',
+                'name' => '9D CHENGDU DAZU ROCK & PANDA VALLEY',
+                'description' => 'CHENGDU DAZU ROCK & PANDA VALLEY',
+                'duration_days' => 9,
+                'continent' => 'Asia',
+                'country' => 'China',
+                'region' => 'East Asia',
+                'destination' => 'JAKARTA -CHENGDU DAZU ROCK & PANDA VALLEY',
+                'product_commission_category' => 'Umum',
+                'showprice' => 10900000,
+                'add_ons' => [
+                    'Visa Grup' => 980000,
+                    'Tipping' => 782000,
+                    'Airport Tax' => 3000000,
+                ],
+                'price_sets' => [
+                    [
+                        'departures' => 'LOW SEASON JUN: 15 JUL: 6, 13, 20, 21, 27, 28 AUG: 3, 4, 10, 11, 17, 18, 24, 25, 31 SEP: 7, 14, 21 OCT: 12, 19, 26',
+                        'availability' => 24,
+                        'prices' => [
+                            'Adult Single' => 13700000,
+                            'Adult Double' => 10900000,
+                            'Adult Twin' => 10900000,
+                            'Adult Extra Bed' => 10900000,
+                            'Child With Bed' => 10900000,
+                            'Child No Bed' => 9265000,
+                            'Infant' => 0,
+                        ],
+                    ],
+                    [
+                        'departures' => 'HIGH SEASON JUN: 29',
+                        'availability' => 24,
+                        'prices' => [
+                            'Adult Single' => 14700000,
+                            'Adult Double' => 11900000,
+                            'Adult Twin' => 11900000,
+                            'Adult Extra Bed' => 11900000,
+                            'Child With Bed' => 11900000,
+                            'Child No Bed' => 10115000,
+                            'Infant' => 0,
+                        ],
+                    ],
+                    [
+                        'departures' => 'HIGH SEASON JUN: 22',
+                        'availability' => 24,
+                        'prices' => [
+                            'Adult Single' => 15700000,
+                            'Adult Double' => 12900000,
+                            'Adult Twin' => 12900000,
+                            'Adult Extra Bed' => 12900000,
+                            'Child With Bed' => 12900000,
+                            'Child No Bed' => 10965000,
+                            'Infant' => 0,
+                        ],
+                    ],
+                ],
+            ],
+            [
+                'code' => 'GCT-06-010',
+                'name' => '9D ZHANGJIAJIE FURONG ZHEN',
+                'description' => '9D ZHANGJIAJIE FURONG ZHEN',
+                'duration_days' => 9,
+                'continent' => 'Asia',
+                'country' => 'China',
+                'region' => 'East Asia',
+                'destination' => 'JAKARTA- ZHANGJIAJIE FURONG ZHEN',
+                'product_commission_category' => 'Umum',
+                'showprice' => 10900000,
+                'add_ons' => [
+                    'Visa Grup' => 980000,
+                    'Tipping' => 782000,
+                    'Airport Tax' => 3000000,
+                ],
+                'price_sets' => [
+                    [
+                        'departures' => 'LOW SEASON JUN: 15 JUL: 6, 13, 20, 21, 27, 28 AUG: 3, 4, 10, 11, 17, 18, 24, 25, 31 SEP: 7, 14, 21 OCT: 12, 19, 26',
+                        'availability' => 24,
+                        'prices' => [
+                            'Adult Single' => 13700000,
+                            'Adult Double' => 10900000,
+                            'Adult Twin' => 10900000,
+                            'Adult Extra Bed' => 10900000,
+                            'Child With Bed' => 10900000,
+                            'Child No Bed' => 9265000,
+                            'Infant' => 0,
+                        ],
+                    ],
+                    [
+                        'departures' => 'HIGH SEASON JUN: 29',
+                        'availability' => 24,
+                        'prices' => [
+                            'Adult Single' => 14700000,
+                            'Adult Double' => 11900000,
+                            'Adult Twin' => 11900000,
+                            'Adult Extra Bed' => 11900000,
+                            'Child With Bed' => 11900000,
+                            'Child No Bed' => 10115000,
+                            'Infant' => 0,
+                        ],
+                    ],
+                    [
+                        'departures' => 'HIGH SEASON JUN: 22',
+                        'availability' => 24,
+                        'prices' => [
+                            'Adult Single' => 15700000,
+                            'Adult Double' => 12900000,
+                            'Adult Twin' => 12900000,
+                            'Adult Extra Bed' => 12900000,
+                            'Child With Bed' => 12900000,
+                            'Child No Bed' => 10965000,
+                            'Infant' => 0,
+                        ],
+                    ],
+                ],
+            ],
+            [
+                'code' => 'GCT-06-011',
+                'name' => '9D JIUZHAIGOU CHENGDU',
+                'description' => '9D JIUZHAIGOU CHENGDU',
+                'duration_days' => 9,
+                'continent' => 'Asia',
+                'country' => 'China',
+                'region' => 'East Asia',
+                'destination' => 'JAKARTA- CHONGQING - CHENGDU - DUJIANGYAN - JIUZHAIGOU',
+                'product_commission_category' => 'Umum',
+                'showprice' => 11900000,
+                'add_ons' => [
+                    'Visa Grup' => 980000,
+                    'Tipping' => 782000,
+                    'Airport Tax' => 3000000,
+                ],
+                'price_sets' => [
+                    [
+                        'departures' => 'LOW SEASON JUN: 15 JUL: 6, 13, 20, 21, 27, 28 AUG: 3, 4, 10, 11, 17, 18, 24, 25, 31 SEP: 7, 14, 21 OCT: 12, 19, 26',
+                        'availability' => 24,
+                        'prices' => [
+                            'Adult Single' => 14700000,
+                            'Adult Double' => 11900000,
+                            'Adult Twin' => 11900000,
+                            'Adult Extra Bed' => 11900000,
+                            'Child With Bed' => 11900000,
+                            'Child No Bed' => 10115000,
+                            'Infant' => 0,
+                        ],
+                    ],
+                    [
+                        'departures' => 'HIGH SEASON JUN: 29',
+                        'availability' => 24,
+                        'prices' => [
+                            'Adult Single' => 15700000,
+                            'Adult Double' => 12900000,
+                            'Adult Twin' => 12900000,
+                            'Adult Extra Bed' => 12900000,
+                            'Child With Bed' => 12900000,
+                            'Child No Bed' => 10965000,
+                            'Infant' => 0,
+                        ],
+                    ],
+                    [
+                        'departures' => 'HIGH SEASON JUN: 22',
+                        'availability' => 24,
+                        'prices' => [
+                            'Adult Single' => 16700000,
+                            'Adult Double' => 13900000,
+                            'Adult Twin' => 13900000,
+                            'Adult Extra Bed' => 13900000,
+                            'Child With Bed' => 13900000,
+                            'Child No Bed' => 11815000,
+                            'Infant' => 0,
+                        ],
+                    ],
+                ],
+            ],
+            [
+                'code' => 'GCT-06-012',
+                'name' => '9D CHONGQING WULONG',
+                'description' => '9D JIUZHAIGOU CHENGDU',
+                'duration_days' => 9,
+                'continent' => 'Asia',
+                'country' => 'China',
+                'region' => 'East Asia',
+                'destination' => 'JAKARTA- CHONGQING - PENGSHUI - WULONG - FAIRYLAND',
+                'product_commission_category' => 'Umum',
+                'showprice' => 1900000,
+                'add_ons' => [
+                    'Visa Grup' => 980000,
+                    'Tipping' => 782000,
+                    'Airport Tax' => 3000000,
+                ],
+                'price_sets' => [
+                    [
+                        'departures' => 'LOW SEASON JUN: 15 JUL: 6, 13, 20, 21, 27, 28 AUG: 3, 4, 10, 11, 17, 18, 24, 25, 31 SEP: 7, 14, 21 OCT: 12, 19, 26',
+                        'availability' => 24,
+                        'prices' => [
+                            'Adult Single' => 13700000,
+                            'Adult Double' => 10900000,
+                            'Adult Twin' => 10900000,
+                            'Adult Extra Bed' => 10900000,
+                            'Child With Bed' => 10900000,
+                            'Child No Bed' => 9265000,
+                            'Infant' => 0,
+                        ],
+                    ],
+                    [
+                        'departures' => 'HIGH SEASON JUN: 29',
+                        'availability' => 24,
+                        'prices' => [
+                            'Adult Single' => 14700000,
+                            'Adult Double' => 11900000,
+                            'Adult Twin' => 11900000,
+                            'Adult Extra Bed' => 11900000,
+                            'Child With Bed' => 11900000,
+                            'Child No Bed' => 10115000,
+                            'Infant' => 0,
+                        ],
+                    ],
+                    [
+                        'departures' => 'HIGH SEASON JUN: 22',
+                        'availability' => 24,
+                        'prices' => [
+                            'Adult Single' => 15700000,
+                            'Adult Double' => 12900000,
+                            'Adult Twin' => 12900000,
+                            'Adult Extra Bed' => 12900000,
+                            'Child With Bed' => 12900000,
+                            'Child No Bed' => 10965000,
+                            'Infant' => 0,
+                        ],
+                    ],
+                ],
             ],
         ];
     }

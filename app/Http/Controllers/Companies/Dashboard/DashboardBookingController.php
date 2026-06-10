@@ -25,6 +25,7 @@ use App\Models\TourPrice;
 use App\Models\TourSchedule;
 use App\Models\User;
 use App\Models\VendorAgentPartner;
+use App\Services\BookingContactPaymentEmailService;
 use App\Services\BookingDownPaymentRuleService;
 use App\Services\BookingNumberService;
 use App\Services\BookingPaymentReceiverService;
@@ -483,14 +484,14 @@ class DashboardBookingController extends Controller
 
                 if ($request->hasFile("passengers.{$index}.passport_file")) {
                     $update['passport_file_path'] = $request->file("passengers.{$index}.passport_file")->store('travel-documents/passports', 'public');
-                } elseif (array_key_exists('passport_file_path', $passengerData)) {
-                    $update['passport_file_path'] = $passengerData['passport_file_path'];
+                } else {
+                    $update['passport_file_path'] = $passengerData['passport_file_path'] ?? null;
                 }
 
                 if ($request->hasFile("passengers.{$index}.visa_file")) {
                     $update['visa_file_path'] = $request->file("passengers.{$index}.visa_file")->store('travel-documents/visas', 'public');
-                } elseif (array_key_exists('visa_file_path', $passengerData)) {
-                    $update['visa_file_path'] = $passengerData['visa_file_path'];
+                } else {
+                    $update['visa_file_path'] = $passengerData['visa_file_path'] ?? null;
                 }
 
                 $passenger->update($update);
@@ -779,6 +780,9 @@ class DashboardBookingController extends Controller
                 $payment->fresh()
             );
         });
+
+        app(BookingContactPaymentEmailService::class)
+            ->sendOnlinePaymentConfirmedIfEligible($booking->fresh(), $payment->fresh());
 
         return response()->json([
             'booking' => [

@@ -20,10 +20,10 @@ import {
     EyeIcon,
     FileTextIcon,
     HeartIcon,
-    type LucideIcon,
     RefreshCwIcon,
+    type LucideIcon,
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 
 type BookingItem = {
     id: number;
@@ -659,8 +659,23 @@ function BookingCard({
         booking.document_url,
         shouldShowProformaButton,
     ].filter(Boolean).length;
-    const shouldPrimaryActionSpanMobile =
-        Boolean(action) && (actionCount === 1 || actionCount === 3);
+    const secondaryActionCount = [
+        reviewHref,
+        documentHref,
+        booking.document_url,
+        shouldShowProformaButton,
+    ].filter(Boolean).length;
+    const shouldStackPrimaryLastOnMobile = Boolean(action) && actionCount >= 3;
+    const actionGridClassName =
+        actionCount === 2 && !shouldStackPrimaryLastOnMobile
+            ? 'grid-cols-2'
+            : 'grid-cols-1';
+    const secondaryActionGridClassName =
+        secondaryActionCount === 3
+            ? 'grid-cols-3'
+            : secondaryActionCount >= 2
+              ? 'grid-cols-2'
+              : 'grid-cols-1';
     const grandTotal = Number(booking.grand_total ?? 0);
     const paidAmount = Number(booking.paid_amount ?? 0);
     const remainingBalance =
@@ -716,8 +731,8 @@ function BookingCard({
                     hasImage={hasImage}
                     landscape
                 />
-                <div className="flex min-w-0 flex-col p-4 sm:p-5 md:justify-center lg:pr-4">
-                    <h2 className="line-clamp-2 text-lg font-bold leading-tight text-foreground">
+                <div className="flex min-w-0 flex-col overflow-hidden p-4 sm:p-5 md:justify-center lg:pr-4">
+                    <h2 className="line-clamp-2 min-w-0 text-lg font-bold leading-tight text-foreground break-words [overflow-wrap:anywhere]">
                         {booking.tour?.name ?? 'Tour'}
                     </h2>
                     <div className="mt-2 grid min-w-0 gap-2 text-xs sm:grid-cols-2">
@@ -737,11 +752,7 @@ function BookingCard({
                         ))}
                     </div>
                 </div>
-                <div
-                    className={cn(
-                        'flex h-full min-h-40 flex-col gap-4 border-t p-4 sm:p-5 md:col-start-2 lg:col-auto lg:min-h-44 lg:w-80 lg:min-w-80 lg:border-l lg:border-t-0 lg:text-right',
-                    )}
-                >
+                <div className="flex h-full min-h-40 min-w-0 flex-col gap-4 overflow-hidden border-t p-4 sm:p-5 md:col-start-2 lg:col-auto lg:min-h-44 lg:w-80 lg:min-w-80 lg:border-l lg:border-t-0 lg:text-right">
                     <div className="space-y-3">
                         <div className="flex flex-wrap items-center justify-start gap-2">
                             <Badge
@@ -798,110 +809,48 @@ function BookingCard({
                     </div>
                     <div
                         className={cn(
-                            'flex min-w-0 flex-nowrap justify-start gap-1.5 overflow-x-auto pb-1 sm:justify-end sm:overflow-visible',
+                            'grid min-w-0 gap-2 sm:flex sm:flex-nowrap sm:justify-end sm:gap-1.5 sm:pb-1',
+                            actionGridClassName,
                             actionCount === 0 && 'hidden',
                         )}
                     >
-                        {action && (
-                            <div
-                                className={cn(
-                                    'shrink-0',
-                                    shouldPrimaryActionSpanMobile &&
-                                        'sm:flex-none',
+                        {shouldStackPrimaryLastOnMobile ? (
+                            <>
+                                <div
+                                    className={cn(
+                                        'order-1 grid min-w-0 gap-2 sm:order-2 sm:flex sm:gap-1.5',
+                                        secondaryActionGridClassName,
+                                    )}
+                                >
+                                    <BookingSecondaryActions
+                                        booking={booking}
+                                        reviewHref={reviewHref}
+                                        documentHref={documentHref}
+                                        shouldShowProformaButton={
+                                            shouldShowProformaButton
+                                        }
+                                    />
+                                </div>
+                                {action && (
+                                    <div className="order-2 min-w-0 sm:order-1">
+                                        <BookingActionButton action={action} />
+                                    </div>
                                 )}
-                            >
-                                <BookingActionButton action={action} />
-                            </div>
-                        )}
-                        {reviewHref && (
-                            <div className="shrink-0">
-                                <BookingReviewButton href={reviewHref} />
-                            </div>
-                        )}
-                        {documentHref && (
-                            <div className="shrink-0">
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <Button
-                                            asChild
-                                            variant="outline"
-                                            aria-label="Complete Documents"
-                                            className="h-8 min-w-8 gap-1.5 rounded-lg px-2 text-[11px] sm:w-8 sm:flex-none sm:px-0"
-                                        >
-                                            <Link href={documentHref}>
-                                                <ClipboardCheckIcon className="size-4" />
-                                                <span className="truncate font-semibold sm:sr-only">
-                                                    Complete Documents
-                                                </span>
-                                            </Link>
-                                        </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                        Complete missing passport and visa
-                                        documents.
-                                    </TooltipContent>
-                                </Tooltip>
-                            </div>
-                        )}
-                        {booking.document_url && (
-                            <div className="shrink-0">
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <Button
-                                            asChild
-                                            variant="outline"
-                                            aria-label="View trip PDF"
-                                            className="h-8 min-w-8 gap-1.5 rounded-lg px-2 text-[11px] sm:w-8 sm:flex-none sm:px-0"
-                                        >
-                                            <a
-                                                href={booking.document_url}
-                                                target="_blank"
-                                                rel="noreferrer"
-                                            >
-                                                <IconPdf size={18} />
-                                                <span className="truncate font-semibold sm:sr-only">
-                                                    Itinerary
-                                                </span>
-                                            </a>
-                                        </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                        View itinerary and other trip
-                                        information.
-                                    </TooltipContent>
-                                </Tooltip>
-                            </div>
-                        )}
-                        {shouldShowProformaButton && (
-                            <div className="shrink-0">
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <span className="inline-flex">
-                                            <Button
-                                                type="button"
-                                                variant="outline"
-                                                aria-label="Print Proforma Invoice"
-                                                onClick={() =>
-                                                    window.open(
-                                                        `/mybookings/${booking.id}/invoice`,
-                                                        '_blank',
-                                                        'noopener,noreferrer',
-                                                    )
-                                                }
-                                                className="h-8 min-w-8 gap-1.5 rounded-lg px-2 text-[11px] sm:w-8 sm:flex-none sm:px-0"
-                                            >
-                                                <FileTextIcon className="size-4" />
-                                                <span className="truncate font-semibold sm:sr-only">
-                                                    Proforma
-                                                </span>
-                                            </Button>
-                                        </span>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                        Print Proforma Invoice
-                                    </TooltipContent>
-                                </Tooltip>
-                            </div>
+                            </>
+                        ) : (
+                            <>
+                                {action && (
+                                    <BookingActionButton action={action} />
+                                )}
+                                <BookingSecondaryActions
+                                    booking={booking}
+                                    reviewHref={reviewHref}
+                                    documentHref={documentHref}
+                                    shouldShowProformaButton={
+                                        shouldShowProformaButton
+                                    }
+                                />
+                            </>
                         )}
                     </div>
                 </div>
@@ -914,8 +863,8 @@ function BookingActionButton({ action }: { action: BookingAction }) {
     const Icon = action.icon;
     const content = (
         <>
-            <Icon className="size-4" />
-            <span className="truncate">{action.label}</span>
+            <Icon className="hidden size-4 sm:block" />
+            <span className="min-w-0 truncate">{action.label}</span>
         </>
     );
 
@@ -923,7 +872,7 @@ function BookingActionButton({ action }: { action: BookingAction }) {
         return (
             <Button
                 asChild
-                className="h-8 min-w-24 gap-1.5 rounded-lg px-2.5 text-[11px] sm:min-w-28 sm:flex-none"
+                className="h-9 w-full min-w-0 gap-1.5 rounded-lg px-2.5 text-[11px] sm:h-8 sm:w-auto sm:min-w-28 sm:flex-none"
             >
                 <Link href={action.href}>{content}</Link>
             </Button>
@@ -933,7 +882,7 @@ function BookingActionButton({ action }: { action: BookingAction }) {
     return (
         <Button
             type="button"
-            className="h-8 min-w-24 gap-1.5 rounded-lg px-2.5 text-[11px] sm:min-w-28 sm:flex-none"
+            className="h-9 w-full min-w-0 gap-1.5 rounded-lg px-2.5 text-[11px] sm:h-8 sm:w-auto sm:min-w-28 sm:flex-none"
             onClick={action.onClick}
         >
             {content}
@@ -941,26 +890,151 @@ function BookingActionButton({ action }: { action: BookingAction }) {
     );
 }
 
-function BookingReviewButton({ href }: { href: string }) {
+function BookingSecondaryActions({
+    booking,
+    reviewHref,
+    documentHref,
+    shouldShowProformaButton,
+}: {
+    booking: BookingItem;
+    reviewHref: string | null;
+    documentHref: string | null;
+    shouldShowProformaButton: boolean;
+}) {
+    return (
+        <>
+            {reviewHref && <BookingReviewButton href={reviewHref} />}
+            {documentHref && (
+                <BookingSecondaryLinkButton
+                    href={documentHref}
+                    label="Documents"
+                    ariaLabel="Complete Documents"
+                    tooltip="Complete missing passport and visa documents"
+                    icon={
+                        <ClipboardCheckIcon className="hidden size-4 sm:block" />
+                    }
+                />
+            )}
+            {booking.document_url && (
+                <BookingSecondaryLinkButton
+                    href={booking.document_url}
+                    label="Itinerary"
+                    ariaLabel="View trip PDF"
+                    tooltip="View itinerary and other trip information"
+                    external
+                    icon={<IconPdf className="hidden size-4 sm:block" />}
+                />
+            )}
+            {shouldShowProformaButton && (
+                <BookingSecondaryButton
+                    label="Proforma Invoice"
+                    ariaLabel="Print Proforma Invoice"
+                    tooltip="Print Proforma Invoice"
+                    icon={<FileTextIcon className="hidden size-4 sm:block" />}
+                    onClick={() =>
+                        window.open(
+                            `/mybookings/${booking.id}/invoice`,
+                            '_blank',
+                            'noopener,noreferrer',
+                        )
+                    }
+                />
+            )}
+        </>
+    );
+}
+
+function BookingSecondaryLinkButton({
+    href,
+    label,
+    ariaLabel,
+    tooltip,
+    icon,
+    external = false,
+}: {
+    href: string;
+    label: string;
+    ariaLabel: string;
+    tooltip: string;
+    icon: ReactNode;
+    external?: boolean;
+}) {
     return (
         <Tooltip>
             <TooltipTrigger asChild>
                 <Button
                     asChild
                     variant="outline"
-                    aria-label="View Booking"
-                    className="h-8 min-w-8 gap-1.5 rounded-lg px-2 text-[11px] sm:w-8 sm:flex-none sm:px-0"
+                    aria-label={ariaLabel}
+                    className="h-9 w-full min-w-0 gap-1.5 rounded-lg px-2 text-[11px] sm:h-8 sm:w-8 sm:flex-none sm:px-0"
                 >
-                    <Link href={href}>
-                        <EyeIcon className="size-4" />
-                        <span className="truncate font-semibold sm:sr-only">
-                            View Booking
-                        </span>
-                    </Link>
+                    {external ? (
+                        <a href={href} target="_blank" rel="noreferrer">
+                            {icon}
+                            <span className="min-w-0 truncate font-semibold sm:sr-only">
+                                {label}
+                            </span>
+                        </a>
+                    ) : (
+                        <Link href={href}>
+                            {icon}
+                            <span className="min-w-0 truncate font-semibold sm:sr-only">
+                                {label}
+                            </span>
+                        </Link>
+                    )}
                 </Button>
             </TooltipTrigger>
-            <TooltipContent>View booking details.</TooltipContent>
+            <TooltipContent>{tooltip}</TooltipContent>
         </Tooltip>
+    );
+}
+
+function BookingSecondaryButton({
+    label,
+    ariaLabel,
+    tooltip,
+    icon,
+    onClick,
+}: {
+    label: string;
+    ariaLabel: string;
+    tooltip: string;
+    icon: ReactNode;
+    onClick: () => void;
+}) {
+    return (
+        <Tooltip>
+            <TooltipTrigger asChild>
+                <span className="inline-flex w-full min-w-0 sm:w-auto">
+                    <Button
+                        type="button"
+                        variant="outline"
+                        aria-label={ariaLabel}
+                        onClick={onClick}
+                        className="h-9 w-full min-w-0 gap-1.5 rounded-lg px-2 text-[11px] sm:h-8 sm:w-8 sm:flex-none sm:px-0"
+                    >
+                        {icon}
+                        <span className="min-w-0 truncate font-semibold sm:sr-only">
+                            {label}
+                        </span>
+                    </Button>
+                </span>
+            </TooltipTrigger>
+            <TooltipContent>{tooltip}</TooltipContent>
+        </Tooltip>
+    );
+}
+
+function BookingReviewButton({ href }: { href: string }) {
+    return (
+        <BookingSecondaryLinkButton
+            href={href}
+            label="View Booking Detail"
+            ariaLabel="View Booking Detail"
+            tooltip="View booking detail"
+            icon={<EyeIcon className="hidden size-4 sm:block" />}
+        />
     );
 }
 
@@ -976,13 +1050,13 @@ function AmountStackItem({
     valueClassName?: string;
 }) {
     return (
-        <div className="flex min-w-0 items-baseline justify-between gap-3">
-            <p className="min-w-0 text-[11px] font-medium text-muted-foreground">
+        <div className="flex min-w-0 flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+            <p className="min-w-0 shrink-0 text-[11px] font-medium text-muted-foreground">
                 {label}
             </p>
             <p
                 className={cn(
-                    'shrink-0 text-right font-bold leading-5 text-foreground',
+                    'min-w-0 flex-1 text-right font-bold leading-5 text-foreground break-words [overflow-wrap:anywhere]',
                     emphasis ? 'text-xl leading-6' : 'text-sm',
                     valueClassName,
                 )}
@@ -1003,7 +1077,7 @@ function DeadlineBadge({
     return (
         <span
             className={cn(
-                'inline-flex max-w-full items-center rounded-full px-2.5 py-1 text-left text-[11px] font-medium leading-4 break-words',
+                'inline-flex max-w-full items-center rounded-full px-2.5 py-1 text-left text-[11px] font-medium leading-4 break-words [overflow-wrap:anywhere]',
                 tone === 'payment' &&
                     'bg-red-50 text-red-700 ring-1 ring-red-100 dark:bg-red-950/30 dark:text-red-300 dark:ring-red-900/40',
                 tone === 'document' &&
@@ -1035,7 +1109,7 @@ function BookingReferenceItem({
             </p>
             <p
                 className={cn(
-                    'mt-0.5 min-w-0 text-xs font-semibold text-foreground/85',
+                    'mt-0.5 min-w-0 text-xs font-semibold text-foreground/85 break-words [overflow-wrap:anywhere]',
                     valueClassName,
                 )}
             >
@@ -1052,7 +1126,7 @@ function TripMetadataItem({
     wrap = 'normal',
 }: MetadataItem) {
     return (
-        <div className="flex w-fit max-w-full min-w-0 flex-col items-start gap-1.5 rounded-xl bg-muted/50 px-3 py-2.5">
+        <div className="flex w-full max-w-full min-w-0 flex-col items-start gap-1.5 rounded-xl bg-muted/50 px-3 py-2.5 sm:w-fit">
             <span className="rounded-md bg-background/85 px-1.5 py-0.5 text-[9px] font-semibold uppercase leading-none tracking-[0.08em] text-muted-foreground ring-1 ring-border/70">
                 {caption}
             </span>
@@ -1060,7 +1134,7 @@ function TripMetadataItem({
                 title={label}
                 className={cn(
                     'min-w-0 max-w-full text-sm font-semibold leading-5 text-foreground break-words [overflow-wrap:anywhere]',
-                    caption === 'Destination' && 'max-w-sm',
+                    caption === 'Destination' && 'sm:max-w-sm',
                     wrap === 'break' && 'break-all',
                     valueClassName,
                 )}

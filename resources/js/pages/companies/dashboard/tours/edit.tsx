@@ -1478,7 +1478,7 @@ export default function Page({ tour }: Props) {
                                 <div className="overflow-hidden rounded-3xl border bg-card shadow-sm">
                                     <div className="border-b bg-muted/40 px-6 py-4">
                                         <h2 className="text-lg font-semibold">
-                                            Tour Cover
+                                            {data.code} {data.name}
                                         </h2>
 
                                         <p className="text-sm text-muted-foreground">
@@ -1513,14 +1513,23 @@ export default function Page({ tour }: Props) {
                                 {/* Code */}
                                 <div className="rounded-3xl border bg-card shadow-sm overflow-hidden">
                                     {/* HEADER */}
-                                    <div className="border-b bg-muted/40 px-6 py-4">
-                                        <h2 className="text-lg font-semibold">
-                                            Basic Information
-                                        </h2>
+                                    <div className="flex items-start justify-between border-b bg-muted/40 px-6 py-4">
+                                        <div>
+                                            <h2 className="text-lg font-semibold">
+                                                Basic Information
+                                            </h2>
 
-                                        <p className="text-sm text-muted-foreground">
-                                            Main information about your tour
-                                        </p>
+                                            <p className="text-sm text-muted-foreground">
+                                                Main information about your tour
+                                            </p>
+                                        </div>
+
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-sm font-medium">
+                                                Input By :{' '}
+                                                {tour.user?.name || '-'}
+                                            </span>
+                                        </div>
                                     </div>
                                     {/* BODY */}
                                     <div className="grid grid-cols-1 gap-5 p-6 md:grid-cols-2">
@@ -2010,21 +2019,6 @@ export default function Page({ tour }: Props) {
                                         </div>
                                     </div>
                                 </div>
-
-                                {/* Created By */}
-                                <div className="grid gap-2">
-                                    <Label>Input By</Label>
-
-                                    <div className="rounded-xl border bg-muted/30 px-4 py-3">
-                                        <div className="font-medium">
-                                            {tour.user?.name || '-'}
-                                        </div>
-
-                                        {/* <div className="text-sm text-muted-foreground">
-                                            User ID: {tour.user?.id || '-'}
-                                        </div> */}
-                                    </div>
-                                </div>
                             </div>
                             <div className="flex justify-start pt-6 border-t">
                                 <Button type="submit" disabled={processing}>
@@ -2038,8 +2032,14 @@ export default function Page({ tour }: Props) {
 
                         <TabsContent value="schedule">
                             <div className="space-y-4">
-                                <div className="flex flex-col gap-3 px-4 py-2 md:flex-row md:items-center md:justify-end">
-                                    <div className="flex items-center gap-3">
+                                <div className="flex flex-col gap-3 px-4 py-2 md:flex-row md:items-center md:justify-between">
+                                    <div>
+                                        <h2 className="text-lg font-semibold">
+                                            {data.code} {data.name}
+                                        </h2>
+                                    </div>
+
+                                    <div className="flex justify-end">
                                         <Button
                                             type="button"
                                             onClick={addSchedule}
@@ -2258,7 +2258,8 @@ export default function Page({ tour }: Props) {
                                                                                         {item
                                                                                             .prices
                                                                                             ?.length ??
-                                                                                            0}
+                                                                                            0}{' '}
+                                                                                        item
                                                                                     </Badge>
                                                                                 </div>
 
@@ -2445,7 +2446,7 @@ export default function Page({ tour }: Props) {
                                                                                                                           .value
                                                                                                                     : ''
                                                                                                             }
-                                                                                                            placeholder="Promotion %"
+                                                                                                            placeholder="Promotion"
                                                                                                             onChange={(
                                                                                                                 e,
                                                                                                             ) => {
@@ -3312,6 +3313,9 @@ export default function Page({ tour }: Props) {
 
                         <TabsContent value="availability">
                             <div className="space-y-4">
+                                <h2 className="text-lg font-semibold">
+                                    {data.code} {data.name}
+                                </h2>
                                 <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2">
                                     {/* LEFT */}
                                     <div className="flex flex-wrap items-center gap-3">
@@ -4115,6 +4119,9 @@ export default function Page({ tour }: Props) {
                         {/* ================= TAB 4 — ADD ONS ================= */}
                         <TabsContent value="addons">
                             <div className="space-y-4">
+                                <h2 className="text-lg font-semibold">
+                                    {data.code} {data.name}
+                                </h2>
                                 <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2">
                                     {/* LEFT */}
                                     <div className="flex flex-wrap items-center gap-2">
