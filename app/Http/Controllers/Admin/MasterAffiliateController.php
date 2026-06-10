@@ -2,89 +2,61 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Admin\Concerns\BulkUpdatesAffiliateProfiles;
+use App\Http\Controllers\Admin\Concerns\QueriesAdminAffiliateProfiles;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\BulkUpdateAffiliateProfileRequest;
+use App\Http\Requests\Admin\IndexMasterAffiliateRequest;
 use App\Models\AffiliateProfile;
-use App\Models\User;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class MasterAffiliateController extends Controller
 {
-    public function index(): Response
-    {
-        $data = AffiliateProfile::query()
-            ->with(['user', 'upline.affiliateProfile'])
-            ->whereIn('tier', ['master_affiliate', 'master-affiliate'])
-            ->orderByDesc('created_at')
-            ->get()
-            ->map(function (AffiliateProfile $profile): array {
-                $invitedAffiliates = AffiliateProfile::query()
-                    ->with('user')
-                    ->where('tier', 'affiliate')
-                    ->where('upline_id', $profile->user_id)
-                    ->orderByDesc('created_at')
-                    ->get()
-                    ->map(fn (AffiliateProfile $affiliate): array => [
-                        'id' => $affiliate->id,
-                        'name' => $affiliate->user?->name ?? '-',
-                        'email' => $affiliate->user?->email ?? '-',
-                        'referral_code' => $affiliate->referral_code,
-                        'status' => $affiliate->status,
-                        'is_inactive' => $this->isInactive($affiliate, $affiliate->user),
-                    ]);
+    use BulkUpdatesAffiliateProfiles;
+    use QueriesAdminAffiliateProfiles;
 
-                return [
-                    'id' => $profile->id,
-                    'name' => $profile->user?->name ?? '-',
-                    'email' => $profile->user?->email ?? '-',
-                    'phone' => $profile->phone ?: $profile->user?->phone,
-                    'referral_code' => $profile->referral_code,
-                    'status' => $profile->status,
-                    'user_status' => $this->enumValue($profile->user?->status),
-                    'is_inactive' => $this->isInactive($profile, $profile->user),
-                    'partner' => $this->networkPerson($profile->upline, $profile->upline?->affiliateProfile),
-                    'invited_affiliates_count' => $invitedAffiliates->count(),
-                    'invited_affiliates' => $invitedAffiliates,
-                    'created_at' => $profile->created_at,
-                ];
-            });
+    public function index(IndexMasterAffiliateRequest $request): Response
+    {
+        $validated = $request->validated();
+
+        $query = AffiliateProfile::query()
+            ->with([
+                'user',
+                'upline.affiliateProfile',
+                'downlines' => fn ($downlineQuery) => $downlineQuery
+                    ->where('tier', 'affiliate')
+                    ->with('user')
+                    ->orderByDesc('created_at'),
+            ])
+            ->whereIn('tier', ['master_affiliate', 'master-affiliate'])
+            ->withCount([
+                'downlines as invited_affiliates_count' => fn ($downlineQuery) => $downlineQuery->where('tier', 'affiliate'),
+            ]);
+
+        $this->applyAffiliateProfileIndexFilters($query, $validated);
+
+        $data = $query->paginate($validated['per_page'] ?? 10);
+
+        $data->through(fn (AffiliateProfile $profile): array => $this->masterAffiliateRowItem($profile));
 
         return Inertia::render('admin/database/master-affiliates/index', [
-            'data' => [
-                'data' => $data,
-                'total' => $data->count(),
-            ],
+            'data' => $data,
         ]);
     }
 
-    private function networkPerson(?User $user, ?AffiliateProfile $profile): ?array
+    public function bulkUpdate(BulkUpdateAffiliateProfileRequest $request)
     {
-        if (! $user || ! $profile) {
-            return null;
-        }
+        $validated = $request->validated();
 
-        return [
-            'id' => $user->id,
-            'name' => $user->name,
-            'email' => $user->email,
-            'referral_code' => $profile->referral_code,
-            'status' => $profile->status,
-            'user_status' => $this->enumValue($user->status),
-            'is_inactive' => $this->isInactive($profile, $user),
-        ];
+        $this->bulkUpdateAffiliateProfiles($validated);
+
+        return back()->with('success', 'Master affiliates updated successfully.');
     }
 
-    private function isInactive(?AffiliateProfile $profile, ?User $user): bool
+    public function exportAsCsv(Request $request)
     {
-        if (! $profile || ! $user) {
-            return false;
-        }
-
-        return $profile->status !== 'approved' || $this->enumValue($user->status) !== 'active';
-    }
-
-    private function enumValue(mixed $value): mixed
-    {
-        return $value instanceof \BackedEnum ? $value->value : $value;
+        return $this->exportAffiliateProfilesCsv($request, 'master-affiliates.csv');
     }
 }

@@ -5,82 +5,57 @@ import AdminDashboardLayout from '@/components/layouts/admin-dashboard';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useDataTable } from '@/hooks/use-data-table';
-import type { Column, ColumnDef } from '@tanstack/react-table';
+import type { ColumnDef } from '@tanstack/react-table';
 import dayjs from 'dayjs';
-import { Ban, Text } from 'lucide-react';
+import { Ban, CalendarIcon, CircleDashedIcon, Text } from 'lucide-react';
 import { useMemo } from 'react';
+import {
+    AffiliateRowActions,
+    AffiliateStatusBadge,
+} from '../shared/affiliate-row-actions';
+import type {
+    AdminAffiliateRow,
+    NetworkPerson,
+    PaginatedAffiliates,
+} from '../shared/affiliate-types';
+import { AffiliatesTableActionBar } from '../shared/affiliates-table-action-bar';
 
-type NetworkPerson = {
-    id: number;
-    name?: string | null;
-    email?: string | null;
-    referral_code?: string | null;
-    status?: string | null;
-    user_status?: string | null;
-    is_inactive?: boolean;
-};
+const STATUS_OPTIONS = [
+    { label: 'Pending', value: 'pending' },
+    { label: 'Approved', value: 'approved' },
+    { label: 'Rejected', value: 'rejected' },
+    { label: 'Suspended', value: 'suspended' },
+];
 
-type AffiliateRow = {
-    id: number;
-    name?: string | null;
-    email?: string | null;
-    phone?: string | null;
-    referral_code?: string | null;
-    status?: string | null;
-    user_status?: string | null;
-    is_inactive?: boolean;
-    master_affiliate?: NetworkPerson | null;
-    partner?: NetworkPerson | null;
-    invited_agents_count: number;
-    subscribed_agents_count: number;
-    created_at?: string | null;
-};
-
-type PageProps = {
-    data: {
-        data: AffiliateRow[];
-        total: number;
-    };
-};
-
-function InactiveIcon({ inactive }: { inactive?: boolean }) {
-    if (!inactive) {
+function InactiveIcon({ person }: { person?: NetworkPerson | null }) {
+    if (!person?.is_inactive) {
         return null;
     }
 
-    return <Ban className="h-3.5 w-3.5 text-rose-500" aria-hidden="true" />;
+    return <Ban className="size-3.5 text-rose-500" aria-hidden="true" />;
 }
 
-function PersonCell({ person }: { person?: NetworkPerson | null }) {
+function PersonName({ person }: { person?: NetworkPerson | null }) {
     if (!person) {
-        return <span className="text-sm text-slate-400">-</span>;
+        return <span className="text-sm text-muted-foreground">—</span>;
     }
 
     return (
-        <div className="flex min-w-[150px] items-center gap-2">
-            <span className="truncate text-sm font-medium text-slate-900 dark:text-slate-100">
-                {person.name || '-'}
+        <div className="flex min-w-[120px] items-center gap-2">
+            <span className="truncate text-sm font-medium">
+                {person.name || '—'}
             </span>
-            <InactiveIcon inactive={person.is_inactive} />
+            <InactiveIcon person={person} />
         </div>
     );
 }
 
-function StatusBadge({ status }: { status?: string | null }) {
-    const value = status || 'pending';
-
-    return (
-        <Badge
-            variant={value === 'approved' ? 'secondary' : 'outline'}
-            className="capitalize"
-        >
-            {value.replace(/_/g, ' ')}
-        </Badge>
-    );
-}
+type PageProps = {
+    data: PaginatedAffiliates;
+};
 
 export default function Page({ data }: PageProps) {
-    const columns = useMemo<ColumnDef<AffiliateRow>[]>(
+    const columns = useMemo<ColumnDef<AdminAffiliateRow>[]>(
         () => [
             {
                 id: 'select',
@@ -108,34 +83,35 @@ export default function Page({ data }: PageProps) {
                 enableHiding: false,
             },
             {
-                id: 'affiliate',
+                id: 'name',
                 accessorKey: 'name',
-                header: ({
-                    column,
-                }: {
-                    column: Column<AffiliateRow, unknown>;
-                }) => (
+                header: ({ column }) => (
                     <DataTableColumnHeader column={column} label="Affiliate" />
                 ),
                 cell: ({ row }) => (
                     <div className="min-w-[210px] space-y-1">
                         <div className="flex items-center gap-2">
-                            <span className="font-medium text-slate-900 dark:text-slate-100">
-                                {row.original.name || '-'}
+                            <span className="font-medium">
+                                {row.original.name || '—'}
                             </span>
-                            <InactiveIcon inactive={row.original.is_inactive} />
+                            {row.original.is_inactive ? (
+                                <Ban
+                                    className="size-3.5 text-rose-500"
+                                    aria-hidden="true"
+                                />
+                            ) : null}
                         </div>
-                        <div className="truncate text-xs text-slate-500">
-                            {row.original.email || '-'}
+                        <div className="truncate text-xs text-muted-foreground">
+                            {row.original.email || '—'}
                         </div>
-                        {row.original.referral_code && (
+                        {row.original.referral_code ? (
                             <Badge
-                                variant="secondary"
+                                variant="outline"
                                 className="font-mono text-[11px]"
                             >
                                 {row.original.referral_code}
                             </Badge>
-                        )}
+                        ) : null}
                     </div>
                 ),
                 meta: {
@@ -149,33 +125,27 @@ export default function Page({ data }: PageProps) {
             {
                 id: 'master_affiliate',
                 accessorFn: (row) => row.master_affiliate?.name || '',
-                header: ({
-                    column,
-                }: {
-                    column: Column<AffiliateRow, unknown>;
-                }) => <DataTableColumnHeader column={column} label="MA" />,
-                cell: ({ row }) => (
-                    <PersonCell person={row.original.master_affiliate} />
+                header: ({ column }) => (
+                    <DataTableColumnHeader column={column} label="MA" />
                 ),
+                cell: ({ row }) => (
+                    <PersonName person={row.original.master_affiliate} />
+                ),
+                enableSorting: false,
             },
             {
                 id: 'partner',
                 accessorFn: (row) => row.partner?.name || '',
-                header: ({
-                    column,
-                }: {
-                    column: Column<AffiliateRow, unknown>;
-                }) => <DataTableColumnHeader column={column} label="Partner" />,
-                cell: ({ row }) => <PersonCell person={row.original.partner} />,
+                header: ({ column }) => (
+                    <DataTableColumnHeader column={column} label="Partner" />
+                ),
+                cell: ({ row }) => <PersonName person={row.original.partner} />,
+                enableSorting: false,
             },
             {
                 id: 'invited_agents_count',
                 accessorKey: 'invited_agents_count',
-                header: ({
-                    column,
-                }: {
-                    column: Column<AffiliateRow, unknown>;
-                }) => (
+                header: ({ column }) => (
                     <DataTableColumnHeader
                         column={column}
                         label="Invited Agents"
@@ -190,18 +160,14 @@ export default function Page({ data }: PageProps) {
             {
                 id: 'subscribed_agents_count',
                 accessorKey: 'subscribed_agents_count',
-                header: ({
-                    column,
-                }: {
-                    column: Column<AffiliateRow, unknown>;
-                }) => (
+                header: ({ column }) => (
                     <DataTableColumnHeader
                         column={column}
                         label="Subscribed Agents"
                     />
                 ),
                 cell: ({ cell }) => (
-                    <div className="min-w-[130px] text-sm font-medium text-emerald-700">
+                    <div className="min-w-[130px] text-sm font-medium text-emerald-700 dark:text-emerald-300">
                         {cell.getValue<number>()}
                     </div>
                 ),
@@ -209,52 +175,69 @@ export default function Page({ data }: PageProps) {
             {
                 id: 'status',
                 accessorKey: 'status',
-                header: ({
-                    column,
-                }: {
-                    column: Column<AffiliateRow, unknown>;
-                }) => <DataTableColumnHeader column={column} label="Status" />,
-                cell: ({ row }) => <StatusBadge status={row.original.status} />,
+                header: ({ column }) => (
+                    <DataTableColumnHeader column={column} label="Status" />
+                ),
+                cell: ({ row }) => (
+                    <AffiliateStatusBadge status={row.original.status} />
+                ),
+                meta: {
+                    label: 'Status',
+                    variant: 'multiSelect',
+                    options: STATUS_OPTIONS,
+                    icon: CircleDashedIcon,
+                },
+                enableColumnFilter: true,
             },
             {
                 id: 'created_at',
                 accessorKey: 'created_at',
-                header: ({
-                    column,
-                }: {
-                    column: Column<AffiliateRow, unknown>;
-                }) => (
+                header: ({ column }) => (
                     <DataTableColumnHeader column={column} label="Join Date" />
                 ),
                 cell: ({ cell }) => {
                     const createdAt = cell.getValue<string | null>();
 
                     return (
-                        <div className="min-w-[110px] text-sm text-slate-700 dark:text-slate-300">
+                        <div className="text-sm">
                             {createdAt
                                 ? dayjs(createdAt).format('DD MMM YYYY')
-                                : '-'}
+                                : '—'}
                         </div>
                     );
                 },
+                meta: {
+                    label: 'Join Date',
+                    placeholder: 'Search join date...',
+                    variant: 'dateRange',
+                    icon: CalendarIcon,
+                },
+                enableColumnFilter: true,
+            },
+            {
+                id: 'actions',
+                cell: ({ row }) => (
+                    <AffiliateRowActions affiliate={row.original} />
+                ),
+                size: 40,
             },
         ],
         [],
     );
 
     const { table } = useDataTable({
-        enableClientFiltering: true,
         queryKeys: {
             perPage: 'per_page',
             page: 'page',
         },
         data: data.data,
         columns,
-        pageCount: 1,
+        pageCount: data.last_page,
         rowCount: data.total,
         shallow: false,
         initialState: {
             sorting: [{ id: 'created_at', desc: true }],
+            columnPinning: { right: ['actions'] },
         },
         getRowId: (row) => row.id.toString(),
     });
@@ -262,17 +245,25 @@ export default function Page({ data }: PageProps) {
     return (
         <AdminDashboardLayout
             containerClassName="p-4"
+            activeMenuIds={['database', 'database.affiliates']}
+            openMenuIds={['database']}
             breadcrumb={[{ title: 'Database' }, { title: 'Affiliate' }]}
         >
             <DataTable
                 table={table}
                 renderEmptyState={
-                    <div className="py-8 text-sm text-slate-500">
+                    <div className="py-8 text-sm text-muted-foreground">
                         No affiliates found.
                     </div>
                 }
+                actionBar={
+                    <AffiliatesTableActionBar
+                        table={table}
+                        entity="affiliate"
+                    />
+                }
             >
-                <DataTableToolbar table={table} searchMode="global" />
+                <DataTableToolbar table={table} />
             </DataTable>
         </AdminDashboardLayout>
     );

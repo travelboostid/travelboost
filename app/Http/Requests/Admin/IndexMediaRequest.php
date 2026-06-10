@@ -48,11 +48,8 @@ class IndexMediaRequest extends FormRequest
                     $allowed = [
                         'id',
                         'name',
-                        'email',
-                        'username',
-                        'phone',
-                        'address',
-                        'status',
+                        'type',
+                        'subtype',
                         'created_at',
                     ];
 

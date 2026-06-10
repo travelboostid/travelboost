@@ -9,14 +9,22 @@ import {
     AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
-
+import { DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { destroy } from '@/routes/admin/database/medias';
 import { useForm } from '@inertiajs/react';
 import { TrashIcon } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
-export default function DeleteButton({ data }: { data: any }) {
+type DeleteButtonProps = {
+    data: { id: number };
+    variant?: 'icon' | 'menu';
+};
+
+export default function DeleteButton({
+    data,
+    variant = 'icon',
+}: DeleteButtonProps) {
     const [open, setOpen] = useState(false);
     const form = useForm();
 
@@ -34,11 +42,24 @@ export default function DeleteButton({ data }: { data: any }) {
 
     return (
         <AlertDialog open={open} onOpenChange={setOpen}>
-            <AlertDialogTrigger asChild>
-                <Button size="icon" variant="destructive">
-                    <TrashIcon />
-                </Button>
-            </AlertDialogTrigger>
+            {variant === 'icon' ? (
+                <AlertDialogTrigger asChild>
+                    <Button size="icon" variant="destructive">
+                        <TrashIcon />
+                    </Button>
+                </AlertDialogTrigger>
+            ) : (
+                <DropdownMenuItem
+                    className="cursor-pointer text-destructive focus:text-destructive"
+                    onSelect={(event) => {
+                        event.preventDefault();
+                        setOpen(true);
+                    }}
+                >
+                    <TrashIcon className="size-4" />
+                    Delete
+                </DropdownMenuItem>
+            )}
             <AlertDialogContent>
                 <AlertDialogHeader>
                     <AlertDialogTitle>
@@ -56,10 +77,11 @@ export default function DeleteButton({ data }: { data: any }) {
                     </AlertDialogCancel>
                     <Button
                         type="button"
+                        variant="destructive"
                         onClick={handleSubmit}
                         disabled={form.processing}
                     >
-                        Yes
+                        Delete
                     </Button>
                 </AlertDialogFooter>
             </AlertDialogContent>

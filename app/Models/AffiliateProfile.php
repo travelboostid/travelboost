@@ -2,8 +2,10 @@
 
 namespace App\Models;
 
+use App\Enums\CompanyType;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class AffiliateProfile extends Model
 {
@@ -54,6 +56,20 @@ class AffiliateProfile extends Model
     public function downlines()
     {
         return $this->hasMany(AffiliateProfile::class, 'upline_id', 'user_id');
+    }
+
+    public function invitedAgents(): HasMany
+    {
+        return $this->hasMany(Company::class, 'referred_by', 'user_id')
+            ->where('type', CompanyType::AGENT);
+    }
+
+    public function subscribedAgents(): HasMany
+    {
+        return $this->invitedAgents()
+            ->whereHas('agentSubscription', fn ($query) => $query
+                ->whereNotNull('started_at')
+                ->whereNotNull('ended_at'));
     }
 
     public function photo()
