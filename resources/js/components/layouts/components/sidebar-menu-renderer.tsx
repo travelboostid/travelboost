@@ -40,6 +40,7 @@ export type MenuItemBase = {
     target?: HTMLAttributeAnchorTarget;
     icon?: LucideIcon;
     disabled?: boolean;
+    badgeCount?: number;
 };
 
 export type MenuItem =
@@ -76,6 +77,17 @@ export function SidebarMenuRenderer({
             activeState[item.id] ||
             item.items?.some((child) => isItemActive(child)),
         );
+    const renderBadge = (count?: number) => {
+        if (!count || count <= 0) {
+            return null;
+        }
+
+        return (
+            <span className="ml-auto inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full border border-rose-200 bg-rose-50 px-1.5 text-[0.68rem] font-semibold leading-none text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/40 dark:text-rose-300">
+                {count > 99 ? '99+' : count}
+            </span>
+        );
+    };
     const menuButtonClassName =
         'h-9 rounded-2xl px-2 text-[0.9rem] font-medium text-slate-600 transition-all hover:bg-slate-50 hover:text-slate-950 hover:shadow-sm data-[active=true]:bg-primary/10 data-[active=true]:font-semibold data-[active=true]:text-primary data-[active=true]:shadow-sm data-[active=true]:shadow-primary/10 data-[active=true]:[&>svg]:text-primary dark:text-slate-300 dark:hover:bg-slate-900 dark:hover:text-white dark:data-[active=true]:bg-primary/20 dark:data-[active=true]:text-primary [&>svg]:size-[1.12rem] group-data-[collapsible=icon]:[&>svg]:size-5';
     const submenuButtonClassName =
@@ -122,6 +134,7 @@ export function SidebarMenuRenderer({
                     <div className="flex w-full items-center gap-2 opacity-50 cursor-not-allowed pointer-events-none">
                         {item.icon && <item.icon />}
                         <span className="flex-1">{item.title}</span>
+                        {renderBadge(item.badgeCount)}
                     </div>
                 </Button>
             );
@@ -152,6 +165,7 @@ export function SidebarMenuRenderer({
                             <item.icon className="text-slate-500 transition-colors dark:text-slate-400" />
                         )}
                         <span className="flex-1">{item.title}</span>
+                        {renderBadge(item.badgeCount)}
 
                         {item.target === '_blank' && (
                             <ExternalLinkIcon className="size-3 text-muted-foreground" />
@@ -176,6 +190,7 @@ export function SidebarMenuRenderer({
                 >
                     {item.icon && <item.icon className="text-slate-500" />}
                     <span className="flex-1">{item.title}</span>
+                    {renderBadge(item.badgeCount)}
                 </button>
             </Button>
         );
@@ -192,6 +207,7 @@ export function SidebarMenuRenderer({
                         <item.icon className="text-slate-500 dark:text-slate-400" />
                     )}
                     <span>{item.title}</span>
+                    {renderBadge(item.badgeCount)}
                 </SidebarMenuButton>
             </DropdownMenuTrigger>
             <DropdownMenuContent
@@ -237,7 +253,10 @@ export function SidebarMenuRenderer({
                                 {sub.icon && (
                                     <sub.icon className="size-4 text-slate-500 dark:text-slate-400" />
                                 )}
-                                <span>{sub.title}</span>
+                                <span className="min-w-0 flex-1 truncate">
+                                    {sub.title}
+                                </span>
+                                {renderBadge(sub.badgeCount)}
                                 {sub.target === '_blank' && (
                                     <ExternalLinkIcon className="ml-auto size-3 text-muted-foreground" />
                                 )}
@@ -247,7 +266,10 @@ export function SidebarMenuRenderer({
                                 {sub.icon && (
                                     <sub.icon className="size-4 text-slate-500 dark:text-slate-400" />
                                 )}
-                                <span>{sub.title}</span>
+                                <span className="min-w-0 flex-1 truncate">
+                                    {sub.title}
+                                </span>
+                                {renderBadge(sub.badgeCount)}
                             </div>
                         )}
                     </DropdownMenuItem>
@@ -359,6 +381,7 @@ export function SidebarMenuRenderer({
                                             <item.icon className="text-slate-500 dark:text-slate-400" />
                                         )}
                                         <span>{item.title}</span>
+                                        {renderBadge(item.badgeCount)}
 
                                         <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
                                     </SidebarMenuButton>

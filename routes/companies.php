@@ -159,9 +159,9 @@ Route::prefix('companies')->middleware(['can:access-company-pages', 'use-analyti
         Route::post('bookings/{booking}/online-payment', [DashboardBookingController::class, 'storeOnlinePayment'])->name('bookings.online-payment');
         Route::post('bookings/{booking}/online-payment/{payment}/confirm', [DashboardBookingController::class, 'confirmOnlinePayment'])->name('bookings.online-payment.confirm');
         Route::post('bookings/{booking}/reorder', [BookingIndexController::class, 'reorder'])->name('bookings.reorder');
-        Route::get('booking-action-requests', [BookingIndexController::class, 'actionRequests'])->name('booking-action-requests.index');
-        Route::post('booking-action-requests/{bookingActionRequest}/approve', [BookingIndexController::class, 'approveActionRequest'])->name('booking-action-requests.approve');
-        Route::post('booking-action-requests/{bookingActionRequest}/reject', [BookingIndexController::class, 'rejectActionRequest'])->name('booking-action-requests.reject');
+        Route::get('booking-modification-requests', [BookingIndexController::class, 'actionRequests'])->name('booking-modification-requests.index');
+        Route::post('booking-modification-requests/{bookingActionRequest}/approve', [BookingIndexController::class, 'approveActionRequest'])->name('booking-modification-requests.approve');
+        Route::post('booking-modification-requests/{bookingActionRequest}/reject', [BookingIndexController::class, 'rejectActionRequest'])->name('booking-modification-requests.reject');
         Route::post('bookings/{booking}/cancel', [BookingIndexController::class, 'cancel'])->name('bookings.cancel');
         Route::post('bookings/{booking}/refund', [BookingIndexController::class, 'refund'])->name('bookings.refund');
         Route::get('bookings/{booking}/invoice', [BookingIndexController::class, 'invoice'])->name('bookings.invoice');

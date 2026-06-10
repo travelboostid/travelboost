@@ -1,6 +1,7 @@
 <?php
 
 use App\Actions\Booking\ExpireBookingReservationsAction;
+use App\Console\Commands\CancelOverdueDownPaymentBookings;
 use App\Console\Commands\CheckAgentSubscriptionExpiry;
 use App\Console\Commands\SendBookingDeadlineReminders;
 use App\Jobs\MarkExpiredPaymentsJob;
@@ -41,6 +42,13 @@ Schedule::command(CheckAgentSubscriptionExpiry::class)
 Schedule::command(SendBookingDeadlineReminders::class)
     ->daily()
     ->name('booking-deadline-reminders')
+    ->withoutOverlapping()
+    ->onOneServer();
+
+Schedule::command(CancelOverdueDownPaymentBookings::class)
+    ->dailyAt('00:00')
+    ->timezone('Asia/Jakarta')
+    ->name('cancel-overdue-down-payment-bookings')
     ->withoutOverlapping()
     ->onOneServer();
 
