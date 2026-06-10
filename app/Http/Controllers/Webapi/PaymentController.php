@@ -151,10 +151,16 @@ class PaymentController extends Controller
         $validated = $request->validate([
             'company_id' => ['required', 'exists:companies,id'],
             'package_id' => ['required', 'exists:agent_subscription_packages,id'],
-            'provider' => ['nullable', 'in:midtrans,prismalink'],
+            'payment_method_id' => ['required', 'exists:payment_methods,id'],
         ]);
         $user = Auth::user();
-        $provider = $validated['provider'] ?? 'midtrans';
+        $paymentMethod = PaymentMethod::query()->findOrFail($validated['payment_method_id']);
+
+        if ($paymentMethod->status !== PaymentMethodStatus::ENABLED) {
+            return response()->json([
+                'message' => 'Selected payment method is not available.',
+            ], 422);
+        }
 
         $package = AgentSubscriptionPackage::findOrFail($validated['package_id']);
         $subscriptionPayment = AgentSubscriptionPayment::create([
@@ -164,13 +170,13 @@ class PaymentController extends Controller
         $payment = $subscriptionPayment->payment()->create([
             'owner_id' => $validated['company_id'],
             'owner_type' => 'company',
-            'provider' => $provider,
-            'payment_method' => $this->paymentMethodForProvider($provider),
+            'provider' => $paymentMethod->provider,
+            'payment_method' => $paymentMethod->method,
             'amount' => $package->price,
             'status' => 'unpaid',
         ]);
 
-        return $this->initiateGatewayPayment($payment, $request, $user, [
+        $context = [
             'finish_url' => $this->paymentFinishUrl(),
             'invoice_number' => 'AS-'.$payment->id,
             'product_details' => [
@@ -183,7 +189,13 @@ class PaymentController extends Controller
                 ],
             ],
             'remarks' => 'Agent subscription: '.$package->name,
-        ]);
+        ];
+
+        if ($paymentMethod->provider === 'midtrans') {
+            $context['selected_payment_method'] = $paymentMethod;
+        }
+
+        return $this->initiateGatewayPayment($payment, $request, $user, $context);
     }
 
     /**
@@ -196,11 +208,17 @@ class PaymentController extends Controller
         $validated = $request->validate([
             'company_id' => ['required', 'exists:companies,id'],
             'amount' => ['required', 'integer', 'min:1000'],
-            'provider' => ['nullable', 'in:midtrans,prismalink'],
+            'payment_method_id' => ['required', 'exists:payment_methods,id'],
         ]);
 
         $user = Auth::user();
-        $provider = $validated['provider'] ?? 'midtrans';
+        $paymentMethod = PaymentMethod::query()->findOrFail($validated['payment_method_id']);
+
+        if ($paymentMethod->status !== PaymentMethodStatus::ENABLED) {
+            return response()->json([
+                'message' => 'Selected payment method is not available.',
+            ], 422);
+        }
 
         $topup = AiCreditTopupPayment::create([
             'amount' => $validated['amount'],
@@ -209,13 +227,13 @@ class PaymentController extends Controller
         $payment = $topup->payment()->create([
             'owner_id' => $validated['company_id'],
             'owner_type' => 'company',
-            'provider' => $provider,
-            'payment_method' => $this->paymentMethodForProvider($provider),
+            'provider' => $paymentMethod->provider,
+            'payment_method' => $paymentMethod->method,
             'amount' => $topup->amount,
             'status' => 'unpaid',
         ]);
 
-        return $this->initiateGatewayPayment($payment, $request, $user, [
+        $context = [
             'finish_url' => $this->paymentFinishUrl(),
             'invoice_number' => 'AI-'.$payment->id,
             'product_details' => [
@@ -228,7 +246,13 @@ class PaymentController extends Controller
                 ],
             ],
             'remarks' => 'AI credit topup',
-        ]);
+        ];
+
+        if ($paymentMethod->provider === 'midtrans') {
+            $context['selected_payment_method'] = $paymentMethod;
+        }
+
+        return $this->initiateGatewayPayment($payment, $request, $user, $context);
     }
 
     /**
@@ -416,14 +440,6 @@ class PaymentController extends Controller
         }
 
         return route('prismalink.frontend-callback', absolute: true);
-    }
-
-    private function paymentMethodForProvider(string $provider): string
-    {
-        return match ($provider) {
-            'prismalink' => 'payment_page',
-            default => 'snap',
-        };
     }
 
     /**

@@ -4,10 +4,8 @@
  * Travelboost
  * OpenAPI spec version: 0.0.1
  */
-import type { CreateAgentSubscriptionPaymentBodyProvider } from './createAgentSubscriptionPaymentBodyProvider';
-
 export type CreateAgentSubscriptionPaymentBody = {
     company_id: number;
     package_id: number;
-    provider?: CreateAgentSubscriptionPaymentBodyProvider;
+    payment_method_id: number;
 };
