@@ -5,18 +5,21 @@ import {
     EmptyMedia,
     EmptyTitle,
 } from '@/components/ui/empty';
-import { IconFolderCode } from '@tabler/icons-react';
+import { Building2Icon } from 'lucide-react';
+import { FormattedMessage } from 'react-intl';
 
 export function EmptyRegistrations() {
     return (
-        <Empty className="">
+        <Empty>
             <EmptyHeader>
                 <EmptyMedia variant="icon">
-                    <IconFolderCode />
+                    <Building2Icon />
                 </EmptyMedia>
-                <EmptyTitle>No Data Available</EmptyTitle>
+                <EmptyTitle>
+                    <FormattedMessage defaultMessage="No vendor registrations" />
+                </EmptyTitle>
                 <EmptyDescription>
-                    There are no vendor registrations to display.
+                    <FormattedMessage defaultMessage="No registrations match your filters. Try adjusting the search or status filters." />
                 </EmptyDescription>
             </EmptyHeader>
         </Empty>

@@ -21,6 +21,7 @@ use App\Notifications\AffiliateAgentSubscriptionNotification;
 use App\Notifications\AgentSubscriptionActivatedNotification;
 use App\Services\BookingContactPaymentEmailService;
 use App\Services\BookingPaymentWorkflowService;
+use App\Services\OnlinePaymentSettlementService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -30,6 +31,10 @@ use SnapBi\SnapBi;
 
 class MidtransWebhookController extends Controller
 {
+    public function __construct(
+        private readonly OnlinePaymentSettlementService $settlementService,
+    ) {}
+
     public function handleNotification(Request $request): JsonResponse
     {
         if (! $this->isWebhookVerified($request)) {
@@ -51,6 +56,7 @@ class MidtransWebhookController extends Controller
 
         if ($this->isAlreadyProcessed($payment)) {
             $this->reconcileAlreadyProcessedBookingPayment($payment);
+            $this->settlementService->settle($payment);
             $this->sendBookingContactOnlinePaymentConfirmation($payment);
 
             return response()->json(['message' => 'Payment already processed']);
@@ -179,8 +185,8 @@ class MidtransWebhookController extends Controller
         match ($payment->payable_type) {
             Booking::class => $this->processBookingPayment($payment),
             'agent-subscription-payment' => $this->processAgentSubscription($payment),
-            'wallet-topup-payment' => $this->processWalletTopup($payment),
-            'ai-credit-topup-payment' => $this->processAiCreditTopup($payment),
+            'wallet-topup-payment' => $this->settlementService->settle($payment),
+            'ai-credit-topup-payment' => $this->settlementService->settle($payment),
             default => $this->logUnknownPayableType($payment),
         };
     }

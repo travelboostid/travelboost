@@ -278,15 +278,14 @@ test('customer online payment to agent stays waiting approval after gateway conf
         'grand_total' => 1_000_000,
     ]);
 
-    Mockery::mock('alias:Midtrans\Snap')
-        ->shouldReceive('getSnapToken')
-        ->once()
-        ->andReturn('agent-payment-token');
+    mockMidtransCoreApiCharge();
+    $paymentMethod = createMidtransBcaPaymentMethod();
 
     $this->actingAs($customer)
         ->postJson("/bookings/{$booking->id}/online-payment", [
             'payment_type' => 'down_payment',
             'amount' => 300_000,
+            'payment_method_id' => $paymentMethod->id,
         ])
         ->assertOk()
         ->assertJsonPath('payment.payload.payment_flow_stage', 'customer_to_agent');
@@ -372,15 +371,14 @@ test('agent online payment to vendor remains waiting approval until vendor appro
         ],
     ]);
 
-    Mockery::mock('alias:Midtrans\Snap')
-        ->shouldReceive('getSnapToken')
-        ->once()
-        ->andReturn('agent-vendor-token');
+    mockMidtransCoreApiCharge();
+    $paymentMethod = createMidtransBcaPaymentMethod();
 
     $this->actingAs($agentUser)
         ->postJson("/companies/{$agent->username}/dashboard/bookings/{$booking->id}/online-payment", [
             'payment_type' => 'down_payment',
             'amount' => 500_000,
+            'payment_method_id' => $paymentMethod->id,
         ])
         ->assertOk()
         ->assertJsonPath('payment.payload.payment_flow_stage', 'agent_to_vendor')
@@ -485,25 +483,29 @@ test('agent online payment to vendor reuses active snap attempt', function () {
             'vendor_review_status' => 'pending',
             'counts_toward_booking_total' => false,
             'order_id' => 'agent-vendor-order',
-            'snap_token' => 'agent-vendor-token',
-            'snap_token_expires_at' => now()->addMinutes(30)->toISOString(),
+            'instruction_type' => 'va',
+            'va_number' => '80777100888888',
+            'charge_expires_at' => now()->addMinutes(30)->toISOString(),
         ],
+        'expired_at' => now()->addMinutes(30),
     ]);
 
-    Mockery::mock('alias:Midtrans\Snap')
-        ->shouldReceive('getSnapToken')
+    Mockery::mock('alias:Midtrans\CoreApi')
+        ->shouldReceive('charge')
         ->never();
+    $paymentMethod = createMidtransBcaPaymentMethod();
 
     $this->actingAs($agentUser)
         ->postJson("/companies/{$agent->username}/dashboard/bookings/{$booking->id}/online-payment", [
             'payment_type' => 'down_payment',
             'amount' => 500_000,
+            'payment_method_id' => $paymentMethod->id,
         ])
         ->assertOk()
         ->assertJsonPath('payment.id', $agentVendorPayment->id)
         ->assertJsonPath('payment.reused', true)
         ->assertJsonPath('payment.payload.order_id', 'agent-vendor-order')
-        ->assertJsonPath('payment.payload.snap_token', 'agent-vendor-token');
+        ->assertJsonPath('payment.payload.va_number', '80777100888888');
 
     expect($booking->fresh()->payments()
         ->where('provider', 'midtrans')
@@ -648,7 +650,7 @@ test('manual payment sender account number must contain digits only', function (
     $response->assertSessionHasErrors('sender_account_number');
 });
 
-test('customer can create an online booking payment with midtrans snap token', function () {
+test('customer can create an online booking payment with midtrans core api', function () {
     $user = User::factory()->create();
     $vendor = Company::factory()->create(['type' => 'vendor']);
     $vendor->companySetting()->updateOrCreate([], [
@@ -663,18 +665,18 @@ test('customer can create an online booking payment with midtrans snap token', f
         'grand_total' => 1_000_000,
     ]);
 
-    Mockery::mock('alias:Midtrans\Snap')
-        ->shouldReceive('getSnapToken')
-        ->once()
-        ->andReturn('booking-snap-token');
+    mockMidtransCoreApiCharge();
+    $paymentMethod = createMidtransBcaPaymentMethod();
 
     $response = $this->actingAs($user)->postJson("/bookings/{$booking->id}/online-payment", [
         'payment_type' => 'down_payment',
         'amount' => 300_000,
+        'payment_method_id' => $paymentMethod->id,
     ]);
 
     $response->assertOk()
-        ->assertJsonPath('payment.payload.snap_token', 'booking-snap-token')
+        ->assertJsonPath('payment.payload.va_number', '80777100123456')
+        ->assertJsonPath('payment.payload.instruction_type', 'va')
         ->assertJsonPath('payment.payload.payment_type', 'down_payment');
 
     $this->assertDatabaseHas('payments', [
@@ -683,7 +685,7 @@ test('customer can create an online booking payment with midtrans snap token', f
         'payable_type' => Booking::class,
         'payable_id' => $booking->id,
         'provider' => 'midtrans',
-        'payment_method' => 'snap',
+        'payment_method' => 'bca_va',
         'amount' => 300_000,
         'status' => 'pending',
     ]);
@@ -712,32 +714,36 @@ test('customer reuses active online booking payment attempt while hold is active
         'owner_type' => User::class,
         'owner_id' => $user->id,
         'provider' => 'midtrans',
-        'payment_method' => 'snap',
+        'payment_method' => 'bca_va',
         'amount' => 300_000,
         'status' => 'pending',
         'payload' => [
             'booking_payment_type' => 'down_payment',
             'payment_type' => 'down_payment',
             'order_id' => 'old-booking-order',
-            'snap_token' => 'old-snap-token',
-            'snap_token_expires_at' => now()->addMinutes(30)->toISOString(),
+            'instruction_type' => 'va',
+            'va_number' => '80777100123456',
+            'charge_expires_at' => now()->addMinutes(30)->toISOString(),
         ],
+        'expired_at' => now()->addMinutes(30),
     ]);
 
-    Mockery::mock('alias:Midtrans\Snap')
-        ->shouldReceive('getSnapToken')
+    Mockery::mock('alias:Midtrans\CoreApi')
+        ->shouldReceive('charge')
         ->never();
+    $paymentMethod = createMidtransBcaPaymentMethod();
 
     $response = $this->actingAs($user)->postJson("/bookings/{$booking->id}/online-payment", [
         'payment_type' => 'down_payment',
         'amount' => 300_000,
+        'payment_method_id' => $paymentMethod->id,
     ]);
 
     $response->assertOk()
         ->assertJsonPath('payment.id', $payment->id)
         ->assertJsonPath('payment.reused', true)
         ->assertJsonPath('payment.payload.order_id', 'old-booking-order')
-        ->assertJsonPath('payment.payload.snap_token', 'old-snap-token')
+        ->assertJsonPath('payment.payload.va_number', '80777100123456')
         ->assertJsonPath('bookingPaymentResult.bookingStatus', 'booking reserved')
         ->assertJsonPath('bookingPaymentResult.paymentStatus', 'pending');
 
@@ -745,7 +751,7 @@ test('customer reuses active online booking payment attempt while hold is active
         ->and($booking->fresh()->payments()->where('provider', 'midtrans')->where('status', PaymentStatus::PENDING)->count())->toBe(1);
 });
 
-test('customer creates new online booking payment when previous snap attempt is expired', function () {
+test('customer creates new online booking payment when previous core api attempt is expired', function () {
     $user = User::factory()->create();
     $vendor = Company::factory()->create(['type' => 'vendor']);
     $vendor->companySetting()->updateOrCreate([], [
@@ -766,31 +772,32 @@ test('customer creates new online booking payment when previous snap attempt is 
         'owner_type' => User::class,
         'owner_id' => $user->id,
         'provider' => 'midtrans',
-        'payment_method' => 'snap',
+        'payment_method' => 'bca_va',
         'amount' => 300_000,
         'status' => PaymentStatus::PENDING,
         'payload' => [
             'booking_payment_type' => 'down_payment',
             'payment_type' => 'down_payment',
             'order_id' => 'expired-booking-order',
-            'snap_token' => 'expired-snap-token',
-            'snap_token_expires_at' => now()->subMinute()->toISOString(),
+            'instruction_type' => 'va',
+            'va_number' => '80777100999999',
+            'charge_expires_at' => now()->subMinute()->toISOString(),
         ],
+        'expired_at' => now()->subMinute(),
     ]);
 
-    Mockery::mock('alias:Midtrans\Snap')
-        ->shouldReceive('getSnapToken')
-        ->once()
-        ->andReturn('fresh-booking-snap-token');
+    mockMidtransCoreApiCharge();
+    $paymentMethod = createMidtransBcaPaymentMethod();
 
     $response = $this->actingAs($user)->postJson("/bookings/{$booking->id}/online-payment", [
         'payment_type' => 'down_payment',
         'amount' => 300_000,
+        'payment_method_id' => $paymentMethod->id,
     ]);
 
     $response->assertOk()
         ->assertJsonPath('payment.reused', false)
-        ->assertJsonPath('payment.payload.snap_token', 'fresh-booking-snap-token')
+        ->assertJsonPath('payment.payload.va_number', '80777100123456')
         ->assertJsonPath('bookingPaymentResult.paymentStatus', 'pending');
 
     $oldPayment->refresh();
@@ -803,7 +810,7 @@ test('customer creates new online booking payment when previous snap attempt is 
     expect($oldPayment->status)->toBe(PaymentStatus::FAILED)
         ->and($newPayment->id)->not->toBe($oldPayment->id)
         ->and(data_get($newPayment->payload, 'order_id'))->not->toBe('expired-booking-order')
-        ->and(data_get($newPayment->payload, 'snap_token_expires_at'))->not->toBeNull();
+        ->and(data_get($newPayment->payload, 'charge_expires_at'))->not->toBeNull();
 });
 
 test('dashboard online full payment keeps down payment booking status until midtrans confirms', function () {
@@ -845,19 +852,18 @@ test('dashboard online full payment keeps down payment booking status until midt
         'paid_at' => now()->subDay(),
     ]);
 
-    Mockery::mock('alias:Midtrans\Snap')
-        ->shouldReceive('getSnapToken')
-        ->once()
-        ->andReturn('dashboard-balance-token');
+    mockMidtransCoreApiCharge();
+    $paymentMethod = createMidtransBcaPaymentMethod();
 
     $response = $this->actingAs($vendorUser)
         ->postJson("/companies/{$vendor->username}/dashboard/bookings/{$booking->id}/online-payment", [
             'payment_type' => 'full_payment',
             'amount' => 750_000,
+            'payment_method_id' => $paymentMethod->id,
         ]);
 
     $response->assertOk()
-        ->assertJsonPath('payment.payload.snap_token', 'dashboard-balance-token')
+        ->assertJsonPath('payment.payload.va_number', '80777100123456')
         ->assertJsonPath('payment.payload.payment_type', 'full_payment')
         ->assertJsonPath('bookingPaymentResult.bookingStatus', 'down payment')
         ->assertJsonPath('bookingPaymentResult.paymentStatus', 'pending');
@@ -896,19 +902,18 @@ test('dashboard online payment preserves waiting approval payment process status
         'commission_amount' => 0,
     ]);
 
-    Mockery::mock('alias:Midtrans\Snap')
-        ->shouldReceive('getSnapToken')
-        ->once()
-        ->andReturn('dashboard-wa-payment-token');
+    mockMidtransCoreApiCharge();
+    $paymentMethod = createMidtransBcaPaymentMethod();
 
     $response = $this->actingAs($vendorUser)
         ->postJson("/companies/{$vendor->username}/dashboard/bookings/{$booking->id}/online-payment", [
             'payment_type' => 'down_payment',
             'amount' => 500_000,
+            'payment_method_id' => $paymentMethod->id,
         ]);
 
     $response->assertOk()
-        ->assertJsonPath('payment.payload.snap_token', 'dashboard-wa-payment-token')
+        ->assertJsonPath('payment.payload.va_number', '80777100123456')
         ->assertJsonPath('bookingPaymentResult.bookingStatus', 'waiting payment approval')
         ->assertJsonPath('bookingPaymentResult.paymentStatus', 'pending');
 
@@ -952,10 +957,13 @@ test('dashboard full payment amount must cover finalizable remaining balance', f
         'paid_at' => now()->subDay(),
     ]);
 
+    $paymentMethod = createMidtransBcaPaymentMethod();
+
     $response = $this->actingAs($vendorUser)
         ->postJson("/companies/{$vendor->username}/dashboard/bookings/{$booking->id}/online-payment", [
             'payment_type' => 'full_payment',
             'amount' => 500_000,
+            'payment_method_id' => $paymentMethod->id,
         ]);
 
     $response->assertUnprocessable()
@@ -991,18 +999,17 @@ test('customer online full payment keeps down payment booking status until midtr
         'paid_at' => now()->subDay(),
     ]);
 
-    Mockery::mock('alias:Midtrans\Snap')
-        ->shouldReceive('getSnapToken')
-        ->once()
-        ->andReturn('customer-balance-token');
+    mockMidtransCoreApiCharge();
+    $paymentMethod = createMidtransBcaPaymentMethod();
 
     $response = $this->actingAs($user)->postJson("/bookings/{$booking->id}/online-payment", [
         'payment_type' => 'full_payment',
         'amount' => 750_000,
+        'payment_method_id' => $paymentMethod->id,
     ]);
 
     $response->assertOk()
-        ->assertJsonPath('payment.payload.snap_token', 'customer-balance-token')
+        ->assertJsonPath('payment.payload.va_number', '80777100123456')
         ->assertJsonPath('payment.payload.payment_type', 'full_payment')
         ->assertJsonPath('bookingPaymentResult.bookingStatus', 'down payment')
         ->assertJsonPath('bookingPaymentResult.paymentStatus', 'pending');
@@ -1128,7 +1135,9 @@ test('midtrans webhook marks online booking payment as paid and updates booking 
     expect($booking->fresh()->status->value)->toBe('down payment');
     expect($booking->fresh()->payment_mode)->toBe('online');
     expect($payment->fresh()->status->value)->toBe('paid');
-    expect(data_get($payment->fresh()->payload, 'payment_type'))->toBe('down_payment');
+    expect(data_get($payment->fresh()->payload, 'payment_type'))->toBe('down_payment')
+        ->and(data_get($payment->fresh()->payload, 'transaction_status'))->toBe('settlement')
+        ->and(data_get($payment->fresh()->payload, 'midtrans'))->toBeNull();
 });
 
 test('midtrans webhook repairs already paid booking payment with stale awaiting payment status', function () {

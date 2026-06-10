@@ -1,27 +1,44 @@
 import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 import type { JSX } from 'react';
 import { FormattedMessage } from 'react-intl';
 
 export default function StatusBadge({ partnership }: { partnership: any }) {
-    const statusColors: Record<string, string> = {
-        pending: 'bg-yellow-100 text-yellow-800',
-        active: 'bg-green-100 text-green-800',
-        rejected: 'bg-red-100 text-red-800',
-        suspended: 'bg-gray-100 text-gray-800',
-    };
-    const statusMap: Record<string, JSX.Element> = {
-        pending: <FormattedMessage defaultMessage="Pending" />,
-        active: <FormattedMessage defaultMessage="Active" />,
-        rejected: <FormattedMessage defaultMessage="Rejected" />,
-        suspended: <FormattedMessage defaultMessage="Suspended" />,
-    };
     const status = partnership.status || 'unknown';
 
-    const colorClasses = statusColors[status] || 'bg-gray-100 text-gray-800';
+    const statusConfig: Record<
+        string,
+        { label: JSX.Element; className: string }
+    > = {
+        pending: {
+            label: <FormattedMessage defaultMessage="Pending" />,
+            className:
+                'border-amber-500/30 bg-amber-500/10 text-amber-800 dark:text-amber-300',
+        },
+        active: {
+            label: <FormattedMessage defaultMessage="Active" />,
+            className:
+                'border-emerald-500/30 bg-emerald-500/10 text-emerald-800 dark:text-emerald-300',
+        },
+        rejected: {
+            label: <FormattedMessage defaultMessage="Rejected" />,
+            className:
+                'border-destructive/30 bg-destructive/10 text-destructive',
+        },
+        suspended: {
+            label: <FormattedMessage defaultMessage="Suspended" />,
+            className: 'border-border bg-muted text-muted-foreground',
+        },
+    };
+
+    const config = statusConfig[status] ?? {
+        label: <FormattedMessage defaultMessage="Unknown" />,
+        className: 'border-border bg-muted text-muted-foreground',
+    };
 
     return (
-        <Badge className={colorClasses}>
-            {statusMap[status] || <FormattedMessage defaultMessage="Unknown" />}
+        <Badge variant="outline" className={cn('capitalize', config.className)}>
+            {config.label}
         </Badge>
     );
 }

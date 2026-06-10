@@ -34,6 +34,7 @@ use App\Services\BookingPricingService;
 use App\Services\BookingRoomArrangementValidator;
 use App\Services\BookingService;
 use App\Services\BookingTravelDocumentService;
+use App\Services\MidtransService;
 use App\Services\ReusableMidtransBookingPaymentAttemptService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -47,7 +48,6 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
-use Midtrans\Snap;
 use Midtrans\Transaction;
 use Throwable;
 
@@ -56,6 +56,10 @@ class DashboardBookingController extends Controller
     private const PAYMENT_UNAVAILABLE_MESSAGE = 'Payment is temporarily unavailable. Please try again later or contact customer support.';
 
     private const ONLINE_PAYMENT_UNAVAILABLE_MESSAGE = 'Online payment is temporarily unavailable. Please try again later or contact customer support.';
+
+    public function __construct(
+        private readonly MidtransService $midtransService,
+    ) {}
 
     /**
      * @var array<string, string>
@@ -586,7 +590,10 @@ class DashboardBookingController extends Controller
         $validated = $request->validate([
             'payment_type' => ['required', 'string', 'in:down_payment,full_payment'],
             'amount' => ['required', 'numeric', 'min:1'],
+            'payment_method_id' => ['required', 'exists:payment_methods,id'],
         ]);
+
+        $paymentMethod = $this->midtransService->resolveEnabledPaymentMethod((int) $validated['payment_method_id']);
 
         $paymentWorkflow = app(BookingPaymentWorkflowService::class);
         $agentVendorCustomerPayment = $paymentWorkflow->agentVendorCustomerPaymentForDashboardPayment($company, $booking);
@@ -634,41 +641,32 @@ class DashboardBookingController extends Controller
             ]);
         }
 
-        $payment = DB::transaction(function () use ($request, $booking, $validated, $agentVendorCustomerPayment, $paymentWorkflowPayload, $reusableAttemptService): Payment {
+        $payment = DB::transaction(function () use ($request, $booking, $validated, $agentVendorCustomerPayment, $paymentWorkflowPayload, $reusableAttemptService, $paymentMethod): Payment {
             $payment = $booking->payments()->create([
                 'owner_type' => get_class($request->user()),
                 'owner_id' => $request->user()->id,
                 'provider' => 'midtrans',
-                'payment_method' => 'snap',
+                'payment_method' => $paymentMethod->method,
                 'amount' => $validated['amount'],
                 'status' => 'unpaid',
                 'payload' => $paymentWorkflowPayload,
             ]);
 
-            $params = [
-                'transaction_details' => [
-                    'order_id' => $payment->id.'-'.uniqid(),
-                    'gross_amount' => (int) $payment->amount,
-                ],
-                'customer_details' => [
-                    'first_name' => $booking->contact_name ?: $request->user()->name,
-                    'email' => $booking->contact_email ?: $request->user()->email,
-                ],
-                'callbacks' => [
-                    'finish' => route('companies.dashboard.bookings.index', request()->route('company'), false),
-                ],
-                'expiry' => $reusableAttemptService->snapExpiryPayload(),
-            ];
-            $orderId = $params['transaction_details']['order_id'];
-            $snapTokenExpiresAt = $reusableAttemptService->newSnapTokenExpiresAt();
+            $chargeExpiresAt = $reusableAttemptService->newChargeExpiresAt();
 
             try {
-                $snapToken = Snap::getSnapToken($params);
+                $chargePayload = $this->midtransService->charge(
+                    $payment,
+                    $paymentMethod,
+                    $request->user(),
+                    route('companies.dashboard.bookings.index', request()->route('company'), absolute: true),
+                );
             } catch (Throwable $exception) {
-                Log::warning('Midtrans Snap token request failed', [
+                Log::warning('Midtrans Core API charge failed', [
                     'booking_id' => $booking->id,
                     'payment_id' => $payment->id,
                     'payment_type' => $validated['payment_type'],
+                    'payment_method' => $paymentMethod->method,
                     'amount' => (float) $payment->amount,
                     'midtrans_environment' => $this->midtransEnvironment(),
                     'message' => $exception->getMessage(),
@@ -677,20 +675,14 @@ class DashboardBookingController extends Controller
                 throw ValidationException::withMessages(['payment' => self::ONLINE_PAYMENT_UNAVAILABLE_MESSAGE]);
             }
 
-            if (! $snapToken) {
-                throw ValidationException::withMessages(['payment' => self::ONLINE_PAYMENT_UNAVAILABLE_MESSAGE]);
-            }
-
             $payment->update([
                 'status' => 'pending',
                 'payload' => [
                     ...$paymentWorkflowPayload,
-                    'order_id' => $orderId,
-                    'snap_token' => $snapToken,
-                    'snap_token_expires_at' => $snapTokenExpiresAt->toISOString(),
-                    'request' => $params,
+                    ...$chargePayload,
+                    'charge_expires_at' => $chargeExpiresAt->toISOString(),
                 ],
-                'expired_at' => $snapTokenExpiresAt,
+                'expired_at' => $chargeExpiresAt,
             ]);
 
             $booking->update([

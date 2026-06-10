@@ -1,25 +1,48 @@
+import { Button } from '@/components/ui/button';
 import {
     Empty,
+    EmptyContent,
     EmptyDescription,
     EmptyHeader,
     EmptyMedia,
     EmptyTitle,
 } from '@/components/ui/empty';
-import { IconFolderCode } from '@tabler/icons-react';
+import { ArrowDownRightIcon } from 'lucide-react';
+import { FormattedMessage } from 'react-intl';
 
-export default function EmptyWithdrawals() {
+type EmptyWithdrawalsProps = {
+    showClearFilters?: boolean;
+    onClearFilters?: () => void;
+};
+
+export default function EmptyWithdrawals({
+    showClearFilters,
+    onClearFilters,
+}: EmptyWithdrawalsProps) {
     return (
-        <Empty className="p-4">
+        <Empty className="rounded-xl border border-dashed py-10">
             <EmptyHeader>
                 <EmptyMedia variant="icon">
-                    <IconFolderCode />
+                    <ArrowDownRightIcon />
                 </EmptyMedia>
-                <EmptyTitle>No Withdrawals</EmptyTitle>
+                <EmptyTitle>
+                    <FormattedMessage defaultMessage="No withdrawals found" />
+                </EmptyTitle>
                 <EmptyDescription>
-                    You have not made any withdrawals in the current period.
-                    Withdrawals will appear here once they are made.
+                    <FormattedMessage defaultMessage="Withdrawals for the selected period will appear here." />
                 </EmptyDescription>
             </EmptyHeader>
+            {showClearFilters ? (
+                <EmptyContent>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={onClearFilters}
+                    >
+                        <FormattedMessage defaultMessage="Clear filters" />
+                    </Button>
+                </EmptyContent>
+            ) : null}
         </Empty>
     );
 }

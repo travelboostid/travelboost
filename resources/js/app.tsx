@@ -10,6 +10,7 @@ import { createRoot } from 'react-dom/client';
 import '../css/app.css';
 import I18nProvider from './components/i18n-provider';
 import { LocaleProvider } from './components/locale-context';
+import { OnlinePaymentHost } from './components/payment/online-payment-host';
 import { Toaster } from './components/ui/sonner';
 import { TooltipProvider } from './components/ui/tooltip';
 import { initializeTheme } from './hooks/use-appearance';
@@ -73,6 +74,7 @@ createInertiaApp({
                                     <NuqsAdapter>
                                         <App {...props} />
                                     </NuqsAdapter>
+                                    <OnlinePaymentHost />
                                     <Toaster />
                                 </QueryClientProvider>
                             </TooltipProvider>

@@ -7,28 +7,29 @@ import {
     EmptyMedia,
     EmptyTitle,
 } from '@/components/ui/empty';
-import { IconFolderCode } from '@tabler/icons-react';
-import { PlusIcon } from 'lucide-react';
+import { LandmarkIcon, PlusIcon } from 'lucide-react';
+import { FormattedMessage } from 'react-intl';
 import CreateBankAccountDialog from './create-bank-account-dialog';
 
 export function EmptyBankAccounts() {
     return (
-        <Empty className="min-h-[75vh]">
+        <Empty className="min-h-[50vh] rounded-xl border border-dashed">
             <EmptyHeader>
                 <EmptyMedia variant="icon">
-                    <IconFolderCode />
+                    <LandmarkIcon />
                 </EmptyMedia>
-                <EmptyTitle>No Bank Accounts Yet</EmptyTitle>
+                <EmptyTitle>
+                    <FormattedMessage defaultMessage="No bank accounts yet" />
+                </EmptyTitle>
                 <EmptyDescription>
-                    You have not added any bank accounts yet. Please add a bank
-                    account to enable withdrawals.
+                    <FormattedMessage defaultMessage="Add a verified bank account to receive wallet withdrawals." />
                 </EmptyDescription>
             </EmptyHeader>
             <EmptyContent className="flex-row justify-center gap-2">
                 <CreateBankAccountDialog>
-                    <Button>
-                        <PlusIcon />
-                        Add Your First Account
+                    <Button size="lg" className="gap-2">
+                        <PlusIcon className="size-4" />
+                        <FormattedMessage defaultMessage="Add your first account" />
                     </Button>
                 </CreateBankAccountDialog>
             </EmptyContent>

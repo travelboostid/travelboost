@@ -1,12 +1,23 @@
 import { Button } from '@/components/ui/button';
 import { openOnlinePayment } from '@/lib/open-online-payment';
+import { refreshPageAfterPayment } from '@/lib/refresh-after-payment';
 
 export default function ContinuePayment({ payment }: { payment: any }) {
     const handlePay = () => {
-        openOnlinePayment({
-            provider: payment?.provider,
-            payload: payment?.payload,
-        });
+        openOnlinePayment(
+            {
+                id: payment?.id,
+                status: payment?.status,
+                provider: payment?.provider,
+                amount: payment?.amount,
+                payload: payment?.payload,
+            },
+            {
+                onComplete: () => {
+                    refreshPageAfterPayment();
+                },
+            },
+        );
     };
 
     return (

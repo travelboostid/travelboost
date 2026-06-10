@@ -5,16 +5,17 @@ namespace App\Http\Controllers\Webhooks;
 use App\Enums\PaymentStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Payment;
+use App\Services\OnlinePaymentSettlementService;
 use App\Services\PrismaLinkService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 
 class PrismaLinkWebhookController extends Controller
 {
     public function __construct(
         private readonly PrismaLinkService $prismaLinkService,
+        private readonly OnlinePaymentSettlementService $settlementService,
     ) {}
 
     public function backendCallback(Request $request): JsonResponse
@@ -44,6 +45,8 @@ class PrismaLinkWebhookController extends Controller
         }
 
         if ($this->isAlreadyProcessed($payment)) {
+            $this->settlementService->settle($payment);
+
             return response()->json(['ack' => true, 'message' => 'Payment already processed']);
         }
 
@@ -59,7 +62,7 @@ class PrismaLinkWebhookController extends Controller
             ]);
 
             if ($newStatus === PaymentStatus::PAID) {
-                $this->processPayment($payment->fresh());
+                $this->settlementService->settle($payment->fresh());
             }
         });
 
@@ -91,54 +94,5 @@ class PrismaLinkWebhookController extends Controller
     private function isAlreadyProcessed(Payment $payment): bool
     {
         return $payment->status === PaymentStatus::PAID;
-    }
-
-    private function processPayment(Payment $payment): void
-    {
-        match ($payment->payable_type) {
-            'wallet-topup-payment' => $this->processWalletTopup($payment),
-            default => $this->logUnknownPayableType($payment),
-        };
-    }
-
-    private function processWalletTopup(Payment $payment): void
-    {
-        Log::info('Processing wallet topup via PrismaLink', ['payment_id' => $payment->id]);
-
-        $owner = $payment->owner;
-        if (! $owner) {
-            Log::error('Owner not found', ['payment_id' => $payment->id]);
-
-            return;
-        }
-
-        $payment->load('payable');
-        $topup = $payment->payable;
-
-        if (! $topup) {
-            Log::error('Wallet topup payable not found', ['payment_id' => $payment->id]);
-
-            return;
-        }
-
-        $owner->wallet->deposit($topup->amount, [
-            'type' => 'wallet-topup',
-            'description' => 'Wallet topup via PrismaLink',
-            'payment_id' => $payment->id,
-        ]);
-
-        Log::info('Wallet topup successful', [
-            'owner_id' => $payment->owner_id,
-            'wallet_id' => $owner->wallet->id,
-            'amount' => $topup->amount,
-        ]);
-    }
-
-    private function logUnknownPayableType(Payment $payment): void
-    {
-        Log::warning('PrismaLink webhook received unknown payable type', [
-            'payment_id' => $payment->id,
-            'payable_type' => $payment->payable_type,
-        ]);
     }
 }

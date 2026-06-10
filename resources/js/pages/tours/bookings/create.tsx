@@ -24,6 +24,8 @@ import Step4BookingSummary, {
 import WizardStepIndicator from '@/components/booking/WizardStepIndicator';
 import CompanyDashboardLayout from '@/components/layouts/company-dashboard';
 import TenantLayout from '@/components/layouts/tenant-layout';
+import { OnlinePaymentDialog } from '@/components/payment/online-payment-dialog';
+import { PaymentMethodDialog } from '@/components/payment/payment-method-dialog';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -36,6 +38,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import type { WizardStepId } from '@/constants/booking';
+import { refreshPageAfterPayment } from '@/lib/refresh-after-payment';
 import type {
     BookingContact,
     BookingStatusCode,
@@ -84,10 +87,19 @@ type AgentOption = {
     email?: string | null;
 };
 
-type OnlinePaymentAttempt = {
+type PendingMidtransPayment = {
+    paymentType: PaymentType;
+    finalAmount: number;
+    addOns: AddOnItem[];
+    manualData?: ManualPaymentData;
+};
+
+type ActiveOnlinePayment = {
     bookingId: number | string;
     paymentId?: number | string;
-    snapToken: string;
+    provider: string;
+    amount: number;
+    payload: Record<string, unknown>;
     pendingResult?: BookingPaymentResultData;
 };
 
@@ -428,8 +440,12 @@ export default function Page() {
     const [paymentErrorMessage, setPaymentErrorMessage] = useState<
         string | null
     >(null);
-    const [, setActiveOnlinePaymentAttempt] =
-        useState<OnlinePaymentAttempt | null>(null);
+    const [paymentMethodDialogOpen, setPaymentMethodDialogOpen] =
+        useState(false);
+    const [pendingMidtransPayment, setPendingMidtransPayment] =
+        useState<PendingMidtransPayment | null>(null);
+    const [activeOnlinePayment, setActiveOnlinePayment] =
+        useState<ActiveOnlinePayment | null>(null);
     const [isRefreshingPaymentResult, setIsRefreshingPaymentResult] =
         useState(false);
 
@@ -1088,7 +1104,7 @@ export default function Page() {
             window.history.back();
         };
 
-        setActiveOnlinePaymentAttempt(null);
+        setActiveOnlinePayment(null);
 
         if (!existingBooking?.id) {
             redirectAfterRelease();
@@ -1677,7 +1693,7 @@ export default function Page() {
 
     const showPaymentResult = useCallback(
         (nextResult: BookingPaymentResultData) => {
-            setActiveOnlinePaymentAttempt(null);
+            setActiveOnlinePayment(null);
             stopHoldTimer();
             if (isDashboardBooking) {
                 router.visit(dashboardReturnUrl);
@@ -1746,6 +1762,10 @@ export default function Page() {
                         if (nextResult) {
                             showPaymentResult(nextResult);
                         }
+
+                        if (isConfirmedPaymentResult(nextResult)) {
+                            refreshPageAfterPayment();
+                        }
                     }
                 })
                 .catch(() => {
@@ -1761,84 +1781,36 @@ export default function Page() {
         [bookingActionUrl, showPaymentResult],
     );
 
-    const openSnapPayment = useCallback(
+    const showOnlinePaymentInstructions = useCallback(
         (
-            snapToken: string,
             bookingId: number | string,
             paymentId: number | string | undefined,
+            payment: {
+                provider: string;
+                amount: number;
+                payload: Record<string, unknown>;
+            },
             pendingResult: BookingPaymentResultData | undefined,
         ) => {
-            const snap = (window as any).snap;
-            let receivedPendingEvent = false;
-            let receivedTerminalEvent = false;
-
-            const callbacks = {
-                onSuccess: () => {
-                    receivedTerminalEvent = true;
-                    confirmOnlinePaymentAndShowResult(
-                        bookingId,
-                        paymentId,
-                        pendingResult,
-                        {
-                            showPendingResult: true,
-                        },
-                    );
-                },
-                onPending: () => {
-                    receivedPendingEvent = true;
-                    setActiveOnlinePaymentAttempt({
-                        bookingId,
-                        paymentId,
-                        snapToken,
-                        pendingResult,
-                    });
-                    setPaymentErrorMessage(null);
-                    setIsSubmitting(false);
-                },
-                onError: () => {
-                    receivedTerminalEvent = true;
-                    setActiveOnlinePaymentAttempt(null);
-                    setIsSubmitting(false);
-                },
-                onClose: () => {
-                    setIsSubmitting(false);
-
-                    if (receivedPendingEvent || receivedTerminalEvent) {
-                        setPaymentErrorMessage(
-                            'Payment window closed. You can continue payment again while the booking timer is still active.',
-                        );
-                        return;
-                    }
-
-                    confirmOnlinePaymentAndShowResult(
-                        bookingId,
-                        paymentId,
-                        pendingResult,
-                        {
-                            showPendingResult: false,
-                        },
-                    );
-                },
-            };
-
-            if (typeof snap?.pay !== 'function') {
-                setActiveOnlinePaymentAttempt(null);
-                setPaymentErrorMessage(
-                    'Online payment is not available in this browser session. Please refresh the page and try again.',
-                );
-                setIsSubmitting(false);
-                return;
-            }
-
-            snap.pay(snapToken, callbacks);
+            setActiveOnlinePayment({
+                bookingId,
+                paymentId,
+                provider: payment.provider,
+                amount: payment.amount,
+                payload: payment.payload,
+                pendingResult,
+            });
+            setPaymentErrorMessage(null);
+            setIsSubmitting(false);
         },
-        [confirmOnlinePaymentAndShowResult],
+        [],
     );
 
     const startOnlinePayment = (
         bookingId: number | string,
         paymentType: PaymentType,
         finalAmount: number,
+        paymentMethodId: number,
     ) => {
         axios
             .post(
@@ -1846,6 +1818,7 @@ export default function Page() {
                 {
                     payment_type: paymentType,
                     amount: finalAmount,
+                    payment_method_id: paymentMethodId,
                 },
                 {
                     withCredentials: true,
@@ -1853,8 +1826,9 @@ export default function Page() {
                 },
             )
             .then((response) => {
-                const snapToken = response.data?.payment?.payload
-                    ?.snap_token as string | undefined;
+                const paymentPayload = response.data?.payment?.payload as
+                    | Record<string, unknown>
+                    | undefined;
                 const paymentId = response.data?.payment?.id as
                     | number
                     | string
@@ -1863,8 +1837,8 @@ export default function Page() {
                     | BookingPaymentResultData
                     | undefined;
 
-                if (!snapToken) {
-                    setActiveOnlinePaymentAttempt(null);
+                if (!paymentPayload?.order_id) {
+                    setActiveOnlinePayment(null);
                     setPaymentErrorMessage(
                         'Online payment could not be started. Please try again.',
                     );
@@ -1872,13 +1846,16 @@ export default function Page() {
                     return;
                 }
 
-                setActiveOnlinePaymentAttempt({
+                showOnlinePaymentInstructions(
                     bookingId,
                     paymentId,
-                    snapToken,
+                    {
+                        provider: 'midtrans',
+                        amount: finalAmount,
+                        payload: paymentPayload,
+                    },
                     pendingResult,
-                });
-                openSnapPayment(snapToken, bookingId, paymentId, pendingResult);
+                );
             })
             .catch((error) => {
                 const message = paymentErrorMessageFromResponse(error);
@@ -1889,6 +1866,90 @@ export default function Page() {
 
                 setIsSubmitting(false);
             });
+    };
+
+    const proceedWithMidtransPayment = (
+        paymentMethodId: number,
+        pending: PendingMidtransPayment,
+    ) => {
+        const { paymentType, finalAmount, addOns } = pending;
+
+        if (isBalancePayment && existingBooking?.id) {
+            let startedPayment = false;
+
+            router.put(
+                `/bookings/${existingBooking.id}`,
+                buildBookingPayload(addOns, paymentType, 'midtrans', false),
+                {
+                    forceFormData: true,
+                    preserveScroll: true,
+                    onSuccess: () => {
+                        startedPayment = true;
+                        startOnlinePayment(
+                            existingBooking.id,
+                            paymentType,
+                            finalAmount,
+                            paymentMethodId,
+                        );
+                    },
+                    onError: (errors) => {
+                        const message =
+                            firstErrorMessage(errors.payment) ??
+                            firstErrorMessage(errors.payment_date) ??
+                            firstErrorMessage(errors.payment_type);
+
+                        if (message) {
+                            setPaymentErrorMessage(message);
+                        }
+                    },
+                    onFinish: () => {
+                        if (!startedPayment) {
+                            setIsSubmitting(false);
+                        }
+                    },
+                },
+            );
+
+            return;
+        }
+
+        const payload = buildBookingPayload(
+            addOns,
+            paymentType,
+            'midtrans',
+            true,
+        );
+
+        router.post(storeUrl, payload as any, {
+            forceFormData: true,
+            preserveScroll: true,
+            onSuccess: () => {
+                const bookingId = existingBooking?.id;
+                if (!bookingId) {
+                    setIsSubmitting(false);
+                    return;
+                }
+
+                startOnlinePayment(
+                    bookingId,
+                    paymentType,
+                    finalAmount,
+                    paymentMethodId,
+                );
+            },
+            onError: (errors) => {
+                const message =
+                    firstErrorMessage(errors.payment) ??
+                    firstErrorMessage(errors.payment_date) ??
+                    firstErrorMessage(errors.payment_type);
+
+                if (message) {
+                    setPaymentErrorMessage(message);
+                }
+
+                setIsSubmitting(false);
+            },
+        });
     };
 
     const submitManualPayment = (
@@ -2177,6 +2238,17 @@ export default function Page() {
         setIsSubmitting(true);
         setPaymentErrorMessage(null);
 
+        if (paymentMethod === 'midtrans') {
+            setPendingMidtransPayment({
+                paymentType,
+                finalAmount,
+                addOns,
+                manualData,
+            });
+            setPaymentMethodDialogOpen(true);
+            return;
+        }
+
         if (!fullPaymentAvailable && paymentType === 'full_payment') {
             setPaymentErrorMessage(
                 paymentUnavailableReason ?? DEFAULT_PAYMENT_UNAVAILABLE_MESSAGE,
@@ -2204,15 +2276,6 @@ export default function Page() {
                     preserveScroll: true,
                     onSuccess: () => {
                         startedPayment = true;
-
-                        if (paymentMethod === 'midtrans') {
-                            startOnlinePayment(
-                                existingBooking.id,
-                                paymentType,
-                                finalAmount,
-                            );
-                            return;
-                        }
 
                         submitManualPayment(
                             existingBooking.id,
@@ -2252,17 +2315,6 @@ export default function Page() {
             forceFormData: true,
             preserveScroll: true,
             onSuccess: () => {
-                if (paymentMethod === 'midtrans') {
-                    const bookingId = existingBooking?.id;
-                    if (!bookingId) {
-                        setIsSubmitting(false);
-                        return;
-                    }
-
-                    startOnlinePayment(bookingId, paymentType, finalAmount);
-                    return;
-                }
-
                 if (!manualData || paymentMethod !== 'manual_transfer') {
                     return;
                 }
@@ -2293,7 +2345,7 @@ export default function Page() {
                 setIsSubmitting(false);
             },
             onFinish: () => {
-                if (!manualData && paymentMethod !== 'midtrans') {
+                if (!manualData) {
                     setIsSubmitting(false);
                 }
             },
@@ -2850,6 +2902,93 @@ export default function Page() {
                         </AlertDialogFooter>
                     </AlertDialogContent>
                 </AlertDialog>
+
+                <PaymentMethodDialog
+                    open={paymentMethodDialogOpen}
+                    onOpenChange={(open) => {
+                        setPaymentMethodDialogOpen(open);
+
+                        if (!open) {
+                            setPendingMidtransPayment(null);
+                            setIsSubmitting(false);
+                        }
+                    }}
+                    description={
+                        pendingMidtransPayment
+                            ? `Select how you want to pay Rp ${pendingMidtransPayment.finalAmount.toLocaleString('id-ID')}`
+                            : undefined
+                    }
+                    loading={isSubmitting}
+                    onConfirm={(methodId) => {
+                        if (!pendingMidtransPayment) {
+                            return;
+                        }
+
+                        setPaymentMethodDialogOpen(false);
+                        proceedWithMidtransPayment(
+                            methodId,
+                            pendingMidtransPayment,
+                        );
+                        setPendingMidtransPayment(null);
+                    }}
+                />
+
+                <OnlinePaymentDialog
+                    open={activeOnlinePayment !== null}
+                    onOpenChange={(open) => {
+                        if (!open) {
+                            setActiveOnlinePayment(null);
+                        }
+                    }}
+                    paymentId={activeOnlinePayment?.paymentId}
+                    status="pending"
+                    statusCheck={
+                        activeOnlinePayment?.paymentId
+                            ? {
+                                  url: `${bookingActionUrl(activeOnlinePayment.bookingId, 'online-payment')}/${activeOnlinePayment.paymentId}/confirm`,
+                                  method: 'POST',
+                              }
+                            : undefined
+                    }
+                    provider={activeOnlinePayment?.provider}
+                    amount={activeOnlinePayment?.amount}
+                    payload={activeOnlinePayment?.payload}
+                    continueLabel="I've paid"
+                    description="Complete the transfer below while your booking timer is still active, then confirm once finished."
+                    reloadOnPaid={false}
+                    onStatusChange={(result) => {
+                        if (result.status !== 'paid') {
+                            return;
+                        }
+
+                        const nextResult =
+                            (result.bookingPaymentResult as
+                                | BookingPaymentResultData
+                                | undefined) ??
+                            activeOnlinePayment?.pendingResult;
+
+                        if (nextResult) {
+                            showPaymentResult(nextResult);
+                        }
+
+                        setActiveOnlinePayment(null);
+                        setIsSubmitting(false);
+                        refreshPageAfterPayment();
+                    }}
+                    onContinue={
+                        activeOnlinePayment
+                            ? () => {
+                                  confirmOnlinePaymentAndShowResult(
+                                      activeOnlinePayment.bookingId,
+                                      activeOnlinePayment.paymentId,
+                                      activeOnlinePayment.pendingResult,
+                                      { showPendingResult: true },
+                                  );
+                                  setActiveOnlinePayment(null);
+                              }
+                            : undefined
+                    }
+                />
 
                 {releaseHoldDialog}
                 {holdExpiryResolutionDialog}

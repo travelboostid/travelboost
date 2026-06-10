@@ -117,6 +117,7 @@ Route::prefix('companies')->middleware(['can:access-company-pages', 'use-analyti
         Route::resource('bank-accounts', BankAccountController::class);
         Route::get('wallet-transactions', [WalletTransactionsController::class, 'index'])->name('wallet-transaction.index');
         Route::resource('withdrawals', WithdrawalController::class);
+        Route::post('withdrawals/{withdrawal}/cancel', [WithdrawalController::class, 'cancel'])->name('withdrawals.cancel');
         Route::get('profile', [ProfileController::class, 'show'])->name('settings.profile.show');
 
         Route::get(

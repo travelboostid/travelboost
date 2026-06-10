@@ -32,6 +32,7 @@ Route::prefix('webapi')->group(function () {
             'update' => 'webapi.companies.update',
             'destroy' => 'webapi.companies.destroy',
         ]);
+        Route::post('payments/{payment}/sync-status', [PaymentController::class, 'syncStatus']);
         Route::apiResource('payments', PaymentController::class);
         Route::apiResource('withdrawals', WithdrawalController::class);
         Route::apiResource('bank-accounts', BankAccountController::class);

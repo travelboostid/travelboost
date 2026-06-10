@@ -35,6 +35,8 @@ class PrismaLinkService
 
     private const INTEGRATION_TYPE_PAYMENT_PAGE = '01';
 
+    private const INTEGRATION_TYPE_FULL_API = '02';
+
     private const SUCCESS_RESPONSE_CODE = 'PL000';
 
     private const MAX_MERCHANT_REF_NO_LENGTH = 24;
@@ -93,7 +95,9 @@ class PrismaLinkService
             'invoice_number' => $this->normalizeInvoiceNumber($params['invoice_number']),
             'transaction_amount' => (int) $params['transaction_amount'],
             'transaction_date_time' => $this->formatDateTime($now),
-            'integration_type' => self::INTEGRATION_TYPE_PAYMENT_PAGE,
+            'integration_type' => ($params['payment_method'] ?? null) === 'CC'
+                ? self::INTEGRATION_TYPE_PAYMENT_PAGE
+                : self::INTEGRATION_TYPE_FULL_API,
             'validity' => $params['validity'] ?? $this->formatDateTime($now->copy()->addHours($validityHours)),
         ];
 
@@ -136,6 +140,78 @@ class PrismaLinkService
         }
 
         return $response;
+    }
+
+    /**
+     * @param  array<string, mixed>  $response
+     * @return array<string, mixed>
+     */
+    public function extractInstructions(
+        array $response,
+        ?string $paymentMethod = null,
+        ?string $bankId = null,
+    ): array {
+        $paymentMethodCode = $this->paymentMethodCode($paymentMethod);
+
+        if ($paymentMethodCode === 'VA' || $this->hasVaNumberList($response)) {
+            $vaInstructions = $this->extractVirtualAccountInstructions(
+                $response,
+                $paymentMethod,
+                $bankId,
+            );
+
+            if ($vaInstructions !== []) {
+                return $vaInstructions;
+            }
+        }
+
+        if ($paymentMethodCode === 'QR' || filled($response['qris_data'] ?? null)) {
+            $qrInstructions = $this->extractQrisInstructions($response);
+
+            if ($qrInstructions !== []) {
+                return $qrInstructions;
+            }
+        }
+
+        if (
+            $paymentMethodCode === 'CC'
+            || filled($response['creditcard_form_url'] ?? null)
+            || filled($response['payment_page_url'] ?? null)
+            || filled($response['creditcard_session_token'] ?? null)
+        ) {
+            $cardFormUrl = $response['creditcard_form_url'] ?? null;
+
+            if (is_string($cardFormUrl) && $cardFormUrl !== '') {
+                return [
+                    'instruction_type' => 'redirect',
+                    'redirect_url' => $this->resolvePaymentPageUrl($cardFormUrl),
+                ];
+            }
+
+            $paymentPageUrl = $response['payment_page_url'] ?? null;
+
+            if (is_string($paymentPageUrl) && $paymentPageUrl !== '') {
+                return [
+                    'instruction_type' => 'redirect',
+                    'redirect_url' => $this->resolvePaymentPageUrl($paymentPageUrl),
+                ];
+            }
+
+            $sessionToken = $response['creditcard_session_token'] ?? null;
+
+            if (is_string($sessionToken) && $sessionToken !== '') {
+                return [
+                    'instruction_type' => 'redirect',
+                    'redirect_url' => $this->resolvePaymentPageUrl(
+                        '/creditcard/landingpage?keyId='.$sessionToken,
+                    ),
+                ];
+            }
+        }
+
+        return [
+            'instruction_type' => 'unknown',
+        ];
     }
 
     /**
@@ -315,6 +391,180 @@ class PrismaLinkService
         return hash_hmac('sha256', $body, (string) config('prismalink.secret_key', ''));
     }
 
+    /**
+     * @param  array<string, mixed>  $response
+     * @return array<int, array<string, mixed>>
+     */
+    private function parseVaNumberList(array $response): array
+    {
+        $raw = $response['va_number_list'] ?? null;
+
+        if (! is_string($raw) || trim($raw) === '') {
+            return [];
+        }
+
+        $decoded = json_decode($raw, true);
+
+        return is_array($decoded) ? $decoded : [];
+    }
+
+    /**
+     * @param  array<string, mixed>  $response
+     */
+    private function hasVaNumberList(array $response): bool
+    {
+        return $this->parseVaNumberList($response) !== [];
+    }
+
+    /**
+     * @param  array<string, mixed>  $response
+     * @return array<string, mixed>
+     */
+    private function extractVirtualAccountInstructions(
+        array $response,
+        ?string $paymentMethod,
+        ?string $bankId,
+    ): array {
+        $entries = $this->parseVaNumberList($response);
+
+        if ($entries === []) {
+            return [];
+        }
+
+        $preferredBankLabel = $this->bankLabelFromPaymentMethod($paymentMethod);
+        $selected = null;
+
+        foreach ($entries as $entry) {
+            if (! is_array($entry)) {
+                continue;
+            }
+
+            $bankName = trim((string) ($entry['bank'] ?? ''));
+            $vaNumber = trim((string) ($entry['va'] ?? $entry['va_number'] ?? ''));
+
+            if ($vaNumber === '') {
+                continue;
+            }
+
+            if (
+                $preferredBankLabel !== null
+                && strcasecmp($bankName, $preferredBankLabel) === 0
+            ) {
+                $selected = [
+                    'bank' => $this->normalizeBankSlug($bankName, $paymentMethod),
+                    'va_number' => $vaNumber,
+                ];
+
+                break;
+            }
+
+            $selected ??= [
+                'bank' => $this->normalizeBankSlug($bankName, $paymentMethod),
+                'va_number' => $vaNumber,
+            ];
+        }
+
+        if ($selected === null) {
+            return [];
+        }
+
+        return [
+            'instruction_type' => 'va',
+            'bank' => $selected['bank'],
+            'va_number' => $selected['va_number'],
+            'bank_id' => $bankId,
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $response
+     * @return array<string, mixed>
+     */
+    private function extractQrisInstructions(array $response): array
+    {
+        $qrisData = $response['qris_data'] ?? null;
+
+        if (! is_string($qrisData) || trim($qrisData) === '') {
+            return [];
+        }
+
+        $qrisData = trim($qrisData);
+
+        if (
+            str_starts_with($qrisData, 'http://')
+            || str_starts_with($qrisData, 'https://')
+        ) {
+            return [
+                'instruction_type' => 'qris',
+                'qr_url' => $qrisData,
+            ];
+        }
+
+        if (str_contains($qrisData, '000201')) {
+            $normalized = str_replace(' ', '', $qrisData);
+            $start = strpos($normalized, '000201');
+            $emvPayload = substr($normalized, $start !== false ? $start : 0);
+
+            if (preg_match('/^(000201.+?6304[0-9A-Fa-f]{4})/', $emvPayload, $matches) === 1) {
+                $emvPayload = $matches[1];
+            }
+
+            return [
+                'instruction_type' => 'qris',
+                'qr_data' => $emvPayload,
+            ];
+        }
+
+        if (str_starts_with($qrisData, 'data:')) {
+            return [
+                'instruction_type' => 'qris',
+                'qr_url' => $qrisData,
+            ];
+        }
+
+        return [
+            'instruction_type' => 'qris',
+            'qr_data' => $qrisData,
+        ];
+    }
+
+    private function paymentMethodCode(?string $method): ?string
+    {
+        if ($method !== null && str_ends_with($method, '_va')) {
+            return 'VA';
+        }
+
+        return match ($method) {
+            'credit-card' => 'CC',
+            'qr', 'qris' => 'QR',
+            default => null,
+        };
+    }
+
+    private function bankLabelFromPaymentMethod(?string $method): ?string
+    {
+        return match ($method) {
+            'bca_va' => 'BCA',
+            'mandiri_va' => 'Mandiri',
+            'bni_va' => 'BNI',
+            'bri_va' => 'BRI',
+            'btn_va' => 'BTN',
+            'permata_va' => 'Permata',
+            'cimb_va' => 'Niaga',
+            'danamon_va' => 'Danamon',
+            default => null,
+        };
+    }
+
+    private function normalizeBankSlug(string $bankName, ?string $paymentMethod): string
+    {
+        if (is_string($paymentMethod) && str_ends_with($paymentMethod, '_va')) {
+            return str_replace('_va', '', $paymentMethod);
+        }
+
+        return strtolower(str_replace(' ', '_', $bankName));
+    }
+
     public function resolvePaymentPageUrl(?string $paymentPageUrl): ?string
     {
         if (! is_string($paymentPageUrl) || trim($paymentPageUrl) === '') {
@@ -337,7 +587,14 @@ class PrismaLinkService
 
             $path = ($parts['path'] ?? '').(isset($parts['query']) ? '?'.$parts['query'] : '');
 
-            if ($path === '' || ! str_contains($path, 'paymentpage') && ! str_contains($path, 'directdebit')) {
+            if (
+                $path === ''
+                || (
+                    ! str_contains($path, 'paymentpage')
+                    && ! str_contains($path, 'directdebit')
+                    && ! str_contains($path, 'creditcard')
+                )
+            ) {
                 return $paymentPageUrl;
             }
 

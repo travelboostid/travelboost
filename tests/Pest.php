@@ -44,7 +44,40 @@ expect()->extend('toBeOne', function () {
 |
 */
 
-function something()
+use App\Enums\PaymentMethodCategory;
+use App\Enums\PaymentMethodStatus;
+use App\Models\PaymentMethod;
+
+function createMidtransBcaPaymentMethod(): PaymentMethod
 {
-    // ..
+    return PaymentMethod::query()->create([
+        'provider' => 'midtrans',
+        'method' => 'bca_va',
+        'name' => 'Midtrans BCA Virtual Account',
+        'description' => 'Test BCA VA',
+        'category' => PaymentMethodCategory::BANK_TRANSFER,
+        'status' => PaymentMethodStatus::ENABLED,
+        'meta' => [
+            'payment_type' => 'bank_transfer',
+            'bank' => 'bca',
+        ],
+    ]);
+}
+
+/**
+ * @param  array<string, mixed>  $overrides
+ */
+function mockMidtransCoreApiCharge(array $overrides = []): void
+{
+    Mockery::mock('alias:Midtrans\CoreApi')
+        ->shouldReceive('charge')
+        ->andReturn(array_merge([
+            'transaction_status' => 'pending',
+            'va_numbers' => [
+                [
+                    'bank' => 'bca',
+                    'va_number' => '80777100123456',
+                ],
+            ],
+        ], $overrides));
 }
