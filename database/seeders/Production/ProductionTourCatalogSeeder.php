@@ -23,7 +23,7 @@ abstract class ProductionTourCatalogSeeder extends Seeder
      *     destination: string,
      *     product_commission_category: string,
      *     showprice: int,
-     *     add_ons: array<string, int>,
+     *     add_ons: array<string, int|array{price:int,is_taxable:bool}>,
      *     price_sets: list<array{
      *         departures: string,
      *         availability: int,
@@ -267,11 +267,14 @@ abstract class ProductionTourCatalogSeeder extends Seeder
     }
 
     /**
-     * @param  array<string, int>  $addOns
+     * @param  array<string, int|array{price:int,is_taxable:bool}>  $addOns
      */
     private function seedAddOns(int $companyId, int $tourId, int $scheduleId, array $addOns): void
     {
-        foreach ($addOns as $description => $price) {
+        foreach ($addOns as $description => $definition) {
+            $price = is_array($definition) ? (int) ($definition['price'] ?? 0) : (int) $definition;
+            $isTaxable = is_array($definition) ? (bool) ($definition['is_taxable'] ?? false) : false;
+
             DB::table('tour_add_ons')->updateOrInsert(
                 [
                     'company_id' => $companyId,
@@ -282,7 +285,7 @@ abstract class ProductionTourCatalogSeeder extends Seeder
                     'tour_id' => $tourId,
                     'price' => $price,
                     'edit_status' => false,
-                    'is_taxable' => false,
+                    'is_taxable' => $isTaxable,
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]

@@ -2,6 +2,8 @@
 
 namespace Database\Seeders\Production;
 
+use Illuminate\Support\Str;
+
 class GrandChinaTravelTourSeeder extends ProductionTourCatalogSeeder
 {
     protected function vendorUsername(): string
@@ -11,7 +13,7 @@ class GrandChinaTravelTourSeeder extends ProductionTourCatalogSeeder
 
     protected function tours(): array
     {
-        return [
+        return $this->normalizeAddOns([
             [
                 'code' => 'GCT-01-001',
                 'name' => '8D Lingshan Wangxian Valley',
@@ -1193,7 +1195,7 @@ class GrandChinaTravelTourSeeder extends ProductionTourCatalogSeeder
             ],
             [
                 'code' => 'GCT-06-006',
-                'name' => 'CHONGQING - EMEISHAN CITY - DUJIANGYAN - JIUZHAIGOU - CHENGDU',
+                'name' => '11D CHONGQING EMEISHAN CITY DUJIANGYAN JIUZHAIGOU CHENGDU',
                 'description' => 'CHONGQING - EMEISHAN CITY - DUJIANGYAN - JIUZHAIGOU - CHENGDU',
                 'duration_days' => 11,
                 'continent' => 'Asia',
@@ -1549,7 +1551,7 @@ class GrandChinaTravelTourSeeder extends ProductionTourCatalogSeeder
                 'region' => 'East Asia',
                 'destination' => 'JAKARTA- CHONGQING - PENGSHUI - WULONG - FAIRYLAND',
                 'product_commission_category' => 'Umum',
-                'showprice' => 1900000,
+                'showprice' => 11900000,
                 'add_ons' => [
                     'Visa Grup' => 980000,
                     'Tipping' => 782000,
@@ -1597,6 +1599,25 @@ class GrandChinaTravelTourSeeder extends ProductionTourCatalogSeeder
                     ],
                 ],
             ],
-        ];
+        ]);
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $tours
+     * @return list<array<string, mixed>>
+     */
+    private function normalizeAddOns(array $tours): array
+    {
+        return array_map(function (array $tour): array {
+            $tour['add_ons'] = collect($tour['add_ons'] ?? [])
+                ->reject(fn (mixed $_price, string $description): bool => Str::contains(Str::lower($description), 'visa'))
+                ->map(fn (mixed $price): array => [
+                    'price' => (int) $price,
+                    'is_taxable' => true,
+                ])
+                ->all();
+
+            return $tour;
+        }, $tours);
     }
 }

@@ -21,7 +21,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { Textarea } from '@/components/ui/textarea';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { router, useForm, usePage } from '@inertiajs/react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import SelectCategory from './components/select-category';
 import SelectContinent from './components/select-continent';
 import SelectCountry from './components/select-country';
@@ -39,6 +39,8 @@ import {
 } from '@/components/ui/tooltip';
 import { InfoIcon } from 'lucide-react';
 import SelectProductCommissionCategory from './components/select-product-commission-category';
+import SelectVisaCategory from './components/select-visa-category';
+import VisaCategoryPreview from './components/visa-category-preview';
 
 ///////////tab 2
 type RoomPrice = {
@@ -69,6 +71,17 @@ type PriceCategory = {
 type ProductCommissionCategory = {
     id: number;
     name: string;
+};
+
+type VisaCategory = {
+    id: number;
+    name: string;
+    items: Array<{
+        id: number;
+        description: string;
+        price: number | string;
+        is_taxable: boolean;
+    }>;
 };
 /////////////
 
@@ -136,6 +149,7 @@ export default function Page() {
         country_id: '',
         category_id: '',
         product_commission_category_id: '',
+        visa_category_id: '',
         status: 'inactive',
         image_id: '',
         document_id: '',
@@ -143,10 +157,25 @@ export default function Page() {
         currency: 'IDR',
     });
 
-    const { priceCategories, productCommissionCategories } = usePage<{
+    const { priceCategories, productCommissionCategories, visaCategories } = usePage<{
         priceCategories: PriceCategory[];
         productCommissionCategories: ProductCommissionCategory[];
+        visaCategories: VisaCategory[];
     }>().props;
+
+    const selectedVisaCategory = useMemo(() => {
+        const selectedId = Number(data.visa_category_id || 0);
+
+        if (!selectedId) {
+            return null;
+        }
+
+        return (
+            visaCategories?.find(
+                (category: VisaCategory) => category.id === selectedId,
+            ) ?? null
+        );
+    }, [data.visa_category_id, visaCategories]);
 
     const [schedules, setSchedules] = useState<Schedule[]>([]);
 
@@ -711,8 +740,8 @@ export default function Page() {
                                         </h2>
 
                                         <p className="text-sm text-muted-foreground">
-                                            Configure itinerary document, status
-                                            and currency
+                                            Configure itinerary document, status,
+                                            and visa type
                                         </p>
                                     </div>
                                     {/* BODY */}
@@ -745,7 +774,7 @@ export default function Page() {
                                         </div>
 
                                         {/* Status */}
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                             {/* STATUS */}
                                             <div className="grid gap-2">
                                                 <Label htmlFor="status">
@@ -782,18 +811,38 @@ export default function Page() {
                                                 />
                                             </div>
 
-                                            {/* CURRENCY */}
                                             <div className="grid gap-2">
-                                                <Label>Currency</Label>
+                                                <Label htmlFor="visa_category_id">
+                                                    Visa Type
+                                                </Label>
 
-                                                <SelectCurrency
-                                                    value={data.currency}
+                                                <SelectVisaCategory
+                                                    value={
+                                                        data.visa_category_id ||
+                                                        undefined
+                                                    }
+                                                    categories={visaCategories}
                                                     onChange={(val) =>
-                                                        setData('currency', val)
+                                                        setData(
+                                                            'visa_category_id',
+                                                            val === '0'
+                                                                ? ''
+                                                                : Number(val),
+                                                        )
+                                                    }
+                                                />
+
+                                                <InputError
+                                                    message={
+                                                        errors.visa_category_id
                                                     }
                                                 />
                                             </div>
                                         </div>
+
+                                        <VisaCategoryPreview
+                                            category={selectedVisaCategory}
+                                        />
                                     </div>
                                 </div>
 
@@ -810,31 +859,44 @@ export default function Page() {
                                         </p>
                                     </div>
                                     <div className="space-y-6 p-6">
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="showprice">
-                                                Normal Price show on catalog
-                                            </Label>
-                                            <Input
-                                                id="showprice_display"
-                                                type="text"
-                                                placeholder="Normal Price"
-                                                value={displayPrice}
-                                                onChange={(e) =>
-                                                    handlePriceChange(
-                                                        e.target.value,
-                                                    )
-                                                }
-                                            />
-                                            {/* hidden raw value */}
-                                            <input
-                                                type="hidden"
-                                                name="showprice"
-                                                value={rawPrice}
-                                            />
+                                        <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+                                            <div className="grid gap-2">
+                                                <Label htmlFor="showprice">
+                                                    Normal Price show on catalog
+                                                </Label>
+                                                <Input
+                                                    id="showprice_display"
+                                                    type="text"
+                                                    placeholder="Normal Price"
+                                                    value={displayPrice}
+                                                    onChange={(e) =>
+                                                        handlePriceChange(
+                                                            e.target.value,
+                                                        )
+                                                    }
+                                                />
+                                                {/* hidden raw value */}
+                                                <input
+                                                    type="hidden"
+                                                    name="showprice"
+                                                    value={rawPrice}
+                                                />
 
-                                            <InputError
-                                                message={errors.showprice}
-                                            />
+                                                <InputError
+                                                    message={errors.showprice}
+                                                />
+                                            </div>
+
+                                            <div className="grid gap-2">
+                                                <Label>Currency</Label>
+
+                                                <SelectCurrency
+                                                    value={data.currency}
+                                                    onChange={(val) =>
+                                                        setData('currency', val)
+                                                    }
+                                                />
+                                            </div>
                                         </div>
 
                                         <div className="rounded-2xl border border-pink-200 bg-gradient-to-br from-pink-50 to-rose-50 p-5 shadow-sm">

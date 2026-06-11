@@ -32,6 +32,7 @@ class TourController extends Controller
                 'user',
                 'category',
                 'productCommissionCategory',
+                'visaCategory.items',
             ])
             ->orderBy('id', 'desc')
             ->get();
@@ -44,6 +45,10 @@ class TourController extends Controller
                 ->orderBy('sort_order')
                 ->orderBy('category_name')
                 ->get(['id', 'category_name']),
+            'visaCategories' => $company->visaCategories()
+                ->with('items')
+                ->orderBy('name')
+                ->get(),
         ]);
     }
 
@@ -60,6 +65,10 @@ class TourController extends Controller
                 ->orderBy('sort_order')
                 ->orderBy('category_name')
                 ->get(['id', 'category_name']),
+            'visaCategories' => $company->visaCategories()
+                ->with('items')
+                ->orderBy('name')
+                ->get(),
         ]);
     }
 
@@ -103,6 +112,7 @@ class TourController extends Controller
             'schedules.availability',
             'schedules.addOns',
             'productCommissionCategory',
+            'visaCategory.items',
         ]);
 
         $addOnsFromDb = TourAddOn::where('company_id', $company->id)
@@ -127,6 +137,10 @@ class TourController extends Controller
                 ->orderBy('sort_order')
                 ->orderBy('category_name')
                 ->get(['id', 'category_name']),
+            'visaCategories' => $company->visaCategories()
+                ->with('items')
+                ->orderBy('name')
+                ->get(),
         ]);
     }
 
@@ -145,6 +159,10 @@ class TourController extends Controller
                 $payload['product_commission_category_id'] = $payload['product_commission_category_id'] ?: null;
             }
 
+            if (array_key_exists('visa_category_id', $payload)) {
+                $payload['visa_category_id'] = $payload['visa_category_id'] ?: null;
+            }
+
             $tour->fill($payload);
             $tour->save();
 
@@ -161,6 +179,7 @@ class TourController extends Controller
         $data['promote_price'] = (int) ($data['promote_price'] ?? 0);
         $data['category_id'] = $data['category_id'] ?: null;
         $data['product_commission_category_id'] = ($data['product_commission_category_id'] ?? null) ?: null;
+        $data['visa_category_id'] = ($data['visa_category_id'] ?? null) ?: null;
         $data['image_id'] = $data['image_id'] ?: null;
         $data['document_id'] = $data['document_id'] ?: null;
 
