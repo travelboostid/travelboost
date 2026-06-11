@@ -10,6 +10,7 @@ use Database\Seeders\Common\PaymentMethodSeeder;
 use Database\Seeders\Common\PriceCategorySeeder;
 use Database\Seeders\Common\RegionSeeder;
 use Database\Seeders\Common\RolePermissionSeeder;
+use Database\Seeders\Common\VisaCategorySeeder;
 use Illuminate\Database\Seeder;
 
 class ProductionSeeder extends Seeder
@@ -32,6 +33,7 @@ class ProductionSeeder extends Seeder
             CountrySeeder::class,
             CurrencySeeder::class,
             PriceCategorySeeder::class,
+            VisaCategorySeeder::class,
             GrandChinaTravelTourSeeder::class,
             IslamicChinaTravelTourSeeder::class,
         ]);

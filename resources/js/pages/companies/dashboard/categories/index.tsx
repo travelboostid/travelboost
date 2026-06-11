@@ -79,7 +79,7 @@ function SortableHeader({
             type="button"
             onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
             className={cn(
-                '-ml-4 flex h-8 items-center font-bold text-primary',
+                'flex h-8 items-center font-bold text-primary',
                 className,
             )}
         >
@@ -191,10 +191,10 @@ export const columns: ColumnDef<TourCategoryWithManualReservedLimit>[] = [
     {
         accessorKey: 'name',
         header: ({ column }) => (
-            <SortableHeader column={column} title="Category" className="pl-3" />
+            <SortableHeader column={column} title="Category" />
         ),
         cell: ({ row }) => (
-            <div className="flex min-w-[240px] items-center gap-3 pl-3">
+            <div className="flex min-w-[240px] items-center gap-3">
                 <div className="min-w-0">
                     <p
                         className="truncate font-semibold text-slate-900 dark:text-slate-100"
@@ -233,8 +233,10 @@ export const columns: ColumnDef<TourCategoryWithManualReservedLimit>[] = [
         ),
         cell: ({ row }) => (
             <span className="whitespace-nowrap text-sm font-medium text-slate-500 dark:text-slate-300">
-                {row.original.manual_reserved_limit_value ?? 1}{' '}
-                {row.original.manual_reserved_limit_unit ?? 'hour'}
+                {row.original.manual_reserved_limit_value &&
+                row.original.manual_reserved_limit_unit
+                    ? `${row.original.manual_reserved_limit_value} ${row.original.manual_reserved_limit_unit}`
+                    : 'No limit'}
             </span>
         ),
     },
@@ -259,7 +261,10 @@ export default function Page({ data }: { data: any }) {
                 item.name,
                 item.description || '',
                 String(item.position_no ?? ''),
-                `${item.manual_reserved_limit_value ?? 1} ${item.manual_reserved_limit_unit ?? 'hour'}`,
+                item.manual_reserved_limit_value &&
+                item.manual_reserved_limit_unit
+                    ? `${item.manual_reserved_limit_value} ${item.manual_reserved_limit_unit}`
+                    : 'no limit',
             ].some((value) => value.toLowerCase().includes(search));
         },
         [],
@@ -377,20 +382,20 @@ export default function Page({ data }: { data: any }) {
                             unwrapped
                             className="w-full border-separate border-spacing-0 text-sm"
                         >
-                            <TableHeader className="sticky top-0 z-40 bg-slate-50 shadow-[0_1px_0_0_theme(colors.border)] dark:bg-slate-900/90">
+                            <TableHeader className="sticky top-0 z-40 bg-white shadow-[0_1px_0_0_theme(colors.border)] dark:bg-slate-950/95">
                                 {table.getHeaderGroups().map((headerGroup) => (
                                     <TableRow
                                         key={headerGroup.id}
-                                        className="border-none bg-slate-50 hover:bg-slate-50 dark:bg-slate-900/90 dark:hover:bg-slate-900/90"
+                                        className="border-none bg-white hover:bg-white dark:bg-slate-950/95 dark:hover:bg-slate-950/95"
                                     >
                                         {headerGroup.headers.map((header) => (
                                             <TableHead
                                                 key={header.id}
                                                 className={cn(
-                                                    'h-12 whitespace-nowrap bg-slate-50 px-3 font-bold text-primary dark:bg-slate-900/90',
+                                                    'h-12 whitespace-nowrap bg-white px-4 font-bold text-primary dark:bg-slate-950/95',
                                                     header.column.id ===
                                                         'actions' &&
-                                                        'sticky left-0 z-50 w-[3.75rem] min-w-[3.75rem] max-w-[3.75rem] border-r border-border/70 bg-white/95 px-0 text-center shadow-[10px_0_14px_-16px_rgba(15,23,42,0.55)] backdrop-blur dark:bg-slate-950/95',
+                                                        'sticky left-0 z-50 w-[3.75rem] min-w-[3.75rem] max-w-[3.75rem] border-r border-border/70 bg-white px-0 text-center shadow-[10px_0_14px_-16px_rgba(15,23,42,0.35)] backdrop-blur dark:bg-slate-950/95',
                                                 )}
                                             >
                                                 {header.isPlaceholder
@@ -418,10 +423,10 @@ export default function Page({ data }: { data: any }) {
                                                     <TableCell
                                                         key={cell.id}
                                                         className={cn(
-                                                            'border-b border-border px-3 py-3',
+                                                            'border-b border-border px-4 py-3 align-middle',
                                                             cell.column.id ===
                                                                 'actions' &&
-                                                                'sticky left-0 z-20 w-[3.75rem] min-w-[3.75rem] max-w-[3.75rem] border-r border-border/70 bg-card px-0 text-center shadow-[10px_0_14px_-16px_rgba(15,23,42,0.55)] transition-colors group-hover:bg-slate-50 dark:bg-slate-950/95 dark:group-hover:bg-slate-900/50',
+                                                                'sticky left-0 z-20 w-[3.75rem] min-w-[3.75rem] max-w-[3.75rem] border-r border-border/70 bg-card px-0 text-center shadow-[10px_0_14px_-16px_rgba(15,23,42,0.35)] transition-colors group-hover:bg-slate-50 dark:bg-slate-950/95 dark:group-hover:bg-slate-900/50',
                                                             cell.column.id ===
                                                                 'actions' &&
                                                                 rowIndex ===

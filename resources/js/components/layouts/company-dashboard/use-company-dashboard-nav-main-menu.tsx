@@ -156,6 +156,13 @@ export function useCompanyDashboardNavMainMenu() {
                     ),
                     urlOrAction: `/companies/${company.username}/dashboard/price-categories`,
                 },
+                {
+                    id: 'tours.visa-categories',
+                    title: (
+                        <FormattedMessage defaultMessage="Visa Categories" />
+                    ),
+                    urlOrAction: `/companies/${company.username}/dashboard/visa-categories`,
+                },
             ],
             shouldDisplay: (roles, permissions) =>
                 roles.includes('user:vendor') &&

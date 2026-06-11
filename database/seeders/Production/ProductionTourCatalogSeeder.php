@@ -115,6 +115,7 @@ abstract class ProductionTourCatalogSeeder extends Seeder
             $companyId,
             $tourData['product_commission_category']
         );
+        $visaCategoryId = $this->visaCategoryId($companyId, 'Visa Group A');
 
         $values = [
             'name' => $tourData['name'],
@@ -139,6 +140,7 @@ abstract class ProductionTourCatalogSeeder extends Seeder
             'country_id' => $countryId,
             'category_id' => null,
             'product_commission_category_id' => $productCommissionCategoryId,
+            'visa_category_id' => $visaCategoryId,
             'user_id' => null,
             'image_id' => null,
             'document_id' => null,
@@ -365,6 +367,14 @@ abstract class ProductionTourCatalogSeeder extends Seeder
             'created_at' => now(),
             'updated_at' => now(),
         ]);
+    }
+
+    private function visaCategoryId(int $companyId, string $sourceName): ?int
+    {
+        return DB::table('visa_categories')
+            ->where('company_id', $companyId)
+            ->where('slug', Str::slug($sourceName))
+            ->value('id');
     }
 
     /**

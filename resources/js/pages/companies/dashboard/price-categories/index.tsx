@@ -12,10 +12,16 @@ import {
 } from '@tanstack/react-table';
 import * as React from 'react';
 
-import { router } from '@inertiajs/react';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import CompanyDashboardLayout from '@/components/layouts/company-dashboard';
 import { Button } from '@/components/ui/button';
+import {
+    DropdownMenu,
+    DropdownMenuCheckboxItem,
+    DropdownMenuContent,
+    DropdownMenuGroup,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import {
     Table,
@@ -25,17 +31,21 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
-import {
-    DropdownMenu,
-    DropdownMenuCheckboxItem,
-    DropdownMenuContent,
-    DropdownMenuGroup,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { cn } from '@/lib/utils';
-import { ArrowDown, ArrowUp, ArrowUpDown, ChevronDown, EditIcon, MoreHorizontal, PlusIcon, Search, TrashIcon, XIcon } from 'lucide-react';
+import { router } from '@inertiajs/react';
+import {
+    ArrowDown,
+    ArrowUp,
+    ArrowUpDown,
+    ChevronDown,
+    EditIcon,
+    MoreHorizontal,
+    PlusIcon,
+    Search,
+    TrashIcon,
+    XIcon,
+} from 'lucide-react';
 
 import AddPriceCategoryDialog from './add-price-category-dialog';
 import UpdatePriceCategoryDialog from './update-price-category-dialog';
@@ -60,7 +70,10 @@ function SortableHeader({
         <button
             type="button"
             onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-            className={cn('-ml-4 flex h-8 items-center font-bold text-primary', className)}
+            className={cn(
+                'flex h-8 items-center font-bold text-primary',
+                className,
+            )}
         >
             <span>{title}</span>
             {column.getIsSorted() === 'desc' ? (
@@ -80,9 +93,12 @@ function RowAction({ item }: { item: PriceCategory }) {
     const handleDelete = () => {
         if (!confirm('Delete this category?')) return;
 
-        router.delete(`/companies/${company.username}/dashboard/price-categories/${item.id}`, {
-            preserveScroll: true,
-        });
+        router.delete(
+            `/companies/${company.username}/dashboard/price-categories/${item.id}`,
+            {
+                preserveScroll: true,
+            },
+        );
     };
 
     return (
@@ -129,21 +145,33 @@ function RowAction({ item }: { item: PriceCategory }) {
 export const columns: ColumnDef<PriceCategory>[] = [
     {
         id: 'actions',
-        header: () => <div className="px-2 text-center text-[11px] font-bold tracking-wider text-primary">Actions</div>,
+        header: () => (
+            <div className="px-2 text-center text-[11px] font-bold tracking-wider text-primary">
+                Actions
+            </div>
+        ),
         enableSorting: false,
         enableHiding: false,
         cell: ({ row }) => <RowAction item={row.original} />,
     },
     {
         accessorKey: 'name',
-        header: ({ column }) => <SortableHeader column={column} title="Category" className="pl-3" />,
+        header: ({ column }) => (
+            <SortableHeader column={column} title="Category" />
+        ),
         cell: ({ row }) => (
-            <div className="flex min-w-[240px] items-center gap-3 pl-3">
+            <div className="flex min-w-[240px] items-center gap-3">
                 <div className="min-w-0">
-                    <p className="truncate font-semibold text-slate-900 dark:text-slate-100" title={row.original.name}>
+                    <p
+                        className="truncate font-semibold text-slate-900 dark:text-slate-100"
+                        title={row.original.name}
+                    >
                         {row.original.name}
                     </p>
-                    <p className="truncate text-xs text-slate-500 dark:text-slate-400" title={row.original.description || ''}>
+                    <p
+                        className="truncate text-xs text-slate-500 dark:text-slate-400"
+                        title={row.original.description || ''}
+                    >
                         {row.original.description || '-'}
                     </p>
                 </div>
@@ -152,7 +180,9 @@ export const columns: ColumnDef<PriceCategory>[] = [
     },
     {
         accessorKey: 'room_type',
-        header: ({ column }) => <SortableHeader column={column} title="Room Type" />,
+        header: ({ column }) => (
+            <SortableHeader column={column} title="Room Type" />
+        ),
         cell: ({ row }) => (
             <span className="whitespace-nowrap text-sm font-medium text-slate-500 dark:text-slate-300">
                 {row.original.room_type}
@@ -163,17 +193,26 @@ export const columns: ColumnDef<PriceCategory>[] = [
 
 export default function Page({ categories }: any) {
     const [sorting, setSorting] = React.useState<SortingState>([]);
-    const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
-    const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
+    const [columnFilters, setColumnFilters] =
+        React.useState<ColumnFiltersState>([]);
+    const [columnVisibility, setColumnVisibility] =
+        React.useState<VisibilityState>({});
     const [rowSelection, setRowSelection] = React.useState({});
     const [globalFilter, setGlobalFilter] = React.useState('');
 
-    const globalFilterFn = React.useCallback((row: any, _columnId: string, filterValue: string) => {
-        const search = filterValue.toLowerCase();
-        const item = row.original as PriceCategory;
+    const globalFilterFn = React.useCallback(
+        (row: any, _columnId: string, filterValue: string) => {
+            const search = filterValue.toLowerCase();
+            const item = row.original as PriceCategory;
 
-        return [item.name, item.room_type || '', item.description || ''].some((value) => value.toLowerCase().includes(search));
-    }, []);
+            return [
+                item.name,
+                item.room_type || '',
+                item.description || '',
+            ].some((value) => value.toLowerCase().includes(search));
+        },
+        [],
+    );
 
     const table = useReactTable({
         data: categories,
@@ -222,7 +261,9 @@ export default function Page({ categories }: any) {
                             <Input
                                 placeholder="Search category, room type, or description"
                                 value={globalFilter}
-                                onChange={(event) => setGlobalFilter(event.target.value)}
+                                onChange={(event) =>
+                                    setGlobalFilter(event.target.value)
+                                }
                                 className="h-9 w-full rounded-lg border-slate-200 bg-background pl-9 pr-9 text-xs font-medium shadow-inner shadow-slate-100/70 transition-all placeholder:text-[13px] placeholder:font-normal placeholder:text-muted-foreground/70 focus-visible:border-primary/50 focus-visible:ring-2 focus-visible:ring-primary/20 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:shadow-black/20 dark:placeholder:text-slate-500"
                             />
                             {globalFilter.trim() !== '' && (
@@ -248,18 +289,26 @@ export default function Page({ categories }: any) {
                                 <ChevronDown className="ml-2 inline h-4 w-4 opacity-50" />
                             </button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-[220px] rounded-xl">
+                        <DropdownMenuContent
+                            align="end"
+                            className="w-[220px] rounded-xl"
+                        >
                             <DropdownMenuGroup>
-                                {table.getAllColumns().filter((column) => column.getCanHide()).map((column) => (
-                                    <DropdownMenuCheckboxItem
-                                        key={column.id}
-                                        className="cursor-pointer capitalize"
-                                        checked={column.getIsVisible()}
-                                        onCheckedChange={(value) => column.toggleVisibility(!!value)}
-                                    >
-                                        {column.id.replace(/_/g, ' ')}
-                                    </DropdownMenuCheckboxItem>
-                                ))}
+                                {table
+                                    .getAllColumns()
+                                    .filter((column) => column.getCanHide())
+                                    .map((column) => (
+                                        <DropdownMenuCheckboxItem
+                                            key={column.id}
+                                            className="cursor-pointer capitalize"
+                                            checked={column.getIsVisible()}
+                                            onCheckedChange={(value) =>
+                                                column.toggleVisibility(!!value)
+                                            }
+                                        >
+                                            {column.id.replace(/_/g, ' ')}
+                                        </DropdownMenuCheckboxItem>
+                                    ))}
                             </DropdownMenuGroup>
                         </DropdownMenuContent>
                     </DropdownMenu>
@@ -267,19 +316,33 @@ export default function Page({ categories }: any) {
 
                 <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm dark:border-slate-800 dark:bg-slate-950/80 dark:shadow-none">
                     <div className="relative max-h-[68vh] w-full overflow-auto [scrollbar-gutter:stable]">
-                        <Table unwrapped className="w-full border-separate border-spacing-0 text-sm">
-                            <TableHeader className="sticky top-0 z-40 bg-slate-50 shadow-[0_1px_0_0_theme(colors.border)] dark:bg-slate-900/90">
+                        <Table
+                            unwrapped
+                            className="w-full border-separate border-spacing-0 text-sm"
+                        >
+                            <TableHeader className="sticky top-0 z-40 bg-white shadow-[0_1px_0_0_theme(colors.border)] dark:bg-slate-950/95">
                                 {table.getHeaderGroups().map((headerGroup) => (
-                                    <TableRow key={headerGroup.id} className="border-none bg-slate-50 hover:bg-slate-50 dark:bg-slate-900/90 dark:hover:bg-slate-900/90">
+                                    <TableRow
+                                        key={headerGroup.id}
+                                        className="border-none bg-white hover:bg-white dark:bg-slate-950/95 dark:hover:bg-slate-950/95"
+                                    >
                                         {headerGroup.headers.map((header) => (
                                             <TableHead
                                                 key={header.id}
                                                 className={cn(
-                                                    'h-12 whitespace-nowrap bg-slate-50 px-3 font-bold text-primary dark:bg-slate-900/90',
-                                                    header.column.id === 'actions' && 'sticky left-0 z-50 w-[3.75rem] min-w-[3.75rem] max-w-[3.75rem] border-r border-border/70 bg-white/95 px-0 text-center shadow-[10px_0_14px_-16px_rgba(15,23,42,0.55)] backdrop-blur dark:bg-slate-950/95',
+                                                    'h-12 whitespace-nowrap bg-white px-4 font-bold text-primary dark:bg-slate-950/95',
+                                                    header.column.id ===
+                                                        'actions' &&
+                                                        'sticky left-0 z-50 w-[3.75rem] min-w-[3.75rem] max-w-[3.75rem] border-r border-border/70 bg-white px-0 text-center shadow-[10px_0_14px_-16px_rgba(15,23,42,0.35)] backdrop-blur dark:bg-slate-950/95',
                                                 )}
                                             >
-                                                {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                                                {header.isPlaceholder
+                                                    ? null
+                                                    : flexRender(
+                                                          header.column
+                                                              .columnDef.header,
+                                                          header.getContext(),
+                                                      )}
                                             </TableHead>
                                         ))}
                                     </TableRow>
@@ -288,24 +351,43 @@ export default function Page({ categories }: any) {
                             <TableBody>
                                 {tableRows.length ? (
                                     tableRows.map((row, rowIndex) => (
-                                        <TableRow key={row.id} className="group border-none transition-colors hover:bg-slate-50 dark:hover:bg-slate-900/50">
-                                            {row.getVisibleCells().map((cell) => (
-                                                <TableCell
-                                                    key={cell.id}
-                                                    className={cn(
-                                                        'border-b border-border px-3 py-3',
-                                                        cell.column.id === 'actions' && 'sticky left-0 z-20 w-[3.75rem] min-w-[3.75rem] max-w-[3.75rem] border-r border-border/70 bg-card px-0 text-center shadow-[10px_0_14px_-16px_rgba(15,23,42,0.55)] transition-colors group-hover:bg-slate-50 dark:bg-slate-950/95 dark:group-hover:bg-slate-900/50',
-                                                        cell.column.id === 'actions' && rowIndex === tableRows.length - 1 && 'rounded-bl-xl',
-                                                    )}
-                                                >
-                                                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                                                </TableCell>
-                                            ))}
+                                        <TableRow
+                                            key={row.id}
+                                            className="group border-none transition-colors hover:bg-slate-50 dark:hover:bg-slate-900/50"
+                                        >
+                                            {row
+                                                .getVisibleCells()
+                                                .map((cell) => (
+                                                    <TableCell
+                                                        key={cell.id}
+                                                        className={cn(
+                                                            'border-b border-border px-4 py-3 align-middle',
+                                                            cell.column.id ===
+                                                                'actions' &&
+                                                                'sticky left-0 z-20 w-[3.75rem] min-w-[3.75rem] max-w-[3.75rem] border-r border-border/70 bg-card px-0 text-center shadow-[10px_0_14px_-16px_rgba(15,23,42,0.35)] transition-colors group-hover:bg-slate-50 dark:bg-slate-950/95 dark:group-hover:bg-slate-900/50',
+                                                            cell.column.id ===
+                                                                'actions' &&
+                                                                rowIndex ===
+                                                                    tableRows.length -
+                                                                        1 &&
+                                                                'rounded-bl-xl',
+                                                        )}
+                                                    >
+                                                        {flexRender(
+                                                            cell.column
+                                                                .columnDef.cell,
+                                                            cell.getContext(),
+                                                        )}
+                                                    </TableCell>
+                                                ))}
                                         </TableRow>
                                     ))
                                 ) : (
                                     <TableRow>
-                                        <TableCell colSpan={columns.length} className="h-40">
+                                        <TableCell
+                                            colSpan={columns.length}
+                                            className="h-40"
+                                        >
                                             No results.
                                         </TableCell>
                                     </TableRow>
