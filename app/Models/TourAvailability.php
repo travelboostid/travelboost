@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class TourAvailability extends Model
 {
-    protected $table = 'tour_availabilities'; // 🔥 penting (karena plural tidak standar)
+    protected $table = 'tour_availabilities';
 
     protected $fillable = [
         'company_id',
@@ -25,6 +25,15 @@ class TourAvailability extends Model
         'EX',
         'WL',
         'available',
+        'manual_reserved_started_at',
+        'manual_reserved_expires_at',
+        'manual_reserved_original_available',
+    ];
+
+    protected $casts = [
+        'manual_reserved_started_at' => 'datetime',
+        'manual_reserved_expires_at' => 'datetime',
+        'manual_reserved_original_available' => 'integer',
     ];
 
     public function tour()

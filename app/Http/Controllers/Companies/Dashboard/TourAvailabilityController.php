@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Company;
 use App\Models\TourSchedule;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -43,7 +44,6 @@ class TourAvailabilityController extends Controller
 
         try {
             foreach ($rows as $row) {
-
                 if (empty($row['schedule_id'])) {
                     continue;
                 }
@@ -56,6 +56,29 @@ class TourAvailabilityController extends Controller
                     continue;
                 }
 
+                $existingAvailability = DB::table('tour_availabilities')
+                    ->where('company_id', $company->id)
+                    ->where('tour_id', $schedule->tour_id)
+                    ->where('schedule_id', $schedule->id)
+                    ->first();
+
+                $manualReservedValue = max(0, (int) ($row['RS'] ?? 0));
+                $rowAvailable = (int) ($row['available'] ?? $existingAvailability?->available ?? 0);
+                $originalAvailable = $manualReservedValue > 0
+                    ? max(0, (int) ($row['manual_reserved_original_available'] ?? ($rowAvailable + $manualReservedValue)))
+                    : null;
+                $available = $manualReservedValue > 0
+                    ? max(0, (int) $originalAvailable - $manualReservedValue)
+                    : $rowAvailable;
+                $manualReservedStartedAt = null;
+                $manualReservedExpiresAt = null;
+
+                if ($manualReservedValue > 0) {
+                    $manualReservedStartedAt = $this->resolveManualReservedStartAt($row, $schedule) ?? now('UTC');
+                    $manualReservedLimitMinutes = $this->resolveManualReservedLimitMinutes((int) $schedule->tour_id);
+                    $manualReservedExpiresAt = $manualReservedStartedAt->copy()->addMinutes($manualReservedLimitMinutes);
+                }
+
                 DB::table('tour_availabilities')->updateOrInsert(
                     [
                         'company_id' => $company->id,
@@ -64,7 +87,7 @@ class TourAvailabilityController extends Controller
                     ],
                     [
                         'max_pax' => $row['max_pax'] ?? 0,
-                        'RS' => $row['RS'] ?? 0,
+                        'RS' => $manualReservedValue,
                         'BRS' => $row['BRS'] ?? 0,
                         'CA' => $row['CA'] ?? 0,
                         'RF' => $row['RF'] ?? 0,
@@ -74,7 +97,10 @@ class TourAvailabilityController extends Controller
                         'WPA' => $row['WPA'] ?? 0,
                         'DP' => $row['DP'] ?? 0,
                         'FP' => $row['FP'] ?? 0,
-                        'available' => $row['available'] ?? 0,
+                        'available' => $available,
+                        'manual_reserved_started_at' => $manualReservedStartedAt,
+                        'manual_reserved_expires_at' => $manualReservedExpiresAt,
+                        'manual_reserved_original_available' => $originalAvailable,
                         'updated_at' => now(),
                         'created_at' => now(),
                     ]
@@ -100,5 +126,59 @@ class TourAvailabilityController extends Controller
         }
 
         return back()->with('success', 'Availability saved');
+    }
+
+    private function resolveManualReservedStartAt(array $row, TourSchedule $schedule): ?Carbon
+    {
+        $date = $row['manual_reserved_start_date'] ?? $schedule->departure_date;
+        $timezone = $this->resolveManualReservedTimezone($row);
+        $time = $row['manual_reserved_start_time'] ?? now($timezone)->format('H:i');
+
+        if (! $date) {
+            return null;
+        }
+
+        try {
+            return Carbon::parse($date.' '.$time, $timezone)->utc();
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    private function resolveManualReservedTimezone(array $row): string
+    {
+        $fallbackTimezone = (string) (config('travelboost.scheduler_timezone') ?? config('app.timezone', 'UTC'));
+        $timezone = is_string($row['manual_reserved_timezone'] ?? null)
+            ? trim($row['manual_reserved_timezone'])
+            : '';
+
+        if ($timezone === '') {
+            return $fallbackTimezone;
+        }
+
+        try {
+            return Carbon::now($timezone)->timezoneName;
+        } catch (\Throwable) {
+            return $fallbackTimezone;
+        }
+    }
+
+    private function resolveManualReservedLimitMinutes(int $tourId): int
+    {
+        $tour = DB::table('tours')->where('id', $tourId)->first(['category_id']);
+
+        if (! $tour?->category_id) {
+            return 60;
+        }
+
+        $category = DB::table('tour_categories')->where('id', $tour->category_id)->first([
+            'manual_reserved_limit_value',
+            'manual_reserved_limit_unit',
+        ]);
+
+        $value = (int) ($category?->manual_reserved_limit_value ?? 1);
+        $unit = $category?->manual_reserved_limit_unit ?? 'hour';
+
+        return $unit === 'minute' ? $value : $value * 60;
     }
 }
