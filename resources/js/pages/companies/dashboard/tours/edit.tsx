@@ -1,5 +1,5 @@
-import { update } from '@/actions/App/Http/Controllers/Companies/Dashboard/TourController';
 import { store as storeTourAvailability } from '@/actions/App/Http/Controllers/Companies/Dashboard/TourAvailabilityController';
+import { update } from '@/actions/App/Http/Controllers/Companies/Dashboard/TourController';
 import type { MediaResource } from '@/api/model';
 import InputError from '@/components/input-error';
 import CompanyDashboardLayout from '@/components/layouts/company-dashboard';
@@ -228,17 +228,23 @@ export default function Page({ tour }: Props) {
         tour.document || null,
     );
 
-    const [manualReservedEditorOpen, setManualReservedEditorOpen] = useState(false);
-    const [manualReservedEditorRow, setManualReservedEditorRow] = useState<ManualReservedSummary | null>(null);
-    const [manualReservedEditorStartDate, setManualReservedEditorStartDate] = useState('');
-    const [manualReservedEditorStartTime, setManualReservedEditorStartTime] = useState('00:00');
+    const [manualReservedEditorOpen, setManualReservedEditorOpen] =
+        useState(false);
+    const [manualReservedEditorRow, setManualReservedEditorRow] =
+        useState<ManualReservedSummary | null>(null);
+    const [manualReservedEditorStartDate, setManualReservedEditorStartDate] =
+        useState('');
+    const [manualReservedEditorStartTime, setManualReservedEditorStartTime] =
+        useState('00:00');
     const [manualReservedSummaryOpen, setManualReservedSummaryOpen] =
         useState(false);
-    const [manualReservedSummaryRows, setManualReservedSummaryRows] =
-        useState<ManualReservedSummary[]>([]);
+    const [manualReservedSummaryRows, setManualReservedSummaryRows] = useState<
+        ManualReservedSummary[]
+    >([]);
 
     const { company } = usePageSharedDataProps();
-    const { productCommissionCategories, visaCategories } = usePage().props as any;
+    const { productCommissionCategories, visaCategories } = usePage()
+        .props as any;
     const handleSuccess = () => {
         toast.success('Success', {
             position: 'top-center',
@@ -320,69 +326,74 @@ export default function Page({ tour }: Props) {
         };
     };
 
-    const parseServerUtcDateTime = useCallback((
-        value: string | null | undefined,
-    ): Date | null => {
-        if (!value) {
-            return null;
-        }
+    const parseServerUtcDateTime = useCallback(
+        (value: string | null | undefined): Date | null => {
+            if (!value) {
+                return null;
+            }
 
-        const normalizedValue = value.includes('T')
-            ? value
-            : value.replace(' ', 'T');
-        const hasExplicitTimeZone =
-            /(?:Z|[+-]\d{2}:\d{2})$/i.test(normalizedValue);
-        const parsed = new Date(
-            hasExplicitTimeZone ? normalizedValue : `${normalizedValue}Z`,
-        );
+            const normalizedValue = value.includes('T')
+                ? value
+                : value.replace(' ', 'T');
+            const hasExplicitTimeZone = /(?:Z|[+-]\d{2}:\d{2})$/i.test(
+                normalizedValue,
+            );
+            const parsed = new Date(
+                hasExplicitTimeZone ? normalizedValue : `${normalizedValue}Z`,
+            );
 
-        if (Number.isNaN(parsed.getTime())) {
-            return null;
-        }
+            if (Number.isNaN(parsed.getTime())) {
+                return null;
+            }
 
-        return parsed;
-    }, []);
+            return parsed;
+        },
+        [],
+    );
 
-    const getLocalDateTimeParts = useCallback((
-        value: string | null | undefined,
-        fallbackDate: string,
-        fallbackTime = '00:00',
-    ): LocalDateTimeParts => {
-        if (!value) {
+    const getLocalDateTimeParts = useCallback(
+        (
+            value: string | null | undefined,
+            fallbackDate: string,
+            fallbackTime = '00:00',
+        ): LocalDateTimeParts => {
+            if (!value) {
+                return {
+                    date: fallbackDate,
+                    time: fallbackTime,
+                };
+            }
+
+            const parsed = parseServerUtcDateTime(value);
+
+            if (!parsed) {
+                return {
+                    date: fallbackDate,
+                    time: fallbackTime,
+                };
+            }
+
+            const formatter = new Intl.DateTimeFormat('en-CA', {
+                timeZone: browserTimeZone,
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false,
+            });
+
+            const parts = formatter.formatToParts(parsed);
+            const getPart = (type: Intl.DateTimeFormatPartTypes): string =>
+                parts.find((part) => part.type === type)?.value ?? '';
+
             return {
-                date: fallbackDate,
-                time: fallbackTime,
+                date: `${getPart('year')}-${getPart('month')}-${getPart('day')}`,
+                time: `${getPart('hour')}:${getPart('minute')}`,
             };
-        }
-
-        const parsed = parseServerUtcDateTime(value);
-
-        if (!parsed) {
-            return {
-                date: fallbackDate,
-                time: fallbackTime,
-            };
-        }
-
-        const formatter = new Intl.DateTimeFormat('en-CA', {
-            timeZone: browserTimeZone,
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: false,
-        });
-
-        const parts = formatter.formatToParts(parsed);
-        const getPart = (type: Intl.DateTimeFormatPartTypes): string =>
-            parts.find((part) => part.type === type)?.value ?? '';
-
-        return {
-            date: `${getPart('year')}-${getPart('month')}-${getPart('day')}`,
-            time: `${getPart('hour')}:${getPart('minute')}`,
-        };
-    }, [browserTimeZone, parseServerUtcDateTime]);
+        },
+        [browserTimeZone, parseServerUtcDateTime],
+    );
 
     const formatManualReservedDateTime = (
         value: string | null | undefined,
@@ -434,7 +445,8 @@ export default function Page({ tour }: Props) {
     };
 
     const formatManualReservedLimit = () => {
-        const unitLabel = manualReservedLimitUnit === 'minute' ? 'minutes' : 'hours';
+        const unitLabel =
+            manualReservedLimitUnit === 'minute' ? 'minutes' : 'hours';
         return `${manualReservedLimitValue} ${unitLabel}`;
     };
 
@@ -462,11 +474,11 @@ export default function Page({ tour }: Props) {
         manual_reserved_started_at:
             row.RS > 0 ? `${startDate}T${startTime}:00` : null,
         manual_reserved_expires_at:
-            row.RS > 0 ? getManualReservedExpiresAt(startDate, startTime) : null,
-        manual_reserved_original_available:
             row.RS > 0
-                ? Number(row.available + row.RS)
+                ? getManualReservedExpiresAt(startDate, startTime)
                 : null,
+        manual_reserved_original_available:
+            row.RS > 0 ? Number(row.available + row.RS) : null,
         manual_reserved_start_date: startDate,
         manual_reserved_start_time: startTime,
     });
@@ -928,15 +940,26 @@ export default function Page({ tour }: Props) {
                 EX: Number(a.EX || 0),
                 WL: Number(a.WL || 0),
                 available: Number(a.available || 0),
-                manual_reserved_started_at: a.manual_reserved_started_at ? String(a.manual_reserved_started_at) : null,
-                manual_reserved_expires_at: a.manual_reserved_expires_at ? String(a.manual_reserved_expires_at) : null,
-                manual_reserved_original_available: a.manual_reserved_original_available != null ? Number(a.manual_reserved_original_available) : null,
+                manual_reserved_started_at: a.manual_reserved_started_at
+                    ? String(a.manual_reserved_started_at)
+                    : null,
+                manual_reserved_expires_at: a.manual_reserved_expires_at
+                    ? String(a.manual_reserved_expires_at)
+                    : null,
+                manual_reserved_original_available:
+                    a.manual_reserved_original_available != null
+                        ? Number(a.manual_reserved_original_available)
+                        : null,
                 manual_reserved_start_date: getLocalDateTimeParts(
-                    a.manual_reserved_started_at ? String(a.manual_reserved_started_at) : null,
+                    a.manual_reserved_started_at
+                        ? String(a.manual_reserved_started_at)
+                        : null,
                     s.departure_date,
                 ).date,
                 manual_reserved_start_time: getLocalDateTimeParts(
-                    a.manual_reserved_started_at ? String(a.manual_reserved_started_at) : null,
+                    a.manual_reserved_started_at
+                        ? String(a.manual_reserved_started_at)
+                        : null,
                     s.departure_date,
                 ).time,
             };
@@ -1064,9 +1087,12 @@ export default function Page({ tour }: Props) {
             available: row.available,
             manual_reserved_started_at: row.manual_reserved_started_at ?? null,
             manual_reserved_expires_at: row.manual_reserved_expires_at ?? null,
-            manual_reserved_original_available: row.manual_reserved_original_available ?? null,
-            manual_reserved_start_date: row.manual_reserved_start_date ?? row.departure_date,
-            manual_reserved_start_time: row.manual_reserved_start_time ?? '00:00',
+            manual_reserved_original_available:
+                row.manual_reserved_original_available ?? null,
+            manual_reserved_start_date:
+                row.manual_reserved_start_date ?? row.departure_date,
+            manual_reserved_start_time:
+                row.manual_reserved_start_time ?? '00:00',
         }));
     };
     void buildAvailabilityPayloadLegacy;
@@ -1489,17 +1515,25 @@ export default function Page({ tour }: Props) {
             setSchedules(updatedSchedules);
 
             const manualReservedSummary = createdSchedules.map((schedule) => {
-                const startDate = source.availability?.manual_reserved_start_date ?? schedule.departure_date;
-                const startTime = source.availability?.manual_reserved_start_time ?? '00:00';
+                const startDate =
+                    source.availability?.manual_reserved_start_date ??
+                    schedule.departure_date;
+                const startTime =
+                    source.availability?.manual_reserved_start_time ?? '00:00';
                 const startAt = `${startDate} ${startTime}`;
-                const expiresAt = getManualReservedExpiresAt(startDate, startTime);
+                const expiresAt = getManualReservedExpiresAt(
+                    startDate,
+                    startTime,
+                );
 
                 return {
                     scheduleId: schedule.id ?? null,
                     departureDate: schedule.departure_date,
                     startAt,
                     expiresAt,
-                    originalAvailable: Number(source.availability?.available ?? 0),
+                    originalAvailable: Number(
+                        source.availability?.available ?? 0,
+                    ),
                     limitLabel: manualReservedLimitLabel,
                 };
             });
@@ -1516,13 +1550,19 @@ export default function Page({ tour }: Props) {
                         available: source.availability?.available || 0,
                         manual_reserved_start_date: getLocalDateTimeParts(
                             source.availability?.manual_reserved_started_at
-                                ? String(source.availability.manual_reserved_started_at)
+                                ? String(
+                                      source.availability
+                                          .manual_reserved_started_at,
+                                  )
                                 : null,
                             s.departure_date,
                         ).date,
                         manual_reserved_start_time: getLocalDateTimeParts(
                             source.availability?.manual_reserved_started_at
-                                ? String(source.availability.manual_reserved_started_at)
+                                ? String(
+                                      source.availability
+                                          .manual_reserved_started_at,
+                                  )
                                 : null,
                             s.departure_date,
                         ).time,
@@ -2179,8 +2219,8 @@ export default function Page({ tour }: Props) {
                                         </h2>
 
                                         <p className="text-sm text-muted-foreground">
-                                            Configure itinerary document, status,
-                                            and visa type
+                                            Configure itinerary document,
+                                            status, and visa type
                                         </p>
                                     </div>
                                     {/* BODY */}
@@ -3841,7 +3881,9 @@ export default function Page({ tour }: Props) {
                                                         </TooltipTrigger>
 
                                                         <TooltipContent>
-                                                            {manualReservedLimitDescription}
+                                                            {
+                                                                manualReservedLimitDescription
+                                                            }
                                                         </TooltipContent>
                                                     </Tooltip>
                                                 </th>
@@ -4205,7 +4247,9 @@ export default function Page({ tour }: Props) {
                                                                                     savingAvailability
                                                                                 }
                                                                                 onClick={() => {
-                                                                                    handleAvailabilitySave(row);
+                                                                                    handleAvailabilitySave(
+                                                                                        row,
+                                                                                    );
                                                                                 }}
                                                                             >
                                                                                 {savingAvailability ? (
@@ -4213,7 +4257,8 @@ export default function Page({ tour }: Props) {
                                                                                 ) : (
                                                                                     <Save className="mr-2 h-4 w-4" />
                                                                                 )}
-                                                                                Save Availability
+                                                                                Save
+                                                                                Availability
                                                                             </DropdownMenuItem>
                                                                         </DropdownMenuContent>
                                                                     </DropdownMenu>
@@ -4315,7 +4360,9 @@ export default function Page({ tour }: Props) {
                                                                 }
                                                                 onClick={() => {
                                                                     handleAvailabilitySave(
-                                                                        availability[actualIndex],
+                                                                        availability[
+                                                                            actualIndex
+                                                                        ],
                                                                     );
                                                                 }}
                                                             >
@@ -4333,34 +4380,40 @@ export default function Page({ tour }: Props) {
 
                                                 {/* Input grid */}
                                                 <div className="grid grid-cols-2 gap-2 text-sm">
-                                                    {AVAILABILITY_MOBILE_FIELDS.map((field) => (
-                                                        <Fragment key={field.key}>
-                                                            <div className="text-muted-foreground">
-                                                                {field.label}
-                                                            </div>
+                                                    {AVAILABILITY_MOBILE_FIELDS.map(
+                                                        (field) => (
+                                                            <Fragment
+                                                                key={field.key}
+                                                            >
+                                                                <div className="text-muted-foreground">
+                                                                    {
+                                                                        field.label
+                                                                    }
+                                                                </div>
 
-                                                            <MoneyInput
-                                                                className="text-right"
-                                                                value={
-                                                                    row[
-                                                                        field
-                                                                            .key
-                                                                    ]
-                                                                }
-                                                                onChange={(
-                                                                    val,
-                                                                ) =>
-                                                                    updateAvailability(
-                                                                        actualIndex,
-                                                                        field.key,
-                                                                        Number(
-                                                                            val,
-                                                                        ),
-                                                                    )
-                                                                }
-                                                            />
-                                                        </Fragment>
-                                                    ))}
+                                                                <MoneyInput
+                                                                    className="text-right"
+                                                                    value={
+                                                                        row[
+                                                                            field
+                                                                                .key
+                                                                        ]
+                                                                    }
+                                                                    onChange={(
+                                                                        val,
+                                                                    ) =>
+                                                                        updateAvailability(
+                                                                            actualIndex,
+                                                                            field.key,
+                                                                            Number(
+                                                                                val,
+                                                                            ),
+                                                                        )
+                                                                    }
+                                                                />
+                                                            </Fragment>
+                                                        ),
+                                                    )}
                                                 </div>
                                             </div>
                                         );
@@ -4958,7 +5011,9 @@ export default function Page({ tour }: Props) {
                                         <Input
                                             id="manual_reserved_start_date"
                                             type="date"
-                                            value={manualReservedEditorStartDate}
+                                            value={
+                                                manualReservedEditorStartDate
+                                            }
                                             onChange={(event) =>
                                                 setManualReservedEditorStartDate(
                                                     event.target.value,
@@ -4974,7 +5029,9 @@ export default function Page({ tour }: Props) {
                                         <Input
                                             id="manual_reserved_start_time"
                                             type="time"
-                                            value={manualReservedEditorStartTime}
+                                            value={
+                                                manualReservedEditorStartTime
+                                            }
                                             onChange={(event) =>
                                                 setManualReservedEditorStartTime(
                                                     event.target.value,
@@ -5004,7 +5061,9 @@ export default function Page({ tour }: Props) {
                                 <Button
                                     type="button"
                                     variant="outline"
-                                    onClick={() => setManualReservedEditorOpen(false)}
+                                    onClick={() =>
+                                        setManualReservedEditorOpen(false)
+                                    }
                                 >
                                     Cancel
                                 </Button>
@@ -5015,14 +5074,17 @@ export default function Page({ tour }: Props) {
                                             return;
                                         }
 
-                                        const selectedAvailability = availability.find(
-                                            (row) =>
-                                                row.schedule_id ===
-                                                manualReservedEditorRow.scheduleId,
-                                        );
+                                        const selectedAvailability =
+                                            availability.find(
+                                                (row) =>
+                                                    row.schedule_id ===
+                                                    manualReservedEditorRow.scheduleId,
+                                            );
 
                                         if (!selectedAvailability) {
-                                            toast.error('Availability row was not found.');
+                                            toast.error(
+                                                'Availability row was not found.',
+                                            );
 
                                             return;
                                         }
@@ -5037,24 +5099,35 @@ export default function Page({ tour }: Props) {
                                             ],
                                             {
                                                 onSuccess: () => {
-                                                    setManualReservedSummaryRows([
-                                                        {
-                                                            scheduleId: manualReservedEditorRow.scheduleId,
-                                                            departureDate: manualReservedEditorRow.departureDate,
-                                                            startAt: `${manualReservedEditorStartDate} ${manualReservedEditorStartTime}`,
-                                                            expiresAt: getManualReservedExpiresAt(
-                                                                manualReservedEditorStartDate,
-                                                                manualReservedEditorStartTime,
-                                                            ),
-                                                            originalAvailable: Number(
-                                                                selectedAvailability.available +
-                                                                    selectedAvailability.RS,
-                                                            ),
-                                                            limitLabel: manualReservedLimitLabel,
-                                                        },
-                                                    ]);
-                                                    setManualReservedEditorOpen(false);
-                                                    setManualReservedSummaryOpen(true);
+                                                    setManualReservedSummaryRows(
+                                                        [
+                                                            {
+                                                                scheduleId:
+                                                                    manualReservedEditorRow.scheduleId,
+                                                                departureDate:
+                                                                    manualReservedEditorRow.departureDate,
+                                                                startAt: `${manualReservedEditorStartDate} ${manualReservedEditorStartTime}`,
+                                                                expiresAt:
+                                                                    getManualReservedExpiresAt(
+                                                                        manualReservedEditorStartDate,
+                                                                        manualReservedEditorStartTime,
+                                                                    ),
+                                                                originalAvailable:
+                                                                    Number(
+                                                                        selectedAvailability.available +
+                                                                            selectedAvailability.RS,
+                                                                    ),
+                                                                limitLabel:
+                                                                    manualReservedLimitLabel,
+                                                            },
+                                                        ],
+                                                    );
+                                                    setManualReservedEditorOpen(
+                                                        false,
+                                                    );
+                                                    setManualReservedSummaryOpen(
+                                                        true,
+                                                    );
                                                 },
                                             },
                                         );
@@ -5072,14 +5145,14 @@ export default function Page({ tour }: Props) {
                     >
                         <DialogContent className="sm:max-w-[640px]">
                             <DialogHeader>
-                                <DialogTitle>
-                                    Manual Reserved Saved
-                                </DialogTitle>
+                                <DialogTitle>Manual Reserved Saved</DialogTitle>
                             </DialogHeader>
                             <div className="space-y-3">
                                 {manualReservedSummaryRows.map((row) => (
                                     <div
-                                        key={row.scheduleId ?? row.departureDate}
+                                        key={
+                                            row.scheduleId ?? row.departureDate
+                                        }
                                         className="rounded-xl border p-4 text-sm"
                                     >
                                         <div className="font-medium">
@@ -5094,7 +5167,8 @@ export default function Page({ tour }: Props) {
                                                 .
                                             </p>
                                             <p>
-                                                It will automatically reset to 0 at{' '}
+                                                It will automatically reset to 0
+                                                at{' '}
                                                 {formatManualReservedDateTime(
                                                     row.expiresAt,
                                                 )}
@@ -5108,7 +5182,9 @@ export default function Page({ tour }: Props) {
                             <DialogFooter>
                                 <Button
                                     type="button"
-                                    onClick={() => setManualReservedSummaryOpen(false)}
+                                    onClick={() =>
+                                        setManualReservedSummaryOpen(false)
+                                    }
                                 >
                                     Close
                                 </Button>
