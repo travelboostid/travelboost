@@ -5,10 +5,16 @@ import {
 } from './blocks/base';
 import type { ButtonComponentProps } from './blocks/button';
 import { ButtonComponentConfig } from './blocks/button';
+import type { DividerComponentProps } from './blocks/divider';
+import { DividerComponentConfig } from './blocks/divider';
 import type { FlexComponentProps } from './blocks/flex';
 import { FlexComponentConfig } from './blocks/flex';
 import type { GridComponentProps } from './blocks/grid';
 import { GridComponentConfig } from './blocks/grid';
+import type { HeadingComponentProps } from './blocks/heading';
+import { HeadingComponentConfig } from './blocks/heading';
+import type { ImageComponentProps } from './blocks/image';
+import { ImageComponentConfig } from './blocks/image';
 import { InputComponentConfig, type InputComponentProps } from './blocks/input';
 import type { LinkComponentProps } from './blocks/link';
 import { LinkComponentConfig } from './blocks/link';
@@ -18,9 +24,15 @@ import {
 } from './blocks/link-button';
 import type { PlainTextProps } from './blocks/plain-text';
 import { PlainTextComponentConfig } from './blocks/plain-text';
+import type { SpacerComponentProps } from './blocks/spacer';
+import { SpacerComponentConfig } from './blocks/spacer';
 
 export type BasePuckProps = {
-    PlainText: PlainTextProps;
+    PlainText: WithLayoutComponentProps<PlainTextProps>;
+    Heading: WithLayoutComponentProps<HeadingComponentProps>;
+    Image: WithLayoutComponentProps<ImageComponentProps>;
+    Spacer: WithLayoutComponentProps<SpacerComponentProps>;
+    Divider: WithLayoutComponentProps<DividerComponentProps>;
     Input: WithLayoutComponentProps<InputComponentProps>;
     Button: WithLayoutComponentProps<ButtonComponentProps>;
     LinkButton: WithLayoutComponentProps<LinkButtonComponentProps>;
@@ -29,9 +41,13 @@ export type BasePuckProps = {
     Link: WithLayoutComponentProps<LinkComponentProps>;
 };
 
-export const BasePuckConfig: Config<BasePuckProps> = {
+export const BasePuckConfig = {
     components: {
         PlainText: withLayoutComponentConfig(PlainTextComponentConfig),
+        Heading: withLayoutComponentConfig(HeadingComponentConfig),
+        Image: withLayoutComponentConfig(ImageComponentConfig),
+        Spacer: withLayoutComponentConfig(SpacerComponentConfig),
+        Divider: withLayoutComponentConfig(DividerComponentConfig),
         Input: withLayoutComponentConfig(InputComponentConfig),
         Button: withLayoutComponentConfig(ButtonComponentConfig),
         LinkButton: withLayoutComponentConfig(LinkButtonComponentConfig),
@@ -39,6 +55,4 @@ export const BasePuckConfig: Config<BasePuckProps> = {
         Flex: withLayoutComponentConfig(FlexComponentConfig),
         Link: withLayoutComponentConfig(LinkComponentConfig),
     },
-};
-
-type c = typeof BasePuckConfig.components.Button;
+} as Config<BasePuckProps>;

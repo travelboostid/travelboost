@@ -1,171 +1,112 @@
-import {
-    createChatMessage,
-    getChatMessages,
-} from '@/api/chat-message/chat-message';
-import {
-    getChatRoom,
-    getChatRooms,
-    useOpenChatRoom,
-} from '@/api/chat-room/chat-room';
-import type {
-    ChatMessageResource,
-    ChatRoomResource,
-    GetChatMessages200,
-    GetChatMessagesParams,
-    GetChatRoomsParams,
-    StoreChatMessageRequest,
-} from '@/api/model';
+import { useOpenChatRoom } from '@/api/chat-room/chat-room';
+import type { ChatMessageResource, ChatRoomResource } from '@/api/model';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
+import {
+    selectChatRooms,
+    selectMessage,
+    selectRoom,
+    selectRoomMessages,
+    selectRoomPagination,
+    selectRoomSending,
+    selectRoomsStatus,
+    useChatStore,
+} from '@/stores/chat/chat-store';
+import { useChatUiStore } from '@/stores/chat/chat-ui-store';
+import type { Attachment, ChatActor } from '@/stores/chat/types';
 import { useEcho, useEchoPublic } from '@laravel/echo-react';
 import { MessageSquareIcon } from 'lucide-react';
-import type { Dispatch, ReactNode, SetStateAction } from 'react';
-import { createContext, useContext, useState } from 'react';
+import type { ReactNode } from 'react';
+import { useCallback, useEffect, useLayoutEffect } from 'react';
 import { toast } from 'sonner';
+import { useShallow } from 'zustand/react/shallow';
 import { useAnonymousUserContext } from '../anonymous-user-context-provider';
 
-export type ChatActor = {
-    type: 'user' | 'company' | 'anonymous-user';
-    id: number;
-};
+export type { Attachment, ChatActor };
 
-type ChatState = {
-    actor: ChatActor | null;
-    roomById: Record<number, ChatRoomResource>;
-    messageById: Record<number, ChatMessageResource>;
-};
+function notifyIncomingMessage(
+    message: ChatMessageResource,
+    actor: ChatActor | null,
+): void {
+    if (actor?.type === message.sender_type && actor.id === message.sender_id) {
+        return;
+    }
 
-type ChatActions = {
-    sendMessage: (roomId: number, dto: StoreChatMessageRequest) => Promise<any>;
-    loadMessages: (
-        roomId: number,
-        options: GetChatMessagesParams,
-    ) => Promise<GetChatMessages200>;
-    loadRoom: (roomId: number) => Promise<any>;
-    loadRooms: (options: GetChatRoomsParams) => Promise<any>;
-    setMessageById: Dispatch<
-        SetStateAction<Record<number, ChatMessageResource>>
-    >;
-    setRoomById: Dispatch<SetStateAction<Record<number, ChatRoomResource>>>;
-};
-
-type ChatContextType = ChatState & ChatActions;
-
-export const ChatContext = createContext<ChatContextType>(null!);
+    toast(message.sender?.name ?? 'New message', {
+        description: <p className="line-clamp-1">{message.message || '???'}</p>,
+        icon: <MessageSquareIcon />,
+        position: 'top-center',
+    });
+}
 
 function AuthenticatedChatMessageListener() {
     const { auth } = usePageSharedDataProps();
-    const { setMessageById, setRoomById, actor } = useChatContext();
+    const actor = useChatStore((state) => state.actor);
+    const upsertMessage = useChatStore((state) => state.upsertMessage);
+    const upsertRoom = useChatStore((state) => state.upsertRoom);
     const channelName = `users.${auth?.user?.id}`;
 
-    // 🔔 Message created
     useEcho(
         channelName,
         '.ChatMessageCreated',
-        (e) => {
-            setMessageById((messageById) => ({
-                ...messageById,
-                [e.id]: {
-                    ...messageById[e.id],
-                    ...e,
-                },
-            }));
-
-            // Toast new message notification
-            if (actor?.type !== e.sender_type && actor?.id !== e.sender_id) {
-                toast(e.sender.name, {
-                    description: (
-                        <p className="line-clamp-1">{e.message || '???'}</p>
-                    ),
-                    icon: <MessageSquareIcon />,
-                    position: 'top-center',
-                });
-            }
+        (event: ChatMessageResource) => {
+            upsertMessage(event);
+            notifyIncomingMessage(event, actor);
         },
-        [channelName, actor, setMessageById],
+        [channelName, actor, upsertMessage],
     );
 
-    // 🔔 Room updated
     useEcho(
         channelName,
         '.ChatRoomUpdated',
-        (e) => {
-            setRoomById((roomById) => ({
-                ...roomById,
-                [e.room.id]: {
-                    ...roomById[e.room.id],
-                    ...e.room,
-                },
-            }));
+        (event: { room: ChatRoomResource }) => {
+            upsertRoom(event.room);
         },
-        [channelName, setRoomById],
+        [channelName, upsertRoom],
     );
 
-    // 🔔 Room created
     useEcho(
         channelName,
         '.ChatRoomCreated',
-        (e) => {
-            setRoomById((roomById) => ({
-                ...roomById,
-                [e.room.id]: {
-                    ...roomById[e.room.id],
-                    ...e.room,
-                },
-            }));
+        (event: { room: ChatRoomResource }) => {
+            upsertRoom(event.room);
         },
-        [channelName, setRoomById],
+        [channelName, upsertRoom],
     );
 
     return null;
 }
 
 function UnauthenticatedChatMessageListener() {
-    const { setMessageById, setRoomById, actor } = useChatContext();
+    const actor = useChatStore((state) => state.actor);
+    const upsertMessage = useChatStore((state) => state.upsertMessage);
+    const upsertRoom = useChatStore((state) => state.upsertRoom);
     const anonymousUser = useAnonymousUserContext();
     const channelName = `anonymous-users.${anonymousUser?.id}`;
 
-    // 🔔 Message created
-    useEchoPublic(channelName, '.ChatMessageCreated', (e: any) => {
-        setMessageById((messageById) => ({
-            ...messageById,
-            [e.id]: {
-                ...messageById[e.id],
-                ...e,
-            },
-        }));
-        // Toast new message notification
-        if (actor?.type !== e.sender_type && actor?.id !== e.sender_id) {
-            toast(e.sender.name, {
-                description: (
-                    <p className="line-clamp-1">{e.message || '???'}</p>
-                ),
-                icon: <MessageSquareIcon />,
-                position: 'top-center',
-            });
-        }
-    });
+    useEchoPublic(
+        channelName,
+        '.ChatMessageCreated',
+        (event: ChatMessageResource) => {
+            upsertMessage(event);
+            notifyIncomingMessage(event, actor);
+        },
+    );
 
-    // 🔔 Room updated
-    useEchoPublic(channelName, '.ChatRoomUpdated', (e: any) => {
-        setRoomById((roomById) => ({
-            ...roomById,
-            [e.room.id]: {
-                ...roomById[e.room.id],
-                ...e.room,
-            },
-        }));
-    });
+    useEchoPublic(
+        channelName,
+        '.ChatRoomUpdated',
+        (event: { room: ChatRoomResource }) => {
+            upsertRoom(event.room);
+        },
+    );
 
-    // 🔔 Room created
-    useEchoPublic(channelName, '.ChatRoomCreated', (e: any) => {
-        setRoomById((roomById) => ({
-            ...roomById,
-            [e.room.id]: {
-                ...roomById[e.room.id],
-                ...e.room,
-            },
-        }));
-    });
+    useEchoPublic(
+        channelName,
+        '.ChatRoomCreated',
+        (event: { room: ChatRoomResource }) => {
+            upsertRoom(event.room);
+        },
+    );
 
     return null;
 }
@@ -178,220 +119,201 @@ export function ChatContextProvider({
     actor: ChatActor;
 }) {
     const { auth } = usePageSharedDataProps();
-    const [roomById, setRoomById] = useState<Record<number, ChatRoomResource>>(
-        {},
-    );
-    const [messageById, setMessageById] = useState<
-        Record<number, ChatMessageResource>
-    >({});
-    const sendMessage = async (
-        roomId: number,
-        dto: StoreChatMessageRequest,
-    ) => {
-        const result = await createChatMessage(roomId.toString(), dto);
-        setMessageById((prev) => ({
-            ...prev,
-            [result.data.id]: result.data,
-        }));
-        return result.data;
-    };
-    const loadMessages = async (
-        roomId: number,
-        options: GetChatMessagesParams,
-    ) => {
-        const result = await getChatMessages(roomId.toString(), options);
-        setMessageById((prev) => {
-            const next = { ...prev };
+    const setActor = useChatStore((state) => state.setActor);
+    const reset = useChatStore((state) => state.reset);
 
-            for (const message of result.data) {
-                next[message.id] = message;
-            }
+    useLayoutEffect(() => {
+        setActor(actor);
+    }, [actor, setActor]);
 
-            return next;
-        });
-        return result;
-    };
-
-    const loadRoom = async (roomId: number) => {
-        const result = await getChatRoom(roomId);
-        setRoomById((prev) => {
-            const next = { ...prev, [roomId]: result.data };
-            return next;
-        });
-        return result;
-    };
-
-    const loadRooms = async (options: GetChatMessagesParams) => {
-        const result = await getChatRooms(options);
-        setRoomById((prev) => {
-            const next = { ...prev };
-
-            for (const room of result.data) {
-                next[room.id] = room;
-            }
-
-            return next;
-        });
-        return result;
-    };
+    useEffect(() => {
+        return () => {
+            reset();
+        };
+    }, [reset]);
 
     return (
-        <ChatContext.Provider
-            value={{
-                actor,
-                loadMessages,
-                loadRoom,
-                loadRooms,
-                messageById,
-                roomById,
-                sendMessage,
-                setMessageById,
-                setRoomById,
-            }}
-        >
+        <>
             {auth?.user ? (
                 <AuthenticatedChatMessageListener />
             ) : (
                 <UnauthenticatedChatMessageListener />
             )}
             {children}
-        </ChatContext.Provider>
+        </>
     );
 }
 
+function setMessageById(
+    updater:
+        | Record<number, ChatMessageResource>
+        | ((
+              current: Record<number, ChatMessageResource>,
+          ) => Record<number, ChatMessageResource>),
+): void {
+    const current = useChatStore.getState().messageById;
+    const next = typeof updater === 'function' ? updater(current) : updater;
+
+    useChatStore.getState().upsertMessages(Object.values(next));
+}
+
+function setRoomById(
+    updater:
+        | Record<number, ChatRoomResource>
+        | ((
+              current: Record<number, ChatRoomResource>,
+          ) => Record<number, ChatRoomResource>),
+): void {
+    const current = useChatStore.getState().roomById;
+    const next = typeof updater === 'function' ? updater(current) : updater;
+
+    useChatStore.getState().upsertRooms(Object.values(next));
+}
+
+export function useChatActor() {
+    return useChatStore((state) => state.actor);
+}
+
 export function useChatContext() {
-    return useContext(ChatContext);
+    const context = useChatStore(
+        useShallow((state) => ({
+            actor: state.actor,
+            roomById: state.roomById,
+            messageById: state.messageById,
+            sendMessage: state.sendMessage,
+            loadMessages: state.loadMessages,
+            loadRoom: state.loadRoom,
+            loadRooms: state.loadRooms,
+        })),
+    );
+
+    return {
+        ...context,
+        setMessageById,
+        setRoomById,
+    };
 }
 
 export function useLoadMessages() {
-    const { loadMessages } = useChatContext();
-    return loadMessages;
+    return useChatStore((state) => state.loadMessages);
 }
 
 export function useLoadRoom() {
-    const { loadRoom } = useChatContext();
-    return loadRoom;
+    return useChatStore((state) => state.loadRoom);
 }
 
 export function useLoadRooms() {
-    const { loadRooms } = useChatContext();
-    return loadRooms;
+    return useChatStore((state) => state.loadRooms);
 }
 
 export function useSendMessage() {
-    const { sendMessage } = useChatContext();
-    return sendMessage;
+    return useChatStore((state) => state.sendMessage);
 }
 
 export function useRoomMessages(roomId: number) {
-    const { messageById } = useChatContext();
-    return Object.values(messageById)
-        .filter((message) => message.room_id == roomId)
-        .sort((a, b) => {
-            return (
-                new Date(a.created_at!).getTime() -
-                new Date(b.created_at!).getTime()
-            );
-        });
+    return useChatStore(
+        useShallow((state) => selectRoomMessages(state, roomId)),
+    );
 }
 
 export function useChatRooms() {
-    const { roomById } = useChatContext();
-    return Object.values(roomById).sort((a, b) => {
-        return (
-            new Date(b.updated_at!).getTime() -
-            new Date(a.updated_at!).getTime()
-        );
-    });
+    return useChatStore(useShallow(selectChatRooms));
 }
 
 export function useChatRoom(roomId: number) {
-    const { roomById } = useChatContext();
-    return roomById[roomId];
+    return useChatStore((state) => selectRoom(state, roomId));
 }
 
 export function useMessage(messageId: number) {
-    const { messageById } = useChatContext();
-    return messageById[messageId];
+    return useChatStore((state) => selectMessage(state, messageId));
 }
 
-export type Attachment = {
-    type: 'tour' | 'agent-tour';
-    data: any;
-};
+export function useRoomPagination(roomId: number) {
+    return useChatStore(
+        useShallow((state) => selectRoomPagination(state, roomId)),
+    );
+}
 
-type FloatingChatWidgetContextType = {
-    message: string;
-    setMessage: (o: string) => void;
-    attachment: Attachment | undefined | null;
-    setAttachment: (o: Attachment | undefined | null) => void;
-    open: boolean;
-    setOpen: (o: boolean) => void;
-    roomId: number;
-    setRoomId: (roomId: number) => void;
-    startPrivateChat: (
-        actor: ChatActor,
-        attachment?: Attachment | undefined | null,
-    ) => Promise<void>;
-};
+export function useRoomSending(roomId: number) {
+    return useChatStore((state) => selectRoomSending(state, roomId));
+}
 
-const FloatingChatWidgetContext = createContext<FloatingChatWidgetContextType>(
-    null!,
-);
+export function useRoomsStatus() {
+    return useChatStore(useShallow(selectRoomsStatus));
+}
+
+export function useClearRoomError() {
+    return useChatStore((state) => state.clearRoomError);
+}
+
+export function useClearRoomsError() {
+    return useChatStore((state) => state.clearRoomsError);
+}
+
+export function useStartPrivateChat() {
+    const upsertRoom = useChatStore((state) => state.upsertRoom);
+    const openChatRoom = useOpenChatRoom();
+    const setAttachment = useChatUiStore((state) => state.setAttachment);
+    const setRoomId = useChatUiStore((state) => state.setRoomId);
+    const setOpen = useChatUiStore((state) => state.setOpen);
+
+    return useCallback(
+        async (
+            recipient: ChatActor,
+            attachment?: Attachment | null,
+        ): Promise<void> => {
+            if (attachment) {
+                setAttachment(attachment);
+            }
+
+            const actor = useChatStore.getState().actor;
+
+            if (!actor?.id) {
+                throw new Error('Chat actor is not initialized.');
+            }
+
+            const result = await openChatRoom.mutateAsync({
+                data: {
+                    sender_id: actor.id,
+                    sender_type: actor.type,
+                    recipient_id: recipient.id,
+                    recipient_type: recipient.type,
+                },
+            });
+
+            upsertRoom(result.data);
+            setRoomId(result.data.id);
+            setOpen(true);
+        },
+        [openChatRoom, setAttachment, setOpen, setRoomId, upsertRoom],
+    );
+}
 
 export function FloatingChatWidgetContextProvider({
     children,
 }: {
     children: ReactNode;
-    initialValue?: Partial<FloatingChatWidgetContextType>;
 }) {
-    const { actor } = useChatContext();
-    const { auth } = usePageSharedDataProps();
-
-    const openChatRoom = useOpenChatRoom();
-    const [message, setMessage] = useState('');
-    const [attachment, setAttachment] = useState<Attachment | undefined | null>(
-        null,
-    );
-    const [open, setOpen] = useState(false);
-    const [roomId, setRoomId] = useState(0);
-
-    const startPrivateChat = async (
-        recepient: ChatActor,
-        attachment?: Attachment | undefined | null,
-    ) => {
-        if (attachment) setAttachment(attachment);
-        const result = await openChatRoom.mutateAsync({
-            data: {
-                sender_id: actor?.id || auth?.user?.id || 0,
-                sender_type: actor?.type || 'user',
-                recipient_id: recepient.id,
-                recipient_type: recepient.type,
-            },
-        });
-        setRoomId(result.data.id);
-        setOpen(true);
-    };
-
-    return (
-        <FloatingChatWidgetContext.Provider
-            value={{
-                open,
-                setOpen,
-                roomId,
-                setRoomId,
-                message,
-                setMessage,
-                attachment,
-                setAttachment,
-                startPrivateChat,
-            }}
-        >
-            {children}
-        </FloatingChatWidgetContext.Provider>
-    );
+    return <>{children}</>;
 }
 
 export function useFloatingChatWidgetContext() {
-    return useContext(FloatingChatWidgetContext);
+    const ui = useChatUiStore(
+        useShallow((state) => ({
+            open: state.open,
+            setOpen: state.setOpen,
+            roomId: state.roomId,
+            setRoomId: state.setRoomId,
+            message: state.message,
+            setMessage: state.setMessage,
+            attachment: state.attachment,
+            setAttachment: state.setAttachment,
+        })),
+    );
+    const startPrivateChat = useStartPrivateChat();
+
+    return {
+        ...ui,
+        startPrivateChat,
+    };
 }

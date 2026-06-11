@@ -5,18 +5,20 @@ export type Footer1ComponentProps = {
 };
 
 export const Footer1ComponentConfig: ComponentConfig<Footer1ComponentProps> = {
-    label: 'Footer',
+    label: 'Simple Bar',
     fields: {
-        content: { label: 'Content', type: 'text', contentEditable: true },
+        content: {
+            label: 'Copyright Text',
+            type: 'text',
+            contentEditable: true,
+        },
     },
     defaultProps: {
         content: '© 2025 Travel Company. All rights reserved.',
     },
-    render: ({ content }) => {
-        return (
-            <footer className="bg-foreground px-4 py-12 text-primary-foreground sm:px-6 lg:px-8  text-center text-sm">
-                <p>{content}</p>
-            </footer>
-        );
-    },
+    render: ({ content }) => (
+        <footer className="bg-foreground px-4 py-10 text-center text-sm text-primary-foreground sm:px-6 lg:px-8">
+            <p>{content}</p>
+        </footer>
+    ),
 };

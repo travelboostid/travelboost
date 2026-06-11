@@ -6,9 +6,9 @@
         "build": "vite build",
         "build:ssr": "vite build && vite build --ssr",
         "dev:vite": "vite",
-        "dev:queue": "php artisan queue:work",
-        "dev:reverb": "php artisan reverb:start",
-        "dev:serve": "php artisan serve",
+        "dev:queue": "php -d extension=bcmath artisan queue:work",
+        "dev:reverb": "php -d extension=bcmath artisan reverb:start",
+        "dev:serve": "php -d extension=bcmath artisan serve",
         "format": "prettier --write resources/",
         "format:check": "prettier --check resources/",
         "lint": "eslint . --fix",
@@ -104,6 +104,7 @@
         "embla-carousel-react": "^8.6.0",
         "framer-motion": "^12.38.0",
         "globals": "^15.14.0",
+        "immer": "^11.1.8",
         "input-otp": "^1.4.2",
         "laravel-vite-plugin": "^2.0",
         "lodash": "^4.18.1",
@@ -133,7 +134,8 @@
         "tw-animate-css": "^1.4.0",
         "vaul": "^1.1.2",
         "vite": "^7.0.4",
-        "zod": "^4.3.6"
+        "zod": "^4.3.6",
+        "zustand": "^5.0.14"
     },
     "optionalDependencies": {
         "@rollup/rollup-linux-x64-gnu": "4.9.5",

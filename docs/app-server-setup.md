@@ -9,6 +9,14 @@ sudo apt update
 sudo apt install -y composer supervisor php php-cli php-fpm php-common php-mbstring php-xml php-curl php-zip php-bcmath php-intl php-pgsql php-sqlite3 php-gd php-imagick
 ```
 
+Verify `bcmath` is loaded after install. The chatbot (`ChatbotAgent`) depends on it for AI credit billing:
+
+```bash
+php -r 'echo function_exists("bccomp") ? "bcmath OK\n" : "bcmath MISSING\n";'
+```
+
+On some Linux distributions the extension package is installed but not enabled in `php.ini`. Enable it in `/etc/php/conf.d/` if the check above fails.
+
 ---
 
 ## Installing Caddy
