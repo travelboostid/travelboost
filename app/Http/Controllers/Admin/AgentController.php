@@ -3,107 +3,127 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Enums\CompanyType;
+use App\Http\Controllers\Admin\Concerns\QueriesAdminCompanies;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\BulkUpdateCompanyRequest;
 use App\Http\Requests\Admin\IndexAgentRequest;
+use App\Http\Requests\Admin\UpdateCompanyRequest;
 use App\Models\AffiliateProfile;
 use App\Models\Company;
 use App\Models\User;
+use DB;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class AgentController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
+    use QueriesAdminCompanies;
+
     public function index(IndexAgentRequest $request): Response
     {
         $validated = $request->validated();
-        $data = Company::query()
-            ->where('type', CompanyType::AGENT)
-            ->with(['settings', 'referrer.affiliateProfile.upline.affiliateProfile.upline.affiliateProfile'])
-            ->when($validated['name'] ?? null, function ($query, $name) {
-                $query->where('name', 'like', "%$name%");
-            })
-            ->when($validated['email'] ?? null, function ($query, $email) {
-                $query->where('email', 'like', "%$email%");
-            })
-            ->when($validated['username'] ?? null, function ($query, $username) {
-                $query->where('username', 'like', "%$username%");
-            })
-            ->when($validated['phone'] ?? null, function ($query, $phone) {
-                $query->where('phone', 'like', "%$phone%");
-            })
-            ->when($validated['address'] ?? null, function ($query, $address) {
-                $query->where('address', 'like', "%$address%");
-            })
-            ->paginate();
 
-        $data->through(fn (Company $company): array => [
-            'id' => $company->id,
-            'name' => $company->name,
-            'username' => $company->username,
-            'email' => $company->email,
-            'phone' => $company->phone,
-            'status' => $this->enumValue($company->status ?? 'active'),
-            'created_at' => $company->created_at,
-            'affiliation' => $this->resolveAffiliation($company),
-        ]);
+        $query = Company::query()
+            ->where('type', CompanyType::AGENT)
+            ->with([
+                'photo',
+                'agentSubscription.package',
+                'referrer.affiliateProfile.upline.affiliateProfile.upline.affiliateProfile',
+            ]);
+
+        $this->applyCompanyIndexFilters($query, $validated);
+
+        if (! empty($validated['subscription_status'])) {
+            $this->applyAgentSubscriptionStatusFilter($query, $validated['subscription_status']);
+        }
+
+        $data = $query->paginate($validated['per_page'] ?? 10);
+
+        $data->through(function (Company $company): array {
+            return [
+                ...$this->companyListItem($company),
+                'affiliation' => $this->resolveAffiliation($company),
+            ];
+        });
 
         return Inertia::render('admin/database/agents/index', [
             'data' => $data,
         ]);
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
+    public function edit(Company $agent): Response
+    {
+        abort_unless($agent->type === CompanyType::AGENT, 404);
+
+        $agent->load(['photo', 'agentSubscription.package']);
+
+        return Inertia::render('admin/database/agents/edit', [
+            'company' => [
+                ...$this->companyListItem($agent),
+                'affiliation' => $this->resolveAffiliation($agent),
+            ],
+        ]);
+    }
+
+    public function update(UpdateCompanyRequest $request, Company $agent)
+    {
+        abort_unless($agent->type === CompanyType::AGENT, 404);
+
+        $agent->update($request->validated());
+
+        return back()->with('success', 'Agent updated successfully.');
+    }
+
+    public function bulkUpdate(BulkUpdateCompanyRequest $request)
+    {
+        $validated = $request->validated();
+        $companies = Company::query()
+            ->where('type', CompanyType::AGENT)
+            ->whereIn('id', $validated['ids'])
+            ->get();
+
+        DB::transaction(function () use ($companies, $validated): void {
+            foreach ($companies as $company) {
+                $company->update(['note' => $validated['note']]);
+            }
+        });
+
+        return back()->with('success', 'Agents updated successfully.');
+    }
+
+    public function exportAsCsv(Request $request)
+    {
+        return $this->exportCompaniesCsv($request, 'agents.csv');
+    }
+
     public function create()
     {
         //
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(Request $request)
     {
         //
     }
 
-    /**
-     * Display the specified resource.
-     */
     public function show(string $id)
     {
         //
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(string $id)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, string $id)
-    {
-        //
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
     public function destroy(string $id)
     {
         //
     }
 
+    /**
+     * @return array{
+     *     affiliator: array<string, mixed>|null,
+     *     master_affiliate: array<string, mixed>|null,
+     *     partner: array<string, mixed>|null,
+     * }
+     */
     private function resolveAffiliation(Company $company): array
     {
         $referrer = $company->referrer;
@@ -146,6 +166,9 @@ class AgentController extends Controller
         ];
     }
 
+    /**
+     * @return array<string, mixed>|null
+     */
     private function networkPerson(?User $user, ?AffiliateProfile $profile): ?array
     {
         if (! $user || ! $profile) {

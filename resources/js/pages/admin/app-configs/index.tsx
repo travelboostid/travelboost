@@ -39,6 +39,20 @@ export default function AppConfigsPage({ data }: AppConfigsPageProps) {
                 ),
             },
             {
+                id: 'schema',
+                accessorFn: (row) => (row.schema ? 'yes' : 'no'),
+                header: ({
+                    column,
+                }: {
+                    column: Column<AppConfigResource, unknown>;
+                }) => <DataTableColumnHeader column={column} label="Schema" />,
+                cell: ({ row }) => (
+                    <div className="text-sm text-muted-foreground">
+                        {row.original.schema ? 'Defined' : '—'}
+                    </div>
+                ),
+            },
+            {
                 id: 'description',
                 accessorKey: 'description',
                 header: ({

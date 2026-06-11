@@ -5,6 +5,7 @@ import {
     Dialog,
     DialogClose,
     DialogContent,
+    DialogDescription,
     DialogFooter,
     DialogHeader,
     DialogTitle,
@@ -23,8 +24,10 @@ import { Spinner } from '@/components/ui/spinner';
 import { Switch } from '@/components/ui/switch';
 import usePageProps from '@/hooks/use-page-props';
 import { useForm } from '@inertiajs/react';
+import { LandmarkIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useState } from 'react';
+import { FormattedMessage } from 'react-intl';
 import type { BankAccountsPageProps } from '..';
 
 type CreateBankAccountDialogProps = {
@@ -37,8 +40,6 @@ export default function CreateBankAccountDialog({
     const { company, bankAccountProviders } =
         usePageProps<BankAccountsPageProps>();
     const [open, setOpen] = useState(false);
-
-    console.log('Bank Account Providers:', bankAccountProviders); // Debugging log
 
     const form = useForm({
         provider: '',
@@ -53,7 +54,7 @@ export default function CreateBankAccountDialog({
 
         form.post(store({ company: company.username }).url, {
             preserveScroll: true,
-            onError: () => setOpen(true), // 🔥 keep modal open on validation error
+            onError: () => setOpen(true),
             onSuccess: () => {
                 form.reset();
                 setOpen(false);
@@ -67,14 +68,26 @@ export default function CreateBankAccountDialog({
 
             <DialogContent className="sm:max-w-md">
                 <DialogHeader>
-                    <DialogTitle>Add Bank Account</DialogTitle>
+                    <div className="flex items-center gap-3">
+                        <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                            <LandmarkIcon className="size-5" />
+                        </div>
+                        <div>
+                            <DialogTitle>
+                                <FormattedMessage defaultMessage="Add bank account" />
+                            </DialogTitle>
+                            <DialogDescription>
+                                <FormattedMessage defaultMessage="Used as the destination for wallet withdrawals." />
+                            </DialogDescription>
+                        </div>
+                    </div>
                 </DialogHeader>
 
-                {/* ❗ ONLY ONE submit button, ONLY ONE form */}
-                <form onSubmit={handleSubmit} className="space-y-6">
-                    {/* Provider Selection */}
+                <form onSubmit={handleSubmit} className="space-y-5">
                     <div className="grid gap-2">
-                        <Label htmlFor="provider">Provider *</Label>
+                        <Label htmlFor="provider">
+                            <FormattedMessage defaultMessage="Bank" />
+                        </Label>
                         <Select
                             value={form.data.provider}
                             onValueChange={(value) =>
@@ -82,7 +95,7 @@ export default function CreateBankAccountDialog({
                             }
                         >
                             <SelectTrigger>
-                                <SelectValue placeholder="Select provider" />
+                                <SelectValue placeholder="Select bank" />
                             </SelectTrigger>
                             <SelectContent>
                                 {bankAccountProviders.map((provider) => (
@@ -98,12 +111,13 @@ export default function CreateBankAccountDialog({
                         <InputError message={form.errors.provider} />
                     </div>
 
-                    {/* Account Number */}
                     <div className="grid gap-2">
-                        <Label htmlFor="account_number">Account Number *</Label>
+                        <Label htmlFor="account_number">
+                            <FormattedMessage defaultMessage="Account number" />
+                        </Label>
                         <Input
                             id="account_number"
-                            placeholder="Enter account number"
+                            placeholder="1234567890"
                             value={form.data.account_number}
                             onChange={(e) =>
                                 form.setData('account_number', e.target.value)
@@ -113,14 +127,13 @@ export default function CreateBankAccountDialog({
                         <InputError message={form.errors.account_number} />
                     </div>
 
-                    {/* Account Name */}
                     <div className="grid gap-2">
                         <Label htmlFor="account_name">
-                            Account Holder Name *
+                            <FormattedMessage defaultMessage="Account holder name" />
                         </Label>
                         <Input
                             id="account_name"
-                            placeholder="Enter account holder name"
+                            placeholder="As shown on your bank statement"
                             value={form.data.account_name}
                             onChange={(e) =>
                                 form.setData('account_name', e.target.value)
@@ -130,12 +143,13 @@ export default function CreateBankAccountDialog({
                         <InputError message={form.errors.account_name} />
                     </div>
 
-                    {/* Branch (Optional) */}
                     <div className="grid gap-2">
-                        <Label htmlFor="branch">Branch (Optional)</Label>
+                        <Label htmlFor="branch">
+                            <FormattedMessage defaultMessage="Branch (optional)" />
+                        </Label>
                         <Input
                             id="branch"
-                            placeholder="Enter branch name"
+                            placeholder="Branch name"
                             value={form.data.branch}
                             onChange={(e) =>
                                 form.setData('branch', e.target.value)
@@ -145,15 +159,13 @@ export default function CreateBankAccountDialog({
                         <InputError message={form.errors.branch} />
                     </div>
 
-                    {/* Set as Default */}
-                    <div className="flex items-center justify-between space-x-2">
+                    <div className="flex items-center justify-between gap-4 rounded-lg border bg-muted/20 px-4 py-3">
                         <div className="space-y-0.5">
                             <Label htmlFor="is_default">
-                                Set as default account
+                                <FormattedMessage defaultMessage="Default account" />
                             </Label>
                             <p className="text-sm text-muted-foreground">
-                                This account will be used as the primary
-                                destination for payments
+                                <FormattedMessage defaultMessage="Primary destination for withdrawals." />
                             </p>
                         </div>
                         <Switch
@@ -169,13 +181,15 @@ export default function CreateBankAccountDialog({
                     <DialogFooter>
                         <DialogClose asChild>
                             <Button type="button" variant="outline">
-                                Cancel
+                                <FormattedMessage defaultMessage="Cancel" />
                             </Button>
                         </DialogClose>
 
                         <Button type="submit" disabled={form.processing}>
-                            {form.processing && <Spinner className="mr-2" />}
-                            Add Account
+                            {form.processing ? (
+                                <Spinner className="mr-2" />
+                            ) : null}
+                            <FormattedMessage defaultMessage="Add account" />
                         </Button>
                     </DialogFooter>
                 </form>

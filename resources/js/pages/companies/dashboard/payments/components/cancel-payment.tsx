@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
+import { refreshPageAfterPayment } from '@/lib/refresh-after-payment';
 import { router } from '@inertiajs/react';
 
 export default function CancelPayment({ payment }: { payment: any }) {
@@ -23,7 +24,7 @@ export default function CancelPayment({ payment }: { payment: any }) {
             {
                 preserveScroll: true,
                 onSuccess: () => {
-                    // optional: toast / notification
+                    refreshPageAfterPayment();
                 },
             },
         );
@@ -31,7 +32,11 @@ export default function CancelPayment({ payment }: { payment: any }) {
     return (
         <AlertDialog>
             <AlertDialogTrigger asChild>
-                <Button size="sm" variant="destructive">
+                <Button
+                    size="lg"
+                    variant="destructive"
+                    className="h-11 w-full sm:flex-1"
+                >
                     Cancel
                 </Button>
             </AlertDialogTrigger>

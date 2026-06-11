@@ -7,46 +7,83 @@ use App\Http\Controllers\Controller;
 use App\Models\Company;
 use App\Models\Payment;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 class PaymentController extends Controller
 {
-    // Display a listing of the payments for a specific company
     public function index(Company $company, Request $request)
     {
-        // Determine the start date for filtering payments
-        $from = $request->input('from')
-          ? Carbon::parse($request->input('from'))->startOfDay()
-          : now()->subMonth()->startOfDay(); // Default to one month ago
+        $from = $request->filled('from')
+            ? Carbon::parse($request->input('from'))->startOfDay()
+            : now()->subMonth()->startOfDay();
 
-        // Determine the end date for filtering payments
-        $to = $request->input('to')
-          ? Carbon::parse($request->input('to'))->endOfDay()
-          : now()->endOfDay(); // Default to now
+        $to = $request->filled('to')
+            ? Carbon::parse($request->input('to'))->endOfDay()
+            : now()->endOfDay();
 
-        // Fetch payments within the specified date range
-        $payments = $company->payments()->with('payable')
-            ->whereBetween('created_at', [$from, $to]) // Filter by date range
-            ->latest() // Order by latest payments
+        $status = $request->input('status');
+        if (! in_array($status, ['unpaid', 'pending', 'paid', 'failed', 'expired', 'cancelled', 'refunded'], true)) {
+            $status = null;
+        }
+
+        $type = $request->input('type', 'all');
+        $allowedTypes = [
+            'all',
+            'wallet-topup-payment',
+            'agent-subscription-payment',
+            'ai-credit-topup-payment',
+        ];
+        if (! in_array($type, $allowedTypes, true)) {
+            $type = 'all';
+        }
+
+        $sort = $request->input('sort', '-created_at');
+        if (! in_array($sort, ['-created_at', 'created_at'], true)) {
+            $sort = '-created_at';
+        }
+
+        $periodQuery = $company->payments()
+            ->whereBetween('created_at', [$from, $to]);
+
+        $stats = [
+            'total_count' => (clone $periodQuery)->count(),
+            'total_amount' => (float) (clone $periodQuery)->sum('amount'),
+            'paid_count' => (clone $periodQuery)->where('status', PaymentStatus::PAID)->count(),
+            'pending_count' => (clone $periodQuery)
+                ->whereIn('status', [PaymentStatus::PENDING, PaymentStatus::UNPAID])
+                ->count(),
+        ];
+
+        $payments = (clone $periodQuery)
+            ->with('payable')
+            ->when($status, fn (Builder $query) => $query->where('status', $status))
+            ->when($type !== 'all', fn (Builder $query) => $query->where('payable_type', $type))
+            ->when(
+                $sort === '-created_at',
+                fn (Builder $query) => $query->latest(),
+                fn (Builder $query) => $query->oldest(),
+            )
             ->get();
 
-        // Render the payments index view with payments and filters
         return Inertia::render('companies/dashboard/payments/index', [
             'payments' => $payments,
-            'filters' => [ // Return filters for consistency
-                'from' => $request->input('from') ? $from->toDateString() : null,
-                'to' => $request->input('to') ? $to->toDateString() : null,
+            'filters' => [
+                'from' => $from->toDateString(),
+                'to' => $to->toDateString(),
+                'status' => $status,
+                'type' => $type,
+                'sort' => $sort,
             ],
+            'stats' => $stats,
         ]);
     }
 
-    // Cancel a specific payment for a company
     public function cancel(Company $company, Payment $payment)
     {
-        // Update the payment status to cancelled
         $payment->update(['status' => PaymentStatus::CANCELLED]);
 
-        return back(); // Redirect back to the previous page
+        return back();
     }
 }

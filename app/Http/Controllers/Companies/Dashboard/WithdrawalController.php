@@ -62,8 +62,12 @@ class WithdrawalController extends Controller
         // Calculate statistics for the withdrawals
         $total_withdrawals = $withdrawals->count(); // Total number of withdrawals
         $total_amount = $withdrawals->sum('amount'); // Total amount withdrawn
-        $pending_amount = $withdrawals->whereIn('status', ['requested', 'approved', 'processing'])->sum('amount'); // Total pending amount
-        $completed_amount = $withdrawals->where('status', 'paid')->sum('amount'); // Total completed amount
+        $pending_amount = $withdrawals
+            ->whereIn('status', [WithdrawalStatus::PENDING, WithdrawalStatus::PROCESSING])
+            ->sum('amount');
+        $completed_amount = $withdrawals
+            ->where('status', WithdrawalStatus::PAID)
+            ->sum('amount');
 
         // Render the Inertia view with withdrawals and statistics
         return Inertia::render('companies/dashboard/withdrawals/index', [
@@ -89,7 +93,7 @@ class WithdrawalController extends Controller
         // Validate the incoming request data
         $validated = $request->validate([
             'wallet_id' => 'required|numeric|exists:wallets,id',
-            'amount' => 'required|numeric|min:50000',
+            'amount' => 'required|numeric|min:100000',
             'bank_account_id' => 'required|numeric|exists:bank_accounts,id',
         ]);
 
@@ -105,13 +109,26 @@ class WithdrawalController extends Controller
         return back()->with('success', 'Withdrawal request submitted successfully.');
     }
 
-    // Cancel a specific withdrawal
-    public function cancel(Withdrawal $withdrawal)
+    public function cancel(Company $company, Withdrawal $withdrawal)
     {
+        if (
+            ! in_array($withdrawal->owner_type, [Company::class, 'company'], true)
+            || (int) $withdrawal->owner_id !== (int) $company->id
+        ) {
+            abort(403);
+        }
+
+        if ($withdrawal->status !== WithdrawalStatus::PENDING) {
+            return back()->withErrors([
+                'withdrawal' => 'Only pending withdrawals can be cancelled.',
+            ]);
+        }
+
         $withdrawal->update([
-            'status' => WithdrawalStatus::CANCELLED, // Update status to cancelled
+            'status' => WithdrawalStatus::CANCELLED,
+            'cancelled_at' => now(),
         ]);
 
-        return back(); // Redirect back
+        return back();
     }
 }

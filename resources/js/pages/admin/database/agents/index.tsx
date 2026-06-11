@@ -3,75 +3,53 @@ import { DataTableColumnHeader } from '@/components/data-table/data-table-column
 import { DataTableToolbar } from '@/components/data-table/data-table-toolbar';
 import AdminDashboardLayout from '@/components/layouts/admin-dashboard';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import {
     Tooltip,
     TooltipContent,
     TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { useDataTable } from '@/hooks/use-data-table';
-import type { Column, ColumnDef } from '@tanstack/react-table';
+import { edit } from '@/routes/admin/database/agents';
+import type { ColumnDef } from '@tanstack/react-table';
 import dayjs from 'dayjs';
-import { Ban, MoreHorizontal, Text } from 'lucide-react';
+import { Ban, CalendarIcon, CircleDashedIcon, Text } from 'lucide-react';
 import { useMemo } from 'react';
+import { CompaniesTableActionBar } from '../shared/companies-table-action-bar';
+import {
+    CompanyRowActions,
+    SubscriptionStatusBadge,
+} from '../shared/company-row-actions';
+import type {
+    AdminCompanyRow,
+    NetworkPerson,
+    PaginatedCompanies,
+} from '../shared/company-types';
 import { EmptyAgents } from './components/empty-agents';
 
-type NetworkPerson = {
-    id: number;
-    name?: string | null;
-    email?: string | null;
-    referral_code?: string | null;
-    status?: string | null;
-    user_status?: string | null;
-    is_inactive?: boolean;
-};
-
-type AgentCompany = {
-    id: number;
-    name?: string | null;
-    username?: string | null;
-    email?: string | null;
-    phone?: string | null;
-    status?: string | null;
-    created_at?: string | null;
-    affiliation?: {
-        affiliator?: NetworkPerson | null;
-        master_affiliate?: NetworkPerson | null;
-        partner?: NetworkPerson | null;
-    } | null;
-};
-
-type PageProps = {
-    data: {
-        data: AgentCompany[];
-        total: number;
-    };
-};
+const SUBSCRIPTION_STATUS_OPTIONS = [
+    { label: 'Active', value: 'active' },
+    { label: 'Expired', value: 'expired' },
+    { label: 'Inactive', value: 'inactive' },
+];
 
 function InactiveIcon({ person }: { person?: NetworkPerson | null }) {
     if (!person?.is_inactive) {
         return null;
     }
 
-    return <Ban className="h-3.5 w-3.5 text-rose-500" aria-hidden="true" />;
+    return <Ban className="size-3.5 text-rose-500" aria-hidden="true" />;
 }
 
 function PersonName({ person }: { person?: NetworkPerson | null }) {
     if (!person) {
-        return <span className="text-sm text-slate-400">-</span>;
+        return <span className="text-sm text-muted-foreground">—</span>;
     }
 
     return (
-        <div className="flex min-w-[140px] items-center gap-2">
-            <span className="truncate text-sm font-medium text-slate-900 dark:text-slate-100">
-                {person.name || '-'}
+        <div className="flex min-w-[120px] items-center gap-2">
+            <span className="truncate text-sm font-medium">
+                {person.name || '—'}
             </span>
             <InactiveIcon person={person} />
         </div>
@@ -80,16 +58,18 @@ function PersonName({ person }: { person?: NetworkPerson | null }) {
 
 function AffiliatorCell({ person }: { person?: NetworkPerson | null }) {
     if (!person) {
-        return <span className="text-sm text-slate-400">No referral</span>;
+        return (
+            <span className="text-sm text-muted-foreground">No referral</span>
+        );
     }
 
     return (
-        <div className="min-w-[190px] space-y-1">
+        <div className="min-w-[170px] space-y-1">
             <div className="flex items-center gap-2">
                 <Tooltip>
                     <TooltipTrigger asChild>
-                        <span className="max-w-[150px] truncate text-sm font-medium text-slate-900 underline-offset-2 hover:underline dark:text-slate-100">
-                            {person.name || '-'}
+                        <span className="max-w-[140px] truncate text-sm font-medium underline-offset-2 hover:underline">
+                            {person.name || '—'}
                         </span>
                     </TooltipTrigger>
                     <TooltipContent>
@@ -99,21 +79,16 @@ function AffiliatorCell({ person }: { person?: NetworkPerson | null }) {
                 <InactiveIcon person={person} />
             </div>
             {person.referral_code ? (
-                <Badge
-                    variant="secondary"
-                    className="font-mono text-[11px] tracking-wide"
-                >
+                <Badge variant="outline" className="font-mono text-[11px]">
                     {person.referral_code}
                 </Badge>
-            ) : (
-                <span className="text-xs text-slate-400">No code</span>
-            )}
+            ) : null}
         </div>
     );
 }
 
-export default function Page({ data }: PageProps) {
-    const columns = useMemo<ColumnDef<AgentCompany>[]>(
+export default function AgentsPage({ data }: { data: PaginatedCompanies }) {
+    const columns = useMemo<ColumnDef<AdminCompanyRow>[]>(
         () => [
             {
                 id: 'select',
@@ -143,18 +118,14 @@ export default function Page({ data }: PageProps) {
             {
                 id: 'name',
                 accessorKey: 'name',
-                header: ({
-                    column,
-                }: {
-                    column: Column<AgentCompany, unknown>;
-                }) => <DataTableColumnHeader column={column} label="Name" />,
+                header: ({ column }) => (
+                    <DataTableColumnHeader column={column} label="Name" />
+                ),
                 cell: ({ row }) => (
-                    <div className="min-w-[180px]">
-                        <div className="font-medium text-slate-900 dark:text-slate-100">
-                            {row.original.name || '-'}
-                        </div>
-                        <div className="text-xs text-slate-500 dark:text-slate-400">
-                            @{row.original.username || '-'}
+                    <div className="min-w-[160px]">
+                        <div className="font-medium">{row.original.name}</div>
+                        <div className="text-xs text-muted-foreground">
+                            @{row.original.username}
                         </div>
                     </div>
                 ),
@@ -167,16 +138,31 @@ export default function Page({ data }: PageProps) {
                 enableColumnFilter: true,
             },
             {
+                id: 'username',
+                accessorKey: 'username',
+                header: ({ column }) => (
+                    <DataTableColumnHeader column={column} label="Username" />
+                ),
+                cell: ({ cell }) => (
+                    <div className="text-sm">@{cell.getValue<string>()}</div>
+                ),
+                meta: {
+                    label: 'Username',
+                    placeholder: 'Search usernames...',
+                    variant: 'text',
+                    icon: Text,
+                },
+                enableColumnFilter: true,
+            },
+            {
                 id: 'email',
                 accessorKey: 'email',
-                header: ({
-                    column,
-                }: {
-                    column: Column<AgentCompany, unknown>;
-                }) => <DataTableColumnHeader column={column} label="Email" />,
+                header: ({ column }) => (
+                    <DataTableColumnHeader column={column} label="Email" />
+                ),
                 cell: ({ cell }) => (
-                    <div className="min-w-[180px] text-sm text-slate-700 dark:text-slate-300">
-                        {cell.getValue<string>() || '-'}
+                    <div className="min-w-[180px] text-sm">
+                        {cell.getValue<string>()}
                     </div>
                 ),
                 meta: {
@@ -190,16 +176,63 @@ export default function Page({ data }: PageProps) {
             {
                 id: 'phone',
                 accessorKey: 'phone',
-                header: ({
-                    column,
-                }: {
-                    column: Column<AgentCompany, unknown>;
-                }) => <DataTableColumnHeader column={column} label="Phone" />,
+                header: ({ column }) => (
+                    <DataTableColumnHeader column={column} label="Phone" />
+                ),
                 cell: ({ cell }) => (
-                    <div className="min-w-[130px] text-sm text-slate-700 dark:text-slate-300">
-                        {cell.getValue<string>() || '-'}
+                    <div className="text-sm">
+                        {cell.getValue<string>() || '—'}
                     </div>
                 ),
+                meta: {
+                    label: 'Phone',
+                    placeholder: 'Search phone...',
+                    variant: 'text',
+                    icon: Text,
+                },
+                enableColumnFilter: true,
+            },
+            {
+                id: 'address',
+                accessorKey: 'address',
+                header: ({ column }) => (
+                    <DataTableColumnHeader column={column} label="Address" />
+                ),
+                cell: ({ cell }) => (
+                    <div className="max-w-[200px] truncate text-sm">
+                        {cell.getValue<string>() || '—'}
+                    </div>
+                ),
+                meta: {
+                    label: 'Address',
+                    placeholder: 'Search address...',
+                    variant: 'text',
+                    icon: Text,
+                },
+                enableColumnFilter: true,
+            },
+            {
+                id: 'subscription_status',
+                accessorKey: 'subscription_status',
+                header: ({ column }) => (
+                    <DataTableColumnHeader
+                        column={column}
+                        label="Subscription"
+                    />
+                ),
+                cell: ({ row }) => (
+                    <SubscriptionStatusBadge
+                        status={row.original.subscription_status}
+                    />
+                ),
+                meta: {
+                    label: 'Subscription',
+                    variant: 'multiSelect',
+                    options: SUBSCRIPTION_STATUS_OPTIONS,
+                    icon: CircleDashedIcon,
+                },
+                enableColumnFilter: true,
+                enableSorting: false,
             },
             {
                 id: 'affiliator',
@@ -207,11 +240,7 @@ export default function Page({ data }: PageProps) {
                     row.affiliation?.affiliator?.name ||
                     row.affiliation?.affiliator?.referral_code ||
                     '',
-                header: ({
-                    column,
-                }: {
-                    column: Column<AgentCompany, unknown>;
-                }) => (
+                header: ({ column }) => (
                     <DataTableColumnHeader column={column} label="Affiliator" />
                 ),
                 cell: ({ row }) => (
@@ -219,111 +248,91 @@ export default function Page({ data }: PageProps) {
                         person={row.original.affiliation?.affiliator}
                     />
                 ),
+                enableSorting: false,
             },
             {
                 id: 'master_affiliate',
                 accessorFn: (row) =>
                     row.affiliation?.master_affiliate?.name || '',
-                header: ({
-                    column,
-                }: {
-                    column: Column<AgentCompany, unknown>;
-                }) => <DataTableColumnHeader column={column} label="MA" />,
+                header: ({ column }) => (
+                    <DataTableColumnHeader column={column} label="MA" />
+                ),
                 cell: ({ row }) => (
                     <PersonName
                         person={row.original.affiliation?.master_affiliate}
                     />
                 ),
+                enableSorting: false,
             },
             {
                 id: 'partner',
                 accessorFn: (row) => row.affiliation?.partner?.name || '',
-                header: ({
-                    column,
-                }: {
-                    column: Column<AgentCompany, unknown>;
-                }) => <DataTableColumnHeader column={column} label="Partner" />,
+                header: ({ column }) => (
+                    <DataTableColumnHeader column={column} label="Partner" />
+                ),
                 cell: ({ row }) => (
                     <PersonName person={row.original.affiliation?.partner} />
                 ),
-            },
-            {
-                id: 'status',
-                accessorKey: 'status',
-                header: ({
-                    column,
-                }: {
-                    column: Column<AgentCompany, unknown>;
-                }) => <DataTableColumnHeader column={column} label="Status" />,
-                cell: ({ cell }) => (
-                    <Badge variant="secondary" className="capitalize">
-                        {cell.getValue<string>() ?? 'active'}
-                    </Badge>
-                ),
+                enableSorting: false,
             },
             {
                 id: 'created_at',
                 accessorKey: 'created_at',
-                header: ({
-                    column,
-                }: {
-                    column: Column<AgentCompany, unknown>;
-                }) => (
+                header: ({ column }) => (
                     <DataTableColumnHeader column={column} label="Join Date" />
                 ),
                 cell: ({ cell }) => {
                     const createdAt = cell.getValue<string | null>();
 
                     return (
-                        <div className="min-w-[110px] text-sm text-slate-700 dark:text-slate-300">
+                        <div className="text-sm">
                             {createdAt
                                 ? dayjs(createdAt).format('DD MMM YYYY')
-                                : '-'}
+                                : '—'}
                         </div>
                     );
                 },
+                meta: {
+                    label: 'Join Date',
+                    placeholder: 'Search join date...',
+                    variant: 'dateRange',
+                    icon: CalendarIcon,
+                },
+                enableColumnFilter: true,
             },
             {
                 id: 'actions',
-                cell: function Cell() {
-                    return (
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon">
-                                    <MoreHorizontal className="h-4 w-4" />
-                                    <span className="sr-only">Open menu</span>
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                                <DropdownMenuItem>View Detail</DropdownMenuItem>
-                                <DropdownMenuItem>Verify</DropdownMenuItem>
-                                <DropdownMenuItem variant="destructive">
-                                    Suspend
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                    );
-                },
-                size: 32,
+                cell: ({ row }) => (
+                    <CompanyRowActions
+                        company={row.original}
+                        entityLabel="Agent"
+                        editHref={edit({ agent: row.original.id }).url}
+                        showAffiliation
+                    />
+                ),
+                size: 40,
             },
         ],
         [],
     );
 
     const { table } = useDataTable({
-        enableClientFiltering: true,
         queryKeys: {
             perPage: 'per_page',
             page: 'page',
         },
         data: data.data,
         columns,
-        pageCount: 1,
+        pageCount: data.last_page,
         rowCount: data.total,
         shallow: false,
         initialState: {
             sorting: [{ id: 'created_at', desc: true }],
             columnPinning: { right: ['actions'] },
+            columnVisibility: {
+                username: false,
+                address: false,
+            },
         },
         getRowId: (row) => row.id.toString(),
     });
@@ -331,10 +340,18 @@ export default function Page({ data }: PageProps) {
     return (
         <AdminDashboardLayout
             containerClassName="p-4"
+            activeMenuIds={['database', 'database.agents']}
+            openMenuIds={['database']}
             breadcrumb={[{ title: 'Database' }, { title: 'Agent' }]}
         >
-            <DataTable table={table} renderEmptyState={<EmptyAgents />}>
-                <DataTableToolbar table={table} searchMode="global" />
+            <DataTable
+                table={table}
+                renderEmptyState={<EmptyAgents />}
+                actionBar={
+                    <CompaniesTableActionBar table={table} entity="agent" />
+                }
+            >
+                <DataTableToolbar table={table} />
             </DataTable>
         </AdminDashboardLayout>
     );

@@ -4,19 +4,20 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\IndexMediaRequest;
+use App\Http\Requests\Admin\UpdateMediaRequest;
 use App\Models\Media;
 use App\Services\KnowledgeBaseService;
 use Carbon\Carbon;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Inertia\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class MediaController extends Controller
 {
     public function __construct(private KnowledgeBaseService $knowledgeBaseService) {}
 
-    /**
-     * Display a listing of the resource.
-     */
-    public function index(IndexMediaRequest $request)
+    public function index(IndexMediaRequest $request): Response
     {
         $validated = $request->validated();
 
@@ -69,11 +70,27 @@ class MediaController extends Controller
         ]);
     }
 
+    public function edit(Media $media): Response
+    {
+        $media->load(['owner']);
+
+        return Inertia::render('admin/database/medias/edit', [
+            'media' => $media,
+        ]);
+    }
+
+    public function update(UpdateMediaRequest $request, Media $media)
+    {
+        $media->update($request->validated());
+
+        return back()->with('success', 'Media updated successfully.');
+    }
+
     public function destroy(Media $media)
     {
         $media->delete();
 
-        return redirect()->back()->with('success', 'Role deleted successfully');
+        return redirect()->back()->with('success', 'Media deleted successfully.');
     }
 
     public function triggerGenerateKnowledgeBase(Media $media)
@@ -84,5 +101,51 @@ class MediaController extends Controller
         }
 
         return redirect()->back()->with('success', 'Knowledge base generated successfully');
+    }
+
+    public function exportAsCsv(Request $request): StreamedResponse
+    {
+        $validated = $request->validate([
+            'ids' => ['required', 'string'],
+        ]);
+
+        $mediaIds = explode(',', $validated['ids']);
+
+        return response()->streamDownload(
+            function () use ($mediaIds): void {
+                $file = fopen('php://output', 'w');
+
+                fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF));
+
+                fputcsv($file, [
+                    'ID',
+                    'Name',
+                    'Type',
+                    'Subtype',
+                    'Owner',
+                    'Created At',
+                ]);
+
+                Media::query()
+                    ->with('owner')
+                    ->whereIn('id', $mediaIds)
+                    ->orderBy('id')
+                    ->cursor()
+                    ->each(function (Media $media) use ($file): void {
+                        fputcsv($file, [
+                            $media->id,
+                            $media->name,
+                            $media->type?->value ?? $media->type,
+                            $media->subtype,
+                            $media->owner?->name,
+                            $media->created_at?->toDateTimeString(),
+                        ]);
+                    });
+
+                fclose($file);
+            },
+            'medias.csv',
+            ['Content-Type' => 'text/csv'],
+        );
     }
 }

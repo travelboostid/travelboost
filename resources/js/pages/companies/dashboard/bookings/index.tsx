@@ -3,6 +3,7 @@ import {
     type ManualPaymentData,
 } from '@/components/booking/ManualPaymentDialog';
 import CompanyDashboardLayout from '@/components/layouts/company-dashboard';
+import { PaymentMethodDialog } from '@/components/payment/payment-method-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -39,6 +40,7 @@ import {
 } from '@/components/ui/tooltip';
 import { formatIDR } from '@/constants/booking';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
+import { openOnlinePayment } from '@/lib/open-online-payment';
 import { cn } from '@/lib/utils';
 import { Head, Link, router } from '@inertiajs/react';
 import {
@@ -880,7 +882,8 @@ function RowActions({
     const [paymentActionError, setPaymentActionError] = React.useState<
         string | null
     >(null);
-    const [snapActive, setSnapActive] = React.useState(false);
+    const [vendorMethodDialogOpen, setVendorMethodDialogOpen] =
+        React.useState(false);
     const [actionDialog, setActionDialog] = React.useState<
         'cancel' | 'refund' | null
     >(null);
@@ -967,16 +970,9 @@ function RowActions({
         }
     }, [canOpenPaymentReview, manualPaymentId]);
 
-    const handleReviewOpenChange = React.useCallback(
-        (open: boolean) => {
-            if (!open && snapActive) {
-                return;
-            }
-
-            setReviewOpen(open);
-        },
-        [snapActive],
-    );
+    const handleReviewOpenChange = React.useCallback((open: boolean) => {
+        setReviewOpen(open);
+    }, []);
 
     const submitManualPaymentDecision = () => {
         if (!booking.manual_payment || !canSubmitPaymentReviewDecision) return;
@@ -1100,7 +1096,7 @@ function RowActions({
             })
             .finally(() => setProcessingAction(null));
     };
-    const submitAgentVendorOnlinePayment = () => {
+    const submitAgentVendorOnlinePayment = (paymentMethodId: number) => {
         if (!customerPayment || customerPaymentAmount <= 0) return;
 
         setProcessingAction('pay_vendor_online');
@@ -1112,6 +1108,7 @@ function RowActions({
                 {
                     payment_type: customerPaymentType,
                     amount: customerPaymentAmount,
+                    payment_method_id: paymentMethodId,
                 },
                 {
                     withCredentials: true,
@@ -1119,60 +1116,43 @@ function RowActions({
                 },
             )
             .then((response) => {
-                const snapToken = response.data?.payment?.payload
-                    ?.snap_token as string | undefined;
                 const paymentId = response.data?.payment?.id as
                     | number
                     | string
                     | undefined;
-                const snap = (window as any).snap;
+                const payload = response.data?.payment?.payload as
+                    | Record<string, unknown>
+                    | undefined;
 
-                if (!snapToken || typeof snap?.pay !== 'function') {
+                if (!payload?.order_id) {
                     setPaymentActionError(
-                        'Online payment is not available in this browser session. Please refresh and try again.',
+                        'Online payment could not be started. Please try again.',
                     );
-                    setSnapActive(false);
                     setProcessingAction(null);
                     return;
                 }
 
-                setSnapActive(true);
-
-                try {
-                    snap.pay(snapToken, {
-                        onSuccess: () => {
-                            setSnapActive(false);
-                            confirmAgentVendorOnlinePayment(paymentId);
-                        },
-                        onPending: () => {
-                            setSnapActive(false);
-                            setPaymentActionError(
-                                'Payment is still pending. You can reopen Online Payment to continue the same attempt while it is active.',
-                            );
-                            setProcessingAction(null);
-                        },
-                        onError: () => {
-                            setSnapActive(false);
-                            setPaymentActionError(
-                                'Online payment could not be completed. Please try again.',
-                            );
-                            setProcessingAction(null);
-                        },
-                        onClose: () => {
-                            setSnapActive(false);
-                            setPaymentActionError(
-                                'Payment window closed. You can reopen Online Payment and continue the same attempt while it is active.',
-                            );
-                            setProcessingAction(null);
-                        },
-                    });
-                } catch {
-                    setSnapActive(false);
-                    setPaymentActionError(
-                        'Online payment could not be opened. Please try again.',
-                    );
-                    setProcessingAction(null);
-                }
+                openOnlinePayment(
+                    {
+                        id: paymentId,
+                        status: 'pending',
+                        provider: 'midtrans',
+                        amount: customerPaymentAmount,
+                        payload,
+                    },
+                    {
+                        onPaid: () =>
+                            confirmAgentVendorOnlinePayment(paymentId),
+                        onComplete: () => setProcessingAction(null),
+                        reloadOnPaid: false,
+                        statusCheck: paymentId
+                            ? {
+                                  url: `/companies/${companyUsername}/dashboard/bookings/${booking.id}/online-payment/${paymentId}/confirm`,
+                                  method: 'POST',
+                              }
+                            : undefined,
+                    },
+                );
             })
             .catch((error) => {
                 const message =
@@ -1181,7 +1161,6 @@ function RowActions({
                     'Online payment could not be started.';
 
                 setPaymentActionError(String(message));
-                setSnapActive(false);
                 setProcessingAction(null);
             });
     };
@@ -1318,25 +1297,8 @@ function RowActions({
                 </DropdownMenuContent>
             </DropdownMenu>
 
-            <Dialog
-                open={reviewOpen}
-                modal={!snapActive}
-                onOpenChange={handleReviewOpenChange}
-            >
-                <DialogContent
-                    className="w-full max-w-2xl"
-                    showCloseButton={!snapActive}
-                    onEscapeKeyDown={(event) => {
-                        if (snapActive) {
-                            event.preventDefault();
-                        }
-                    }}
-                    onInteractOutside={(event) => {
-                        if (snapActive) {
-                            event.preventDefault();
-                        }
-                    }}
-                >
+            <Dialog open={reviewOpen} onOpenChange={handleReviewOpenChange}>
+                <DialogContent className="w-full max-w-2xl">
                     <DialogHeader>
                         <DialogTitle>
                             {canPayVendor && !canSubmitPaymentReviewDecision
@@ -1416,8 +1378,8 @@ function RowActions({
                                         <Button
                                             type="button"
                                             disabled={processingAction !== null}
-                                            onClick={
-                                                submitAgentVendorOnlinePayment
+                                            onClick={() =>
+                                                setVendorMethodDialogOpen(true)
                                             }
                                         >
                                             {processingAction ===
@@ -1550,6 +1512,17 @@ function RowActions({
                     )}
                 </DialogContent>
             </Dialog>
+
+            <PaymentMethodDialog
+                open={vendorMethodDialogOpen}
+                onOpenChange={setVendorMethodDialogOpen}
+                description={`Select how you want to pay ${formatIDR(customerPaymentAmount)} to the vendor`}
+                loading={processingAction === 'pay_vendor_online'}
+                onConfirm={(methodId) => {
+                    setVendorMethodDialogOpen(false);
+                    submitAgentVendorOnlinePayment(methodId);
+                }}
+            />
 
             <ManualPaymentDialog
                 open={manualPayVendorOpen}

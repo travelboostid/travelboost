@@ -2,44 +2,48 @@
 
 namespace App\Http\Controllers\Companies\Dashboard;
 
+use App\Enums\PaymentStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\PaymentResource;
 use App\Models\Company;
 use App\Models\Payment;
+use App\Models\Wallet;
 use App\Models\WalletTopupPayment;
 use Bavix\Wallet\Models\Transaction;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Attributes\Controllers\Authorize;
 use Inertia\Inertia;
 
 class WalletController extends Controller
 {
+    #[Authorize('view', 'company')]
     public function index(Request $request, Company $company)
     {
-        $wallet = $company->wallet; // Get the default wallet
-        $balance = $wallet->balance; // Current balance
+        abort_unless(
+            $request->user()->isAbleTo('wallet.query', "company:{$company->id}"),
+            403
+        );
 
-        // Define date ranges for this month and last month
+        $wallet = $this->resolveWallet($company, $request->query('wallet'));
+        $balance = $wallet->balance;
+
         $thisMonthStart = now()->startOfMonth();
         $thisMonthEnd = now()->endOfMonth();
         $lastMonthStart = now()->subMonth()->startOfMonth();
         $lastMonthEnd = now()->subMonth()->endOfMonth();
 
-        // --- THIS MONTH ---
-        // Calculate income and expenses for this month
         $thisIncome = $wallet->transactions()
-            ->where('amount', '>', 0) // Income transactions
+            ->where('amount', '>', 0)
             ->whereBetween('created_at', [$thisMonthStart, $thisMonthEnd])
             ->sum('amount');
 
         $thisExpense = abs(
             $wallet->transactions()
-                ->where('amount', '<', 0) // Expense transactions
+                ->where('amount', '<', 0)
                 ->whereBetween('created_at', [$thisMonthStart, $thisMonthEnd])
                 ->sum('amount')
         );
 
-        // --- LAST MONTH ---
-        // Calculate income and expenses for last month
         $lastIncome = $wallet->transactions()
             ->where('amount', '>', 0)
             ->whereBetween('created_at', [$lastMonthStart, $lastMonthEnd])
@@ -52,18 +56,16 @@ class WalletController extends Controller
                 ->sum('amount')
         );
 
-        // Calculate net movement for this month and last month
         $thisNet = $thisIncome - $thisExpense;
         $lastNet = $lastIncome - $lastExpense;
 
-        // Retrieve the last 10 transactions
         $transactions = $wallet->transactions()
             ->latest()
             ->take(10)
             ->get()
             ->map(fn (Transaction $t) => [
                 'id' => $t->id,
-                'type' => $t->amount > 0 ? 'income' : 'expense', // Determine transaction type
+                'type' => $t->amount > 0 ? 'income' : 'expense',
                 'amount' => $t->amount,
                 'confirmed' => $t->confirmed,
                 'meta' => $t->meta,
@@ -73,7 +75,7 @@ class WalletController extends Controller
         $pendingTopup = Payment::query()
             ->whereMorphedTo('owner', $company)
             ->whereMorphedTo('payable', WalletTopupPayment::class)
-            ->where('status', 'pending')
+            ->whereIn('status', [PaymentStatus::PENDING, PaymentStatus::UNPAID])
             ->whereIn(
                 'payable_id',
                 WalletTopupPayment::query()
@@ -83,7 +85,6 @@ class WalletController extends Controller
             ->latest()
             ->first();
 
-        // Render the Inertia view with wallet data
         return Inertia::render('companies/dashboard/wallet/index', [
             'balance' => $balance,
             'income' => [
@@ -102,20 +103,62 @@ class WalletController extends Controller
                 'growth_pct' => $this->growthPercentage($thisNet, $lastNet),
             ],
             'transactions' => $transactions,
-            'wallet' => $wallet,
+            'wallet' => [
+                'id' => $wallet->id,
+                'name' => $wallet->name,
+                'slug' => $wallet->slug,
+                'description' => $wallet->description,
+                'balance' => $wallet->balance,
+            ],
+            'wallets' => $this->walletOptions($company),
             'pendingTopup' => $pendingTopup
                 ? (new PaymentResource($pendingTopup))->resolve($request)
                 : null,
         ]);
     }
 
-    // Calculate growth percentage between current and previous values
+    private function resolveWallet(Company $company, ?string $slug): Wallet
+    {
+        $defaultSlug = (string) config('wallet.wallet.default.slug', 'main');
+        $slug = filled($slug) ? $slug : $defaultSlug;
+
+        /** @var Wallet|null $wallet */
+        $wallet = $company->wallets()->where('slug', $slug)->first();
+
+        abort_unless($wallet instanceof Wallet, 404);
+
+        return $wallet;
+    }
+
+    /**
+     * @return list<array{id: int, name: string, slug: string, description: string|null, balance: int|float|string, is_default: bool}>
+     */
+    private function walletOptions(Company $company): array
+    {
+        $defaultSlug = (string) config('wallet.wallet.default.slug', 'main');
+
+        return $company->wallets()
+            ->orderByRaw('CASE WHEN slug = ? THEN 0 ELSE 1 END', [$defaultSlug])
+            ->orderBy('name')
+            ->get()
+            ->map(fn (Wallet $wallet) => [
+                'id' => $wallet->id,
+                'name' => $wallet->name,
+                'slug' => $wallet->slug,
+                'description' => $wallet->description,
+                'balance' => $wallet->balance,
+                'is_default' => $wallet->slug === $defaultSlug,
+            ])
+            ->values()
+            ->all();
+    }
+
     private function growthPercentage(int $current, int $previous): float
     {
         if ($previous === 0) {
-            return $current > 0 ? 100.0 : 0.0; // Handle division by zero
+            return $current > 0 ? 100.0 : 0.0;
         }
 
-        return round((($current - $previous) / abs($previous)) * 100, 2); // Calculate percentage
+        return round((($current - $previous) / abs($previous)) * 100, 2);
     }
 }
