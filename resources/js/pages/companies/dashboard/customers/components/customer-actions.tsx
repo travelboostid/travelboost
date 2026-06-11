@@ -1,4 +1,5 @@
 import type { UserResource } from '@/api/model';
+import { Button } from '@/components/ui/button';
 import {
     Dialog,
     DialogContent,
@@ -21,6 +22,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import { Spinner } from '@/components/ui/spinner';
 import { Textarea } from '@/components/ui/textarea';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { cn } from '@/lib/utils';
@@ -207,16 +209,26 @@ export function CustomerActions({ customer }: { customer: CustomerRow }) {
                 open={isNotificationOpen}
                 onOpenChange={setIsNotificationOpen}
             >
-                <DialogContent className="sm:max-w-[520px]">
-                    <DialogHeader>
-                        <DialogTitle>Send Notification</DialogTitle>
-                        <DialogDescription>
-                            Send a custom notification to {customer.name} via
-                            dashboard, email, or both.
-                        </DialogDescription>
+                <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-md">
+                    <DialogHeader className="space-y-3 border-b px-6 py-5 text-left">
+                        <div className="flex items-start gap-3">
+                            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                                <BellIcon className="size-5" />
+                            </div>
+                            <div className="space-y-1">
+                                <DialogTitle className="text-lg">
+                                    Send Notification
+                                </DialogTitle>
+                                <DialogDescription className="text-sm leading-relaxed">
+                                    Send a custom notification to{' '}
+                                    {customer.name} via dashboard, email, or
+                                    both.
+                                </DialogDescription>
+                            </div>
+                        </div>
                     </DialogHeader>
 
-                    <div className="space-y-4">
+                    <div className="space-y-5 px-6 py-5">
                         <div className="space-y-2">
                             <label className="text-sm font-medium text-slate-700 dark:text-slate-200">
                                 Title
@@ -276,22 +288,27 @@ export function CustomerActions({ customer }: { customer: CustomerRow }) {
                         </div>
                     </div>
 
-                    <DialogFooter>
-                        <button
+                    <DialogFooter className="flex-col gap-2 border-t bg-muted/20 px-6 py-4 sm:flex-col">
+                        <Button
                             type="button"
-                            onClick={() => setIsNotificationOpen(false)}
-                            className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            type="button"
+                            size="lg"
+                            className="w-full"
                             onClick={sendNotification}
                             disabled={notificationForm.processing}
-                            className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
                         >
+                            {notificationForm.processing ? (
+                                <Spinner className="mr-2" />
+                            ) : null}
                             Send Notification
-                        </button>
+                        </Button>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            className="w-full"
+                            onClick={() => setIsNotificationOpen(false)}
+                        >
+                            Cancel
+                        </Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>

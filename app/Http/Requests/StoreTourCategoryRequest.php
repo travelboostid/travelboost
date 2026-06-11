@@ -2,6 +2,8 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Company;
+use App\Models\TourCategory;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
 
@@ -9,8 +11,12 @@ class StoreTourCategoryRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        // sudah login?
-        return Auth::check();
+        $company = $this->route('company');
+
+        return Auth::check()
+            && $company instanceof Company
+            && $this->user()->can('create', TourCategory::class)
+            && $company->teams()->where('user_id', $this->user()->id)->exists();
     }
 
     public function rules(): array

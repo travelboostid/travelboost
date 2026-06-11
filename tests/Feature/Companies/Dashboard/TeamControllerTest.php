@@ -131,6 +131,75 @@ test('owner can update a team members status role email and password', function 
     Notification::assertSentOnDemand(TeamAccountNotification::class);
 });
 
+test('owner can filter team members from the server', function () {
+    $member = User::factory()->create([
+        'status' => UserStatus::ACTIVE,
+        'name' => 'Filter Target',
+        'email' => 'filter-target@example.com',
+        'username' => 'filter-target',
+    ]);
+
+    $member->addRoles([
+        'user:vendor',
+        "company:{$this->company->id}:admin",
+    ]);
+
+    CompanyTeam::create([
+        'company_id' => $this->company->id,
+        'user_id' => $member->id,
+        'invite_email' => $member->email,
+        'invite_role' => "company:{$this->company->id}:admin",
+        'invited_at' => now(),
+        'accepted_at' => now(),
+        'status' => CompanyTeamStatus::ACTIVE,
+    ]);
+
+    $response = $this->actingAs($this->owner)->get(
+        "/companies/{$this->company->username}/dashboard/teams?user=Filter+Target"
+    );
+
+    $response->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('companies/dashboard/teams/index')
+            ->has('data.data', 1)
+            ->where('data.data.0.user.name', 'Filter Target'));
+});
+
+test('owner can bulk suspend team members', function () {
+    $member = User::factory()->create([
+        'status' => UserStatus::ACTIVE,
+        'email' => 'bulk-member@example.com',
+        'username' => 'bulk-member',
+    ]);
+
+    $member->addRoles([
+        'user:vendor',
+        "company:{$this->company->id}:admin",
+    ]);
+
+    $team = CompanyTeam::create([
+        'company_id' => $this->company->id,
+        'user_id' => $member->id,
+        'invite_email' => $member->email,
+        'invite_role' => "company:{$this->company->id}:admin",
+        'invited_at' => now(),
+        'accepted_at' => now(),
+        'status' => CompanyTeamStatus::ACTIVE,
+    ]);
+
+    $response = $this->actingAs($this->owner)->put(
+        "/companies/{$this->company->username}/dashboard/teams/bulk-update",
+        [
+            'ids' => [$team->id],
+            'status' => 'suspended',
+        ]
+    );
+
+    $response->assertRedirect();
+
+    expect($team->fresh()->status)->toBe(CompanyTeamStatus::SUSPENDED);
+});
+
 test('owner can delete a team member and deactivate standalone login access', function () {
     $member = User::factory()->create([
         'status' => UserStatus::ACTIVE,

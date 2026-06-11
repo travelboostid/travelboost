@@ -1,8 +1,44 @@
+import InputError from '@/components/input-error';
 import CompanyDashboardLayout from '@/components/layouts/company-dashboard';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card';
+import { FieldDescription } from '@/components/ui/field';
+import { Input } from '@/components/ui/input';
+import {
+    InputGroup,
+    InputGroupAddon,
+    InputGroupButton,
+    InputGroupInput,
+} from '@/components/ui/input-group';
+import { Label } from '@/components/ui/label';
 import MoneyInput from '@/components/ui/money-input';
+import { Spinner } from '@/components/ui/spinner';
+import { Textarea } from '@/components/ui/textarea';
+import { cn } from '@/lib/utils';
 import { Head, useForm, usePage } from '@inertiajs/react';
-import type { FormEvent } from 'react';
+import {
+    Banknote,
+    CalendarClock,
+    CreditCard,
+    Eye,
+    EyeOff,
+    Info,
+    Landmark,
+    Save,
+    ScrollText,
+    SlidersHorizontal,
+    type LucideIcon,
+} from 'lucide-react';
+import { useState, type FormEvent, type ReactNode } from 'react';
 import { FormattedMessage, useIntl } from 'react-intl';
+import { toast } from 'sonner';
 
 type Settings = {
     booking_deadline: number;
@@ -39,6 +75,44 @@ type ParameterVendorFormData = {
     _method: 'put';
 };
 
+type SectionTone = 'primary' | 'sky' | 'emerald' | 'amber' | 'violet';
+
+const sectionToneStyles: Record<
+    SectionTone,
+    { card: string; header: string; iconWrap: string }
+> = {
+    primary: {
+        card: 'ring-1 ring-primary/10',
+        header: 'border-b border-primary/15 bg-linear-to-r from-primary/12 via-primary/5 to-transparent',
+        iconWrap:
+            'bg-primary text-primary-foreground shadow-sm shadow-primary/25 ring-1 ring-primary/20',
+    },
+    sky: {
+        card: 'ring-1 ring-sky-500/10',
+        header: 'border-b border-sky-500/15 bg-linear-to-r from-sky-500/12 via-sky-500/5 to-transparent',
+        iconWrap:
+            'bg-sky-500 text-white shadow-sm shadow-sky-500/25 ring-1 ring-sky-500/20',
+    },
+    emerald: {
+        card: 'ring-1 ring-emerald-500/10',
+        header: 'border-b border-emerald-500/15 bg-linear-to-r from-emerald-500/12 via-emerald-500/5 to-transparent',
+        iconWrap:
+            'bg-emerald-600 text-white shadow-sm shadow-emerald-500/25 ring-1 ring-emerald-500/20',
+    },
+    amber: {
+        card: 'ring-1 ring-amber-500/10',
+        header: 'border-b border-amber-500/15 bg-linear-to-r from-amber-500/12 via-amber-500/5 to-transparent',
+        iconWrap:
+            'bg-amber-500 text-white shadow-sm shadow-amber-500/25 ring-1 ring-amber-500/20',
+    },
+    violet: {
+        card: 'ring-1 ring-violet-500/10',
+        header: 'border-b border-violet-500/15 bg-linear-to-r from-violet-500/12 via-violet-500/5 to-transparent',
+        iconWrap:
+            'bg-violet-600 text-white shadow-sm shadow-violet-500/25 ring-1 ring-violet-500/20',
+    },
+};
+
 const decimalInputValue = (value: unknown): string => {
     const numeric = Number(value ?? 0);
 
@@ -65,8 +139,50 @@ const parseDecimalInput = (value: DecimalInputValue): number => {
     return Number.isFinite(parsed) ? parsed : 0;
 };
 
+const parseNonNegativeInt = (value: string | number): number => {
+    const parsed = parseInt(String(value).replace(/\D/g, ''), 10);
+
+    return Number.isFinite(parsed) ? Math.max(0, parsed) : 0;
+};
+
+function ParameterSectionHeader({
+    icon: Icon,
+    title,
+    description,
+    tone,
+}: {
+    icon: LucideIcon;
+    title: ReactNode;
+    description: ReactNode;
+    tone: SectionTone;
+}) {
+    const style = sectionToneStyles[tone];
+
+    return (
+        <CardHeader
+            className={cn('gap-0 px-6 py-4 [.border-b]:pb-4', style.header)}
+        >
+            <div className="flex items-start gap-3">
+                <div
+                    className={cn(
+                        'flex size-10 shrink-0 items-center justify-center rounded-xl',
+                        style.iconWrap,
+                    )}
+                >
+                    <Icon className="size-5" />
+                </div>
+                <div className="min-w-0 space-y-1">
+                    <CardTitle className="text-lg">{title}</CardTitle>
+                    <CardDescription>{description}</CardDescription>
+                </div>
+            </div>
+        </CardHeader>
+    );
+}
+
 export default function ParameterVendorPage() {
     const intl = useIntl();
+    const [showPassword, setShowPassword] = useState(false);
 
     const { props } = usePage<{
         settings: Settings;
@@ -114,18 +230,20 @@ export default function ParameterVendorPage() {
             minimum_vat: parseDecimalInput(payload.minimum_vat),
         }));
 
-        post(window.location.pathname);
+        post(window.location.pathname, {
+            preserveScroll: true,
+            onSuccess: () => {
+                toast.success(
+                    intl.formatMessage({
+                        defaultMessage:
+                            'Vendor parameters updated successfully.',
+                    }),
+                );
+            },
+        });
     };
 
-    const inputClass =
-        'w-full rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-primary sm:px-4 sm:py-2.5';
-    const labelClass =
-        'mb-2 block min-h-[48px] text-sm font-medium text-foreground';
-    const labelClassSingleRow =
-        'mb-2 block text-sm font-medium text-foreground';
-
     const hasPercentage = parseDecimalInput(data.minimum_down_payment) > 0;
-
     const hasAmount = Number(data.minimum_down_payment_value || 0) > 0;
 
     return (
@@ -151,219 +269,330 @@ export default function ParameterVendorPage() {
                 })}
             />
 
-            <div className="mx-auto w-full max-w-5xl space-y-4 px-3 pb-20 sm:space-y-6 sm:px-4">
-                {/* Header */}
-
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                        <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">
-                            <FormattedMessage defaultMessage="Parameters Settings" />
-                        </h1>
-                        <p className="mt-1 text-sm text-muted-foreground sm:text-base">
-                            <FormattedMessage defaultMessage="Manage booking rules, tax, payment instructions and terms for your company." />
-                        </p>
-                    </div>
-                </div>
-
-                {props.flash?.success && (
-                    <div className="rounded-2xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700 shadow-sm">
-                        {props.flash.success}
-                    </div>
-                )}
-
-                <form onSubmit={submit} className="space-y-6">
-                    {/* Booking Rules */}
-                    <div className="rounded-2xl border bg-card p-4 shadow-sm sm:p-6">
-                        <h2 className="mb-5 text-lg font-semibold">
-                            <FormattedMessage defaultMessage="Booking Entry Rules" />
-                        </h2>
-
-                        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-                            <div>
-                                <label className={labelClass}>
-                                    <FormattedMessage defaultMessage="Entry Deadline Before Departure Date (days)" />
-                                </label>
-                                <MoneyInput
-                                    value={data.booking_deadline}
-                                    className={inputClass}
-                                    onChange={(raw) =>
-                                        setData('booking_deadline', Number(raw))
-                                    }
-                                />
-                                {errors.booking_deadline && (
-                                    <p className="mt-1 text-sm text-red-500">
-                                        {errors.booking_deadline}
-                                    </p>
-                                )}
+            <div className="mx-auto w-full max-w-5xl space-y-6 p-4 pb-20 sm:p-6">
+                <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                    <div className="space-y-1">
+                        <div className="flex items-center gap-2.5">
+                            <div className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                                <SlidersHorizontal className="size-5" />
                             </div>
-
                             <div>
-                                <label className={labelClass}>
-                                    <FormattedMessage defaultMessage="Booking Reserve Time Limit (minutes)" />
-                                </label>
-                                <MoneyInput
-                                    value={data.booking_entry_time_limit}
-                                    className={inputClass}
-                                    onChange={(raw) =>
-                                        setData(
-                                            'booking_entry_time_limit',
-                                            Number(raw),
-                                        )
-                                    }
-                                />
-                                {errors.booking_entry_time_limit && (
-                                    <p className="mt-1 text-sm text-red-500">
-                                        {errors.booking_entry_time_limit}
-                                    </p>
-                                )}
-                            </div>
-
-                            <div>
-                                <label className={labelClass}>
-                                    <FormattedMessage defaultMessage="Document Completed Deadline Before Departure Date (days)" />
-                                </label>
-
-                                <MoneyInput
-                                    value={data.document_completed_deadline}
-                                    className={inputClass}
-                                    onChange={(raw) =>
-                                        setData(
-                                            'document_completed_deadline',
-                                            Number(raw),
-                                        )
-                                    }
-                                />
-
-                                {errors.document_completed_deadline && (
-                                    <p className="mt-1 text-sm text-red-500">
-                                        {errors.document_completed_deadline}
-                                    </p>
-                                )}
+                                <h1 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
+                                    <FormattedMessage defaultMessage="Vendor parameters" />
+                                </h1>
+                                <p className="text-sm text-muted-foreground">
+                                    <FormattedMessage defaultMessage="Configure booking deadlines, payment rules, bank details, and terms shown to customers." />
+                                </p>
                             </div>
                         </div>
                     </div>
+                </header>
 
-                    {/* Financial */}
-                    <div className="rounded-2xl border bg-card p-4 shadow-sm sm:p-6">
-                        <h2 className="mb-5 text-lg font-semibold">
-                            <FormattedMessage defaultMessage="Booking Payment Rules" />
-                        </h2>
-
-                        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                            <div>
-                                <label className={labelClassSingleRow}>
-                                    <FormattedMessage defaultMessage="Minimum Down Payment (%) / total base price" />
-                                </label>
-                                <input
-                                    type="text"
-                                    inputMode="decimal"
-                                    className={inputClass}
-                                    disabled={hasAmount}
-                                    value={data.minimum_down_payment}
-                                    onChange={(e) => {
-                                        setData(
-                                            'minimum_down_payment',
-                                            normalizeDecimalInput(
-                                                e.target.value,
-                                            ),
-                                        );
-                                    }}
-                                />
-                                {errors.minimum_down_payment && (
-                                    <p className="mt-1 text-sm text-red-500">
-                                        {errors.minimum_down_payment}
-                                    </p>
-                                )}
-                            </div>
-
-                            <div>
-                                <label className={labelClassSingleRow}>
-                                    <FormattedMessage defaultMessage="Minimum Down Payment Amount / Pax" />
-                                </label>
-                                <MoneyInput
-                                    value={data.minimum_down_payment_value}
-                                    className={inputClass}
-                                    disabled={hasPercentage}
-                                    onChange={(raw) =>
-                                        setData(
-                                            'minimum_down_payment_value',
-                                            Number(raw || 0),
-                                        )
-                                    }
-                                />
-                                {errors.minimum_down_payment_value && (
-                                    <p className="mt-1 text-sm text-red-500">
-                                        {errors.minimum_down_payment_value}
-                                    </p>
-                                )}
-                            </div>
-
-                            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:col-span-2">
-                                <div>
-                                    <label className={labelClassSingleRow}>
-                                        <FormattedMessage defaultMessage="VAT (%)" />
-                                    </label>
-                                    <input
-                                        type="text"
-                                        inputMode="decimal"
-                                        className={inputClass}
-                                        value={data.minimum_vat}
-                                        onChange={(e) => {
+                <form onSubmit={submit} className="space-y-6">
+                    <Card
+                        className={cn(
+                            'overflow-hidden border shadow-sm gap-0 py-0',
+                            sectionToneStyles.primary.card,
+                        )}
+                    >
+                        <ParameterSectionHeader
+                            icon={CalendarClock}
+                            tone="primary"
+                            title={
+                                <FormattedMessage defaultMessage="Booking entry rules" />
+                            }
+                            description={
+                                <FormattedMessage defaultMessage="Control when customers can book, how long reservations are held, and document deadlines." />
+                            }
+                        />
+                        <CardContent className="grid gap-4 px-6 pt-6 pb-6 sm:grid-cols-2 lg:grid-cols-3">
+                            <div className="space-y-2">
+                                <Label htmlFor="booking_deadline">
+                                    <FormattedMessage defaultMessage="Entry deadline" />
+                                </Label>
+                                <InputGroup>
+                                    <InputGroupInput
+                                        id="booking_deadline"
+                                        inputMode="numeric"
+                                        value={String(data.booking_deadline)}
+                                        onChange={(e) =>
                                             setData(
-                                                'minimum_vat',
-                                                normalizeDecimalInput(
+                                                'booking_deadline',
+                                                parseNonNegativeInt(
                                                     e.target.value,
                                                 ),
-                                            );
-                                        }}
-                                    />
-                                    {errors.minimum_vat && (
-                                        <p className="mt-1 text-sm text-red-500">
-                                            {errors.minimum_vat}
-                                        </p>
-                                    )}
-                                </div>
-
-                                <div>
-                                    <label className={labelClassSingleRow}>
-                                        <FormattedMessage defaultMessage="Full Payment Deadline Before Departure Date (days)" />
-                                    </label>
-
-                                    <MoneyInput
-                                        value={data.full_payment_deadline}
-                                        className={inputClass}
-                                        onChange={(raw) =>
-                                            setData(
-                                                'full_payment_deadline',
-                                                Number(raw),
                                             )
                                         }
                                     />
+                                    <InputGroupAddon
+                                        align="inline-end"
+                                        className="bg-muted text-muted-foreground"
+                                    >
+                                        <FormattedMessage defaultMessage="days before departure" />
+                                    </InputGroupAddon>
+                                </InputGroup>
+                                <FieldDescription>
+                                    <FormattedMessage defaultMessage="Last day a customer can start a booking before the tour departs." />
+                                </FieldDescription>
+                                <InputError message={errors.booking_deadline} />
+                            </div>
 
-                                    {errors.full_payment_deadline && (
-                                        <p className="mt-1 text-sm text-red-500">
-                                            {errors.full_payment_deadline}
-                                        </p>
-                                    )}
+                            <div className="space-y-2">
+                                <Label htmlFor="booking_entry_time_limit">
+                                    <FormattedMessage defaultMessage="Reservation hold time" />
+                                </Label>
+                                <InputGroup>
+                                    <InputGroupInput
+                                        id="booking_entry_time_limit"
+                                        inputMode="numeric"
+                                        value={String(
+                                            data.booking_entry_time_limit,
+                                        )}
+                                        onChange={(e) =>
+                                            setData(
+                                                'booking_entry_time_limit',
+                                                parseNonNegativeInt(
+                                                    e.target.value,
+                                                ),
+                                            )
+                                        }
+                                    />
+                                    <InputGroupAddon
+                                        align="inline-end"
+                                        className="bg-muted text-muted-foreground"
+                                    >
+                                        <FormattedMessage defaultMessage="minutes" />
+                                    </InputGroupAddon>
+                                </InputGroup>
+                                <FieldDescription>
+                                    <FormattedMessage defaultMessage="How long an unpaid booking stays reserved before it expires." />
+                                </FieldDescription>
+                                <InputError
+                                    message={errors.booking_entry_time_limit}
+                                />
+                            </div>
+
+                            <div className="space-y-2 sm:col-span-2 lg:col-span-1">
+                                <Label htmlFor="document_completed_deadline">
+                                    <FormattedMessage defaultMessage="Document deadline" />
+                                </Label>
+                                <InputGroup>
+                                    <InputGroupInput
+                                        id="document_completed_deadline"
+                                        inputMode="numeric"
+                                        value={String(
+                                            data.document_completed_deadline,
+                                        )}
+                                        onChange={(e) =>
+                                            setData(
+                                                'document_completed_deadline',
+                                                parseNonNegativeInt(
+                                                    e.target.value,
+                                                ),
+                                            )
+                                        }
+                                    />
+                                    <InputGroupAddon
+                                        align="inline-end"
+                                        className="bg-muted text-muted-foreground"
+                                    >
+                                        <FormattedMessage defaultMessage="days before departure" />
+                                    </InputGroupAddon>
+                                </InputGroup>
+                                <FieldDescription>
+                                    <FormattedMessage defaultMessage="Deadline for customers to complete required travel documents." />
+                                </FieldDescription>
+                                <InputError
+                                    message={errors.document_completed_deadline}
+                                />
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    <Card
+                        className={cn(
+                            'overflow-hidden border shadow-sm gap-0 py-0',
+                            sectionToneStyles.amber.card,
+                        )}
+                    >
+                        <ParameterSectionHeader
+                            icon={Banknote}
+                            tone="amber"
+                            title={
+                                <FormattedMessage defaultMessage="Booking payment rules" />
+                            }
+                            description={
+                                <FormattedMessage defaultMessage="Set down payment, tax, and full-payment deadlines applied at checkout." />
+                            }
+                        />
+                        <CardContent className="space-y-4 px-6 pt-6 pb-6">
+                            <Alert className="border-amber-500/20 bg-amber-500/5">
+                                <Info className="text-amber-600" />
+                                <AlertDescription>
+                                    <FormattedMessage defaultMessage="Choose either a percentage of the base price or a fixed amount per passenger for the minimum down payment — not both." />
+                                </AlertDescription>
+                            </Alert>
+
+                            <div className="grid gap-4 sm:grid-cols-2">
+                                <div className="space-y-2">
+                                    <Label htmlFor="minimum_down_payment">
+                                        <FormattedMessage defaultMessage="Minimum down payment" />
+                                    </Label>
+                                    <InputGroup
+                                        className={cn(
+                                            hasAmount && 'opacity-60',
+                                        )}
+                                    >
+                                        <InputGroupInput
+                                            id="minimum_down_payment"
+                                            type="text"
+                                            inputMode="decimal"
+                                            disabled={hasAmount}
+                                            value={data.minimum_down_payment}
+                                            onChange={(e) =>
+                                                setData(
+                                                    'minimum_down_payment',
+                                                    normalizeDecimalInput(
+                                                        e.target.value,
+                                                    ),
+                                                )
+                                            }
+                                        />
+                                        <InputGroupAddon
+                                            align="inline-end"
+                                            className="bg-muted text-muted-foreground"
+                                        >
+                                            %
+                                        </InputGroupAddon>
+                                    </InputGroup>
+                                    <FieldDescription>
+                                        <FormattedMessage defaultMessage="Percentage of the total base price required upfront." />
+                                    </FieldDescription>
+                                    <InputError
+                                        message={errors.minimum_down_payment}
+                                    />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="minimum_down_payment_value">
+                                        <FormattedMessage defaultMessage="Minimum down payment per pax" />
+                                    </Label>
+                                    <MoneyInput
+                                        value={data.minimum_down_payment_value}
+                                        disabled={hasPercentage}
+                                        className={cn(
+                                            hasPercentage && 'opacity-60',
+                                        )}
+                                        onChange={(raw) =>
+                                            setData(
+                                                'minimum_down_payment_value',
+                                                Number(raw || 0),
+                                            )
+                                        }
+                                    />
+                                    <FieldDescription>
+                                        <FormattedMessage defaultMessage="Fixed amount per passenger required upfront." />
+                                    </FieldDescription>
+                                    <InputError
+                                        message={
+                                            errors.minimum_down_payment_value
+                                        }
+                                    />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="minimum_vat">
+                                        <FormattedMessage defaultMessage="VAT" />
+                                    </Label>
+                                    <InputGroup>
+                                        <InputGroupInput
+                                            id="minimum_vat"
+                                            type="text"
+                                            inputMode="decimal"
+                                            value={data.minimum_vat}
+                                            onChange={(e) =>
+                                                setData(
+                                                    'minimum_vat',
+                                                    normalizeDecimalInput(
+                                                        e.target.value,
+                                                    ),
+                                                )
+                                            }
+                                        />
+                                        <InputGroupAddon
+                                            align="inline-end"
+                                            className="bg-muted text-muted-foreground"
+                                        >
+                                            %
+                                        </InputGroupAddon>
+                                    </InputGroup>
+                                    <FieldDescription>
+                                        <FormattedMessage defaultMessage="Value-added tax applied to bookings. Set to 0 if not applicable." />
+                                    </FieldDescription>
+                                    <InputError message={errors.minimum_vat} />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="full_payment_deadline">
+                                        <FormattedMessage defaultMessage="Full payment deadline" />
+                                    </Label>
+                                    <InputGroup>
+                                        <InputGroupInput
+                                            id="full_payment_deadline"
+                                            inputMode="numeric"
+                                            value={String(
+                                                data.full_payment_deadline,
+                                            )}
+                                            onChange={(e) =>
+                                                setData(
+                                                    'full_payment_deadline',
+                                                    parseNonNegativeInt(
+                                                        e.target.value,
+                                                    ),
+                                                )
+                                            }
+                                        />
+                                        <InputGroupAddon
+                                            align="inline-end"
+                                            className="bg-muted text-muted-foreground"
+                                        >
+                                            <FormattedMessage defaultMessage="days before departure" />
+                                        </InputGroupAddon>
+                                    </InputGroup>
+                                    <FieldDescription>
+                                        <FormattedMessage defaultMessage="Last day the remaining balance must be paid before departure." />
+                                    </FieldDescription>
+                                    <InputError
+                                        message={errors.full_payment_deadline}
+                                    />
                                 </div>
                             </div>
-                        </div>
-                    </div>
+                        </CardContent>
+                    </Card>
 
-                    {/* Bank Transfer */}
-                    <div className="rounded-2xl border bg-card p-4 shadow-sm sm:p-6">
-                        <h2 className="mb-5 text-lg font-semibold">
-                            <FormattedMessage defaultMessage="Manual Bank Transfer" />
-                        </h2>
-
-                        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                            <div>
-                                <label className={labelClassSingleRow}>
-                                    <FormattedMessage defaultMessage="Bank Name" />
-                                </label>
-                                <input
-                                    type="text"
-                                    className={inputClass}
+                    <Card
+                        className={cn(
+                            'overflow-hidden border shadow-sm gap-0 py-0',
+                            sectionToneStyles.sky.card,
+                        )}
+                    >
+                        <ParameterSectionHeader
+                            icon={Landmark}
+                            tone="sky"
+                            title={
+                                <FormattedMessage defaultMessage="Manual bank transfer" />
+                            }
+                            description={
+                                <FormattedMessage defaultMessage="Bank account details shown to customers who pay via manual transfer." />
+                            }
+                        />
+                        <CardContent className="grid gap-4 px-6 pt-6 pb-6 sm:grid-cols-2">
+                            <div className="space-y-2">
+                                <Label htmlFor="manual_bank_transfer">
+                                    <FormattedMessage defaultMessage="Bank name" />
+                                </Label>
+                                <Input
+                                    id="manual_bank_transfer"
                                     value={data.manual_bank_transfer}
                                     onChange={(e) =>
                                         setData(
@@ -371,16 +600,16 @@ export default function ParameterVendorPage() {
                                             e.target.value,
                                         )
                                     }
+                                    placeholder="BCA, Mandiri, BRI…"
                                 />
                             </div>
 
-                            <div>
-                                <label className={labelClassSingleRow}>
-                                    <FormattedMessage defaultMessage="Account Name" />
-                                </label>
-                                <input
-                                    type="text"
-                                    className={inputClass}
+                            <div className="space-y-2">
+                                <Label htmlFor="manual_bank_transfer_account_name">
+                                    <FormattedMessage defaultMessage="Account name" />
+                                </Label>
+                                <Input
+                                    id="manual_bank_transfer_account_name"
                                     value={
                                         data.manual_bank_transfer_account_name
                                     }
@@ -393,13 +622,12 @@ export default function ParameterVendorPage() {
                                 />
                             </div>
 
-                            <div className="md:col-span-2">
-                                <label className={labelClassSingleRow}>
-                                    <FormattedMessage defaultMessage="Account Number" />
-                                </label>
-                                <input
-                                    type="text"
-                                    className={inputClass}
+                            <div className="space-y-2 sm:col-span-2">
+                                <Label htmlFor="manual_bank_transfer_account_number">
+                                    <FormattedMessage defaultMessage="Account number" />
+                                </Label>
+                                <Input
+                                    id="manual_bank_transfer_account_number"
                                     value={
                                         data.manual_bank_transfer_account_number
                                     }
@@ -409,26 +637,41 @@ export default function ParameterVendorPage() {
                                             e.target.value,
                                         )
                                     }
+                                    className="font-mono tracking-wider"
+                                    inputMode="numeric"
                                 />
+                                <FieldDescription>
+                                    <FormattedMessage defaultMessage="Displayed on invoices and payment instructions." />
+                                </FieldDescription>
                             </div>
-                        </div>
-                    </div>
+                        </CardContent>
+                    </Card>
 
-                    {/* Payment Gateway */}
-                    <div className="rounded-2xl border bg-card p-4 shadow-sm sm:p-6">
-                        <h2 className="mb-5 text-lg font-semibold">
-                            <FormattedMessage defaultMessage="Credential Payment Gateway" />
-                        </h2>
-
-                        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                            <div>
-                                <label className={labelClassSingleRow}>
-                                    <FormattedMessage defaultMessage="Payment Gateway Email" />
-                                </label>
-
-                                <input
+                    <Card
+                        className={cn(
+                            'overflow-hidden border shadow-sm gap-0 py-0',
+                            sectionToneStyles.violet.card,
+                        )}
+                    >
+                        <ParameterSectionHeader
+                            icon={CreditCard}
+                            tone="violet"
+                            title={
+                                <FormattedMessage defaultMessage="Payment gateway credentials" />
+                            }
+                            description={
+                                <FormattedMessage defaultMessage="Login credentials for your online payment provider. Stored securely and never shown to customers." />
+                            }
+                        />
+                        <CardContent className="grid gap-4 px-6 pt-6 pb-6 sm:grid-cols-2">
+                            <div className="space-y-2">
+                                <Label htmlFor="email_payment_gateway">
+                                    <FormattedMessage defaultMessage="Gateway email" />
+                                </Label>
+                                <Input
+                                    id="email_payment_gateway"
                                     type="email"
-                                    className={inputClass}
+                                    autoComplete="off"
                                     value={data.email_payment_gateway}
                                     onChange={(e) =>
                                         setData(
@@ -437,75 +680,122 @@ export default function ParameterVendorPage() {
                                         )
                                     }
                                 />
-
-                                {errors.email_payment_gateway && (
-                                    <p className="mt-1 text-sm text-red-500">
-                                        {errors.email_payment_gateway}
-                                    </p>
-                                )}
-                            </div>
-
-                            <div>
-                                <label className={labelClassSingleRow}>
-                                    <FormattedMessage defaultMessage="Payment Gateway Password" />
-                                </label>
-
-                                <input
-                                    type="password"
-                                    className={inputClass}
-                                    value={data.password_payment_gateway}
-                                    onChange={(e) =>
-                                        setData(
-                                            'password_payment_gateway',
-                                            e.target.value,
-                                        )
-                                    }
+                                <InputError
+                                    message={errors.email_payment_gateway}
                                 />
-
-                                {errors.password_payment_gateway && (
-                                    <p className="mt-1 text-sm text-red-500">
-                                        {errors.password_payment_gateway}
-                                    </p>
-                                )}
                             </div>
-                        </div>
-                    </div>
 
-                    {/* Terms */}
-                    <div className="rounded-2xl border bg-card p-4 shadow-sm sm:p-6">
-                        <h2 className="mb-5 text-lg font-semibold">
-                            <FormattedMessage defaultMessage="Booking Terms & Conditions" />
-                        </h2>
+                            <div className="space-y-2">
+                                <Label htmlFor="password_payment_gateway">
+                                    <FormattedMessage defaultMessage="Gateway password" />
+                                </Label>
+                                <InputGroup>
+                                    <InputGroupInput
+                                        id="password_payment_gateway"
+                                        type={
+                                            showPassword ? 'text' : 'password'
+                                        }
+                                        autoComplete="new-password"
+                                        value={data.password_payment_gateway}
+                                        onChange={(e) =>
+                                            setData(
+                                                'password_payment_gateway',
+                                                e.target.value,
+                                            )
+                                        }
+                                    />
+                                    <InputGroupAddon align="inline-end">
+                                        <InputGroupButton
+                                            type="button"
+                                            variant="ghost"
+                                            size="icon-sm"
+                                            aria-label={
+                                                showPassword
+                                                    ? intl.formatMessage({
+                                                          defaultMessage:
+                                                              'Hide password',
+                                                      })
+                                                    : intl.formatMessage({
+                                                          defaultMessage:
+                                                              'Show password',
+                                                      })
+                                            }
+                                            onClick={() =>
+                                                setShowPassword((v) => !v)
+                                            }
+                                        >
+                                            {showPassword ? (
+                                                <EyeOff className="size-4" />
+                                            ) : (
+                                                <Eye className="size-4" />
+                                            )}
+                                        </InputGroupButton>
+                                    </InputGroupAddon>
+                                </InputGroup>
+                                <InputError
+                                    message={errors.password_payment_gateway}
+                                />
+                            </div>
+                        </CardContent>
+                    </Card>
 
-                        <textarea
-                            rows={6}
-                            className={`${inputClass} min-h-[140px] resize-y`}
-                            value={data.term_conditions}
-                            onChange={(e) =>
-                                setData('term_conditions', e.target.value)
+                    <Card
+                        className={cn(
+                            'overflow-hidden border shadow-sm gap-0 py-0',
+                            sectionToneStyles.emerald.card,
+                        )}
+                    >
+                        <ParameterSectionHeader
+                            icon={ScrollText}
+                            tone="emerald"
+                            title={
+                                <FormattedMessage defaultMessage="Booking terms & conditions" />
+                            }
+                            description={
+                                <FormattedMessage defaultMessage="Legal terms displayed during checkout. Leave blank to hide from customers." />
                             }
                         />
+                        <CardContent className="space-y-2 px-6 pt-6 pb-6">
+                            <Textarea
+                                id="term_conditions"
+                                rows={8}
+                                className="min-h-[180px] resize-y"
+                                value={data.term_conditions}
+                                onChange={(e) =>
+                                    setData('term_conditions', e.target.value)
+                                }
+                                placeholder={intl.formatMessage({
+                                    defaultMessage:
+                                        'Enter cancellation policy, refund rules, and other booking conditions…',
+                                })}
+                            />
+                            <div className="flex items-center justify-between gap-2">
+                                <FieldDescription>
+                                    <FormattedMessage defaultMessage="Supports plain text. Shown in a scrollable panel at checkout." />
+                                </FieldDescription>
+                                <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
+                                    {data.term_conditions.length}{' '}
+                                    <FormattedMessage defaultMessage="characters" />
+                                </span>
+                            </div>
+                            <InputError message={errors.term_conditions} />
+                        </CardContent>
+                    </Card>
 
-                        {errors.term_conditions && (
-                            <p className="mt-1 text-sm text-red-500">
-                                {errors.term_conditions}
-                            </p>
-                        )}
-                    </div>
-
-                    {/* Save */}
-                    <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-                        <button
+                    <div className="flex justify-end">
+                        <Button
                             type="submit"
                             disabled={processing}
-                            className="w-full rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground shadow-sm transition hover:opacity-90 disabled:opacity-50 sm:w-auto"
+                            size="lg"
+                            className="h-11 w-full sm:w-auto"
                         >
                             {processing ? (
-                                <FormattedMessage defaultMessage="Saving..." />
+                                <Spinner className="mr-2" />
                             ) : (
-                                <FormattedMessage defaultMessage="Save Changes" />
+                                <Save className="mr-2 size-4" />
                             )}
-                        </button>
+                            <FormattedMessage defaultMessage="Save changes" />
+                        </Button>
                     </div>
                 </form>
             </div>

@@ -12,7 +12,7 @@ class TourCategoryPolicy
      */
     public function viewAny(User $user): bool
     {
-        return false;
+        return $user->isAbleTo('tour-category.query');
     }
 
     /**
@@ -20,7 +20,11 @@ class TourCategoryPolicy
      */
     public function view(User $user, TourCategory $tourCategory): bool
     {
-        return false;
+        if (! $user->isAbleTo('tour-category.query')) {
+            return false;
+        }
+
+        return $this->belongsToCategoryCompanyTeam($user, $tourCategory) || $user->hasRole('user:admin');
     }
 
     /**
@@ -28,7 +32,7 @@ class TourCategoryPolicy
      */
     public function create(User $user): bool
     {
-        return false;
+        return $user->isAbleTo('tour-category.mutation');
     }
 
     /**
@@ -36,7 +40,11 @@ class TourCategoryPolicy
      */
     public function update(User $user, TourCategory $tourCategory): bool
     {
-        return false;
+        if (! $user->isAbleTo('tour-category.mutation')) {
+            return false;
+        }
+
+        return $this->belongsToCategoryCompanyTeam($user, $tourCategory) || $user->hasRole('user:admin');
     }
 
     /**
@@ -44,7 +52,7 @@ class TourCategoryPolicy
      */
     public function delete(User $user, TourCategory $tourCategory): bool
     {
-        return false;
+        return $this->update($user, $tourCategory);
     }
 
     /**
@@ -61,5 +69,13 @@ class TourCategoryPolicy
     public function forceDelete(User $user, TourCategory $tourCategory): bool
     {
         return false;
+    }
+
+    private function belongsToCategoryCompanyTeam(User $user, TourCategory $tourCategory): bool
+    {
+        return (bool) $tourCategory->company
+            ?->teams()
+            ->where('user_id', $user->id)
+            ->exists();
     }
 }

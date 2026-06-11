@@ -7,10 +7,9 @@ use App\Http\Requests\MediaIndexRequest;
 use App\Http\Requests\MediaUpdateRequest;
 use App\Http\Requests\StoreMediaRequest;
 use App\Http\Resources\MediaResource;
+use App\Http\Resources\MessageResource;
 use App\Models\Media;
-use Illuminate\Http\Request;
-use Illuminate\Http\Resources\Json\JsonResource;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\Storage;
 use Intervention\Image\Drivers\Gd\Driver;
 use Intervention\Image\Encoders\JpegEncoder;
@@ -22,22 +21,15 @@ class MediaController extends Controller
 
     public function __construct()
     {
-        $this->imageManager = new ImageManager(
-            new Driver
-        );
+        $this->imageManager = new ImageManager(new Driver);
     }
 
     /**
-     * Get medias
-     *
-     * @param  Request  $request
-     * @return JsonResource
-     *
-     * @throws \Exception
+     * List media for an owner. Requires `owner_type` and `owner_id` unless platform admin.
      *
      * @operationId getMedias
-     * */
-    public function index(MediaIndexRequest $request)
+     */
+    public function index(MediaIndexRequest $request): AnonymousResourceCollection
     {
         $pageSize = (int) $request->query('page_size', 20);
 
@@ -63,34 +55,33 @@ class MediaController extends Controller
     }
 
     /**
-     * Create media
+     * Upload a file and create a media record.
      *
      * @operationId createMedia
      *
      * @requestMediaType multipart/form-data
      */
-    public function store(StoreMediaRequest $request)
+    public function store(StoreMediaRequest $request): MediaResource
     {
-        // Validasi request
         $validated = $request->validated();
         $file = $request->file('data');
-        // Dispatch to correct private method
-        switch ($validated['type']) {
-            case 'image':
-                $variants = $validated['subtype'] === 'photo' ? $this->photoVariants() : $this->imageVariants();
-                $data = $this->createPhotoOrImage($validated, $variants);
-                break;
-            case 'document':
-                $data = $this->createDocument($validated);
-                break;
-            case 'raw':
-                $data = $this->createRaw($validated);
-                break;
-            default:
-                throw new \Exception("Type {$validated['type']} not implemented");
-        }
 
-        // Save media
+        $this->authorize('createForOwner', [
+            Media::class,
+            $validated['owner_type'],
+            (int) $validated['owner_id'],
+        ]);
+
+        $data = match ($validated['type']) {
+            'image' => $this->createPhotoOrImage(
+                $validated,
+                $validated['subtype'] === 'photo' ? $this->photoVariants() : $this->imageVariants()
+            ),
+            'document' => $this->createDocument($validated),
+            'raw' => $this->createRaw($validated),
+            default => throw new \InvalidArgumentException("Type {$validated['type']} not implemented"),
+        };
+
         $media = Media::create([
             'owner_type' => $validated['owner_type'],
             'owner_id' => $validated['owner_id'],
@@ -104,55 +95,62 @@ class MediaController extends Controller
         return new MediaResource($media);
     }
 
-    public function show(Media $media)
+    /**
+     * Get a single media item.
+     *
+     * @operationId getMedia
+     */
+    public function show(Media $media): MediaResource
     {
-        $this->authorizeMedia($media);
+        $this->authorize('view', $media);
 
         return new MediaResource(
-            $media->load('user')
+            $media->load('owner')
         );
     }
 
-    public function update(MediaUpdateRequest $request, Media $media)
+    /**
+     * Update media metadata (name, description).
+     *
+     * @operationId updateMedia
+     */
+    public function update(MediaUpdateRequest $request, Media $media): MediaResource
     {
-        $this->authorizeMedia($media);
+        $this->authorize('update', $media);
 
-        $validated = $request->validated();
-        $media->update($validated);
+        $media->update($request->validated());
 
         return new MediaResource($media);
     }
 
-    public function destroy(Media $media)
+    /**
+     * Delete a media item and its stored files.
+     *
+     * @operationId deleteMedia
+     */
+    public function destroy(Media $media): MessageResource
     {
-        $this->authorizeMedia($media);
+        $this->authorize('delete', $media);
 
         $media->delete();
 
-        return response()->json([
+        return new MessageResource([
             'message' => 'Media deleted',
         ]);
     }
 
-    protected function authorizeMedia(Media $media): void
-    {
-        abort_if(
-            $media->user_id !== Auth::id(),
-            403,
-            'Unauthorized'
-        );
-    }
-
-    private function createPhotoOrImage(array $validated, array $variants)
+    /**
+     * @param  array<string, mixed>  $validated
+     * @param  list<array{code: string, width: int, height: int, always_resized: bool, quality: int}>  $variants
+     * @return array{files: list<array<string, mixed>>}
+     */
+    private function createPhotoOrImage(array $validated, array $variants): array
     {
         $file = $validated['data'];
-
         $files = [];
-
         $image = $this->imageManager->decode($file->getRealPath() ?: $file->getPathname());
 
         foreach ($variants as $variant) {
-            // Skip if width > original and not always resized
             if (
                 $variant['width'] > 0 &&
                 $image->width() < $variant['width'] &&
@@ -161,14 +159,11 @@ class MediaController extends Controller
                 continue;
             }
 
-            // ✅ clone FIRST
             $clone = clone $image;
 
             if ($variant['width'] > 0 && $variant['height'] > 0) {
-                // exact crop
                 $clone->cover($variant['width'], $variant['height']);
             } elseif ($variant['width'] > 0) {
-                // aspect ratio resize
                 $clone->scale(width: $variant['width']);
             }
 
@@ -177,9 +172,7 @@ class MediaController extends Controller
 
             Storage::disk('public')->put(
                 $path,
-                (string) $clone->encode(
-                    new JpegEncoder(quality: $variant['quality'])
-                )
+                (string) $clone->encode(new JpegEncoder(quality: $variant['quality']))
             );
 
             $files[] = [
@@ -192,15 +185,16 @@ class MediaController extends Controller
             ];
         }
 
-        return [
-            'files' => $files,
-        ];
+        return ['files' => $files];
     }
 
-    private function createDocument(array $validated)
+    /**
+     * @param  array<string, mixed>  $validated
+     * @return array<string, mixed>
+     */
+    private function createDocument(array $validated): array
     {
         $file = $validated['data'];
-
         $filename = uniqid().'.'.$file->getClientOriginalExtension();
         $path = "media/documents/$filename";
         Storage::disk('public')->putFileAs('media/documents', $file, $filename);
@@ -212,10 +206,13 @@ class MediaController extends Controller
         ];
     }
 
-    private function createRaw(array $validated)
+    /**
+     * @param  array<string, mixed>  $validated
+     * @return array<string, mixed>
+     */
+    private function createRaw(array $validated): array
     {
         $file = $validated['data'];
-
         $filename = uniqid().'.'.$file->getClientOriginalExtension();
         $path = "media/raw/$filename";
         Storage::disk('public')->putFileAs('media/raw', $file, $filename);
@@ -227,6 +224,9 @@ class MediaController extends Controller
         ];
     }
 
+    /**
+     * @return list<array{code: string, width: int, height: int, always_resized: bool, quality: int}>
+     */
     private function photoVariants(): array
     {
         return [
@@ -238,6 +238,9 @@ class MediaController extends Controller
         ];
     }
 
+    /**
+     * @return list<array{code: string, width: int, height: int, always_resized: bool, quality: int}>
+     */
     private function imageVariants(): array
     {
         return [

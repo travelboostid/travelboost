@@ -5,6 +5,7 @@ import {
     Dialog,
     DialogClose,
     DialogContent,
+    DialogDescription,
     DialogFooter,
     DialogHeader,
     DialogTitle,
@@ -15,8 +16,10 @@ import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { useForm } from '@inertiajs/react';
+import { TagIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useState } from 'react';
+import { FormattedMessage } from 'react-intl';
 
 type AddCategoryDialogProps = {
     children: ReactNode;
@@ -39,7 +42,7 @@ export default function AddCategoryDialog({
 
         form.post(store({ company: company.username }).url, {
             preserveScroll: true,
-            onError: () => setOpen(true), // 🔥 keep modal open on validation error
+            onError: () => setOpen(true),
             onSuccess: () => {
                 form.reset();
                 setOpen(false);
@@ -47,66 +50,104 @@ export default function AddCategoryDialog({
         });
     };
 
+    const handleOpenChange = (nextOpen: boolean) => {
+        setOpen(nextOpen);
+
+        if (!nextOpen) {
+            form.reset();
+        }
+    };
+
     return (
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog open={open} onOpenChange={handleOpenChange}>
             <DialogTrigger asChild>{children}</DialogTrigger>
 
-            <DialogContent className="sm:max-w-106.25">
-                <DialogHeader>
-                    <DialogTitle>Add Category</DialogTitle>
+            <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-md">
+                <DialogHeader className="space-y-3 border-b px-6 py-5 text-left">
+                    <div className="flex items-start gap-3">
+                        <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                            <TagIcon className="size-5" />
+                        </div>
+                        <div className="space-y-1">
+                            <DialogTitle className="text-lg">
+                                <FormattedMessage defaultMessage="Add category" />
+                            </DialogTitle>
+                            <DialogDescription className="text-sm leading-relaxed">
+                                <FormattedMessage defaultMessage="Create a new category to organize your tours." />
+                            </DialogDescription>
+                        </div>
+                    </div>
                 </DialogHeader>
 
-                {/* ❗ ONLY ONE submit button, ONLY ONE form */}
-                <form onSubmit={handleSubmit} className="grid gap-6">
-                    <div className="grid gap-2">
-                        <Label htmlFor="name">Category Name</Label>
-                        <Input
-                            id="name"
-                            value={form.data.name}
-                            onChange={(e) =>
-                                form.setData('name', e.target.value)
-                            }
-                            placeholder="Category name"
-                        />
-                        <InputError message={form.errors.name} />
+                <form onSubmit={handleSubmit}>
+                    <div className="space-y-5 px-6 py-5">
+                        <div className="grid gap-2">
+                            <Label htmlFor="name">
+                                <FormattedMessage defaultMessage="Category name" />
+                            </Label>
+                            <Input
+                                id="name"
+                                value={form.data.name}
+                                onChange={(e) =>
+                                    form.setData('name', e.target.value)
+                                }
+                                placeholder="e.g. Beach Tours"
+                            />
+                            <InputError message={form.errors.name} />
+                        </div>
+
+                        <div className="grid gap-2">
+                            <Label htmlFor="description">
+                                <FormattedMessage defaultMessage="Description" />
+                            </Label>
+                            <Input
+                                id="description"
+                                value={form.data.description}
+                                onChange={(e) =>
+                                    form.setData('description', e.target.value)
+                                }
+                                placeholder="Brief description of this category"
+                            />
+                            <InputError message={form.errors.description} />
+                        </div>
+
+                        <div className="grid gap-2">
+                            <Label htmlFor="position_no">
+                                <FormattedMessage defaultMessage="Position number" />
+                            </Label>
+                            <Input
+                                id="position_no"
+                                value={form.data.position_no}
+                                onChange={(e) =>
+                                    form.setData('position_no', e.target.value)
+                                }
+                                placeholder="e.g. 1"
+                            />
+                            <InputError message={form.errors.position_no} />
+                        </div>
                     </div>
-                    <div className="grid gap-2">
-                        <Label htmlFor="description">
-                            Category Description
-                        </Label>
-                        <Input
-                            id="description"
-                            value={form.data.description}
-                            onChange={(e) =>
-                                form.setData('description', e.target.value)
-                            }
-                            placeholder="Category Description"
-                        />
-                        <InputError message={form.errors.description} />
-                    </div>
-                    <div className="grid gap-2">
-                        <Label htmlFor="name">Position No</Label>
-                        <Input
-                            id="position_no"
-                            value={form.data.position_no}
-                            onChange={(e) =>
-                                form.setData('position_no', e.target.value)
-                            }
-                            placeholder="Position No"
-                        />
-                        <InputError message={form.errors.position_no} />
-                    </div>
-                    <DialogFooter>
+
+                    <DialogFooter className="flex-col gap-2 border-t bg-muted/20 px-6 py-4 sm:flex-col">
+                        <Button
+                            type="submit"
+                            size="lg"
+                            className="w-full"
+                            disabled={form.processing}
+                        >
+                            {form.processing ? (
+                                <Spinner className="mr-2" />
+                            ) : null}
+                            <FormattedMessage defaultMessage="Add category" />
+                        </Button>
                         <DialogClose asChild>
-                            <Button type="button" variant="outline">
-                                Cancel
+                            <Button
+                                type="button"
+                                variant="outline"
+                                className="w-full"
+                            >
+                                <FormattedMessage defaultMessage="Cancel" />
                             </Button>
                         </DialogClose>
-
-                        <Button type="submit" disabled={form.processing}>
-                            {form.processing && <Spinner className="mr-2" />}
-                            Save
-                        </Button>
                     </DialogFooter>
                 </form>
             </DialogContent>

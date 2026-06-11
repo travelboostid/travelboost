@@ -8,6 +8,7 @@ import {
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { update } from '@/routes/companies/dashboard/teams';
 import { router } from '@inertiajs/react';
+import { toast } from 'sonner';
 
 export default function TeamRoleSelect({
     team,
@@ -35,7 +36,18 @@ export default function TeamRoleSelect({
                 router.put(
                     update({ company: company.username, team: team.id }).url,
                     { role: value },
-                    { preserveScroll: true },
+                    {
+                        preserveScroll: true,
+                        onSuccess: () => {
+                            const roleLabel =
+                                roles.find((role) => role.name === value)
+                                    ?.display_name ?? value;
+                            toast.success(`Role updated to ${roleLabel}`);
+                        },
+                        onError: () => {
+                            toast.error('Failed to update role');
+                        },
+                    },
                 )
             }
         >

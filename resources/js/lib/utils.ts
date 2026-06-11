@@ -33,8 +33,16 @@ export function extractDocumentUrl(media: MediaResource) {
 }
 
 export const formatIDR = (value: number) =>
-    new Intl.NumberFormat('id-ID', {
-        style: 'currency',
-        currency: 'IDR',
-        minimumFractionDigits: 0,
-    }).format(value);
+    value >= 1000000
+        ? new Intl.NumberFormat('id-ID', {
+              notation: 'compact',
+              compactDisplay: 'short',
+              style: 'currency',
+              currency: 'IDR',
+              minimumFractionDigits: 0,
+          }).format(value)
+        : new Intl.NumberFormat('id-ID', {
+              style: 'currency',
+              currency: 'IDR',
+              minimumFractionDigits: 0,
+          }).format(value);

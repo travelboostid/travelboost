@@ -6,16 +6,18 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\CompanyIndexRequest;
 use App\Http\Requests\UpdateCompanySettingsRequest;
 use App\Http\Resources\CompanyResource;
+use App\Http\Resources\CompanySettingsResource;
 use App\Models\Company;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class CompanyController extends Controller
 {
     /**
-     * Display a listing of the users.
+     * List companies with optional filters.
      *
      * @operationId getCompanies
      */
-    public function index(CompanyIndexRequest $request)
+    public function index(CompanyIndexRequest $request): AnonymousResourceCollection
     {
         $data = Company::query()
             ->when($request->input('ids'), function ($q) use ($request) {
@@ -36,21 +38,29 @@ class CompanyController extends Controller
         return CompanyResource::collection($data);
     }
 
-    public function showSettings(Company $company)
+    /**
+     * Get company dashboard settings.
+     *
+     * @operationId getCompanySettings
+     */
+    public function showSettings(Company $company): CompanySettingsResource
     {
         $company->load('settings');
 
-        return response()->json($company->settings);
+        return new CompanySettingsResource(
+            $company->settings ?? $company->settings()->make()
+        );
     }
 
-    public function updateSettings(UpdateCompanySettingsRequest $request, Company $company)
+    /**
+     * Update company dashboard settings.
+     *
+     * @operationId updateCompanySettings
+     */
+    public function updateSettings(UpdateCompanySettingsRequest $request, Company $company): CompanySettingsResource
     {
-        $validated = $request->validated();
-        $company->settings()->updateOrCreate(
-            [], // one-to-one relation
-            $validated
-        );
+        $settings = $company->settings()->updateOrCreate([], $request->validated());
 
-        return response()->json($company->settings());
+        return new CompanySettingsResource($settings);
     }
 }

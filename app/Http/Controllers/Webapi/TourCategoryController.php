@@ -6,20 +6,19 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\TourCategoryIndexRequest;
 use App\Http\Resources\TourCategoryResource;
 use App\Models\TourCategory;
-use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class TourCategoryController extends Controller
 {
     /**
-     * Display a listing of the resource.
+     * List tour categories for a company.
      *
      * @operationId getTourCategories
      */
-    public function index(TourCategoryIndexRequest $request): JsonResponse
+    public function index(TourCategoryIndexRequest $request): AnonymousResourceCollection
     {
         $validated = $request->validated();
 
-        // Build query
         $categories = TourCategory::query()
             ->when($validated['company_id'] ?? null, function ($q) use ($validated) {
                 $q->where('company_id', $validated['company_id']);
@@ -27,7 +26,6 @@ class TourCategoryController extends Controller
             ->orderBy($validated['sort_by'], $validated['sort_order'])
             ->paginate();
 
-        // Return paginated resource
-        return TourCategoryResource::collection($categories)->response();
+        return TourCategoryResource::collection($categories);
     }
 }

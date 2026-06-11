@@ -100,52 +100,59 @@ function TierFormDialog({
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>{children}</DialogTrigger>
-            <DialogContent>
-                <DialogHeader>
+            <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-md">
+                <DialogHeader className="border-b px-6 py-5 text-left">
                     <DialogTitle>
                         {tier ? 'Edit Agent Tier' : 'Add Agent Tier'}
                     </DialogTitle>
                 </DialogHeader>
-                <form onSubmit={submit} className="space-y-4">
-                    <div className="grid gap-2">
-                        <Label>Name</Label>
-                        <Input
-                            value={form.data.name}
-                            onChange={(e) =>
-                                form.setData('name', e.target.value)
-                            }
-                            placeholder="Whole Seller"
-                        />
-                        {form.errors.name && (
-                            <p className="text-sm text-red-500">
-                                {form.errors.name}
-                            </p>
-                        )}
+                <form onSubmit={submit}>
+                    <div className="space-y-4 px-6 py-5">
+                        <div className="grid gap-2">
+                            <Label>Name</Label>
+                            <Input
+                                value={form.data.name}
+                                onChange={(e) =>
+                                    form.setData('name', e.target.value)
+                                }
+                                placeholder="Whole Seller"
+                            />
+                            {form.errors.name && (
+                                <p className="text-sm text-red-500">
+                                    {form.errors.name}
+                                </p>
+                            )}
+                        </div>
+                        <div className="grid gap-2">
+                            <Label>Sort Order</Label>
+                            <Input
+                                type="number"
+                                value={form.data.sort_order}
+                                onChange={(e) =>
+                                    form.setData(
+                                        'sort_order',
+                                        Number(e.target.value),
+                                    )
+                                }
+                            />
+                        </div>
+                        <div className="flex items-center justify-between rounded-xl border px-4 py-3">
+                            <Label>Active</Label>
+                            <Switch
+                                checked={form.data.is_active}
+                                onCheckedChange={(checked) =>
+                                    form.setData('is_active', checked)
+                                }
+                            />
+                        </div>
                     </div>
-                    <div className="grid gap-2">
-                        <Label>Sort Order</Label>
-                        <Input
-                            type="number"
-                            value={form.data.sort_order}
-                            onChange={(e) =>
-                                form.setData(
-                                    'sort_order',
-                                    Number(e.target.value),
-                                )
-                            }
-                        />
-                    </div>
-                    <div className="flex items-center justify-between rounded-xl border px-4 py-3">
-                        <Label>Active</Label>
-                        <Switch
-                            checked={form.data.is_active}
-                            onCheckedChange={(checked) =>
-                                form.setData('is_active', checked)
-                            }
-                        />
-                    </div>
-                    <DialogFooter>
-                        <Button type="submit" disabled={form.processing}>
+                    <DialogFooter className="flex-col gap-2 border-t bg-muted/20 px-6 py-4 sm:flex-col">
+                        <Button
+                            type="submit"
+                            size="lg"
+                            className="w-full"
+                            disabled={form.processing}
+                        >
                             Save
                         </Button>
                     </DialogFooter>

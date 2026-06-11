@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Media;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -12,7 +13,15 @@ class StoreMediaRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return true;
+        if (! $this->filled('owner_type') || ! $this->filled('owner_id')) {
+            return false;
+        }
+
+        return $this->user()->can('createForOwner', [
+            Media::class,
+            $this->input('owner_type'),
+            (int) $this->input('owner_id'),
+        ]);
     }
 
     /**

@@ -36,6 +36,9 @@ return [
         ['name' => 'tour-category.query', 'display_name' => 'Query Tour Category', 'description' => 'Allow viewing tour categories'],
         ['name' => 'tour-category.mutation', 'display_name' => 'Mutate Tour Category', 'description' => 'Allow creating, editing, or deleting tour categories'],
 
+        ['name' => 'media.query', 'display_name' => 'Query Media', 'description' => 'Allow viewing media'],
+        ['name' => 'media.mutation', 'display_name' => 'Mutate Media', 'description' => 'Allow creating, editing, or deleting media'],
+
         ['name' => 'role.query', 'display_name' => 'Query Role', 'description' => 'Allow viewing roles'],
         ['name' => 'role.mutation', 'display_name' => 'Mutate Role', 'description' => 'Allow creating, editing, or deleting roles'],
 
@@ -110,6 +113,9 @@ return [
                 'tour-category.query',
                 'tour-category.mutation',
 
+                'media.query',
+                'media.mutation',
+
                 'role.query',
                 'role.mutation',
 
@@ -161,6 +167,9 @@ return [
         'tour-category.query',
         'tour-category.mutation',
 
+        'media.query',
+        'media.mutation',
+
         'role.query',
         'role.mutation',
     ],
@@ -204,6 +213,9 @@ return [
                 'tour-category.query',
                 'tour-category.mutation',
 
+                'media.query',
+                'media.mutation',
+
                 'role.query',
                 'role.mutation',
             ],
@@ -223,6 +235,9 @@ return [
 
                 'tour-category.query',
                 'tour-category.mutation',
+
+                'media.query',
+                'media.mutation',
             ],
         ],
     ],

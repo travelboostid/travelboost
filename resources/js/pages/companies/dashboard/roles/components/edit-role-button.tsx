@@ -12,17 +12,15 @@ import {
 import { Field, FieldGroup } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-    Tooltip,
-    TooltipContent,
-    TooltipTrigger,
-} from '@/components/ui/tooltip';
+import { Spinner } from '@/components/ui/spinner';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { update } from '@/routes/companies/dashboard/roles';
 import { useForm } from '@inertiajs/react';
-import { EditIcon } from 'lucide-react';
+import { EditIcon, ShieldPlusIcon } from 'lucide-react';
 import { useState } from 'react';
+import { toast } from 'sonner';
 import PermissionsSelector from './permissions-selector';
+import { isProtectedCompanyRole } from './role-utils';
 
 export default function EditRoleButton({
     role,
@@ -53,103 +51,131 @@ export default function EditRoleButton({
         e.preventDefault();
         form.put(update({ company: company.username, role: role.id }).url, {
             preserveScroll: true,
-            onError: () => setOpen(true),
+            onError: () => {
+                setOpen(true);
+                toast.error('Failed to update role');
+            },
             onSuccess: () => {
                 setOpen(false);
+                toast.success('Role updated successfully');
             },
         });
     };
 
-    const shouldDisabled = role.name.endsWith(':superadmin');
+    const shouldDisabled = isProtectedCompanyRole(role.name);
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger>
-                <Tooltip>
-                    <TooltipTrigger>
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="rounded-full"
-                            aria-label="Edit role"
-                        >
-                            <EditIcon className="size-4" />
-                        </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Edit role</TooltipContent>
-                </Tooltip>
+            <DialogTrigger asChild>
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    className="rounded-full"
+                    aria-label="Edit role"
+                >
+                    <EditIcon className="size-4" />
+                </Button>
             </DialogTrigger>
 
-            <DialogContent className="flex flex-col overflow-y-auto max-h-screen">
-                <form onSubmit={handleSubmit} className="flex flex-col flex-1">
-                    <DialogHeader>
-                        <DialogTitle>Edit Role</DialogTitle>
-                        <DialogDescription>
-                            Update the details of the role. Click update role
-                            when you're done.
-                        </DialogDescription>
-                    </DialogHeader>
+            <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-lg">
+                <DialogHeader className="space-y-3 border-b px-6 py-5 text-left">
+                    <div className="flex items-start gap-3">
+                        <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                            <ShieldPlusIcon className="size-5" />
+                        </div>
+                        <div className="space-y-1">
+                            <DialogTitle className="text-lg">
+                                Edit Role
+                            </DialogTitle>
+                            <DialogDescription className="text-sm leading-relaxed">
+                                Update the details of the role. Click update
+                                role when you're done.
+                            </DialogDescription>
+                        </div>
+                    </div>
+                </DialogHeader>
 
-                    <FieldGroup>
-                        <Field>
-                            <Label htmlFor="name">Code</Label>
-                            <Input
-                                name="name"
-                                value={form.data.name}
-                                onChange={(e) => {
-                                    const formattedValue = (
-                                        e.target.value || ''
-                                    )
-                                        .toLowerCase()
-                                        .replace(/\s+/g, '_')
-                                        .replace(/[^a-z0-9_]/g, '');
-                                    form.setData('name', formattedValue);
-                                }}
-                                disabled={shouldDisabled}
-                            />
+                <form onSubmit={handleSubmit}>
+                    <div className="max-h-[min(60vh,520px)] overflow-y-auto px-6 py-5">
+                        <FieldGroup>
+                            <Field>
+                                <Label htmlFor="name">Code</Label>
+                                <Input
+                                    name="name"
+                                    value={form.data.name}
+                                    onChange={(e) => {
+                                        const formattedValue = (
+                                            e.target.value || ''
+                                        )
+                                            .toLowerCase()
+                                            .replace(/\s+/g, '_')
+                                            .replace(/[^a-z0-9_]/g, '');
+                                        form.setData('name', formattedValue);
+                                    }}
+                                    disabled={shouldDisabled}
+                                />
 
-                            <InputError message={form.errors.name} />
-                        </Field>
+                                <InputError message={form.errors.name} />
+                            </Field>
 
-                        <Field>
-                            <Label htmlFor="display_name">Display Name</Label>
-                            <Input
-                                name="display_name"
-                                value={form.data.display_name}
-                                onChange={(e) =>
-                                    form.setData('display_name', e.target.value)
-                                }
-                            />
+                            <Field>
+                                <Label htmlFor="display_name">
+                                    Display Name
+                                </Label>
+                                <Input
+                                    name="display_name"
+                                    value={form.data.display_name}
+                                    onChange={(e) =>
+                                        form.setData(
+                                            'display_name',
+                                            e.target.value,
+                                        )
+                                    }
+                                />
 
-                            <InputError message={form.errors.display_name} />
-                        </Field>
-                        <Field>
-                            <Label htmlFor="description">Description</Label>
-                            <Input
-                                name="description"
-                                value={form.data.description}
-                                onChange={(e) =>
-                                    form.setData('description', e.target.value)
-                                }
-                            />
-                            <InputError message={form.errors.description} />
-                        </Field>
-                        <Field>
-                            <Label>Permissions</Label>
-                            <PermissionsSelector
-                                disabled={shouldDisabled}
-                                permissions={permissions}
-                                value={form.data.permissions}
-                                onChange={(value) =>
-                                    form.setData('permissions', value)
-                                }
-                            />
-                        </Field>
-                    </FieldGroup>
+                                <InputError
+                                    message={form.errors.display_name}
+                                />
+                            </Field>
+                            <Field>
+                                <Label htmlFor="description">Description</Label>
+                                <Input
+                                    name="description"
+                                    value={form.data.description}
+                                    onChange={(e) =>
+                                        form.setData(
+                                            'description',
+                                            e.target.value,
+                                        )
+                                    }
+                                />
+                                <InputError message={form.errors.description} />
+                            </Field>
+                            <Field>
+                                <Label>Permissions</Label>
+                                <PermissionsSelector
+                                    disabled={shouldDisabled}
+                                    permissions={permissions}
+                                    value={form.data.permissions}
+                                    onChange={(value) =>
+                                        form.setData('permissions', value)
+                                    }
+                                />
+                            </Field>
+                        </FieldGroup>
+                    </div>
 
-                    <DialogFooter className="mt-4">
-                        <Button type="submit" disabled={form.processing}>
-                            {form.processing ? 'Updating...' : 'Update Role'}
+                    <DialogFooter className="flex-col gap-2 border-t bg-muted/20 px-6 py-4 sm:flex-col">
+                        <Button
+                            type="submit"
+                            size="lg"
+                            className="w-full"
+                            disabled={form.processing}
+                        >
+                            {form.processing ? (
+                                <Spinner className="mr-2" />
+                            ) : null}
+                            Update Role
                         </Button>
                     </DialogFooter>
                 </form>

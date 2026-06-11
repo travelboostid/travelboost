@@ -48,7 +48,7 @@ class MiscController extends Controller
      *
      * @operationId adminSearchResourceOwners
      */
-    public function searchResourceOwners(SearchResourceOwnersRequest $request)
+    public function searchResourceOwners(SearchResourceOwnersRequest $request): SearchResourceOwnersResource
     {
         $validated = $request->validated();
 

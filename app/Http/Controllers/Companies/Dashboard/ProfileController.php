@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Companies\UpdateProfileRequest;
 use App\Models\Company;
 use App\Models\User;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Inertia\Inertia;
@@ -34,9 +35,10 @@ class ProfileController extends Controller
         ]);
     }
 
-    public function update(UpdateProfileRequest $request, Company $company)
+    public function update(UpdateProfileRequest $request, Company $company): RedirectResponse
     {
         $validated = $request->validated();
+        $previousUsername = $company->username;
 
         $updateDomainDto = Arr::only($validated, ['subdomain', 'domain', 'domain_enabled']);
         $companyDto = Arr::except($validated, ['subdomain', 'domain', 'domain_enabled']);
@@ -45,6 +47,14 @@ class ProfileController extends Controller
 
         $company->forceFill($companyDto)->save();
         $company->domain()->updateOrCreate([], $updateDomainDto);
+
+        if ($company->username !== $previousUsername) {
+            return redirect()
+                ->route('companies.dashboard.settings.profile.show', [
+                    'company' => $company->username,
+                ])
+                ->with('success', 'Profile updated successfully.');
+        }
 
         return back()->with('success', 'Profile updated successfully.');
     }

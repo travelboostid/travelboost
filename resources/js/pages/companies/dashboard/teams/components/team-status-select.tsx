@@ -8,6 +8,7 @@ import {
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { update } from '@/routes/companies/dashboard/teams';
 import { router } from '@inertiajs/react';
+import { toast } from 'sonner';
 
 export default function TeamStatusSelect({
     team,
@@ -35,11 +36,19 @@ export default function TeamStatusSelect({
                 router.put(
                     update({ company: company.username, team: team.id }).url,
                     { status: value },
-                    { preserveScroll: true },
+                    {
+                        preserveScroll: true,
+                        onSuccess: () => {
+                            toast.success(`Status updated to ${value}`);
+                        },
+                        onError: () => {
+                            toast.error('Failed to update status');
+                        },
+                    },
                 )
             }
         >
-            <SelectTrigger className="h-9 w-[132px] rounded-lg border-slate-200 bg-white text-sm capitalize shadow-sm dark:border-slate-700 dark:bg-slate-900">
+            <SelectTrigger className="h-9 w-[132px] capitalize">
                 <SelectValue placeholder="Select status" />
             </SelectTrigger>
             <SelectContent>

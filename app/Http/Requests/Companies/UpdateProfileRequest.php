@@ -27,6 +27,16 @@ class UpdateProfileRequest extends FormRequest
             }
         }
 
+        $emptyStringDefaults = [
+            'customer_service_phone',
+        ];
+
+        foreach ($emptyStringDefaults as $field) {
+            if ($this->input($field) === null) {
+                $data[$field] = '';
+            }
+        }
+
         if (! $this->boolean('domain_enabled')) {
             $data['domain'] = null;
         }
@@ -51,14 +61,18 @@ class UpdateProfileRequest extends FormRequest
      */
     public function rules(): array
     {
-        $domain = $this->company?->domain;
+        $company = $this->company;
+        $domain = $company?->domain;
+        $usernameChanged = filled($this->input('username'))
+            && $this->input('username') !== $company?->username;
 
         return [
             'username' => [
                 'nullable',
                 'string',
                 'max:255',
-                Rule::unique('companies', 'username')->ignore($this->company->id),
+                Rule::unique('companies', 'username')->ignore($company->id),
+                Rule::when($usernameChanged, Rule::unique('users', 'username')),
             ],
             'subdomain' => [
                 'nullable',

@@ -1,18 +1,14 @@
-# Debugging Setup Guide
+# Debugging
 
-This document explains how to configure PHP Xdebug for local debugging in our project using VSCode, Xdebug v3, Google Chrome, and the Xdebug Helper by JetBrains extension.
+Xdebug setup for Laravel in VS Code / Cursor (breakpoints, queues, listeners).
 
-The goal of this setup is to provide a more efficient and maintainable debugging workflow compared to relying only on `echo`, `dump()`, `dd()`, or log statements. While those methods are still useful for quick inspections, they become difficult to manage when debugging complex Laravel applications, especially when working with queued jobs, event listeners, middleware pipelines, service classes, background workers, and asynchronous processes.
+Doc index: [README](../README.md)
 
-With Xdebug, developers can pause application execution at specific lines using breakpoints, inspect variables and object states in real time, follow the execution flow step-by-step, and analyze stack traces directly from the editor. This makes it much easier to identify the root cause of issues without repeatedly modifying the source code to add temporary debug statements.
-
-Using a proper debugger also helps reduce noise in commits and prevents accidental debug code from being left in the codebase. Instead of inserting multiple `dd()` or logging statements throughout the application, developers can inspect the runtime behavior interactively without changing business logic.
-
-This setup is particularly important for our project because many parts of the system run outside normal HTTP request flows, such as queues, event listeners, scheduled tasks, and background processes. These flows are often difficult to debug effectively using traditional print-based debugging techniques alone.
+Use Xdebug when print debugging (`dd()`, logs) is awkward — especially for queued jobs, event listeners, and background workers.
 
 ## Requirements
 
-Make sure yo have installed:
+Make sure you have installed:
 
 - PHP with Xdebug extension
 - VSCode
@@ -271,4 +267,4 @@ php artisan tinker --execute 'dump(App\Models\ChatMessage::where("is_bot", true)
 - `app/Listeners/ChatbotAutoReply.php` — listener entry
 - `app/Ai/Agents/ChatbotAgent.php` — `setup()` (conditions gate) and `reply()` (AI call)
 
-For the full flow, prerequisites, and common errors, see [Chat and Chatbot](./chat-and-chatbot.md).
+For the full flow, prerequisites, and common errors, see [Live Chat & Chatbot](./live-chat.md).
