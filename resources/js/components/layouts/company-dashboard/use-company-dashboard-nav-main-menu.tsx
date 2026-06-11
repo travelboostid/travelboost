@@ -144,11 +144,11 @@ export function useCompanyDashboardNavMainMenu() {
                     urlOrAction: `/companies/${company.username}/dashboard/bookings`,
                 },
                 {
-                    id: 'tours.booking-modification-requests',
+                    id: 'tours.booking-correction',
                     title: (
                         <FormattedMessage defaultMessage="Booking Correction" />
                     ),
-                    urlOrAction: `/companies/${company.username}/dashboard/booking-modification-requests`,
+                    urlOrAction: `/companies/${company.username}/dashboard/booking-correction`,
                     badgeCount: bookingModificationRequestBadgeCount,
                 },
                 {
@@ -196,11 +196,11 @@ export function useCompanyDashboardNavMainMenu() {
                     urlOrAction: `/companies/${company.username}/dashboard/bookings`,
                 },
                 {
-                    id: 'tours.booking-modification-requests',
+                    id: 'tours.booking-correction',
                     title: (
                         <FormattedMessage defaultMessage="Booking Correction" />
                     ),
-                    urlOrAction: `/companies/${company.username}/dashboard/booking-modification-requests`,
+                    urlOrAction: `/companies/${company.username}/dashboard/booking-correction`,
                 },
                 {
                     id: 'tours.categories',

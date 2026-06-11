@@ -19,6 +19,14 @@ test('overdue down payment bookings are cancelled after the full payment due dat
     $vendor->companySetting()->update(['full_payment_deadline' => 1]);
 
     $tour = Tour::factory()->create(['company_id' => $vendor->id]);
+    TourSchedule::create([
+        'tour_id' => $tour->id,
+        'tour_code' => $tour->code,
+        'company_id' => $vendor->id,
+        'departure_date' => '2026-06-09',
+        'return_date' => '2026-06-12',
+        'is_active' => false,
+    ]);
     $schedule = TourSchedule::create([
         'tour_id' => $tour->id,
         'tour_code' => $tour->code,

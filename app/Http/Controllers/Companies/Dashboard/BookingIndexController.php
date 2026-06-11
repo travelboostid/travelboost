@@ -610,6 +610,7 @@ class BookingIndexController extends Controller
         $activeAction = is_string($requestedAction) && in_array($requestedAction, $allowedActions, true)
             ? $requestedAction
             : 'cancel';
+        $search = $request->string('search')->trim()->limit(100, '')->toString();
 
         $requests = BookingActionRequest::query()
             ->with([
@@ -624,6 +625,7 @@ class BookingIndexController extends Controller
             ->when($companyType === 'vendor', fn ($query) => $query->whereHas('booking', fn ($bookingQuery) => $bookingQuery->where('vendor_id', $company->id)))
             ->when($companyType === 'agent', fn ($query) => $query->where('requester_company_id', $company->id))
             ->where('target_action', $activeAction)
+            ->when($search !== '', fn (Builder $query) => $this->applyBookingActionRequestSearch($query, $search))
             ->latest()
             ->paginate(15)
             ->withQueryString()
@@ -668,9 +670,59 @@ class BookingIndexController extends Controller
         return Inertia::render('companies/dashboard/bookings/action-requests', [
             'requests' => $requests,
             'activeAction' => $activeAction,
+            'search' => $search,
             'canReviewRequests' => $companyType === 'vendor',
             'actionRequiredCounts' => $this->bookingModificationActionRequiredCounts($company),
         ]);
+    }
+
+    private function applyBookingActionRequestSearch(Builder $query, string $search): void
+    {
+        $likeSearch = "%{$search}%";
+        $normalizedSearch = '%'.str($search)->lower()->toString().'%';
+
+        $query->where(function (Builder $query) use ($likeSearch, $normalizedSearch): void {
+            $query
+                ->whereRaw($this->textSearchSql('booking_action_requests.id'), [$normalizedSearch])
+                ->orWhereLike('booking_action_requests.target_action', $likeSearch)
+                ->orWhereLike('booking_action_requests.status', $likeSearch)
+                ->orWhereLike('booking_action_requests.reason', $likeSearch)
+                ->orWhereHas('booking', function (Builder $bookingQuery) use ($likeSearch, $normalizedSearch): void {
+                    $bookingQuery
+                        ->whereRaw($this->textSearchSql('bookings.id'), [$normalizedSearch])
+                        ->orWhereLike('bookings.booking_number', $likeSearch)
+                        ->orWhereLike('bookings.contact_name', $likeSearch)
+                        ->orWhereLike('bookings.status', $likeSearch)
+                        ->orWhereRaw($this->textSearchSql('bookings.departure_date'), [$normalizedSearch])
+                        ->orWhereRaw($this->textSearchSql('bookings.grand_total'), [$normalizedSearch])
+                        ->orWhereHas('tour', function (Builder $tourQuery) use ($likeSearch): void {
+                            $tourQuery
+                                ->whereLike('name', $likeSearch)
+                                ->orWhereLike('code', $likeSearch)
+                                ->orWhereLike('destination', $likeSearch);
+                        });
+                })
+                ->orWhereHas('requesterCompany', function (Builder $companyQuery) use ($likeSearch): void {
+                    $companyQuery
+                        ->whereLike('name', $likeSearch)
+                        ->orWhereLike('username', $likeSearch);
+                })
+                ->orWhereHas('requesterUser', function (Builder $userQuery) use ($likeSearch): void {
+                    $userQuery
+                        ->whereLike('name', $likeSearch)
+                        ->orWhereLike('email', $likeSearch);
+                });
+        });
+    }
+
+    private function textSearchSql(string $column): string
+    {
+        $castType = match (DB::connection()->getDriverName()) {
+            'mysql', 'mariadb' => 'CHAR',
+            default => 'TEXT',
+        };
+
+        return "LOWER(CAST({$column} AS {$castType})) LIKE ?";
     }
 
     /**
@@ -723,13 +775,32 @@ class BookingIndexController extends Controller
             'user_name' => $request->reviewerUser?->name ?? 'System',
             'company_name' => $request->reviewerCompany?->name,
             'role_label' => $this->bookingActionRequestReviewerRoleLabel($request->reviewerCompany, $request->reviewerUser),
-            'action_label' => match ($request->status) {
-                'approved' => 'Approved by',
-                'rejected' => 'Rejected by',
-                default => 'Reviewed by',
-            },
+            'action_label' => $this->bookingActionRequestReviewerActionLabel($request),
             'reviewed_at' => $request->reviewed_at?->toIso8601String(),
         ];
+    }
+
+    private function bookingActionRequestReviewerActionLabel(BookingActionRequest $request): string
+    {
+        if ($request->status === 'rejected') {
+            return 'Rejected by';
+        }
+
+        if ($request->status !== 'approved') {
+            return 'Reviewed by';
+        }
+
+        if ((int) $request->requester_company_id !== (int) $request->reviewer_company_id) {
+            return 'Approved by';
+        }
+
+        return match ($request->target_action) {
+            'cancel' => 'Cancelled by',
+            'refund' => 'Refunded by',
+            'reschedule' => 'Rescheduled by',
+            'restore' => 'Reactivated by',
+            default => 'Approved by',
+        };
     }
 
     private function bookingActionRequestReviewerRoleLabel(?Company $company, ?User $user): string
@@ -770,14 +841,13 @@ class BookingIndexController extends Controller
         $this->assertCanReviewBookingActionRequest($company, $bookingActionRequest);
         abort_unless($bookingActionRequest->status === 'pending', 422);
 
-        $this->applyBookingAction($bookingActionRequest->booking, $bookingActionRequest->target_action);
-
-        $bookingActionRequest->update([
-            'status' => 'approved',
-            'reviewer_company_id' => $company->id,
-            'reviewer_user_id' => request()->user()?->id,
-            'reviewed_at' => now(),
-        ]);
+        $this->applyBookingAction(
+            $bookingActionRequest->booking,
+            $bookingActionRequest->target_action,
+            $bookingActionRequest,
+            $company,
+            request()->user()
+        );
 
         return back()->with('success', 'Booking action request approved.');
     }
@@ -824,14 +894,36 @@ class BookingIndexController extends Controller
 
         abort_unless($companyType === 'vendor', 404);
 
-        $this->applyBookingAction($booking, $action);
+        $this->applyBookingAction(
+            $booking,
+            $action,
+            null,
+            $company,
+            $request->user(),
+            [
+                'booking_id' => $booking->id,
+                'requester_company_id' => $company->id,
+                'requester_user_id' => $request->user()->id,
+                'target_action' => $action,
+                'reason' => $request->string('reason')->trim()->toString() ?: null,
+            ]
+        );
 
         return back()->with('success', 'Booking '.($action === 'cancel' ? 'cancelled' : 'refunded').'.');
     }
 
-    private function applyBookingAction(Booking $booking, string $action): void
-    {
-        $lockedBooking = DB::transaction(function () use ($booking, $action): Booking {
+    /**
+     * @param  array{booking_id: int, requester_company_id: int, requester_user_id: int, target_action: string, reason: string|null}|null  $approvedActionRequestAttributes
+     */
+    private function applyBookingAction(
+        Booking $booking,
+        string $action,
+        ?BookingActionRequest $approvedActionRequest = null,
+        ?Company $reviewerCompany = null,
+        ?User $reviewerUser = null,
+        ?array $approvedActionRequestAttributes = null
+    ): void {
+        $lockedBooking = DB::transaction(function () use ($booking, $action, $approvedActionRequest, $reviewerCompany, $reviewerUser, $approvedActionRequestAttributes): Booking {
             $lockedBooking = Booking::query()
                 ->whereKey($booking->id)
                 ->lockForUpdate()
@@ -864,6 +956,27 @@ class BookingIndexController extends Controller
                     ->update(['status' => PaymentStatus::CANCELLED->value]);
 
                 $this->markPendingAgentVendorAttemptsInactive($lockedBooking);
+            }
+
+            $reviewedAt = now();
+
+            if ($approvedActionRequest instanceof BookingActionRequest) {
+                $approvedActionRequest->update([
+                    'status' => 'approved',
+                    'reviewer_company_id' => $reviewerCompany?->id,
+                    'reviewer_user_id' => $reviewerUser?->id,
+                    'reviewed_at' => $reviewedAt,
+                ]);
+            }
+
+            if ($approvedActionRequestAttributes !== null) {
+                BookingActionRequest::query()->create([
+                    ...$approvedActionRequestAttributes,
+                    'status' => 'approved',
+                    'reviewer_company_id' => $reviewerCompany?->id,
+                    'reviewer_user_id' => $reviewerUser?->id,
+                    'reviewed_at' => $reviewedAt,
+                ]);
             }
 
             return $lockedBooking->fresh();

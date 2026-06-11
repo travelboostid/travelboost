@@ -1,15 +1,16 @@
 import CompanyDashboardLayout from '@/components/layouts/company-dashboard';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { formatIDR } from '@/constants/booking';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { cn } from '@/lib/utils';
 import {
     approve,
-    index as bookingModificationRequests,
+    index as bookingCorrectionRoute,
     reject,
-} from '@/routes/companies/dashboard/booking-modification-requests';
+} from '@/routes/companies/dashboard/booking-correction/index';
 import { Head, router } from '@inertiajs/react';
 import dayjs from 'dayjs';
 import {
@@ -17,9 +18,10 @@ import {
     Clock3Icon,
     HistoryIcon,
     RotateCcwIcon,
+    SearchIcon,
     XIcon,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 type ActionKey = 'cancel' | 'refund' | 'reschedule' | 'restore';
 
@@ -77,6 +79,7 @@ type PaginatedActionRequests = {
 type PageProps = {
     requests: PaginatedActionRequests;
     activeAction: ActionKey;
+    search: string;
     canReviewRequests: boolean;
     actionRequiredCounts: ActionCounts;
 };
@@ -143,6 +146,7 @@ function paginationLabel(label: string): string {
 export default function Page({
     requests,
     activeAction,
+    search,
     canReviewRequests,
     actionRequiredCounts,
 }: PageProps) {
@@ -150,28 +154,79 @@ export default function Page({
         company: { username: string };
     };
     const [processingId, setProcessingId] = useState<number | null>(null);
+    const [globalFilter, setGlobalFilter] = useState(search);
 
     const activeTab = tabs.find((tab) => tab.value === activeAction) ?? tabs[0];
 
-    const handleActionChange = (value: string) => {
-        const nextAction = value as ActionKey;
-        const routeDefinition = bookingModificationRequests(
-            { company: company.username },
-            nextAction === 'cancel'
-                ? undefined
-                : { query: { action: nextAction } },
-        );
+    const buildIndexRoute = useCallback(
+        (action: ActionKey, keyword: string) => {
+            const query: Record<string, string> = {};
+            const normalizedKeyword = keyword.trim();
 
-        router.get(
-            routeDefinition.url,
-            {},
-            {
-                preserveScroll: true,
-                preserveState: true,
-                replace: true,
-            },
-        );
+            if (action !== 'cancel') {
+                query.action = action;
+            }
+
+            if (normalizedKeyword !== '') {
+                query.search = normalizedKeyword;
+            }
+
+            return bookingCorrectionRoute(
+                { company: company.username },
+                Object.keys(query).length > 0 ? { query } : undefined,
+            );
+        },
+        [company.username],
+    );
+
+    const visitRequests = useCallback(
+        (action: ActionKey, keyword: string) => {
+            const routeDefinition = buildIndexRoute(action, keyword);
+
+            router.get(
+                routeDefinition.url,
+                {},
+                {
+                    preserveScroll: true,
+                    preserveState: true,
+                    replace: true,
+                },
+            );
+        },
+        [buildIndexRoute],
+    );
+
+    useEffect(() => {
+        setGlobalFilter(search);
+    }, [search]);
+
+    useEffect(() => {
+        const normalizedKeyword = globalFilter.trim();
+
+        if (normalizedKeyword === search.trim()) {
+            return;
+        }
+
+        const timeoutId = window.setTimeout(() => {
+            visitRequests(activeAction, normalizedKeyword);
+        }, 400);
+
+        return () => window.clearTimeout(timeoutId);
+    }, [activeAction, globalFilter, search, visitRequests]);
+
+    const handleActionChange = (value: string) => {
+        visitRequests(value as ActionKey, globalFilter);
     };
+
+    const handleClearSearch = () => {
+        setGlobalFilter('');
+        visitRequests(activeAction, '');
+    };
+
+    const emptyLabel =
+        search.trim() === ''
+            ? `No ${activeTab.label.toLowerCase()} yet.`
+            : `No ${activeTab.label.toLowerCase()} match your search.`;
 
     const submitDecision = (
         requestId: number,
@@ -202,7 +257,7 @@ export default function Page({
     return (
         <CompanyDashboardLayout
             openMenuIds={['tours']}
-            activeMenuIds={['tours.booking-modification-requests']}
+            activeMenuIds={['tours.booking-correction']}
             breadcrumb={[{ title: 'Tours' }, { title: 'Booking Correction' }]}
         >
             <Head title="Booking Correction" />
@@ -237,10 +292,37 @@ export default function Page({
                         })}
                     </TabsList>
 
+                    <div className="mx-auto w-full max-w-3xl">
+                        <div className="relative">
+                            <span className="pointer-events-none absolute left-2 top-1/2 flex size-6 -translate-y-1/2 items-center justify-center rounded-lg bg-primary/10 text-primary ring-1 ring-primary/15 dark:bg-primary/15">
+                                <SearchIcon className="size-3.5" />
+                            </span>
+                            <Input
+                                type="text"
+                                value={globalFilter}
+                                onChange={(event) =>
+                                    setGlobalFilter(event.target.value)
+                                }
+                                placeholder="Search tour, booking ID, departure, customer, agent"
+                                className="h-9 w-full rounded-lg border-slate-200 bg-background pl-9 pr-9 text-xs font-medium shadow-inner shadow-slate-100/70 transition-all placeholder:text-[13px] placeholder:font-normal placeholder:text-muted-foreground/70 focus-visible:border-primary/50 focus-visible:ring-2 focus-visible:ring-primary/20 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:shadow-black/20 dark:placeholder:text-slate-500"
+                            />
+                            {globalFilter.trim() !== '' && (
+                                <button
+                                    type="button"
+                                    aria-label="Clear search"
+                                    onClick={handleClearSearch}
+                                    className="absolute right-2 top-1/2 flex size-6 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                                >
+                                    <XIcon className="size-3.5" />
+                                </button>
+                            )}
+                        </div>
+                    </div>
+
                     <TabsContent value={activeAction} className="mt-1">
                         <RequestList
                             requests={requests}
-                            emptyLabel={`No ${activeTab.label.toLowerCase()} yet.`}
+                            emptyLabel={emptyLabel}
                             canReviewRequests={canReviewRequests}
                             processingId={processingId}
                             onSubmitDecision={submitDecision}
