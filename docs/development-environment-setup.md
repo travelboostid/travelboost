@@ -3,12 +3,27 @@
 ## System Requirements
 
 - **OS**: Windows, macOS, or Linux
-- **PHP**: ^8.5 (require additional extensions: imagick, gd, iconv, psql)
+- **PHP**: ^8.5 with required extensions:
+    - **bcmath** — required for chatbot AI credit billing (`ChatbotAgent`)
+    - **imagick**, **gd**, **iconv**, **pgsql** (PostgreSQL)
 - **Server**: LAMP, WAMP, XAMPP, Laravel Herd, or equivalent
 - **SSH**: Pre-installed on most systems; install if needed
 - **PostgreSQL**: v18 with pgvector extension
 - **Node.js**: Required for frontend tooling and Vite builds
 - **PNPM**: Required for frontend dependency management
+
+Verify PHP extensions:
+
+```bash
+php -r 'echo function_exists("bccomp") ? "bcmath OK\n" : "bcmath MISSING — enable php-bcmath\n";'
+php -m | rg -i "pgsql|imagick|gd|bcmath"
+```
+
+On Arch Linux, `bcmath` is often built as a shared module but not enabled by default:
+
+```bash
+echo 'extension=bcmath' | sudo tee /etc/php/conf.d/bcmath.ini
+```
 
 For Windows users, pgvector can be installed from:
 
@@ -120,3 +135,26 @@ Install globally:
 ```bash id="igjlwm"
 npm install -g pnpm
 ```
+
+---
+
+## Running the Dev Server
+
+Start the full local stack (Reverb, queue worker, Vite, and Laravel):
+
+```bash
+pnpm dev:full
+```
+
+This is required for features that depend on real-time updates, including **live chat and chatbot replies**. The npm scripts pass `-d extension=bcmath` to PHP so the chatbot works even when bcmath is not enabled system-wide.
+
+Individual processes can also be run separately:
+
+```bash
+pnpm dev:serve   # Laravel HTTP server
+pnpm dev:reverb  # WebSocket server (chat broadcasts)
+pnpm dev:queue   # Queue worker
+pnpm dev:vite    # Frontend HMR
+```
+
+See [Chat and Chatbot](./chat-and-chatbot.md) for how chat auto-reply works and how to troubleshoot it.

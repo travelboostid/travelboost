@@ -16,7 +16,7 @@ export type Hero2ComponentProps = {
 };
 
 export const Hero2ComponentConfig: ComponentConfig<Hero2ComponentProps> = {
-    label: 'Hero 2',
+    label: 'Split + Features',
     fields: {
         imageUrl: {
             label: 'Image',

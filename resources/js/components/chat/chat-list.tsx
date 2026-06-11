@@ -3,23 +3,29 @@ import { DEFAULT_PHOTO } from '@/config';
 import { cn } from '@/lib/utils';
 import { IconUsersGroup } from '@tabler/icons-react';
 import { UserIcon } from 'lucide-react';
-import { useEffect } from 'react';
+import { useCallback, useEffect } from 'react';
 import {
     Avatar,
     AvatarFallback,
     AvatarGroupCount,
     AvatarImage,
 } from '../ui/avatar';
-import EmptyChat from './empty-chat';
 import {
-    useChatContext,
+    ChatEmptyRooms,
+    ChatErrorPanel,
+    ChatRoomListSkeleton,
+} from './chat-status';
+import {
+    useChatActor,
     useChatRooms,
+    useClearRoomsError,
     useFloatingChatWidgetContext,
     useLoadRooms,
+    useRoomsStatus,
 } from './state';
 
 function PrivateRoomItem({ room }: { room: ChatRoomResource }) {
-    const { actor } = useChatContext();
+    const actor = useChatActor();
     const { setRoomId } = useFloatingChatWidgetContext();
     const partner = room?.members?.find(
         (member) =>
@@ -27,42 +33,57 @@ function PrivateRoomItem({ room }: { room: ChatRoomResource }) {
             member?.member_id !== actor?.id,
     ) as any;
     const partnerPhoto = partner?.member?.photo_url || DEFAULT_PHOTO;
+
     return (
-        <div className="flex gap-2 p-4" onClick={() => setRoomId(room.id)}>
+        <button
+            type="button"
+            className="flex w-full gap-3 p-4 text-left transition-colors hover:bg-muted/50"
+            onClick={() => setRoomId(room.id)}
+        >
             <div className="flex-none">
                 <Avatar>
-                    <AvatarImage src={partnerPhoto} alt="@shadcn" />
+                    <AvatarImage
+                        src={partnerPhoto}
+                        alt={partner?.member?.name || 'User'}
+                    />
                     <AvatarFallback>
                         <UserIcon />
                     </AvatarFallback>
                 </Avatar>
             </div>
-            <div className="flex-1">
-                <div>{partner?.member?.name || 'User'}</div>
-                <div className="text-xs text-muted-foreground line-clamp-1">
-                    {room.last_message?.message || ''}
+            <div className="min-w-0 flex-1">
+                <div className="truncate font-medium">
+                    {partner?.member?.name || 'User'}
+                </div>
+                <div className="truncate text-xs text-muted-foreground">
+                    {room.last_message?.message || 'No messages yet'}
                 </div>
             </div>
-        </div>
+        </button>
     );
 }
 
 function GroupRoomItem({ room }: { room: ChatRoomResource }) {
     const { setRoomId } = useFloatingChatWidgetContext();
+
     return (
-        <div className="flex gap-2 p-4" onClick={() => setRoomId(room.id)}>
+        <button
+            type="button"
+            className="flex w-full gap-3 p-4 text-left transition-colors hover:bg-muted/50"
+            onClick={() => setRoomId(room.id)}
+        >
             <div className="flex-none">
                 <AvatarGroupCount>
                     <IconUsersGroup />
                 </AvatarGroupCount>
             </div>
-            <div className="flex-1">
-                <div>{room.name}</div>
-                <div className="text-xs text-muted-foreground line-clamp-1">
-                    {room.last_message?.message || ''}
+            <div className="min-w-0 flex-1">
+                <div className="truncate font-medium">{room.name}</div>
+                <div className="truncate text-xs text-muted-foreground">
+                    {room.last_message?.message || 'No messages yet'}
                 </div>
             </div>
-        </div>
+        </button>
     );
 }
 
@@ -75,26 +96,61 @@ function RoomItem({ room }: { room: ChatRoomResource }) {
 }
 
 export default function ChatList({ className }: { className?: string }) {
-    const { actor } = useChatContext();
+    const actor = useChatActor();
     const loadRooms = useLoadRooms();
+    const clearRoomsError = useClearRoomsError();
     const rooms = useChatRooms();
-    useEffect(() => {
-        loadRooms({
-            per_page: 100,
-            member_type: actor?.type || 'user',
-            member_id: actor?.id || 0,
-        });
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [actor]);
+    const { isLoading, error, hasLoaded } = useRoomsStatus();
 
-    if (!rooms.length) {
-        return <EmptyChat />;
+    const fetchRooms = useCallback(() => {
+        if (!actor?.id) {
+            return;
+        }
+
+        void loadRooms({
+            per_page: 100,
+            member_type: actor.type,
+            member_id: actor.id,
+        });
+    }, [actor, loadRooms]);
+
+    useEffect(() => {
+        fetchRooms();
+    }, [fetchRooms]);
+
+    const handleRetry = () => {
+        clearRoomsError();
+        fetchRooms();
+    };
+
+    if (isLoading && !hasLoaded) {
+        return <ChatRoomListSkeleton className={className} />;
+    }
+
+    if (error && !rooms.length) {
+        return (
+            <ChatErrorPanel
+                title="Could not load conversations"
+                message={error}
+                onRetry={handleRetry}
+                className={className}
+            />
+        );
+    }
+
+    if (hasLoaded && !rooms.length) {
+        return <ChatEmptyRooms className={className} />;
     }
 
     return (
         <div className={cn('divide-y overflow-y-auto', className)}>
+            {error && (
+                <div className="border-b bg-destructive/5 px-4 py-2 text-xs text-destructive">
+                    {error}
+                </div>
+            )}
             {rooms.map((room) => (
-                <RoomItem room={room} />
+                <RoomItem key={room.id} room={room} />
             ))}
         </div>
     );

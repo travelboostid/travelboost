@@ -28,11 +28,11 @@ class OpenChatRequest extends FormRequest
             'recipient_id' => [
                 'required',
                 'integer',
-                match ($this->input('sender_type')) {
+                match ($this->input('recipient_type')) {
                     'user' => Rule::exists('users', 'id'),
                     'company' => Rule::exists('companies', 'id'),
                     'anonymous-user' => Rule::exists('anonymous_users', 'id'),
-                    default => Rule::exists('users', 'id'), // Default to users if type is unknown
+                    default => Rule::exists('users', 'id'),
                 },
             ],
             'sender_type' => ['required', 'in:user,company,anonymous-user'],

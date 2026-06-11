@@ -16,11 +16,11 @@ From a data modeling perspective, we also need composite unique constraints. Ins
 
 ## Chatbot
 
-The chat feature is implemented in a standard way. Each company can choose whether to enable the chatbot. If enabled, the system will generate automated replies.
+The chat feature supports private messaging between customers (authenticated users or anonymous visitors) and a company. Each company can enable or disable the chatbot from its dashboard. When enabled, incoming customer messages trigger an automated AI reply via `ChatbotAgent`.
 
-One challenge is how to implement this without requiring users to log in. We considered using an anonymous login approach similar to Firebase Auth. However, adopting Firebase Auth or replicating its logic is not practical. Another concern is handling inactive users, which could result in a large amount of unused chat data that needs to be cleaned up.
+Anonymous visitors on company landing pages can chat without registering. They are tracked as `anonymous-user` records and subscribe to public Reverb channels for real-time updates.
 
-Our initial design allowed either regular chat or auto-reply. However, combining customer support chat with a chatbot may introduce several drawbacks. This approach is still under consideration.
+For implementation details, local setup, prerequisites, and troubleshooting, see [Chat and Chatbot](./chat-and-chatbot.md).
 
 ## Wallet
 
