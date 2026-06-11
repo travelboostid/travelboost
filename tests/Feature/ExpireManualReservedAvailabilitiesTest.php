@@ -88,3 +88,92 @@ test('it releases expired manual reserved availability rows', function () {
         date_default_timezone_set($originalTimezone);
     }
 });
+
+test('it activates scheduled manual reserved availability rows when the start time arrives', function () {
+    $company = Company::factory()->create(['type' => 'vendor']);
+    $tour = Tour::factory()->create(['company_id' => $company->id]);
+    $schedule = TourSchedule::create([
+        'tour_id' => $tour->id,
+        'tour_code' => $tour->code,
+        'company_id' => $company->id,
+        'departure_date' => now()->addMonth()->toDateString(),
+        'return_date' => now()->addMonth()->addDays(5)->toDateString(),
+        'quota' => 24,
+        'is_active' => true,
+    ]);
+
+    $availability = TourAvailability::create([
+        'company_id' => $company->id,
+        'tour_id' => $tour->id,
+        'schedule_id' => $schedule->id,
+        'max_pax' => 24,
+        'RS' => 0,
+        'available' => 24,
+        'manual_reserved_pending_value' => 2,
+        'manual_reserved_started_at' => now('UTC')->subMinute(),
+        'manual_reserved_expires_at' => now('UTC')->addHour(),
+    ]);
+
+    $this->artisan('tour-availabilities:expire-manual-reserved')
+        ->assertSuccessful();
+
+    expect($availability->fresh())
+        ->RS->toBe(2)
+        ->available->toBe(22)
+        ->manual_reserved_pending_value->toBeNull()
+        ->manual_reserved_original_available->toBe(24)
+        ->and($company->fresh()->notifications()->count())
+        ->toBe(1)
+        ->and($company->fresh()->notifications()->latest()->first()->data)
+        ->toMatchArray([
+            'title' => 'Manual reserved started',
+            'type' => 'manual_reserved_started',
+            'tour_id' => $tour->id,
+            'schedule_id' => $schedule->id,
+            'reserved_seats' => 2,
+        ]);
+});
+
+test('it keeps active manual reserved rows without expiry when no limit is configured', function () {
+    $company = Company::factory()->create(['type' => 'vendor']);
+    $tour = Tour::factory()->create(['company_id' => $company->id]);
+    $schedule = TourSchedule::create([
+        'tour_id' => $tour->id,
+        'tour_code' => $tour->code,
+        'company_id' => $company->id,
+        'departure_date' => now()->addMonth()->toDateString(),
+        'return_date' => now()->addMonth()->addDays(5)->toDateString(),
+        'quota' => 24,
+        'is_active' => true,
+    ]);
+
+    $availability = TourAvailability::create([
+        'company_id' => $company->id,
+        'tour_id' => $tour->id,
+        'schedule_id' => $schedule->id,
+        'max_pax' => 24,
+        'RS' => 0,
+        'available' => 24,
+        'manual_reserved_pending_value' => 2,
+        'manual_reserved_started_at' => now('UTC')->subMinute(),
+        'manual_reserved_expires_at' => null,
+    ]);
+
+    $this->artisan('tour-availabilities:expire-manual-reserved')
+        ->assertSuccessful();
+
+    expect($availability->fresh())
+        ->RS->toBe(2)
+        ->available->toBe(22)
+        ->manual_reserved_pending_value->toBeNull()
+        ->manual_reserved_expires_at->toBeNull()
+        ->manual_reserved_original_available->toBe(24);
+
+    $this->artisan('tour-availabilities:expire-manual-reserved')
+        ->assertSuccessful();
+
+    expect($availability->fresh())
+        ->RS->toBe(2)
+        ->available->toBe(22)
+        ->manual_reserved_expires_at->toBeNull();
+});

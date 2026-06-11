@@ -63,20 +63,35 @@ class TourAvailabilityController extends Controller
                     ->first();
 
                 $manualReservedValue = max(0, (int) ($row['RS'] ?? 0));
-                $rowAvailable = (int) ($row['available'] ?? $existingAvailability?->available ?? 0);
-                $originalAvailable = $manualReservedValue > 0
-                    ? max(0, (int) ($row['manual_reserved_original_available'] ?? ($rowAvailable + $manualReservedValue)))
-                    : null;
-                $available = $manualReservedValue > 0
-                    ? max(0, (int) $originalAvailable - $manualReservedValue)
-                    : $rowAvailable;
                 $manualReservedStartedAt = null;
                 $manualReservedExpiresAt = null;
+                $manualReservedPendingValue = null;
+                $manualReservedOriginalAvailable = null;
+                $available = $this->resolveExistingAvailable($existingAvailability, $row);
 
                 if ($manualReservedValue > 0) {
                     $manualReservedStartedAt = $this->resolveManualReservedStartAt($row, $schedule) ?? now('UTC');
                     $manualReservedLimitMinutes = $this->resolveManualReservedLimitMinutes((int) $schedule->tour_id);
-                    $manualReservedExpiresAt = $manualReservedStartedAt->copy()->addMinutes($manualReservedLimitMinutes);
+                    $manualReservedExpiresAt = $manualReservedLimitMinutes !== null
+                        ? $manualReservedStartedAt->copy()->addMinutes($manualReservedLimitMinutes)
+                        : null;
+
+                    if ($manualReservedStartedAt->isFuture()) {
+                        $manualReservedPendingValue = $manualReservedValue;
+                        $available = $this->resolveAvailableWithoutManualReserved(
+                            $existingAvailability,
+                            $row,
+                        );
+                        $manualReservedValue = 0;
+                    } else {
+                        $manualReservedOriginalAvailable = $this->resolveAvailableWithoutManualReserved(
+                            $existingAvailability,
+                            $row,
+                        );
+                        $available = max(0, $manualReservedOriginalAvailable - $manualReservedValue);
+                    }
+                } else {
+                    $available = $this->resolveAvailableWithoutManualReserved($existingAvailability, $row);
                 }
 
                 DB::table('tour_availabilities')->updateOrInsert(
@@ -88,6 +103,7 @@ class TourAvailabilityController extends Controller
                     [
                         'max_pax' => $row['max_pax'] ?? 0,
                         'RS' => $manualReservedValue,
+                        'manual_reserved_pending_value' => $manualReservedPendingValue,
                         'BRS' => $row['BRS'] ?? 0,
                         'CA' => $row['CA'] ?? 0,
                         'RF' => $row['RF'] ?? 0,
@@ -100,7 +116,7 @@ class TourAvailabilityController extends Controller
                         'available' => $available,
                         'manual_reserved_started_at' => $manualReservedStartedAt,
                         'manual_reserved_expires_at' => $manualReservedExpiresAt,
-                        'manual_reserved_original_available' => $originalAvailable,
+                        'manual_reserved_original_available' => $manualReservedOriginalAvailable,
                         'updated_at' => now(),
                         'created_at' => now(),
                     ]
@@ -163,12 +179,44 @@ class TourAvailabilityController extends Controller
         }
     }
 
-    private function resolveManualReservedLimitMinutes(int $tourId): int
+    private function resolveExistingAvailable(?object $existingAvailability, array $row): int
+    {
+        if ($existingAvailability) {
+            return (int) $existingAvailability->available;
+        }
+
+        return $this->resolveAvailableWithoutManualReserved(null, $row);
+    }
+
+    private function resolveAvailableWithoutManualReserved(?object $existingAvailability, array $row): int
+    {
+        if ($existingAvailability) {
+            $currentReservedSeats = (int) ($existingAvailability->RS ?? 0);
+            $currentAvailable = (int) ($existingAvailability->available ?? 0);
+
+            return max(
+                0,
+                (int) ($existingAvailability->manual_reserved_original_available ?? ($currentAvailable + $currentReservedSeats)),
+            );
+        }
+
+        $maxPax = max(0, (int) ($row['max_pax'] ?? 0));
+        $reducingColumns = [
+            max(0, (int) ($row['DP'] ?? 0)),
+            max(0, (int) ($row['FP'] ?? 0)),
+            max(0, (int) ($row['BRS'] ?? 0)),
+            max(0, (int) ($row['WPA'] ?? 0)),
+        ];
+
+        return max(0, $maxPax - array_sum($reducingColumns));
+    }
+
+    private function resolveManualReservedLimitMinutes(int $tourId): ?int
     {
         $tour = DB::table('tours')->where('id', $tourId)->first(['category_id']);
 
         if (! $tour?->category_id) {
-            return 60;
+            return null;
         }
 
         $category = DB::table('tour_categories')->where('id', $tour->category_id)->first([
@@ -176,9 +224,15 @@ class TourAvailabilityController extends Controller
             'manual_reserved_limit_unit',
         ]);
 
-        $value = (int) ($category?->manual_reserved_limit_value ?? 1);
-        $unit = $category?->manual_reserved_limit_unit ?? 'hour';
+        $value = $category?->manual_reserved_limit_value;
+        $unit = $category?->manual_reserved_limit_unit;
 
-        return $unit === 'minute' ? $value : $value * 60;
+        if ($value === null || $unit === null) {
+            return null;
+        }
+
+        $resolvedValue = max(1, (int) $value);
+
+        return $unit === 'minute' ? $resolvedValue : $resolvedValue * 60;
     }
 }

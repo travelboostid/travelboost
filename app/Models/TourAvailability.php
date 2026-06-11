@@ -18,6 +18,7 @@ class TourAvailability extends Model
         'DP',
         'FP',
         'RS',
+        'manual_reserved_pending_value',
         'BRS',
         'WA',
         'CA',
@@ -33,6 +34,7 @@ class TourAvailability extends Model
     protected $casts = [
         'manual_reserved_started_at' => 'datetime',
         'manual_reserved_expires_at' => 'datetime',
+        'manual_reserved_pending_value' => 'integer',
         'manual_reserved_original_available' => 'integer',
     ];
 

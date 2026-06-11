@@ -85,14 +85,22 @@ class SyncAvailabilityAction
                 'schedule_id' => $schedule->id,
             ])->lockForUpdate()->firstOrFail();
 
+            if ($this->manualReservedShouldActivate($availability)) {
+                $this->activateManualReserved($availability);
+                $availability->refresh();
+            }
+
             if ($this->manualReservedIsExpired($availability)) {
                 $availability->update([
                     'RS' => 0,
                     'available' => (int) ($availability->manual_reserved_original_available ?? $availability->max_pax),
+                    'manual_reserved_pending_value' => null,
                     'manual_reserved_started_at' => null,
                     'manual_reserved_expires_at' => null,
                     'manual_reserved_original_available' => null,
                 ]);
+
+                $availability->refresh();
             }
 
             $totals = Booking::query()
@@ -140,5 +148,26 @@ class SyncAvailabilityAction
     {
         return $availability->manual_reserved_expires_at !== null
             && $availability->manual_reserved_expires_at->isPast();
+    }
+
+    private function manualReservedShouldActivate(TourAvailability $availability): bool
+    {
+        return (int) ($availability->manual_reserved_pending_value ?? 0) > 0
+            && (int) $availability->RS === 0
+            && $availability->manual_reserved_started_at !== null
+            && $availability->manual_reserved_started_at->isPastOrNow();
+    }
+
+    private function activateManualReserved(TourAvailability $availability): void
+    {
+        $reservedSeats = (int) ($availability->manual_reserved_pending_value ?? 0);
+        $originalAvailable = max(0, (int) $availability->available);
+
+        $availability->update([
+            'RS' => $reservedSeats,
+            'available' => max(0, $originalAvailable - $reservedSeats),
+            'manual_reserved_pending_value' => null,
+            'manual_reserved_original_available' => $originalAvailable,
+        ]);
     }
 }
