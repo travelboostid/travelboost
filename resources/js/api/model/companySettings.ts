@@ -25,6 +25,7 @@ export interface CompanySettings {
     minimum_down_payment: string;
     minimum_vat: string;
     term_conditions: CompanySettingsTermConditions;
+    cancel_refund_term_conditions: CompanySettingsTermConditions;
     booking_entry_time_limit: number;
     manual_bank_transfer: CompanySettingsManualBankTransfer;
     manual_bank_transfer_account_name: CompanySettingsManualBankTransferAccountName;

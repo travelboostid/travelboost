@@ -1,7 +1,34 @@
 import CompanyDashboardLayout from '@/components/layouts/company-dashboard';
+import {
+    Accordion,
+    AccordionContent,
+    AccordionItem,
+    AccordionTrigger,
+} from '@/components/ui/accordion';
 import MoneyInput from '@/components/ui/money-input';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { Head, useForm, usePage } from '@inertiajs/react';
-import type { FormEvent } from 'react';
+import {
+    BoldIcon,
+    Heading2Icon,
+    ItalicIcon,
+    ListOrderedIcon,
+    StrikethroughIcon,
+    UnderlineIcon,
+} from 'lucide-react';
+import {
+    useCallback,
+    useEffect,
+    useRef,
+    type FormEvent,
+    type MouseEvent,
+    type RefObject,
+} from 'react';
 import { FormattedMessage, useIntl } from 'react-intl';
 
 type Settings = {
@@ -10,6 +37,7 @@ type Settings = {
     minimum_down_payment_value: number;
     minimum_vat: number;
     term_conditions: string;
+    cancel_refund_term_conditions: string;
     booking_entry_time_limit: number;
     manual_bank_transfer: string;
     manual_bank_transfer_account_name: string;
@@ -28,6 +56,7 @@ type ParameterVendorFormData = {
     minimum_down_payment_value: number;
     minimum_vat: DecimalInputValue;
     term_conditions: string;
+    cancel_refund_term_conditions: string;
     booking_entry_time_limit: number;
     manual_bank_transfer: string;
     manual_bank_transfer_account_name: string;
@@ -65,8 +94,146 @@ const parseDecimalInput = (value: DecimalInputValue): number => {
     return Number.isFinite(parsed) ? parsed : 0;
 };
 
+type EditorCommand =
+    | 'bold'
+    | 'italic'
+    | 'underline'
+    | 'strikeThrough'
+    | 'insertOrderedList';
+
+const termsEditorToolbar = [
+    {
+        icon: Heading2Icon,
+        title: 'Heading',
+        type: 'block',
+        value: 'h2',
+    },
+    { icon: BoldIcon, title: 'Bold', type: 'command', value: 'bold' },
+    { icon: ItalicIcon, title: 'Italic', type: 'command', value: 'italic' },
+    {
+        icon: UnderlineIcon,
+        title: 'Underline',
+        type: 'command',
+        value: 'underline',
+    },
+    {
+        icon: StrikethroughIcon,
+        title: 'Strikethrough',
+        type: 'command',
+        value: 'strikeThrough',
+    },
+    {
+        icon: ListOrderedIcon,
+        title: 'Numbered List',
+        type: 'command',
+        value: 'insertOrderedList',
+    },
+] as const;
+
+const richTextDisplayClass =
+    '[&_h1]:mb-3 [&_h1]:text-2xl [&_h1]:font-bold [&_h2]:mb-3 [&_h2]:text-xl [&_h2]:font-semibold [&_h3]:mb-2 [&_h3]:text-lg [&_h3]:font-semibold [&_ol]:ml-6 [&_ol]:list-decimal [&_p]:mb-3 [&_strike]:text-muted-foreground';
+
+const normalizeTermsForEditor = (value: string): string => {
+    if (!value.trim()) {
+        return '';
+    }
+
+    if (value.includes('<')) {
+        return value;
+    }
+
+    return value.replace(/\n/g, '<br />');
+};
+
+function TermsEditorToolbar({
+    onAction,
+}: {
+    onAction: (
+        event: MouseEvent<HTMLButtonElement>,
+        type: 'command' | 'block',
+        value: string,
+    ) => void;
+}) {
+    return (
+        <TooltipProvider delayDuration={150}>
+            <div className="flex flex-wrap gap-2 border-b border-border/70 bg-muted/20 px-3 py-3">
+                {termsEditorToolbar.map((item) => {
+                    const Icon = item.icon;
+
+                    return (
+                        <Tooltip key={`${item.type}-${item.value}`}>
+                            <TooltipTrigger asChild>
+                                <button
+                                    type="button"
+                                    onMouseDown={(event) =>
+                                        onAction(event, item.type, item.value)
+                                    }
+                                    className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-background text-foreground transition hover:bg-muted"
+                                    aria-label={item.title}
+                                >
+                                    <Icon className="size-4" />
+                                </button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top">
+                                {item.title}
+                            </TooltipContent>
+                        </Tooltip>
+                    );
+                })}
+            </div>
+        </TooltipProvider>
+    );
+}
+
+function TermsEditorPanel({
+    editorId,
+    editorRef,
+    error,
+    description,
+    onInput,
+    onToolbarAction,
+}: {
+    editorId: string;
+    editorRef: RefObject<HTMLDivElement | null>;
+    error?: string;
+    description: string;
+    onInput: () => void;
+    onToolbarAction: (
+        event: MouseEvent<HTMLButtonElement>,
+        type: 'command' | 'block',
+        value: string,
+    ) => void;
+}) {
+    return (
+        <div className="overflow-hidden rounded-2xl border border-border/80 bg-background shadow-sm">
+            <div className="flex items-start justify-between gap-4 border-b border-border/70 px-4 py-3">
+                <p className="text-sm leading-6 text-muted-foreground">
+                    {description}
+                </p>
+            </div>
+            <TermsEditorToolbar onAction={onToolbarAction} />
+            <div
+                id={editorId}
+                ref={editorRef}
+                contentEditable
+                suppressContentEditableWarning
+                onInput={onInput}
+                className={`min-h-[220px] w-full px-4 py-4 text-sm leading-7 text-foreground outline-none ${richTextDisplayClass}`}
+            />
+            {error && <p className="px-4 pb-4 text-sm text-red-500">{error}</p>}
+            {!error && (
+                <div className="px-4 pb-4 text-xs text-muted-foreground">
+                    Preview is saved exactly as shown in the editor.
+                </div>
+            )}
+        </div>
+    );
+}
+
 export default function ParameterVendorPage() {
     const intl = useIntl();
+    const bookingTermsEditorRef = useRef<HTMLDivElement | null>(null);
+    const cancelRefundTermsEditorRef = useRef<HTMLDivElement | null>(null);
 
     const { props } = usePage<{
         settings: Settings;
@@ -84,6 +251,8 @@ export default function ParameterVendorPage() {
             props.settings?.minimum_down_payment_value ?? 0,
         minimum_vat: decimalInputValue(props.settings?.minimum_vat ?? 0),
         term_conditions: props.settings?.term_conditions ?? '',
+        cancel_refund_term_conditions:
+            props.settings?.cancel_refund_term_conditions ?? '',
         booking_entry_time_limit: props.settings?.booking_entry_time_limit ?? 0,
         manual_bank_transfer: props.settings?.manual_bank_transfer ?? '',
         manual_bank_transfer_account_name:
@@ -128,6 +297,67 @@ export default function ParameterVendorPage() {
 
     const hasAmount = Number(data.minimum_down_payment_value || 0) > 0;
 
+    useEffect(() => {
+        if (
+            bookingTermsEditorRef.current &&
+            bookingTermsEditorRef.current.innerHTML !==
+                normalizeTermsForEditor(data.term_conditions)
+        ) {
+            bookingTermsEditorRef.current.innerHTML = normalizeTermsForEditor(
+                data.term_conditions,
+            );
+        }
+    }, [data.term_conditions]);
+
+    useEffect(() => {
+        if (
+            cancelRefundTermsEditorRef.current &&
+            cancelRefundTermsEditorRef.current.innerHTML !==
+                normalizeTermsForEditor(data.cancel_refund_term_conditions)
+        ) {
+            cancelRefundTermsEditorRef.current.innerHTML =
+                normalizeTermsForEditor(data.cancel_refund_term_conditions);
+        }
+    }, [data.cancel_refund_term_conditions]);
+
+    const syncTermsEditor = useCallback(
+        (field: 'term_conditions' | 'cancel_refund_term_conditions') => {
+            const editor =
+                field === 'term_conditions'
+                    ? bookingTermsEditorRef.current
+                    : cancelRefundTermsEditorRef.current;
+
+            setData(field, editor?.innerHTML ?? '');
+        },
+        [setData],
+    );
+
+    const applyTermsEditorCommand = useCallback(
+        (
+            event: MouseEvent<HTMLButtonElement>,
+            field: 'term_conditions' | 'cancel_refund_term_conditions',
+            type: 'command' | 'block',
+            value: string,
+        ) => {
+            event.preventDefault();
+            const editor =
+                field === 'term_conditions'
+                    ? bookingTermsEditorRef.current
+                    : cancelRefundTermsEditorRef.current;
+
+            editor?.focus();
+
+            if (type === 'block') {
+                document.execCommand('formatBlock', false, value);
+            } else {
+                document.execCommand(value as EditorCommand, false);
+            }
+
+            syncTermsEditor(field);
+        },
+        [syncTermsEditor],
+    );
+
     return (
         <CompanyDashboardLayout
             breadcrumb={[
@@ -154,14 +384,47 @@ export default function ParameterVendorPage() {
             <div className="mx-auto w-full max-w-5xl space-y-4 px-3 pb-20 sm:space-y-6 sm:px-4">
                 {/* Header */}
 
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                        <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">
-                            <FormattedMessage defaultMessage="Parameters Settings" />
-                        </h1>
-                        <p className="mt-1 text-sm text-muted-foreground sm:text-base">
-                            <FormattedMessage defaultMessage="Manage booking rules, tax, payment instructions and terms for your company." />
-                        </p>
+                <div className="overflow-hidden rounded-3xl border border-primary/10 bg-gradient-to-br from-primary/[0.08] via-background to-background shadow-sm">
+                    <div className="flex flex-col gap-6 px-5 py-6 sm:px-6 lg:flex-row lg:items-end lg:justify-between">
+                        <div className="max-w-3xl">
+                            <div className="inline-flex items-center gap-2 rounded-full border border-primary/15 bg-background/80 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+                                {/* <SparklesIcon className="size-3.5" /> */}
+                                Vendor Configuration
+                            </div>
+                            <h1 className="mt-4 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+                                <FormattedMessage defaultMessage="Parameters Settings" />
+                            </h1>
+                            <p className="mt-2 text-sm leading-6 text-muted-foreground sm:text-base">
+                                <FormattedMessage defaultMessage="Manage booking rules, payment settings, and policy content from one place with a cleaner editor workflow." />
+                            </p>
+                        </div>
+
+                        {/* <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 lg:min-w-[420px]">
+                            <div className="rounded-2xl border border-border/70 bg-background/90 px-4 py-3">
+                                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                                    Booking Rules
+                                </p>
+                                <p className="mt-2 text-sm font-semibold text-foreground">
+                                    Deadlines and reserve time
+                                </p>
+                            </div>
+                            <div className="rounded-2xl border border-border/70 bg-background/90 px-4 py-3">
+                                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                                    Payments
+                                </p>
+                                <p className="mt-2 text-sm font-semibold text-foreground">
+                                    Down payment, VAT, and transfer info
+                                </p>
+                            </div>
+                            <div className="rounded-2xl border border-border/70 bg-background/90 px-4 py-3">
+                                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                                    Policies
+                                </p>
+                                <p className="mt-2 text-sm font-semibold text-foreground">
+                                    Booking and cancel/refund terms
+                                </p>
+                            </div>
+                        </div> */}
                     </div>
                 </div>
 
@@ -473,24 +736,96 @@ export default function ParameterVendorPage() {
 
                     {/* Terms */}
                     <div className="rounded-2xl border bg-card p-4 shadow-sm sm:p-6">
-                        <h2 className="mb-5 text-lg font-semibold">
-                            <FormattedMessage defaultMessage="Booking Terms & Conditions" />
+                        <h2 className="mb-2 text-lg font-semibold">
+                            <FormattedMessage defaultMessage="Booking Terms & Policies" />
                         </h2>
+                        <p className="mb-5 text-sm leading-6 text-muted-foreground">
+                            <FormattedMessage defaultMessage="Keep the page compact with accordions, and use the same formatting tools for both policy sections." />
+                        </p>
 
-                        <textarea
-                            rows={6}
-                            className={`${inputClass} min-h-[140px] resize-y`}
-                            value={data.term_conditions}
-                            onChange={(e) =>
-                                setData('term_conditions', e.target.value)
-                            }
-                        />
+                        <Accordion
+                            type="multiple"
+                            defaultValue={[
+                                'booking-terms',
+                                'cancel-refund-terms',
+                            ]}
+                            className="space-y-4"
+                        >
+                            <AccordionItem
+                                value="booking-terms"
+                                className="overflow-hidden rounded-2xl border border-border/80 bg-background"
+                            >
+                                <AccordionTrigger className="px-4 py-4 text-left hover:no-underline sm:px-5">
+                                    <div>
+                                        <p className="text-sm font-semibold text-foreground">
+                                            Booking Terms & Conditions
+                                        </p>
+                                        <p className="mt-1 text-sm text-muted-foreground">
+                                            Rules shown during booking checkout.
+                                        </p>
+                                    </div>
+                                </AccordionTrigger>
+                                <AccordionContent className="border-t border-border/70 px-4 py-4 sm:px-5">
+                                    <TermsEditorPanel
+                                        editorId="term_conditions"
+                                        editorRef={bookingTermsEditorRef}
+                                        error={errors.term_conditions}
+                                        description="Use headings, emphasis, and lists to make booking instructions easier to scan."
+                                        onInput={() =>
+                                            syncTermsEditor('term_conditions')
+                                        }
+                                        onToolbarAction={(event, type, value) =>
+                                            applyTermsEditorCommand(
+                                                event,
+                                                'term_conditions',
+                                                type,
+                                                value,
+                                            )
+                                        }
+                                    />
+                                </AccordionContent>
+                            </AccordionItem>
 
-                        {errors.term_conditions && (
-                            <p className="mt-1 text-sm text-red-500">
-                                {errors.term_conditions}
-                            </p>
-                        )}
+                            <AccordionItem
+                                value="cancel-refund-terms"
+                                className="overflow-hidden rounded-2xl border border-border/80 bg-background"
+                            >
+                                <AccordionTrigger className="px-4 py-4 text-left hover:no-underline sm:px-5">
+                                    <div>
+                                        <p className="text-sm font-semibold text-foreground">
+                                            Cancel & Refund Terms & Conditions
+                                        </p>
+                                        <p className="mt-1 text-sm text-muted-foreground">
+                                            Policy details for schedule changes,
+                                            cancellation, and refunds.
+                                        </p>
+                                    </div>
+                                </AccordionTrigger>
+                                <AccordionContent className="border-t border-border/70 px-4 py-4 sm:px-5">
+                                    <TermsEditorPanel
+                                        editorId="cancel_refund_term_conditions"
+                                        editorRef={cancelRefundTermsEditorRef}
+                                        error={
+                                            errors.cancel_refund_term_conditions
+                                        }
+                                        description="Use the same formatting tools to structure refund windows, penalties, and exceptions clearly."
+                                        onInput={() =>
+                                            syncTermsEditor(
+                                                'cancel_refund_term_conditions',
+                                            )
+                                        }
+                                        onToolbarAction={(event, type, value) =>
+                                            applyTermsEditorCommand(
+                                                event,
+                                                'cancel_refund_term_conditions',
+                                                type,
+                                                value,
+                                            )
+                                        }
+                                    />
+                                </AccordionContent>
+                            </AccordionItem>
+                        </Accordion>
                     </div>
 
                     {/* Save */}
