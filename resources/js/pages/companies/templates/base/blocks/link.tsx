@@ -32,6 +32,10 @@ export const LinkComponentFields: Fields<LinkComponentProps> = {
             { value: '_blank', label: 'New Tab' },
         ],
     },
+    className: {
+        type: 'text',
+        label: 'CSS Class',
+    },
     content: {
         type: 'slot',
         label: 'Link Content',

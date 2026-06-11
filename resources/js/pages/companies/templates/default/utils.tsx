@@ -8,7 +8,7 @@ export const LUCIDE_ICON_NAMES = Object.keys(lucide.icons);
 
 export type LucideIconName = (typeof LUCIDE_ICON_NAMES)[number];
 
-type LucideIconRendererProps = IconProps & {
+type LucideIconRendererProps = Omit<IconProps, 'icon'> & {
     name: string;
 };
 
