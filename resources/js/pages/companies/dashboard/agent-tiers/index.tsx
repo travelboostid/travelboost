@@ -114,7 +114,7 @@ function TierFormDialog({
                             onChange={(e) =>
                                 form.setData('name', e.target.value)
                             }
-                            placeholder="Whole Seller"
+                            placeholder="Wholesaler"
                         />
                         {form.errors.name && (
                             <p className="text-sm text-red-500">
