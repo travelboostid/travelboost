@@ -12,8 +12,9 @@ import {
 import ChatBox from './chat-box';
 import ChatInput from './chat-input';
 import ChatList from './chat-list';
+import { ChatHeaderSkeleton } from './chat-status';
 import {
-    useChatContext,
+    useChatActor,
     useChatRoom,
     useFloatingChatWidgetContext,
 } from './state';
@@ -21,25 +22,37 @@ import {
 function GroupChatHeader() {
     const { roomId, setRoomId, setAttachment } = useFloatingChatWidgetContext();
     const room = useChatRoom(roomId);
+
     const handleExitRoom = () => {
         setRoomId(0);
         setAttachment(null);
     };
 
+    if (!room) {
+        return <ChatHeaderSkeleton />;
+    }
+
     return (
-        <div className="flex flex-0 items-center gap-2 border-b p-4">
-            <button className="flex-0" type="button" onClick={handleExitRoom}>
-                <ChevronLeftIcon />
+        <div className="flex shrink-0 items-center gap-3 border-b p-4">
+            <button
+                className="shrink-0 rounded-md p-1 transition-colors hover:bg-muted"
+                type="button"
+                onClick={handleExitRoom}
+                aria-label="Back to conversations"
+            >
+                <ChevronLeftIcon className="size-5" />
             </button>
-            <div className="flex-0">
+            <div className="shrink-0">
                 <AvatarGroupCount>
                     <IconUsersGroup />
                 </AvatarGroupCount>
             </div>
-            <div className="flex-1">
-                <div className="font-bold">{room?.name || 'Unnamed Group'}</div>
+            <div className="min-w-0 flex-1">
+                <div className="truncate font-semibold">
+                    {room.name || 'Unnamed Group'}
+                </div>
                 <div className="text-xs text-muted-foreground">
-                    {room?.members?.length} participants
+                    {room.members?.length ?? 0} participants
                 </div>
             </div>
         </div>
@@ -47,7 +60,7 @@ function GroupChatHeader() {
 }
 
 function PrivateChatHeader() {
-    const { actor } = useChatContext();
+    const actor = useChatActor();
     const { setAttachment, roomId, setRoomId } = useFloatingChatWidgetContext();
     const room = useChatRoom(roomId);
 
@@ -63,25 +76,38 @@ function PrivateChatHeader() {
         setRoomId(0);
         setAttachment(null);
     };
+
+    if (!room) {
+        return <ChatHeaderSkeleton />;
+    }
+
     return (
-        <div className="flex flex-0 items-center gap-2 border-b p-4">
-            <button className="flex-0" type="button" onClick={handleExitRoom}>
-                <ChevronLeftIcon />
+        <div className="flex shrink-0 items-center gap-3 border-b p-4">
+            <button
+                className="shrink-0 rounded-md p-1 transition-colors hover:bg-muted"
+                type="button"
+                onClick={handleExitRoom}
+                aria-label="Back to conversations"
+            >
+                <ChevronLeftIcon className="size-5" />
             </button>
-            <div className="flex-0">
+            <div className="shrink-0">
                 <Avatar>
-                    <AvatarImage src={partnerPhoto} alt="@shadcn" />
+                    <AvatarImage
+                        src={partnerPhoto}
+                        alt={partner?.member?.name || 'User'}
+                    />
                     <AvatarFallback>
                         <UserIcon />
                     </AvatarFallback>
                 </Avatar>
             </div>
-            <div className="flex-1">
-                <div className="font-bold">
+            <div className="min-w-0 flex-1">
+                <div className="truncate font-semibold">
                     {partner?.member?.name || 'User'}
                 </div>
-                <div className="flex items-center gap-1 text-xs text-green-500">
-                    Online
+                <div className="text-xs text-muted-foreground">
+                    Private chat
                 </div>
             </div>
         </div>
@@ -91,20 +117,21 @@ function PrivateChatHeader() {
 function ChatListHeader() {
     const { auth } = usePageSharedDataProps();
     const photoUrl = auth?.user?.photo_url || DEFAULT_PHOTO;
+
     return (
-        <div className="flex flex-0 items-center gap-2 border-b p-4">
-            <div className="flex-0">
+        <div className="flex shrink-0 items-center gap-3 border-b p-4">
+            <div className="shrink-0">
                 <Avatar>
-                    <AvatarImage src={photoUrl} alt="@shadcn" />
+                    <AvatarImage src={photoUrl} alt="Your profile" />
                     <AvatarFallback>
                         <UserIcon />
                     </AvatarFallback>
                 </Avatar>
             </div>
-            <div className="flex-1">
-                <div className="font-bold">Chats</div>
-                <div className="flex items-center gap-1 text-xs text-green-500">
-                    Online
+            <div className="min-w-0 flex-1">
+                <div className="font-semibold">Messages</div>
+                <div className="text-xs text-muted-foreground">
+                    Your conversations
                 </div>
             </div>
         </div>
@@ -114,9 +141,24 @@ function ChatListHeader() {
 function ChatHeader() {
     const { roomId } = useFloatingChatWidgetContext();
     const room = useChatRoom(roomId);
-    if (room?.type === 'private') return <PrivateChatHeader />;
-    if (room?.type === 'group') return <GroupChatHeader />;
-    return <ChatListHeader />;
+
+    if (!roomId) {
+        return <ChatListHeader />;
+    }
+
+    if (!room) {
+        return <ChatHeaderSkeleton />;
+    }
+
+    if (room.type === 'private') {
+        return <PrivateChatHeader />;
+    }
+
+    if (room.type === 'group') {
+        return <GroupChatHeader />;
+    }
+
+    return <ChatHeaderSkeleton />;
 }
 
 export default function ChatSheet() {
@@ -124,23 +166,23 @@ export default function ChatSheet() {
 
     return (
         <Sheet open={open} onOpenChange={setOpen}>
-            <SheetContent className="flex min-h-screen flex-col gap-0 w-full sm:max-w-120">
+            <SheetContent className="flex w-full min-h-screen flex-col gap-0 p-0 sm:max-w-120">
                 <ChatHeader />
-                <div className="flex flex-1 flex-col">
-                    <div className="relative flex-1">
+                <div className="flex min-h-0 flex-1 flex-col">
+                    <div className="relative min-h-0 flex-1">
                         {roomId ? (
                             <ChatBox
                                 roomId={roomId}
-                                className="absolute top-0 left-0 h-full w-full"
-                            ></ChatBox>
+                                className="absolute inset-0 h-full w-full"
+                            />
                         ) : (
-                            <ChatList className="absolute top-0 left-0 h-full w-full"></ChatList>
+                            <ChatList className="absolute inset-0 h-full w-full" />
                         )}
                     </div>
                     {!!roomId && (
                         <ChatInput
                             roomId={roomId}
-                            className="flex-none border-t"
+                            className="shrink-0 border-t"
                         />
                     )}
                 </div>

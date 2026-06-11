@@ -30,9 +30,7 @@ export default function UserDashboardLayout(props: UserDashboardLayoutProps) {
 
     return (
         <ChatContextProvider actor={{ type: 'user', id: auth.user.id }}>
-            <FloatingChatWidgetContextProvider
-                initialValue={{ actor: { type: 'user', id: auth.user.id } }}
-            >
+            <FloatingChatWidgetContextProvider>
                 <SidebarProvider>
                     <SidebarSection {...props} />
                     <SidebarInset>

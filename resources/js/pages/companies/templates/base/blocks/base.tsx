@@ -1,31 +1,99 @@
 import { cn } from '@/lib/utils';
-import type { ComponentConfig, DefaultComponentProps } from '@puckeditor/core';
+import type {
+    ComponentConfig,
+    DefaultComponentProps,
+    PuckComponent,
+} from '@puckeditor/core';
 import type { CSSProperties } from 'react';
 
 type LayoutComponentProps = {
-    backgroundColor: string;
-    textColor: string;
-    width?: number;
-    height?: number;
+    backgroundColor?: string;
+    textColor?: string;
+    width?: string;
+    height?: string;
     colSpan?: number;
     rowSpan?: number;
     flexGrow?: number;
     flexShrink?: number;
-    flexBasis?: number;
+    flexBasis?: string;
     alignSelf?: string;
     order?: number;
+    className?: string;
 };
 
 export type WithLayoutComponentProps<T extends DefaultComponentProps> = T &
     LayoutComponentProps;
 
-export function withLayoutComponentConfig(config: ComponentConfig) {
+export function withLayoutComponentConfig(config: any): ComponentConfig {
+    const render: PuckComponent<DefaultComponentProps> = (props) => {
+        const extraClasses: string[] = [];
+        const extraStyles: CSSProperties = {};
+
+        if (props.width) {
+            extraClasses.push(props.width);
+        }
+        if (props.height) {
+            extraClasses.push(props.height);
+        }
+        if (props.backgroundColor) {
+            extraClasses.push(props.backgroundColor);
+        }
+        if (props.textColor) {
+            extraClasses.push(props.textColor);
+        }
+
+        if (props.colSpan) {
+            extraStyles.gridColumn = `span ${Math.max(
+                Math.min(props.colSpan, 12),
+                1,
+            )}`;
+        }
+
+        if (props.rowSpan) {
+            extraStyles.gridRow = `span ${Math.max(
+                Math.min(props.rowSpan, 12),
+                1,
+            )}`;
+        }
+
+        if (typeof props.flexGrow === 'number') {
+            extraStyles.flexGrow = props.flexGrow;
+        }
+
+        if (typeof props.flexShrink === 'number') {
+            extraStyles.flexShrink = props.flexShrink;
+        }
+
+        if (props.flexBasis) {
+            extraStyles.flexBasis = props.flexBasis;
+        }
+
+        if (props.alignSelf) {
+            extraStyles.alignSelf = props.alignSelf;
+        }
+
+        if (typeof props.order === 'number') {
+            extraStyles.order = props.order;
+        }
+
+        return (
+            <div
+                ref={props.puck.dragRef}
+                className={cn(props.className, extraClasses.join(' '))}
+                style={extraStyles}
+            >
+                {config.render(props)}
+            </div>
+        );
+    };
+
     return {
         ...config,
         resolveFields: (data, params) => {
             let resolvedFields = config.resolveFields
-                ? config.resolveFields(data, params as any)
+                ? config.resolveFields(data, params)
                 : params.fields;
+
             resolvedFields = {
                 ...resolvedFields,
                 backgroundColor: {
@@ -98,7 +166,7 @@ export function withLayoutComponentConfig(config: ComponentConfig) {
                         { value: 'h-3/4', label: '75%' },
                     ],
                 },
-            } as any;
+            };
 
             if (params.parent?.type === 'Grid') {
                 resolvedFields = {
@@ -156,15 +224,10 @@ export function withLayoutComponentConfig(config: ComponentConfig) {
         },
         defaultProps: {
             ...config.defaultProps,
-            // Size
             width: 'w-auto',
             height: 'h-auto',
-
-            // Grid defaults
             colSpan: 1,
             rowSpan: 1,
-
-            // Flex item defaults
             flexGrow: 0,
             flexShrink: 1,
             flexBasis: 'auto',
@@ -172,86 +235,6 @@ export function withLayoutComponentConfig(config: ComponentConfig) {
             order: 0,
         },
         inline: true,
-        render: (props) => {
-            const extraClasses = [];
-            const extraStyles: CSSProperties = {};
-
-            // Width / Height utility classes
-            if (props.width) extraClasses.push(props.width);
-            if (props.height) extraClasses.push(props.height);
-            if (props.backgroundColor) extraClasses.push(props.backgroundColor);
-            if (props.textColor) extraClasses.push(props.textColor);
-            // -----------------
-            // GRID SUPPORT
-            // -----------------
-            if (props?.colSpan) {
-                extraStyles.gridColumn = `span ${Math.max(
-                    Math.min(props.colSpan, 12),
-                    1,
-                )}`;
-            }
-
-            if (props?.rowSpan) {
-                extraStyles.gridRow = `span ${Math.max(
-                    Math.min(props.rowSpan, 12),
-                    1,
-                )}`;
-            }
-
-            // -----------------
-            // FLEX ITEM SUPPORT
-            // -----------------
-            if (typeof props.flexGrow === 'number') {
-                extraStyles.flexGrow = props.flexGrow;
-            }
-
-            if (typeof props.flexShrink === 'number') {
-                extraStyles.flexShrink = props.flexShrink;
-            }
-
-            if (props.flexBasis) {
-                extraStyles.flexBasis = props.flexBasis;
-            }
-
-            if (props.alignSelf) {
-                extraStyles.alignSelf = props.alignSelf;
-            }
-
-            if (typeof props.order === 'number') {
-                extraStyles.order = props.order;
-            }
-
-            return (
-                <div
-                    ref={props.puck.dragRef}
-                    className={cn(props.className, extraClasses.join(' '))}
-                    style={{
-                        ...extraStyles,
-                    }}
-                >
-                    {config.render(props)}
-                </div>
-            );
-        },
-        // render: (props) => {
-        //   const element = config.render(props);
-        //   const extraClasses = [];
-        //   if (props.width) {
-        //     extraClasses.push(props.width);
-        //   }
-        //   if (props.height) {
-        //     extraClasses.push(props.height);
-        //   }
-        //   if (props.colSpan) {
-        //     extraClasses.push(`col-span-${props.colSpan}`);
-        //   }
-        //   if (props.rowSpan) {
-        //     extraClasses.push(`row-span-${props.rowSpan}`);
-        //   }
-        //   return cloneElement(element, {
-        //     className:
-        //       `${element.props.className || ''} ${extraClasses.join(' ')}`.trim(),
-        //   });
-        // },
+        render,
     };
 }

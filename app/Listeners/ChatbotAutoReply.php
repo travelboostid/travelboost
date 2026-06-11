@@ -25,14 +25,14 @@ class ChatbotAutoReply
     {
         try {
             retry(
-                3,
+                [3000, 5000],
                 fn () => ChatbotAgent::make($event->message)->reply(),
-                [3000, 5000]
             );
         } catch (Throwable $e) {
             Log::error('ChatbotAutoReply job failed', [
                 'message_id' => $event->message->id,
-                'error' => $e?->getMessage() ?? 'Unknown error',
+                'error' => $e->getMessage(),
+                'exception' => $e::class,
             ]);
         }
     }
