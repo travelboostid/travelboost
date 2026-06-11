@@ -25,32 +25,32 @@ class WalletController extends Controller
         );
 
         $wallet = $this->resolveWallet($company, $request->query('wallet'));
-        $balance = $wallet->balance;
+        $balance = $wallet->balanceInt;
 
         $thisMonthStart = now()->startOfMonth();
         $thisMonthEnd = now()->endOfMonth();
         $lastMonthStart = now()->subMonth()->startOfMonth();
         $lastMonthEnd = now()->subMonth()->endOfMonth();
 
-        $thisIncome = $wallet->transactions()
+        $thisIncome = $wallet->walletTransactions()
             ->where('amount', '>', 0)
             ->whereBetween('created_at', [$thisMonthStart, $thisMonthEnd])
             ->sum('amount');
 
         $thisExpense = abs(
-            $wallet->transactions()
+            $wallet->walletTransactions()
                 ->where('amount', '<', 0)
                 ->whereBetween('created_at', [$thisMonthStart, $thisMonthEnd])
                 ->sum('amount')
         );
 
-        $lastIncome = $wallet->transactions()
+        $lastIncome = $wallet->walletTransactions()
             ->where('amount', '>', 0)
             ->whereBetween('created_at', [$lastMonthStart, $lastMonthEnd])
             ->sum('amount');
 
         $lastExpense = abs(
-            $wallet->transactions()
+            $wallet->walletTransactions()
                 ->where('amount', '<', 0)
                 ->whereBetween('created_at', [$lastMonthStart, $lastMonthEnd])
                 ->sum('amount')
@@ -59,7 +59,7 @@ class WalletController extends Controller
         $thisNet = $thisIncome - $thisExpense;
         $lastNet = $lastIncome - $lastExpense;
 
-        $transactions = $wallet->transactions()
+        $transactions = $wallet->walletTransactions()
             ->latest()
             ->take(10)
             ->get()
@@ -106,9 +106,9 @@ class WalletController extends Controller
             'wallet' => [
                 'id' => $wallet->id,
                 'name' => $wallet->name,
-                'slug' => $wallet->slug,
+                'slug' => $this->presentedWalletSlug($wallet),
                 'description' => $wallet->description,
-                'balance' => $wallet->balance,
+                'balance' => $wallet->balanceInt,
             ],
             'wallets' => $this->walletOptions($company),
             'pendingTopup' => $pendingTopup
@@ -120,7 +120,11 @@ class WalletController extends Controller
     private function resolveWallet(Company $company, ?string $slug): Wallet
     {
         $defaultSlug = (string) config('wallet.wallet.default.slug', 'main');
-        $slug = filled($slug) ? $slug : $defaultSlug;
+        $slug = filled($slug) ? (string) $slug : $defaultSlug;
+
+        if ($slug === 'main') {
+            $slug = $defaultSlug;
+        }
 
         /** @var Wallet|null $wallet */
         $wallet = $company->wallets()->where('slug', $slug)->first();
@@ -144,13 +148,20 @@ class WalletController extends Controller
             ->map(fn (Wallet $wallet) => [
                 'id' => $wallet->id,
                 'name' => $wallet->name,
-                'slug' => $wallet->slug,
+                'slug' => $this->presentedWalletSlug($wallet),
                 'description' => $wallet->description,
-                'balance' => $wallet->balance,
+                'balance' => $wallet->balanceInt,
                 'is_default' => $wallet->slug === $defaultSlug,
             ])
             ->values()
             ->all();
+    }
+
+    private function presentedWalletSlug(Wallet $wallet): string
+    {
+        $defaultSlug = (string) config('wallet.wallet.default.slug', 'main');
+
+        return $wallet->slug === $defaultSlug ? 'main' : $wallet->slug;
     }
 
     private function growthPercentage(int $current, int $previous): float

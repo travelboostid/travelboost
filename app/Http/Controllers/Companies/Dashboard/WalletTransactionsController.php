@@ -37,7 +37,7 @@ class WalletTransactionsController extends Controller
             $type = 'all';
         }
 
-        $periodQuery = $wallet->transactions()
+        $periodQuery = $wallet->walletTransactions()
             ->whereBetween('created_at', [$from, $to]);
 
         $transactionCount = (clone $periodQuery)->count();
@@ -71,7 +71,7 @@ class WalletTransactionsController extends Controller
 
         return Inertia::render('companies/dashboard/wallet-transactions/index', [
             'filters' => [
-                'wallet' => $wallet->slug,
+                'wallet' => $this->presentedWalletSlug($wallet),
                 'from' => $from->toDateString(),
                 'to' => $to->toDateString(),
                 'type' => $type,
@@ -79,9 +79,9 @@ class WalletTransactionsController extends Controller
             'wallet' => [
                 'id' => $wallet->id,
                 'name' => $wallet->name,
-                'slug' => $wallet->slug,
+                'slug' => $this->presentedWalletSlug($wallet),
                 'description' => $wallet->description,
-                'balance' => $wallet->balance,
+                'balance' => $wallet->balanceInt,
             ],
             'wallets' => $this->walletOptions($company),
             'transaction_count' => $transactionCount,
@@ -94,7 +94,11 @@ class WalletTransactionsController extends Controller
     private function resolveWallet(Company $company, ?string $slug): Wallet
     {
         $defaultSlug = (string) config('wallet.wallet.default.slug', 'main');
-        $slug = filled($slug) ? $slug : $defaultSlug;
+        $slug = filled($slug) ? (string) $slug : $defaultSlug;
+
+        if ($slug === 'main') {
+            $slug = $defaultSlug;
+        }
 
         /** @var Wallet|null $wallet */
         $wallet = $company->wallets()->where('slug', $slug)->first();
@@ -118,12 +122,19 @@ class WalletTransactionsController extends Controller
             ->map(fn (Wallet $wallet) => [
                 'id' => $wallet->id,
                 'name' => $wallet->name,
-                'slug' => $wallet->slug,
+                'slug' => $this->presentedWalletSlug($wallet),
                 'description' => $wallet->description,
-                'balance' => $wallet->balance,
+                'balance' => $wallet->balanceInt,
                 'is_default' => $wallet->slug === $defaultSlug,
             ])
             ->values()
             ->all();
+    }
+
+    private function presentedWalletSlug(Wallet $wallet): string
+    {
+        $defaultSlug = (string) config('wallet.wallet.default.slug', 'main');
+
+        return $wallet->slug === $defaultSlug ? 'main' : $wallet->slug;
     }
 }
