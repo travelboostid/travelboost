@@ -60,7 +60,7 @@ import {
 } from 'lucide-react';
 import type React from 'react';
 import { useEffect, useMemo, useState } from 'react';
-import { FormattedMessage, useIntl } from 'react-intl';
+import { FormattedMessage } from 'react-intl';
 
 type CommissionType = 'percent' | 'nominal';
 type SortDirection = 'asc' | 'desc';
@@ -189,6 +189,14 @@ function formatThousands(value: string | number): string {
     return new Intl.NumberFormat('id-ID', {
         maximumFractionDigits: 0,
     }).format(numericValue);
+}
+
+function formatDateSaveLabel(count: number): string {
+    return `Save ${count} ${count === 1 ? 'Date' : 'Dates'}`;
+}
+
+function formatScheduleSaveLabel(count: number): string {
+    return `Save ${count} ${count === 1 ? 'Schedule' : 'Schedules'}`;
 }
 
 function SortableHeader({
@@ -685,7 +693,6 @@ function CategoryDepartureDialog({
     categories: ProductCommissionCategory[];
     additionalRules: AdditionalRule[];
 }) {
-    const intl = useIntl();
     const { company } = usePageSharedDataProps();
     const [open, setOpen] = useState(false);
     const [selectedTierId, setSelectedTierId] = useState<number | ''>(
@@ -1078,13 +1085,7 @@ function CategoryDepartureDialog({
                             className="gap-2 rounded-xl"
                         >
                             <SaveIcon className="h-4 w-4" />
-                            {intl.formatMessage(
-                                {
-                                    defaultMessage:
-                                        'Save {count, plural, one {# Date} other {# Dates}}',
-                                },
-                                { count: validRows.length },
-                            )}
+                            {formatDateSaveLabel(validRows.length)}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
@@ -1101,7 +1102,6 @@ function TourScheduleDialog({
     tours: Tour[];
     additionalRules: AdditionalRule[];
 }) {
-    const intl = useIntl();
     const { company } = usePageSharedDataProps();
     const [open, setOpen] = useState(false);
     const [selectedTierId, setSelectedTierId] = useState<number | ''>(
@@ -1248,12 +1248,7 @@ function TourScheduleDialog({
                                     <FormattedMessage defaultMessage="Tour Product" />
                                 </div>
                                 <Command>
-                                    <CommandInput
-                                        placeholder={intl.formatMessage({
-                                            defaultMessage:
-                                                'Search tour code or name...',
-                                        })}
-                                    />
+                                    <CommandInput placeholder="Search tour code or name..." />
                                     <CommandList className="max-h-[420px]">
                                         <CommandEmpty>
                                             <FormattedMessage defaultMessage="No tour product found." />
@@ -1492,13 +1487,7 @@ function TourScheduleDialog({
                             className="gap-2 rounded-xl"
                         >
                             <SaveIcon className="h-4 w-4" />
-                            {intl.formatMessage(
-                                {
-                                    defaultMessage:
-                                        'Save {count, plural, one {# Schedule} other {# Schedules}}',
-                                },
-                                { count: selectedRows.length },
-                            )}
+                            {formatScheduleSaveLabel(selectedRows.length)}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
@@ -1522,7 +1511,6 @@ function AdditionalRuleEditDialog({
     onOpenChange?: (open: boolean) => void;
     hideTrigger?: boolean;
 }) {
-    const intl = useIntl();
     const { company } = usePageSharedDataProps();
     const schedule = rule.tour_schedule || rule.tourSchedule;
     const [internalOpen, setInternalOpen] = useState(false);
@@ -1692,9 +1680,7 @@ function AdditionalRuleEditDialog({
                             <p className="font-semibold text-slate-900 dark:text-slate-100">
                                 {rule.tour
                                     ? `${rule.tour.code} - ${rule.tour.name}`
-                                    : intl.formatMessage({
-                                          defaultMessage: 'Tour Schedule',
-                                      })}
+                                    : 'Tour Schedule'}
                             </p>
                             <p className="mt-1 text-muted-foreground">
                                 {formatSchedule(schedule)}
@@ -1755,7 +1741,6 @@ function AdditionalRuleActions({
     categories: ProductCommissionCategory[];
     onDelete: (rule: AdditionalRule) => void;
 }) {
-    const intl = useIntl();
     const [editOpen, setEditOpen] = useState(false);
 
     return (
@@ -1769,11 +1754,7 @@ function AdditionalRuleActions({
                         className="h-8 w-8 text-secondary-foreground hover:bg-secondary/80 shadow-sm"
                     >
                         <MoreHorizontal className="h-4 w-4" />
-                        <span className="sr-only">
-                            {intl.formatMessage({
-                                defaultMessage: 'Open actions',
-                            })}
-                        </span>
+                        <span className="sr-only">Open actions</span>
                     </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-44 rounded-xl">
@@ -1822,7 +1803,6 @@ function AdditionalRulesTable({
     tiers: Tier[];
     categories: ProductCommissionCategory[];
 }) {
-    const intl = useIntl();
     const { company } = usePageSharedDataProps();
     const [sortKey, setSortKey] = useState<AdditionalSortKey>('created_at');
     const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
@@ -1889,13 +1869,7 @@ function AdditionalRulesTable({
     };
 
     const deleteRule = (rule: AdditionalRule) => {
-        if (
-            !confirm(
-                intl.formatMessage({
-                    defaultMessage: 'Delete this additional commission rule?',
-                }),
-            )
-        ) {
+        if (!confirm('Delete this additional commission rule?')) {
             return;
         }
 
@@ -2093,23 +2067,17 @@ export default function Page({
     additionalRules: AdditionalRule[];
     view?: PageView;
 }) {
-    const intl = useIntl();
-
     return (
         <CompanyDashboardLayout
             breadcrumb={[
                 {
-                    title: intl.formatMessage({
-                        defaultMessage: 'Commission Setup',
-                    }),
+                    title: 'Commission Setup',
                 },
                 {
-                    title: intl.formatMessage({
-                        defaultMessage:
-                            view === 'base'
-                                ? 'Base Commission Rules'
-                                : 'Additional Commission Rules',
-                    }),
+                    title:
+                        view === 'base'
+                            ? 'Base Commission Rules'
+                            : 'Additional Commission Rules',
                 },
             ]}
             openMenuIds={['commission-setup']}
