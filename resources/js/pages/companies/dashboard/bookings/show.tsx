@@ -20,6 +20,7 @@ import type {
     TourPrice,
     TravelDocumentEntry,
     VendorInfo,
+    VisaCategoryItemOption,
 } from '@/types/booking';
 import {
     calculateAddOnPricing,
@@ -52,6 +53,10 @@ type Passenger = {
     passport_file_path: string | null;
     visa_number: string | null;
     visa_file_path: string | null;
+    visa_category_item_id: number | null;
+    visa_type_description: string | null;
+    visa_type_price: number | string | null;
+    visa_type_is_taxable: boolean | number | null;
     room_type: string | null;
     note: string | null;
 };
@@ -93,6 +98,7 @@ type PageProps = {
     booking: BookingData;
     tourPrices: TourPrice[];
     addOns: AddOnItem[];
+    visaCategoryItems?: VisaCategoryItemOption[];
     minimumDownPaymentPct: number | null;
     downPaymentRule?: DownPaymentRule;
     minimumVatPct: number;
@@ -130,6 +136,12 @@ function passengersToGuests(passengers: Passenger[]): GuestEntry[] {
             price: p.price_amount ?? 0,
             originalPrice: p.price_amount ?? 0,
             roomTypeDescription: p.room_type ?? '',
+            visaCategoryItemId: p.visa_category_item_id
+                ? Number(p.visa_category_item_id)
+                : null,
+            visaTypeDescription: p.visa_type_description ?? null,
+            visaTypePrice: Number(p.visa_type_price ?? 0),
+            visaTypeIsTaxable: Boolean(p.visa_type_is_taxable),
             note: p.note ?? '',
             bookingPassengerId: p.id,
         };
@@ -177,6 +189,7 @@ export default function Page({
     booking,
     tourPrices,
     addOns,
+    visaCategoryItems = [],
     minimumDownPaymentPct,
     downPaymentRule = null,
     minimumVatPct,
@@ -197,6 +210,7 @@ export default function Page({
             booking={booking}
             tourPrices={tourPrices}
             addOns={addOns}
+            visaCategoryItems={visaCategoryItems}
             minimumDownPaymentPct={minimumDownPaymentPct}
             downPaymentRule={downPaymentRule}
             minimumVatPct={minimumVatPct}
@@ -219,6 +233,7 @@ function ReadOnlyWizard({
     booking,
     tourPrices,
     addOns: initialAddOns,
+    visaCategoryItems,
     minimumDownPaymentPct,
     downPaymentRule,
     minimumVatPct,
@@ -233,6 +248,7 @@ function ReadOnlyWizard({
     booking: BookingData;
     tourPrices: TourPrice[];
     addOns: AddOnItem[];
+    visaCategoryItems: VisaCategoryItemOption[];
     minimumDownPaymentPct: number | null;
     downPaymentRule: DownPaymentRule;
     minimumVatPct: number;
@@ -507,6 +523,9 @@ function ReadOnlyWizard({
                                                 onGuestUpdate={() => {}}
                                                 onGuestRemove={() => {}}
                                                 tourPrices={tourPrices}
+                                                visaCategoryItems={
+                                                    visaCategoryItems
+                                                }
                                                 maxGuests={99}
                                                 departureDate={departureDate}
                                                 showAddAsGuest={false}

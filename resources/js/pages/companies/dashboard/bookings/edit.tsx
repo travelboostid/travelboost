@@ -27,12 +27,14 @@ import { Button } from '@/components/ui/button';
 import type { WizardStepId } from '@/constants/booking';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { openOnlinePayment } from '@/lib/open-online-payment';
+import { hasOnlinePaymentInstructions } from '@/lib/payment-instructions';
 import type {
     BookingContact,
     GuestEntry,
     TourPrice,
     TravelDocumentEntry,
     VendorInfo,
+    VisaCategoryItemOption,
 } from '@/types/booking';
 import {
     calculateAddOnPricing,
@@ -73,6 +75,10 @@ type Passenger = {
     passport_file_path: string | null;
     visa_number: string | null;
     visa_file_path: string | null;
+    visa_category_item_id: number | null;
+    visa_type_description: string | null;
+    visa_type_price: number | string | null;
+    visa_type_is_taxable: boolean | number | null;
     room_type: string | null;
     note: string | null;
 };
@@ -115,6 +121,7 @@ type PageProps = {
     booking: BookingData;
     tourPrices: TourPrice[];
     addOns: AddOnItem[];
+    visaCategoryItems?: VisaCategoryItemOption[];
     minimumDownPaymentPct: number | null;
     downPaymentRule?: DownPaymentRule;
     minimumVatPct: number;
@@ -156,6 +163,10 @@ function makeEditableDefaultGuest(
         price: 0,
         originalPrice: 0,
         roomTypeDescription: '',
+        visaCategoryItemId: null,
+        visaTypeDescription: null,
+        visaTypePrice: 0,
+        visaTypeIsTaxable: false,
         note: '',
     };
 }
@@ -219,6 +230,12 @@ function passengersToGuests(
             price: restoredPrice,
             originalPrice: restoredOriginalPrice,
             roomTypeDescription: p.room_type ?? '',
+            visaCategoryItemId: p.visa_category_item_id
+                ? Number(p.visa_category_item_id)
+                : null,
+            visaTypeDescription: p.visa_type_description ?? null,
+            visaTypePrice: Number(p.visa_type_price ?? 0),
+            visaTypeIsTaxable: Boolean(p.visa_type_is_taxable),
             note: p.note ?? '',
             passengerId: p.id,
             bookingPassengerId: p.id,
@@ -267,6 +284,7 @@ export default function Page({
     booking,
     tourPrices,
     addOns,
+    visaCategoryItems = [],
     minimumDownPaymentPct,
     downPaymentRule = null,
     minimumVatPct,
@@ -361,6 +379,7 @@ export default function Page({
             booking={booking}
             tourPrices={tourPrices}
             addOns={addOns}
+            visaCategoryItems={visaCategoryItems}
             minimumDownPaymentPct={minimumDownPaymentPct}
             downPaymentRule={downPaymentRule}
             minimumVatPct={minimumVatPct}
@@ -390,6 +409,7 @@ function EditableWizard({
     booking,
     tourPrices,
     addOns: initialAddOns,
+    visaCategoryItems,
     minimumDownPaymentPct,
     downPaymentRule,
     minimumVatPct,
@@ -411,6 +431,7 @@ function EditableWizard({
     booking: BookingData;
     tourPrices: TourPrice[];
     addOns: AddOnItem[];
+    visaCategoryItems: VisaCategoryItemOption[];
     minimumDownPaymentPct: number | null;
     downPaymentRule: DownPaymentRule;
     minimumVatPct: number;
@@ -766,7 +787,8 @@ function EditableWizard({
                 g.lastName.trim() === '' ||
                 g.dateOfBirth.trim() === '' ||
                 g.placeOfBirth.trim() === '' ||
-                g.priceCategory === null
+                g.priceCategory === null ||
+                (visaCategoryItems.length > 0 && g.visaCategoryItemId === null)
             )
                 return false;
 
@@ -867,6 +889,7 @@ function EditableWizard({
                     passport_issue_date: doc?.passportIssueDate || null,
                     passport_expiry_date: doc?.passportExpiryDate || null,
                     visa_number: doc?.visaNumber || null,
+                    visa_category_item_id: guest.visaCategoryItemId,
                     price_category: guest.priceCategory,
                     price_amount: guest.price,
                     room_type: guest.roomTypeDescription || null,
@@ -1111,6 +1134,15 @@ function EditableWizard({
                 },
             )
             .then((response) => {
+                const payment = response.data?.payment as
+                    | {
+                          id?: number | string;
+                          provider?: string | null;
+                          amount?: number | string | null;
+                          status?: string | null;
+                          payload?: Record<string, unknown>;
+                      }
+                    | undefined;
                 const paymentId = response.data?.payment?.id as
                     | number
                     | string
@@ -1118,8 +1150,14 @@ function EditableWizard({
                 const payload = response.data?.payment?.payload as
                     | Record<string, unknown>
                     | undefined;
+                const provider = payment?.provider ?? 'midtrans';
+                const paymentAmount = Number(payment?.amount ?? finalAmount);
 
-                if (!payload?.order_id) {
+                if (
+                    !payload ||
+                    (!hasOnlinePaymentInstructions(provider, payload) &&
+                        Object.keys(payload).length === 0)
+                ) {
                     setPaymentErrorMessage(
                         intl.formatMessage({
                             defaultMessage:
@@ -1133,9 +1171,11 @@ function EditableWizard({
                 openOnlinePayment(
                     {
                         id: paymentId,
-                        status: 'pending',
-                        provider: 'midtrans',
-                        amount: finalAmount,
+                        status: payment?.status ?? 'pending',
+                        provider,
+                        amount: Number.isFinite(paymentAmount)
+                            ? paymentAmount
+                            : finalAmount,
                         payload,
                     },
                     {
@@ -1214,10 +1254,10 @@ function EditableWizard({
         finalAmount: number,
         manualData?: ManualPaymentData,
     ) => {
-        setIsSubmitting(true);
         setPaymentErrorMessage(null);
 
         if (paymentMethod === 'midtrans') {
+            setIsSubmitting(false);
             setPendingOnlinePayment({
                 paymentType,
                 finalAmount,
@@ -1227,6 +1267,8 @@ function EditableWizard({
             setPaymentMethodDialogOpen(true);
             return;
         }
+
+        setIsSubmitting(true);
 
         if (editMode !== 'full') {
             if (paymentMethod === 'manual_transfer') {
@@ -1436,6 +1478,9 @@ function EditableWizard({
                                                     handleGuestRemove
                                                 }
                                                 tourPrices={tourPrices}
+                                                visaCategoryItems={
+                                                    visaCategoryItems
+                                                }
                                                 departureDate={departureDate}
                                                 contactGuestId={contactGuestId}
                                                 onContactGuestToggle={
@@ -1672,6 +1717,7 @@ function EditableWizard({
                         return;
                     }
 
+                    setIsSubmitting(true);
                     setPaymentMethodDialogOpen(false);
                     proceedWithOnlinePayment(methodId, pendingOnlinePayment);
                     setPendingOnlinePayment(null);

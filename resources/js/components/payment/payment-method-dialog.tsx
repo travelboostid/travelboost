@@ -38,14 +38,10 @@ export function PaymentMethodDialog({
         null,
     );
     const paymentMethods = usePaymentMethods();
-    const methods = paymentMethods.data?.data ?? [];
+    const methods = paymentMethods.data ?? [];
     const selectedMethod = findPaymentMethodById(methods, selectedMethodId);
 
     const handleOpenChange = (nextOpen: boolean) => {
-        if (!nextOpen && loading) {
-            return;
-        }
-
         onOpenChange(nextOpen);
 
         if (!nextOpen) {
@@ -112,10 +108,7 @@ export function PaymentMethodDialog({
                     )}
 
                     <div className="flex w-full flex-col-reverse gap-2 sm:flex-row sm:items-stretch">
-                        <AlertDialogCancel
-                            disabled={loading}
-                            className="mt-0 h-11 w-full sm:flex-1"
-                        >
+                        <AlertDialogCancel className="mt-0 h-11 w-full sm:flex-1">
                             Cancel
                         </AlertDialogCancel>
                         <Button

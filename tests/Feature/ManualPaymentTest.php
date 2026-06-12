@@ -2,12 +2,15 @@
 
 use App\Enums\BookingStatus;
 use App\Enums\CompanyTeamStatus;
+use App\Enums\PaymentMethodCategory;
+use App\Enums\PaymentMethodStatus;
 use App\Enums\PaymentStatus;
 use App\Enums\VendorAgentPartnerStatus;
 use App\Models\Booking;
 use App\Models\Company;
 use App\Models\CompanyTeam;
 use App\Models\Domain;
+use App\Models\PaymentMethod;
 use App\Models\Tour;
 use App\Models\TourAvailability;
 use App\Models\TourSchedule;
@@ -16,6 +19,7 @@ use App\Models\VendorAgentPartner;
 use Database\Seeders\Common\RolePermissionSeeder;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 
 beforeEach(function () {
@@ -686,6 +690,88 @@ test('customer can create an online booking payment with midtrans core api', fun
         'payable_id' => $booking->id,
         'provider' => 'midtrans',
         'payment_method' => 'bca_va',
+        'amount' => 300_000,
+        'status' => 'pending',
+    ]);
+
+    expect($booking->fresh()->payment_mode)->toBe('online');
+});
+
+test('customer can create an online booking payment with prismalink', function () {
+    config([
+        'prismalink.merchant_id' => 'merchant',
+        'prismalink.merchant_key_id' => 'key',
+        'prismalink.secret_key' => 'secret',
+        'prismalink.backend_callback_url' => 'https://tunnel-8000.travelboost.co.id/webhooks/prismalink/backend-callback',
+        'prismalink.frontend_callback_url' => 'https://tunnel-8000.travelboost.co.id',
+    ]);
+
+    Http::fake([
+        'api-staging.plink.co.id/*' => Http::response([
+            'response_code' => 'PL000',
+            'plink_ref_no' => 'PLINK-BOOKING-1',
+            'transaction_status' => 'PNDNG',
+            'validity' => now()->addDay()->toDateTimeString(),
+            'va_number_list' => json_encode([
+                ['bank' => 'BRI', 'va' => '77788000123456'],
+            ]),
+        ]),
+    ]);
+
+    $user = User::factory()->create();
+    $vendor = Company::factory()->create(['type' => 'vendor']);
+    $vendor->companySetting()->updateOrCreate([], [
+        'minimum_down_payment' => 30,
+    ]);
+    $tour = Tour::factory()->create(['company_id' => $vendor->id]);
+    $booking = Booking::factory()->create([
+        'user_id' => $user->id,
+        'vendor_id' => $vendor->id,
+        'tour_id' => $tour->id,
+        'status' => 'reserved',
+        'grand_total' => 1_000_000,
+    ]);
+
+    $paymentMethod = PaymentMethod::query()->create([
+        'provider' => 'prismalink',
+        'method' => 'bri_va',
+        'name' => 'PrismaLink BRI Virtual Account',
+        'description' => 'Test PrismaLink BRI VA',
+        'category' => PaymentMethodCategory::BANK_TRANSFER,
+        'status' => PaymentMethodStatus::ENABLED,
+        'meta' => [
+            'bank_id' => '002',
+        ],
+    ]);
+
+    $response = $this->actingAs($user)->postJson("/bookings/{$booking->id}/online-payment", [
+        'payment_type' => 'down_payment',
+        'amount' => 300_000,
+        'payment_method_id' => $paymentMethod->id,
+    ]);
+
+    $response->assertOk()
+        ->assertJsonPath('payment.provider', 'prismalink')
+        ->assertJsonPath('payment.payload.instruction_type', 'va')
+        ->assertJsonPath('payment.payload.bank', 'bri')
+        ->assertJsonPath('payment.payload.va_number', '77788000123456')
+        ->assertJsonPath('payment.payload.payment_type', 'down_payment');
+
+    Http::assertSent(function ($request): bool {
+        $payload = json_decode($request->body(), true);
+
+        return is_array($payload)
+            && ($payload['backend_callback_url'] ?? null) === 'https://tunnel-8000.travelboost.co.id/webhooks/prismalink/backend-callback'
+            && ($payload['frontend_callback_url'] ?? null) === 'https://tunnel-8000.travelboost.co.id';
+    });
+
+    $this->assertDatabaseHas('payments', [
+        'owner_type' => User::class,
+        'owner_id' => $user->id,
+        'payable_type' => Booking::class,
+        'payable_id' => $booking->id,
+        'provider' => 'prismalink',
+        'payment_method' => 'bri_va',
         'amount' => 300_000,
         'status' => 'pending',
     ]);

@@ -30,6 +30,13 @@ export interface TourPrice {
     commission: number; // fixed commission amount
 }
 
+export interface VisaCategoryItemOption {
+    id: number;
+    description: string;
+    price: number;
+    isTaxable: boolean;
+}
+
 export interface RoomType {
     id: number;
     name: string;
@@ -52,6 +59,10 @@ export interface GuestEntry {
     price: number; // discounted price (after promotion)
     originalPrice: number; // base price before promotion discount
     roomTypeDescription: string; // price_categories.description (auto-derived)
+    visaCategoryItemId: number | null;
+    visaTypeDescription: string | null;
+    visaTypePrice: number;
+    visaTypeIsTaxable: boolean;
     note: string;
 }
 
@@ -117,6 +128,8 @@ export interface BookingPricing {
     subtotalGuests: number;
     discountedSubtotal: number;
     promotionDiscount: number; // total discount from promotions
+    visaTotal: number;
+    taxableVisaTotal: number;
     platformFee: number;
     ppn: number;
     agentCommission: number;

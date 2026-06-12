@@ -52,9 +52,19 @@ export function calculateBookingPricing(
         0,
     );
     const promotionDiscount = Math.max(0, subtotalGuests - discountedSubtotal);
+    const visaTotal = guests.reduce(
+        (sum, g) => sum + (g.visaTypePrice ?? 0),
+        0,
+    );
+    const taxableVisaTotal = guests.reduce(
+        (sum, g) => (g.visaTypeIsTaxable ? sum + (g.visaTypePrice ?? 0) : sum),
+        0,
+    );
     const paxCount = guests.length;
     const platformFee = paxCount * platformFeePerPax;
-    const ppn = Math.round(discountedSubtotal * (vatPct / 100));
+    const ppn = Math.round(
+        (discountedSubtotal + taxableVisaTotal) * (vatPct / 100),
+    );
     const calculatedAgentCommission = tourPrices.length
         ? guests.reduce(
               (sum, guest) => sum + commissionForGuest(guest, tourPrices),
@@ -64,13 +74,15 @@ export function calculateBookingPricing(
     const agentFee = tourPrices.length
         ? calculatedAgentCommission
         : agentCommission;
-    const totalPrice = discountedSubtotal + platformFee + ppn;
+    const totalPrice = discountedSubtotal + visaTotal + platformFee + ppn;
     const totalPayment = totalPrice;
 
     return {
         subtotalGuests,
         discountedSubtotal,
         promotionDiscount,
+        visaTotal,
+        taxableVisaTotal,
         platformFee,
         ppn,
         agentCommission: agentFee,

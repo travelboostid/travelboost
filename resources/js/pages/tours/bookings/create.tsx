@@ -38,6 +38,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import type { WizardStepId } from '@/constants/booking';
+import { hasOnlinePaymentInstructions } from '@/lib/payment-instructions';
 import { refreshPageAfterPayment } from '@/lib/refresh-after-payment';
 import type {
     BookingContact,
@@ -46,6 +47,7 @@ import type {
     GuestEntry,
     SavedPassengerOption,
     TravelDocumentEntry,
+    VisaCategoryItemOption,
 } from '@/types/booking';
 import {
     calculateAddOnPricing,
@@ -190,6 +192,10 @@ function makeDefaultGuest(
         price: 0,
         originalPrice: 0,
         roomTypeDescription: '',
+        visaCategoryItemId: null,
+        visaTypeDescription: null,
+        visaTypePrice: 0,
+        visaTypeIsTaxable: false,
         note: '',
     };
 }
@@ -339,6 +345,16 @@ function isConfirmedPaymentResult(
     );
 }
 
+function bookingIdFromPageProps(pageProps: unknown): number | string | null {
+    const bookingId = (pageProps as any)?.existingBooking?.id;
+
+    if (typeof bookingId === 'number' || typeof bookingId === 'string') {
+        return bookingId;
+    }
+
+    return null;
+}
+
 export default function Page() {
     const {
         tour,
@@ -352,6 +368,7 @@ export default function Page() {
         availability,
         bookingSeatLimit,
         addOns,
+        visaCategoryItems = [],
         existingBooking,
         bookingTimeLimitMinutes,
         minimumDownPaymentPct,
@@ -382,6 +399,7 @@ export default function Page() {
         dashboardBookingContext,
         flash,
     } = usePage<any>().props as any;
+    const visaTypeOptions = visaCategoryItems as VisaCategoryItemOption[];
     const isDashboardBooking = Boolean(dashboardBookingContext?.isDashboard);
     const bookingActionBaseUrl =
         dashboardBookingContext?.bookingActionBaseUrl ?? '/bookings';
@@ -836,6 +854,12 @@ export default function Page() {
                 roomTypeDescription:
                     p.room_type ??
                     (matchedPrice ? matchedPrice.description : ''),
+                visaCategoryItemId: p.visa_category_item_id
+                    ? Number(p.visa_category_item_id)
+                    : null,
+                visaTypeDescription: p.visa_type_description ?? null,
+                visaTypePrice: Number(p.visa_type_price ?? 0),
+                visaTypeIsTaxable: Boolean(p.visa_type_is_taxable),
                 note: p.note ?? '',
             });
         }
@@ -1374,6 +1398,7 @@ export default function Page() {
                     pob: g.placeOfBirth || null,
                     price_category: g.priceCategory,
                     price_amount: g.price,
+                    visa_category_item_id: g.visaCategoryItemId,
                     room_type: g.roomTypeDescription || null,
                     room_number: null,
                     note: g.note || null,
@@ -1668,7 +1693,8 @@ export default function Page() {
                 g.lastName.trim() === '' ||
                 g.dateOfBirth.trim() === '' ||
                 g.placeOfBirth.trim() === '' ||
-                g.priceCategory === null
+                g.priceCategory === null ||
+                (visaTypeOptions.length > 0 && g.visaCategoryItemId === null)
             )
                 return false;
 
@@ -1841,18 +1867,30 @@ export default function Page() {
                 },
             )
             .then((response) => {
+                const payment = response.data?.payment as
+                    | {
+                          id?: number | string;
+                          provider?: string | null;
+                          amount?: number | string | null;
+                          status?: string | null;
+                          payload?: Record<string, unknown>;
+                      }
+                    | undefined;
                 const paymentPayload = response.data?.payment?.payload as
                     | Record<string, unknown>
                     | undefined;
-                const paymentId = response.data?.payment?.id as
-                    | number
-                    | string
-                    | undefined;
+                const paymentId = payment?.id;
+                const provider = payment?.provider ?? 'midtrans';
+                const paymentAmount = Number(payment?.amount ?? finalAmount);
                 const pendingResult = response.data?.bookingPaymentResult as
                     | BookingPaymentResultData
                     | undefined;
 
-                if (!paymentPayload?.order_id) {
+                if (
+                    !paymentPayload ||
+                    (!hasOnlinePaymentInstructions(provider, paymentPayload) &&
+                        Object.keys(paymentPayload).length === 0)
+                ) {
                     setActiveOnlinePayment(null);
                     setPaymentErrorMessage(
                         'Online payment could not be started. Please try again.',
@@ -1865,8 +1903,10 @@ export default function Page() {
                     bookingId,
                     paymentId,
                     {
-                        provider: 'midtrans',
-                        amount: finalAmount,
+                        provider,
+                        amount: Number.isFinite(paymentAmount)
+                            ? paymentAmount
+                            : finalAmount,
                         payload: paymentPayload,
                     },
                     pendingResult,
@@ -1938,8 +1978,10 @@ export default function Page() {
         router.post(storeUrl, payload as any, {
             forceFormData: true,
             preserveScroll: true,
-            onSuccess: () => {
-                const bookingId = existingBooking?.id;
+            onSuccess: (page) => {
+                const bookingId =
+                    bookingIdFromPageProps(page.props) ?? existingBooking?.id;
+
                 if (!bookingId) {
                     setIsSubmitting(false);
                     return;
@@ -2218,6 +2260,7 @@ export default function Page() {
                     visa_file_path: doc?.visaFile
                         ? null
                         : (doc?.visaFilePath ?? null),
+                    visa_category_item_id: g.visaCategoryItemId,
                     room_type: g.roomTypeDescription || null,
                     room_number: roomNumberByGuestId.get(g.id) ?? null,
                     note: g.note || null,
@@ -2250,10 +2293,10 @@ export default function Page() {
         finalAmount: number,
         manualData?: ManualPaymentData,
     ) => {
-        setIsSubmitting(true);
         setPaymentErrorMessage(null);
 
         if (paymentMethod === 'midtrans') {
+            setIsSubmitting(false);
             setPendingMidtransPayment({
                 paymentType,
                 finalAmount,
@@ -2263,6 +2306,8 @@ export default function Page() {
             setPaymentMethodDialogOpen(true);
             return;
         }
+
+        setIsSubmitting(true);
 
         if (!fullPaymentAvailable && paymentType === 'full_payment') {
             setPaymentErrorMessage(
@@ -2329,12 +2374,13 @@ export default function Page() {
         router.post(storeUrl, payload as any, {
             forceFormData: true,
             preserveScroll: true,
-            onSuccess: () => {
+            onSuccess: (page) => {
                 if (!manualData || paymentMethod !== 'manual_transfer') {
                     return;
                 }
 
-                const bookingId = existingBooking?.id;
+                const bookingId =
+                    bookingIdFromPageProps(page.props) ?? existingBooking?.id;
                 if (!bookingId || !manualData.proofFile) {
                     setIsSubmitting(false);
                     return;
@@ -2646,6 +2692,9 @@ export default function Page() {
                                                     handleGuestRemove
                                                 }
                                                 tourPrices={tourPrices}
+                                                visaCategoryItems={
+                                                    visaTypeOptions
+                                                }
                                                 maxGuests={maxSeatTakingGuests}
                                                 departureDate={preselectedDate}
                                                 contactGuestId={contactGuestId}
@@ -2942,6 +2991,7 @@ export default function Page() {
                             return;
                         }
 
+                        setIsSubmitting(true);
                         setPaymentMethodDialogOpen(false);
                         proceedWithMidtransPayment(
                             methodId,

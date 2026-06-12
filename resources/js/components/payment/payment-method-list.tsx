@@ -101,7 +101,7 @@ export function PaymentMethodList({
     onSelect,
 }: PaymentMethodListProps) {
     const paymentMethods = usePaymentMethods();
-    const methods = paymentMethods.data?.data ?? [];
+    const methods = paymentMethods.data ?? [];
 
     if (paymentMethods.isLoading) {
         return <PaymentMethodListSkeleton />;

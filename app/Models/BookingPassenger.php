@@ -28,6 +28,10 @@ class BookingPassenger extends Model
         'visa_number',
         'passport_file_path',
         'visa_file_path',
+        'visa_category_item_id',
+        'visa_type_description',
+        'visa_type_price',
+        'visa_type_is_taxable',
         'price_category',
         'price_amount',
         'note',
@@ -40,11 +44,19 @@ class BookingPassenger extends Model
             'dob' => 'date',
             'passport_issue_date' => 'date',
             'passport_expiry_date' => 'date',
+            'visa_category_item_id' => 'integer',
+            'visa_type_price' => 'decimal:2',
+            'visa_type_is_taxable' => 'boolean',
         ];
     }
 
     public function booking(): BelongsTo
     {
         return $this->belongsTo(Booking::class);
+    }
+
+    public function visaCategoryItem(): BelongsTo
+    {
+        return $this->belongsTo(VisaCategoryItem::class);
     }
 }

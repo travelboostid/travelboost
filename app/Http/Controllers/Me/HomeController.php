@@ -188,6 +188,7 @@ class HomeController extends Controller
                         'label' => $addon->name ?: 'Add-on',
                         'amount' => (float) $addon->price,
                     ])
+                    ->concat($this->nonTaxableVisaSummaryRows($booking))
                     ->values()
                     ->all(),
                 'isProforma' => $isProforma,
@@ -392,6 +393,8 @@ class HomeController extends Controller
             })
             ->values();
 
+        $taxableVisaRows = $this->visaPaymentRows($booking->passengers, true);
+
         $addonRows = ($taxableAddons ?? $booking->addons)
             ->map(fn ($addon): array => [
                 'description' => $addon->name ?: 'Add-on',
@@ -402,9 +405,43 @@ class HomeController extends Controller
             ]);
 
         return $passengerRows
+            ->concat($taxableVisaRows)
             ->concat($addonRows)
             ->values()
             ->all();
+    }
+
+    private function visaPaymentRows(Collection $passengers, bool $taxable): Collection
+    {
+        return $passengers
+            ->filter(fn ($passenger): bool => (float) $passenger->visa_type_price > 0
+                && (bool) $passenger->visa_type_is_taxable === $taxable)
+            ->groupBy(fn ($passenger): string => implode('|', [
+                (string) $passenger->visa_type_description,
+                (string) $passenger->visa_type_price,
+            ]))
+            ->map(function (Collection $group): array {
+                $first = $group->first();
+                $description = (string) ($first->visa_type_description ?: 'Visa Type');
+
+                return [
+                    'description' => 'Visa: '.$description,
+                    'quantity' => $group->count(),
+                    'unit_price' => (float) $first->visa_type_price,
+                    'discount' => 0.0,
+                    'amount' => (float) $group->sum('visa_type_price'),
+                ];
+            })
+            ->values();
+    }
+
+    private function nonTaxableVisaSummaryRows(Booking $booking): Collection
+    {
+        return $this->visaPaymentRows($booking->passengers, false)
+            ->map(fn (array $row): array => [
+                'label' => $row['description'].' (x'.$row['quantity'].')',
+                'amount' => (float) $row['amount'],
+            ]);
     }
 
     private function resolveInvoiceSchedule(Booking $booking): ?TourSchedule

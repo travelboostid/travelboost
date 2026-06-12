@@ -218,6 +218,49 @@ export default function Step4BookingSummary({
         return Array.from(map.values());
     }, [guests]);
 
+    const visaBreakdown = useMemo(() => {
+        const map = new Map<
+            string,
+            {
+                key: string;
+                label: string;
+                qty: number;
+                unitPrice: number;
+                isTaxable: boolean;
+            }
+        >();
+
+        for (const guest of guests) {
+            const label = guest.visaTypeDescription?.trim();
+            const unitPrice = Number(guest.visaTypePrice ?? 0);
+
+            if (!label || unitPrice <= 0) {
+                continue;
+            }
+
+            const key = [
+                guest.visaCategoryItemId ?? label,
+                unitPrice,
+                guest.visaTypeIsTaxable ? 'taxable' : 'non-taxable',
+            ].join(':');
+            const existing = map.get(key);
+
+            if (existing) {
+                existing.qty += 1;
+            } else {
+                map.set(key, {
+                    key,
+                    label,
+                    qty: 1,
+                    unitPrice,
+                    isTaxable: guest.visaTypeIsTaxable,
+                });
+            }
+        }
+
+        return Array.from(map.values());
+    }, [guests]);
+
     const vatPct = minimumVatPct ?? 11;
     const addOnPricing = useMemo(
         () => calculateAddOnPricing(displayAddOns, vatPct),
@@ -226,10 +269,7 @@ export default function Step4BookingSummary({
     const addOnsTotal = addOnPricing.addOnsTotal;
     const taxableAddOnsTotal = addOnPricing.taxableAddOnsTotal;
     const taxableAddOns = useMemo(
-        () =>
-            displayAddOns.filter(
-                (addon) => addon.isTaxable && addon.unitPrice * addon.qty > 0,
-            ),
+        () => displayAddOns.filter((addon) => addon.isTaxable),
         [displayAddOns],
     );
     const nonTaxableAddOns = useMemo(
@@ -742,18 +782,111 @@ export default function Step4BookingSummary({
                                                 </span>
                                             </div>
                                         )}
+                                        {visaBreakdown.map((visa) => (
+                                            <div
+                                                key={`visa-${visa.key}`}
+                                                className="flex items-center justify-between gap-3 text-muted-foreground"
+                                            >
+                                                <div className="min-w-0">
+                                                    <span className="block truncate">
+                                                        {visa.label}
+                                                    </span>
+                                                </div>
+                                                <div className="flex shrink-0 items-center gap-3">
+                                                    <span className="text-xs font-medium text-muted-foreground">
+                                                        x{visa.qty}
+                                                    </span>
+                                                    <span className="min-w-[100px] text-right font-medium text-foreground">
+                                                        {formatCurrency(
+                                                            visa.unitPrice *
+                                                                visa.qty,
+                                                        )}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        ))}
                                         {taxableAddOns.map((addon) => (
                                             <div
                                                 key={`taxable-${addon.key}`}
-                                                className="flex justify-between text-muted-foreground"
+                                                className="flex items-center justify-between gap-3 text-muted-foreground"
                                             >
-                                                <span>{addon.label}</span>
-                                                <span className="font-medium text-foreground">
-                                                    {formatCurrency(
-                                                        addon.unitPrice *
-                                                            addon.qty,
+                                                <div className="flex min-w-0 items-center gap-1.5">
+                                                    <span className="truncate">
+                                                        {addon.label}
+                                                    </span>
+                                                    {addon.tooltip && (
+                                                        <Tooltip>
+                                                            <TooltipTrigger
+                                                                asChild
+                                                            >
+                                                                <HelpCircleIcon className="size-3.5 shrink-0 cursor-help text-muted-foreground" />
+                                                            </TooltipTrigger>
+                                                            <TooltipContent
+                                                                side="right"
+                                                                className="max-w-[200px] text-xs"
+                                                            >
+                                                                {addon.tooltip}
+                                                            </TooltipContent>
+                                                        </Tooltip>
                                                     )}
-                                                </span>
+                                                </div>
+                                                <div className="flex shrink-0 items-center gap-2">
+                                                    {addon.hasQty ? (
+                                                        <div className="flex items-center gap-1">
+                                                            <Button
+                                                                type="button"
+                                                                variant="outline"
+                                                                size="icon"
+                                                                className="size-6"
+                                                                onClick={() =>
+                                                                    updateAddOnQty(
+                                                                        addon.key,
+                                                                        -1,
+                                                                    )
+                                                                }
+                                                                disabled={
+                                                                    addOnsLocked ||
+                                                                    addon.qty ===
+                                                                        0
+                                                                }
+                                                            >
+                                                                <MinusIcon className="size-3" />
+                                                            </Button>
+                                                            <span className="w-6 text-center text-xs font-semibold tabular-nums">
+                                                                {addon.qty}
+                                                            </span>
+                                                            <Button
+                                                                type="button"
+                                                                variant="outline"
+                                                                size="icon"
+                                                                className="size-6"
+                                                                onClick={() =>
+                                                                    updateAddOnQty(
+                                                                        addon.key,
+                                                                        1,
+                                                                    )
+                                                                }
+                                                                disabled={
+                                                                    addOnsLocked ||
+                                                                    addon.qty >=
+                                                                        guests.length
+                                                                }
+                                                            >
+                                                                <PlusIcon className="size-3" />
+                                                            </Button>
+                                                        </div>
+                                                    ) : (
+                                                        <span className="text-xs font-medium text-muted-foreground">
+                                                            x{addon.qty}
+                                                        </span>
+                                                    )}
+                                                    <span className="min-w-[100px] text-right font-medium text-foreground">
+                                                        {formatCurrency(
+                                                            addon.unitPrice *
+                                                                addon.qty,
+                                                        )}
+                                                    </span>
+                                                </div>
                                             </div>
                                         ))}
                                         <div className="flex justify-between text-muted-foreground">
@@ -788,105 +921,105 @@ export default function Step4BookingSummary({
                         </div>
                     </div>
 
-                    {/* ─── Add-ons Cost ───────────────────────────────────────────── */}
-                    <div className="p-4">
-                        <p className="mb-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                            Add-ons Cost
-                        </p>
+                    {nonTaxableAddOns.length > 0 && (
+                        <div className="p-4">
+                            <p className="mb-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                                Add-ons Cost
+                            </p>
 
-                        <div className="space-y-2 text-sm">
-                            {nonTaxableAddOns.map((addon) => (
-                                <motion.div
-                                    key={addon.key}
-                                    layout
-                                    className="flex items-center justify-between"
-                                >
-                                    <div className="flex items-center gap-1.5">
-                                        <span className="text-muted-foreground">
-                                            {addon.label}
-                                        </span>
-                                        {addon.tooltip && (
-                                            <Tooltip>
-                                                <TooltipTrigger asChild>
-                                                    <HelpCircleIcon className="size-3.5 cursor-help text-muted-foreground" />
-                                                </TooltipTrigger>
-                                                <TooltipContent
-                                                    side="right"
-                                                    className="max-w-[200px] text-xs"
-                                                >
-                                                    {addon.tooltip}
-                                                </TooltipContent>
-                                            </Tooltip>
-                                        )}
-                                    </div>
-
-                                    <div className="flex items-center gap-3">
-                                        {addon.hasQty && (
-                                            <div className="flex items-center gap-1.5">
-                                                <Button
-                                                    type="button"
-                                                    variant="outline"
-                                                    size="icon"
-                                                    className="size-7"
-                                                    onClick={() =>
-                                                        updateAddOnQty(
-                                                            addon.key,
-                                                            -1,
-                                                        )
-                                                    }
-                                                    disabled={
-                                                        addOnsLocked ||
-                                                        addon.qty === 0
-                                                    }
-                                                >
-                                                    <MinusIcon className="size-3" />
-                                                </Button>
-                                                <span className="w-8 text-center text-sm font-semibold tabular-nums">
-                                                    {addon.qty}
-                                                </span>
-                                                <Button
-                                                    type="button"
-                                                    variant="outline"
-                                                    size="icon"
-                                                    className="size-7"
-                                                    onClick={() =>
-                                                        updateAddOnQty(
-                                                            addon.key,
-                                                            1,
-                                                        )
-                                                    }
-                                                    disabled={
-                                                        addOnsLocked ||
-                                                        addon.qty >=
-                                                            guests.length
-                                                    }
-                                                >
-                                                    <PlusIcon className="size-3" />
-                                                </Button>
-                                            </div>
-                                        )}
-                                        <span className="min-w-[100px] text-right font-medium">
-                                            {formatCurrency(
-                                                addon.unitPrice * addon.qty,
+                            <div className="space-y-2 text-sm">
+                                {nonTaxableAddOns.map((addon) => (
+                                    <motion.div
+                                        key={addon.key}
+                                        layout
+                                        className="flex items-center justify-between"
+                                    >
+                                        <div className="flex items-center gap-1.5">
+                                            <span className="text-muted-foreground">
+                                                {addon.label}
+                                            </span>
+                                            {addon.tooltip && (
+                                                <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                        <HelpCircleIcon className="size-3.5 cursor-help text-muted-foreground" />
+                                                    </TooltipTrigger>
+                                                    <TooltipContent
+                                                        side="right"
+                                                        className="max-w-[200px] text-xs"
+                                                    >
+                                                        {addon.tooltip}
+                                                    </TooltipContent>
+                                                </Tooltip>
                                             )}
-                                        </span>
-                                    </div>
-                                </motion.div>
-                            ))}
-                        </div>
+                                        </div>
 
-                        {/* Add-ons subtotal */}
-                        <div className="mt-3 flex justify-end border-t border-dashed pt-2">
-                            <div className="flex items-center gap-4 text-sm">
-                                <span className="text-muted-foreground">
-                                    Add-ons Total
-                                </span>
-                                <span className="font-semibold">
-                                    {formatCurrency(nonTaxableAddOnsTotal)}
-                                </span>
+                                        <div className="flex items-center gap-2">
+                                            {addon.hasQty && (
+                                                <div className="flex items-center gap-1">
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        size="icon"
+                                                        className="size-6"
+                                                        onClick={() =>
+                                                            updateAddOnQty(
+                                                                addon.key,
+                                                                -1,
+                                                            )
+                                                        }
+                                                        disabled={
+                                                            addOnsLocked ||
+                                                            addon.qty === 0
+                                                        }
+                                                    >
+                                                        <MinusIcon className="size-3" />
+                                                    </Button>
+                                                    <span className="w-6 text-center text-xs font-semibold tabular-nums">
+                                                        {addon.qty}
+                                                    </span>
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        size="icon"
+                                                        className="size-6"
+                                                        onClick={() =>
+                                                            updateAddOnQty(
+                                                                addon.key,
+                                                                1,
+                                                            )
+                                                        }
+                                                        disabled={
+                                                            addOnsLocked ||
+                                                            addon.qty >=
+                                                                guests.length
+                                                        }
+                                                    >
+                                                        <PlusIcon className="size-3" />
+                                                    </Button>
+                                                </div>
+                                            )}
+                                            <span className="min-w-[100px] text-right font-medium">
+                                                {formatCurrency(
+                                                    addon.unitPrice * addon.qty,
+                                                )}
+                                            </span>
+                                        </div>
+                                    </motion.div>
+                                ))}
+                            </div>
+
+                            <div className="mt-3 flex justify-end border-t border-dashed pt-2">
+                                <div className="flex items-center gap-4 text-sm">
+                                    <span className="text-muted-foreground">
+                                        Add-ons Total
+                                    </span>
+                                    <span className="font-semibold">
+                                        {formatCurrency(nonTaxableAddOnsTotal)}
+                                    </span>
+                                </div>
                             </div>
                         </div>
-                    </div>
+                    )}
 
                     {/* ─── Payment Selection ──────────────────────────────────────── */}
                     <div className="p-4">

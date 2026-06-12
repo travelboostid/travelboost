@@ -7,6 +7,7 @@ use App\Actions\Booking\FinalizeBookingPaymentAction;
 use App\Actions\Booking\NotifyBookingPaymentEventAction;
 use App\Actions\Booking\SyncAvailabilityAction;
 use App\Enums\BookingStatus;
+use App\Enums\PaymentMethodStatus;
 use App\Enums\PaymentStatus;
 use App\Enums\VendorAgentPartnerStatus;
 use App\Http\Controllers\Controller;
@@ -17,6 +18,7 @@ use App\Models\Booking;
 use App\Models\BookingDocument;
 use App\Models\Company;
 use App\Models\Payment;
+use App\Models\PaymentMethod;
 use App\Models\Role;
 use App\Models\Tour;
 use App\Models\TourAddOn;
@@ -34,7 +36,11 @@ use App\Services\BookingPricingService;
 use App\Services\BookingRoomArrangementValidator;
 use App\Services\BookingService;
 use App\Services\BookingTravelDocumentService;
+use App\Services\BookingVisaTypeService;
 use App\Services\MidtransService;
+use App\Services\PaymentGatewayStatusSyncService;
+use App\Services\PrismaLinkException;
+use App\Services\PrismaLinkService;
 use App\Services\ReusableMidtransBookingPaymentAttemptService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -70,7 +76,7 @@ class DashboardBookingController extends Controller
     {
         $this->assertCompanyCanBookTour($company, $tour);
 
-        $tour->load('company.companySetting', 'schedules.availability');
+        $tour->load('company.companySetting', 'schedules.availability', 'visaCategory.items');
         $settings = $tour->company?->companySetting;
         $deadlineDays = (int) ($settings?->booking_deadline ?? 0);
         $bookingTimeLimitMinutes = $this->resolveBookingTimeLimitMinutes($tour);
@@ -190,6 +196,7 @@ class DashboardBookingController extends Controller
             'availability' => $availableSeats,
             'bookingSeatLimit' => $bookingSeatLimit,
             'addOns' => $addOns,
+            'visaCategoryItems' => $this->visaCategoryItemsPayload($tour),
             'bookingDeadlineDays' => $deadlineDays,
             'bookingTimeLimitMinutes' => $bookingTimeLimitMinutes,
             'downPaymentAvailable' => $downPaymentAvailable,
@@ -256,9 +263,17 @@ class DashboardBookingController extends Controller
             'passengers.*.pob' => ['nullable', 'string', 'max:255'],
             'passengers.*.price_category' => ['nullable', 'string'],
             'passengers.*.price_amount' => ['nullable', 'numeric'],
+            'passengers.*.visa_category_item_id' => ['nullable', 'integer', 'exists:visa_category_items,id'],
             'passengers.*.room_type' => ['nullable', 'string'],
             'passengers.*.note' => ['nullable', 'string', 'max:1000'],
         ]);
+
+        $visaErrors = app(BookingVisaTypeService::class)
+            ->validationErrorsForPassengers($tour->loadMissing('visaCategory.items'), $data['passengers'] ?? []);
+
+        if ($visaErrors !== []) {
+            throw ValidationException::withMessages($visaErrors);
+        }
 
         $owner = $this->resolveBookingOwner($request, $data);
         $agent = $this->resolveDashboardBookingAgent($company, $tour, data_get($data, 'agent_id'));
@@ -447,6 +462,25 @@ class DashboardBookingController extends Controller
         return back()->with('success', 'Booking hold resolved.');
     }
 
+    /**
+     * @return array<int, array{id: int, description: string, price: float, isTaxable: bool}>
+     */
+    private function visaCategoryItemsPayload(Tour $tour): array
+    {
+        $tour->loadMissing('visaCategory.items');
+
+        return $tour->visaCategory?->items
+            ->sortBy('sort_order')
+            ->values()
+            ->map(fn ($item): array => [
+                'id' => (int) $item->id,
+                'description' => (string) $item->description,
+                'price' => (float) $item->price,
+                'isTaxable' => (bool) $item->is_taxable,
+            ])
+            ->all() ?? [];
+    }
+
     public function updateTravelDocuments(Company $company, Booking $booking, Request $request): RedirectResponse
     {
         $this->assertCompanyCanAccessBooking($company, $booking);
@@ -593,7 +627,7 @@ class DashboardBookingController extends Controller
             'payment_method_id' => ['required', 'exists:payment_methods,id'],
         ]);
 
-        $paymentMethod = $this->midtransService->resolveEnabledPaymentMethod((int) $validated['payment_method_id']);
+        $paymentMethod = $this->resolveEnabledOnlinePaymentMethod((int) $validated['payment_method_id']);
 
         $paymentWorkflow = app(BookingPaymentWorkflowService::class);
         $agentVendorCustomerPayment = $paymentWorkflow->agentVendorCustomerPaymentForDashboardPayment($company, $booking);
@@ -613,6 +647,19 @@ class DashboardBookingController extends Controller
         $paymentWorkflowPayload = $agentVendorCustomerPayment
             ? $paymentWorkflow->agentVendorPaymentPayload($booking, $agentVendorCustomerPayment, (string) $validated['payment_type'])
             : $paymentWorkflow->initialPaymentPayload($paymentReceiver, (string) $validated['payment_type']);
+
+        if ($paymentMethod->provider === 'prismalink') {
+            return $this->storePrismaLinkOnlinePayment(
+                $company,
+                $request,
+                $booking,
+                $validated,
+                $agentVendorCustomerPayment !== null,
+                $paymentWorkflowPayload,
+                $paymentMethod,
+            );
+        }
+
         $reusableAttemptService = app(ReusableMidtransBookingPaymentAttemptService::class);
         $reusablePayment = $reusableAttemptService->findReusableAttempt(
             $booking,
@@ -632,11 +679,7 @@ class DashboardBookingController extends Controller
             ]);
 
             return response()->json([
-                'payment' => [
-                    'id' => $reusablePayment->id,
-                    'payload' => $reusablePayment->payload,
-                    'reused' => true,
-                ],
+                'payment' => $this->onlinePaymentResponsePayload($reusablePayment->fresh(), true),
                 'bookingPaymentResult' => $this->buildBookingPaymentResult($booking->fresh(), $reusablePayment->fresh()),
             ]);
         }
@@ -699,13 +742,224 @@ class DashboardBookingController extends Controller
         app(NotifyBookingPaymentEventAction::class)->execute($booking->fresh(), 'online_payment_pending', $payment->fresh());
 
         return response()->json([
-            'payment' => [
-                'id' => $payment->id,
-                'payload' => $payment->payload,
-                'reused' => false,
-            ],
+            'payment' => $this->onlinePaymentResponsePayload($payment->fresh(), false),
             'bookingPaymentResult' => $this->buildBookingPaymentResult($booking->fresh(), $payment->fresh()),
         ]);
+    }
+
+    /**
+     * @param  array<string, mixed>  $validated
+     * @param  array<string, mixed>  $paymentWorkflowPayload
+     */
+    private function storePrismaLinkOnlinePayment(
+        Company $company,
+        Request $request,
+        Booking $booking,
+        array $validated,
+        bool $isAgentVendorCustomerPayment,
+        array $paymentWorkflowPayload,
+        PaymentMethod $paymentMethod,
+    ): JsonResponse {
+        $payment = DB::transaction(function () use ($request, $booking, $validated, $isAgentVendorCustomerPayment, $paymentWorkflowPayload, $paymentMethod): Payment {
+            $payment = $booking->payments()->create([
+                'owner_type' => get_class($request->user()),
+                'owner_id' => $request->user()->id,
+                'provider' => 'prismalink',
+                'payment_method' => $paymentMethod->method,
+                'amount' => $validated['amount'],
+                'status' => 'unpaid',
+                'payload' => $paymentWorkflowPayload,
+            ]);
+
+            try {
+                $this->initiatePrismaLinkBookingPayment($payment, $paymentMethod, $request, $booking);
+            } catch (PrismaLinkException $exception) {
+                Log::warning('PrismaLink dashboard booking payment initiation failed', [
+                    'booking_id' => $booking->id,
+                    'payment_id' => $payment->id,
+                    'payment_type' => $validated['payment_type'],
+                    'payment_method' => $paymentMethod->method,
+                    'amount' => (float) $payment->amount,
+                    'message' => $exception->getMessage(),
+                    'response_code' => $exception->responseCode,
+                ]);
+
+                throw ValidationException::withMessages([
+                    'payment' => $exception->getMessage(),
+                ]);
+            }
+
+            $booking->update([
+                'status' => $isAgentVendorCustomerPayment
+                    ? BookingStatus::WAITING_PAYMENT_APPROVAL
+                    : $this->pendingOnlinePaymentBookingStatus($booking),
+                'payment_mode' => 'online',
+            ]);
+
+            return $payment;
+        });
+
+        app(SyncAvailabilityAction::class)->executeForBooking($booking->fresh());
+        app(NotifyBookingPaymentEventAction::class)->execute($booking->fresh(), 'online_payment_pending', $payment->fresh());
+
+        return response()->json([
+            'payment' => $this->onlinePaymentResponsePayload($payment->fresh(), false),
+            'bookingPaymentResult' => $this->buildBookingPaymentResult($booking->fresh(), $payment->fresh()),
+        ]);
+    }
+
+    private function initiatePrismaLinkBookingPayment(
+        Payment $payment,
+        PaymentMethod $paymentMethod,
+        Request $request,
+        Booking $booking,
+    ): void {
+        $prismaLinkService = app(PrismaLinkService::class);
+        $merchantRefNo = $prismaLinkService->buildMerchantRefNo($payment->id);
+        $validityHours = (int) config('prismalink.default_validity_hours', 24);
+        $paymentMethodCode = $this->prismaLinkPaymentMethodCode($paymentMethod->method);
+        $bankId = $this->prismaLinkBankIdFromMeta($paymentMethod->meta);
+
+        $params = [
+            'merchant_ref_no' => $merchantRefNo,
+            'user_id' => (string) $request->user()->id,
+            'user_device_id' => (string) $request->header('X-Device-Id', $request->user()->id),
+            'user_ip_address' => $request->ip() ?? '127.0.0.1',
+            'product_details' => [[
+                'item_code' => 'booking',
+                'item_title' => 'Booking '.$booking->booking_number,
+                'quantity' => 1,
+                'total' => (string) (int) $payment->amount,
+                'currency' => 'IDR',
+            ]],
+            'invoice_number' => 'BK-'.$payment->id,
+            'transaction_amount' => (int) $payment->amount,
+            'user_name' => (string) $request->user()->name,
+            'user_email' => (string) $request->user()->email,
+            'remarks' => 'Booking payment: '.$booking->booking_number,
+            'backend_callback_url' => $this->prismaLinkBackendCallbackUrl(),
+            'frontend_callback_url' => $this->prismaLinkFrontendCallbackUrl(),
+        ];
+
+        if ($paymentMethodCode !== null) {
+            $params['payment_method'] = $paymentMethodCode;
+        }
+
+        if ($paymentMethodCode === 'VA') {
+            if ($bankId === null) {
+                throw new PrismaLinkException('PrismaLink bank_id is required for virtual account payments.');
+            }
+
+            $params['bank_id'] = $bankId;
+        }
+
+        $response = $prismaLinkService->submitPaymentPageTransaction($params);
+        $expiredAt = filled($response['validity'] ?? null)
+            ? Carbon::parse((string) $response['validity'])
+            : now()->addHours($validityHours);
+        $instructionPayload = $prismaLinkService->extractInstructions(
+            $response,
+            $paymentMethod->method,
+            $bankId,
+        );
+
+        $payment->update([
+            'status' => 'pending',
+            'payload' => [
+                ...($payment->payload ?? []),
+                'merchant_ref_no' => $merchantRefNo,
+                'plink_ref_no' => $response['plink_ref_no'] ?? null,
+                'transaction_status' => $response['transaction_status'] ?? null,
+                'validity' => $response['validity'] ?? null,
+                'charge_expires_at' => $expiredAt->toISOString(),
+                ...$instructionPayload,
+            ],
+            'expired_at' => $expiredAt,
+        ]);
+    }
+
+    private function resolveEnabledOnlinePaymentMethod(int $paymentMethodId): PaymentMethod
+    {
+        $paymentMethod = PaymentMethod::query()->find($paymentMethodId);
+
+        if (
+            ! $paymentMethod instanceof PaymentMethod
+            || $paymentMethod->status !== PaymentMethodStatus::ENABLED
+            || ! in_array($paymentMethod->provider, ['midtrans', 'prismalink'], true)
+        ) {
+            throw ValidationException::withMessages([
+                'payment_method_id' => 'Selected payment method is not available.',
+            ]);
+        }
+
+        return $paymentMethod;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function onlinePaymentResponsePayload(Payment $payment, bool $reused): array
+    {
+        return [
+            'id' => $payment->id,
+            'provider' => $payment->provider,
+            'payment_method' => $payment->payment_method,
+            'amount' => (float) $payment->amount,
+            'status' => $payment->status instanceof PaymentStatus ? $payment->status->value : (string) $payment->status,
+            'payload' => $payment->payload,
+            'reused' => $reused,
+        ];
+    }
+
+    private function prismaLinkBackendCallbackUrl(): string
+    {
+        $configured = config('prismalink.backend_callback_url');
+
+        if (is_string($configured) && $configured !== '') {
+            return $configured;
+        }
+
+        return route('prismalink.backend-callback', absolute: true);
+    }
+
+    private function prismaLinkFrontendCallbackUrl(): string
+    {
+        $configured = config('prismalink.frontend_callback_url');
+
+        if (is_string($configured) && $configured !== '') {
+            return $configured;
+        }
+
+        return route('prismalink.frontend-callback', absolute: true);
+    }
+
+    private function prismaLinkPaymentMethodCode(?string $method): ?string
+    {
+        if ($method !== null && str_ends_with($method, '_va')) {
+            return 'VA';
+        }
+
+        return match ($method) {
+            'credit-card' => 'CC',
+            'qr', 'qris' => 'QR',
+            default => null,
+        };
+    }
+
+    /**
+     * @param  array<string, mixed>|null  $meta
+     */
+    private function prismaLinkBankIdFromMeta(?array $meta): ?string
+    {
+        $bankId = data_get($meta, 'bank_id');
+
+        if (! is_string($bankId) && ! is_int($bankId)) {
+            return null;
+        }
+
+        $bankId = trim((string) $bankId);
+
+        return $bankId !== '' ? $bankId : null;
     }
 
     public function confirmOnlinePayment(Company $company, Booking $booking, Payment $payment): JsonResponse
@@ -713,6 +967,11 @@ class DashboardBookingController extends Controller
         $this->assertCompanyCanAccessBooking($company, $booking);
         abort_unless($payment->payable_type === Booking::class, 404);
         abort_unless((int) $payment->payable_id === (int) $booking->id, 404);
+
+        if ($payment->provider === 'prismalink') {
+            return $this->confirmPrismaLinkOnlinePayment($booking, $payment);
+        }
+
         abort_unless($payment->provider === 'midtrans', 422);
 
         $orderId = data_get($payment->payload, 'order_id') ?? data_get($payment->payload, 'request.transaction_details.order_id');
@@ -786,6 +1045,51 @@ class DashboardBookingController extends Controller
                 'status' => $payment->fresh()->status->value,
             ],
             'bookingPaymentResult' => $this->buildBookingPaymentResult($booking->fresh(), $payment->fresh()),
+        ]);
+    }
+
+    private function confirmPrismaLinkOnlinePayment(Booking $booking, Payment $payment): JsonResponse
+    {
+        try {
+            $result = app(PaymentGatewayStatusSyncService::class)->sync($payment);
+        } catch (Throwable $exception) {
+            Log::warning('PrismaLink dashboard booking payment status sync failed', [
+                'booking_id' => $booking->id,
+                'payment_id' => $payment->id,
+                'message' => $exception->getMessage(),
+            ]);
+
+            return response()->json([
+                'message' => 'Payment status could not be checked right now. Please try again shortly.',
+            ], 422);
+        }
+
+        $freshPayment = $result['payment']->fresh();
+
+        if ($freshPayment->status !== PaymentStatus::PAID) {
+            $booking = $this->ensureBookingNotExpired($booking);
+        }
+
+        if ($freshPayment->status !== PaymentStatus::PAID) {
+            app(NotifyBookingPaymentEventAction::class)->execute(
+                $booking->fresh(),
+                match ($freshPayment->status) {
+                    PaymentStatus::FAILED => 'online_payment_failed',
+                    default => 'online_payment_pending',
+                },
+                $freshPayment
+            );
+        }
+
+        return response()->json([
+            'booking' => [
+                'id' => $booking->id,
+                'status' => $booking->fresh()->status->value,
+            ],
+            'payment' => $this->onlinePaymentResponsePayload($freshPayment, false),
+            'status' => $freshPayment->status->value,
+            'transaction_status' => $result['transaction_status'],
+            'bookingPaymentResult' => $this->buildBookingPaymentResult($booking->fresh(), $freshPayment),
         ]);
     }
 

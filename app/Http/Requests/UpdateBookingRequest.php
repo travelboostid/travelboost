@@ -4,9 +4,12 @@ namespace App\Http\Requests;
 
 use App\Enums\BookingStatus;
 use App\Enums\UserGender;
+use App\Models\Booking;
+use App\Services\BookingVisaTypeService;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 class UpdateBookingRequest extends FormRequest
 {
@@ -77,6 +80,7 @@ class UpdateBookingRequest extends FormRequest
             'passengers.*.passport_issue_date' => ['nullable', 'date'],
             'passengers.*.passport_expiry_date' => ['nullable', 'date'],
             'passengers.*.visa_number' => ['nullable', 'string', 'max:255'],
+            'passengers.*.visa_category_item_id' => ['nullable', 'integer', 'exists:visa_category_items,id'],
             'passengers.*.price_category' => ['nullable', 'string', 'max:255'],
             'passengers.*.price_amount' => ['nullable', 'numeric'],
             'passengers.*.room_type' => ['nullable', 'string', 'max:255'],
@@ -97,6 +101,30 @@ class UpdateBookingRequest extends FormRequest
             'addons.*.qty' => ['nullable', 'integer', 'min:1', 'max:999'],
             'addons.*.is_taxable' => ['nullable', 'boolean'],
         ];
+    }
+
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(function (Validator $validator): void {
+            $booking = $this->route('booking');
+
+            if (! $booking instanceof Booking) {
+                return;
+            }
+
+            $tour = $booking->tour()->with('visaCategory.items')->first();
+
+            if (! $tour) {
+                return;
+            }
+
+            $errors = app(BookingVisaTypeService::class)
+                ->validationErrorsForPassengers($tour, (array) $this->input('passengers', []));
+
+            foreach ($errors as $field => $message) {
+                $validator->errors()->add($field, $message);
+            }
+        });
     }
 
     /**

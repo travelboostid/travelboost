@@ -3,9 +3,12 @@
 namespace App\Http\Requests;
 
 use App\Enums\UserGender;
+use App\Models\Tour;
+use App\Services\BookingVisaTypeService;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 class StoreBookingRequest extends FormRequest
 {
@@ -63,6 +66,7 @@ class StoreBookingRequest extends FormRequest
             'passengers.*.visa_number' => ['nullable', 'string', 'max:255'],
             'passengers.*.visa_file' => ['nullable', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:5120'],
             'passengers.*.visa_file_path' => ['nullable', 'string'],
+            'passengers.*.visa_category_item_id' => ['nullable', 'integer', 'exists:visa_category_items,id'],
             'passengers.*.price_category' => ['nullable', 'string', 'max:255'],
             'passengers.*.price_amount' => ['nullable', 'numeric'],
             'passengers.*.note' => ['nullable', 'string', 'max:1000'],
@@ -90,5 +94,25 @@ class StoreBookingRequest extends FormRequest
             'commission_amount' => ['required', 'numeric', 'min:0'],
             'grand_total' => ['required', 'numeric', 'min:0'],
         ];
+    }
+
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(function (Validator $validator): void {
+            $tour = Tour::query()
+                ->with('visaCategory.items')
+                ->find((int) $this->input('tour_id'));
+
+            if (! $tour) {
+                return;
+            }
+
+            $errors = app(BookingVisaTypeService::class)
+                ->validationErrorsForPassengers($tour, (array) $this->input('passengers', []));
+
+            foreach ($errors as $field => $message) {
+                $validator->errors()->add($field, $message);
+            }
+        });
     }
 }
