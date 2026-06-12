@@ -39,25 +39,15 @@ class SyncAvailabilityAction
         $schedule = TourSchedule::where('tour_id', $booking->tour_id)
             ->whereDate('departure_date', $departureDate)
             ->where('company_id', $booking->vendor_id)
+            ->whereHas('availability', function ($query) use ($booking): void {
+                $query
+                    ->where('company_id', $booking->vendor_id)
+                    ->where('tour_id', $booking->tour_id);
+            })
+            ->orderBy('id')
             ->first();
 
         if (! $schedule) {
-            logger()->warning('SyncAvailabilityAction: missing schedule for booking sync', [
-                'booking_id' => $booking->id,
-                'tour_id' => $booking->tour_id,
-                'departure_date' => $departureDate,
-                'company_id' => $booking->vendor_id,
-            ]);
-
-            return;
-        }
-
-        $hasAvailability = TourAvailability::where('company_id', $booking->vendor_id)
-            ->where('tour_id', $booking->tour_id)
-            ->where('schedule_id', $schedule->id)
-            ->exists();
-
-        if (! $hasAvailability) {
             logger()->warning('SyncAvailabilityAction: missing availability row for booking sync', [
                 'booking_id' => $booking->id,
                 'tour_id' => $booking->tour_id,
@@ -68,7 +58,7 @@ class SyncAvailabilityAction
             return;
         }
 
-        $this->execute((int) $booking->tour_id, $departureDate, (int) $booking->vendor_id);
+        $this->executeForSchedule($schedule, $departureDate, (int) $booking->vendor_id);
     }
 
     public function execute(int $tourId, string $departureDate, int $companyId): void
@@ -77,6 +67,12 @@ class SyncAvailabilityAction
             $schedule = TourSchedule::where('tour_id', $tourId)
                 ->whereDate('departure_date', $departureDate)
                 ->where('company_id', $companyId)
+                ->whereHas('availability', function ($query) use ($tourId, $companyId): void {
+                    $query
+                        ->where('company_id', $companyId)
+                        ->where('tour_id', $tourId);
+                })
+                ->orderBy('id')
                 ->firstOrFail();
 
             $availability = TourAvailability::where([
@@ -85,69 +81,92 @@ class SyncAvailabilityAction
                 'schedule_id' => $schedule->id,
             ])->lockForUpdate()->firstOrFail();
 
-            if ($this->manualReservedShouldActivate($availability)) {
-                $this->activateManualReserved($availability);
-                $availability->refresh();
-            }
-
-            if ($this->manualReservedIsExpired($availability)) {
-                $availability->update([
-                    'RS' => 0,
-                    'available' => (int) ($availability->manual_reserved_original_available ?? $availability->max_pax),
-                    'manual_reserved_pending_value' => null,
-                    'manual_reserved_started_at' => null,
-                    'manual_reserved_expires_at' => null,
-                    'manual_reserved_original_available' => null,
-                ]);
-
-                $availability->refresh();
-            }
-
-            $totals = Booking::query()
-                ->select('status', DB::raw('COALESCE(SUM(COALESCE(pax_adult, 0) + COALESCE(pax_child, 0) + COALESCE(pax_infant, 0)), 0) as total_pax'))
-                ->where('tour_id', $tourId)
-                ->where('vendor_id', $companyId)
-                ->whereDate('departure_date', $departureDate)
-                ->groupBy('status')
-                ->get()
-                ->keyBy('status');
-
-            $snapshotValues = array_fill_keys(array_unique(array_values(self::STATUS_COLUMN_MAP)), 0);
-            $snapshotValues['RS'] = (int) $availability->RS;
-
-            foreach (self::STATUS_COLUMN_MAP as $statusValue => $columnKey) {
-                $row = $totals->get($statusValue);
-                $snapshotValues[$columnKey] += $row ? (int) $row->total_pax : 0;
-            }
-
-            foreach ($totals->keys() as $statusValue) {
-                if (! isset(self::STATUS_COLUMN_MAP[$statusValue]) && ! in_array($statusValue, self::IGNORED_STATUSES, true)) {
-                    logger()->warning('SyncAvailabilityAction: unrecognized booking status encountered', [
-                        'status' => $statusValue,
-                        'tour_id' => $tourId,
-                        'departure_date' => $departureDate,
-                        'company_id' => $companyId,
-                    ]);
-                }
-            }
-
-            $reducingTotal = 0;
-            foreach (self::AVAILABILITY_COLUMNS as $col) {
-                $reducingTotal += $snapshotValues[$col];
-            }
-            $available = max(0, (float) $availability->max_pax - $reducingTotal);
-
-            $availability->update([
-                ...$snapshotValues,
-                'available' => $available,
-            ]);
+            $this->syncAvailabilitySnapshot($availability, $tourId, $departureDate, $companyId);
         });
     }
 
-    private function manualReservedIsExpired(TourAvailability $availability): bool
+    private function executeForSchedule(TourSchedule $schedule, string $departureDate, int $companyId): void
     {
-        return $availability->manual_reserved_expires_at !== null
-            && $availability->manual_reserved_expires_at->isPast();
+        DB::transaction(function () use ($schedule, $departureDate, $companyId): void {
+            $availability = TourAvailability::where([
+                'company_id' => $companyId,
+                'tour_id' => $schedule->tour_id,
+                'schedule_id' => $schedule->id,
+            ])->lockForUpdate()->first();
+
+            if (! $availability) {
+                logger()->warning('SyncAvailabilityAction: missing availability row for booking sync', [
+                    'tour_id' => $schedule->tour_id,
+                    'departure_date' => $departureDate,
+                    'company_id' => $companyId,
+                    'schedule_id' => $schedule->id,
+                ]);
+
+                return;
+            }
+
+            $this->syncAvailabilitySnapshot($availability, (int) $schedule->tour_id, $departureDate, $companyId);
+        });
+    }
+
+    private function syncAvailabilitySnapshot(TourAvailability $availability, int $tourId, string $departureDate, int $companyId): void
+    {
+        if ($this->manualReservedShouldActivate($availability)) {
+            $this->activateManualReserved($availability);
+            $availability->refresh();
+        }
+
+        if ($this->manualReservedIsExpired($availability)) {
+            $availability->update([
+                'RS' => 0,
+                'available' => (int) ($availability->manual_reserved_original_available ?? $availability->max_pax),
+                'manual_reserved_pending_value' => null,
+                'manual_reserved_started_at' => null,
+                'manual_reserved_expires_at' => null,
+                'manual_reserved_original_available' => null,
+            ]);
+
+            $availability->refresh();
+        }
+
+        $totals = Booking::query()
+            ->select('status', DB::raw('COALESCE(SUM(COALESCE(pax_adult, 0) + COALESCE(pax_child, 0) + COALESCE(pax_infant, 0)), 0) as total_pax'))
+            ->where('tour_id', $tourId)
+            ->where('vendor_id', $companyId)
+            ->whereDate('departure_date', $departureDate)
+            ->groupBy('status')
+            ->get()
+            ->keyBy('status');
+
+        $snapshotValues = array_fill_keys(array_unique(array_values(self::STATUS_COLUMN_MAP)), 0);
+        $snapshotValues['RS'] = (int) $availability->RS;
+
+        foreach (self::STATUS_COLUMN_MAP as $statusValue => $columnKey) {
+            $row = $totals->get($statusValue);
+            $snapshotValues[$columnKey] += $row ? (int) $row->total_pax : 0;
+        }
+
+        foreach ($totals->keys() as $statusValue) {
+            if (! isset(self::STATUS_COLUMN_MAP[$statusValue]) && ! in_array($statusValue, self::IGNORED_STATUSES, true)) {
+                logger()->warning('SyncAvailabilityAction: unrecognized booking status encountered', [
+                    'status' => $statusValue,
+                    'tour_id' => $tourId,
+                    'departure_date' => $departureDate,
+                    'company_id' => $companyId,
+                ]);
+            }
+        }
+
+        $reducingTotal = 0;
+        foreach (self::AVAILABILITY_COLUMNS as $col) {
+            $reducingTotal += $snapshotValues[$col];
+        }
+        $available = max(0, (float) $availability->max_pax - $reducingTotal);
+
+        $availability->update([
+            ...$snapshotValues,
+            'available' => $available,
+        ]);
     }
 
     private function manualReservedShouldActivate(TourAvailability $availability): bool
@@ -156,6 +175,12 @@ class SyncAvailabilityAction
             && (int) $availability->RS === 0
             && $availability->manual_reserved_started_at !== null
             && $availability->manual_reserved_started_at->lessThanOrEqualTo(now('UTC'));
+    }
+
+    private function manualReservedIsExpired(TourAvailability $availability): bool
+    {
+        return $availability->manual_reserved_expires_at !== null
+            && $availability->manual_reserved_expires_at->isPast();
     }
 
     private function activateManualReserved(TourAvailability $availability): void

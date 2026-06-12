@@ -25,6 +25,7 @@ type MenuItemBase = {
     icon?: LucideIcon;
     shouldDisplay?: (roles: string[], permissions: string[]) => boolean;
     disabled?: boolean;
+    badgeCount?: number;
 };
 
 type MenuItem =
@@ -42,8 +43,12 @@ type MenuItem =
       });
 
 export function useCompanyDashboardNavMainMenu() {
-    const { company, auth, subscriptionRules } =
-        usePageSharedDataProps() as any;
+    const {
+        company,
+        auth,
+        subscriptionRules,
+        bookingModificationRequestCounts,
+    } = usePageSharedDataProps() as any;
 
     const { data } = useGetCompanies(
         { type: 'vendor' },
@@ -60,6 +65,9 @@ export function useCompanyDashboardNavMainMenu() {
 
     const companySubdomain = `${protocol}//${company.username}.${baseHost}${port}`;
     const isMarketingDisabled = !!subscriptionRules?.isMarketingDisabled;
+    const bookingModificationRequestBadgeCount = Number(
+        bookingModificationRequestCounts?.total ?? 0,
+    );
 
     const renderTitle = (node: React.ReactNode, isLocked: boolean) => {
         if (isLocked) {
@@ -136,11 +144,12 @@ export function useCompanyDashboardNavMainMenu() {
                     urlOrAction: `/companies/${company.username}/dashboard/bookings`,
                 },
                 {
-                    id: 'tours.cancelation-refund',
+                    id: 'tours.booking-correction',
                     title: (
-                        <FormattedMessage defaultMessage="Cancelation and Refund" />
+                        <FormattedMessage defaultMessage="Booking Correction" />
                     ),
-                    urlOrAction: `/companies/${company.username}/dashboard/booking-action-requests`,
+                    urlOrAction: `/companies/${company.username}/dashboard/booking-correction`,
+                    badgeCount: bookingModificationRequestBadgeCount,
                 },
                 {
                     id: 'tours.categories',
@@ -192,6 +201,13 @@ export function useCompanyDashboardNavMainMenu() {
                     id: 'tours.bookings',
                     title: <FormattedMessage defaultMessage="Bookings" />,
                     urlOrAction: `/companies/${company.username}/dashboard/bookings`,
+                },
+                {
+                    id: 'tours.booking-correction',
+                    title: (
+                        <FormattedMessage defaultMessage="Booking Correction" />
+                    ),
+                    urlOrAction: `/companies/${company.username}/dashboard/booking-correction`,
                 },
                 {
                     id: 'tours.categories',

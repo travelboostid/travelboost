@@ -6,7 +6,6 @@ import {
     Building2,
     Heart,
     Mail,
-    MapPin,
     Phone,
     Rocket,
     Sparkles,
@@ -80,7 +79,11 @@ export function CTASection() {
                     </div>
 
                     <div className="text-center">
-                        <Button size="lg" className="px-10 py-6 text-lg" asChild>
+                        <Button
+                            size="lg"
+                            className="px-10 py-6 text-lg"
+                            asChild
+                        >
                             <Link href={showRegister()}>
                                 <FormattedMessage defaultMessage="Gabung TravelBoost Sekarang" />
                             </Link>
@@ -106,8 +109,9 @@ export function CTASection() {
                             <p className="mx-auto mt-4 max-w-2xl text-base leading-7 text-muted-foreground sm:text-lg">
                                 TravelBoost membantu tim travel bekerja lebih
                                 rapi dalam promosi, distribusi produk, dan
-                                koordinasi operasional. Tim kami siap mendampingi
-                                dari tahap eksplorasi hingga implementasi.
+                                koordinasi operasional. Tim kami siap
+                                mendampingi dari tahap eksplorasi hingga
+                                implementasi.
                             </p>
                         </div>
 
@@ -120,14 +124,14 @@ export function CTASection() {
                                         Informasi Kontak
                                     </div>
                                     <h3 className="mt-6 font-playfair-display text-2xl font-semibold sm:text-3xl">
-                                        Jalur komunikasi yang jelas untuk vendor,
-                                        agent, dan partner resmi.
+                                        Jalur komunikasi yang jelas untuk
+                                        vendor, agent, dan partner resmi.
                                     </h3>
                                     <p className="mt-4 max-w-sm text-sm leading-7 text-white/80 sm:text-base">
                                         Hubungi kami untuk diskusi presentasi
-                                        produk, konsultasi operasional, kebutuhan
-                                        onboarding, atau peluang kolaborasi
-                                        industri.
+                                        produk, konsultasi operasional,
+                                        kebutuhan onboarding, atau peluang
+                                        kolaborasi industri.
                                     </p>
 
                                     <div className="mt-8 space-y-5 text-sm sm:text-base">
@@ -144,8 +148,8 @@ export function CTASection() {
                                                     Jl. Alaydrus No.37,
                                                     RT.8/RW.2, Petojo Utara,
                                                     Kecamatan Gambir, Kota
-                                                    Jakarta Pusat, Daerah
-                                                    Khusus Ibukota Jakarta 10130
+                                                    Jakarta Pusat, Daerah Khusus
+                                                    Ibukota Jakarta 10130
                                                 </p>
                                             </div>
                                         </div>
@@ -205,8 +209,9 @@ export function CTASection() {
                                         </p>
                                         <p className="mt-2 text-sm leading-6 text-muted-foreground">
                                             Terbuka untuk kolaborasi asosiasi,
-                                            payment partner, dan partner industri
-                                            yang relevan dengan travel ecosystem.
+                                            payment partner, dan partner
+                                            industri yang relevan dengan travel
+                                            ecosystem.
                                         </p>
                                     </div>
                                 </div>
@@ -261,20 +266,22 @@ export function CTASection() {
                                 <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-16 bg-gradient-to-r from-background/95 to-transparent" />
                                 <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-16 bg-gradient-to-l from-background/95 to-transparent" />
                                 <div className="flex w-max animate-[contact-marquee_18s_linear_infinite] items-center gap-4 px-4">
-                                    {[...partnerLogos, ...partnerLogos, ...partnerLogos].map(
-                                        (partner, index) => (
-                                            <div
-                                                key={`${partner.name}-${index}`}
-                                                className="flex h-20 min-w-[220px] items-center justify-center rounded-2xl border border-border/60 bg-card px-8 shadow-sm"
-                                            >
-                                                <img
-                                                    src={partner.src}
-                                                    alt={partner.name}
-                                                    className="h-10 w-auto max-w-[150px] object-contain"
-                                                />
-                                            </div>
-                                        ),
-                                    )}
+                                    {[
+                                        ...partnerLogos,
+                                        ...partnerLogos,
+                                        ...partnerLogos,
+                                    ].map((partner, index) => (
+                                        <div
+                                            key={`${partner.name}-${index}`}
+                                            className="flex h-20 min-w-[220px] items-center justify-center rounded-2xl border border-border/60 bg-card px-8 shadow-sm"
+                                        >
+                                            <img
+                                                src={partner.src}
+                                                alt={partner.name}
+                                                className="h-10 w-auto max-w-[150px] object-contain"
+                                            />
+                                        </div>
+                                    ))}
                                 </div>
                             </div>
                         </div>

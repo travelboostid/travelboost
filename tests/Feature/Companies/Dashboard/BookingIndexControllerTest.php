@@ -23,8 +23,10 @@ use Database\Seeders\Common\RolePermissionSeeder;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Tests\TestCase;
 
 beforeEach(function () {
+    /** @var TestCase $this */
     $this->withoutVite();
     $this->seed(RolePermissionSeeder::class);
     Booking::unsetEventDispatcher();
@@ -2106,6 +2108,17 @@ test('vendor can directly cancel an in progress booking and release availability
         ->and($booking->fresh()->reserved_expires_at)->toBeNull()
         ->and((int) $availability->fresh()->BRS)->toBe(0)
         ->and((float) $availability->fresh()->available)->toBe(10.0);
+
+    $this->assertDatabaseHas('booking_action_requests', [
+        'booking_id' => $booking->id,
+        'requester_company_id' => $vendor->id,
+        'requester_user_id' => $this->user->id,
+        'target_action' => 'cancel',
+        'status' => 'approved',
+        'reason' => 'Customer requested cancellation',
+        'reviewer_company_id' => $vendor->id,
+        'reviewer_user_id' => $this->user->id,
+    ]);
 });
 
 test('full payment booking exposes cancel and refund actions in dashboard index', function () {
@@ -2223,6 +2236,17 @@ test('vendor can directly cancel a full payment booking and release availability
         ->and((int) $availability->fresh()->FP)->toBe(0)
         ->and((int) $availability->fresh()->CA)->toBe(2)
         ->and((float) $availability->fresh()->available)->toBe(10.0);
+
+    $this->assertDatabaseHas('booking_action_requests', [
+        'booking_id' => $booking->id,
+        'requester_company_id' => $vendor->id,
+        'requester_user_id' => $this->user->id,
+        'target_action' => 'cancel',
+        'status' => 'approved',
+        'reason' => 'Customer requested cancellation after full payment',
+        'reviewer_company_id' => $vendor->id,
+        'reviewer_user_id' => $this->user->id,
+    ]);
 });
 
 test('vendor can directly cancel a down payment booking and release availability', function () {
@@ -2286,6 +2310,17 @@ test('vendor can directly cancel a down payment booking and release availability
         ->and((int) $availability->fresh()->DP)->toBe(0)
         ->and((int) $availability->fresh()->CA)->toBe(2)
         ->and((float) $availability->fresh()->available)->toBe(10.0);
+
+    $this->assertDatabaseHas('booking_action_requests', [
+        'booking_id' => $booking->id,
+        'requester_company_id' => $vendor->id,
+        'requester_user_id' => $this->user->id,
+        'target_action' => 'cancel',
+        'status' => 'approved',
+        'reason' => 'Customer requested cancellation after down payment',
+        'reviewer_company_id' => $vendor->id,
+        'reviewer_user_id' => $this->user->id,
+    ]);
 });
 
 test('vendor can directly refund a paid booking and release availability', function () {
@@ -2349,6 +2384,17 @@ test('vendor can directly refund a paid booking and release availability', funct
         ->and((int) $availability->fresh()->DP)->toBe(0)
         ->and((int) $availability->fresh()->RF)->toBe(2)
         ->and((float) $availability->fresh()->available)->toBe(10.0);
+
+    $this->assertDatabaseHas('booking_action_requests', [
+        'booking_id' => $booking->id,
+        'requester_company_id' => $vendor->id,
+        'requester_user_id' => $this->user->id,
+        'target_action' => 'refund',
+        'status' => 'approved',
+        'reason' => 'Refund approved by vendor',
+        'reviewer_company_id' => $vendor->id,
+        'reviewer_user_id' => $this->user->id,
+    ]);
 });
 
 test('agent cancel creates a pending vendor approval request without mutating booking', function () {
@@ -2628,17 +2674,32 @@ test('vendor can approve and reject agent cancel refund requests', function () {
         'accepted_at' => now(),
     ]);
 
-    $tour = Tour::factory()->create(['company_id' => $vendor->id]);
+    $refundTour = Tour::factory()->create([
+        'company_id' => $vendor->id,
+        'name' => 'Refund Island Escape',
+        'code' => 'RFD-SEA',
+    ]);
+    $cancelTour = Tour::factory()->create([
+        'company_id' => $vendor->id,
+        'name' => 'Cancel Mountain Trail',
+        'code' => 'CXL-MTN',
+    ]);
     $bookingToApprove = Booking::factory()->create([
+        'booking_number' => 'BKG-REFUND-001',
+        'contact_name' => 'Refund Customer',
         'vendor_id' => $vendor->id,
         'agent_id' => $agent->id,
-        'tour_id' => $tour->id,
+        'tour_id' => $refundTour->id,
+        'departure_date' => '2026-12-24',
         'status' => BookingStatus::DOWN_PAYMENT,
     ]);
     $bookingToReject = Booking::factory()->create([
+        'booking_number' => 'BKG-CANCEL-001',
+        'contact_name' => 'Cancel Customer',
         'vendor_id' => $vendor->id,
         'agent_id' => $agent->id,
-        'tour_id' => $tour->id,
+        'tour_id' => $cancelTour->id,
+        'departure_date' => '2026-11-15',
         'status' => BookingStatus::WAITING_PAYMENT_APPROVAL,
     ]);
     DB::table('booking_action_requests')->insert([
@@ -2650,8 +2711,8 @@ test('vendor can approve and reject agent cancel refund requests', function () {
             'target_action' => 'refund',
             'status' => 'pending',
             'reason' => 'Refund requested',
-            'created_at' => now(),
-            'updated_at' => now(),
+            'created_at' => now()->subMinute(),
+            'updated_at' => now()->subMinute(),
         ],
         [
             'id' => 1002,
@@ -2667,17 +2728,58 @@ test('vendor can approve and reject agent cancel refund requests', function () {
     ]);
 
     $indexResponse = $this->actingAs($vendorUser)
-        ->get("/companies/{$vendor->username}/dashboard/booking-action-requests");
+        ->get("/companies/{$vendor->username}/dashboard/booking-correction");
 
     $indexResponse->assertOk();
     $indexResponse->assertInertia(fn ($page) => $page
         ->component('companies/dashboard/bookings/action-requests')
-        ->has('requests.data', 2));
+        ->where('activeAction', 'cancel')
+        ->where('requests.total', 1)
+        ->has('requests.data', 1)
+        ->where('requests.data.0.target_action', 'cancel')
+        ->where('canReviewRequests', true)
+        ->where('actionRequiredCounts.cancellations', 1)
+        ->where('actionRequiredCounts.refunds', 1));
+
+    $refundIndexResponse = $this->actingAs($vendorUser)
+        ->get("/companies/{$vendor->username}/dashboard/booking-correction?action=refund");
+
+    $refundIndexResponse->assertOk();
+    $refundIndexResponse->assertInertia(fn ($page) => $page
+        ->component('companies/dashboard/bookings/action-requests')
+        ->where('activeAction', 'refund')
+        ->where('search', '')
+        ->where('requests.total', 1)
+        ->has('requests.data', 1)
+        ->where('requests.data.0.target_action', 'refund')
+        ->where('requests.data.0.reason', 'Refund requested'));
+
+    $searchByTourResponse = $this->actingAs($vendorUser)
+        ->get("/companies/{$vendor->username}/dashboard/booking-correction?search=Mountain");
+
+    $searchByTourResponse->assertOk();
+    $searchByTourResponse->assertInertia(fn ($page) => $page
+        ->component('companies/dashboard/bookings/action-requests')
+        ->where('activeAction', 'cancel')
+        ->where('search', 'Mountain')
+        ->where('requests.total', 1)
+        ->where('requests.data.0.booking.booking_number', 'BKG-CANCEL-001'));
+
+    $searchByDepartureResponse = $this->actingAs($vendorUser)
+        ->get("/companies/{$vendor->username}/dashboard/booking-correction?action=refund&search=2026-12-24");
+
+    $searchByDepartureResponse->assertOk();
+    $searchByDepartureResponse->assertInertia(fn ($page) => $page
+        ->component('companies/dashboard/bookings/action-requests')
+        ->where('activeAction', 'refund')
+        ->where('search', '2026-12-24')
+        ->where('requests.total', 1)
+        ->where('requests.data.0.booking.booking_number', 'BKG-REFUND-001'));
 
     $approveResponse = $this->actingAs($vendorUser)
-        ->post("/companies/{$vendor->username}/dashboard/booking-action-requests/1001/approve");
+        ->post("/companies/{$vendor->username}/dashboard/booking-correction/1001/approve");
     $rejectResponse = $this->actingAs($vendorUser)
-        ->post("/companies/{$vendor->username}/dashboard/booking-action-requests/1002/reject");
+        ->post("/companies/{$vendor->username}/dashboard/booking-correction/1002/reject");
 
     $approveResponse->assertRedirect();
     $rejectResponse->assertRedirect();
@@ -2696,6 +2798,176 @@ test('vendor can approve and reject agent cancel refund requests', function () {
         'reviewer_company_id' => $vendor->id,
         'reviewer_user_id' => $vendorUser->id,
     ]);
+
+    $historyResponse = $this->actingAs($vendorUser)
+        ->get("/companies/{$vendor->username}/dashboard/booking-correction");
+
+    $historyResponse->assertOk();
+    $historyResponse->assertInertia(fn ($page) => $page
+        ->component('companies/dashboard/bookings/action-requests')
+        ->where('activeAction', 'cancel')
+        ->where('requests.total', 1)
+        ->has('requests.data', 1)
+        ->where('actionRequiredCounts.cancellations', 0)
+        ->where('actionRequiredCounts.refunds', 0)
+        ->where('requests.data.0.status', 'rejected')
+        ->where('requests.data.0.reviewer.user_name', $vendorUser->name)
+        ->where('requests.data.0.reviewer.company_name', $vendor->name)
+        ->where('requests.data.0.reviewer.action_label', 'Rejected by'));
+
+    $refundHistoryResponse = $this->actingAs($vendorUser)
+        ->get("/companies/{$vendor->username}/dashboard/booking-correction?action=refund");
+
+    $refundHistoryResponse->assertOk();
+    $refundHistoryResponse->assertInertia(fn ($page) => $page
+        ->component('companies/dashboard/bookings/action-requests')
+        ->where('activeAction', 'refund')
+        ->where('requests.total', 1)
+        ->has('requests.data', 1)
+        ->where('requests.data.0.status', 'approved')
+        ->where('requests.data.0.reviewer.user_name', $vendorUser->name)
+        ->where('requests.data.0.reviewer.company_name', $vendor->name)
+        ->where('requests.data.0.reviewer.action_label', 'Approved by'));
+});
+
+test('legacy booking request urls redirect to booking correction', function () {
+    $vendor = Company::factory()->create(['type' => 'vendor']);
+
+    CompanyTeam::create([
+        'company_id' => $vendor->id,
+        'user_id' => $this->user->id,
+        'status' => CompanyTeamStatus::ACTIVE,
+        'is_owner' => true,
+        'accepted_at' => now(),
+    ]);
+
+    $response = $this->actingAs($this->user)
+        ->get("/companies/{$vendor->username}/dashboard/booking-action-requests?action=refund&search=Mountain");
+
+    $response->assertRedirect("/companies/{$vendor->username}/dashboard/booking-correction?action=refund&search=Mountain");
+
+    $modificationResponse = $this->actingAs($this->user)
+        ->get("/companies/{$vendor->username}/dashboard/booking-modification-requests?action=refund&search=Mountain");
+
+    $modificationResponse->assertRedirect("/companies/{$vendor->username}/dashboard/booking-correction?action=refund&search=Mountain");
+});
+
+test('direct vendor booking actions use final action reviewer labels', function () {
+    $vendorUser = User::factory()->create();
+    $vendor = Company::factory()->create(['type' => 'vendor']);
+
+    CompanyTeam::create([
+        'company_id' => $vendor->id,
+        'user_id' => $vendorUser->id,
+        'status' => CompanyTeamStatus::ACTIVE,
+        'is_owner' => true,
+        'accepted_at' => now(),
+    ]);
+
+    $tour = Tour::factory()->create(['company_id' => $vendor->id]);
+    $cancelledBooking = Booking::factory()->create([
+        'vendor_id' => $vendor->id,
+        'tour_id' => $tour->id,
+        'status' => BookingStatus::CANCELLED,
+    ]);
+    $refundedBooking = Booking::factory()->create([
+        'vendor_id' => $vendor->id,
+        'tour_id' => $tour->id,
+        'status' => BookingStatus::REFUNDED,
+    ]);
+
+    DB::table('booking_action_requests')->insert([
+        [
+            'booking_id' => $cancelledBooking->id,
+            'requester_company_id' => $vendor->id,
+            'requester_user_id' => $vendorUser->id,
+            'target_action' => 'cancel',
+            'status' => 'approved',
+            'reason' => 'Cancelled directly by vendor',
+            'reviewer_company_id' => $vendor->id,
+            'reviewer_user_id' => $vendorUser->id,
+            'reviewed_at' => now(),
+            'created_at' => now()->subMinute(),
+            'updated_at' => now()->subMinute(),
+        ],
+        [
+            'booking_id' => $refundedBooking->id,
+            'requester_company_id' => $vendor->id,
+            'requester_user_id' => $vendorUser->id,
+            'target_action' => 'refund',
+            'status' => 'approved',
+            'reason' => 'Refunded directly by vendor',
+            'reviewer_company_id' => $vendor->id,
+            'reviewer_user_id' => $vendorUser->id,
+            'reviewed_at' => now(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ],
+    ]);
+
+    $cancelResponse = $this->actingAs($vendorUser)
+        ->get("/companies/{$vendor->username}/dashboard/booking-correction");
+
+    $cancelResponse->assertOk();
+    $cancelResponse->assertInertia(fn ($page) => $page
+        ->component('companies/dashboard/bookings/action-requests')
+        ->where('activeAction', 'cancel')
+        ->where('requests.data.0.reviewer.action_label', 'Cancelled by'));
+
+    $refundResponse = $this->actingAs($vendorUser)
+        ->get("/companies/{$vendor->username}/dashboard/booking-correction?action=refund");
+
+    $refundResponse->assertOk();
+    $refundResponse->assertInertia(fn ($page) => $page
+        ->component('companies/dashboard/bookings/action-requests')
+        ->where('activeAction', 'refund')
+        ->where('requests.data.0.reviewer.action_label', 'Refunded by'));
+});
+
+test('agent can monitor their booking modification requests without review actions', function () {
+    $agentUser = User::factory()->create();
+    $vendor = Company::factory()->create(['type' => 'vendor']);
+    $agent = Company::factory()->create(['type' => 'agent']);
+
+    CompanyTeam::create([
+        'company_id' => $agent->id,
+        'user_id' => $agentUser->id,
+        'status' => CompanyTeamStatus::ACTIVE,
+        'is_owner' => true,
+        'accepted_at' => now(),
+    ]);
+
+    $tour = Tour::factory()->create(['company_id' => $vendor->id]);
+    $booking = Booking::factory()->create([
+        'vendor_id' => $vendor->id,
+        'agent_id' => $agent->id,
+        'tour_id' => $tour->id,
+        'status' => BookingStatus::DOWN_PAYMENT,
+    ]);
+    DB::table('booking_action_requests')->insert([
+        'id' => 1003,
+        'booking_id' => $booking->id,
+        'requester_company_id' => $agent->id,
+        'requester_user_id' => $agentUser->id,
+        'target_action' => 'cancel',
+        'status' => 'pending',
+        'reason' => 'Customer asked agent to cancel',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    $response = $this->actingAs($agentUser)
+        ->get("/companies/{$agent->username}/dashboard/booking-correction");
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->component('companies/dashboard/bookings/action-requests')
+        ->where('activeAction', 'cancel')
+        ->has('requests.data', 1)
+        ->where('canReviewRequests', false)
+        ->where('actionRequiredCounts.cancellations', 0)
+        ->where('requests.data.0.status', 'pending')
+        ->where('requests.data.0.requester_company.name', $agent->name));
 });
 
 test('availability save preserves manual reserved and recomputes booking reserved from bookings', function () {

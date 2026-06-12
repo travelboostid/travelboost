@@ -43,6 +43,8 @@ use App\Http\Controllers\Companies\Dashboard\WalletController;
 use App\Http\Controllers\Companies\Dashboard\WalletTransactionsController;
 use App\Http\Controllers\Companies\Dashboard\WithdrawalController;
 use App\Http\Controllers\Companies\IndexController;
+use App\Models\Company;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('companies')->middleware(['can:access-company-pages', 'use-analytics-measurement-ids-props'])->name('companies.')->group(function () {
@@ -170,9 +172,19 @@ Route::prefix('companies')->middleware(['can:access-company-pages', 'use-analyti
         Route::post('bookings/{booking}/online-payment', [DashboardBookingController::class, 'storeOnlinePayment'])->name('bookings.online-payment');
         Route::post('bookings/{booking}/online-payment/{payment}/confirm', [DashboardBookingController::class, 'confirmOnlinePayment'])->name('bookings.online-payment.confirm');
         Route::post('bookings/{booking}/reorder', [BookingIndexController::class, 'reorder'])->name('bookings.reorder');
-        Route::get('booking-action-requests', [BookingIndexController::class, 'actionRequests'])->name('booking-action-requests.index');
-        Route::post('booking-action-requests/{bookingActionRequest}/approve', [BookingIndexController::class, 'approveActionRequest'])->name('booking-action-requests.approve');
-        Route::post('booking-action-requests/{bookingActionRequest}/reject', [BookingIndexController::class, 'rejectActionRequest'])->name('booking-action-requests.reject');
+        Route::get('booking-action-requests', fn (Company $company, Request $request) => redirect()->route('companies.dashboard.booking-correction.index', [
+            ...$request->query(),
+            'company' => $company->username,
+        ], 301));
+        Route::post('booking-action-requests/{bookingActionRequest}/approve', [BookingIndexController::class, 'approveActionRequest']);
+        Route::post('booking-action-requests/{bookingActionRequest}/reject', [BookingIndexController::class, 'rejectActionRequest']);
+        Route::get('booking-modification-requests', fn (Company $company, Request $request) => redirect()->route('companies.dashboard.booking-correction.index', [
+            ...$request->query(),
+            'company' => $company->username,
+        ], 301));
+        Route::get('booking-correction', [BookingIndexController::class, 'actionRequests'])->name('booking-correction.index');
+        Route::post('booking-correction/{bookingActionRequest}/approve', [BookingIndexController::class, 'approveActionRequest'])->name('booking-correction.approve');
+        Route::post('booking-correction/{bookingActionRequest}/reject', [BookingIndexController::class, 'rejectActionRequest'])->name('booking-correction.reject');
         Route::post('bookings/{booking}/cancel', [BookingIndexController::class, 'cancel'])->name('bookings.cancel');
         Route::post('bookings/{booking}/refund', [BookingIndexController::class, 'refund'])->name('bookings.refund');
         Route::get('bookings/{booking}/invoice', [BookingIndexController::class, 'invoice'])->name('bookings.invoice');
