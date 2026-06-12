@@ -8,6 +8,7 @@ import {
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { update } from '@/routes/companies/dashboard/teams';
 import { router } from '@inertiajs/react';
+import { FormattedMessage, useIntl } from 'react-intl';
 import { toast } from 'sonner';
 
 export default function TeamStatusSelect({
@@ -17,6 +18,7 @@ export default function TeamStatusSelect({
     team: any;
     canManageMembers: boolean;
 }) {
+    const intl = useIntl();
     const { company } = usePageSharedDataProps();
     const disabled = !canManageMembers || team.is_owner || !team.user;
 
@@ -39,21 +41,41 @@ export default function TeamStatusSelect({
                     {
                         preserveScroll: true,
                         onSuccess: () => {
-                            toast.success(`Status updated to ${value}`);
+                            toast.success(
+                                intl.formatMessage(
+                                    {
+                                        defaultMessage:
+                                            'Status updated to {status}',
+                                    },
+                                    { status: value },
+                                ),
+                            );
                         },
                         onError: () => {
-                            toast.error('Failed to update status');
+                            toast.error(
+                                intl.formatMessage({
+                                    defaultMessage: 'Failed to update status',
+                                }),
+                            );
                         },
                     },
                 )
             }
         >
             <SelectTrigger className="h-9 w-[132px] capitalize">
-                <SelectValue placeholder="Select status" />
+                <SelectValue
+                    placeholder={intl.formatMessage({
+                        defaultMessage: 'Select status',
+                    })}
+                />
             </SelectTrigger>
             <SelectContent>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="suspended">Suspended</SelectItem>
+                <SelectItem value="active">
+                    <FormattedMessage defaultMessage="Active" />
+                </SelectItem>
+                <SelectItem value="suspended">
+                    <FormattedMessage defaultMessage="Suspended" />
+                </SelectItem>
             </SelectContent>
         </Select>
     );

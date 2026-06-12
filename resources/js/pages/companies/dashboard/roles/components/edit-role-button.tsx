@@ -18,6 +18,7 @@ import { update } from '@/routes/companies/dashboard/roles';
 import { useForm } from '@inertiajs/react';
 import { EditIcon, ShieldPlusIcon } from 'lucide-react';
 import { useState } from 'react';
+import { FormattedMessage, useIntl } from 'react-intl';
 import { toast } from 'sonner';
 import PermissionsSelector from './permissions-selector';
 import { isProtectedCompanyRole } from './role-utils';
@@ -29,6 +30,7 @@ export default function EditRoleButton({
     role: any;
     permissions: any[];
 }) {
+    const intl = useIntl();
     const [open, setOpen] = useState(false);
     const { company } = usePageSharedDataProps();
 
@@ -53,11 +55,19 @@ export default function EditRoleButton({
             preserveScroll: true,
             onError: () => {
                 setOpen(true);
-                toast.error('Failed to update role');
+                toast.error(
+                    intl.formatMessage({
+                        defaultMessage: 'Failed to update role',
+                    }),
+                );
             },
             onSuccess: () => {
                 setOpen(false);
-                toast.success('Role updated successfully');
+                toast.success(
+                    intl.formatMessage({
+                        defaultMessage: 'Role updated successfully',
+                    }),
+                );
             },
         });
     };
@@ -71,7 +81,9 @@ export default function EditRoleButton({
                     variant="ghost"
                     size="icon"
                     className="rounded-full"
-                    aria-label="Edit role"
+                    aria-label={intl.formatMessage({
+                        defaultMessage: 'Edit role',
+                    })}
                 >
                     <EditIcon className="size-4" />
                 </Button>
@@ -85,11 +97,10 @@ export default function EditRoleButton({
                         </div>
                         <div className="space-y-1">
                             <DialogTitle className="text-lg">
-                                Edit Role
+                                <FormattedMessage defaultMessage="Edit Role" />
                             </DialogTitle>
                             <DialogDescription className="text-sm leading-relaxed">
-                                Update the details of the role. Click update
-                                role when you're done.
+                                <FormattedMessage defaultMessage="Update the details of the role. Click update role when you're done." />
                             </DialogDescription>
                         </div>
                     </div>
@@ -99,7 +110,9 @@ export default function EditRoleButton({
                     <div className="max-h-[min(60vh,520px)] overflow-y-auto px-6 py-5">
                         <FieldGroup>
                             <Field>
-                                <Label htmlFor="name">Code</Label>
+                                <Label htmlFor="name">
+                                    <FormattedMessage defaultMessage="Code" />
+                                </Label>
                                 <Input
                                     name="name"
                                     value={form.data.name}
@@ -120,7 +133,7 @@ export default function EditRoleButton({
 
                             <Field>
                                 <Label htmlFor="display_name">
-                                    Display Name
+                                    <FormattedMessage defaultMessage="Display Name" />
                                 </Label>
                                 <Input
                                     name="display_name"
@@ -138,7 +151,9 @@ export default function EditRoleButton({
                                 />
                             </Field>
                             <Field>
-                                <Label htmlFor="description">Description</Label>
+                                <Label htmlFor="description">
+                                    <FormattedMessage defaultMessage="Description" />
+                                </Label>
                                 <Input
                                     name="description"
                                     value={form.data.description}
@@ -152,7 +167,9 @@ export default function EditRoleButton({
                                 <InputError message={form.errors.description} />
                             </Field>
                             <Field>
-                                <Label>Permissions</Label>
+                                <Label>
+                                    <FormattedMessage defaultMessage="Permissions" />
+                                </Label>
                                 <PermissionsSelector
                                     disabled={shouldDisabled}
                                     permissions={permissions}
@@ -175,7 +192,7 @@ export default function EditRoleButton({
                             {form.processing ? (
                                 <Spinner className="mr-2" />
                             ) : null}
-                            Update Role
+                            <FormattedMessage defaultMessage="Update Role" />
                         </Button>
                     </DialogFooter>
                 </form>

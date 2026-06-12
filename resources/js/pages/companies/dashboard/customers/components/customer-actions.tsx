@@ -30,6 +30,7 @@ import { router, useForm } from '@inertiajs/react';
 import dayjs from 'dayjs';
 import { BellIcon, EyeIcon, HistoryIcon, MoreHorizontal } from 'lucide-react';
 import { useState } from 'react';
+import { FormattedMessage, useIntl } from 'react-intl';
 
 export type CustomerRow = UserResource & {
     gender?: string | null;
@@ -44,7 +45,7 @@ function DetailRow({
     label,
     value,
 }: {
-    label: string;
+    label: React.ReactNode;
     value: React.ReactNode;
 }) {
     return (
@@ -60,6 +61,7 @@ function DetailRow({
 }
 
 export function CustomerActions({ customer }: { customer: CustomerRow }) {
+    const intl = useIntl();
     const { company } = usePageSharedDataProps();
     const [isProfileOpen, setIsProfileOpen] = useState(false);
     const [isNotificationOpen, setIsNotificationOpen] = useState(false);
@@ -110,7 +112,7 @@ export function CustomerActions({ customer }: { customer: CustomerRow }) {
                             className="cursor-pointer"
                         >
                             <EyeIcon className="mr-2 h-4 w-4" />
-                            View Profile
+                            <FormattedMessage defaultMessage="View Profile" />
                         </DropdownMenuItem>
                         <DropdownMenuItem
                             onSelect={(event) => {
@@ -127,7 +129,7 @@ export function CustomerActions({ customer }: { customer: CustomerRow }) {
                             className="cursor-pointer"
                         >
                             <HistoryIcon className="mr-2 h-4 w-4" />
-                            History Booking
+                            <FormattedMessage defaultMessage="Booking History" />
                         </DropdownMenuItem>
                         <DropdownMenuItem
                             onSelect={(event) => {
@@ -137,7 +139,7 @@ export function CustomerActions({ customer }: { customer: CustomerRow }) {
                             className="cursor-pointer"
                         >
                             <BellIcon className="mr-2 h-4 w-4" />
-                            Send Notification
+                            <FormattedMessage defaultMessage="Send Notification" />
                         </DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>
@@ -147,35 +149,52 @@ export function CustomerActions({ customer }: { customer: CustomerRow }) {
                 <DialogContent className="sm:max-w-[460px]">
                     <DialogHeader>
                         <DialogTitle className="border-b pb-4 text-xl font-bold text-primary">
-                            Customer Profile
+                            <FormattedMessage defaultMessage="Customer Profile" />
                         </DialogTitle>
                     </DialogHeader>
                     <div className="py-2">
-                        <DetailRow label="Full Name" value={customer.name} />
                         <DetailRow
-                            label="Username"
+                            label={
+                                <FormattedMessage defaultMessage="Full Name" />
+                            }
+                            value={customer.name}
+                        />
+                        <DetailRow
+                            label={
+                                <FormattedMessage defaultMessage="Username" />
+                            }
                             value={
                                 customer.username
                                     ? `@${customer.username}`
                                     : '-'
                             }
                         />
-                        <DetailRow label="Email" value={customer.email} />
                         <DetailRow
-                            label="Phone Number"
+                            label={<FormattedMessage defaultMessage="Email" />}
+                            value={customer.email}
+                        />
+                        <DetailRow
+                            label={
+                                <FormattedMessage defaultMessage="Phone Number" />
+                            }
                             value={customer.phone}
                         />
                         <DetailRow
-                            label="Gender"
+                            label={<FormattedMessage defaultMessage="Gender" />}
                             value={
                                 <span className="capitalize">
                                     {customer.gender || '-'}
                                 </span>
                             }
                         />
-                        <DetailRow label="Address" value={customer.address} />
                         <DetailRow
-                            label="Status"
+                            label={
+                                <FormattedMessage defaultMessage="Address" />
+                            }
+                            value={customer.address}
+                        />
+                        <DetailRow
+                            label={<FormattedMessage defaultMessage="Status" />}
                             value={
                                 <span
                                     className={cn(
@@ -190,13 +209,17 @@ export function CustomerActions({ customer }: { customer: CustomerRow }) {
                             }
                         />
                         <DetailRow
-                            label="Agent"
+                            label={<FormattedMessage defaultMessage="Agent" />}
                             value={
-                                customer.company?.name ?? 'Direct Registration'
+                                customer.company?.name ?? (
+                                    <FormattedMessage defaultMessage="Direct Registration" />
+                                )
                             }
                         />
                         <DetailRow
-                            label="Join Date"
+                            label={
+                                <FormattedMessage defaultMessage="Join Date" />
+                            }
                             value={dayjs(customer.created_at).format(
                                 'D MMMM YYYY, HH:mm',
                             )}
@@ -217,12 +240,13 @@ export function CustomerActions({ customer }: { customer: CustomerRow }) {
                             </div>
                             <div className="space-y-1">
                                 <DialogTitle className="text-lg">
-                                    Send Notification
+                                    <FormattedMessage defaultMessage="Send Notification" />
                                 </DialogTitle>
                                 <DialogDescription className="text-sm leading-relaxed">
-                                    Send a custom notification to{' '}
-                                    {customer.name} via dashboard, email, or
-                                    both.
+                                    <FormattedMessage
+                                        defaultMessage="Send a custom notification to {name} via dashboard, email, or both."
+                                        values={{ name: customer.name }}
+                                    />
                                 </DialogDescription>
                             </div>
                         </div>
@@ -231,7 +255,7 @@ export function CustomerActions({ customer }: { customer: CustomerRow }) {
                     <div className="space-y-5 px-6 py-5">
                         <div className="space-y-2">
                             <label className="text-sm font-medium text-slate-700 dark:text-slate-200">
-                                Title
+                                <FormattedMessage defaultMessage="Title" />
                             </label>
                             <Input
                                 value={notificationForm.data.title}
@@ -241,13 +265,15 @@ export function CustomerActions({ customer }: { customer: CustomerRow }) {
                                         event.target.value,
                                     )
                                 }
-                                placeholder="Enter notification title"
+                                placeholder={intl.formatMessage({
+                                    defaultMessage: 'Enter notification title',
+                                })}
                             />
                         </div>
 
                         <div className="space-y-2">
                             <label className="text-sm font-medium text-slate-700 dark:text-slate-200">
-                                Delivery Channel
+                                <FormattedMessage defaultMessage="Delivery Channel" />
                             </label>
                             <Select
                                 value={notificationForm.data.channel}
@@ -260,19 +286,21 @@ export function CustomerActions({ customer }: { customer: CustomerRow }) {
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="dashboard">
-                                        Dashboard Only
+                                        <FormattedMessage defaultMessage="Dashboard Only" />
                                     </SelectItem>
                                     <SelectItem value="email">
-                                        Email Only
+                                        <FormattedMessage defaultMessage="Email Only" />
                                     </SelectItem>
-                                    <SelectItem value="both">Both</SelectItem>
+                                    <SelectItem value="both">
+                                        <FormattedMessage defaultMessage="Both" />
+                                    </SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
 
                         <div className="space-y-2">
                             <label className="text-sm font-medium text-slate-700 dark:text-slate-200">
-                                Message
+                                <FormattedMessage defaultMessage="Message" />
                             </label>
                             <Textarea
                                 rows={5}
@@ -283,7 +311,10 @@ export function CustomerActions({ customer }: { customer: CustomerRow }) {
                                         event.target.value,
                                     )
                                 }
-                                placeholder="Write your message for the customer"
+                                placeholder={intl.formatMessage({
+                                    defaultMessage:
+                                        'Write your message for the customer',
+                                })}
                             />
                         </div>
                     </div>
@@ -299,7 +330,7 @@ export function CustomerActions({ customer }: { customer: CustomerRow }) {
                             {notificationForm.processing ? (
                                 <Spinner className="mr-2" />
                             ) : null}
-                            Send Notification
+                            <FormattedMessage defaultMessage="Send Notification" />
                         </Button>
                         <Button
                             type="button"
@@ -307,7 +338,7 @@ export function CustomerActions({ customer }: { customer: CustomerRow }) {
                             className="w-full"
                             onClick={() => setIsNotificationOpen(false)}
                         >
-                            Cancel
+                            <FormattedMessage defaultMessage="Cancel" />
                         </Button>
                     </DialogFooter>
                 </DialogContent>

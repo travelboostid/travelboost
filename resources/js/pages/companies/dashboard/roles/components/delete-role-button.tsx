@@ -15,10 +15,12 @@ import { destroy } from '@/routes/companies/dashboard/roles';
 import { useForm } from '@inertiajs/react';
 import { Trash2Icon } from 'lucide-react';
 import { useState } from 'react';
+import { FormattedMessage, useIntl } from 'react-intl';
 import { toast } from 'sonner';
 import { isProtectedCompanyRole } from './role-utils';
 
 export default function DeleteRoleButton({ role }: { role: any }) {
+    const intl = useIntl();
     const { company } = usePageSharedDataProps();
     const [open, setOpen] = useState(false);
     const form = useForm();
@@ -32,10 +34,18 @@ export default function DeleteRoleButton({ role }: { role: any }) {
             preserveScroll: true,
             onSuccess: () => {
                 setOpen(false);
-                toast.success('Role deleted successfully');
+                toast.success(
+                    intl.formatMessage({
+                        defaultMessage: 'Role deleted successfully',
+                    }),
+                );
             },
             onError: () => {
-                toast.error('Failed to delete role');
+                toast.error(
+                    intl.formatMessage({
+                        defaultMessage: 'Failed to delete role',
+                    }),
+                );
             },
         });
     };
@@ -47,7 +57,9 @@ export default function DeleteRoleButton({ role }: { role: any }) {
                     variant="ghost"
                     size="icon"
                     className="rounded-full text-destructive"
-                    aria-label="Delete role"
+                    aria-label={intl.formatMessage({
+                        defaultMessage: 'Delete role',
+                    })}
                 >
                     <Trash2Icon className="size-4" />
                 </Button>
@@ -55,17 +67,21 @@ export default function DeleteRoleButton({ role }: { role: any }) {
             <AlertDialogContent>
                 <AlertDialogHeader>
                     <AlertDialogTitle>
-                        Delete {role.display_name}?
+                        <FormattedMessage
+                            defaultMessage="Delete {roleName}?"
+                            values={{ roleName: role.display_name }}
+                        />
                     </AlertDialogTitle>
                     <AlertDialogDescription>
-                        This will permanently delete the role. This action
-                        cannot be undone.
+                        <FormattedMessage defaultMessage="This will permanently delete the role. This action cannot be undone." />
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogCancel>
+                        <FormattedMessage defaultMessage="Cancel" />
+                    </AlertDialogCancel>
                     <AlertDialogAction onClick={handleDelete}>
-                        Delete
+                        <FormattedMessage defaultMessage="Delete" />
                     </AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>

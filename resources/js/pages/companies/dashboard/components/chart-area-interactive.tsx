@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { FormattedMessage, useIntl } from 'react-intl';
 import { Area, AreaChart, CartesianGrid, XAxis } from 'recharts';
 
 import {
@@ -123,21 +124,27 @@ const chartData = [
     { date: '2024-06-30', desktop: 446, mobile: 400 },
 ];
 
-const chartConfig = {
-    visitors: {
-        label: 'Visitors',
-    },
-    desktop: {
-        label: 'Desktop',
-        color: 'var(--primary)',
-    },
-    mobile: {
-        label: 'Mobile',
-        color: 'var(--primary)',
-    },
-} satisfies ChartConfig;
+function useChartConfig(): ChartConfig {
+    const intl = useIntl();
+
+    return {
+        visitors: {
+            label: intl.formatMessage({ defaultMessage: 'Visitors' }),
+        },
+        desktop: {
+            label: intl.formatMessage({ defaultMessage: 'Desktop' }),
+            color: 'var(--primary)',
+        },
+        mobile: {
+            label: intl.formatMessage({ defaultMessage: 'Mobile' }),
+            color: 'var(--primary)',
+        },
+    };
+}
 
 export function ChartAreaInteractive() {
+    const intl = useIntl();
+    const chartConfig = useChartConfig();
     const isMobile = useIsMobile();
     const [timeRange, setTimeRange] = React.useState('90d');
 
@@ -164,12 +171,16 @@ export function ChartAreaInteractive() {
     return (
         <Card className="@container/card">
             <CardHeader>
-                <CardTitle>Total Visitors</CardTitle>
+                <CardTitle>
+                    <FormattedMessage defaultMessage="Total Visitors" />
+                </CardTitle>
                 <CardDescription>
                     <span className="hidden @[540px]/card:block">
-                        Total for the last 3 months
+                        <FormattedMessage defaultMessage="Total for the last 3 months" />
                     </span>
-                    <span className="@[540px]/card:hidden">Last 3 months</span>
+                    <span className="@[540px]/card:hidden">
+                        <FormattedMessage defaultMessage="Last 3 months" />
+                    </span>
                 </CardDescription>
                 <CardAction>
                     <ToggleGroup
@@ -180,32 +191,38 @@ export function ChartAreaInteractive() {
                         className="hidden *:data-[slot=toggle-group-item]:!px-4 @[767px]/card:flex"
                     >
                         <ToggleGroupItem value="90d">
-                            Last 3 months
+                            <FormattedMessage defaultMessage="Last 3 months" />
                         </ToggleGroupItem>
                         <ToggleGroupItem value="30d">
-                            Last 30 days
+                            <FormattedMessage defaultMessage="Last 30 days" />
                         </ToggleGroupItem>
                         <ToggleGroupItem value="7d">
-                            Last 7 days
+                            <FormattedMessage defaultMessage="Last 7 days" />
                         </ToggleGroupItem>
                     </ToggleGroup>
                     <Select value={timeRange} onValueChange={setTimeRange}>
                         <SelectTrigger
                             className="flex w-40 **:data-[slot=select-value]:block **:data-[slot=select-value]:truncate @[767px]/card:hidden"
                             size="sm"
-                            aria-label="Select a value"
+                            aria-label={intl.formatMessage({
+                                defaultMessage: 'Select a value',
+                            })}
                         >
-                            <SelectValue placeholder="Last 3 months" />
+                            <SelectValue
+                                placeholder={intl.formatMessage({
+                                    defaultMessage: 'Last 3 months',
+                                })}
+                            />
                         </SelectTrigger>
                         <SelectContent className="rounded-xl">
                             <SelectItem value="90d" className="rounded-lg">
-                                Last 3 months
+                                <FormattedMessage defaultMessage="Last 3 months" />
                             </SelectItem>
                             <SelectItem value="30d" className="rounded-lg">
-                                Last 30 days
+                                <FormattedMessage defaultMessage="Last 30 days" />
                             </SelectItem>
                             <SelectItem value="7d" className="rounded-lg">
-                                Last 7 days
+                                <FormattedMessage defaultMessage="Last 7 days" />
                             </SelectItem>
                         </SelectContent>
                     </Select>

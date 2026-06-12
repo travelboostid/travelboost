@@ -7,6 +7,7 @@ import { Head, router } from '@inertiajs/react';
 import dayjs from 'dayjs';
 import { CheckIcon, XIcon } from 'lucide-react';
 import { useState } from 'react';
+import { FormattedMessage, useIntl } from 'react-intl';
 
 type ActionRequest = {
     id: number;
@@ -34,6 +35,7 @@ type PageProps = {
 };
 
 export default function Page({ requests }: PageProps) {
+    const intl = useIntl();
     const { company } = usePageSharedDataProps() as {
         company: { username: string };
     };
@@ -59,26 +61,38 @@ export default function Page({ requests }: PageProps) {
             openMenuIds={['tours']}
             activeMenuIds={['tours.cancelation-refund']}
             breadcrumb={[
-                { title: 'Tours' },
-                { title: 'Cancelation and Refund' },
+                {
+                    title: intl.formatMessage({
+                        defaultMessage: 'Tours',
+                    }),
+                },
+                {
+                    title: intl.formatMessage({
+                        defaultMessage: 'Cancelation and Refund',
+                    }),
+                },
             ]}
         >
-            <Head title="Cancelation and Refund" />
+            <Head
+                title={intl.formatMessage({
+                    defaultMessage: 'Cancelation and Refund',
+                })}
+            />
 
             <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 p-4 md:p-6">
                 <div>
                     <h1 className="text-xl font-semibold">
-                        Cancelation and Refund
+                        <FormattedMessage defaultMessage="Cancelation and Refund" />
                     </h1>
                     <p className="text-sm text-muted-foreground">
-                        Review pending cancel and refund requests from agents.
+                        <FormattedMessage defaultMessage="Review pending cancel and refund requests from agents." />
                     </p>
                 </div>
 
                 <div className="overflow-hidden rounded-lg border bg-card">
                     {requests.data.length === 0 ? (
                         <div className="p-6 text-sm text-muted-foreground">
-                            No pending requests.
+                            <FormattedMessage defaultMessage="No pending requests." />
                         </div>
                     ) : (
                         <div className="divide-y">
@@ -103,15 +117,24 @@ export default function Page({ requests }: PageProps) {
                                         <div>
                                             <p className="truncate text-sm font-semibold">
                                                 {request.booking?.tour?.name ??
-                                                    'Untitled tour'}
+                                                    intl.formatMessage({
+                                                        defaultMessage:
+                                                            'Untitled tour',
+                                                    })}
                                             </p>
                                             <p className="text-xs text-muted-foreground">
                                                 {request.booking
                                                     ?.contact_name ??
-                                                    'Booking contact'}{' '}
+                                                    intl.formatMessage({
+                                                        defaultMessage:
+                                                            'Booking contact',
+                                                    })}{' '}
                                                 ·{' '}
                                                 {request.requester_company
-                                                    ?.name ?? 'Agent'}{' '}
+                                                    ?.name ??
+                                                    intl.formatMessage({
+                                                        defaultMessage: 'Agent',
+                                                    })}{' '}
                                                 ·{' '}
                                                 {request.created_at
                                                     ? dayjs(
@@ -122,14 +145,14 @@ export default function Page({ requests }: PageProps) {
                                         </div>
                                         <div className="grid gap-1 text-xs text-muted-foreground sm:grid-cols-3">
                                             <span>
-                                                Status:{' '}
+                                                <FormattedMessage defaultMessage="Status:" />{' '}
                                                 <strong className="font-semibold text-foreground">
                                                     {request.booking?.status ??
                                                         '-'}
                                                 </strong>
                                             </span>
                                             <span>
-                                                Departure:{' '}
+                                                <FormattedMessage defaultMessage="Departure:" />{' '}
                                                 <strong className="font-semibold text-foreground">
                                                     {request.booking
                                                         ?.departure_date
@@ -143,7 +166,7 @@ export default function Page({ requests }: PageProps) {
                                                 </strong>
                                             </span>
                                             <span>
-                                                Grand total:{' '}
+                                                <FormattedMessage defaultMessage="Grand total:" />{' '}
                                                 <strong className="font-semibold text-foreground">
                                                     {formatIDR(
                                                         request.booking
@@ -175,7 +198,7 @@ export default function Page({ requests }: PageProps) {
                                             }
                                         >
                                             <XIcon className="size-4" />
-                                            Reject
+                                            <FormattedMessage defaultMessage="Reject" />
                                         </Button>
                                         <Button
                                             type="button"
@@ -191,7 +214,7 @@ export default function Page({ requests }: PageProps) {
                                             }
                                         >
                                             <CheckIcon className="size-4" />
-                                            Approve
+                                            <FormattedMessage defaultMessage="Approve" />
                                         </Button>
                                     </div>
                                 </div>

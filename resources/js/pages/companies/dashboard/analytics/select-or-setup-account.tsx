@@ -14,6 +14,7 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { useState } from 'react';
+import { FormattedMessage, useIntl } from 'react-intl';
 import { toast } from 'sonner';
 
 function getPropertyRowCount(property: any) {
@@ -36,6 +37,7 @@ export default function SelectOrSetupAccountPage({
     googleAccount,
     analyticAccounts,
 }: SelectOrSetupAccountPageProps) {
+    const intl = useIntl();
     const [loading, setLoading] = useState(false);
     const { company } = usePageProps();
 
@@ -56,7 +58,10 @@ export default function SelectOrSetupAccountPage({
                 onBefore: () => setLoading(true),
                 onSuccess: () => {
                     toast.success(
-                        'Google analytics property successfully connected!',
+                        intl.formatMessage({
+                            defaultMessage:
+                                'Google Analytics property successfully connected!',
+                        }),
                     );
                     router.reload();
                 },
@@ -67,20 +72,44 @@ export default function SelectOrSetupAccountPage({
     return (
         <CompanyDashboardLayout
             containerClassName="w-full flex-1 flex flex-col"
-            breadcrumb={[{ title: 'Analytics' }]}
+            breadcrumb={[
+                {
+                    title: intl.formatMessage({
+                        defaultMessage: 'Analytics',
+                    }),
+                },
+            ]}
             activeMenuIds={['customers']}
         >
-            <Head title="Google Analytics" />
+            <Head
+                title={intl.formatMessage({
+                    defaultMessage: 'Google Analytics',
+                })}
+            />
             <Table>
                 <TableHeader>
                     <TableRow>
-                        <TableHead>Account</TableHead>
-                        <TableHead>Property</TableHead>
-                        <TableHead>Stream</TableHead>
-                        <TableHead>Measurement ID</TableHead>
-                        <TableHead>Website</TableHead>
-                        <TableHead>Timezone</TableHead>
-                        <TableHead className="w-[120px]">Action</TableHead>
+                        <TableHead>
+                            <FormattedMessage defaultMessage="Account" />
+                        </TableHead>
+                        <TableHead>
+                            <FormattedMessage defaultMessage="Property" />
+                        </TableHead>
+                        <TableHead>
+                            <FormattedMessage defaultMessage="Stream" />
+                        </TableHead>
+                        <TableHead>
+                            <FormattedMessage defaultMessage="Measurement ID" />
+                        </TableHead>
+                        <TableHead>
+                            <FormattedMessage defaultMessage="Website" />
+                        </TableHead>
+                        <TableHead>
+                            <FormattedMessage defaultMessage="Timezone" />
+                        </TableHead>
+                        <TableHead className="w-[120px]">
+                            <FormattedMessage defaultMessage="Action" />
+                        </TableHead>
                     </TableRow>
                 </TableHeader>
 
@@ -157,7 +186,7 @@ export default function SelectOrSetupAccountPage({
                                                     )
                                                 }
                                             >
-                                                Select
+                                                <FormattedMessage defaultMessage="Select" />
                                             </Button>
                                         </TableCell>
                                     </TableRow>

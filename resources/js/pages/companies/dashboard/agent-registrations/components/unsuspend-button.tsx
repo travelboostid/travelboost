@@ -15,6 +15,7 @@ import { update } from '@/routes/companies/dashboard/agent-registrations';
 import { useForm } from '@inertiajs/react';
 import { UserCheckIcon } from 'lucide-react';
 import { useState } from 'react';
+import { FormattedMessage } from 'react-intl';
 
 export default function UnsuspendButton({
     registration,
@@ -50,17 +51,19 @@ export default function UnsuspendButton({
             </AlertDialogTrigger>
             <AlertDialogContent>
                 <AlertDialogHeader>
-                    <AlertDialogTitle>Unsuspend Registration</AlertDialogTitle>
+                    <AlertDialogTitle>
+                        <FormattedMessage defaultMessage="Unsuspend Registration" />
+                    </AlertDialogTitle>
                     <AlertDialogDescription>
-                        This will unsuspend the registration and allow the agent
-                        to access your tours. The agent will be notified about
-                        the change. Are you sure you want to proceed?
+                        <FormattedMessage defaultMessage="This will unsuspend the registration and allow the agent to access your tours. The agent will be notified about the change. Are you sure you want to proceed?" />
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogCancel>
+                        <FormattedMessage defaultMessage="Cancel" />
+                    </AlertDialogCancel>
                     <AlertDialogAction onClick={handleApprove}>
-                        Unsuspend
+                        <FormattedMessage defaultMessage="Unsuspend" />
                     </AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>

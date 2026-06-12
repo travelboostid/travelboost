@@ -19,7 +19,7 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
-import { router, usePage } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
 import {
     flexRender,
     getCoreRowModel,
@@ -34,23 +34,33 @@ import {
 } from '@tanstack/react-table';
 import { ChevronDown, EditIcon, PlusIcon, TrashIcon } from 'lucide-react';
 import * as React from 'react';
+import { FormattedMessage, useIntl } from 'react-intl';
 import AddCategoryDialog from './add-category-dialog';
 import UpdateCategoryDialog from './update-category-dialog';
 
 function RowAction({ category }: { category: TourCategoryResource }) {
+    const intl = useIntl();
     const { company } = usePageSharedDataProps();
+
     const handleDelete = () => {
-        if (!confirm('Delete this category?')) return;
+        if (
+            !confirm(
+                intl.formatMessage({
+                    defaultMessage: 'Delete this category?',
+                }),
+            )
+        ) {
+            return;
+        }
+
         router.delete(
             destroy({ company: company.username, category: category.id }),
             {
                 preserveScroll: true,
-                onSuccess: () => {
-                    // optional: toast
-                },
             },
         );
     };
+
     return (
         <div className="flex gap-2">
             <Button variant="destructive" onClick={handleDelete}>
@@ -65,34 +75,8 @@ function RowAction({ category }: { category: TourCategoryResource }) {
     );
 }
 
-export const columns: ColumnDef<TourCategoryResource>[] = [
-    {
-        accessorKey: 'name',
-        header: 'Name',
-        cell: ({ row }) => <div className="">{row.getValue('name')}</div>,
-    },
-    {
-        accessorKey: 'description',
-        header: 'Description',
-        cell: ({ row }) => (
-            <div className="">{row.getValue('description')}</div>
-        ),
-    },
-    {
-        accessorKey: 'position_no',
-        header: 'Position No',
-        cell: ({ row }) => (
-            <div className="">{row.getValue('position_no')}</div>
-        ),
-    },
-    {
-        id: 'actions',
-        enableHiding: false,
-        cell: ({ row }) => <RowAction category={row.original} />,
-    },
-];
-
 export default function Page({ data }: { data: any }) {
+    const intl = useIntl();
     const { errors } = usePage().props as any;
     const [sorting, setSorting] = React.useState<SortingState>([]);
     const [columnFilters, setColumnFilters] =
@@ -100,6 +84,38 @@ export default function Page({ data }: { data: any }) {
     const [columnVisibility, setColumnVisibility] =
         React.useState<VisibilityState>({});
     const [rowSelection, setRowSelection] = React.useState({});
+
+    const columns = React.useMemo<ColumnDef<TourCategoryResource>[]>(
+        () => [
+            {
+                accessorKey: 'name',
+                header: () => <FormattedMessage defaultMessage="Name" />,
+                cell: ({ row }) => (
+                    <div className="">{row.getValue('name')}</div>
+                ),
+            },
+            {
+                accessorKey: 'description',
+                header: () => <FormattedMessage defaultMessage="Description" />,
+                cell: ({ row }) => (
+                    <div className="">{row.getValue('description')}</div>
+                ),
+            },
+            {
+                accessorKey: 'position_no',
+                header: () => <FormattedMessage defaultMessage="Position No" />,
+                cell: ({ row }) => (
+                    <div className="">{row.getValue('position_no')}</div>
+                ),
+            },
+            {
+                id: 'actions',
+                enableHiding: false,
+                cell: ({ row }) => <RowAction category={row.original} />,
+            },
+        ],
+        [],
+    );
 
     const table = useReactTable({
         data,
@@ -122,17 +138,35 @@ export default function Page({ data }: { data: any }) {
 
     return (
         <CompanyDashboardLayout
-            breadcrumb={[{ title: 'Tours' }, { title: 'Product Categories' }]}
+            breadcrumb={[
+                {
+                    title: intl.formatMessage({
+                        defaultMessage: 'Tours',
+                    }),
+                },
+                {
+                    title: intl.formatMessage({
+                        defaultMessage: 'Product Categories',
+                    }),
+                },
+            ]}
             openMenuIds={['tours']}
             activeMenuIds={['tours.categories']}
             applet={
                 <AddCategoryDialog>
                     <Button>
-                        <PlusIcon /> Add Category
+                        <PlusIcon />
+                        <FormattedMessage defaultMessage="Add Category" />
                     </Button>
                 </AddCategoryDialog>
             }
         >
+            <Head
+                title={intl.formatMessage({
+                    defaultMessage: 'Product Categories',
+                })}
+            />
+
             <div className="w-full p-4">
                 {errors.delete_error && (
                     <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -141,7 +175,9 @@ export default function Page({ data }: { data: any }) {
                 )}
                 <div className="flex items-center py-4">
                     <Input
-                        placeholder="Filter name..."
+                        placeholder={intl.formatMessage({
+                            defaultMessage: 'Filter name...',
+                        })}
                         value={
                             (table
                                 .getColumn('name')
@@ -157,7 +193,8 @@ export default function Page({ data }: { data: any }) {
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <Button variant="outline" className="ml-auto">
-                                Columns <ChevronDown />
+                                <FormattedMessage defaultMessage="Columns" />
+                                <ChevronDown />
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
@@ -231,7 +268,7 @@ export default function Page({ data }: { data: any }) {
                                         colSpan={columns.length}
                                         className="h-24 text-center"
                                     >
-                                        No results.
+                                        <FormattedMessage defaultMessage="No results." />
                                     </TableCell>
                                 </TableRow>
                             )}
@@ -240,9 +277,15 @@ export default function Page({ data }: { data: any }) {
                 </div>
                 <div className="flex items-center justify-end space-x-2 py-4">
                     <div className="flex-1 text-sm text-muted-foreground">
-                        {table.getFilteredSelectedRowModel().rows.length} of{' '}
-                        {table.getFilteredRowModel().rows.length} row(s)
-                        selected.
+                        <FormattedMessage
+                            defaultMessage="{selected} of {total} row(s) selected."
+                            values={{
+                                selected:
+                                    table.getFilteredSelectedRowModel().rows
+                                        .length,
+                                total: table.getFilteredRowModel().rows.length,
+                            }}
+                        />
                     </div>
                     <div className="space-x-2">
                         <Button
@@ -251,7 +294,7 @@ export default function Page({ data }: { data: any }) {
                             onClick={() => table.previousPage()}
                             disabled={!table.getCanPreviousPage()}
                         >
-                            Previous
+                            <FormattedMessage defaultMessage="Previous" />
                         </Button>
                         <Button
                             variant="outline"
@@ -259,7 +302,7 @@ export default function Page({ data }: { data: any }) {
                             onClick={() => table.nextPage()}
                             disabled={!table.getCanNextPage()}
                         >
-                            Next
+                            <FormattedMessage defaultMessage="Next" />
                         </Button>
                     </div>
                 </div>

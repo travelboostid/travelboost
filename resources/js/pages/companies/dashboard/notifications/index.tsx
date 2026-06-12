@@ -33,6 +33,7 @@ import {
     TrashIcon,
 } from 'lucide-react';
 import { useCallback, useMemo } from 'react';
+import { FormattedMessage, useIntl } from 'react-intl';
 import { toast } from 'sonner';
 
 dayjs.extend(relativeTime);
@@ -60,7 +61,7 @@ function DetailRow({
     label,
     value,
 }: {
-    label: string;
+    label: React.ReactNode;
     value: React.ReactNode;
 }) {
     return (
@@ -74,6 +75,7 @@ function DetailRow({
 }
 
 export default function NotificationsPage({ data }: NotificationsPageProps) {
+    const intl = useIntl();
     const { company } = usePageSharedDataProps();
 
     const markAsRead = useCallback(
@@ -84,11 +86,15 @@ export default function NotificationsPage({ data }: NotificationsPageProps) {
                 {
                     preserveScroll: true,
                     onSuccess: () =>
-                        toast.success('Notification marked as read'),
+                        toast.success(
+                            intl.formatMessage({
+                                defaultMessage: 'Notification marked as read',
+                            }),
+                        ),
                 },
             );
         },
-        [company.username],
+        [company.username, intl],
     );
 
     const markAllAsRead = () => {
@@ -98,24 +104,40 @@ export default function NotificationsPage({ data }: NotificationsPageProps) {
             {
                 preserveScroll: true,
                 onSuccess: () =>
-                    toast.success('All notifications marked as read'),
+                    toast.success(
+                        intl.formatMessage({
+                            defaultMessage: 'All notifications marked as read',
+                        }),
+                    ),
             },
         );
     };
 
     const deleteNotification = useCallback(
         (id: string) => {
-            if (confirm('Are you sure you want to delete this notification?')) {
+            if (
+                confirm(
+                    intl.formatMessage({
+                        defaultMessage:
+                            'Are you sure you want to delete this notification?',
+                    }),
+                )
+            ) {
                 router.delete(
                     `/companies/${company.username}/dashboard/notifications/${id}`,
                     {
                         preserveScroll: true,
-                        onSuccess: () => toast.success('Notification deleted'),
+                        onSuccess: () =>
+                            toast.success(
+                                intl.formatMessage({
+                                    defaultMessage: 'Notification deleted',
+                                }),
+                            ),
                     },
                 );
             }
         },
-        [company.username],
+        [company.username, intl],
     );
 
     const columns = useMemo<ColumnDef<NotificationResource>[]>(
@@ -133,7 +155,9 @@ export default function NotificationsPage({ data }: NotificationsPageProps) {
                             onCheckedChange={(value) =>
                                 table.toggleAllPageRowsSelected(!!value)
                             }
-                            aria-label="Select all"
+                            aria-label={intl.formatMessage({
+                                defaultMessage: 'Select all',
+                            })}
                             className="border-primary/50 data-[state=checked]:bg-primary"
                         />
                     </div>
@@ -145,7 +169,9 @@ export default function NotificationsPage({ data }: NotificationsPageProps) {
                             onCheckedChange={(value) =>
                                 row.toggleSelected(!!value)
                             }
-                            aria-label="Select row"
+                            aria-label={intl.formatMessage({
+                                defaultMessage: 'Select row',
+                            })}
                             className="border-primary/40 data-[state=checked]:bg-primary"
                         />
                     </div>
@@ -158,7 +184,12 @@ export default function NotificationsPage({ data }: NotificationsPageProps) {
                 id: 'status',
                 accessorKey: 'read_at',
                 header: ({ column }) => (
-                    <DataTableColumnHeader column={column} label="Status" />
+                    <DataTableColumnHeader
+                        column={column}
+                        label={intl.formatMessage({
+                            defaultMessage: 'Status',
+                        })}
+                    />
                 ),
                 cell: ({ row }) => (
                     <div>
@@ -167,11 +198,11 @@ export default function NotificationsPage({ data }: NotificationsPageProps) {
                                 variant="secondary"
                                 className="bg-slate-100 text-slate-600 border-none text-[10px]"
                             >
-                                Read
+                                <FormattedMessage defaultMessage="Read" />
                             </Badge>
                         ) : (
                             <Badge className="bg-red-100 text-red-600 border-none hover:bg-red-100 text-[10px]">
-                                Unread
+                                <FormattedMessage defaultMessage="Unread" />
                             </Badge>
                         )}
                     </div>
@@ -183,14 +214,23 @@ export default function NotificationsPage({ data }: NotificationsPageProps) {
                 header: ({ column }) => (
                     <DataTableColumnHeader
                         column={column}
-                        label="Notification"
+                        label={intl.formatMessage({
+                            defaultMessage: 'Notification',
+                        })}
                     />
                 ),
                 cell: ({ row }) => {
                     const notif = row.original;
-                    const title = notif.data?.title || 'System Notification';
+                    const title =
+                        notif.data?.title ||
+                        intl.formatMessage({
+                            defaultMessage: 'System Notification',
+                        });
                     const message =
-                        notif.data?.message || 'You have a new message.';
+                        notif.data?.message ||
+                        intl.formatMessage({
+                            defaultMessage: 'You have a new message.',
+                        });
 
                     return (
                         <div className="flex flex-col max-w-[300px] xl:max-w-[450px]">
@@ -214,7 +254,12 @@ export default function NotificationsPage({ data }: NotificationsPageProps) {
                 id: 'created_at',
                 accessorKey: 'created_at',
                 header: ({ column }) => (
-                    <DataTableColumnHeader column={column} label="Date" />
+                    <DataTableColumnHeader
+                        column={column}
+                        label={intl.formatMessage({
+                            defaultMessage: 'Date',
+                        })}
+                    />
                 ),
                 cell: ({ cell }) => (
                     <div className="text-xs text-slate-500 whitespace-nowrap">
@@ -235,7 +280,9 @@ export default function NotificationsPage({ data }: NotificationsPageProps) {
                     const actionLabel =
                         typeof notif.data?.action_label === 'string'
                             ? notif.data.action_label
-                            : 'Open';
+                            : intl.formatMessage({
+                                  defaultMessage: 'Open',
+                              });
 
                     return (
                         <div className="flex items-center gap-2">
@@ -256,29 +303,40 @@ export default function NotificationsPage({ data }: NotificationsPageProps) {
                                 <DialogContent className="sm:max-w-[500px]">
                                     <DialogHeader>
                                         <DialogTitle className="text-xl font-bold text-primary border-b pb-4">
-                                            Notification Details
+                                            <FormattedMessage defaultMessage="Notification Details" />
                                         </DialogTitle>
                                     </DialogHeader>
                                     <div className="flex flex-col gap-1 py-2">
                                         <DetailRow
-                                            label="Title"
+                                            label={
+                                                <FormattedMessage defaultMessage="Title" />
+                                            }
                                             value={
                                                 notif.data?.title ||
-                                                'System Notification'
+                                                intl.formatMessage({
+                                                    defaultMessage:
+                                                        'System Notification',
+                                                })
                                             }
                                         />
                                         <DetailRow
-                                            label="Message"
+                                            label={
+                                                <FormattedMessage defaultMessage="Message" />
+                                            }
                                             value={notif.data?.message || '-'}
                                         />
                                         <DetailRow
-                                            label="Date"
+                                            label={
+                                                <FormattedMessage defaultMessage="Date" />
+                                            }
                                             value={dayjs(
                                                 notif.created_at,
                                             ).format('DD MMMM YYYY, HH:mm')}
                                         />
                                         <DetailRow
-                                            label="Status"
+                                            label={
+                                                <FormattedMessage defaultMessage="Status" />
+                                            }
                                             value={
                                                 <Badge
                                                     variant={
@@ -287,9 +345,11 @@ export default function NotificationsPage({ data }: NotificationsPageProps) {
                                                             : 'destructive'
                                                     }
                                                 >
-                                                    {notif.read_at
-                                                        ? 'Read'
-                                                        : 'Unread'}
+                                                    {notif.read_at ? (
+                                                        <FormattedMessage defaultMessage="Read" />
+                                                    ) : (
+                                                        <FormattedMessage defaultMessage="Unread" />
+                                                    )}
                                                 </Badge>
                                             }
                                         />
@@ -328,7 +388,7 @@ export default function NotificationsPage({ data }: NotificationsPageProps) {
                                             onClick={() => markAsRead(notif.id)}
                                         >
                                             <CheckCheckIcon className="mr-2 h-4 w-4" />{' '}
-                                            Mark as Read
+                                            <FormattedMessage defaultMessage="Mark as Read" />
                                         </DropdownMenuItem>
                                     )}
                                     {actionUrl && (
@@ -349,7 +409,7 @@ export default function NotificationsPage({ data }: NotificationsPageProps) {
                                         }
                                     >
                                         <TrashIcon className="mr-2 h-4 w-4" />{' '}
-                                        Delete
+                                        <FormattedMessage defaultMessage="Delete" />
                                     </DropdownMenuItem>
                                 </DropdownMenuContent>
                             </DropdownMenu>
@@ -360,7 +420,7 @@ export default function NotificationsPage({ data }: NotificationsPageProps) {
                 enableSorting: false,
             },
         ],
-        [markAsRead, deleteNotification],
+        [deleteNotification, intl, markAsRead],
     );
 
     const { table } = useDataTable({
@@ -383,18 +443,28 @@ export default function NotificationsPage({ data }: NotificationsPageProps) {
     return (
         <CompanyDashboardLayout
             containerClassName="w-full flex-1 flex flex-col"
-            breadcrumb={[{ title: 'Notifications' }]}
+            breadcrumb={[
+                {
+                    title: intl.formatMessage({
+                        defaultMessage: 'Notifications',
+                    }),
+                },
+            ]}
             activeMenuIds={['notifications']}
         >
-            <Head title="Notifications" />
+            <Head
+                title={intl.formatMessage({
+                    defaultMessage: 'Notifications',
+                })}
+            />
             <div className="w-full space-y-6 p-4 md:p-6 pb-20">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div>
                         <h1 className="text-2xl font-bold tracking-tight text-foreground">
-                            Notifications
+                            <FormattedMessage defaultMessage="Notifications" />
                         </h1>
                         <p className="text-sm text-muted-foreground mt-1">
-                            View and manage all system updates and alerts.
+                            <FormattedMessage defaultMessage="View and manage all system updates and alerts." />
                         </p>
                     </div>
                     <Button
@@ -402,8 +472,8 @@ export default function NotificationsPage({ data }: NotificationsPageProps) {
                         variant="outline"
                         className="shadow-sm"
                     >
-                        <CheckCheckIcon className="mr-2 h-4 w-4" /> Mark all as
-                        read
+                        <CheckCheckIcon className="mr-2 h-4 w-4" />
+                        <FormattedMessage defaultMessage="Mark all as read" />
                     </Button>
                 </div>
 

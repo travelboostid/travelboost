@@ -58,7 +58,9 @@ import {
     SearchIcon,
     TrashIcon,
 } from 'lucide-react';
+import type React from 'react';
 import { useEffect, useMemo, useState } from 'react';
+import { FormattedMessage, useIntl } from 'react-intl';
 
 type CommissionType = 'percent' | 'nominal';
 type SortDirection = 'asc' | 'desc';
@@ -193,7 +195,7 @@ function SortableHeader({
     children,
     onClick,
 }: {
-    children: string;
+    children: React.ReactNode;
     onClick: () => void;
 }) {
     return (
@@ -228,7 +230,10 @@ function PaginationControls({
     return (
         <div className="flex flex-col gap-3 border-t border-slate-100 px-5 py-4 text-sm text-muted-foreground dark:border-slate-800 sm:flex-row sm:items-center sm:justify-between">
             <p>
-                Showing {startItem} to {endItem} of {totalItems} entries
+                <FormattedMessage
+                    defaultMessage="Showing {startItem} to {endItem} of {totalItems} entries"
+                    values={{ startItem, endItem, totalItems }}
+                />
             </p>
             <div className="flex items-center gap-2">
                 <Button
@@ -239,7 +244,7 @@ function PaginationControls({
                     onClick={() => onPageChange(safeCurrentPage - 1)}
                     className="rounded-xl"
                 >
-                    Previous
+                    <FormattedMessage defaultMessage="Previous" />
                 </Button>
                 <span className="min-w-20 text-center text-xs font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">
                     {safeCurrentPage} / {totalPages}
@@ -252,7 +257,7 @@ function PaginationControls({
                     onClick={() => onPageChange(safeCurrentPage + 1)}
                     className="rounded-xl"
                 >
-                    Next
+                    <FormattedMessage defaultMessage="Next" />
                 </Button>
             </div>
         </div>
@@ -295,8 +300,12 @@ function CommissionFields({
                     <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                    <SelectItem value="percent">Percent</SelectItem>
-                    <SelectItem value="nominal">Nominal</SelectItem>
+                    <SelectItem value="percent">
+                        <FormattedMessage defaultMessage="Percent" />
+                    </SelectItem>
+                    <SelectItem value="nominal">
+                        <FormattedMessage defaultMessage="Nominal" />
+                    </SelectItem>
                 </SelectContent>
             </Select>
             <Input
@@ -396,7 +405,7 @@ function BaseRuleRow({
                     className="h-10 gap-2 rounded-xl px-4"
                 >
                     <SaveIcon className="h-4 w-4" />
-                    Save
+                    <FormattedMessage defaultMessage="Save" />
                 </Button>
             </TableCell>
         </TableRow>
@@ -544,19 +553,17 @@ function BaseMatrixPage({
             <div className="flex flex-col gap-4 border-b border-slate-100 p-5 dark:border-slate-800 md:flex-row md:items-start md:justify-between">
                 <div className="max-w-3xl self-start">
                     <h2 className="text-base font-semibold text-slate-950 dark:text-slate-100">
-                        Base Commission
+                        <FormattedMessage defaultMessage="Base Commission" />
                     </h2>
                     <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                        One row controls the base commission for every tour
-                        using the same product commission category and agent
-                        tier.
+                        <FormattedMessage defaultMessage="One row controls the base commission for every tour using the same product commission category and agent tier." />
                     </p>
                 </div>
                 <div className="flex flex-col gap-3 sm:min-w-[560px] lg:min-w-[620px]">
                     <div className="grid grid-cols-[0.92fr_1.08fr] gap-3">
                         <div className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 text-sm dark:border-slate-800 dark:bg-slate-900">
                             <span className="block text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
-                                Agent Category
+                                <FormattedMessage defaultMessage="Agent Category" />
                             </span>
                             <span className="mt-1 block text-xl font-semibold text-slate-950 dark:text-slate-100">
                                 {tiers.length}
@@ -564,7 +571,7 @@ function BaseMatrixPage({
                         </div>
                         <div className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 text-sm dark:border-slate-800 dark:bg-slate-900">
                             <span className="block text-[10px] uppercase tracking-[0.14em] text-muted-foreground whitespace-nowrap">
-                                Product Comm. Categories
+                                <FormattedMessage defaultMessage="Product Comm. Categories" />
                             </span>
                             <span className="mt-1 block text-xl font-semibold text-slate-950 dark:text-slate-100">
                                 {categories.length}
@@ -578,7 +585,7 @@ function BaseMatrixPage({
                         className="h-10 gap-2 rounded-xl"
                     >
                         <SaveIcon className="h-4 w-4" />
-                        Save Changes
+                        <FormattedMessage defaultMessage="Save Changes" />
                         {dirtyRows.length > 0 ? ` (${dirtyRows.length})` : ''}
                     </Button>
                 </div>
@@ -595,19 +602,19 @@ function BaseMatrixPage({
                                         )
                                     }
                                 >
-                                    Agent Category
+                                    <FormattedMessage defaultMessage="Agent Category" />
                                 </SortableHeader>
                             </TableHead>
                             <TableHead className="font-semibold text-primary">
                                 <span className="inline-block max-w-[190px] leading-5">
-                                    Product Commission Category
+                                    <FormattedMessage defaultMessage="Product Commission Category" />
                                 </span>
                             </TableHead>
                             <TableHead className="font-semibold text-primary">
-                                Commission
+                                <FormattedMessage defaultMessage="Commission" />
                             </TableHead>
                             <TableHead className="w-[118px] text-right font-semibold text-primary">
-                                Actions
+                                <FormattedMessage defaultMessage="Actions" />
                             </TableHead>
                         </TableRow>
                     </TableHeader>
@@ -618,8 +625,7 @@ function BaseMatrixPage({
                                     colSpan={4}
                                     className="h-28 text-center text-muted-foreground"
                                 >
-                                    Agent tiers and product commission
-                                    categories are required.
+                                    <FormattedMessage defaultMessage="Agent tiers and product commission categories are required." />
                                 </TableCell>
                             </TableRow>
                         ) : (
@@ -679,6 +685,7 @@ function CategoryDepartureDialog({
     categories: ProductCommissionCategory[];
     additionalRules: AdditionalRule[];
 }) {
+    const intl = useIntl();
     const { company } = usePageSharedDataProps();
     const [open, setOpen] = useState(false);
     const [selectedTierId, setSelectedTierId] = useState<number | ''>(
@@ -860,12 +867,10 @@ function CategoryDepartureDialog({
                         </div>
                         <div className="min-w-0 flex-1">
                             <h2 className="text-base font-semibold text-slate-950 dark:text-slate-100">
-                                Departure Date Commission
+                                <FormattedMessage defaultMessage="Departure Date Commission" />
                             </h2>
                             <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                                Set additional commission for one product
-                                commission category across one or more departure
-                                dates.
+                                <FormattedMessage defaultMessage="Set additional commission for one product commission category across one or more departure dates." />
                             </p>
                         </div>
                     </div>
@@ -875,7 +880,7 @@ function CategoryDepartureDialog({
                         className="h-11 w-full gap-2 rounded-2xl px-5 sm:w-auto sm:self-start"
                     >
                         <PlusCircleIcon className="h-4 w-4" />
-                        Add Departure Commission
+                        <FormattedMessage defaultMessage="Add Departure Commission" />
                     </Button>
                 </div>
             </div>
@@ -884,19 +889,19 @@ function CategoryDepartureDialog({
                 <DialogContent className="flex max-h-[92vh] w-[calc(100vw-2rem)] max-w-none flex-col overflow-hidden rounded-3xl p-0 md:w-[35vw] md:min-w-[680px]">
                     <DialogHeader className="border-b border-slate-100 px-6 py-5 dark:border-slate-800">
                         <DialogTitle>
-                            Additional Commission by Departure Date
+                            <FormattedMessage defaultMessage="Additional Commission by Departure Date" />
                         </DialogTitle>
                         <DialogDescription>
-                            Select an agent tier and product commission
-                            category, then add one or more departure dates with
-                            different commission values.
+                            <FormattedMessage defaultMessage="Select an agent tier and product commission category, then add one or more departure dates with different commission values." />
                         </DialogDescription>
                     </DialogHeader>
 
                     <div className="min-h-0 space-y-5 overflow-auto p-6">
                         <div className="grid gap-4 md:grid-cols-2">
                             <div className="grid gap-2">
-                                <Label>Agent Tier</Label>
+                                <Label>
+                                    <FormattedMessage defaultMessage="Agent Tier" />
+                                </Label>
                                 <Select
                                     value={String(selectedTierId)}
                                     onValueChange={(value) =>
@@ -919,7 +924,9 @@ function CategoryDepartureDialog({
                                 </Select>
                             </div>
                             <div className="grid gap-2">
-                                <Label>Product Commission Category</Label>
+                                <Label>
+                                    <FormattedMessage defaultMessage="Product Commission Category" />
+                                </Label>
                                 <Select
                                     value={String(selectedCategoryId)}
                                     onValueChange={(value) =>
@@ -947,9 +954,11 @@ function CategoryDepartureDialog({
                             <Table>
                                 <TableHeader className="bg-slate-50 dark:bg-slate-900">
                                     <TableRow>
-                                        <TableHead>Departure Date</TableHead>
                                         <TableHead>
-                                            Additional Commission
+                                            <FormattedMessage defaultMessage="Departure Date" />
+                                        </TableHead>
+                                        <TableHead>
+                                            <FormattedMessage defaultMessage="Additional Commission" />
                                         </TableHead>
                                         <TableHead className="w-24 text-right" />
                                     </TableRow>
@@ -990,7 +999,7 @@ function CategoryDepartureDialog({
                                                     row.departure_date,
                                                 ) && (
                                                     <p className="mt-1 text-xs font-medium text-primary">
-                                                        Existing rule loaded
+                                                        <FormattedMessage defaultMessage="Existing rule loaded" />
                                                     </p>
                                                 )}
                                             </TableCell>
@@ -1024,9 +1033,11 @@ function CategoryDepartureDialog({
                                                     className="rounded-xl"
                                                 >
                                                     {rows.length === 1 &&
-                                                    index === 0
-                                                        ? 'Clear'
-                                                        : 'Remove'}
+                                                    index === 0 ? (
+                                                        <FormattedMessage defaultMessage="Clear" />
+                                                    ) : (
+                                                        <FormattedMessage defaultMessage="Remove" />
+                                                    )}
                                                 </Button>
                                             </TableCell>
                                         </TableRow>
@@ -1042,7 +1053,7 @@ function CategoryDepartureDialog({
                             className="rounded-xl"
                         >
                             <PlusCircleIcon className="h-4 w-4" />
-                            Add Date
+                            <FormattedMessage defaultMessage="Add Date" />
                         </Button>
                     </div>
 
@@ -1053,7 +1064,7 @@ function CategoryDepartureDialog({
                             onClick={() => setOpen(false)}
                             className="rounded-xl"
                         >
-                            Cancel
+                            <FormattedMessage defaultMessage="Cancel" />
                         </Button>
                         <Button
                             type="button"
@@ -1067,8 +1078,13 @@ function CategoryDepartureDialog({
                             className="gap-2 rounded-xl"
                         >
                             <SaveIcon className="h-4 w-4" />
-                            Save {validRows.length || ''} Date
-                            {validRows.length > 1 ? 's' : ''}
+                            {intl.formatMessage(
+                                {
+                                    defaultMessage:
+                                        'Save {count, plural, one {# Date} other {# Dates}}',
+                                },
+                                { count: validRows.length },
+                            )}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
@@ -1085,6 +1101,7 @@ function TourScheduleDialog({
     tours: Tour[];
     additionalRules: AdditionalRule[];
 }) {
+    const intl = useIntl();
     const { company } = usePageSharedDataProps();
     const [open, setOpen] = useState(false);
     const [selectedTierId, setSelectedTierId] = useState<number | ''>(
@@ -1194,12 +1211,10 @@ function TourScheduleDialog({
                         </div>
                         <div className="min-w-0 flex-1">
                             <h2 className="text-base font-semibold text-slate-950 dark:text-slate-100">
-                                Tour Schedule Commission
+                                <FormattedMessage defaultMessage="Tour Schedule Commission" />
                             </h2>
                             <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                                Select a tour, choose one or more schedules,
-                                then assign additional commission for the
-                                selected departures in one place.
+                                <FormattedMessage defaultMessage="Select a tour, choose one or more schedules, then assign additional commission for the selected departures in one place." />
                             </p>
                         </div>
                     </div>
@@ -1209,7 +1224,7 @@ function TourScheduleDialog({
                         className="h-11 w-full gap-2 rounded-2xl px-5 sm:w-auto sm:self-start"
                     >
                         <PlusCircleIcon className="h-4 w-4" />
-                        Add Schedule Commission
+                        <FormattedMessage defaultMessage="Add Schedule Commission" />
                     </Button>
                 </div>
             </div>
@@ -1218,11 +1233,10 @@ function TourScheduleDialog({
                 <DialogContent className="flex max-h-[92vh] w-[calc(100vw-2rem)] max-w-none flex-col overflow-hidden rounded-3xl p-0 md:w-[60vw] md:min-w-[920px] xl:min-w-[1120px]">
                     <DialogHeader className="border-b border-slate-100 px-6 py-5 dark:border-slate-800">
                         <DialogTitle>
-                            Additional Commission by Tour Schedule
+                            <FormattedMessage defaultMessage="Additional Commission by Tour Schedule" />
                         </DialogTitle>
                         <DialogDescription>
-                            Choose an agent tier, select a tour, then assign
-                            additional commission to one or more schedules.
+                            <FormattedMessage defaultMessage="Choose an agent tier, select a tour, then assign additional commission to one or more schedules." />
                         </DialogDescription>
                     </DialogHeader>
 
@@ -1231,13 +1245,18 @@ function TourScheduleDialog({
                             <div className="overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800">
                                 <div className="flex items-center gap-2 border-b border-slate-100 px-3 py-2 text-sm font-semibold dark:border-slate-800">
                                     <SearchIcon className="h-4 w-4 text-primary" />
-                                    Tour Product
+                                    <FormattedMessage defaultMessage="Tour Product" />
                                 </div>
                                 <Command>
-                                    <CommandInput placeholder="Search tour code or name..." />
+                                    <CommandInput
+                                        placeholder={intl.formatMessage({
+                                            defaultMessage:
+                                                'Search tour code or name...',
+                                        })}
+                                    />
                                     <CommandList className="max-h-[420px]">
                                         <CommandEmpty>
-                                            No tour product found.
+                                            <FormattedMessage defaultMessage="No tour product found." />
                                         </CommandEmpty>
                                         <CommandGroup>
                                             {tours.map((tour) => (
@@ -1287,7 +1306,9 @@ function TourScheduleDialog({
                                             </p>
                                         </div>
                                         <div className="grid gap-2">
-                                            <Label>Agent Tier</Label>
+                                            <Label>
+                                                <FormattedMessage defaultMessage="Agent Tier" />
+                                            </Label>
                                             <Select
                                                 value={String(selectedTierId)}
                                                 onValueChange={(value) =>
@@ -1320,10 +1341,10 @@ function TourScheduleDialog({
                                                 <TableRow>
                                                     <TableHead className="w-12" />
                                                     <TableHead>
-                                                        Departure Schedule
+                                                        <FormattedMessage defaultMessage="Departure Schedule" />
                                                     </TableHead>
                                                     <TableHead>
-                                                        Additional Commission
+                                                        <FormattedMessage defaultMessage="Additional Commission" />
                                                     </TableHead>
                                                 </TableRow>
                                             </TableHeader>
@@ -1335,8 +1356,7 @@ function TourScheduleDialog({
                                                             colSpan={3}
                                                             className="h-32 text-center text-muted-foreground"
                                                         >
-                                                            This tour has no
-                                                            schedule.
+                                                            <FormattedMessage defaultMessage="This tour has no schedule." />
                                                         </TableCell>
                                                     </TableRow>
                                                 ) : (
@@ -1385,9 +1405,7 @@ function TourScheduleDialog({
                                                                             schedule.id,
                                                                         ) && (
                                                                             <p className="mt-1 text-xs font-medium text-primary">
-                                                                                Existing
-                                                                                rule
-                                                                                loaded
+                                                                                <FormattedMessage defaultMessage="Existing rule loaded" />
                                                                             </p>
                                                                         )}
                                                                     </TableCell>
@@ -1442,12 +1460,10 @@ function TourScheduleDialog({
                                             <Layers3Icon className="h-6 w-6" />
                                         </div>
                                         <h3 className="mt-4 font-semibold">
-                                            Select a tour product
+                                            <FormattedMessage defaultMessage="Select a tour product" />
                                         </h3>
                                         <p className="mt-2 max-w-sm text-sm text-muted-foreground">
-                                            Search from the left panel to reveal
-                                            schedules and configure additional
-                                            commission values.
+                                            <FormattedMessage defaultMessage="Search from the left panel to reveal schedules and configure additional commission values." />
                                         </p>
                                     </div>
                                 </div>
@@ -1462,7 +1478,7 @@ function TourScheduleDialog({
                             onClick={() => setOpen(false)}
                             className="rounded-xl"
                         >
-                            Cancel
+                            <FormattedMessage defaultMessage="Cancel" />
                         </Button>
                         <Button
                             type="button"
@@ -1476,8 +1492,13 @@ function TourScheduleDialog({
                             className="gap-2 rounded-xl"
                         >
                             <SaveIcon className="h-4 w-4" />
-                            Save {selectedRows.length || ''} Schedule
-                            {selectedRows.length > 1 ? 's' : ''}
+                            {intl.formatMessage(
+                                {
+                                    defaultMessage:
+                                        'Save {count, plural, one {# Schedule} other {# Schedules}}',
+                                },
+                                { count: selectedRows.length },
+                            )}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
@@ -1501,6 +1522,7 @@ function AdditionalRuleEditDialog({
     onOpenChange?: (open: boolean) => void;
     hideTrigger?: boolean;
 }) {
+    const intl = useIntl();
     const { company } = usePageSharedDataProps();
     const schedule = rule.tour_schedule || rule.tourSchedule;
     const [internalOpen, setInternalOpen] = useState(false);
@@ -1584,20 +1606,24 @@ function AdditionalRuleEditDialog({
                     className="h-9 w-full justify-start rounded-lg px-3"
                 >
                     <PencilIcon className="h-4 w-4" />
-                    Edit
+                    <FormattedMessage defaultMessage="Edit" />
                 </Button>
             )}
             <DialogContent className="flex max-h-[92vh] w-[calc(100vw-2rem)] max-w-none flex-col overflow-hidden rounded-3xl p-0 sm:max-w-xl">
                 <DialogHeader className="border-b border-slate-100 px-6 py-5 dark:border-slate-800">
-                    <DialogTitle>Edit Additional Commission</DialogTitle>
+                    <DialogTitle>
+                        <FormattedMessage defaultMessage="Edit Additional Commission" />
+                    </DialogTitle>
                     <DialogDescription>
-                        Update the selected additional commission rule.
+                        <FormattedMessage defaultMessage="Update the selected additional commission rule." />
                     </DialogDescription>
                 </DialogHeader>
 
                 <div className="grid gap-5 overflow-auto p-6">
                     <div className="grid gap-2">
-                        <Label>Agent Tier</Label>
+                        <Label>
+                            <FormattedMessage defaultMessage="Agent Tier" />
+                        </Label>
                         <Select
                             value={String(selectedTierId)}
                             onValueChange={(value) =>
@@ -1623,7 +1649,9 @@ function AdditionalRuleEditDialog({
                     {rule.scope_type === 'category_departure' ? (
                         <div className="grid gap-4 sm:grid-cols-2">
                             <div className="grid gap-2">
-                                <Label>Product Commission Category</Label>
+                                <Label>
+                                    <FormattedMessage defaultMessage="Product Commission Category" />
+                                </Label>
                                 <Select
                                     value={String(selectedCategoryId)}
                                     onValueChange={(value) =>
@@ -1646,7 +1674,9 @@ function AdditionalRuleEditDialog({
                                 </Select>
                             </div>
                             <div className="grid gap-2">
-                                <Label>Departure Date</Label>
+                                <Label>
+                                    <FormattedMessage defaultMessage="Departure Date" />
+                                </Label>
                                 <Input
                                     type="date"
                                     value={departureDate}
@@ -1662,7 +1692,9 @@ function AdditionalRuleEditDialog({
                             <p className="font-semibold text-slate-900 dark:text-slate-100">
                                 {rule.tour
                                     ? `${rule.tour.code} - ${rule.tour.name}`
-                                    : 'Tour Schedule'}
+                                    : intl.formatMessage({
+                                          defaultMessage: 'Tour Schedule',
+                                      })}
                             </p>
                             <p className="mt-1 text-muted-foreground">
                                 {formatSchedule(schedule)}
@@ -1671,7 +1703,9 @@ function AdditionalRuleEditDialog({
                     )}
 
                     <div className="grid gap-2">
-                        <Label>Additional Commission</Label>
+                        <Label>
+                            <FormattedMessage defaultMessage="Additional Commission" />
+                        </Label>
                         <CommissionFields
                             type={commissionType}
                             value={commissionValue}
@@ -1688,7 +1722,7 @@ function AdditionalRuleEditDialog({
                         onClick={() => setDialogOpen(false)}
                         className="rounded-xl"
                     >
-                        Cancel
+                        <FormattedMessage defaultMessage="Cancel" />
                     </Button>
                     <Button
                         type="button"
@@ -1702,7 +1736,7 @@ function AdditionalRuleEditDialog({
                         className="gap-2 rounded-xl"
                     >
                         <SaveIcon className="h-4 w-4" />
-                        Save Changes
+                        <FormattedMessage defaultMessage="Save Changes" />
                     </Button>
                 </DialogFooter>
             </DialogContent>
@@ -1721,6 +1755,7 @@ function AdditionalRuleActions({
     categories: ProductCommissionCategory[];
     onDelete: (rule: AdditionalRule) => void;
 }) {
+    const intl = useIntl();
     const [editOpen, setEditOpen] = useState(false);
 
     return (
@@ -1734,7 +1769,11 @@ function AdditionalRuleActions({
                         className="h-8 w-8 text-secondary-foreground hover:bg-secondary/80 shadow-sm"
                     >
                         <MoreHorizontal className="h-4 w-4" />
-                        <span className="sr-only">Open actions</span>
+                        <span className="sr-only">
+                            {intl.formatMessage({
+                                defaultMessage: 'Open actions',
+                            })}
+                        </span>
                     </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-44 rounded-xl">
@@ -1746,7 +1785,7 @@ function AdditionalRuleActions({
                         }}
                     >
                         <PencilIcon className="mr-2 h-4 w-4" />
-                        Edit
+                        <FormattedMessage defaultMessage="Edit" />
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
@@ -1757,7 +1796,7 @@ function AdditionalRuleActions({
                         }}
                     >
                         <TrashIcon className="mr-2 h-4 w-4" />
-                        Delete
+                        <FormattedMessage defaultMessage="Delete" />
                     </DropdownMenuItem>
                 </DropdownMenuContent>
             </DropdownMenu>
@@ -1783,6 +1822,7 @@ function AdditionalRulesTable({
     tiers: Tier[];
     categories: ProductCommissionCategory[];
 }) {
+    const intl = useIntl();
     const { company } = usePageSharedDataProps();
     const [sortKey, setSortKey] = useState<AdditionalSortKey>('created_at');
     const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
@@ -1849,7 +1889,13 @@ function AdditionalRulesTable({
     };
 
     const deleteRule = (rule: AdditionalRule) => {
-        if (!confirm('Delete this additional commission rule?')) {
+        if (
+            !confirm(
+                intl.formatMessage({
+                    defaultMessage: 'Delete this additional commission rule?',
+                }),
+            )
+        ) {
             return;
         }
 
@@ -1863,11 +1909,10 @@ function AdditionalRulesTable({
         <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-950">
             <div className="border-b border-slate-100 p-5 dark:border-slate-800">
                 <h2 className="text-base font-semibold text-slate-950 dark:text-slate-100">
-                    Saved Additional Rules
+                    <FormattedMessage defaultMessage="Saved Additional Rules" />
                 </h2>
                 <p className="mt-1 text-sm text-muted-foreground">
-                    Review configured departure date and tour schedule
-                    commission rules.
+                    <FormattedMessage defaultMessage="Review configured departure date and tour schedule commission rules." />
                 </p>
             </div>
             <div className="overflow-x-auto">
@@ -1878,26 +1923,28 @@ function AdditionalRulesTable({
                                 <SortableHeader
                                     onClick={() => updateSort('tier')}
                                 >
-                                    Agent Category
+                                    <FormattedMessage defaultMessage="Agent Category" />
                                 </SortableHeader>
                             </TableHead>
                             <TableHead>
                                 <SortableHeader
                                     onClick={() => updateSort('scope')}
                                 >
-                                    Commission Type
+                                    <FormattedMessage defaultMessage="Commission Type" />
                                 </SortableHeader>
                             </TableHead>
-                            <TableHead>Product Tour and Date</TableHead>
+                            <TableHead>
+                                <FormattedMessage defaultMessage="Product Tour and Date" />
+                            </TableHead>
                             <TableHead>
                                 <SortableHeader
                                     onClick={() => updateSort('commission')}
                                 >
-                                    Additional Commission
+                                    <FormattedMessage defaultMessage="Additional Commission" />
                                 </SortableHeader>
                             </TableHead>
                             <TableHead className="w-[88px] text-right font-semibold text-primary">
-                                Actions
+                                <FormattedMessage defaultMessage="Actions" />
                             </TableHead>
                         </TableRow>
                     </TableHeader>
@@ -1908,7 +1955,7 @@ function AdditionalRulesTable({
                                     colSpan={5}
                                     className="h-24 text-center text-muted-foreground"
                                 >
-                                    No additional commission rules yet.
+                                    <FormattedMessage defaultMessage="No additional commission rules yet." />
                                 </TableCell>
                             </TableRow>
                         ) : (
@@ -1925,9 +1972,11 @@ function AdditionalRulesTable({
                                         <TableCell>
                                             <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
                                                 {rule.scope_type ===
-                                                'category_departure'
-                                                    ? 'Departure Date'
-                                                    : 'Tour Schedule'}
+                                                'category_departure' ? (
+                                                    <FormattedMessage defaultMessage="Departure Date" />
+                                                ) : (
+                                                    <FormattedMessage defaultMessage="Tour Schedule" />
+                                                )}
                                             </span>
                                         </TableCell>
                                         <TableCell>
@@ -2044,15 +2093,23 @@ export default function Page({
     additionalRules: AdditionalRule[];
     view?: PageView;
 }) {
+    const intl = useIntl();
+
     return (
         <CompanyDashboardLayout
             breadcrumb={[
-                { title: 'Commission Setup' },
                 {
-                    title:
-                        view === 'base'
-                            ? 'Base Commission Rules'
-                            : 'Additional Commission Rules',
+                    title: intl.formatMessage({
+                        defaultMessage: 'Commission Setup',
+                    }),
+                },
+                {
+                    title: intl.formatMessage({
+                        defaultMessage:
+                            view === 'base'
+                                ? 'Base Commission Rules'
+                                : 'Additional Commission Rules',
+                    }),
                 },
             ]}
             openMenuIds={['commission-setup']}

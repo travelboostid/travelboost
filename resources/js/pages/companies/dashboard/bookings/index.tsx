@@ -74,6 +74,7 @@ import {
     XIcon,
 } from 'lucide-react';
 import * as React from 'react';
+import { FormattedMessage, useIntl, type IntlShape } from 'react-intl';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -247,63 +248,78 @@ type PageProps = {
     followupSummary: FollowupSummary;
 };
 
-const STATUS_TABS = [
-    { label: 'ALL', fullLabel: 'All', value: '', style: undefined },
+const STATUS_TAB_VALUES = [
+    { label: 'ALL', value: '', style: undefined },
     {
         label: 'WP',
-        fullLabel: 'Awaiting Payment',
         value: 'awaiting payment',
         style: 'bg-amber-100 text-amber-800',
     },
     {
         label: 'BR',
-        fullLabel: 'Booking Reserved',
         value: 'reserved',
         style: 'bg-teal-100 text-teal-800',
     },
     {
         label: 'EX',
-        fullLabel: 'Expired',
         value: 'expired',
         style: 'bg-gray-100 text-gray-800',
     },
     {
         label: 'WA',
-        fullLabel: 'Waiting Payment Approval',
         value: 'waiting payment approval',
         style: 'bg-sky-100 text-sky-800',
     },
     {
         label: 'DP',
-        fullLabel: 'Down Payment',
         value: 'down payment',
         style: 'bg-cyan-100 text-cyan-800',
     },
     {
         label: 'FP',
-        fullLabel: 'Full Payment',
         value: 'full payment',
         style: 'bg-green-100 text-green-800',
     },
     {
         label: 'CA',
-        fullLabel: 'Cancelled',
         value: 'cancelled',
         style: 'bg-red-100 text-red-800',
     },
     {
         label: 'RF',
-        fullLabel: 'Refunded',
         value: 'refunded',
         style: 'bg-orange-100 text-orange-800',
     },
     {
         label: 'WL',
-        fullLabel: 'Waiting List',
         value: 'waiting list',
         style: 'bg-purple-100 text-purple-800',
     },
 ] as const;
+
+function getStatusTabs(intl: IntlShape) {
+    const fullLabels: Record<string, string> = {
+        '': intl.formatMessage({ defaultMessage: 'All' }),
+        'awaiting payment': intl.formatMessage({
+            defaultMessage: 'Awaiting Payment',
+        }),
+        reserved: intl.formatMessage({ defaultMessage: 'Booking Reserved' }),
+        expired: intl.formatMessage({ defaultMessage: 'Expired' }),
+        'waiting payment approval': intl.formatMessage({
+            defaultMessage: 'Waiting Payment Approval',
+        }),
+        'down payment': intl.formatMessage({ defaultMessage: 'Down Payment' }),
+        'full payment': intl.formatMessage({ defaultMessage: 'Full Payment' }),
+        cancelled: intl.formatMessage({ defaultMessage: 'Cancelled' }),
+        refunded: intl.formatMessage({ defaultMessage: 'Refunded' }),
+        'waiting list': intl.formatMessage({ defaultMessage: 'Waiting List' }),
+    };
+
+    return STATUS_TAB_VALUES.map((tab) => ({
+        ...tab,
+        fullLabel: fullLabels[tab.value] ?? tab.label,
+    }));
+}
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -349,19 +365,29 @@ const statusLabels: Record<string, string> = {
     expired: 'EX',
 };
 
-const statusFullLabels: Record<string, string> = {
-    reserved: 'Booking Reserved',
-    'booking reserved': 'Booking Reserved',
-    'manual reserved': 'Manual Reserved',
-    'awaiting payment': 'Awaiting Payment',
-    'waiting payment approval': 'Waiting Payment Approval',
-    'down payment': 'Down Payment',
-    'full payment': 'Full Payment',
-    'waiting list': 'Waiting List',
-    cancelled: 'Cancelled',
-    refunded: 'Refunded',
-    expired: 'Expired',
-};
+function getStatusFullLabels(intl: IntlShape): Record<string, string> {
+    return {
+        reserved: intl.formatMessage({ defaultMessage: 'Booking Reserved' }),
+        'booking reserved': intl.formatMessage({
+            defaultMessage: 'Booking Reserved',
+        }),
+        'manual reserved': intl.formatMessage({
+            defaultMessage: 'Manual Reserved',
+        }),
+        'awaiting payment': intl.formatMessage({
+            defaultMessage: 'Awaiting Payment',
+        }),
+        'waiting payment approval': intl.formatMessage({
+            defaultMessage: 'Waiting Payment Approval',
+        }),
+        'down payment': intl.formatMessage({ defaultMessage: 'Down Payment' }),
+        'full payment': intl.formatMessage({ defaultMessage: 'Full Payment' }),
+        'waiting list': intl.formatMessage({ defaultMessage: 'Waiting List' }),
+        cancelled: intl.formatMessage({ defaultMessage: 'Cancelled' }),
+        refunded: intl.formatMessage({ defaultMessage: 'Refunded' }),
+        expired: intl.formatMessage({ defaultMessage: 'Expired' }),
+    };
+}
 
 function formatCommission(value: number | string | null | undefined): string {
     if (value === null || value === undefined) return '—';
@@ -386,7 +412,10 @@ function followupBadgeClass(followup: FollowupPayload): string {
     return 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300';
 }
 
-function followupDeadlineText(followup: FollowupPayload): string | null {
+function followupDeadlineText(
+    followup: FollowupPayload,
+    intl: IntlShape,
+): string | null {
     if (!followup.deadline) {
         return null;
     }
@@ -398,14 +427,23 @@ function followupDeadlineText(followup: FollowupPayload): string | null {
     }
 
     if (followup.days_remaining < 0) {
-        return `Overdue ${Math.abs(followup.days_remaining)}d · ${date}`;
+        return intl.formatMessage(
+            { defaultMessage: 'Overdue {days}d · {date}' },
+            { days: Math.abs(followup.days_remaining), date },
+        );
     }
 
     if (followup.days_remaining === 0) {
-        return `Due today · ${date}`;
+        return intl.formatMessage(
+            { defaultMessage: 'Due today · {date}' },
+            { date },
+        );
     }
 
-    return `${followup.days_remaining}d left · ${date}`;
+    return intl.formatMessage(
+        { defaultMessage: '{days}d left · {date}' },
+        { days: followup.days_remaining, date },
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -419,8 +457,11 @@ function FollowupCell({
     followup: FollowupPayload;
     details?: string | null;
 }) {
+    const intl = useIntl();
     const deadlineText =
-        followup.state === 'completed' ? null : followupDeadlineText(followup);
+        followup.state === 'completed'
+            ? null
+            : followupDeadlineText(followup, intl);
 
     return (
         <div className="min-w-[150px] text-xs">
@@ -458,6 +499,8 @@ function PaymentDetailCell({
     detail: PaymentDetail | null;
     onViewReceipt: (detail: PaymentDetail) => void;
 }) {
+    const intl = useIntl();
+
     if (!detail) {
         return <span className="text-slate-400">—</span>;
     }
@@ -492,7 +535,7 @@ function PaymentDetailCell({
                             onViewReceipt(detail);
                         }}
                     >
-                        View Receipt
+                        <FormattedMessage defaultMessage="View Receipt" />
                     </button>
                 )}
             </div>
@@ -515,15 +558,27 @@ function DocumentsDialog({
     documents: DocumentDetail[];
     onOpenChange: (open: boolean) => void;
 }) {
+    const intl = useIntl();
+
     return (
         <Dialog open={Boolean(bookingNumber)} onOpenChange={onOpenChange}>
             <DialogContent className="w-full max-w-2xl">
                 <DialogHeader>
-                    <DialogTitle>Travel Documents</DialogTitle>
+                    <DialogTitle>
+                        <FormattedMessage defaultMessage="Travel Documents" />
+                    </DialogTitle>
                     <DialogDescription>
                         {bookingNumber
-                            ? `Documents for booking ${bookingNumber}.`
-                            : 'Submitted travel documents.'}
+                            ? intl.formatMessage(
+                                  {
+                                      defaultMessage:
+                                          'Documents for booking {bookingNumber}.',
+                                  },
+                                  { bookingNumber },
+                              )
+                            : intl.formatMessage({
+                                  defaultMessage: 'Submitted travel documents.',
+                              })}
                     </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-3">
@@ -539,7 +594,7 @@ function DocumentsDialog({
                                 <div className="mt-3 grid gap-2 text-xs sm:grid-cols-2">
                                     <div className="rounded-md border bg-background p-3">
                                         <p className="font-semibold text-muted-foreground">
-                                            Passport
+                                            <FormattedMessage defaultMessage="Passport" />
                                         </p>
                                         {document.passport_file_url ? (
                                             <a
@@ -551,7 +606,10 @@ function DocumentsDialog({
                                                 className="mt-1 block truncate font-semibold text-primary hover:underline"
                                             >
                                                 {document.passport_file_name ??
-                                                    'View passport'}
+                                                    intl.formatMessage({
+                                                        defaultMessage:
+                                                            'View passport',
+                                                    })}
                                             </a>
                                         ) : (
                                             <p className="mt-1 text-muted-foreground">
@@ -561,7 +619,7 @@ function DocumentsDialog({
                                     </div>
                                     <div className="rounded-md border bg-background p-3">
                                         <p className="font-semibold text-muted-foreground">
-                                            Visa
+                                            <FormattedMessage defaultMessage="Visa" />
                                         </p>
                                         {document.visa_file_url ? (
                                             <a
@@ -571,7 +629,10 @@ function DocumentsDialog({
                                                 className="mt-1 block truncate font-semibold text-primary hover:underline"
                                             >
                                                 {document.visa_file_name ??
-                                                    'View visa'}
+                                                    intl.formatMessage({
+                                                        defaultMessage:
+                                                            'View visa',
+                                                    })}
                                             </a>
                                         ) : (
                                             <p className="mt-1 text-muted-foreground">
@@ -584,7 +645,7 @@ function DocumentsDialog({
                         ))
                     ) : (
                         <p className="rounded-lg border bg-muted/30 p-4 text-sm text-muted-foreground">
-                            No submitted documents are available.
+                            <FormattedMessage defaultMessage="No submitted documents are available." />
                         </p>
                     )}
                 </div>
@@ -600,6 +661,7 @@ function FollowupSummaryCards({
     summary: FollowupSummary;
     companyUsername: string;
 }) {
+    const intl = useIntl();
     const activeFollowup =
         typeof window === 'undefined'
             ? ''
@@ -628,7 +690,7 @@ function FollowupSummaryCards({
     };
     const items = [
         {
-            label: 'Payment overdue',
+            label: intl.formatMessage({ defaultMessage: 'Payment overdue' }),
             value: summary.payment_overdue,
             amount: summary.payment_overdue_amount,
             followup: 'payment_overdue',
@@ -637,7 +699,7 @@ function FollowupSummaryCards({
                 'border-red-100 bg-red-50 text-red-600 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300',
         },
         {
-            label: 'Payment due soon',
+            label: intl.formatMessage({ defaultMessage: 'Payment due soon' }),
             value: summary.payment_due_soon,
             amount: summary.payment_due_soon_amount,
             followup: 'payment_due_soon',
@@ -646,7 +708,7 @@ function FollowupSummaryCards({
                 'border-amber-100 bg-amber-50 text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-300',
         },
         {
-            label: 'Docs incomplete',
+            label: intl.formatMessage({ defaultMessage: 'Docs incomplete' }),
             value: summary.documents_incomplete,
             amount: null,
             followup: 'documents_incomplete',
@@ -655,7 +717,7 @@ function FollowupSummaryCards({
                 'border-slate-200 bg-white text-slate-700 dark:border-slate-800 dark:bg-slate-950/70 dark:text-slate-200',
         },
         {
-            label: 'Docs due soon',
+            label: intl.formatMessage({ defaultMessage: 'Docs due soon' }),
             value: summary.documents_due_soon,
             amount: null,
             followup: 'documents_due_soon',
@@ -713,6 +775,7 @@ function PaxCell({
     child: number;
     infant: number;
 }) {
+    const intl = useIntl();
     const total = adult + child + infant;
     return (
         <TooltipProvider>
@@ -724,7 +787,13 @@ function PaxCell({
                 </TooltipTrigger>
                 <TooltipContent>
                     <p>
-                        {adult} Adult · {child} Child · {infant} Infant
+                        {intl.formatMessage(
+                            {
+                                defaultMessage:
+                                    '{adult} Adult · {child} Child · {infant} Infant',
+                            },
+                            { adult, child, infant },
+                        )}
                     </p>
                 </TooltipContent>
             </Tooltip>
@@ -740,18 +809,21 @@ function reviewPaymentType(payment: PaymentReviewItem): string {
     return (payment.payment_type ?? 'full_payment').replace(/_/g, ' ');
 }
 
-function reviewPaymentDetail(payment: PaymentReviewItem): PaymentDetail {
+function reviewPaymentDetail(
+    payment: PaymentReviewItem,
+    intl: IntlShape,
+): PaymentDetail {
     const receiptType = payment.provider === 'midtrans' ? 'online' : 'manual';
 
     return {
         method_label:
             payment.provider === 'midtrans'
-                ? 'Online payment'
-                : 'Manual payment',
+                ? intl.formatMessage({ defaultMessage: 'Online payment' })
+                : intl.formatMessage({ defaultMessage: 'Manual payment' }),
         receiver_label:
             payment.payment_flow_stage === 'agent_to_vendor'
-                ? 'vendor'
-                : 'agent',
+                ? intl.formatMessage({ defaultMessage: 'vendor' })
+                : intl.formatMessage({ defaultMessage: 'agent' }),
         amount: reviewPaymentAmount(payment),
         payment_date: payment.payment_date,
         booking_payment_type: payment.payment_type as
@@ -782,16 +854,22 @@ function PaymentReviewSection({
     payment: PaymentReviewItem;
     onViewReceipt?: (detail: PaymentDetail) => void;
 }) {
+    const intl = useIntl();
     const amount = reviewPaymentAmount(payment);
-    const detail = reviewPaymentDetail(payment);
+    const detail = reviewPaymentDetail(payment, intl);
     const isOnlinePayment = payment.provider === 'midtrans';
-    const senderLabel = isOnlinePayment ? 'Payment Channel' : 'Sender Bank';
+    const senderLabel = isOnlinePayment
+        ? intl.formatMessage({ defaultMessage: 'Payment Channel' })
+        : intl.formatMessage({ defaultMessage: 'Sender Bank' });
     const senderValue = isOnlinePayment
-        ? 'Midtrans Online Payment'
+        ? intl.formatMessage({ defaultMessage: 'Midtrans Online Payment' })
         : (payment.sender_bank_name ?? '—');
-    const accountLabel = isOnlinePayment ? 'Reference' : 'Account Number';
+    const accountLabel = isOnlinePayment
+        ? intl.formatMessage({ defaultMessage: 'Reference' })
+        : intl.formatMessage({ defaultMessage: 'Account Number' });
     const accountValue = isOnlinePayment
-        ? (detail.receipt?.order_id ?? 'Gateway transaction')
+        ? (detail.receipt?.order_id ??
+          intl.formatMessage({ defaultMessage: 'Gateway transaction' }))
         : (payment.sender_account_number ?? '—');
 
     return (
@@ -800,8 +878,12 @@ function PaymentReviewSection({
                 <span className="font-semibold">{title}</span>
                 <Badge variant="outline" className="uppercase">
                     {payment.provider === 'midtrans'
-                        ? 'Online payment'
-                        : 'Manual payment'}
+                        ? intl.formatMessage({
+                              defaultMessage: 'Online payment',
+                          })
+                        : intl.formatMessage({
+                              defaultMessage: 'Manual payment',
+                          })}
                 </Badge>
             </div>
             <div className="flex justify-between gap-4">
@@ -820,19 +902,25 @@ function PaymentReviewSection({
                 </span>
             </div>
             <div className="flex justify-between gap-4">
-                <span className="text-muted-foreground">Transfer Amount</span>
+                <span className="text-muted-foreground">
+                    <FormattedMessage defaultMessage="Transfer Amount" />
+                </span>
                 <span className="text-right font-semibold">
                     {formatIDR(amount)}
                 </span>
             </div>
             <div className="flex justify-between gap-4">
-                <span className="text-muted-foreground">Payment Type</span>
+                <span className="text-muted-foreground">
+                    <FormattedMessage defaultMessage="Payment Type" />
+                </span>
                 <span className="text-right font-semibold capitalize">
                     {reviewPaymentType(payment).toLowerCase()}
                 </span>
             </div>
             <div className="flex justify-between gap-4">
-                <span className="text-muted-foreground">Payment Time</span>
+                <span className="text-muted-foreground">
+                    <FormattedMessage defaultMessage="Payment Time" />
+                </span>
                 <span className="text-right font-semibold">
                     {payment.payment_date
                         ? dayjs(payment.payment_date).format('DD MMM YYYY')
@@ -840,7 +928,9 @@ function PaymentReviewSection({
                 </span>
             </div>
             <div className="flex justify-between gap-4 border-t pt-3">
-                <span className="text-muted-foreground">Receipt</span>
+                <span className="text-muted-foreground">
+                    <FormattedMessage defaultMessage="Receipt" />
+                </span>
                 {payment.proof_url ? (
                     <a
                         href={payment.proof_url}
@@ -848,7 +938,7 @@ function PaymentReviewSection({
                         rel="noreferrer"
                         className="font-semibold text-primary hover:underline"
                     >
-                        View receipt
+                        <FormattedMessage defaultMessage="View receipt" />
                     </a>
                 ) : detail.receipt && onViewReceipt ? (
                     <button
@@ -856,11 +946,14 @@ function PaymentReviewSection({
                         className="font-semibold text-primary underline-offset-2 hover:text-blue-600 hover:underline dark:hover:text-blue-400"
                         onClick={() => onViewReceipt(detail)}
                     >
-                        View receipt
+                        <FormattedMessage defaultMessage="View receipt" />
                     </button>
                 ) : (
                     <span className="text-right text-muted-foreground">
-                        {payment.proof_path ?? 'Gateway receipt'}
+                        {payment.proof_path ??
+                            intl.formatMessage({
+                                defaultMessage: 'Gateway receipt',
+                            })}
                     </span>
                 )}
             </div>
@@ -875,6 +968,7 @@ function RowActions({
     booking: BookingResource;
     companyUsername: string;
 }) {
+    const intl = useIntl();
     const [reviewOpen, setReviewOpen] = React.useState(false);
     const [reviewReceiptPayment, setReviewReceiptPayment] =
         React.useState<PaymentDetail | null>(null);
@@ -954,7 +1048,7 @@ function RowActions({
     const editHref = `/companies/${companyUsername}/dashboard/bookings/${booking.id}/edit${
         editStep ? `?step=${editStep}` : ''
     }`;
-    const editLabel = 'Edit';
+    const editLabel = intl.formatMessage({ defaultMessage: 'Edit' });
 
     React.useEffect(() => {
         if (!canOpenPaymentReview || !manualPaymentId) {
@@ -1051,7 +1145,10 @@ function RowActions({
                             errors.payment ??
                                 errors.payment_type ??
                                 errors.transfer_amount ??
-                                'Payment could not be submitted.',
+                                intl.formatMessage({
+                                    defaultMessage:
+                                        'Payment could not be submitted.',
+                                }),
                         ),
                     );
                 },
@@ -1086,12 +1183,18 @@ function RowActions({
                 }
 
                 setPaymentActionError(
-                    'Payment is not completed yet. You can reopen Online Payment to continue the same attempt while it is active.',
+                    intl.formatMessage({
+                        defaultMessage:
+                            'Payment is not completed yet. You can reopen Online Payment to continue the same attempt while it is active.',
+                    }),
                 );
             })
             .catch(() => {
                 setPaymentActionError(
-                    'Payment status could not be confirmed yet. You can reopen Pay Vendor and continue the same payment attempt.',
+                    intl.formatMessage({
+                        defaultMessage:
+                            'Payment status could not be confirmed yet. You can reopen Pay Vendor and continue the same payment attempt.',
+                    }),
                 );
             })
             .finally(() => setProcessingAction(null));
@@ -1126,7 +1229,10 @@ function RowActions({
 
                 if (!payload?.order_id) {
                     setPaymentActionError(
-                        'Online payment could not be started. Please try again.',
+                        intl.formatMessage({
+                            defaultMessage:
+                                'Online payment could not be started. Please try again.',
+                        }),
                     );
                     setProcessingAction(null);
                     return;
@@ -1158,7 +1264,9 @@ function RowActions({
                 const message =
                     error?.response?.data?.message ??
                     error?.response?.data?.errors?.payment?.[0] ??
-                    'Online payment could not be started.';
+                    intl.formatMessage({
+                        defaultMessage: 'Online payment could not be started.',
+                    });
 
                 setPaymentActionError(String(message));
                 setProcessingAction(null);
@@ -1175,7 +1283,9 @@ function RowActions({
                         className="h-8 w-8 text-secondary-foreground hover:bg-secondary/80 shadow-sm"
                     >
                         <MoreHorizontal className="h-4 w-4" />
-                        <span className="sr-only">Open menu</span>
+                        <span className="sr-only">
+                            <FormattedMessage defaultMessage="Open menu" />
+                        </span>
                     </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start">
@@ -1188,7 +1298,7 @@ function RowActions({
                                 }}
                             >
                                 <FileTextIcon className="mr-2 h-4 w-4" />
-                                Payment Approval
+                                <FormattedMessage defaultMessage="Payment Approval" />
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                         </>
@@ -1202,7 +1312,7 @@ function RowActions({
                                 }}
                             >
                                 <CreditCardIcon className="mr-2 h-4 w-4" />
-                                Pay Vendor
+                                <FormattedMessage defaultMessage="Pay Vendor" />
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                         </>
@@ -1212,14 +1322,14 @@ function RowActions({
                             href={`/companies/${companyUsername}/dashboard/bookings/${booking.id}`}
                         >
                             <EyeIcon className="mr-2 h-4 w-4" />
-                            View Detail
+                            <FormattedMessage defaultMessage="View Detail" />
                         </Link>
                     </DropdownMenuItem>
                     {booking.continue_booking_url && (
                         <DropdownMenuItem asChild>
                             <Link href={booking.continue_booking_url}>
                                 <ArrowRightIcon className="mr-2 h-4 w-4" />
-                                Continue Booking
+                                <FormattedMessage defaultMessage="Continue Booking" />
                             </Link>
                         </DropdownMenuItem>
                     )}
@@ -1247,8 +1357,12 @@ function RowActions({
                             >
                                 <RotateCcwIcon className="mr-2 h-4 w-4" />
                                 {processingAction === 'reorder'
-                                    ? 'Reordering...'
-                                    : 'Reorder'}
+                                    ? intl.formatMessage({
+                                          defaultMessage: 'Reordering...',
+                                      })
+                                    : intl.formatMessage({
+                                          defaultMessage: 'Reorder',
+                                      })}
                             </DropdownMenuItem>
                         </>
                     )}
@@ -1270,7 +1384,7 @@ function RowActions({
                                     }}
                                 >
                                     <CircleSlashIcon className="mr-2 h-4 w-4" />
-                                    Cancel
+                                    <FormattedMessage defaultMessage="Cancel" />
                                 </DropdownMenuItem>
                             )}
                             {canRefund && (
@@ -1281,15 +1395,22 @@ function RowActions({
                                     }}
                                 >
                                     <Undo2Icon className="mr-2 h-4 w-4" />
-                                    Refund
+                                    <FormattedMessage defaultMessage="Refund" />
                                 </DropdownMenuItem>
                             )}
                             {hasPendingActionRequest && (
                                 <DropdownMenuItem disabled>
-                                    Pending{' '}
-                                    {booking.pending_action_request
-                                        ?.target_action ?? 'action'}{' '}
-                                    request
+                                    <FormattedMessage
+                                        defaultMessage="Pending {action} request"
+                                        values={{
+                                            action:
+                                                booking.pending_action_request
+                                                    ?.target_action ??
+                                                intl.formatMessage({
+                                                    defaultMessage: 'action',
+                                                }),
+                                        }}
+                                    />
                                 </DropdownMenuItem>
                             )}
                         </>
@@ -1302,13 +1423,23 @@ function RowActions({
                     <DialogHeader>
                         <DialogTitle>
                             {canPayVendor && !canSubmitPaymentReviewDecision
-                                ? 'Pay Vendor'
-                                : 'Payment Approval'}
+                                ? intl.formatMessage({
+                                      defaultMessage: 'Pay Vendor',
+                                  })
+                                : intl.formatMessage({
+                                      defaultMessage: 'Payment Approval',
+                                  })}
                         </DialogTitle>
                         <DialogDescription>
                             {canPayVendor && !canSubmitPaymentReviewDecision
-                                ? 'Review the customer receipt, then submit the agent-to-vendor settlement.'
-                                : 'Verify the payment receipt before approving this booking payment.'}
+                                ? intl.formatMessage({
+                                      defaultMessage:
+                                          'Review the customer receipt, then submit the agent-to-vendor settlement.',
+                                  })
+                                : intl.formatMessage({
+                                      defaultMessage:
+                                          'Verify the payment receipt before approving this booking payment.',
+                                  })}
                         </DialogDescription>
                     </DialogHeader>
 
@@ -1316,7 +1447,9 @@ function RowActions({
                         <div className="space-y-4">
                             {customerPayment && (
                                 <PaymentReviewSection
-                                    title="Customer to Agent"
+                                    title={intl.formatMessage({
+                                        defaultMessage: 'Customer to Agent',
+                                    })}
                                     payment={customerPayment}
                                     onViewReceipt={setReviewReceiptPayment}
                                 />
@@ -1324,7 +1457,9 @@ function RowActions({
 
                             {agentVendorPayment ? (
                                 <PaymentReviewSection
-                                    title="Agent to Vendor"
+                                    title={intl.formatMessage({
+                                        defaultMessage: 'Agent to Vendor',
+                                    })}
                                     payment={agentVendorPayment}
                                     onViewReceipt={setReviewReceiptPayment}
                                 />
@@ -1333,11 +1468,10 @@ function RowActions({
                                     <div className="flex items-center justify-between gap-4">
                                         <div>
                                             <p className="font-semibold">
-                                                Agent to Vendor
+                                                <FormattedMessage defaultMessage="Agent to Vendor" />
                                             </p>
                                             <p className="text-xs text-muted-foreground">
-                                                Submit the vendor settlement for
-                                                this verified customer payment.
+                                                <FormattedMessage defaultMessage="Submit the vendor settlement for this verified customer payment." />
                                             </p>
                                         </div>
                                         <Badge
@@ -1348,12 +1482,14 @@ function RowActions({
                                                 ? reviewPaymentType(
                                                       customerPayment,
                                                   )
-                                                : 'Payment'}
+                                                : intl.formatMessage({
+                                                      defaultMessage: 'Payment',
+                                                  })}
                                         </Badge>
                                     </div>
                                     <div className="flex justify-between gap-4 border-t pt-3">
                                         <span className="text-muted-foreground">
-                                            Amount
+                                            <FormattedMessage defaultMessage="Amount" />
                                         </span>
                                         <span className="font-semibold">
                                             {formatIDR(customerPaymentAmount)}
@@ -1373,7 +1509,7 @@ function RowActions({
                                                 setManualPayVendorOpen(true)
                                             }
                                         >
-                                            Manual Transfer
+                                            <FormattedMessage defaultMessage="Manual Transfer" />
                                         </Button>
                                         <Button
                                             type="button"
@@ -1384,8 +1520,14 @@ function RowActions({
                                         >
                                             {processingAction ===
                                             'pay_vendor_online'
-                                                ? 'Opening...'
-                                                : 'Online Payment'}
+                                                ? intl.formatMessage({
+                                                      defaultMessage:
+                                                          'Opening...',
+                                                  })
+                                                : intl.formatMessage({
+                                                      defaultMessage:
+                                                          'Online Payment',
+                                                  })}
                                         </Button>
                                     </div>
                                 </div>
@@ -1399,7 +1541,7 @@ function RowActions({
                             <div className="space-y-3 rounded-lg border bg-muted/30 p-4 text-sm">
                                 <div className="flex justify-between gap-4">
                                     <span className="text-muted-foreground">
-                                        Sender Bank
+                                        <FormattedMessage defaultMessage="Sender Bank" />
                                     </span>
                                     <span className="text-right font-semibold">
                                         {booking.manual_payment
@@ -1408,7 +1550,7 @@ function RowActions({
                                 </div>
                                 <div className="flex justify-between gap-4">
                                     <span className="text-muted-foreground">
-                                        Account Number
+                                        <FormattedMessage defaultMessage="Account Number" />
                                     </span>
                                     <span className="text-right font-mono font-semibold">
                                         {booking.manual_payment
@@ -1417,7 +1559,7 @@ function RowActions({
                                 </div>
                                 <div className="flex justify-between gap-4">
                                     <span className="text-muted-foreground">
-                                        Transfer Amount
+                                        <FormattedMessage defaultMessage="Transfer Amount" />
                                     </span>
                                     <span className="text-right font-semibold">
                                         {formatIDR(
@@ -1428,7 +1570,7 @@ function RowActions({
                                 </div>
                                 <div className="flex justify-between gap-4">
                                     <span className="text-muted-foreground">
-                                        Payment Type
+                                        <FormattedMessage defaultMessage="Payment Type" />
                                     </span>
                                     <span className="text-right font-semibold capitalize">
                                         {(
@@ -1441,7 +1583,7 @@ function RowActions({
                                 </div>
                                 <div className="flex justify-between gap-4">
                                     <span className="text-muted-foreground">
-                                        Payment Time
+                                        <FormattedMessage defaultMessage="Payment Time" />
                                     </span>
                                     <span className="text-right font-semibold">
                                         {booking.manual_payment.payment_date
@@ -1454,7 +1596,7 @@ function RowActions({
                                 </div>
                                 <div className="flex justify-between gap-4 border-t pt-3">
                                     <span className="text-muted-foreground">
-                                        Receipt
+                                        <FormattedMessage defaultMessage="Receipt" />
                                     </span>
                                     {booking.manual_payment.proof_url ? (
                                         <a
@@ -1465,7 +1607,7 @@ function RowActions({
                                             rel="noreferrer"
                                             className="font-semibold text-primary hover:underline"
                                         >
-                                            View receipt
+                                            <FormattedMessage defaultMessage="View receipt" />
                                         </a>
                                     ) : (
                                         <span className="text-right text-muted-foreground">
@@ -1482,13 +1624,17 @@ function RowActions({
                         booking.manual_payment.agent_vendor_payment && (
                             <div className="space-y-4">
                                 <PaymentReviewSection
-                                    title="Customer to Agent"
+                                    title={intl.formatMessage({
+                                        defaultMessage: 'Customer to Agent',
+                                    })}
                                     payment={
                                         booking.manual_payment.customer_payment
                                     }
                                 />
                                 <PaymentReviewSection
-                                    title="Agent to Vendor"
+                                    title={intl.formatMessage({
+                                        defaultMessage: 'Agent to Vendor',
+                                    })}
                                     payment={
                                         booking.manual_payment
                                             .agent_vendor_payment
@@ -1505,8 +1651,12 @@ function RowActions({
                                 onClick={submitManualPaymentDecision}
                             >
                                 {processingAction === 'accept'
-                                    ? 'Approving...'
-                                    : 'Approve'}
+                                    ? intl.formatMessage({
+                                          defaultMessage: 'Approving...',
+                                      })
+                                    : intl.formatMessage({
+                                          defaultMessage: 'Approve',
+                                      })}
                             </Button>
                         </DialogFooter>
                     )}
@@ -1516,7 +1666,13 @@ function RowActions({
             <PaymentMethodDialog
                 open={vendorMethodDialogOpen}
                 onOpenChange={setVendorMethodDialogOpen}
-                description={`Select how you want to pay ${formatIDR(customerPaymentAmount)} to the vendor`}
+                description={intl.formatMessage(
+                    {
+                        defaultMessage:
+                            'Select how you want to pay {amount} to the vendor',
+                    },
+                    { amount: formatIDR(customerPaymentAmount) },
+                )}
                 loading={processingAction === 'pay_vendor_online'}
                 onConfirm={(methodId) => {
                     setVendorMethodDialogOpen(false);
@@ -1560,11 +1716,24 @@ function RowActions({
                 <DialogContent className="w-full max-w-md">
                     <DialogHeader>
                         <DialogTitle className="capitalize">
-                            {actionDialog} booking
+                            {actionDialog === 'cancel'
+                                ? intl.formatMessage({
+                                      defaultMessage: 'Cancel booking',
+                                  })
+                                : intl.formatMessage({
+                                      defaultMessage: 'Refund booking',
+                                  })}
                         </DialogTitle>
                         <DialogDescription>
-                            Are you sure you want to {actionDialog} this
-                            booking?
+                            {actionDialog === 'cancel'
+                                ? intl.formatMessage({
+                                      defaultMessage:
+                                          'Are you sure you want to cancel this booking?',
+                                  })
+                                : intl.formatMessage({
+                                      defaultMessage:
+                                          'Are you sure you want to refund this booking?',
+                                  })}
                         </DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-2">
@@ -1573,7 +1742,9 @@ function RowActions({
                             onChange={(event) =>
                                 setActionReason(event.target.value)
                             }
-                            placeholder="Reason (optional)"
+                            placeholder={intl.formatMessage({
+                                defaultMessage: 'Reason (optional)',
+                            })}
                         />
                     </div>
                     <DialogFooter>
@@ -1583,7 +1754,7 @@ function RowActions({
                             disabled={processingAction !== null}
                             onClick={() => setActionDialog(null)}
                         >
-                            Keep Booking
+                            <FormattedMessage defaultMessage="Keep Booking" />
                         </Button>
                         <Button
                             type="button"
@@ -1597,8 +1768,16 @@ function RowActions({
                             className="capitalize"
                         >
                             {processingAction === actionDialog
-                                ? 'Processing...'
-                                : actionDialog}
+                                ? intl.formatMessage({
+                                      defaultMessage: 'Processing...',
+                                  })
+                                : actionDialog === 'cancel'
+                                  ? intl.formatMessage({
+                                        defaultMessage: 'Cancel',
+                                    })
+                                  : intl.formatMessage({
+                                        defaultMessage: 'Refund',
+                                    })}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
@@ -1612,15 +1791,19 @@ function RowActions({
 // ---------------------------------------------------------------------------
 
 function buildColumns(
+    intl: IntlShape,
     isAgent: boolean,
     companyUsername: string,
     onViewReceipt: (detail: PaymentDetail) => void,
     onViewDocuments: (booking: BookingResource) => void,
 ): ColumnDef<BookingResource>[] {
+    const statusFullLabels = getStatusFullLabels(intl);
+    const directLabel = intl.formatMessage({ defaultMessage: 'Direct' });
+
     return [
         {
             id: 'actions',
-            header: 'Actions',
+            header: intl.formatMessage({ defaultMessage: 'Actions' }),
             cell: ({ row }) => (
                 <div className="flex justify-center">
                     <RowActions
@@ -1635,7 +1818,7 @@ function buildColumns(
         {
             id: 'created_at',
             accessorKey: 'created_at',
-            header: 'Booking Date',
+            header: intl.formatMessage({ defaultMessage: 'Booking Date' }),
             cell: ({ cell }) => (
                 <div className="whitespace-nowrap text-xs text-slate-500 dark:text-slate-300">
                     {dayjs(cell.getValue<string>()).format('DD MMM YYYY')}
@@ -1645,7 +1828,7 @@ function buildColumns(
         {
             id: 'tour_name',
             accessorFn: (row) => row.tour?.name ?? '—',
-            header: 'Tour Name',
+            header: intl.formatMessage({ defaultMessage: 'Tour Name' }),
             cell: ({ row }) => (
                 <div
                     className="max-w-[180px] xl:max-w-[220px] truncate font-bold text-primary"
@@ -1658,7 +1841,7 @@ function buildColumns(
         {
             id: 'departure_date',
             accessorKey: 'departure_date',
-            header: 'Departure Date',
+            header: intl.formatMessage({ defaultMessage: 'Departure Date' }),
             cell: ({ cell }) => {
                 const val = cell.getValue<string>();
                 return (
@@ -1671,7 +1854,7 @@ function buildColumns(
         {
             id: 'booking_number',
             accessorKey: 'booking_number',
-            header: 'Booking Number',
+            header: intl.formatMessage({ defaultMessage: 'Booking Number' }),
             cell: ({ cell }) => (
                 <span className="uppercase font-mono text-[11px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded border border-slate-200 dark:bg-slate-900 dark:text-slate-200 dark:border-slate-700">
                     {cell.getValue<string>()}
@@ -1681,7 +1864,7 @@ function buildColumns(
         {
             id: 'status',
             accessorKey: 'status',
-            header: 'Status',
+            header: intl.formatMessage({ defaultMessage: 'Status' }),
             cell: ({ cell }) => {
                 const status = cell.getValue<string>();
                 return (
@@ -1713,27 +1896,29 @@ function buildColumns(
             accessorFn: (row) =>
                 isAgent
                     ? (row.vendor?.name ?? '—')
-                    : (row.agent?.name ?? 'Direct'),
-            header: isAgent ? 'Vendor' : 'Agent',
+                    : (row.agent?.name ?? directLabel),
+            header: isAgent
+                ? intl.formatMessage({ defaultMessage: 'Vendor' })
+                : intl.formatMessage({ defaultMessage: 'Agent' }),
             cell: ({ row }) => (
                 <div
                     className="font-semibold text-slate-700 max-w-[120px] xl:max-w-[150px] truncate dark:text-slate-200"
                     title={
                         isAgent
                             ? (row.original.vendor?.name ?? '—')
-                            : (row.original.agent?.name ?? 'Direct')
+                            : (row.original.agent?.name ?? directLabel)
                     }
                 >
                     {isAgent
                         ? (row.original.vendor?.name ?? '—')
-                        : (row.original.agent?.name ?? 'Direct')}
+                        : (row.original.agent?.name ?? directLabel)}
                 </div>
             ),
         },
         {
             id: 'contact_name',
             accessorKey: 'contact_name',
-            header: 'Ordered By',
+            header: intl.formatMessage({ defaultMessage: 'Ordered By' }),
             cell: ({ cell }) => (
                 <div className="text-slate-600 truncate max-w-[120px] dark:text-slate-300">
                     {cell.getValue<string>() || '—'}
@@ -1742,7 +1927,7 @@ function buildColumns(
         },
         {
             id: 'pax',
-            header: 'Pax',
+            header: intl.formatMessage({ defaultMessage: 'Pax' }),
             cell: ({ row }) => (
                 <PaxCell
                     adult={row.original.pax_adult ?? 0}
@@ -1755,7 +1940,7 @@ function buildColumns(
         {
             id: 'grand_total',
             accessorKey: 'grand_total',
-            header: 'Grand Total',
+            header: intl.formatMessage({ defaultMessage: 'Grand Total' }),
             cell: ({ cell }) => (
                 <div className="font-medium tabular-nums whitespace-nowrap text-slate-700 dark:text-slate-200">
                     {formatIDR(cell.getValue<string>())}
@@ -1765,7 +1950,7 @@ function buildColumns(
         {
             id: 'remaining_balance',
             accessorKey: 'remaining_balance',
-            header: 'Remaining',
+            header: intl.formatMessage({ defaultMessage: 'Remaining' }),
             cell: ({ row }) => {
                 const remaining = row.original.remaining_balance;
                 const shouldShowRemaining =
@@ -1788,7 +1973,7 @@ function buildColumns(
         },
         {
             id: 'down_payment_detail',
-            header: 'Down Payments',
+            header: intl.formatMessage({ defaultMessage: 'Down Payments' }),
             cell: ({ row }) => (
                 <PaymentDetailCell
                     detail={row.original.down_payment_detail}
@@ -1799,7 +1984,7 @@ function buildColumns(
         },
         {
             id: 'full_payment_detail',
-            header: 'Full Payment',
+            header: intl.formatMessage({ defaultMessage: 'Full Payment' }),
             cell: ({ row }) => (
                 <PaymentDetailCell
                     detail={row.original.full_payment_detail}
@@ -1810,7 +1995,7 @@ function buildColumns(
         },
         {
             id: 'payment_followup',
-            header: 'Payment Status',
+            header: intl.formatMessage({ defaultMessage: 'Payment Status' }),
             cell: ({ row }) =>
                 row.original.payment_followup.state === 'not_applicable' ? (
                     <NotApplicableCell />
@@ -1821,7 +2006,7 @@ function buildColumns(
         },
         {
             id: 'document_followup',
-            header: 'Documents',
+            header: intl.formatMessage({ defaultMessage: 'Documents' }),
             cell: ({ row }) => {
                 const followup = row.original.document_followup;
                 const missingCount = Number(followup.missing_count ?? 0);
@@ -1843,14 +2028,20 @@ function buildColumns(
                                         onViewDocuments(row.original);
                                     }}
                                 >
-                                    View Documents
+                                    <FormattedMessage defaultMessage="View Documents" />
                                 </button>
                             )}
                         <FollowupCell
                             followup={followup}
                             details={
                                 missingCount > 0
-                                    ? `${missingCount} passenger${missingCount === 1 ? '' : 's'}`
+                                    ? intl.formatMessage(
+                                          {
+                                              defaultMessage:
+                                                  '{count, plural, one {# passenger} other {# passengers}}',
+                                          },
+                                          { count: missingCount },
+                                      )
                                     : undefined
                             }
                         />
@@ -1862,7 +2053,7 @@ function buildColumns(
         {
             id: 'commission_amount',
             accessorKey: 'commission_amount',
-            header: 'Commission',
+            header: intl.formatMessage({ defaultMessage: 'Commission' }),
             cell: ({ cell }) => (
                 <div className="tabular-nums whitespace-nowrap text-slate-600 dark:text-slate-300">
                     {formatCommission(cell.getValue<string>())}
@@ -1884,26 +2075,47 @@ function receiptPaymentTime(payment: PaymentDetail): string {
     );
 }
 
-function receiptRowsForPayment(payment: PaymentDetail): string[][] {
+function receiptRowsForPayment(
+    payment: PaymentDetail,
+    intl: IntlShape,
+): string[][] {
     if (!payment.receipt) {
         return [];
     }
 
     return [
-        ['Type', payment.receipt.type.toUpperCase()],
-        ['Method', payment.method_label],
-        ['Receiver', payment.receiver_label],
-        ['Amount', formatIDR(payment.amount)],
-        ['Payment Time', receiptPaymentTime(payment)],
+        [
+            intl.formatMessage({ defaultMessage: 'Type' }),
+            payment.receipt.type.toUpperCase(),
+        ],
+        [
+            intl.formatMessage({ defaultMessage: 'Method' }),
+            payment.method_label,
+        ],
+        [
+            intl.formatMessage({ defaultMessage: 'Receiver' }),
+            payment.receiver_label,
+        ],
+        [
+            intl.formatMessage({ defaultMessage: 'Amount' }),
+            formatIDR(payment.amount),
+        ],
+        [
+            intl.formatMessage({ defaultMessage: 'Payment Time' }),
+            receiptPaymentTime(payment),
+        ],
     ];
 }
 
-function paginationLabel(label: string): string {
+function paginationLabel(label: string, intl: IntlShape): string {
+    const previous = intl.formatMessage({ defaultMessage: 'Previous' });
+    const next = intl.formatMessage({ defaultMessage: 'Next' });
+
     return label
-        .replace('&laquo; Previous', 'Previous')
-        .replace('Next &raquo;', 'Next')
-        .replace('&laquo;', 'Previous')
-        .replace('&raquo;', 'Next');
+        .replace('&laquo; Previous', previous)
+        .replace('Next &raquo;', next)
+        .replace('&laquo;', previous)
+        .replace('&raquo;', next);
 }
 
 function ReceiptDialog({
@@ -1913,8 +2125,9 @@ function ReceiptDialog({
     payment: PaymentDetail | null;
     onOpenChange: (open: boolean) => void;
 }) {
+    const intl = useIntl();
     const receipt = payment?.receipt ?? null;
-    const receiptRows = payment ? receiptRowsForPayment(payment) : [];
+    const receiptRows = payment ? receiptRowsForPayment(payment, intl) : [];
     const receiptGroup =
         payment?.receipt_group?.filter((section) => section.detail.receipt) ??
         [];
@@ -1924,9 +2137,11 @@ function ReceiptDialog({
         <Dialog open={payment !== null} onOpenChange={onOpenChange}>
             <DialogContent className="w-full max-w-lg">
                 <DialogHeader>
-                    <DialogTitle>Payment Receipt</DialogTitle>
+                    <DialogTitle>
+                        <FormattedMessage defaultMessage="Payment Receipt" />
+                    </DialogTitle>
                     <DialogDescription>
-                        Transaction details for this booking payment.
+                        <FormattedMessage defaultMessage="Transaction details for this booking payment." />
                     </DialogDescription>
                 </DialogHeader>
 
@@ -1936,6 +2151,7 @@ function ReceiptDialog({
                             const sectionReceipt = section.detail.receipt;
                             const sectionRows = receiptRowsForPayment(
                                 section.detail,
+                                intl,
                             );
 
                             return (
@@ -1951,7 +2167,10 @@ function ReceiptDialog({
                                             variant="outline"
                                             className="uppercase"
                                         >
-                                            {sectionReceipt?.type ?? 'receipt'}
+                                            {sectionReceipt?.type ??
+                                                intl.formatMessage({
+                                                    defaultMessage: 'receipt',
+                                                })}
                                         </Badge>
                                     </div>
 
@@ -1977,7 +2196,7 @@ function ReceiptDialog({
                                                 rel="noreferrer"
                                                 className="inline-flex text-sm font-semibold text-primary underline-offset-2 hover:text-blue-600 hover:underline dark:hover:text-blue-400"
                                             >
-                                                Open uploaded receipt
+                                                <FormattedMessage defaultMessage="Open uploaded receipt" />
                                             </a>
                                         )}
                                 </div>
@@ -2009,7 +2228,7 @@ function ReceiptDialog({
                                     rel="noreferrer"
                                     className="inline-flex text-sm font-semibold text-primary underline-offset-2 hover:text-blue-600 hover:underline dark:hover:text-blue-400"
                                 >
-                                    Open uploaded receipt
+                                    <FormattedMessage defaultMessage="Open uploaded receipt" />
                                 </a>
                             )}
                         </div>
@@ -2025,7 +2244,9 @@ function ReceiptDialog({
 // ---------------------------------------------------------------------------
 
 export default function Page({ data, followupSummary }: PageProps) {
+    const intl = useIntl();
     const { company } = usePageSharedDataProps();
+    const statusTabs = React.useMemo(() => getStatusTabs(intl), [intl]);
     const isAgent = company.type === 'agent';
     const [receiptDialogPayment, setReceiptDialogPayment] =
         React.useState<PaymentDetail | null>(null);
@@ -2049,12 +2270,19 @@ export default function Page({ data, followupSummary }: PageProps) {
     const columns = React.useMemo(
         () =>
             buildColumns(
+                intl,
                 isAgent,
                 company.username,
                 handleViewReceipt,
                 handleViewDocuments,
             ),
-        [handleViewDocuments, handleViewReceipt, isAgent, company.username],
+        [
+            handleViewDocuments,
+            handleViewReceipt,
+            intl,
+            isAgent,
+            company.username,
+        ],
     );
 
     const [sorting, setSorting] = React.useState<SortingState>([]);
@@ -2111,15 +2339,30 @@ export default function Page({ data, followupSummary }: PageProps) {
         <CompanyDashboardLayout
             openMenuIds={['tours']}
             activeMenuIds={isAgent ? ['tours.bookings'] : ['tours.orders']}
-            breadcrumb={[{ title: 'Tours' }, { title: 'Bookings' }]}
+            breadcrumb={[
+                {
+                    title: intl.formatMessage({
+                        defaultMessage: 'Tours',
+                    }),
+                },
+                {
+                    title: intl.formatMessage({
+                        defaultMessage: 'Bookings',
+                    }),
+                },
+            ]}
         >
-            <Head title="Bookings" />
+            <Head
+                title={intl.formatMessage({
+                    defaultMessage: 'Bookings',
+                })}
+            />
 
             <div className="w-full flex flex-col gap-6 p-4 md:p-6 max-w-screen-2xl mx-auto pb-20 min-w-0 overflow-hidden">
                 {/* ── Page header ─────────────────────────────────────── */}
                 {/* ── Status filter tabs ───────────────────────────── */}
                 <div className="flex flex-wrap justify-center gap-1.5">
-                    {STATUS_TABS.map((tab) => {
+                    {statusTabs.map((tab) => {
                         const params = new URLSearchParams(
                             window.location.search,
                         );
@@ -2201,7 +2444,10 @@ export default function Page({ data, followupSummary }: PageProps) {
                                 <Search className="size-3.5" />
                             </span>
                             <Input
-                                placeholder="Search booking number, tour, guest, vendor, or agent"
+                                placeholder={intl.formatMessage({
+                                    defaultMessage:
+                                        'Search booking number, tour, guest, vendor, or agent',
+                                })}
                                 value={globalFilter}
                                 onChange={(event) =>
                                     setGlobalFilter(event.target.value)
@@ -2211,7 +2457,9 @@ export default function Page({ data, followupSummary }: PageProps) {
                             {globalFilter.trim() !== '' && (
                                 <button
                                     type="button"
-                                    aria-label="Clear search"
+                                    aria-label={intl.formatMessage({
+                                        defaultMessage: 'Clear search',
+                                    })}
                                     onClick={() => setGlobalFilter('')}
                                     className="absolute right-2 top-1/2 flex size-6 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                                 >
@@ -2226,7 +2474,7 @@ export default function Page({ data, followupSummary }: PageProps) {
                                 variant="outline"
                                 className="ml-auto h-9 w-full border-slate-200 bg-white text-xs dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:hover:bg-slate-900 sm:w-auto"
                             >
-                                View Columns{' '}
+                                <FormattedMessage defaultMessage="View Columns" />{' '}
                                 <ChevronDown className="ml-2 h-4 w-4 opacity-50" />
                             </Button>
                         </DropdownMenuTrigger>
@@ -2331,7 +2579,9 @@ export default function Page({ data, followupSummary }: PageProps) {
                                                 <span className="text-lg mb-1">
                                                     📭
                                                 </span>
-                                                <p>No bookings found.</p>
+                                                <p>
+                                                    <FormattedMessage defaultMessage="No bookings found." />
+                                                </p>
                                             </div>
                                         </TableCell>
                                     </TableRow>
@@ -2344,18 +2594,26 @@ export default function Page({ data, followupSummary }: PageProps) {
                 {/* ── Pagination footer ───────────────────────────────── */}
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2">
                     <p className="text-sm text-muted-foreground bg-slate-50 px-3 py-1.5 rounded-md border border-slate-100 dark:bg-slate-950 dark:border-slate-800 dark:text-slate-400">
-                        <span className="font-semibold text-foreground">
-                            {data.from ?? 0}
-                        </span>{' '}
-                        -{' '}
-                        <span className="font-semibold text-foreground">
-                            {data.to ?? 0}
-                        </span>{' '}
-                        of{' '}
-                        <span className="font-semibold text-foreground">
-                            {data.total}
-                        </span>{' '}
-                        booking(s)
+                        <FormattedMessage
+                            defaultMessage="{from} - {to} of {total} booking(s)"
+                            values={{
+                                from: (
+                                    <span className="font-semibold text-foreground">
+                                        {data.from ?? 0}
+                                    </span>
+                                ),
+                                to: (
+                                    <span className="font-semibold text-foreground">
+                                        {data.to ?? 0}
+                                    </span>
+                                ),
+                                total: (
+                                    <span className="font-semibold text-foreground">
+                                        {data.total}
+                                    </span>
+                                ),
+                            }}
+                        />
                     </p>
                     <div className="flex flex-wrap justify-center gap-2">
                         {data.links.map((link, index) => (
@@ -2374,7 +2632,7 @@ export default function Page({ data, followupSummary }: PageProps) {
                                 disabled={!link.url}
                                 className="min-w-9 border-slate-200"
                             >
-                                {paginationLabel(link.label)}
+                                {paginationLabel(link.label, intl)}
                             </Button>
                         ))}
                     </div>

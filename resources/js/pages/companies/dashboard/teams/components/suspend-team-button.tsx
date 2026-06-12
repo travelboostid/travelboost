@@ -20,8 +20,10 @@ import { update } from '@/routes/companies/dashboard/teams';
 import { useForm } from '@inertiajs/react';
 import { ShieldBanIcon } from 'lucide-react';
 import { useState } from 'react';
+import { FormattedMessage, useIntl } from 'react-intl';
 
 export default function SuspendTeamButton({ team }: { team: any }) {
+    const intl = useIntl();
     const { company } = usePageSharedDataProps();
     const [open, setOpen] = useState(false);
     const form = useForm({
@@ -48,28 +50,33 @@ export default function SuspendTeamButton({ team }: { team: any }) {
                             variant="outline"
                             size="icon"
                             className="h-8 w-8 text-destructive"
-                            aria-label="Suspend"
+                            aria-label={intl.formatMessage({
+                                defaultMessage: 'Suspend',
+                            })}
                         >
                             <ShieldBanIcon className="size-4" />
                         </Button>
                     </TooltipTrigger>
-                    <TooltipContent>Suspend</TooltipContent>
+                    <TooltipContent>
+                        <FormattedMessage defaultMessage="Suspend" />
+                    </TooltipContent>
                 </Tooltip>
             </AlertDialogTrigger>
             <AlertDialogContent>
                 <AlertDialogHeader>
-                    <AlertDialogTitle>Suspend user?</AlertDialogTitle>
+                    <AlertDialogTitle>
+                        <FormattedMessage defaultMessage="Suspend user?" />
+                    </AlertDialogTitle>
                     <AlertDialogDescription>
-                        Are you sure you want to suspend this user? They will
-                        not be able to access any company resources. You can
-                        unsuspend them at any time by clicking the unsuspend
-                        button.
+                        <FormattedMessage defaultMessage="Are you sure you want to suspend this user? They will not be able to access any company resources. You can unsuspend them at any time by clicking the unsuspend button." />
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogCancel>
+                        <FormattedMessage defaultMessage="Cancel" />
+                    </AlertDialogCancel>
                     <AlertDialogAction onClick={handleSuspend}>
-                        Suspend
+                        <FormattedMessage defaultMessage="Suspend" />
                     </AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>

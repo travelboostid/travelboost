@@ -31,7 +31,9 @@ import {
 } from '@/components/ui/dropdown-menu';
 
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
+import { Head } from '@inertiajs/react';
 import { ChevronDown, EditIcon, PlusIcon, TrashIcon } from 'lucide-react';
+import { FormattedMessage, useIntl } from 'react-intl';
 
 import AddPriceCategoryDialog from './add-price-category-dialog';
 import UpdatePriceCategoryDialog from './update-price-category-dialog';
@@ -44,10 +46,19 @@ type PriceCategory = {
 };
 
 function RowAction({ item }: { item: PriceCategory }) {
+    const intl = useIntl();
     const { company } = usePageSharedDataProps();
 
     const handleDelete = () => {
-        if (!confirm('Delete this category?')) return;
+        if (
+            !confirm(
+                intl.formatMessage({
+                    defaultMessage: 'Delete this category?',
+                }),
+            )
+        ) {
+            return;
+        }
 
         router.delete(
             `/companies/${company.username}/dashboard/price-categories/${item.id}`,
@@ -72,33 +83,37 @@ function RowAction({ item }: { item: PriceCategory }) {
     );
 }
 
-export const columns: ColumnDef<PriceCategory>[] = [
-    {
-        accessorKey: 'name',
-        header: 'Name',
-        cell: ({ row }) => <div>{row.getValue('name')}</div>,
-    },
-    {
-        accessorKey: 'room_type',
-        header: 'Room Type',
-        cell: ({ row }) => <div>{row.getValue('room_type')}</div>,
-    },
-    {
-        accessorKey: 'description',
-        header: 'Description',
-        cell: ({ row }) => <div>{row.getValue('description')}</div>,
-    },
-    {
-        id: 'actions',
-        cell: ({ row }) => <RowAction item={row.original} />,
-    },
-];
-
 export default function Page({ categories }: any) {
+    const intl = useIntl();
     const [sorting, setSorting] = React.useState([]);
     const [columnFilters, setColumnFilters] = React.useState([]);
     const [columnVisibility, setColumnVisibility] = React.useState({});
     const [rowSelection, setRowSelection] = React.useState({});
+
+    const columns = React.useMemo<ColumnDef<PriceCategory>[]>(
+        () => [
+            {
+                accessorKey: 'name',
+                header: () => <FormattedMessage defaultMessage="Name" />,
+                cell: ({ row }) => <div>{row.getValue('name')}</div>,
+            },
+            {
+                accessorKey: 'room_type',
+                header: () => <FormattedMessage defaultMessage="Room Type" />,
+                cell: ({ row }) => <div>{row.getValue('room_type')}</div>,
+            },
+            {
+                accessorKey: 'description',
+                header: () => <FormattedMessage defaultMessage="Description" />,
+                cell: ({ row }) => <div>{row.getValue('description')}</div>,
+            },
+            {
+                id: 'actions',
+                cell: ({ row }) => <RowAction item={row.original} />,
+            },
+        ],
+        [],
+    );
 
     const table = useReactTable({
         data: categories,
@@ -123,22 +138,41 @@ export default function Page({ categories }: any) {
 
     return (
         <CompanyDashboardLayout
-            breadcrumb={[{ title: 'Tours' }, { title: 'Price Categories' }]}
+            breadcrumb={[
+                {
+                    title: intl.formatMessage({
+                        defaultMessage: 'Tours',
+                    }),
+                },
+                {
+                    title: intl.formatMessage({
+                        defaultMessage: 'Price Categories',
+                    }),
+                },
+            ]}
             openMenuIds={['tours']}
             activeMenuIds={['tours.price-categories']}
             applet={
                 <AddPriceCategoryDialog>
                     <Button>
-                        <PlusIcon /> Add Price Category
+                        <PlusIcon />
+                        <FormattedMessage defaultMessage="Add Price Category" />
                     </Button>
                 </AddPriceCategoryDialog>
             }
         >
+            <Head
+                title={intl.formatMessage({
+                    defaultMessage: 'Price Categories',
+                })}
+            />
+
             <div className="w-full p-4">
-                {/* FILTER */}
                 <div className="flex items-center py-4">
                     <Input
-                        placeholder="Filter name..."
+                        placeholder={intl.formatMessage({
+                            defaultMessage: 'Filter name...',
+                        })}
                         value={
                             (table
                                 .getColumn('name')
@@ -155,7 +189,8 @@ export default function Page({ categories }: any) {
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <Button variant="outline" className="ml-auto">
-                                Columns <ChevronDown />
+                                <FormattedMessage defaultMessage="Columns" />
+                                <ChevronDown />
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
@@ -179,7 +214,6 @@ export default function Page({ categories }: any) {
                     </DropdownMenu>
                 </div>
 
-                {/* TABLE */}
                 <div className="overflow-hidden rounded-md border">
                     <Table>
                         <TableHeader>
@@ -217,7 +251,7 @@ export default function Page({ categories }: any) {
                                         colSpan={columns.length}
                                         className="text-center"
                                     >
-                                        No results
+                                        <FormattedMessage defaultMessage="No results" />
                                     </TableCell>
                                 </TableRow>
                             )}
@@ -225,7 +259,6 @@ export default function Page({ categories }: any) {
                     </Table>
                 </div>
 
-                {/* PAGINATION */}
                 <div className="flex justify-end gap-2 py-4">
                     <Button
                         variant="outline"
@@ -233,7 +266,7 @@ export default function Page({ categories }: any) {
                         onClick={() => table.previousPage()}
                         disabled={!table.getCanPreviousPage()}
                     >
-                        Previous
+                        <FormattedMessage defaultMessage="Previous" />
                     </Button>
 
                     <Button
@@ -242,7 +275,7 @@ export default function Page({ categories }: any) {
                         onClick={() => table.nextPage()}
                         disabled={!table.getCanNextPage()}
                     >
-                        Next
+                        <FormattedMessage defaultMessage="Next" />
                     </Button>
                 </div>
             </div>

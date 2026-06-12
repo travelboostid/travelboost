@@ -9,6 +9,7 @@ import {
     ItemTitle,
 } from '@/components/ui/item';
 import { ShieldAlertIcon } from 'lucide-react';
+import { FormattedMessage } from 'react-intl';
 
 export default function PendingWithdrawal() {
     const { data } = useGetWithdrawals({ status: 'pending' });
@@ -21,14 +22,16 @@ export default function PendingWithdrawal() {
                 <ShieldAlertIcon />
             </ItemMedia>
             <ItemContent>
-                <ItemTitle>You have pending withdrawals</ItemTitle>
+                <ItemTitle>
+                    <FormattedMessage defaultMessage="You have pending withdrawals" />
+                </ItemTitle>
                 <ItemDescription>
-                    Please wait patiently to have your withdrawal done
+                    <FormattedMessage defaultMessage="Please wait patiently to have your withdrawal done" />
                 </ItemDescription>
             </ItemContent>
             <ItemActions>
                 <Button size="sm" variant="outline" onClick={handleCancel}>
-                    Cancel
+                    <FormattedMessage defaultMessage="Cancel" />
                 </Button>
             </ItemActions>
         </Item>

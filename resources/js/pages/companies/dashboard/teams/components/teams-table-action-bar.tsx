@@ -26,13 +26,9 @@ import { router } from '@inertiajs/react';
 import type { Table } from '@tanstack/react-table';
 import { Trash2Icon, X } from 'lucide-react';
 import * as React from 'react';
+import { FormattedMessage, useIntl } from 'react-intl';
 import { toast } from 'sonner';
 import type { TeamMemberRow } from '../index';
-
-const TEAM_STATUS_OPTIONS = [
-    { label: 'Active', value: 'active' },
-    { label: 'Suspended', value: 'suspended' },
-];
 
 type TeamsTableActionBarProps = {
     table: Table<TeamMemberRow>;
@@ -47,12 +43,27 @@ export default function TeamsTableActionBar({
     table,
     canManageMembers,
 }: TeamsTableActionBarProps) {
+    const intl = useIntl();
     const { company } = usePageSharedDataProps();
     const [updating, setUpdating] = React.useState(false);
     const [deleteOpen, setDeleteOpen] = React.useState(false);
     const rows = table
         .getFilteredSelectedRowModel()
         .rows.filter((row) => isBulkSelectable(row.original));
+
+    const teamStatusOptions = React.useMemo(
+        () => [
+            {
+                label: intl.formatMessage({ defaultMessage: 'Active' }),
+                value: 'active',
+            },
+            {
+                label: intl.formatMessage({ defaultMessage: 'Suspended' }),
+                value: 'suspended',
+            },
+        ],
+        [intl],
+    );
 
     const onOpenChange = React.useCallback(
         (open: boolean) => {
@@ -82,12 +93,22 @@ export default function TeamsTableActionBar({
                 onFinish: () => setUpdating(false),
                 onSuccess: () => {
                     toast.success(
-                        `Status updated to ${status} for ${rows.length} member(s)`,
+                        intl.formatMessage(
+                            {
+                                defaultMessage:
+                                    'Status updated to {status} for {count, plural, one {# member} other {# members}}',
+                            },
+                            { status, count: rows.length },
+                        ),
                     );
                     table.toggleAllRowsSelected(false);
                 },
                 onError: () => {
-                    toast.error('Failed to update team members');
+                    toast.error(
+                        intl.formatMessage({
+                            defaultMessage: 'Failed to update team members',
+                        }),
+                    );
                 },
             },
         );
@@ -103,11 +124,23 @@ export default function TeamsTableActionBar({
                 setDeleteOpen(false);
             },
             onSuccess: () => {
-                toast.success(`Removed ${rows.length} team member(s)`);
+                toast.success(
+                    intl.formatMessage(
+                        {
+                            defaultMessage:
+                                'Removed {count, plural, one {# team member} other {# team members}}',
+                        },
+                        { count: rows.length },
+                    ),
+                );
                 table.toggleAllRowsSelected(false);
             },
             onError: () => {
-                toast.error('Failed to remove team members');
+                toast.error(
+                    intl.formatMessage({
+                        defaultMessage: 'Failed to remove team members',
+                    }),
+                );
             },
         });
     };
@@ -116,7 +149,9 @@ export default function TeamsTableActionBar({
         <ActionBar open={rows.length > 0} onOpenChange={onOpenChange}>
             <ActionBarSelection>
                 <span className="font-medium">{rows.length}</span>
-                <span>selected</span>
+                <span>
+                    <FormattedMessage defaultMessage="selected" />
+                </span>
                 <ActionBarSeparator />
                 <ActionBarClose>
                     <X />
@@ -126,7 +161,7 @@ export default function TeamsTableActionBar({
             <ActionBarGroup>
                 <BulkUpdateMenu
                     disabled={updating}
-                    options={TEAM_STATUS_OPTIONS}
+                    options={teamStatusOptions}
                     onSelect={handleBulkUpdate}
                 />
 
@@ -134,24 +169,27 @@ export default function TeamsTableActionBar({
                     <AlertDialogTrigger asChild>
                         <ActionBarItem disabled={updating}>
                             <Trash2Icon />
-                            Remove
+                            <FormattedMessage defaultMessage="Remove" />
                         </ActionBarItem>
                     </AlertDialogTrigger>
                     <AlertDialogContent>
                         <AlertDialogHeader>
                             <AlertDialogTitle>
-                                Remove selected members?
+                                <FormattedMessage defaultMessage="Remove selected members?" />
                             </AlertDialogTitle>
                             <AlertDialogDescription>
-                                This will remove {rows.length} team member
-                                {rows.length === 1 ? '' : 's'} from your
-                                company.
+                                <FormattedMessage
+                                    defaultMessage="This will remove {count, plural, one {# team member} other {# team members}} from your company."
+                                    values={{ count: rows.length }}
+                                />
                             </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogCancel>
+                                <FormattedMessage defaultMessage="Cancel" />
+                            </AlertDialogCancel>
                             <AlertDialogAction onClick={handleBulkDelete}>
-                                Remove
+                                <FormattedMessage defaultMessage="Remove" />
                             </AlertDialogAction>
                         </AlertDialogFooter>
                     </AlertDialogContent>

@@ -13,6 +13,7 @@ import {
     CheckCircleIcon,
     ChevronRightIcon,
 } from 'lucide-react';
+import { FormattedMessage } from 'react-intl';
 
 export default function SubscriptionAlert() {
     const { agentSubscription, company } = usePageProps<any>();
@@ -34,12 +35,10 @@ export default function SubscriptionAlert() {
             >
                 <AlertTriangleIcon className="h-4 w-4" />
                 <AlertTitle className="font-bold">
-                    Your subscription is not active.
+                    <FormattedMessage defaultMessage="Your subscription is not active." />
                 </AlertTitle>
                 <AlertDescription className="text-sm opacity-90">
-                    You currently do not have an active subscription. Please
-                    select a subscription plan to continue using our services
-                    without interruption.
+                    <FormattedMessage defaultMessage="You currently do not have an active subscription. Please select a subscription plan to continue using our services without interruption." />
                 </AlertDescription>
                 <AlertAction className="pt-2">
                     <Link href={show({ company: company.username })}>
@@ -48,7 +47,7 @@ export default function SubscriptionAlert() {
                             variant="destructive"
                             className="font-semibold shadow-sm"
                         >
-                            View Subscription Plans
+                            <FormattedMessage defaultMessage="View Subscription Plans" />
                             <ChevronRightIcon className="ml-1 h-4 w-4" />
                         </Button>
                     </Link>
@@ -62,15 +61,23 @@ export default function SubscriptionAlert() {
             <div className="flex items-center gap-3 mb-3 sm:mb-0">
                 <CheckCircleIcon className="h-5 w-5" />
                 <div className="text-sm">
-                    <span className="font-bold">Subscription Active</span>
+                    <span className="font-bold">
+                        <FormattedMessage defaultMessage="Subscription Active" />
+                    </span>
                     <span className="mx-2 hidden sm:inline text-primary/60">
                         •
                     </span>
                     <span className="opacity-90 block sm:inline mt-1 sm:mt-0">
-                        Valid until{' '}
-                        <span className="font-semibold">
-                            {formatDate(agentSubscription.ended_at)}
-                        </span>
+                        <FormattedMessage
+                            defaultMessage="Valid until {date}"
+                            values={{
+                                date: (
+                                    <span className="font-semibold">
+                                        {formatDate(agentSubscription.ended_at)}
+                                    </span>
+                                ),
+                            }}
+                        />
                     </span>
                 </div>
             </div>
@@ -80,7 +87,7 @@ export default function SubscriptionAlert() {
                     variant="outline"
                     className="h-8 border-primary/30 text-primary hover:bg-primary/10 font-semibold text-xs"
                 >
-                    Manage Subscription
+                    <FormattedMessage defaultMessage="Manage Subscription" />
                     <ChevronRightIcon className="ml-1 h-3 w-3" />
                 </Button>
             </Link>

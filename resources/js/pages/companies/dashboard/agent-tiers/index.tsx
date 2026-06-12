@@ -25,6 +25,7 @@ import { router, useForm, usePage } from '@inertiajs/react';
 import { ArrowUpDownIcon, EditIcon, PlusIcon, TrashIcon } from 'lucide-react';
 import type React from 'react';
 import { useMemo, useState } from 'react';
+import { FormattedMessage, useIntl } from 'react-intl';
 
 type AgentTier = {
     id: number;
@@ -42,7 +43,7 @@ function SortableHeader({
     activeSortKey,
     onSort,
 }: {
-    title: string;
+    title: React.ReactNode;
     sortKey: SortKey;
     activeSortKey: SortKey;
     onSort: (key: SortKey) => void;
@@ -68,6 +69,7 @@ function TierFormDialog({
     tier?: AgentTier;
     children: React.ReactNode;
 }) {
+    const intl = useIntl();
     const { company } = usePageSharedDataProps();
     const [open, setOpen] = useState(false);
     const form = useForm({
@@ -103,19 +105,27 @@ function TierFormDialog({
             <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-md">
                 <DialogHeader className="border-b px-6 py-5 text-left">
                     <DialogTitle>
-                        {tier ? 'Edit Agent Tier' : 'Add Agent Tier'}
+                        {tier ? (
+                            <FormattedMessage defaultMessage="Edit Agent Tier" />
+                        ) : (
+                            <FormattedMessage defaultMessage="Add Agent Tier" />
+                        )}
                     </DialogTitle>
                 </DialogHeader>
                 <form onSubmit={submit}>
                     <div className="space-y-4 px-6 py-5">
                         <div className="grid gap-2">
-                            <Label>Name</Label>
+                            <Label>
+                                <FormattedMessage defaultMessage="Name" />
+                            </Label>
                             <Input
                                 value={form.data.name}
                                 onChange={(e) =>
                                     form.setData('name', e.target.value)
                                 }
-                                placeholder="Whole Seller"
+                                placeholder={intl.formatMessage({
+                                    defaultMessage: 'Whole Seller',
+                                })}
                             />
                             {form.errors.name && (
                                 <p className="text-sm text-red-500">
@@ -124,7 +134,9 @@ function TierFormDialog({
                             )}
                         </div>
                         <div className="grid gap-2">
-                            <Label>Sort Order</Label>
+                            <Label>
+                                <FormattedMessage defaultMessage="Sort Order" />
+                            </Label>
                             <Input
                                 type="number"
                                 value={form.data.sort_order}
@@ -137,7 +149,9 @@ function TierFormDialog({
                             />
                         </div>
                         <div className="flex items-center justify-between rounded-xl border px-4 py-3">
-                            <Label>Active</Label>
+                            <Label>
+                                <FormattedMessage defaultMessage="Active" />
+                            </Label>
                             <Switch
                                 checked={form.data.is_active}
                                 onCheckedChange={(checked) =>
@@ -153,7 +167,7 @@ function TierFormDialog({
                             className="w-full"
                             disabled={form.processing}
                         >
-                            Save
+                            <FormattedMessage defaultMessage="Save" />
                         </Button>
                     </DialogFooter>
                 </form>
@@ -163,6 +177,7 @@ function TierFormDialog({
 }
 
 export default function Page({ tiers }: { tiers: AgentTier[] }) {
+    const intl = useIntl();
     const { company } = usePageSharedDataProps();
     const { errors } = usePage().props as any;
     const [sortKey, setSortKey] = useState<SortKey>('sort_order');
@@ -195,7 +210,13 @@ export default function Page({ tiers }: { tiers: AgentTier[] }) {
     };
 
     const remove = (tier: AgentTier) => {
-        if (!confirm('Delete this tier?')) {
+        if (
+            !confirm(
+                intl.formatMessage({
+                    defaultMessage: 'Delete this tier?',
+                }),
+            )
+        ) {
             return;
         }
 
@@ -208,8 +229,16 @@ export default function Page({ tiers }: { tiers: AgentTier[] }) {
     return (
         <CompanyDashboardLayout
             breadcrumb={[
-                { title: 'Commission Setup' },
-                { title: 'Agent Categories' },
+                {
+                    title: intl.formatMessage({
+                        defaultMessage: 'Commission Setup',
+                    }),
+                },
+                {
+                    title: intl.formatMessage({
+                        defaultMessage: 'Agent Categories',
+                    }),
+                },
             ]}
             openMenuIds={['commission-setup']}
             activeMenuIds={['commission-setup.agent-tiers']}
@@ -217,7 +246,8 @@ export default function Page({ tiers }: { tiers: AgentTier[] }) {
             applet={
                 <TierFormDialog>
                     <Button className="rounded-xl">
-                        <PlusIcon /> Add Tier
+                        <PlusIcon />
+                        <FormattedMessage defaultMessage="Add Tier" />
                     </Button>
                 </TierFormDialog>
             }
@@ -228,24 +258,15 @@ export default function Page({ tiers }: { tiers: AgentTier[] }) {
                         {errors.delete_error}
                     </div>
                 )}
-                {/* <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                    <p className="text-sm font-medium uppercase tracking-[0.18em] text-primary">
-                        Commission Setup
-                    </p>
-                    <h1 className="mt-2 text-2xl font-semibold text-slate-950 dark:text-slate-100">
-                        Agent Tiers
-                    </h1>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                        Manage vendor tier levels used by tour commission rules.
-                    </p>
-                </div> */}
                 <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-950">
                     <Table>
                         <TableHeader className="bg-slate-50/80 dark:bg-slate-900/80">
                             <TableRow className="hover:bg-transparent">
                                 <TableHead className="h-14 px-4">
                                     <SortableHeader
-                                        title="Name"
+                                        title={
+                                            <FormattedMessage defaultMessage="Name" />
+                                        }
                                         sortKey="name"
                                         activeSortKey={sortKey}
                                         onSort={handleSort}
@@ -253,7 +274,9 @@ export default function Page({ tiers }: { tiers: AgentTier[] }) {
                                 </TableHead>
                                 <TableHead className="h-14 px-4">
                                     <SortableHeader
-                                        title="Sort Order"
+                                        title={
+                                            <FormattedMessage defaultMessage="Sort Order" />
+                                        }
                                         sortKey="sort_order"
                                         activeSortKey={sortKey}
                                         onSort={handleSort}
@@ -261,7 +284,9 @@ export default function Page({ tiers }: { tiers: AgentTier[] }) {
                                 </TableHead>
                                 <TableHead className="h-14 px-4">
                                     <SortableHeader
-                                        title="Status"
+                                        title={
+                                            <FormattedMessage defaultMessage="Status" />
+                                        }
                                         sortKey="is_active"
                                         activeSortKey={sortKey}
                                         onSort={handleSort}
@@ -277,7 +302,7 @@ export default function Page({ tiers }: { tiers: AgentTier[] }) {
                                         colSpan={4}
                                         className="h-24 text-center"
                                     >
-                                        No agent tiers found.
+                                        <FormattedMessage defaultMessage="No agent tiers found." />
                                     </TableCell>
                                 </TableRow>
                             ) : (
@@ -303,9 +328,11 @@ export default function Page({ tiers }: { tiers: AgentTier[] }) {
                                                         : ''
                                                 }
                                             >
-                                                {tier.is_active
-                                                    ? 'Active'
-                                                    : 'Inactive'}
+                                                {tier.is_active ? (
+                                                    <FormattedMessage defaultMessage="Active" />
+                                                ) : (
+                                                    <FormattedMessage defaultMessage="Inactive" />
+                                                )}
                                             </Badge>
                                         </TableCell>
                                         <TableCell>

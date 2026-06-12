@@ -24,11 +24,11 @@ export function Header() {
     const MENUS = [
         {
             name: <FormattedMessage defaultMessage="Features" id="features" />,
-            href: '#features',
+            href: '/#features',
         },
         {
             name: <FormattedMessage defaultMessage="Benefits" id="benefits" />,
-            href: '#benefits',
+            href: '/#benefits',
         },
         {
             name: (
@@ -37,11 +37,15 @@ export function Header() {
                     id="testimonials"
                 />
             ),
-            href: '#testimonials',
+            href: '/#testimonials',
+        },
+        {
+            name: <FormattedMessage defaultMessage="Pricing" id="pricing" />,
+            href: '/pricing',
         },
         {
             name: <FormattedMessage defaultMessage="Contact" id="contact" />,
-            href: '#contact',
+            href: '/#contact',
         },
         // {
         //   name: <FormattedMessage defaultMessage="Affiliate" id="affiliate" />,
@@ -76,15 +80,25 @@ export function Header() {
 
                     {/* DESKTOP MENU */}
                     <nav className="hidden md:flex items-center gap-8 flex-1 justify-center">
-                        {MENUS.map((menu) => (
-                            <a
-                                key={menu.href}
-                                href={menu.href}
-                                className="text-muted-foreground hover:text-foreground transition-colors"
-                            >
-                                {menu.name}
-                            </a>
-                        ))}
+                        {MENUS.map((menu) =>
+                            menu.href.startsWith('/#') ? (
+                                <a
+                                    key={menu.href}
+                                    href={menu.href}
+                                    className="text-muted-foreground hover:text-foreground transition-colors"
+                                >
+                                    {menu.name}
+                                </a>
+                            ) : (
+                                <Link
+                                    key={menu.href}
+                                    href={menu.href}
+                                    className="text-muted-foreground hover:text-foreground transition-colors"
+                                >
+                                    {menu.name}
+                                </Link>
+                            ),
+                        )}
                         <Button
                             variant="ghost"
                             size="icon"
@@ -172,15 +186,27 @@ export function Header() {
                                     </>
                                 )}
                             </div>
-                            {MENUS.map((menu) => (
-                                <a
-                                    key={menu.href}
-                                    href={menu.href}
-                                    className="text-muted-foreground hover:text-foreground transition-colors"
-                                >
-                                    {menu.name}
-                                </a>
-                            ))}
+                            {MENUS.map((menu) =>
+                                menu.href.startsWith('/#') ? (
+                                    <a
+                                        key={menu.href}
+                                        href={menu.href}
+                                        className="text-muted-foreground hover:text-foreground transition-colors"
+                                        onClick={() => setIsMenuOpen(false)}
+                                    >
+                                        {menu.name}
+                                    </a>
+                                ) : (
+                                    <Link
+                                        key={menu.href}
+                                        href={menu.href}
+                                        className="text-muted-foreground hover:text-foreground transition-colors"
+                                        onClick={() => setIsMenuOpen(false)}
+                                    >
+                                        {menu.name}
+                                    </Link>
+                                ),
+                            )}
                         </nav>
                     </div>
                 )}

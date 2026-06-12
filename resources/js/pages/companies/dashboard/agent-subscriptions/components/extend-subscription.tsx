@@ -10,7 +10,8 @@ import {
     CardTitle,
 } from '@/components/ui/card';
 import { X } from 'lucide-react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import { FormattedMessage, useIntl } from 'react-intl';
 
 interface ExtendSubscriptionProps {
     currentSubscription: {
@@ -25,17 +26,41 @@ interface ExtendSubscriptionProps {
     onClose: () => void;
 }
 
-const extensionPeriods = [
-    { id: '1month', label: '1 Month', months: 1, pricePerMonth: 9.99 },
-    { id: '3months', label: '3 Months', months: 3, pricePerMonth: 9.99 },
-    { id: '6months', label: '6 Months', months: 6, pricePerMonth: 8.99 },
-    { id: '1year', label: '1 Year', months: 12, pricePerMonth: 8.33 },
-];
-
 export function ExtendSubscription({
     currentSubscription,
     onClose,
 }: ExtendSubscriptionProps) {
+    const intl = useIntl();
+    const extensionPeriods = useMemo(
+        () => [
+            {
+                id: '1month',
+                label: intl.formatMessage({ defaultMessage: '1 Month' }),
+                months: 1,
+                pricePerMonth: 9.99,
+            },
+            {
+                id: '3months',
+                label: intl.formatMessage({ defaultMessage: '3 Months' }),
+                months: 3,
+                pricePerMonth: 9.99,
+            },
+            {
+                id: '6months',
+                label: intl.formatMessage({ defaultMessage: '6 Months' }),
+                months: 6,
+                pricePerMonth: 8.99,
+            },
+            {
+                id: '1year',
+                label: intl.formatMessage({ defaultMessage: '1 Year' }),
+                months: 12,
+                pricePerMonth: 8.33,
+            },
+        ],
+        [intl],
+    );
+
     const [selectedPeriod, setSelectedPeriod] = useState<string>('1year');
     const [isProcessing, setIsProcessing] = useState(false);
 
@@ -48,7 +73,6 @@ export function ExtendSubscription({
 
     const handleExtend = async () => {
         setIsProcessing(true);
-        // Simulate API call
         await new Promise((resolve) => setTimeout(resolve, 1500));
         setIsProcessing(false);
         onClose();
@@ -59,9 +83,11 @@ export function ExtendSubscription({
             <Card className="w-full max-w-md border-slate-200 bg-white shadow-lg">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
                     <div>
-                        <CardTitle>Extend Your Subscription</CardTitle>
+                        <CardTitle>
+                            <FormattedMessage defaultMessage="Extend Your Subscription" />
+                        </CardTitle>
                         <CardDescription>
-                            Choose your extension period
+                            <FormattedMessage defaultMessage="Choose your extension period" />
                         </CardDescription>
                     </div>
                     <button
@@ -73,10 +99,9 @@ export function ExtendSubscription({
                 </CardHeader>
 
                 <CardContent className="space-y-6">
-                    {/* Extension Period Options */}
                     <div className="space-y-3">
                         <p className="text-sm font-medium text-slate-700">
-                            Select Extension Period
+                            <FormattedMessage defaultMessage="Select Extension Period" />
                         </p>
                         <div className="grid gap-2">
                             {extensionPeriods.map((period) => (
@@ -100,7 +125,7 @@ export function ExtendSubscription({
                                                     period.months *
                                                     period.pricePerMonth
                                                 ).toFixed(2)}{' '}
-                                                total
+                                                <FormattedMessage defaultMessage="total" />
                                             </p>
                                         </div>
                                         {period.pricePerMonth < 9.99 && (
@@ -108,7 +133,7 @@ export function ExtendSubscription({
                                                 variant="secondary"
                                                 className="ml-2 bg-emerald-100 text-emerald-700"
                                             >
-                                                Save
+                                                <FormattedMessage defaultMessage="Save" />
                                             </Badge>
                                         )}
                                     </div>
@@ -117,18 +142,19 @@ export function ExtendSubscription({
                         </div>
                     </div>
 
-                    {/* Price Breakdown */}
                     {selected && (
                         <div className="space-y-2 border-t border-slate-200 pt-4">
                             <div className="flex justify-between text-sm">
-                                <span className="text-slate-600">Duration</span>
+                                <span className="text-slate-600">
+                                    <FormattedMessage defaultMessage="Duration" />
+                                </span>
                                 <span className="font-medium text-slate-900">
                                     {selected.label}
                                 </span>
                             </div>
                             <div className="flex justify-between text-sm">
                                 <span className="text-slate-600">
-                                    Price per month
+                                    <FormattedMessage defaultMessage="Price per month" />
                                 </span>
                                 <span className="font-medium text-slate-900">
                                     ${selected.pricePerMonth.toFixed(2)}
@@ -136,7 +162,9 @@ export function ExtendSubscription({
                             </div>
                             {savings !== '0' && (
                                 <div className="flex justify-between text-sm text-emerald-600">
-                                    <span>Savings</span>
+                                    <span>
+                                        <FormattedMessage defaultMessage="Savings" />
+                                    </span>
                                     <span className="font-medium">
                                         -${savings}
                                     </span>
@@ -144,7 +172,7 @@ export function ExtendSubscription({
                             )}
                             <div className="flex justify-between border-t border-slate-200 pt-2 text-base">
                                 <span className="font-semibold text-slate-900">
-                                    Total
+                                    <FormattedMessage defaultMessage="Total" />
                                 </span>
                                 <span className="font-bold text-blue-600">
                                     ${totalCost.toFixed(2)}
@@ -153,16 +181,17 @@ export function ExtendSubscription({
                         </div>
                     )}
 
-                    {/* Action Buttons */}
                     <div className="flex gap-3 pt-2">
                         <Button
                             onClick={handleExtend}
                             disabled={isProcessing}
                             className="flex-1 bg-blue-600 hover:bg-blue-700"
                         >
-                            {isProcessing
-                                ? 'Processing...'
-                                : 'Extend Subscription'}
+                            {isProcessing ? (
+                                <FormattedMessage defaultMessage="Processing..." />
+                            ) : (
+                                <FormattedMessage defaultMessage="Extend Subscription" />
+                            )}
                         </Button>
                         <Button
                             onClick={onClose}
@@ -170,7 +199,7 @@ export function ExtendSubscription({
                             variant="outline"
                             className="flex-1 border-slate-200"
                         >
-                            Cancel
+                            <FormattedMessage defaultMessage="Cancel" />
                         </Button>
                     </div>
                 </CardContent>

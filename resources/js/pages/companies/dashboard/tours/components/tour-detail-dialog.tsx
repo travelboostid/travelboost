@@ -9,6 +9,7 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { FormattedMessage } from 'react-intl';
 
 export default function TourDetailDialog({ children, tour }: any) {
     return (
@@ -22,8 +23,12 @@ export default function TourDetailDialog({ children, tour }: any) {
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction>Continue</AlertDialogAction>
+                    <AlertDialogCancel>
+                        <FormattedMessage defaultMessage="Cancel" />
+                    </AlertDialogCancel>
+                    <AlertDialogAction>
+                        <FormattedMessage defaultMessage="Continue" />
+                    </AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>

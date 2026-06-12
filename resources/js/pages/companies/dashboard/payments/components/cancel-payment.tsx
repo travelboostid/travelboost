@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { refreshPageAfterPayment } from '@/lib/refresh-after-payment';
 import { router } from '@inertiajs/react';
+import { FormattedMessage } from 'react-intl';
 
 export default function CancelPayment({ payment }: { payment: any }) {
     const { company } = usePageSharedDataProps();
@@ -37,23 +38,27 @@ export default function CancelPayment({ payment }: { payment: any }) {
                     variant="destructive"
                     className="h-11 w-full sm:flex-1"
                 >
-                    Cancel
+                    <FormattedMessage defaultMessage="Cancel" />
                 </Button>
             </AlertDialogTrigger>
             <AlertDialogContent>
                 <AlertDialogHeader>
                     <AlertDialogTitle>
-                        Are you absolutely sure?
+                        <FormattedMessage defaultMessage="Are you absolutely sure?" />
                     </AlertDialogTitle>
                     <AlertDialogDescription>
-                        This action cannot be undone. This will permanently
-                        cancel payment #{payment.id}.
+                        <FormattedMessage
+                            defaultMessage="This action cannot be undone. This will permanently cancel payment #{paymentId}."
+                            values={{ paymentId: payment.id }}
+                        />
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                    <AlertDialogCancel>Close</AlertDialogCancel>
+                    <AlertDialogCancel>
+                        <FormattedMessage defaultMessage="Close" />
+                    </AlertDialogCancel>
                     <AlertDialogAction onClick={handleCancel}>
-                        Continue
+                        <FormattedMessage defaultMessage="Continue" />
                     </AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>

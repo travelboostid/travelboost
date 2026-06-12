@@ -71,6 +71,7 @@ import {
     XIcon,
 } from 'lucide-react';
 import * as React from 'react';
+import { FormattedMessage, useIntl, type IntlShape } from 'react-intl';
 import AgentProfileModal from './components/AgentProfileModal';
 import { EmptyRegistrations } from './components/empty-registrations';
 
@@ -102,13 +103,29 @@ type PageProps = {
     }[];
 };
 
-const STATUS_TABS = [
-    { value: 'all', label: 'All Registrations' },
-    { value: 'pending', label: 'Pending' },
-    { value: 'active', label: 'Active' },
-    { value: 'suspended', label: 'Suspended' },
-    { value: 'rejected', label: 'Rejected' },
+const STATUS_TAB_VALUES = [
+    { value: 'all' },
+    { value: 'pending' },
+    { value: 'active' },
+    { value: 'suspended' },
+    { value: 'rejected' },
 ] as const;
+
+function getStatusTabs(intl: IntlShape) {
+    const labels: Record<(typeof STATUS_TAB_VALUES)[number]['value'], string> =
+        {
+            all: intl.formatMessage({ defaultMessage: 'All Registrations' }),
+            pending: intl.formatMessage({ defaultMessage: 'Pending' }),
+            active: intl.formatMessage({ defaultMessage: 'Active' }),
+            suspended: intl.formatMessage({ defaultMessage: 'Suspended' }),
+            rejected: intl.formatMessage({ defaultMessage: 'Rejected' }),
+        };
+
+    return STATUS_TAB_VALUES.map((tab) => ({
+        ...tab,
+        label: labels[tab.value],
+    }));
+}
 
 const statusStyles: Record<string, string> = {
     active: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300',
@@ -158,6 +175,7 @@ function RegistrationActions({
 }: {
     registration: RegistrationRow;
 }) {
+    const intl = useIntl();
     const { company } = usePageSharedDataProps();
     const [dialogType, setDialogType] = React.useState<
         'approve' | 'reject' | 'suspend' | 'unsuspend' | 'note' | null
@@ -199,42 +217,60 @@ function RegistrationActions({
 
     const dialogConfig = {
         approve: {
-            title: 'Approve registration?',
-            description:
-                'This will approve the registration and allow the agent to access your tours.',
-            actionLabel: 'Approve',
+            title: intl.formatMessage({
+                defaultMessage: 'Approve registration?',
+            }),
+            description: intl.formatMessage({
+                defaultMessage:
+                    'This will approve the registration and allow the agent to access your tours.',
+            }),
+            actionLabel: intl.formatMessage({ defaultMessage: 'Approve' }),
             action: () => submitAction('active', ''),
             showNote: false,
         },
         reject: {
-            title: 'Reject registration?',
-            description:
-                'This action will reject the registration. The agent will be notified and can re-apply if needed.',
-            actionLabel: 'Reject',
+            title: intl.formatMessage({
+                defaultMessage: 'Reject registration?',
+            }),
+            description: intl.formatMessage({
+                defaultMessage:
+                    'This action will reject the registration. The agent will be notified and can re-apply if needed.',
+            }),
+            actionLabel: intl.formatMessage({ defaultMessage: 'Reject' }),
             action: () => submitAction('rejected'),
             showNote: true,
         },
         suspend: {
-            title: 'Suspend registration?',
-            description:
-                'This will suspend the registration and prevent the agent from accessing your tours until it is reactivated.',
-            actionLabel: 'Suspend',
+            title: intl.formatMessage({
+                defaultMessage: 'Suspend registration?',
+            }),
+            description: intl.formatMessage({
+                defaultMessage:
+                    'This will suspend the registration and prevent the agent from accessing your tours until it is reactivated.',
+            }),
+            actionLabel: intl.formatMessage({ defaultMessage: 'Suspend' }),
             action: () => submitAction('suspended'),
             showNote: true,
         },
         unsuspend: {
-            title: 'Unsuspend registration?',
-            description:
-                'This will reactivate the registration and allow the agent to access your tours again.',
-            actionLabel: 'Unsuspend',
+            title: intl.formatMessage({
+                defaultMessage: 'Unsuspend registration?',
+            }),
+            description: intl.formatMessage({
+                defaultMessage:
+                    'This will reactivate the registration and allow the agent to access your tours again.',
+            }),
+            actionLabel: intl.formatMessage({ defaultMessage: 'Unsuspend' }),
             action: () => submitAction('active', ''),
             showNote: false,
         },
         note: {
-            title: 'Edit note',
-            description:
-                'Update the note related to this registration so your team has the latest context.',
-            actionLabel: 'Update Note',
+            title: intl.formatMessage({ defaultMessage: 'Edit note' }),
+            description: intl.formatMessage({
+                defaultMessage:
+                    'Update the note related to this registration so your team has the latest context.',
+            }),
+            actionLabel: intl.formatMessage({ defaultMessage: 'Update Note' }),
             action: () => submitAction(registration.status),
             showNote: true,
         },
@@ -267,7 +303,7 @@ function RegistrationActions({
                                     className="cursor-pointer"
                                 >
                                     <EyeIcon className="mr-2 h-4 w-4" />
-                                    View Profile
+                                    <FormattedMessage defaultMessage="View Profile" />
                                 </DropdownMenuItem>
                             }
                         />
@@ -286,9 +322,11 @@ function RegistrationActions({
                                 className="cursor-pointer"
                             >
                                 <UserCheckIcon className="mr-2 h-4 w-4" />
-                                {registration.status === 'suspended'
-                                    ? 'Unsuspend'
-                                    : 'Approve'}
+                                {registration.status === 'suspended' ? (
+                                    <FormattedMessage defaultMessage="Unsuspend" />
+                                ) : (
+                                    <FormattedMessage defaultMessage="Approve" />
+                                )}
                             </DropdownMenuItem>
                         )}
 
@@ -302,7 +340,7 @@ function RegistrationActions({
                                     className="cursor-pointer"
                                 >
                                     <UserCheckIcon className="mr-2 h-4 w-4" />
-                                    Approve
+                                    <FormattedMessage defaultMessage="Approve" />
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
                                     onSelect={(event) => {
@@ -312,7 +350,7 @@ function RegistrationActions({
                                     className="cursor-pointer text-rose-600 focus:text-rose-600"
                                 >
                                     <UserX2Icon className="mr-2 h-4 w-4" />
-                                    Reject
+                                    <FormattedMessage defaultMessage="Reject" />
                                 </DropdownMenuItem>
                             </>
                         )}
@@ -326,7 +364,7 @@ function RegistrationActions({
                                 className="cursor-pointer text-rose-600 focus:text-rose-600"
                             >
                                 <ShieldBanIcon className="mr-2 h-4 w-4" />
-                                Suspend
+                                <FormattedMessage defaultMessage="Suspend" />
                             </DropdownMenuItem>
                         )}
 
@@ -343,7 +381,7 @@ function RegistrationActions({
                                     className="cursor-pointer"
                                 >
                                     <NotebookPenIcon className="mr-2 h-4 w-4" />
-                                    Edit Note
+                                    <FormattedMessage defaultMessage="Edit Note" />
                                 </DropdownMenuItem>
                             </>
                         )}
@@ -372,7 +410,9 @@ function RegistrationActions({
                     {currentDialog?.showNote && (
                         <Textarea
                             cols={5}
-                            placeholder="Write a note for the agent"
+                            placeholder={intl.formatMessage({
+                                defaultMessage: 'Write a note for the agent',
+                            })}
                             value={form.data.note}
                             onChange={(event) =>
                                 form.setData('note', event.target.value)
@@ -383,7 +423,7 @@ function RegistrationActions({
 
                     <AlertDialogFooter>
                         <AlertDialogCancel onClick={closeDialog}>
-                            Cancel
+                            <FormattedMessage defaultMessage="Cancel" />
                         </AlertDialogCancel>
                         <AlertDialogAction
                             onClick={(event) => {
@@ -401,6 +441,7 @@ function RegistrationActions({
 }
 
 export default function Page({ data, agentTiers }: PageProps) {
+    const intl = useIntl();
     const { company } = usePageSharedDataProps();
     const [sorting, setSorting] = React.useState<SortingState>([
         { id: 'applied_at', desc: true },
@@ -412,7 +453,9 @@ export default function Page({ data, agentTiers }: PageProps) {
     const [rowSelection, setRowSelection] = React.useState({});
     const [globalFilter, setGlobalFilter] = React.useState('');
     const [activeStatus, setActiveStatus] =
-        React.useState<(typeof STATUS_TABS)[number]['value']>('all');
+        React.useState<(typeof STATUS_TAB_VALUES)[number]['value']>('all');
+
+    const statusTabs = React.useMemo(() => getStatusTabs(intl), [intl]);
 
     const filteredData = React.useMemo(() => {
         if (activeStatus === 'all') {
@@ -451,7 +494,7 @@ export default function Page({ data, agentTiers }: PageProps) {
                 id: 'actions',
                 header: () => (
                     <div className="px-2 text-center text-[11px] font-bold tracking-wider text-primary">
-                        Actions
+                        <FormattedMessage defaultMessage="Actions" />
                     </div>
                 ),
                 enableSorting: false,
@@ -464,7 +507,10 @@ export default function Page({ data, agentTiers }: PageProps) {
                 id: 'agent',
                 accessorFn: (row) => row.agent.name,
                 header: ({ column }) => (
-                    <SortableHeader column={column} title="Agent" />
+                    <SortableHeader
+                        column={column}
+                        title={<FormattedMessage defaultMessage="Agent" />}
+                    />
                 ),
                 cell: ({ row }) => {
                     const agent = row.original.agent;
@@ -497,7 +543,10 @@ export default function Page({ data, agentTiers }: PageProps) {
                 id: 'status',
                 accessorKey: 'status',
                 header: ({ column }) => (
-                    <SortableHeader column={column} title="Status" />
+                    <SortableHeader
+                        column={column}
+                        title={<FormattedMessage defaultMessage="Status" />}
+                    />
                 ),
                 cell: ({ row }) => (
                     <span
@@ -511,9 +560,13 @@ export default function Page({ data, agentTiers }: PageProps) {
                 id: 'agent_tier_id',
                 accessorFn: (row) =>
                     agentTiers.find((tier) => tier.id === row.agent_tier_id)
-                        ?.name ?? 'No Tier',
+                        ?.name ??
+                    intl.formatMessage({ defaultMessage: 'No Tier' }),
                 header: ({ column }) => (
-                    <SortableHeader column={column} title="Agent Tier" />
+                    <SortableHeader
+                        column={column}
+                        title={<FormattedMessage defaultMessage="Agent Tier" />}
+                    />
                 ),
                 cell: ({ row }) => {
                     const registration = row.original;
@@ -545,7 +598,9 @@ export default function Page({ data, agentTiers }: PageProps) {
                                 <SelectValue />
                             </SelectTrigger>
                             <SelectContent className="rounded-xl">
-                                <SelectItem value="none">No Tier</SelectItem>
+                                <SelectItem value="none">
+                                    <FormattedMessage defaultMessage="No Tier" />
+                                </SelectItem>
                                 {agentTiers.map((tier) => (
                                     <SelectItem
                                         key={tier.id}
@@ -563,7 +618,12 @@ export default function Page({ data, agentTiers }: PageProps) {
                 id: 'payment_mode',
                 accessorFn: (row) => row.payment_mode || 'vendor',
                 header: ({ column }) => (
-                    <SortableHeader column={column} title="Payment Mode" />
+                    <SortableHeader
+                        column={column}
+                        title={
+                            <FormattedMessage defaultMessage="Payment Mode" />
+                        }
+                    />
                 ),
                 cell: ({ row }) => {
                     const registration = row.original;
@@ -591,8 +651,12 @@ export default function Page({ data, agentTiers }: PageProps) {
                                 <SelectValue />
                             </SelectTrigger>
                             <SelectContent className="rounded-xl">
-                                <SelectItem value="vendor">Vendor</SelectItem>
-                                <SelectItem value="agent">Agent</SelectItem>
+                                <SelectItem value="vendor">
+                                    <FormattedMessage defaultMessage="Vendor" />
+                                </SelectItem>
+                                <SelectItem value="agent">
+                                    <FormattedMessage defaultMessage="Agent" />
+                                </SelectItem>
                             </SelectContent>
                         </Select>
                     );
@@ -604,7 +668,9 @@ export default function Page({ data, agentTiers }: PageProps) {
                 header: ({ column }) => (
                     <SortableHeader
                         column={column}
-                        title="Manual Payment"
+                        title={
+                            <FormattedMessage defaultMessage="Manual Payment" />
+                        }
                         className="justify-start"
                     />
                 ),
@@ -631,9 +697,12 @@ export default function Page({ data, agentTiers }: PageProps) {
                                 onCheckedChange={handleUpdate}
                             />
                             <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                                {(registration.manual_payment_enabled ?? true)
-                                    ? 'Enabled'
-                                    : 'Disabled'}
+                                {(registration.manual_payment_enabled ??
+                                true) ? (
+                                    <FormattedMessage defaultMessage="Enabled" />
+                                ) : (
+                                    <FormattedMessage defaultMessage="Disabled" />
+                                )}
                             </span>
                         </div>
                     );
@@ -645,7 +714,9 @@ export default function Page({ data, agentTiers }: PageProps) {
                 header: ({ column }) => (
                     <SortableHeader
                         column={column}
-                        title="Online Payment"
+                        title={
+                            <FormattedMessage defaultMessage="Online Payment" />
+                        }
                         className="justify-start"
                     />
                 ),
@@ -672,9 +743,12 @@ export default function Page({ data, agentTiers }: PageProps) {
                                 onCheckedChange={handleUpdate}
                             />
                             <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                                {(registration.online_payment_enabled ?? true)
-                                    ? 'Enabled'
-                                    : 'Disabled'}
+                                {(registration.online_payment_enabled ??
+                                true) ? (
+                                    <FormattedMessage defaultMessage="Enabled" />
+                                ) : (
+                                    <FormattedMessage defaultMessage="Disabled" />
+                                )}
                             </span>
                         </div>
                     );
@@ -684,7 +758,10 @@ export default function Page({ data, agentTiers }: PageProps) {
                 id: 'note',
                 accessorKey: 'note',
                 header: ({ column }) => (
-                    <SortableHeader column={column} title="Note" />
+                    <SortableHeader
+                        column={column}
+                        title={<FormattedMessage defaultMessage="Note" />}
+                    />
                 ),
                 cell: ({ row }) => (
                     <div
@@ -699,7 +776,10 @@ export default function Page({ data, agentTiers }: PageProps) {
                 id: 'applied_at',
                 accessorKey: 'applied_at',
                 header: ({ column }) => (
-                    <SortableHeader column={column} title="Applied At" />
+                    <SortableHeader
+                        column={column}
+                        title={<FormattedMessage defaultMessage="Applied At" />}
+                    />
                 ),
                 cell: ({ row }) => (
                     <span className="whitespace-nowrap text-sm font-medium text-slate-500 dark:text-slate-300">
@@ -715,7 +795,12 @@ export default function Page({ data, agentTiers }: PageProps) {
                 id: 'accepted_at',
                 accessorKey: 'accepted_at',
                 header: ({ column }) => (
-                    <SortableHeader column={column} title="Accepted At" />
+                    <SortableHeader
+                        column={column}
+                        title={
+                            <FormattedMessage defaultMessage="Accepted At" />
+                        }
+                    />
                 ),
                 cell: ({ row }) => (
                     <span className="whitespace-nowrap text-sm font-medium text-slate-500 dark:text-slate-300">
@@ -728,7 +813,7 @@ export default function Page({ data, agentTiers }: PageProps) {
                 ),
             },
         ],
-        [agentTiers, company.username],
+        [agentTiers, company.username, intl],
     );
 
     const table = useReactTable({
@@ -760,8 +845,16 @@ export default function Page({ data, agentTiers }: PageProps) {
         <CompanyDashboardLayout
             containerClassName="w-full flex-1 flex flex-col bg-slate-50/30 dark:bg-slate-950"
             breadcrumb={[
-                { title: 'Settings' },
-                { title: 'Agent Registrations' },
+                {
+                    title: intl.formatMessage({
+                        defaultMessage: 'Settings',
+                    }),
+                },
+                {
+                    title: intl.formatMessage({
+                        defaultMessage: 'Agent Registrations',
+                    }),
+                },
             ]}
             openMenuIds={[]}
             activeMenuIds={['agent-registrations']}
@@ -774,7 +867,10 @@ export default function Page({ data, agentTiers }: PageProps) {
                                 <Search className="size-3.5" />
                             </span>
                             <Input
-                                placeholder="Search agent, email, note, payment mode, or tier"
+                                placeholder={intl.formatMessage({
+                                    defaultMessage:
+                                        'Search agent, email, note, payment mode, or tier',
+                                })}
                                 value={globalFilter}
                                 onChange={(event) =>
                                     setGlobalFilter(event.target.value)
@@ -784,7 +880,9 @@ export default function Page({ data, agentTiers }: PageProps) {
                             {globalFilter.trim() !== '' && (
                                 <button
                                     type="button"
-                                    aria-label="Clear search"
+                                    aria-label={intl.formatMessage({
+                                        defaultMessage: 'Clear search',
+                                    })}
                                     onClick={() => setGlobalFilter('')}
                                     className="absolute right-2 top-1/2 flex size-6 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                                 >
@@ -796,7 +894,7 @@ export default function Page({ data, agentTiers }: PageProps) {
 
                     <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
                         <div className="flex flex-wrap gap-1.5">
-                            {STATUS_TABS.map((tab) => {
+                            {statusTabs.map((tab) => {
                                 const isActive = activeStatus === tab.value;
 
                                 return (
@@ -824,7 +922,7 @@ export default function Page({ data, agentTiers }: PageProps) {
                                     variant="outline"
                                     className="ml-auto h-9 w-full border-slate-200 bg-white text-xs dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:hover:bg-slate-900 sm:w-auto"
                                 >
-                                    View Columns{' '}
+                                    <FormattedMessage defaultMessage="View Columns" />{' '}
                                     <ChevronDown className="ml-2 h-4 w-4 opacity-50" />
                                 </Button>
                             </DropdownMenuTrigger>
@@ -943,10 +1041,19 @@ export default function Page({ data, agentTiers }: PageProps) {
 
                 <div className="flex flex-col items-center justify-between gap-4 pt-2 sm:flex-row">
                     <p className="rounded-md border border-slate-100 bg-slate-50 px-3 py-1.5 text-sm text-muted-foreground dark:border-slate-800 dark:bg-slate-950 dark:text-slate-400">
-                        <span className="font-semibold text-foreground dark:text-slate-100">
-                            {table.getFilteredRowModel().rows.length}
-                        </span>{' '}
-                        registration(s) shown
+                        <FormattedMessage
+                            defaultMessage="{count} registration(s) shown"
+                            values={{
+                                count: (
+                                    <span className="font-semibold text-foreground dark:text-slate-100">
+                                        {
+                                            table.getFilteredRowModel().rows
+                                                .length
+                                        }
+                                    </span>
+                                ),
+                            }}
+                        />
                     </p>
                     <div className="flex gap-2">
                         <Button
@@ -955,7 +1062,7 @@ export default function Page({ data, agentTiers }: PageProps) {
                             disabled={!table.getCanPreviousPage()}
                             className="border-slate-200 px-6 dark:border-slate-700"
                         >
-                            Previous
+                            <FormattedMessage defaultMessage="Previous" />
                         </Button>
                         <Button
                             variant="outline"
@@ -963,7 +1070,7 @@ export default function Page({ data, agentTiers }: PageProps) {
                             disabled={!table.getCanNextPage()}
                             className="border-slate-200 px-6 dark:border-slate-700"
                         >
-                            Next
+                            <FormattedMessage defaultMessage="Next" />
                         </Button>
                     </div>
                 </div>

@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { extractImageSrc } from '@/lib/utils';
 import { Building2, MapPin } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
+import { FormattedMessage } from 'react-intl';
 
 interface BaseTourCardProps {
     tour: any;
@@ -53,7 +54,7 @@ export default function BaseTourCard({
                 {isVendorInactive && (
                     <div className="absolute top-0 right-0 w-24 h-24 overflow-hidden z-30 pointer-events-none">
                         <div className="absolute top-[16px] right-[-28px] w-[120px] bg-yellow-400 dark:bg-yellow-500 text-black text-[9px] font-black py-0 text-center rotate-45 shadow-md border-b border-yellow-500 dark:border-yellow-600 tracking-tighter">
-                            VENDOR INACTIVE
+                            <FormattedMessage defaultMessage="VENDOR INACTIVE" />
                         </div>
                     </div>
                 )}
@@ -101,7 +102,7 @@ export default function BaseTourCard({
                                         {discountPrice}
                                     </span>
                                     <Badge className="h-3.5 shrink-0 border-none bg-red-500 px-1 text-[8px] leading-none font-black text-white">
-                                        PROMO
+                                        <FormattedMessage defaultMessage="PROMO" />
                                     </Badge>
                                 </div>
                             </>
@@ -138,7 +139,7 @@ export default function BaseTourCard({
                             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
                             <div className="absolute bottom-5 left-6 right-6">
                                 <Badge className="bg-blue-600 text-white border-none mb-3 px-2 py-0.5 text-xs">
-                                    Tour Overview
+                                    <FormattedMessage defaultMessage="Tour Overview" />
                                 </Badge>
                                 <h2 className="text-xl sm:text-2xl font-bold text-white line-clamp-2 leading-snug shadow-black/20">
                                     {tour.name}
@@ -152,17 +153,19 @@ export default function BaseTourCard({
                                     <div className="flex items-center gap-1.5">
                                         <MapPin className="w-4 h-4 text-slate-400" />
                                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                                            Destination
+                                            <FormattedMessage defaultMessage="Destination" />
                                         </span>
                                     </div>
                                     <span className="text-sm font-bold text-slate-800 dark:text-slate-200">
-                                        {tour.destination || 'Not specified'}
+                                        {tour.destination || (
+                                            <FormattedMessage defaultMessage="Not specified" />
+                                        )}
                                     </span>
                                 </div>
 
                                 <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm flex flex-col justify-center">
                                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
-                                        Price Starts From
+                                        <FormattedMessage defaultMessage="Price Starts From" />
                                     </span>
                                     {discountPrice ? (
                                         <div className="flex flex-col">
@@ -184,13 +187,12 @@ export default function BaseTourCard({
                             <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
                                 <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 mb-4 flex items-center gap-2">
                                     <div className="w-2 h-2 rounded-full bg-blue-500" />
-                                    Detailed Description
+                                    <FormattedMessage defaultMessage="Detailed Description" />
                                 </h3>
                                 <div className="text-sm text-slate-600 dark:text-slate-400 leading-loose whitespace-pre-wrap">
                                     {tour.description || (
                                         <span className="italic text-slate-400">
-                                            No comprehensive description
-                                            provided for this tour.
+                                            <FormattedMessage defaultMessage="No comprehensive description provided for this tour." />
                                         </span>
                                     )}
                                 </div>

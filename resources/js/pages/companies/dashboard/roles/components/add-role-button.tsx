@@ -19,6 +19,7 @@ import { useForm } from '@inertiajs/react';
 import { PlusIcon, ShieldPlusIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useState } from 'react';
+import { FormattedMessage, useIntl } from 'react-intl';
 import { toast } from 'sonner';
 import PermissionsSelector from './permissions-selector';
 
@@ -29,6 +30,7 @@ export default function AddRoleButton({
     permissions: any[];
     children?: ReactNode;
 }) {
+    const intl = useIntl();
     const [open, setOpen] = useState(false);
     const { company } = usePageSharedDataProps();
 
@@ -45,12 +47,20 @@ export default function AddRoleButton({
             preserveScroll: true,
             onError: () => {
                 setOpen(true);
-                toast.error('Failed to create role');
+                toast.error(
+                    intl.formatMessage({
+                        defaultMessage: 'Failed to create role',
+                    }),
+                );
             },
             onSuccess: () => {
                 form.reset();
                 setOpen(false);
-                toast.success('Role created successfully');
+                toast.success(
+                    intl.formatMessage({
+                        defaultMessage: 'Role created successfully',
+                    }),
+                );
             },
         });
     };
@@ -67,9 +77,14 @@ export default function AddRoleButton({
         <Dialog open={open} onOpenChange={handleOpenChange}>
             <DialogTrigger asChild>
                 {children ?? (
-                    <Button variant="default" aria-label="Add role">
+                    <Button
+                        variant="default"
+                        aria-label={intl.formatMessage({
+                            defaultMessage: 'Add role',
+                        })}
+                    >
                         <PlusIcon />
-                        Add Role
+                        <FormattedMessage defaultMessage="Add Role" />
                     </Button>
                 )}
             </DialogTrigger>
@@ -82,12 +97,10 @@ export default function AddRoleButton({
                         </div>
                         <div className="space-y-1">
                             <DialogTitle className="text-lg">
-                                Add Role
+                                <FormattedMessage defaultMessage="Add Role" />
                             </DialogTitle>
                             <DialogDescription className="text-sm leading-relaxed">
-                                Add a new role to your company and assign
-                                permissions to it. You can always edit the role
-                                later to update its permissions or details.
+                                <FormattedMessage defaultMessage="Add a new role to your company and assign permissions to it. You can always edit the role later to update its permissions or details." />
                             </DialogDescription>
                         </div>
                     </div>
@@ -97,7 +110,9 @@ export default function AddRoleButton({
                     <div className="max-h-[min(60vh,520px)] overflow-y-auto px-6 py-5">
                         <FieldGroup>
                             <Field>
-                                <Label htmlFor="name">Code</Label>
+                                <Label htmlFor="name">
+                                    <FormattedMessage defaultMessage="Code" />
+                                </Label>
                                 <Input
                                     name="name"
                                     value={form.data.name}
@@ -117,7 +132,7 @@ export default function AddRoleButton({
 
                             <Field>
                                 <Label htmlFor="display_name">
-                                    Display Name
+                                    <FormattedMessage defaultMessage="Display Name" />
                                 </Label>
                                 <Input
                                     name="display_name"
@@ -135,7 +150,9 @@ export default function AddRoleButton({
                                 />
                             </Field>
                             <Field>
-                                <Label htmlFor="description">Description</Label>
+                                <Label htmlFor="description">
+                                    <FormattedMessage defaultMessage="Description" />
+                                </Label>
                                 <Input
                                     name="description"
                                     value={form.data.description}
@@ -149,7 +166,9 @@ export default function AddRoleButton({
                                 <InputError message={form.errors.description} />
                             </Field>
                             <Field>
-                                <Label>Permissions</Label>
+                                <Label>
+                                    <FormattedMessage defaultMessage="Permissions" />
+                                </Label>
                                 <PermissionsSelector
                                     permissions={permissions}
                                     value={form.data.permissions}
@@ -171,7 +190,7 @@ export default function AddRoleButton({
                             {form.processing ? (
                                 <Spinner className="mr-2" />
                             ) : null}
-                            Create Role
+                            <FormattedMessage defaultMessage="Create Role" />
                         </Button>
                     </DialogFooter>
                 </form>

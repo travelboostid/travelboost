@@ -1,4 +1,5 @@
 import { formatIDR } from '@/lib/utils';
+import { FormattedMessage } from 'react-intl';
 import {
     Area,
     AreaChart,
@@ -14,10 +15,10 @@ export function ChartAreaInteractive({ data }: { data: any[] }) {
             <div className="mb-6 px-1 sm:mb-8 sm:px-2">
                 <div>
                     <h4 className="text-sm font-black text-slate-900 dark:text-slate-100 uppercase tracking-wider">
-                        Revenue Analytics
+                        <FormattedMessage defaultMessage="Revenue Analytics" />
                     </h4>
                     <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 font-medium">
-                        Monthly trajectory over the current fiscal year
+                        <FormattedMessage defaultMessage="Monthly trajectory over the current fiscal year" />
                     </p>
                 </div>
             </div>
@@ -81,17 +82,10 @@ export function ChartAreaInteractive({ data }: { data: any[] }) {
                         />
                         <Area
                             type="monotone"
-                            dataKey="sales"
+                            dataKey="revenue"
                             stroke="#3b82f6"
-                            strokeWidth={4}
+                            strokeWidth={3}
                             fill="url(#chartGradient)"
-                            dot={{
-                                r: 4,
-                                fill: '#3b82f6',
-                                strokeWidth: 2,
-                                stroke: '#fff',
-                            }}
-                            activeDot={{ r: 6, strokeWidth: 0 }}
                         />
                     </AreaChart>
                 </ResponsiveContainer>

@@ -22,7 +22,7 @@ import {
     UsersIcon,
 } from 'lucide-react';
 import { useMemo } from 'react';
-import { FormattedMessage } from 'react-intl';
+import { FormattedMessage, useIntl } from 'react-intl';
 import DeleteTeamButton from './components/delete-team-button';
 import EditTeamAccountButton from './components/edit-team-account-button';
 import InviteTeamButton from './components/invite-team-button';
@@ -58,13 +58,6 @@ export type TeamsPageProps = {
     roles: Array<{ name: string; display_name?: string }>;
     canManageMembers: boolean;
 };
-
-const STATUS_OPTIONS = [
-    { label: 'Active', value: 'active' },
-    { label: 'Pending', value: 'pending' },
-    { label: 'Suspended', value: 'suspended' },
-    { label: 'Rejected', value: 'rejected' },
-];
 
 function statusBadgeClass(status?: string | null): string {
     switch (status) {
@@ -103,6 +96,30 @@ export default function Teams({
     roles,
     canManageMembers,
 }: TeamsPageProps) {
+    const intl = useIntl();
+
+    const statusOptions = useMemo(
+        () => [
+            {
+                label: intl.formatMessage({ defaultMessage: 'Active' }),
+                value: 'active',
+            },
+            {
+                label: intl.formatMessage({ defaultMessage: 'Pending' }),
+                value: 'pending',
+            },
+            {
+                label: intl.formatMessage({ defaultMessage: 'Suspended' }),
+                value: 'suspended',
+            },
+            {
+                label: intl.formatMessage({ defaultMessage: 'Rejected' }),
+                value: 'rejected',
+            },
+        ],
+        [intl],
+    );
+
     const roleOptions = useMemo(
         () =>
             roles.map((role) => ({
@@ -128,7 +145,9 @@ export default function Teams({
                                   onCheckedChange={(value) =>
                                       table.toggleAllPageRowsSelected(!!value)
                                   }
-                                  aria-label="Select all"
+                                  aria-label={intl.formatMessage({
+                                      defaultMessage: 'Select all',
+                                  })}
                               />
                           ),
                           cell: ({ row }) => (
@@ -141,7 +160,9 @@ export default function Teams({
                                   onCheckedChange={(value) =>
                                       row.toggleSelected(!!value)
                                   }
-                                  aria-label="Select row"
+                                  aria-label={intl.formatMessage({
+                                      defaultMessage: 'Select row',
+                                  })}
                               />
                           ),
                           size: 32,
@@ -154,7 +175,12 @@ export default function Teams({
                 id: 'user',
                 accessorFn: (row) => row.user?.name || row.invite_email || '',
                 header: ({ column }) => (
-                    <DataTableColumnHeader column={column} label="Member" />
+                    <DataTableColumnHeader
+                        column={column}
+                        label={intl.formatMessage({
+                            defaultMessage: 'Member',
+                        })}
+                    />
                 ),
                 cell: ({ row }) => {
                     const team = row.original;
@@ -186,10 +212,14 @@ export default function Teams({
                                             undefined
                                         }
                                     >
-                                        {team.user?.name || 'Legacy record'}
+                                        {team.user?.name || (
+                                            <FormattedMessage defaultMessage="Legacy record" />
+                                        )}
                                     </span>
                                     {team.is_owner ? (
-                                        <Badge variant="secondary">Owner</Badge>
+                                        <Badge variant="secondary">
+                                            <FormattedMessage defaultMessage="Owner" />
+                                        </Badge>
                                     ) : null}
                                 </div>
                                 <p
@@ -209,8 +239,12 @@ export default function Teams({
                     );
                 },
                 meta: {
-                    label: 'Member',
-                    placeholder: 'Search name or email...',
+                    label: intl.formatMessage({
+                        defaultMessage: 'Member',
+                    }),
+                    placeholder: intl.formatMessage({
+                        defaultMessage: 'Search name or email...',
+                    }),
                     variant: 'text',
                     icon: TextIcon,
                 },
@@ -220,7 +254,12 @@ export default function Teams({
                 id: 'username',
                 accessorFn: (row) => row.user?.username || '',
                 header: ({ column }) => (
-                    <DataTableColumnHeader column={column} label="Username" />
+                    <DataTableColumnHeader
+                        column={column}
+                        label={intl.formatMessage({
+                            defaultMessage: 'Username',
+                        })}
+                    />
                 ),
                 cell: ({ row }) => (
                     <span className="text-sm text-muted-foreground">
@@ -230,8 +269,12 @@ export default function Teams({
                     </span>
                 ),
                 meta: {
-                    label: 'Username',
-                    placeholder: 'Search username...',
+                    label: intl.formatMessage({
+                        defaultMessage: 'Username',
+                    }),
+                    placeholder: intl.formatMessage({
+                        defaultMessage: 'Search username...',
+                    }),
                     variant: 'text',
                     icon: TextIcon,
                 },
@@ -245,7 +288,12 @@ export default function Teams({
                     row.invite_role ||
                     '',
                 header: ({ column }) => (
-                    <DataTableColumnHeader column={column} label="Role" />
+                    <DataTableColumnHeader
+                        column={column}
+                        label={intl.formatMessage({
+                            defaultMessage: 'Role',
+                        })}
+                    />
                 ),
                 cell: ({ row }) => (
                     <TeamRoleSelect
@@ -255,7 +303,9 @@ export default function Teams({
                     />
                 ),
                 meta: {
-                    label: 'Role',
+                    label: intl.formatMessage({
+                        defaultMessage: 'Role',
+                    }),
                     variant: 'multiSelect',
                     options: roleOptions,
                     icon: CircleDashedIcon,
@@ -267,7 +317,12 @@ export default function Teams({
                 id: 'status',
                 accessorKey: 'status',
                 header: ({ column }) => (
-                    <DataTableColumnHeader column={column} label="Status" />
+                    <DataTableColumnHeader
+                        column={column}
+                        label={intl.formatMessage({
+                            defaultMessage: 'Status',
+                        })}
+                    />
                 ),
                 cell: ({ row }) =>
                     canManageMembers && row.original.user ? (
@@ -287,9 +342,11 @@ export default function Teams({
                         </Badge>
                     ),
                 meta: {
-                    label: 'Status',
+                    label: intl.formatMessage({
+                        defaultMessage: 'Status',
+                    }),
                     variant: 'multiSelect',
-                    options: STATUS_OPTIONS,
+                    options: statusOptions,
                     icon: CircleDashedIcon,
                 },
                 enableColumnFilter: true,
@@ -298,7 +355,12 @@ export default function Teams({
                 id: 'invited_at',
                 accessorKey: 'invited_at',
                 header: ({ column }) => (
-                    <DataTableColumnHeader column={column} label="Added" />
+                    <DataTableColumnHeader
+                        column={column}
+                        label={intl.formatMessage({
+                            defaultMessage: 'Added',
+                        })}
+                    />
                 ),
                 cell: ({ cell }) => {
                     const value = cell.getValue<string | null>();
@@ -312,7 +374,9 @@ export default function Teams({
                     );
                 },
                 meta: {
-                    label: 'Added date',
+                    label: intl.formatMessage({
+                        defaultMessage: 'Added date',
+                    }),
                     variant: 'dateRange',
                     icon: CalendarIcon,
                 },
@@ -324,7 +388,7 @@ export default function Teams({
                 enableHiding: false,
                 header: () => (
                     <div className="text-right text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                        Actions
+                        <FormattedMessage defaultMessage="Actions" />
                     </div>
                 ),
                 cell: ({ row }) => {
@@ -347,7 +411,7 @@ export default function Teams({
                 },
             },
         ],
-        [canManageMembers, roleOptions, roles],
+        [canManageMembers, intl, roleOptions, roles, statusOptions],
     );
 
     const { table } = useDataTable({
@@ -371,7 +435,18 @@ export default function Teams({
     return (
         <CompanyDashboardLayout
             containerClassName="w-full flex-1 flex flex-col"
-            breadcrumb={[{ title: 'Settings' }, { title: 'User Management' }]}
+            breadcrumb={[
+                {
+                    title: intl.formatMessage({
+                        defaultMessage: 'Settings',
+                    }),
+                },
+                {
+                    title: intl.formatMessage({
+                        defaultMessage: 'User Management',
+                    }),
+                },
+            ]}
             openMenuIds={['settings']}
             activeMenuIds={['settings.teams']}
             applet={
@@ -385,7 +460,11 @@ export default function Teams({
                 ) : undefined
             }
         >
-            <Head title="User Management" />
+            <Head
+                title={intl.formatMessage({
+                    defaultMessage: 'User Management',
+                })}
+            />
 
             <div className="mx-auto w-full max-w-6xl space-y-6 p-4 pb-20 sm:p-6">
                 <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">

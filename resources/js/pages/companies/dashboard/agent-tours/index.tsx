@@ -74,6 +74,7 @@ import {
     XIcon,
 } from 'lucide-react';
 import * as React from 'react';
+import { FormattedMessage, useIntl, type IntlShape } from 'react-intl';
 import { toast } from 'sonner';
 
 dayjs.extend(relativeTime);
@@ -100,13 +101,13 @@ const getBookingDeadlineDays = (tour: any): number =>
             0,
     );
 
-const getDocumentName = (media: any): string =>
+const getDocumentName = (media: any, intl: IntlShape): string =>
     media?.name ||
     media?.file_name ||
     media?.data?.name ||
     media?.data?.file_name ||
     media?.data?.filename ||
-    'Itinerary PDF';
+    intl.formatMessage({ defaultMessage: 'Itinerary PDF' });
 
 const isActiveAvailability = (
     availability: any,
@@ -121,6 +122,7 @@ const isActiveAvailability = (
 };
 
 function RowActions({ row }: { row: any }) {
+    const intl = useIntl();
     const agentTour = row.original;
     const tour = agentTour.tour;
     const { company } = usePageSharedDataProps();
@@ -134,7 +136,12 @@ function RowActions({ row }: { row: any }) {
                 preserveScroll: true,
                 onSuccess: () => {
                     if (!(errors as any).delete_error) {
-                        toast.success('Tour removed from catalog successfully');
+                        toast.success(
+                            intl.formatMessage({
+                                defaultMessage:
+                                    'Tour removed from catalog successfully',
+                            }),
+                        );
                         setIsDeleteDialogOpen(false);
                     }
                 },
@@ -166,20 +173,21 @@ function RowActions({ row }: { row: any }) {
                     >
                         <DialogTrigger asChild>
                             <DropdownMenuItem className="cursor-pointer">
-                                <EyeIcon className="mr-2 h-4 w-4" /> View
-                                Details
+                                <EyeIcon className="mr-2 h-4 w-4" />
+                                <FormattedMessage defaultMessage="View Details" />
                             </DropdownMenuItem>
                         </DialogTrigger>
                         <DropdownMenuItem className="cursor-pointer">
-                            <HistoryIcon className="mr-2 h-4 w-4" /> Booking
-                            History
+                            <HistoryIcon className="mr-2 h-4 w-4" />
+                            <FormattedMessage defaultMessage="Booking History" />
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
                             className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50"
                             onClick={() => setIsDeleteDialogOpen(true)}
                         >
-                            <TrashIcon className="mr-2 h-4 w-4" /> Remove Tour
+                            <TrashIcon className="mr-2 h-4 w-4" />
+                            <FormattedMessage defaultMessage="Remove Tour" />
                         </DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>
@@ -188,7 +196,12 @@ function RowActions({ row }: { row: any }) {
                     <div className="relative h-64 w-full">
                         <img
                             src={imageSrc}
-                            alt={tour?.name || 'Tour Image'}
+                            alt={
+                                tour?.name ||
+                                intl.formatMessage({
+                                    defaultMessage: 'Tour Image',
+                                })
+                            }
                             className="w-full h-full object-cover"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-slate-900/40 to-transparent" />
@@ -196,8 +209,12 @@ function RowActions({ row }: { row: any }) {
                             <div className="flex items-center gap-2 mb-2">
                                 <Badge className="bg-primary hover:bg-primary text-white border-none">
                                     {agentTour.category?.name ||
-                                        tour?.category?.name ||
-                                        'Uncategorized'}
+                                    tour?.category?.name ? (
+                                        agentTour.category?.name ||
+                                        tour?.category?.name
+                                    ) : (
+                                        <FormattedMessage defaultMessage="Uncategorized" />
+                                    )}
                                 </Badge>
                                 <Badge
                                     variant={
@@ -219,27 +236,35 @@ function RowActions({ row }: { row: any }) {
                             </h2>
                             <div className="flex items-center text-slate-300 text-sm">
                                 <MapPinIcon className="h-4 w-4 mr-1" />
-                                {tour?.destination || 'Multiple Destinations'}
+                                {tour?.destination || (
+                                    <FormattedMessage defaultMessage="Multiple Destinations" />
+                                )}
                             </div>
                         </div>
                     </div>
                     <div className="p-6 md:p-8 space-y-8">
                         <div>
                             <h3 className="text-lg font-semibold text-slate-900 mb-3">
-                                Tour Description
+                                <FormattedMessage defaultMessage="Tour Description" />
                             </h3>
                             <p className="text-slate-600 leading-relaxed whitespace-pre-wrap text-sm">
-                                {tour?.description ||
-                                    'No description available for this tour.'}
+                                {tour?.description || (
+                                    <FormattedMessage defaultMessage="No description available for this tour." />
+                                )}
                             </p>
                         </div>
                         <div className="flex items-center justify-between pt-6 border-t border-slate-200">
                             <div className="flex flex-col">
                                 <span className="text-sm font-medium text-slate-500">
-                                    Duration
+                                    <FormattedMessage defaultMessage="Duration" />
                                 </span>
                                 <span className="text-lg font-semibold text-slate-900">
-                                    {tour?.duration_days || '-'} Days
+                                    <FormattedMessage
+                                        defaultMessage="{days} Days"
+                                        values={{
+                                            days: tour?.duration_days || '-',
+                                        }}
+                                    />
                                 </span>
                             </div>
                             <Button
@@ -252,8 +277,8 @@ function RowActions({ row }: { row: any }) {
                                     target="_blank"
                                     rel="noreferrer"
                                 >
-                                    <FileTextIcon className="mr-2 h-4 w-4" />{' '}
-                                    View PDF Brochure
+                                    <FileTextIcon className="mr-2 h-4 w-4" />
+                                    <FormattedMessage defaultMessage="View PDF Brochure" />
                                 </a>
                             </Button>
                         </div>
@@ -268,11 +293,10 @@ function RowActions({ row }: { row: any }) {
                 <AlertDialogContent className="rounded-2xl">
                     <AlertDialogHeader>
                         <AlertDialogTitle>
-                            Are you absolutely sure?
+                            <FormattedMessage defaultMessage="Are you absolutely sure?" />
                         </AlertDialogTitle>
                         <AlertDialogDescription>
-                            This action will remove the tour from your catalog.
-                            It cannot be undone.
+                            <FormattedMessage defaultMessage="This action will remove the tour from your catalog. It cannot be undone." />
                             {(errors as any).delete_error && (
                                 <div className="mt-4 p-3 bg-red-50 text-red-600 rounded-lg text-sm font-medium border border-red-100">
                                     {(errors as any).delete_error}
@@ -281,12 +305,14 @@ function RowActions({ row }: { row: any }) {
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogCancel>
+                            <FormattedMessage defaultMessage="Cancel" />
+                        </AlertDialogCancel>
                         <AlertDialogAction
                             onClick={handleDelete}
                             className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
                         >
-                            Remove
+                            <FormattedMessage defaultMessage="Remove" />
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
@@ -296,6 +322,7 @@ function RowActions({ row }: { row: any }) {
 }
 
 function CategoryCell({ row }: { row: any }) {
+    const intl = useIntl();
     const { company } = usePageSharedDataProps();
     const { data, isLoading } = useGetTourCategories({
         company_id: company.id,
@@ -318,7 +345,12 @@ function CategoryCell({ row }: { row: any }) {
             {
                 preserveScroll: true,
                 preserveState: true,
-                onSuccess: () => toast.success('Category updated successfully'),
+                onSuccess: () =>
+                    toast.success(
+                        intl.formatMessage({
+                            defaultMessage: 'Category updated successfully',
+                        }),
+                    ),
             },
         );
     };
@@ -331,10 +363,16 @@ function CategoryCell({ row }: { row: any }) {
                 disabled={isLoading}
             >
                 <SelectTrigger className="w-[140px] h-9 text-xs border-slate-200 bg-white rounded-lg shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100">
-                    <SelectValue placeholder="Select Category" />
+                    <SelectValue
+                        placeholder={intl.formatMessage({
+                            defaultMessage: 'Select Category',
+                        })}
+                    />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl">
-                    <SelectItem value="none">No Category</SelectItem>
+                    <SelectItem value="none">
+                        <FormattedMessage defaultMessage="No Category" />
+                    </SelectItem>
                     {data?.data.map((cat: any) => (
                         <SelectItem key={cat.id} value={cat.id.toString()}>
                             {cat.name}
@@ -347,9 +385,10 @@ function CategoryCell({ row }: { row: any }) {
 }
 
 function StatusCell({ row }: { row: any }) {
+    const intl = useIntl();
     const { company } = usePageSharedDataProps();
     const agentTour = row.original;
-    const vendorStatus = agentTour.tour?.status; // Mengambil status asli dari Vendor
+    const vendorStatus = agentTour.tour?.status;
 
     const [value, setValue] = React.useState(agentTour.status || 'inactive');
 
@@ -365,7 +404,12 @@ function StatusCell({ row }: { row: any }) {
             {
                 preserveScroll: true,
                 preserveState: true,
-                onSuccess: () => toast.success('Status updated successfully'),
+                onSuccess: () =>
+                    toast.success(
+                        intl.formatMessage({
+                            defaultMessage: 'Status updated successfully',
+                        }),
+                    ),
             },
         );
     };
@@ -377,7 +421,6 @@ function StatusCell({ row }: { row: any }) {
             onClick={(e) => e.stopPropagation()}
             className="flex flex-col gap-1.5"
         >
-            {/* 👇 TAMBAHKAN PROPERTI disabled DI SINI 👇 */}
             <Select
                 value={value}
                 onValueChange={handleChange}
@@ -390,19 +433,27 @@ function StatusCell({ row }: { row: any }) {
                             : 'bg-slate-50 text-slate-500 border-slate-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300'
                     } ${vendorStatus === 'inactive' ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
-                    <SelectValue placeholder="Select Status" />
+                    <SelectValue
+                        placeholder={intl.formatMessage({
+                            defaultMessage: 'Select Status',
+                        })}
+                    />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl">
-                    <SelectItem value="active">ACTIVE</SelectItem>
-                    <SelectItem value="inactive">INACTIVE</SelectItem>
+                    <SelectItem value="active">
+                        <FormattedMessage defaultMessage="Active" />
+                    </SelectItem>
+                    <SelectItem value="inactive">
+                        <FormattedMessage defaultMessage="Inactive" />
+                    </SelectItem>
                 </SelectContent>
             </Select>
 
             {vendorStatus === 'inactive' && (
                 <span className="text-[10px] font-semibold text-red-500 leading-tight">
-                    Inactive by Vendor
+                    <FormattedMessage defaultMessage="Inactive by Vendor" />
                     <br />
-                    (Locked)
+                    <FormattedMessage defaultMessage="(Locked)" />
                 </span>
             )}
         </div>
@@ -410,6 +461,7 @@ function StatusCell({ row }: { row: any }) {
 }
 
 function VendorDocumentCell({ row }: { row: any }) {
+    const intl = useIntl();
     const tour = row.original.tour;
     const hasDocument = Boolean(tour?.document);
     const documentUrl = hasDocument ? extractDocumentUrl(tour.document) : '';
@@ -425,20 +477,23 @@ function VendorDocumentCell({ row }: { row: any }) {
             {documentUrl ? (
                 <a
                     href={documentUrl}
-                    download={getDocumentName(tour.document)}
-                    title={getDocumentName(tour.document)}
+                    download={getDocumentName(tour.document, intl)}
+                    title={getDocumentName(tour.document, intl)}
                 >
                     <DownloadIcon className="mr-1.5 h-3.5 w-3.5" />
-                    Vendor PDF
+                    <FormattedMessage defaultMessage="Vendor PDF" />
                 </a>
             ) : (
-                <span>Not available</span>
+                <span>
+                    <FormattedMessage defaultMessage="Not available" />
+                </span>
             )}
         </Button>
     );
 }
 
 function AgentDocumentCell({ row }: { row: any }) {
+    const intl = useIntl();
     const { company } = usePageSharedDataProps();
     const agentTour = row.original;
     const vendorDocument = agentTour.tour?.document;
@@ -458,8 +513,14 @@ function AgentDocumentCell({ row }: { row: any }) {
                 onSuccess: () =>
                     toast.success(
                         media
-                            ? 'Agent itinerary uploaded successfully'
-                            : 'Agent itinerary removed successfully',
+                            ? intl.formatMessage({
+                                  defaultMessage:
+                                      'Agent itinerary uploaded successfully',
+                              })
+                            : intl.formatMessage({
+                                  defaultMessage:
+                                      'Agent itinerary removed successfully',
+                              }),
                     ),
             },
         );
@@ -480,13 +541,17 @@ function AgentDocumentCell({ row }: { row: any }) {
                                 href={documentUrl}
                                 target="_blank"
                                 rel="noreferrer"
-                                title={getDocumentName(agentDocument)}
+                                title={getDocumentName(agentDocument, intl)}
                             >
                                 <FileTextIcon className="mr-1.5 h-3.5 w-3.5 shrink-0" />
-                                <span className="truncate">Agent PDF</span>
+                                <span className="truncate">
+                                    <FormattedMessage defaultMessage="Agent PDF" />
+                                </span>
                             </a>
                         ) : (
-                            <span>Agent PDF</span>
+                            <span>
+                                <FormattedMessage defaultMessage="Agent PDF" />
+                            </span>
                         )}
                     </Button>
                     <Button
@@ -524,14 +589,21 @@ function AgentDocumentCell({ row }: { row: any }) {
                             disabled={!hasVendorDocument}
                             title={
                                 hasVendorDocument
-                                    ? 'Upload Agent PDF'
-                                    : 'Vendor PDF is required before uploading Agent PDF'
+                                    ? intl.formatMessage({
+                                          defaultMessage: 'Upload Agent PDF',
+                                      })
+                                    : intl.formatMessage({
+                                          defaultMessage:
+                                              'Vendor PDF is required before uploading Agent PDF',
+                                      })
                             }
                         >
                             <UploadCloudIcon className="mr-1.5 h-3.5 w-3.5" />
-                            {hasVendorDocument
-                                ? 'Upload Agent PDF'
-                                : 'Vendor PDF Required'}
+                            {hasVendorDocument ? (
+                                <FormattedMessage defaultMessage="Upload Agent PDF" />
+                            ) : (
+                                <FormattedMessage defaultMessage="Vendor PDF Required" />
+                            )}
                         </Button>
                     )}
                 </MediaPicker>
@@ -572,204 +644,233 @@ const getStickyActionColumnClassName = (columnId: string) =>
         ? 'sticky right-0 z-20 w-16 bg-white/95 shadow-[-12px_0_18px_-18px_rgba(15,23,42,0.7)] backdrop-blur dark:bg-slate-950/95 dark:shadow-[-12px_0_18px_-18px_rgba(0,0,0,0.9)]'
         : '';
 
-export const columns: ColumnDef<any>[] = [
-    // {
-    //   id: 'select',
-    //   header: ({ table }) => (
-    //     <div className="px-2 flex items-center justify-center">
-    //       <Checkbox
-    //         checked={
-    //           table.getIsAllPageRowsSelected() ||
-    //           (table.getIsSomePageRowsSelected() && 'indeterminate')
-    //         }
-    //         onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-    //         aria-label="Select all"
-    //         className="border-slate-300 rounded data-[state=checked]:bg-primary"
-    //       />
-    //     </div>
-    //   ),
-    //   cell: ({ row }) => (
-    //     <div className="px-2 flex items-center justify-center">
-    //       <Checkbox
-    //         checked={row.getIsSelected()}
-    //         onCheckedChange={(value) => row.toggleSelected(!!value)}
-    //         aria-label="Select row"
-    //         className="border-slate-300 rounded data-[state=checked]:bg-primary"
-    //       />
-    //     </div>
-    //   ),
-    //   enableSorting: false,
-    //   enableHiding: false,
-    // },
-    {
-        id: 'tour_details',
-        accessorFn: (row) => row.tour?.name,
-        header: ({ column }) => (
-            <SortableHeader column={column} title="Tour Details" />
-        ),
-        cell: ({ row }) => (
-            <div className="flex flex-col gap-1.5 max-w-[250px] xl:max-w-[350px]">
-                <span
-                    className="font-semibold text-slate-900 truncate dark:text-slate-100"
-                    title={row.original.tour?.name}
-                >
-                    {row.original.tour?.name || '-'}
-                </span>
-                <span className="uppercase font-mono text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-md w-fit border border-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
-                    {row.original.tour?.code || '-'}
-                </span>
-            </div>
-        ),
-    },
-    {
-        id: 'vendor',
-        accessorFn: (row) => row.tour?.company?.name,
-        header: ({ column }) => (
-            <SortableHeader column={column} title="Vendor" />
-        ),
-        cell: ({ getValue }) => (
-            <div
-                className="font-medium text-slate-700 truncate max-w-[150px] dark:text-slate-200"
-                title={getValue<string>()}
-            >
-                {getValue<string>() || '-'}
-            </div>
-        ),
-    },
-    {
-        id: 'destination',
-        accessorFn: (row) => row.tour?.destination,
-        header: ({ column }) => (
-            <SortableHeader column={column} title="Destination" />
-        ),
-        cell: ({ getValue }) => (
-            <div
-                className="max-w-[150px] xl:max-w-[200px] truncate text-slate-600 font-medium dark:text-slate-300"
-                title={getValue<string>()}
-            >
-                {getValue<string>() || '-'}
-            </div>
-        ),
-    },
-    {
-        id: 'image',
-        header: 'Cover Image',
-        cell: ({ row }) => {
-            const image = row.original.tour?.image;
-            const src = image
-                ? extractImageSrc(image as any).src
-                : 'https://placehold.co/400x300/f8fafc/94a3b8?text=No+Image';
-
-            return (
-                <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm w-20 h-12 flex items-center justify-center shrink-0">
-                    <img
-                        src={src}
-                        alt="Tour"
-                        className="w-full h-full object-cover"
-                    />
-                </div>
-            );
-        },
-        enableSorting: false,
-    },
-    {
-        id: 'vendor_document',
-        header: 'Vendor Itinerary',
-        cell: ({ row }) => <VendorDocumentCell row={row} />,
-        enableSorting: false,
-    },
-    {
-        id: 'agent_document',
-        accessorFn: (row) => row.agent_document?.name,
-        header: ({ column }) => (
-            <SortableHeader column={column} title="Agent Itinerary" />
-        ),
-        cell: ({ row }) => <AgentDocumentCell row={row} />,
-    },
-    {
-        id: 'category',
-        accessorFn: (row) => row.category?.name || row.tour?.category?.name,
-        header: ({ column }) => (
-            <SortableHeader column={column} title="Category" />
-        ),
-        cell: ({ row }) => <CategoryCell row={row} />,
-    },
-    {
-        id: 'seats',
-        accessorFn: (row: any) =>
-            row.tour?.availabilities
-                ?.filter((item: any) =>
-                    isActiveAvailability(
-                        item,
-                        getBookingDeadlineDays(row.tour),
-                    ),
-                )
-                .reduce(
-                    (sum: number, item: any) =>
-                        sum + (Number(item.available) || 0),
-                    0,
-                ) || 0,
-        header: ({ column }) => (
-            <SortableHeader
-                column={column}
-                title={
-                    <span className="inline-block text-left leading-tight">
-                        Total
-                        <br />
-                        Seats
-                    </span>
-                }
-                className="w-[92px] justify-start"
-            />
-        ),
-        cell: ({ getValue }) => {
-            const seats = getValue<number>();
-            return (
-                <div className="flex min-w-[72px] items-center gap-1.5">
+function getColumns(intl: IntlShape): ColumnDef<any>[] {
+    return [
+        // {
+        //   id: 'select',
+        //   header: ({ table }) => (
+        //     <div className="px-2 flex items-center justify-center">
+        //       <Checkbox
+        //         checked={
+        //           table.getIsAllPageRowsSelected() ||
+        //           (table.getIsSomePageRowsSelected() && 'indeterminate')
+        //         }
+        //         onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+        //         aria-label="Select all"
+        //         className="border-slate-300 rounded data-[state=checked]:bg-primary"
+        //       />
+        //     </div>
+        //   ),
+        //   cell: ({ row }) => (
+        //     <div className="px-2 flex items-center justify-center">
+        //       <Checkbox
+        //         checked={row.getIsSelected()}
+        //         onCheckedChange={(value) => row.toggleSelected(!!value)}
+        //         aria-label="Select row"
+        //         className="border-slate-300 rounded data-[state=checked]:bg-primary"
+        //       />
+        //     </div>
+        //   ),
+        //   enableSorting: false,
+        //   enableHiding: false,
+        // },
+        {
+            id: 'tour_details',
+            accessorFn: (row) => row.tour?.name,
+            header: ({ column }) => (
+                <SortableHeader
+                    column={column}
+                    title={<FormattedMessage defaultMessage="Tour Details" />}
+                />
+            ),
+            cell: ({ row }) => (
+                <div className="flex flex-col gap-1.5 max-w-[250px] xl:max-w-[350px]">
                     <span
-                        className={`h-2 w-2 rounded-full ${seats > 0 ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-red-500'}`}
-                    />
-                    <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">
-                        {seats}
+                        className="font-semibold text-slate-900 truncate dark:text-slate-100"
+                        title={row.original.tour?.name}
+                    >
+                        {row.original.tour?.name || '-'}
+                    </span>
+                    <span className="uppercase font-mono text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-md w-fit border border-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                        {row.original.tour?.code || '-'}
                     </span>
                 </div>
-            );
+            ),
         },
-    },
-    {
-        id: 'status',
-        accessorFn: (row) => row.status,
-        header: ({ column }) => (
-            <SortableHeader column={column} title="Status" />
-        ),
-        cell: ({ row }) => <StatusCell row={row} />,
-    },
-    {
-        id: 'added_at',
-        accessorFn: (row) => row.created_at,
-        header: ({ column }) => (
-            <SortableHeader column={column} title="Added At" />
-        ),
-        cell: ({ getValue }) => (
-            <div className="text-sm font-medium text-slate-500 dark:text-slate-300">
-                {dayjs(getValue<string>()).format('DD MMM YYYY')}
-            </div>
-        ),
-    },
-    {
-        id: 'actions',
-        header: '',
-        cell: ({ row }) => <RowActions row={row} />,
-        enableHiding: false,
-        enableSorting: false,
-    },
-];
+        {
+            id: 'vendor',
+            accessorFn: (row) => row.tour?.company?.name,
+            header: ({ column }) => (
+                <SortableHeader
+                    column={column}
+                    title={<FormattedMessage defaultMessage="Vendor" />}
+                />
+            ),
+            cell: ({ getValue }) => (
+                <div
+                    className="font-medium text-slate-700 truncate max-w-[150px] dark:text-slate-200"
+                    title={getValue<string>()}
+                >
+                    {getValue<string>() || '-'}
+                </div>
+            ),
+        },
+        {
+            id: 'destination',
+            accessorFn: (row) => row.tour?.destination,
+            header: ({ column }) => (
+                <SortableHeader
+                    column={column}
+                    title={<FormattedMessage defaultMessage="Destination" />}
+                />
+            ),
+            cell: ({ getValue }) => (
+                <div
+                    className="max-w-[150px] xl:max-w-[200px] truncate text-slate-600 font-medium dark:text-slate-300"
+                    title={getValue<string>()}
+                >
+                    {getValue<string>() || '-'}
+                </div>
+            ),
+        },
+        {
+            id: 'image',
+            header: () => <FormattedMessage defaultMessage="Cover Image" />,
+            cell: ({ row }) => {
+                const image = row.original.tour?.image;
+                const src = image
+                    ? extractImageSrc(image as any).src
+                    : 'https://placehold.co/400x300/f8fafc/94a3b8?text=No+Image';
+
+                return (
+                    <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm w-20 h-12 flex items-center justify-center shrink-0">
+                        <img
+                            src={src}
+                            alt={intl.formatMessage({ defaultMessage: 'Tour' })}
+                            className="w-full h-full object-cover"
+                        />
+                    </div>
+                );
+            },
+            enableSorting: false,
+        },
+        {
+            id: 'vendor_document',
+            header: () => (
+                <FormattedMessage defaultMessage="Vendor Itinerary" />
+            ),
+            cell: ({ row }) => <VendorDocumentCell row={row} />,
+            enableSorting: false,
+        },
+        {
+            id: 'agent_document',
+            accessorFn: (row) => row.agent_document?.name,
+            header: ({ column }) => (
+                <SortableHeader
+                    column={column}
+                    title={
+                        <FormattedMessage defaultMessage="Agent Itinerary" />
+                    }
+                />
+            ),
+            cell: ({ row }) => <AgentDocumentCell row={row} />,
+        },
+        {
+            id: 'category',
+            accessorFn: (row) => row.category?.name || row.tour?.category?.name,
+            header: ({ column }) => (
+                <SortableHeader
+                    column={column}
+                    title={<FormattedMessage defaultMessage="Category" />}
+                />
+            ),
+            cell: ({ row }) => <CategoryCell row={row} />,
+        },
+        {
+            id: 'seats',
+            accessorFn: (row: any) =>
+                row.tour?.availabilities
+                    ?.filter((item: any) =>
+                        isActiveAvailability(
+                            item,
+                            getBookingDeadlineDays(row.tour),
+                        ),
+                    )
+                    .reduce(
+                        (sum: number, item: any) =>
+                            sum + (Number(item.available) || 0),
+                        0,
+                    ) || 0,
+            header: ({ column }) => (
+                <SortableHeader
+                    column={column}
+                    title={
+                        <span className="inline-block text-left leading-tight">
+                            <FormattedMessage
+                                defaultMessage="Total{br}Seats"
+                                values={{ br: <br /> }}
+                            />
+                        </span>
+                    }
+                    className="w-[92px] justify-start"
+                />
+            ),
+            cell: ({ getValue }) => {
+                const seats = getValue<number>();
+                return (
+                    <div className="flex min-w-[72px] items-center gap-1.5">
+                        <span
+                            className={`h-2 w-2 rounded-full ${seats > 0 ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-red-500'}`}
+                        />
+                        <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+                            {seats}
+                        </span>
+                    </div>
+                );
+            },
+        },
+        {
+            id: 'status',
+            accessorFn: (row) => row.status,
+            header: ({ column }) => (
+                <SortableHeader
+                    column={column}
+                    title={<FormattedMessage defaultMessage="Status" />}
+                />
+            ),
+            cell: ({ row }) => <StatusCell row={row} />,
+        },
+        {
+            id: 'added_at',
+            accessorFn: (row) => row.created_at,
+            header: ({ column }) => (
+                <SortableHeader
+                    column={column}
+                    title={<FormattedMessage defaultMessage="Added At" />}
+                />
+            ),
+            cell: ({ getValue }) => (
+                <div className="text-sm font-medium text-slate-500 dark:text-slate-300">
+                    {dayjs(getValue<string>()).format('DD MMM YYYY')}
+                </div>
+            ),
+        },
+        {
+            id: 'actions',
+            header: '',
+            cell: ({ row }) => <RowActions row={row} />,
+            enableHiding: false,
+            enableSorting: false,
+        },
+    ];
+}
 
 type PageProps = {
     data: any;
 };
 
 export default function Page({ data }: PageProps) {
+    const intl = useIntl();
     const [sorting, setSorting] = React.useState<SortingState>([
         { id: 'added_at', desc: true },
     ]);
@@ -816,6 +917,8 @@ export default function Page({ data }: PageProps) {
         );
     };
 
+    const columns = React.useMemo(() => getColumns(intl), [intl]);
+
     const table = useReactTable({
         data: filteredData,
         columns,
@@ -843,7 +946,13 @@ export default function Page({ data }: PageProps) {
         <CompanyDashboardLayout
             openMenuIds={['tours']}
             activeMenuIds={['agent-tours.index']}
-            breadcrumb={[{ title: 'Products' }]}
+            breadcrumb={[
+                {
+                    title: intl.formatMessage({
+                        defaultMessage: 'Products',
+                    }),
+                },
+            ]}
             containerClassName="w-full flex-1 flex flex-col bg-slate-50/30 dark:bg-slate-950"
         >
             <div className="w-full space-y-6 p-4 md:p-8 max-w-[1600px] mx-auto pb-20">
@@ -851,7 +960,10 @@ export default function Page({ data }: PageProps) {
                     <div className="relative w-full sm:w-[700px] border border-slate-200 rounded-xl shadow-sm dark:border-slate-800">
                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                         <Input
-                            placeholder="Search tour, vendor, or category..."
+                            placeholder={intl.formatMessage({
+                                defaultMessage:
+                                    'Search tour, vendor, or category...',
+                            })}
                             value={globalFilter ?? ''}
                             onChange={(e) => setGlobalFilter(e.target.value)}
                             className="pl-11 h-11 w-full bg-slate-50 border-transparent focus-visible:bg-white focus-visible:ring-2 focus-visible:ring-primary/20 rounded-xl transition-all shadow-inner dark:bg-slate-900 dark:text-slate-100 dark:focus-visible:bg-slate-900"
@@ -870,19 +982,19 @@ export default function Page({ data }: PageProps) {
                                 value="all"
                                 className="rounded-lg data-[state=active]:shadow-sm"
                             >
-                                All Catalog
+                                <FormattedMessage defaultMessage="All Catalog" />
                             </TabsTrigger>
                             <TabsTrigger
                                 value="active"
                                 className="rounded-lg data-[state=active]:shadow-sm data-[state=active]:text-emerald-600"
                             >
-                                Active
+                                <FormattedMessage defaultMessage="Active" />
                             </TabsTrigger>
                             <TabsTrigger
                                 value="inactive"
                                 className="rounded-lg data-[state=active]:shadow-sm data-[state=active]:text-slate-600"
                             >
-                                Inactive
+                                <FormattedMessage defaultMessage="Inactive" />
                             </TabsTrigger>
                         </TabsList>
                     </Tabs>
@@ -894,7 +1006,7 @@ export default function Page({ data }: PageProps) {
                                     variant="outline"
                                     className="h-11 px-6 rounded-xl border-slate-200 bg-white hover:bg-slate-50 shadow-sm w-full sm:w-auto dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
                                 >
-                                    Columns{' '}
+                                    <FormattedMessage defaultMessage="Columns" />
                                     <ChevronDown className="ml-2 h-4 w-4 opacity-50" />
                                 </Button>
                             </DropdownMenuTrigger>
@@ -990,12 +1102,10 @@ export default function Page({ data }: PageProps) {
                                                     <Search className="h-8 w-8 text-slate-400 dark:text-slate-500" />
                                                 </div>
                                                 <p className="text-lg font-medium text-slate-900 mb-1 dark:text-slate-100">
-                                                    No tours found
+                                                    <FormattedMessage defaultMessage="No tours found" />
                                                 </p>
                                                 <p className="text-sm">
-                                                    Try adjusting your search or
-                                                    filter to find what you're
-                                                    looking for.
+                                                    <FormattedMessage defaultMessage="Try adjusting your search or filter to find what you're looking for." />
                                                 </p>
                                             </div>
                                         </TableCell>
@@ -1008,14 +1118,27 @@ export default function Page({ data }: PageProps) {
 
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 px-2">
                     <p className="text-sm font-medium text-slate-500 bg-white px-4 py-2 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">
-                        <span className="text-slate-900 dark:text-slate-100">
-                            {table.getFilteredSelectedRowModel().rows.length}
-                        </span>{' '}
-                        of{' '}
-                        <span className="text-slate-900 dark:text-slate-100">
-                            {table.getFilteredRowModel().rows.length}
-                        </span>{' '}
-                        row(s) selected.
+                        <FormattedMessage
+                            defaultMessage="{selected} of {total} row(s) selected."
+                            values={{
+                                selected: (
+                                    <span className="text-slate-900 dark:text-slate-100">
+                                        {
+                                            table.getFilteredSelectedRowModel()
+                                                .rows.length
+                                        }
+                                    </span>
+                                ),
+                                total: (
+                                    <span className="text-slate-900 dark:text-slate-100">
+                                        {
+                                            table.getFilteredRowModel().rows
+                                                .length
+                                        }
+                                    </span>
+                                ),
+                            }}
+                        />
                     </p>
                     <div className="flex gap-2">
                         <Button
@@ -1024,7 +1147,7 @@ export default function Page({ data }: PageProps) {
                             disabled={!table.getCanPreviousPage()}
                             className="rounded-xl border-slate-200 bg-white hover:bg-slate-50 shadow-sm px-6 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
                         >
-                            Previous
+                            <FormattedMessage defaultMessage="Previous" />
                         </Button>
                         <Button
                             variant="outline"
@@ -1032,7 +1155,7 @@ export default function Page({ data }: PageProps) {
                             disabled={!table.getCanNextPage()}
                             className="rounded-xl border-slate-200 bg-white hover:bg-slate-50 shadow-sm px-6 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
                         >
-                            Next
+                            <FormattedMessage defaultMessage="Next" />
                         </Button>
                     </div>
                 </div>

@@ -16,6 +16,7 @@ import {
 import { DEFAULT_PHOTO } from '@/config';
 import { UserIcon, UserPlus2Icon, XCircleIcon } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import { FormattedMessage, useIntl } from 'react-intl';
 import { useDebounce } from 'react-use';
 
 type UserPickerProps = {
@@ -24,6 +25,7 @@ type UserPickerProps = {
 };
 
 export default function UserPicker({ value, onChange }: UserPickerProps) {
+    const intl = useIntl();
     const [internalValue, setInternalValue] = useState<
         string | null | undefined
     >(value);
@@ -59,19 +61,23 @@ export default function UserPicker({ value, onChange }: UserPickerProps) {
     return (
         <Command className="max-w-sm rounded-lg border" shouldFilter={false}>
             <CommandInput
-                placeholder="Type a command or search..."
+                placeholder={intl.formatMessage({
+                    defaultMessage: 'Type a command or search...',
+                })}
                 value={search}
                 onValueChange={setSearch}
             />
             {!debouncedSearch && (
                 <CommandList>
                     <CommandEmpty>
-                        Enter email or username to start
+                        <FormattedMessage defaultMessage="Enter email or username to start" />
                     </CommandEmpty>
                 </CommandList>
             )}
             <CommandList className="relative">
-                <CommandEmpty>No results found.</CommandEmpty>
+                <CommandEmpty>
+                    <FormattedMessage defaultMessage="No results found." />
+                </CommandEmpty>
                 <CommandGroup>
                     {users?.map((user) => (
                         <CommandItem
@@ -102,7 +108,12 @@ export default function UserPicker({ value, onChange }: UserPickerProps) {
                             onSelect={() => handleChange(debouncedSearch)}
                         >
                             <UserPlus2Icon />
-                            <span>Invite {debouncedSearch}</span>
+                            <span>
+                                <FormattedMessage
+                                    defaultMessage="Invite {email}"
+                                    values={{ email: debouncedSearch }}
+                                />
+                            </span>
                         </CommandItem>
                     )}
                 </CommandGroup>

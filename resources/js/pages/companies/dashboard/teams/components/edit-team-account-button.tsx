@@ -23,6 +23,7 @@ import { update } from '@/routes/companies/dashboard/teams';
 import { useForm } from '@inertiajs/react';
 import { KeyRoundIcon, PencilIcon } from 'lucide-react';
 import { useState } from 'react';
+import { FormattedMessage, useIntl } from 'react-intl';
 
 export default function EditTeamAccountButton({
     team,
@@ -31,6 +32,7 @@ export default function EditTeamAccountButton({
     team: any;
     canManageMembers: boolean;
 }) {
+    const intl = useIntl();
     const { company } = usePageSharedDataProps();
     const [open, setOpen] = useState(false);
     const shouldDisable = !canManageMembers || team.is_owner;
@@ -89,13 +91,17 @@ export default function EditTeamAccountButton({
                             variant="outline"
                             size="icon"
                             className="h-8 w-8"
-                            aria-label="Update credentials"
+                            aria-label={intl.formatMessage({
+                                defaultMessage: 'Update credentials',
+                            })}
                         >
                             <KeyRoundIcon className="h-4 w-4" />
                         </Button>
                     </DialogTrigger>
                 </TooltipTrigger>
-                <TooltipContent>Update email or password</TooltipContent>
+                <TooltipContent>
+                    <FormattedMessage defaultMessage="Update email or password" />
+                </TooltipContent>
             </Tooltip>
 
             <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-md">
@@ -106,11 +112,10 @@ export default function EditTeamAccountButton({
                         </div>
                         <div className="space-y-1">
                             <DialogTitle className="text-lg">
-                                Update Team Account
+                                <FormattedMessage defaultMessage="Update Team Account" />
                             </DialogTitle>
                             <DialogDescription className="text-sm leading-relaxed">
-                                Change the team member email address or set a
-                                new password.
+                                <FormattedMessage defaultMessage="Change the team member email address or set a new password." />
                             </DialogDescription>
                         </div>
                     </div>
@@ -121,7 +126,7 @@ export default function EditTeamAccountButton({
                         <FieldGroup>
                             <Field>
                                 <Label htmlFor={`email-${team.id}`}>
-                                    Email
+                                    <FormattedMessage defaultMessage="Email" />
                                 </Label>
                                 <Input
                                     id={`email-${team.id}`}
@@ -139,12 +144,15 @@ export default function EditTeamAccountButton({
 
                             <Field>
                                 <Label htmlFor={`password-${team.id}`}>
-                                    New Password
+                                    <FormattedMessage defaultMessage="New Password" />
                                 </Label>
                                 <Input
                                     id={`password-${team.id}`}
                                     type="password"
-                                    placeholder="Leave blank to keep the current password"
+                                    placeholder={intl.formatMessage({
+                                        defaultMessage:
+                                            'Leave blank to keep the current password',
+                                    })}
                                     value={form.data.password}
                                     onChange={(event) =>
                                         form.setData(
@@ -160,12 +168,15 @@ export default function EditTeamAccountButton({
                                 <Label
                                     htmlFor={`password-confirmation-${team.id}`}
                                 >
-                                    Confirm New Password
+                                    <FormattedMessage defaultMessage="Confirm New Password" />
                                 </Label>
                                 <Input
                                     id={`password-confirmation-${team.id}`}
                                     type="password"
-                                    placeholder="Repeat the new password"
+                                    placeholder={intl.formatMessage({
+                                        defaultMessage:
+                                            'Repeat the new password',
+                                    })}
                                     value={form.data.password_confirmation}
                                     onChange={(event) =>
                                         form.setData(
@@ -188,7 +199,7 @@ export default function EditTeamAccountButton({
                             {form.processing ? (
                                 <Spinner className="mr-2" />
                             ) : null}
-                            Save Changes
+                            <FormattedMessage defaultMessage="Save Changes" />
                         </Button>
                     </DialogFooter>
                 </form>

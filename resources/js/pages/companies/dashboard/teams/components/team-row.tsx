@@ -6,6 +6,7 @@ import { TableCell, TableRow } from '@/components/ui/table';
 import { DEFAULT_PHOTO } from '@/config';
 import dayjs from 'dayjs';
 import { UserIcon } from 'lucide-react';
+import { FormattedMessage } from 'react-intl';
 import DeleteTeamButton from './delete-team-button';
 import EditTeamAccountButton from './edit-team-account-button';
 import TeamRoleSelect from './team-role-select';
@@ -49,20 +50,24 @@ export default function TeamRow({
                                 <span className="font-medium text-foreground">
                                     {team.user?.name}
                                 </span>
-                                {team.is_owner && <Badge>Owner</Badge>}
+                                {team.is_owner && (
+                                    <Badge>
+                                        <FormattedMessage defaultMessage="Owner" />
+                                    </Badge>
+                                )}
                             </div>
                             <div className="text-sm text-muted-foreground">
-                                Team account
+                                <FormattedMessage defaultMessage="Team account" />
                             </div>
                         </div>
                     </div>
                 ) : (
                     <div className="space-y-1">
                         <div className="font-medium text-foreground">
-                            Legacy Invitation
+                            <FormattedMessage defaultMessage="Legacy Invitation" />
                         </div>
                         <div className="text-sm text-muted-foreground">
-                            This record is not linked to an account.
+                            <FormattedMessage defaultMessage="This record is not linked to an account." />
                         </div>
                     </div>
                 )}

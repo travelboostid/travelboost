@@ -19,6 +19,7 @@ import { Textarea } from '@/components/ui/textarea';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { router, useForm, usePage } from '@inertiajs/react';
 import { useMemo, useState } from 'react';
+import { FormattedMessage, useIntl } from 'react-intl';
 import { toast } from 'sonner';
 import SelectCategory from './components/select-category';
 import SelectContinent from './components/select-continent';
@@ -158,7 +159,8 @@ const AVAILABILITY_MOBILE_FIELDS: { key: AvailabilityField; label: string }[] =
     ];
 
 export default function Page({ tour }: Props) {
-    const { props } = usePage() as any; // ✅ di sini
+    const intl = useIntl();
+    const { props } = usePage() as any;
 
     const [activeTab, setActiveTab] = useState<'tour' | 'schedule'>('tour');
 
@@ -192,9 +194,11 @@ export default function Page({ tour }: Props) {
     const { company } = usePageSharedDataProps();
     const { productCommissionCategories } = usePage().props as any;
     const handleSuccess = () => {
-        toast.success('Success', {
+        toast.success(intl.formatMessage({ defaultMessage: 'Success' }), {
             position: 'top-center',
-            description: 'Tour data updated successfully',
+            description: intl.formatMessage({
+                defaultMessage: 'Tour data updated successfully',
+            }),
         });
     };
 
@@ -413,12 +417,18 @@ export default function Page({ tour }: Props) {
                 );
             }
 
-            toast.success('Schedule saved');
+            toast.success(
+                intl.formatMessage({ defaultMessage: 'Schedule saved' }),
+            );
 
             // CLOSE DROPDOWN
             setOpenDropdownIndex(null);
         } catch (err) {
-            toast.error('Failed save schedule');
+            toast.error(
+                intl.formatMessage({
+                    defaultMessage: 'Failed to save schedule',
+                }),
+            );
         }
     };
     const addDays = (date: string, days: number) => {
@@ -459,7 +469,11 @@ export default function Page({ tour }: Props) {
         // 🔥 VALIDASI DUPLIKAT DEPARTURE DATE
         if (field === 'departure_date') {
             if (isDuplicateDeparture(value, index)) {
-                toast.error('Departure date has been used');
+                toast.error(
+                    intl.formatMessage({
+                        defaultMessage: 'Departure date has been used',
+                    }),
+                );
                 return;
             }
         }
@@ -496,7 +510,12 @@ export default function Page({ tour }: Props) {
             return;
         }
 
-        if (!confirm('Delete this schedule?')) return;
+        if (
+            !confirm(
+                intl.formatMessage({ defaultMessage: 'Delete this schedule?' }),
+            )
+        )
+            return;
 
         router.delete(
             `/companies/${company.username}/dashboard/tours/${tour.id}/schedules/${item.id}`,
@@ -575,7 +594,12 @@ export default function Page({ tour }: Props) {
             return;
         }
 
-        if (!confirm('Delete this category?')) return;
+        if (
+            !confirm(
+                intl.formatMessage({ defaultMessage: 'Delete this category?' }),
+            )
+        )
+            return;
 
         router.delete(
             `/companies/${company.username}/dashboard/tours/${tour.id}/prices/${room.id}`,
@@ -828,7 +852,11 @@ export default function Page({ tour }: Props) {
                 );
 
                 if (isDuplicate) {
-                    toast.error('Description tidak boleh sama');
+                    toast.error(
+                        intl.formatMessage({
+                            defaultMessage: 'Description must be unique',
+                        }),
+                    );
                     return prev;
                 }
             }
@@ -886,7 +914,11 @@ export default function Page({ tour }: Props) {
             const payload = buildAddOnsPayload(data);
 
             if (payload.length === 0) {
-                toast.error('Add Ons masih kosong');
+                toast.error(
+                    intl.formatMessage({
+                        defaultMessage: 'Add-ons cannot be empty',
+                    }),
+                );
                 return;
             }
 
@@ -898,11 +930,20 @@ export default function Page({ tour }: Props) {
                 {
                     preserveState: true,
                     onSuccess: () => {
-                        toast.success('Success Process Add Ons');
+                        toast.success(
+                            intl.formatMessage({
+                                defaultMessage:
+                                    'Add-ons processed successfully',
+                            }),
+                        );
                     },
                     onError: (err) => {
                         console.error(err);
-                        toast.error('Failed to Process Add Ons');
+                        toast.error(
+                            intl.formatMessage({
+                                defaultMessage: 'Failed to process add-ons',
+                            }),
+                        );
                     },
                     onFinish: () => {
                         setSavingAddOns(false);
@@ -915,7 +956,12 @@ export default function Page({ tour }: Props) {
     };
 
     const handleDelete = (scheduleId: number, index: number) => {
-        if (!confirm('Delete this add on?')) return;
+        if (
+            !confirm(
+                intl.formatMessage({ defaultMessage: 'Delete this add-on?' }),
+            )
+        )
+            return;
 
         setAddOns((prev) => {
             const rows = [...(prev[scheduleId] || [])];
@@ -998,7 +1044,11 @@ export default function Page({ tour }: Props) {
 
         // VALIDASI SUDAH DISAVE
         if (!source.id) {
-            toast.error('Please save this schedule before copying');
+            toast.error(
+                intl.formatMessage({
+                    defaultMessage: 'Please save this schedule before copying',
+                }),
+            );
             return;
         }
 
@@ -1009,7 +1059,10 @@ export default function Page({ tour }: Props) {
 
         if (!sourceAvailability) {
             toast.error(
-                'Cannot copy schedule because availability data has not been set',
+                intl.formatMessage({
+                    defaultMessage:
+                        'Cannot copy schedule because availability data has not been set',
+                }),
             );
             return;
         }
@@ -1022,7 +1075,10 @@ export default function Page({ tour }: Props) {
 
         if (!sourceAddonsValid || sourceAddonsValid.length === 0) {
             toast.error(
-                'Cannot copy schedule because add-ons data has not been set',
+                intl.formatMessage({
+                    defaultMessage:
+                        'Cannot copy schedule because add-ons data has not been set',
+                }),
             );
             return;
         }
@@ -1032,7 +1088,11 @@ export default function Page({ tour }: Props) {
             .filter(Boolean);
 
         if (validDates.length === 0) {
-            toast.error('Please select at least one departure date');
+            toast.error(
+                intl.formatMessage({
+                    defaultMessage: 'Please select at least one departure date',
+                }),
+            );
             return;
         }
 
@@ -1043,7 +1103,11 @@ export default function Page({ tour }: Props) {
         );
 
         if (filteredDates.length === 0) {
-            toast.error('Selected dates already exist');
+            toast.error(
+                intl.formatMessage({
+                    defaultMessage: 'Selected dates already exist',
+                }),
+            );
             return;
         }
 
@@ -1188,9 +1252,17 @@ export default function Page({ tour }: Props) {
 
             setCopyOpen(false);
             setSelectedDates([]);
-            toast.success('Schedule copied successfully');
+            toast.success(
+                intl.formatMessage({
+                    defaultMessage: 'Schedule copied successfully',
+                }),
+            );
         } catch (err) {
-            toast.error('Failed copy schedule');
+            toast.error(
+                intl.formatMessage({
+                    defaultMessage: 'Failed to copy schedule',
+                }),
+            );
         }
     };
 
@@ -1328,8 +1400,13 @@ export default function Page({ tour }: Props) {
             openMenuIds={['tours']}
             activeMenuIds={['tours.index']}
             breadcrumb={[
-                { title: 'Tours', url: '/dashboard/tours' },
-                { title: 'Edit' },
+                {
+                    title: intl.formatMessage({ defaultMessage: 'Tours' }),
+                    url: '/dashboard/tours',
+                },
+                {
+                    title: intl.formatMessage({ defaultMessage: 'Edit' }),
+                },
             ]}
         >
             {/* <Form
@@ -1426,7 +1503,7 @@ export default function Page({ tour }: Props) {
             shadow-none
         "
                             >
-                                Master
+                                <FormattedMessage defaultMessage="Master" />
                             </TabsTrigger>
 
                             <TabsTrigger
@@ -1439,7 +1516,7 @@ export default function Page({ tour }: Props) {
             shadow-none
         "
                             >
-                                Schedule & Price
+                                <FormattedMessage defaultMessage="Schedule & Price" />
                             </TabsTrigger>
 
                             <TabsTrigger
@@ -1452,7 +1529,7 @@ export default function Page({ tour }: Props) {
             shadow-none
         "
                             >
-                                Availability
+                                <FormattedMessage defaultMessage="Availability" />
                             </TabsTrigger>
 
                             <TabsTrigger
@@ -1465,7 +1542,7 @@ export default function Page({ tour }: Props) {
             shadow-none
         "
                             >
-                                Add Ons
+                                <FormattedMessage defaultMessage="Add Ons" />
                             </TabsTrigger>
                         </TabsList>
 
@@ -1482,8 +1559,7 @@ export default function Page({ tour }: Props) {
                                         </h2>
 
                                         <p className="text-sm text-muted-foreground">
-                                            Upload attractive image for your
-                                            catalog
+                                            <FormattedMessage defaultMessage="Upload attractive image for your catalog" />
                                         </p>
                                     </div>
 
@@ -1516,31 +1592,44 @@ export default function Page({ tour }: Props) {
                                     <div className="flex items-start justify-between border-b bg-muted/40 px-6 py-4">
                                         <div>
                                             <h2 className="text-lg font-semibold">
-                                                Basic Information
+                                                <FormattedMessage defaultMessage="Basic Information" />
                                             </h2>
 
                                             <p className="text-sm text-muted-foreground">
-                                                Main information about your tour
+                                                <FormattedMessage defaultMessage="Main information about your tour" />
                                             </p>
                                         </div>
 
                                         <div className="flex items-center gap-2">
                                             <span className="text-sm font-medium">
-                                                Input By :{' '}
-                                                {tour.user?.name || '-'}
+                                                <FormattedMessage
+                                                    defaultMessage="Input By: {name}"
+                                                    values={{
+                                                        name:
+                                                            tour.user?.name ||
+                                                            '-',
+                                                    }}
+                                                />
                                             </span>
                                         </div>
                                     </div>
                                     {/* BODY */}
                                     <div className="grid grid-cols-1 gap-5 p-6 md:grid-cols-2">
                                         <div className="grid gap-2">
-                                            <Label htmlFor="code">Code</Label>
+                                            <Label htmlFor="code">
+                                                <FormattedMessage defaultMessage="Code" />
+                                            </Label>
                                             <Input
                                                 id="code"
                                                 type="text"
                                                 name="code"
                                                 required
-                                                placeholder="Tour Code"
+                                                placeholder={intl.formatMessage(
+                                                    {
+                                                        defaultMessage:
+                                                            'Tour Code',
+                                                    },
+                                                )}
                                                 //defaultValue={tour.code}
                                                 value={data.code}
                                                 onChange={(e) =>
@@ -1554,13 +1643,20 @@ export default function Page({ tour }: Props) {
                                         </div>
                                         {/* Name */}
                                         <div className="grid gap-2">
-                                            <Label htmlFor="name">Name</Label>
+                                            <Label htmlFor="name">
+                                                <FormattedMessage defaultMessage="Name" />
+                                            </Label>
                                             <Input
                                                 id="name"
                                                 type="text"
                                                 name="name"
                                                 required
-                                                placeholder="Tour Name"
+                                                placeholder={intl.formatMessage(
+                                                    {
+                                                        defaultMessage:
+                                                            'Tour Name',
+                                                    },
+                                                )}
                                                 //defaultValue={tour.name}
                                                 value={data.name}
                                                 onChange={(e) =>
@@ -1576,12 +1672,17 @@ export default function Page({ tour }: Props) {
                                         {/* Description */}
                                         <div className="grid gap-2 md:col-span-2">
                                             <Label htmlFor="description">
-                                                Description
+                                                <FormattedMessage defaultMessage="Description" />
                                             </Label>
                                             <Textarea
                                                 id="description"
                                                 name="description"
-                                                placeholder="Tour description"
+                                                placeholder={intl.formatMessage(
+                                                    {
+                                                        defaultMessage:
+                                                            'Tour description',
+                                                    },
+                                                )}
                                                 //defaultValue={tour.description}
                                                 className="min-h-[65px] resize-none"
                                                 onInput={(e) => {
@@ -1606,14 +1707,19 @@ export default function Page({ tour }: Props) {
                                         {/* Duration */}
                                         <div className="grid gap-2">
                                             <Label htmlFor="duration_days">
-                                                Duration in Days
+                                                <FormattedMessage defaultMessage="Duration in Days" />
                                             </Label>
                                             <Input
                                                 id="duration_days"
                                                 type="number"
                                                 name="duration_days"
                                                 required
-                                                placeholder="Duration"
+                                                placeholder={intl.formatMessage(
+                                                    {
+                                                        defaultMessage:
+                                                            'Duration',
+                                                    },
+                                                )}
                                                 //defaultValue={tour.duration_days}
                                                 value={data.duration_days}
                                                 onChange={(e) =>
@@ -1631,7 +1737,7 @@ export default function Page({ tour }: Props) {
                                         {/* Product Commission Category */}
                                         <div className="grid gap-2">
                                             <Label htmlFor="product_commission_category_id">
-                                                Product Commission Category
+                                                <FormattedMessage defaultMessage="Product Commission Category" />
                                             </Label>
 
                                             <SelectProductCommissionCategory
@@ -1659,7 +1765,7 @@ export default function Page({ tour }: Props) {
 
                                         <div className="grid gap-2">
                                             <Label htmlFor="continent_id">
-                                                Continent
+                                                <FormattedMessage defaultMessage="Continent" />
                                             </Label>
                                             <SelectContinent
                                                 name="continent_id"
@@ -1687,7 +1793,7 @@ export default function Page({ tour }: Props) {
 
                                         <div className="grid gap-2">
                                             <Label htmlFor="region_id">
-                                                Region
+                                                <FormattedMessage defaultMessage="Region" />
                                             </Label>
                                             <SelectRegion
                                                 name="region_id"
@@ -1712,7 +1818,7 @@ export default function Page({ tour }: Props) {
 
                                         <div className="grid gap-2">
                                             <Label htmlFor="country_id">
-                                                Country
+                                                <FormattedMessage defaultMessage="Country" />
                                             </Label>
                                             <SelectCountry
                                                 name="country_id"
@@ -1736,13 +1842,18 @@ export default function Page({ tour }: Props) {
                                         {/* Destination */}
                                         <div className="grid gap-2">
                                             <Label htmlFor="destination">
-                                                Destination
+                                                <FormattedMessage defaultMessage="Destination" />
                                             </Label>
                                             <Input
                                                 id="destination"
                                                 type="text"
                                                 name="destination"
-                                                placeholder="Destination"
+                                                placeholder={intl.formatMessage(
+                                                    {
+                                                        defaultMessage:
+                                                            'Destination',
+                                                    },
+                                                )}
                                                 //defaultValue={tour.destination}
                                                 value={data.destination}
                                                 onChange={(e) =>
@@ -1760,7 +1871,7 @@ export default function Page({ tour }: Props) {
                                         {/* Category */}
                                         <div className="grid gap-2">
                                             <Label htmlFor="category_id">
-                                                Product Catalog Category
+                                                <FormattedMessage defaultMessage="Product Catalog Category" />
                                             </Label>
                                             <SelectCategory
                                                 name="category_id"
@@ -1792,19 +1903,18 @@ export default function Page({ tour }: Props) {
                                     {/* HEADER */}
                                     <div className="border-b bg-muted/40 px-6 py-4">
                                         <h2 className="text-lg font-semibold">
-                                            Publishing & Documents
+                                            <FormattedMessage defaultMessage="Publishing & Documents" />
                                         </h2>
 
                                         <p className="text-sm text-muted-foreground">
-                                            Configure itinerary document, status
-                                            and currency
+                                            <FormattedMessage defaultMessage="Configure itinerary document, status and currency" />
                                         </p>
                                     </div>
                                     {/* BODY */}
                                     <div className="space-y-6 p-6">
                                         <div className="grid gap-2">
                                             <Label htmlFor="name">
-                                                Document Itinerary
+                                                <FormattedMessage defaultMessage="Document Itinerary" />
                                             </Label>
 
                                             <TourDocumentPicker
@@ -1831,7 +1941,7 @@ export default function Page({ tour }: Props) {
                                             {/* Status */}
                                             <div className="grid gap-2">
                                                 <Label htmlFor="status">
-                                                    Status
+                                                    <FormattedMessage defaultMessage="Status" />
                                                 </Label>
                                                 <Select
                                                     name="status"
@@ -1842,18 +1952,25 @@ export default function Page({ tour }: Props) {
                                                     }
                                                 >
                                                     <SelectTrigger className="w-full">
-                                                        <SelectValue placeholder="Select status" />
+                                                        <SelectValue
+                                                            placeholder={intl.formatMessage(
+                                                                {
+                                                                    defaultMessage:
+                                                                        'Select status',
+                                                                },
+                                                            )}
+                                                        />
                                                     </SelectTrigger>
                                                     <SelectContent>
                                                         <SelectGroup>
                                                             <SelectLabel>
-                                                                Select status
+                                                                <FormattedMessage defaultMessage="Select status" />
                                                             </SelectLabel>
                                                             <SelectItem value="active">
-                                                                Active
+                                                                <FormattedMessage defaultMessage="Active" />
                                                             </SelectItem>
                                                             <SelectItem value="inactive">
-                                                                Inactive
+                                                                <FormattedMessage defaultMessage="Inactive" />
                                                             </SelectItem>
                                                         </SelectGroup>
                                                     </SelectContent>
@@ -1865,7 +1982,9 @@ export default function Page({ tour }: Props) {
 
                                             {/* CURRENCY */}
                                             <div className="grid gap-2">
-                                                <Label>Currency</Label>
+                                                <Label>
+                                                    <FormattedMessage defaultMessage="Currency" />
+                                                </Label>
 
                                                 <SelectCurrency
                                                     value={data.currency}
@@ -1882,23 +2001,27 @@ export default function Page({ tour }: Props) {
                                 <div className="overflow-hidden rounded-3xl border bg-card shadow-sm">
                                     <div className="border-b bg-muted/40 px-6 py-4">
                                         <h2 className="text-lg font-semibold">
-                                            Pricing
+                                            <FormattedMessage defaultMessage="Pricing" />
                                         </h2>
 
                                         <p className="text-sm text-muted-foreground">
-                                            Configure normal and promotional
-                                            prices
+                                            <FormattedMessage defaultMessage="Configure normal and promotional prices" />
                                         </p>
                                     </div>
                                     <div className="space-y-6 p-6">
                                         <div className="grid gap-2">
                                             <Label htmlFor="showprice">
-                                                Normal Price show on catalog
+                                                <FormattedMessage defaultMessage="Normal Price show on catalog" />
                                             </Label>
                                             <Input
                                                 id="showprice_display"
                                                 type="text"
-                                                placeholder="Normal Price"
+                                                placeholder={intl.formatMessage(
+                                                    {
+                                                        defaultMessage:
+                                                            'Normal Price',
+                                                    },
+                                                )}
                                                 value={displayPrice}
                                                 onChange={(e) =>
                                                     handlePriceChange(
@@ -1919,12 +2042,11 @@ export default function Page({ tour }: Props) {
                                         <div className="rounded-2xl border border-pink-200 bg-gradient-to-br from-pink-50 to-rose-50 p-5 shadow-sm">
                                             <div className="mb-5">
                                                 <h3 className="font-semibold text-pink-700">
-                                                    Promotion Campaign
+                                                    <FormattedMessage defaultMessage="Promotion Campaign" />
                                                 </h3>
 
                                                 <p className="text-sm text-muted-foreground">
-                                                    Highlight special offer on
-                                                    catalog
+                                                    <FormattedMessage defaultMessage="Highlight special offer on catalog" />
                                                 </p>
                                             </div>
 
@@ -1932,14 +2054,18 @@ export default function Page({ tour }: Props) {
                                                 {/* promote title */}
                                                 <div className="grid gap-2">
                                                     <Label htmlFor="promote_title">
-                                                        Title Promotion on
-                                                        Catalog
+                                                        <FormattedMessage defaultMessage="Title Promotion on Catalog" />
                                                     </Label>
                                                     <Input
                                                         id="promote_title"
                                                         type="text"
                                                         name="promote_title"
-                                                        placeholder="Title Promotion"
+                                                        placeholder={intl.formatMessage(
+                                                            {
+                                                                defaultMessage:
+                                                                    'Title Promotion',
+                                                            },
+                                                        )}
                                                         //defaultValue={tour.promote_title}
                                                         value={
                                                             data.promote_title
@@ -1961,13 +2087,17 @@ export default function Page({ tour }: Props) {
                                                 {/* Promote Price */}
                                                 <div className="grid gap-2">
                                                     <Label htmlFor="promote_price">
-                                                        Promotion Price show on
-                                                        catalog
+                                                        <FormattedMessage defaultMessage="Promotion Price show on catalog" />
                                                     </Label>
                                                     <Input
                                                         id="promote_price"
                                                         type="text"
-                                                        placeholder="Promotion Price"
+                                                        placeholder={intl.formatMessage(
+                                                            {
+                                                                defaultMessage:
+                                                                    'Promotion Price',
+                                                            },
+                                                        )}
                                                         value={displayPrice1}
                                                         onChange={(e) =>
                                                             handlePriceChange1(
@@ -1990,14 +2120,18 @@ export default function Page({ tour }: Props) {
                                                 {/* promote note — full width */}
                                                 <div className="grid gap-2 md:col-span-2">
                                                     <Label htmlFor="promote_note">
-                                                        Promotion Note on
-                                                        Catalog
+                                                        <FormattedMessage defaultMessage="Promotion Note on Catalog" />
                                                     </Label>
                                                     <Input
                                                         id="promote_note"
                                                         type="text"
                                                         name="promote_note"
-                                                        placeholder="Promotion Note"
+                                                        placeholder={intl.formatMessage(
+                                                            {
+                                                                defaultMessage:
+                                                                    'Promotion Note',
+                                                            },
+                                                        )}
                                                         //defaultValue={tour.promote_note}
                                                         value={
                                                             data.promote_note
@@ -2023,7 +2157,7 @@ export default function Page({ tour }: Props) {
                             <div className="flex justify-start pt-6 border-t">
                                 <Button type="submit" disabled={processing}>
                                     {processing && <Spinner />}
-                                    Save & Continue
+                                    <FormattedMessage defaultMessage="Save & Continue" />
                                 </Button>
                             </div>
                         </TabsContent>
@@ -2044,7 +2178,7 @@ export default function Page({ tour }: Props) {
                                             type="button"
                                             onClick={addSchedule}
                                         >
-                                            + Add New Schedule
+                                            <FormattedMessage defaultMessage="+ Add New Schedule" />
                                         </Button>
                                     </div>
                                 </div>
@@ -2053,13 +2187,13 @@ export default function Page({ tour }: Props) {
                                     {/* LEFT */}
                                     <div className="flex flex-wrap items-center gap-3">
                                         <span className="text-sm text-muted-foreground">
-                                            Departure Date
+                                            <FormattedMessage defaultMessage="Departure Date" />
                                         </span>
 
                                         {/* FROM */}
                                         <div className="flex items-center gap-2">
                                             <span className="text-xs text-muted-foreground">
-                                                From
+                                                <FormattedMessage defaultMessage="From" />
                                             </span>
 
                                             <input
@@ -2078,7 +2212,7 @@ export default function Page({ tour }: Props) {
                                         {/* TO */}
                                         <div className="flex items-center gap-2">
                                             <span className="text-xs text-muted-foreground">
-                                                To
+                                                <FormattedMessage defaultMessage="To" />
                                             </span>
 
                                             <input
@@ -2111,7 +2245,7 @@ export default function Page({ tour }: Props) {
                                                     setCurrentSchedulePage(1);
                                                 }}
                                             >
-                                                Reset
+                                                <FormattedMessage defaultMessage="Reset" />
                                             </Button>
                                         )}
                                     </div>
@@ -2132,20 +2266,20 @@ export default function Page({ tour }: Props) {
                                                     className="p-3 text-left"
                                                     rowSpan={2}
                                                 >
-                                                    Departure
+                                                    <FormattedMessage defaultMessage="Departure" />
                                                 </th>
                                                 <th
                                                     className="p-3 text-left"
                                                     rowSpan={2}
                                                 >
-                                                    Return
+                                                    <FormattedMessage defaultMessage="Return" />
                                                 </th>
 
                                                 <th
                                                     className="p-3 text-center"
                                                     colSpan={4}
                                                 >
-                                                    Prices
+                                                    <FormattedMessage defaultMessage="Prices" />
                                                 </th>
 
                                                 <th
@@ -2249,25 +2383,25 @@ export default function Page({ tour }: Props) {
                                                                             <div className="flex w-full items-center justify-between pr-4">
                                                                                 <div className="flex items-center gap-2">
                                                                                     <span className="font-medium">
-                                                                                        Categories
-                                                                                        &
-                                                                                        Pricing
+                                                                                        <FormattedMessage defaultMessage="Categories & Pricing" />
                                                                                     </span>
 
                                                                                     <Badge variant="secondary">
-                                                                                        {item
-                                                                                            .prices
-                                                                                            ?.length ??
-                                                                                            0}{' '}
-                                                                                        item
+                                                                                        <FormattedMessage
+                                                                                            defaultMessage="{count} item"
+                                                                                            values={{
+                                                                                                count:
+                                                                                                    item
+                                                                                                        .prices
+                                                                                                        ?.length ??
+                                                                                                    0,
+                                                                                            }}
+                                                                                        />
                                                                                     </Badge>
                                                                                 </div>
 
                                                                                 <span className="text-xs text-muted-foreground">
-                                                                                    Click
-                                                                                    to
-                                                                                    manage
-                                                                                    categories
+                                                                                    <FormattedMessage defaultMessage="Click to manage categories" />
                                                                                 </span>
                                                                             </div>
                                                                         </AccordionTrigger>
@@ -2290,13 +2424,13 @@ export default function Page({ tour }: Props) {
                                                                                 }}
                                                                             >
                                                                                 <div>
-                                                                                    Category
+                                                                                    <FormattedMessage defaultMessage="Category" />
                                                                                 </div>
                                                                                 <div>
-                                                                                    Price
+                                                                                    <FormattedMessage defaultMessage="Price" />
                                                                                 </div>
                                                                                 <div>
-                                                                                    Promotion
+                                                                                    <FormattedMessage defaultMessage="Promotion" />
                                                                                 </div>
                                                                                 <div></div>
                                                                             </div>
@@ -2341,8 +2475,12 @@ export default function Page({ tour }: Props) {
                                                                                                     }
                                                                                                 >
                                                                                                     <option value="">
-                                                                                                        Select
-                                                                                                        Category
+                                                                                                        {intl.formatMessage(
+                                                                                                            {
+                                                                                                                defaultMessage:
+                                                                                                                    'Select Category',
+                                                                                                            },
+                                                                                                        )}
                                                                                                     </option>
 
                                                                                                     {(
@@ -2410,7 +2548,12 @@ export default function Page({ tour }: Props) {
                                                                                                     value={
                                                                                                         room.price
                                                                                                     }
-                                                                                                    placeholder="Price"
+                                                                                                    placeholder={intl.formatMessage(
+                                                                                                        {
+                                                                                                            defaultMessage:
+                                                                                                                'Price',
+                                                                                                        },
+                                                                                                    )}
                                                                                                     onChange={(
                                                                                                         val,
                                                                                                     ) =>
@@ -2446,7 +2589,12 @@ export default function Page({ tour }: Props) {
                                                                                                                           .value
                                                                                                                     : ''
                                                                                                             }
-                                                                                                            placeholder="Promotion"
+                                                                                                            placeholder={intl.formatMessage(
+                                                                                                                {
+                                                                                                                    defaultMessage:
+                                                                                                                        'Promotion',
+                                                                                                                },
+                                                                                                            )}
                                                                                                             onChange={(
                                                                                                                 e,
                                                                                                             ) => {
@@ -2505,7 +2653,12 @@ export default function Page({ tour }: Props) {
                                                                                                                           .value
                                                                                                                     : ''
                                                                                                             }
-                                                                                                            placeholder="Promotion Value"
+                                                                                                            placeholder={intl.formatMessage(
+                                                                                                                {
+                                                                                                                    defaultMessage:
+                                                                                                                        'Promotion Value',
+                                                                                                                },
+                                                                                                            )}
                                                                                                             onChange={(
                                                                                                                 val,
                                                                                                             ) => {
@@ -2543,9 +2696,7 @@ export default function Page({ tour }: Props) {
                                                                                                         )
                                                                                                     }
                                                                                                 >
-                                                                                                    x
-                                                                                                    Delete
-                                                                                                    Category
+                                                                                                    <FormattedMessage defaultMessage="Delete Category" />
                                                                                                 </Button>
                                                                                             </div>
                                                                                         </div>
@@ -2579,9 +2730,7 @@ export default function Page({ tour }: Props) {
                                                                                             .length
                                                                                     }
                                                                                 >
-                                                                                    +
-                                                                                    Add
-                                                                                    Category
+                                                                                    <FormattedMessage defaultMessage="+ Add Category" />
                                                                                 </Button>
                                                                             </div>
                                                                         </AccordionContent>
@@ -2634,8 +2783,7 @@ export default function Page({ tour }: Props) {
                                                                             }
                                                                         >
                                                                             <Save className="mr-2 h-4 w-4" />
-                                                                            Save
-                                                                            Schedule
+                                                                            <FormattedMessage defaultMessage="Save Schedule" />
                                                                         </DropdownMenuItem>
 
                                                                         {/* COPY */}
@@ -2652,8 +2800,7 @@ export default function Page({ tour }: Props) {
                                                                             }}
                                                                         >
                                                                             <Copy className="mr-2 h-4 w-4" />
-                                                                            Copy
-                                                                            Schedule
+                                                                            <FormattedMessage defaultMessage="Copy Schedule" />
                                                                         </DropdownMenuItem>
 
                                                                         <DropdownMenuSeparator />
@@ -2672,8 +2819,7 @@ export default function Page({ tour }: Props) {
                                                                             }}
                                                                         >
                                                                             <Trash2 className="mr-2 h-4 w-4" />
-                                                                            Delete
-                                                                            Schedule
+                                                                            <FormattedMessage defaultMessage="Delete Schedule" />
                                                                         </DropdownMenuItem>
                                                                     </DropdownMenuContent>
                                                                 </DropdownMenu>
@@ -2707,7 +2853,7 @@ export default function Page({ tour }: Props) {
                                                     )
                                                 }
                                             >
-                                                Previous
+                                                <FormattedMessage defaultMessage="Previous" />
                                             </Button>
 
                                             <Button
@@ -2724,7 +2870,7 @@ export default function Page({ tour }: Props) {
                                                     )
                                                 }
                                             >
-                                                Next
+                                                <FormattedMessage defaultMessage="Next" />
                                             </Button>
                                         </div>
                                     </div>
@@ -2752,7 +2898,12 @@ export default function Page({ tour }: Props) {
                                                     <div>
                                                         <p className="font-medium">
                                                             {item.departure_date ||
-                                                                'New Schedule'}
+                                                                intl.formatMessage(
+                                                                    {
+                                                                        defaultMessage:
+                                                                            'New Schedule',
+                                                                    },
+                                                                )}
                                                         </p>
 
                                                         <p className="text-xs text-muted-foreground">
@@ -2791,8 +2942,7 @@ export default function Page({ tour }: Props) {
                                                                     }
                                                                 >
                                                                     <Save className="mr-2 h-4 w-4" />
-                                                                    Save
-                                                                    Schedule
+                                                                    <FormattedMessage defaultMessage="Save Schedule" />
                                                                 </DropdownMenuItem>
 
                                                                 {/* COPY */}
@@ -2805,8 +2955,7 @@ export default function Page({ tour }: Props) {
                                                                     }
                                                                 >
                                                                     <Copy className="mr-2 h-4 w-4" />
-                                                                    Copy
-                                                                    Schedule
+                                                                    <FormattedMessage defaultMessage="Copy Schedule" />
                                                                 </DropdownMenuItem>
 
                                                                 <DropdownMenuSeparator />
@@ -2821,8 +2970,7 @@ export default function Page({ tour }: Props) {
                                                                     }
                                                                 >
                                                                     <Trash2 className="mr-2 h-4 w-4" />
-                                                                    Delete
-                                                                    Schedule
+                                                                    <FormattedMessage defaultMessage="Delete Schedule" />
                                                                 </DropdownMenuItem>
                                                             </DropdownMenuContent>
                                                         </DropdownMenu>
@@ -2833,7 +2981,7 @@ export default function Page({ tour }: Props) {
                                                 <div className="grid gap-3 sm:grid-cols-2">
                                                     <div>
                                                         <p className="text-xs text-muted-foreground">
-                                                            Departure
+                                                            <FormattedMessage defaultMessage="Departure" />
                                                         </p>
                                                         <Input
                                                             type="date"
@@ -2853,7 +3001,7 @@ export default function Page({ tour }: Props) {
 
                                                     <div>
                                                         <p className="text-xs text-muted-foreground">
-                                                            Return
+                                                            <FormattedMessage defaultMessage="Return" />
                                                         </p>
                                                         <Input
                                                             type="date"
@@ -2887,7 +3035,7 @@ export default function Page({ tour }: Props) {
                                                     >
                                                         <AccordionTrigger>
                                                             <div className="flex items-center gap-2">
-                                                                Categories
+                                                                <FormattedMessage defaultMessage="Categories" />
                                                                 <Badge variant="secondary">
                                                                     {item.prices
                                                                         ?.length ??
@@ -2915,10 +3063,14 @@ export default function Page({ tour }: Props) {
                                                                             {/* ROOM HEADER */}
                                                                             <div className="flex justify-between items-center">
                                                                                 <p className="text-xs font-medium text-muted-foreground">
-                                                                                    Room
-                                                                                    #
-                                                                                    {rIndex +
-                                                                                        1}
+                                                                                    <FormattedMessage
+                                                                                        defaultMessage="Room #{number}"
+                                                                                        values={{
+                                                                                            number:
+                                                                                                rIndex +
+                                                                                                1,
+                                                                                        }}
+                                                                                    />
                                                                                 </p>
 
                                                                                 <Button
@@ -2933,16 +3085,14 @@ export default function Page({ tour }: Props) {
                                                                                         )
                                                                                     }
                                                                                 >
-                                                                                    x
-                                                                                    Delete
-                                                                                    Category
+                                                                                    <FormattedMessage defaultMessage="Delete Category" />
                                                                                 </Button>
                                                                             </div>
 
                                                                             {/* ROOM TYPE */}
                                                                             <div className="space-y-1">
                                                                                 <p className="text-xs text-muted-foreground">
-                                                                                    Category
+                                                                                    <FormattedMessage defaultMessage="Category" />
                                                                                 </p>
 
                                                                                 <select
@@ -2967,8 +3117,12 @@ export default function Page({ tour }: Props) {
                                                                                     }
                                                                                 >
                                                                                     <option value="">
-                                                                                        Select
-                                                                                        Category
+                                                                                        {intl.formatMessage(
+                                                                                            {
+                                                                                                defaultMessage:
+                                                                                                    'Select Category',
+                                                                                            },
+                                                                                        )}
                                                                                     </option>
 
                                                                                     {(
@@ -3027,13 +3181,18 @@ export default function Page({ tour }: Props) {
                                                                             {/* PRICE */}
                                                                             <div>
                                                                                 <p className="text-xs text-muted-foreground">
-                                                                                    Price
+                                                                                    <FormattedMessage defaultMessage="Price" />
                                                                                 </p>
                                                                                 <MoneyInput
                                                                                     value={
                                                                                         room.price
                                                                                     }
-                                                                                    placeholder="Price"
+                                                                                    placeholder={intl.formatMessage(
+                                                                                        {
+                                                                                            defaultMessage:
+                                                                                                'Price',
+                                                                                        },
+                                                                                    )}
                                                                                     onChange={(
                                                                                         val,
                                                                                     ) =>
@@ -3050,7 +3209,7 @@ export default function Page({ tour }: Props) {
                                                                             {/* PROMOTION */}
                                                                             <div className="space-y-1">
                                                                                 <p className="text-xs text-muted-foreground">
-                                                                                    Promotion
+                                                                                    <FormattedMessage defaultMessage="Promotion" />
                                                                                 </p>
 
                                                                                 <div className="grid gap-2 sm:grid-cols-2">
@@ -3067,7 +3226,12 @@ export default function Page({ tour }: Props) {
                                                                                                           .value
                                                                                                     : ''
                                                                                             }
-                                                                                            placeholder="0"
+                                                                                            placeholder={intl.formatMessage(
+                                                                                                {
+                                                                                                    defaultMessage:
+                                                                                                        '0',
+                                                                                                },
+                                                                                            )}
                                                                                             className="pr-8"
                                                                                             onChange={(
                                                                                                 val,
@@ -3106,7 +3270,12 @@ export default function Page({ tour }: Props) {
                                                                                                       .value
                                                                                                 : ''
                                                                                         }
-                                                                                        placeholder="Value"
+                                                                                        placeholder={intl.formatMessage(
+                                                                                            {
+                                                                                                defaultMessage:
+                                                                                                    'Value',
+                                                                                            },
+                                                                                        )}
                                                                                         onChange={(
                                                                                             val,
                                                                                         ) => {
@@ -3149,7 +3318,7 @@ export default function Page({ tour }: Props) {
                                                                                                           .value
                                                                                                     : ''
                                                                                             }
-                                                                                            placeholder="0"
+                                                                                            placeholder={intl.formatMessage({ defaultMessage: "0" })}
                                                                                             className="pr-8"
                                                                                             onChange={(
                                                                                                 val,
@@ -3188,7 +3357,7 @@ export default function Page({ tour }: Props) {
                                                                                                       .value
                                                                                                 : ''
                                                                                         }
-                                                                                        placeholder="Value"
+                                                                                        placeholder={intl.formatMessage({ defaultMessage: "Value" })}
                                                                                         onChange={(
                                                                                             val,
                                                                                         ) => {
@@ -3242,8 +3411,7 @@ export default function Page({ tour }: Props) {
                                                                         ).length
                                                                     }
                                                                 >
-                                                                    + Add
-                                                                    Category
+                                                                    <FormattedMessage defaultMessage="+ Add Category" />
                                                                 </Button>
                                                             </div>
                                                         </AccordionContent>
@@ -3264,8 +3432,14 @@ export default function Page({ tour }: Props) {
     "
                                     >
                                         <div className="text-sm text-muted-foreground">
-                                            Page {currentSchedulePage} of{' '}
-                                            {totalSchedulePages}
+                                            <FormattedMessage
+                                                defaultMessage="Page {current} of {total}"
+                                                values={{
+                                                    current:
+                                                        currentSchedulePage,
+                                                    total: totalSchedulePages,
+                                                }}
+                                            />
                                         </div>
 
                                         <div className="flex w-full gap-2 sm:w-auto">
@@ -3283,7 +3457,7 @@ export default function Page({ tour }: Props) {
                                                     )
                                                 }
                                             >
-                                                Previous
+                                                <FormattedMessage defaultMessage="Previous" />
                                             </Button>
 
                                             <Button
@@ -3301,7 +3475,7 @@ export default function Page({ tour }: Props) {
                                                     )
                                                 }
                                             >
-                                                Next
+                                                <FormattedMessage defaultMessage="Next" />
                                             </Button>
                                         </div>
                                     </div>
@@ -3320,13 +3494,13 @@ export default function Page({ tour }: Props) {
                                     {/* LEFT */}
                                     <div className="flex flex-wrap items-center gap-3">
                                         <span className="text-sm text-muted-foreground">
-                                            Departure Date
+                                            <FormattedMessage defaultMessage="Departure Date" />
                                         </span>
 
                                         {/* FROM */}
                                         <div className="flex items-center gap-2">
                                             <span className="text-xs text-muted-foreground">
-                                                From
+                                                <FormattedMessage defaultMessage="From" />
                                             </span>
 
                                             <input
@@ -3345,7 +3519,7 @@ export default function Page({ tour }: Props) {
                                         {/* TO */}
                                         <div className="flex items-center gap-2">
                                             <span className="text-xs text-muted-foreground">
-                                                To
+                                                <FormattedMessage defaultMessage="To" />
                                             </span>
 
                                             <input
@@ -3374,14 +3548,14 @@ export default function Page({ tour }: Props) {
                                                     setCurrentPage(1);
                                                 }}
                                             >
-                                                Reset Date
+                                                <FormattedMessage defaultMessage="Reset Date" />
                                             </Button>
                                         )}
                                     </div>
 
                                     {/* RIGHT */}
                                     <div className="rounded-lg border bg-muted/40 px-3 py-2 text-sm font-medium">
-                                        Quantity: pax
+                                        <FormattedMessage defaultMessage="Quantity: pax" />
                                     </div>
                                 </div>
 
@@ -3409,10 +3583,10 @@ export default function Page({ tour }: Props) {
                                         <thead className="sticky top-0 z-30 bg-muted">
                                             <tr>
                                                 <th className="sticky left-0 z-40 bg-muted border-b p-3 text-left font-semibold">
-                                                    Departure → Return
+                                                    <FormattedMessage defaultMessage="Departure → Return" />
                                                 </th>
                                                 <th className="border-b p-2 text-right font-semibold">
-                                                    Max Pax
+                                                    <FormattedMessage defaultMessage="Max Pax" />
                                                 </th>
                                                 <th className="border-b p-2 text-right font-semibold">
                                                     <Tooltip>
@@ -3425,7 +3599,7 @@ export default function Page({ tour }: Props) {
                                                         </TooltipTrigger>
 
                                                         <TooltipContent>
-                                                            Manual Reserved
+                                                            <FormattedMessage defaultMessage="Manual Reserved" />
                                                         </TooltipContent>
                                                     </Tooltip>
                                                 </th>
@@ -3440,7 +3614,7 @@ export default function Page({ tour }: Props) {
                                                         </TooltipTrigger>
 
                                                         <TooltipContent>
-                                                            Waiting Payment
+                                                            <FormattedMessage defaultMessage="Waiting Payment" />
                                                         </TooltipContent>
                                                     </Tooltip>
                                                 </th>
@@ -3455,8 +3629,7 @@ export default function Page({ tour }: Props) {
                                                         </TooltipTrigger>
 
                                                         <TooltipContent>
-                                                            Waiting Payment
-                                                            Approval
+                                                            <FormattedMessage defaultMessage="Waiting Payment Approval" />
                                                         </TooltipContent>
                                                     </Tooltip>
                                                 </th>
@@ -3471,7 +3644,7 @@ export default function Page({ tour }: Props) {
                                                         </TooltipTrigger>
 
                                                         <TooltipContent>
-                                                            Down Payment
+                                                            <FormattedMessage defaultMessage="Down Payment" />
                                                         </TooltipContent>
                                                     </Tooltip>
                                                 </th>
@@ -3486,7 +3659,7 @@ export default function Page({ tour }: Props) {
                                                         </TooltipTrigger>
 
                                                         <TooltipContent>
-                                                            Full Payment
+                                                            <FormattedMessage defaultMessage="Full Payment" />
                                                         </TooltipContent>
                                                     </Tooltip>
                                                 </th>
@@ -3501,7 +3674,7 @@ export default function Page({ tour }: Props) {
                                                         </TooltipTrigger>
 
                                                         <TooltipContent>
-                                                            Booking Reserved
+                                                            <FormattedMessage defaultMessage="Booking Reserved" />
                                                         </TooltipContent>
                                                     </Tooltip>
                                                 </th>
@@ -3516,7 +3689,7 @@ export default function Page({ tour }: Props) {
                                                         </TooltipTrigger>
 
                                                         <TooltipContent>
-                                                            Cancel
+                                                            <FormattedMessage defaultMessage="Cancel" />
                                                         </TooltipContent>
                                                     </Tooltip>
                                                 </th>
@@ -3531,7 +3704,7 @@ export default function Page({ tour }: Props) {
                                                         </TooltipTrigger>
 
                                                         <TooltipContent>
-                                                            Refund
+                                                            <FormattedMessage defaultMessage="Refund" />
                                                         </TooltipContent>
                                                     </Tooltip>
                                                 </th>
@@ -3546,7 +3719,7 @@ export default function Page({ tour }: Props) {
                                                         </TooltipTrigger>
 
                                                         <TooltipContent>
-                                                            Expired
+                                                            <FormattedMessage defaultMessage="Expired" />
                                                         </TooltipContent>
                                                     </Tooltip>
                                                 </th>
@@ -3561,12 +3734,12 @@ export default function Page({ tour }: Props) {
                                                         </TooltipTrigger>
 
                                                         <TooltipContent>
-                                                            Waiting List
+                                                            <FormattedMessage defaultMessage="Waiting List" />
                                                         </TooltipContent>
                                                     </Tooltip>
                                                 </th>
                                                 <th className="border-b p-2 text-right font-semibold">
-                                                    Available
+                                                    <FormattedMessage defaultMessage="Available" />
                                                 </th>
                                                 <th className="sticky right-0 z-40 bg-muted border-b p-2 text-right font-semibold"></th>
                                             </tr>
@@ -3807,13 +3980,23 @@ export default function Page({ tour }: Props) {
                                                                                                 onSuccess:
                                                                                                     () => {
                                                                                                         toast.success(
-                                                                                                            'Availability saved',
+                                                                                                            intl.formatMessage(
+                                                                                                                {
+                                                                                                                    defaultMessage:
+                                                                                                                        'Availability saved',
+                                                                                                                },
+                                                                                                            ),
                                                                                                         );
                                                                                                     },
                                                                                                 onError:
                                                                                                     () => {
                                                                                                         toast.error(
-                                                                                                            'Failed to save availability',
+                                                                                                            intl.formatMessage(
+                                                                                                                {
+                                                                                                                    defaultMessage:
+                                                                                                                        'Failed to save availability',
+                                                                                                                },
+                                                                                                            ),
                                                                                                         );
                                                                                                     },
                                                                                                 onFinish:
@@ -3836,8 +4019,7 @@ export default function Page({ tour }: Props) {
                                                                                 ) : (
                                                                                     <Save className="mr-2 h-4 w-4" />
                                                                                 )}
-                                                                                Save
-                                                                                Availability
+                                                                                <FormattedMessage defaultMessage="Save Availability" />
                                                                             </DropdownMenuItem>
                                                                         </DropdownMenuContent>
                                                                     </DropdownMenu>
@@ -3865,7 +4047,7 @@ export default function Page({ tour }: Props) {
                                                     setCurrentPage((p) => p - 1)
                                                 }
                                             >
-                                                Previous
+                                                <FormattedMessage defaultMessage="Previous" />
                                             </Button>
 
                                             <Button
@@ -3879,7 +4061,7 @@ export default function Page({ tour }: Props) {
                                                     setCurrentPage((p) => p + 1)
                                                 }
                                             >
-                                                Next
+                                                <FormattedMessage defaultMessage="Next" />
                                             </Button>
                                         </div>
                                     </div>
@@ -3910,7 +4092,12 @@ export default function Page({ tour }: Props) {
                                                                     : 'text-green-600'
                                                             }`}
                                                         >
-                                                            {row.available} pax
+                                                            <FormattedMessage
+                                                                defaultMessage="{count} pax"
+                                                                values={{
+                                                                    count: row.available,
+                                                                }}
+                                                            />
                                                         </div>
                                                     </div>
 
@@ -3961,13 +4148,23 @@ export default function Page({ tour }: Props) {
                                                                                 onSuccess:
                                                                                     () => {
                                                                                         toast.success(
-                                                                                            'Availability saved',
+                                                                                            intl.formatMessage(
+                                                                                                {
+                                                                                                    defaultMessage:
+                                                                                                        'Availability saved',
+                                                                                                },
+                                                                                            ),
                                                                                         );
                                                                                     },
                                                                                 onError:
                                                                                     () => {
                                                                                         toast.error(
-                                                                                            'Failed to save availability',
+                                                                                            intl.formatMessage(
+                                                                                                {
+                                                                                                    defaultMessage:
+                                                                                                        'Failed to save availability',
+                                                                                                },
+                                                                                            ),
                                                                                         );
                                                                                     },
                                                                                 onFinish:
@@ -3990,8 +4187,7 @@ export default function Page({ tour }: Props) {
                                                                 ) : (
                                                                     <Save className="mr-2 h-4 w-4" />
                                                                 )}
-                                                                Save
-                                                                Availability
+                                                                <FormattedMessage defaultMessage="Save Availability" />
                                                             </DropdownMenuItem>
                                                         </DropdownMenuContent>
                                                     </DropdownMenu>
@@ -4002,47 +4198,102 @@ export default function Page({ tour }: Props) {
                                                     {[
                                                         {
                                                             key: 'max_pax',
-                                                            label: 'Max Pax',
+                                                            label: intl.formatMessage(
+                                                                {
+                                                                    defaultMessage:
+                                                                        'Max Pax',
+                                                                },
+                                                            ),
                                                         },
                                                         {
                                                             key: 'RS',
-                                                            label: 'Manual Reserved (RS)',
+                                                            label: intl.formatMessage(
+                                                                {
+                                                                    defaultMessage:
+                                                                        'Manual Reserved (RS)',
+                                                                },
+                                                            ),
                                                         },
                                                         {
                                                             key: 'WP',
-                                                            label: 'Waiting Payment (WP)',
+                                                            label: intl.formatMessage(
+                                                                {
+                                                                    defaultMessage:
+                                                                        'Waiting Payment (WP)',
+                                                                },
+                                                            ),
                                                         },
                                                         {
                                                             key: 'WPA',
-                                                            label: 'Waiting Payment Approval (WA)',
+                                                            label: intl.formatMessage(
+                                                                {
+                                                                    defaultMessage:
+                                                                        'Waiting Payment Approval (WA)',
+                                                                },
+                                                            ),
                                                         },
                                                         {
                                                             key: 'DP',
-                                                            label: 'Down Payment (DP)',
+                                                            label: intl.formatMessage(
+                                                                {
+                                                                    defaultMessage:
+                                                                        'Down Payment (DP)',
+                                                                },
+                                                            ),
                                                         },
                                                         {
                                                             key: 'FP',
-                                                            label: 'Full Payment (FP)',
+                                                            label: intl.formatMessage(
+                                                                {
+                                                                    defaultMessage:
+                                                                        'Full Payment (FP)',
+                                                                },
+                                                            ),
                                                         },
                                                         {
                                                             key: 'BRS',
-                                                            label: 'Booking Reserved (BR)',
+                                                            label: intl.formatMessage(
+                                                                {
+                                                                    defaultMessage:
+                                                                        'Booking Reserved (BR)',
+                                                                },
+                                                            ),
                                                         },
                                                         {
                                                             key: 'CA',
-                                                            label: 'Cancel (CA)',
+                                                            label: intl.formatMessage(
+                                                                {
+                                                                    defaultMessage:
+                                                                        'Cancel (CA)',
+                                                                },
+                                                            ),
                                                         },
                                                         {
                                                             key: 'RF',
-                                                            label: 'Refund (RF)',
+                                                            label: intl.formatMessage(
+                                                                {
+                                                                    defaultMessage:
+                                                                        'Refund (RF)',
+                                                                },
+                                                            ),
                                                         },
                                                         {
                                                             key: 'EX',
-                                                            label: 'Expired (EX)',
+                                                            label: intl.formatMessage(
+                                                                {
+                                                                    defaultMessage:
+                                                                        'Expired (EX)',
+                                                                },
+                                                            ),
                                                         },
                                                         {
                                                             key: 'WL',
-                                                            label: 'Waiting List (WL)',
+                                                            label: intl.formatMessage(
+                                                                {
+                                                                    defaultMessage:
+                                                                        'Waiting List (WL)',
+                                                                },
+                                                            ),
                                                         },
                                                     ].map((field) => (
                                                         <>
@@ -4091,7 +4342,7 @@ export default function Page({ tour }: Props) {
                                                     setCurrentPage((p) => p - 1)
                                                 }
                                             >
-                                                Previous
+                                                <FormattedMessage defaultMessage="Previous" />
                                             </Button>
 
                                             <Button
@@ -4105,7 +4356,7 @@ export default function Page({ tour }: Props) {
                                                     setCurrentPage((p) => p + 1)
                                                 }
                                             >
-                                                Next
+                                                <FormattedMessage defaultMessage="Next" />
                                             </Button>
                                         </div>
                                     </div>
@@ -4126,13 +4377,13 @@ export default function Page({ tour }: Props) {
                                     {/* LEFT */}
                                     <div className="flex flex-wrap items-center gap-2">
                                         <span className="text-sm text-muted-foreground">
-                                            Departure Date
+                                            <FormattedMessage defaultMessage="Departure Date" />
                                         </span>
 
                                         {/* FROM */}
                                         <div className="flex items-center gap-2">
                                             <span className="text-xs text-muted-foreground">
-                                                From
+                                                <FormattedMessage defaultMessage="From" />
                                             </span>
 
                                             <input
@@ -4153,7 +4404,7 @@ export default function Page({ tour }: Props) {
                                         {/* TO */}
                                         <div className="flex items-center gap-2">
                                             <span className="text-xs text-muted-foreground">
-                                                To
+                                                <FormattedMessage defaultMessage="To" />
                                             </span>
 
                                             <input
@@ -4186,7 +4437,7 @@ export default function Page({ tour }: Props) {
                                                     setCurrentAddOnsPage(1);
                                                 }}
                                             >
-                                                Reset Date
+                                                <FormattedMessage defaultMessage="Reset Date" />
                                             </Button>
                                         )}
                                     </div>
@@ -4232,7 +4483,12 @@ export default function Page({ tour }: Props) {
                                                                         {
                                                                             rows.length
                                                                         }{' '}
-                                                                        add ons
+                                                                        <FormattedMessage
+                                                                            defaultMessage="{count} add ons"
+                                                                            values={{
+                                                                                count: rows.length,
+                                                                            }}
+                                                                        />
                                                                     </div>
                                                                 </div>
 
@@ -4265,14 +4521,17 @@ export default function Page({ tour }: Props) {
                                                                                     {/* DESCRIPTION */}
                                                                                     <div className="space-y-2">
                                                                                         <Label className="text-xs uppercase tracking-wide text-muted-foreground">
-                                                                                            Add
-                                                                                            Ons
-                                                                                            Description
+                                                                                            <FormattedMessage defaultMessage="Add Ons Description" />
                                                                                         </Label>
 
                                                                                         <Input
                                                                                             type="text"
-                                                                                            placeholder="Example: Extra baggage, Visa, Single supplement"
+                                                                                            placeholder={intl.formatMessage(
+                                                                                                {
+                                                                                                    defaultMessage:
+                                                                                                        'Example: Extra baggage, Visa, Single supplement',
+                                                                                                },
+                                                                                            )}
                                                                                             value={
                                                                                                 row.description
                                                                                             }
@@ -4294,9 +4553,7 @@ export default function Page({ tour }: Props) {
                                                                                     {/* PRICE */}
                                                                                     <div className="space-y-2">
                                                                                         <Label className="text-xs uppercase tracking-wide text-muted-foreground">
-                                                                                            Price
-                                                                                            Per
-                                                                                            Pax
+                                                                                            <FormattedMessage defaultMessage="Price Per Pax" />
                                                                                         </Label>
 
                                                                                         <MoneyInput
@@ -4322,9 +4579,7 @@ export default function Page({ tour }: Props) {
                                                                                     {/* TAXABLE */}
                                                                                     <div className="space-y-2">
                                                                                         <Label className="text-xs uppercase tracking-wide text-muted-foreground">
-                                                                                            Included
-                                                                                            in
-                                                                                            PPN
+                                                                                            <FormattedMessage defaultMessage="Included in PPN" />
                                                                                         </Label>
 
                                                                                         <div className="flex h-10 items-center rounded-xl border px-3">
@@ -4347,7 +4602,7 @@ export default function Page({ tour }: Props) {
                                                                                                         )
                                                                                                     }
                                                                                                 />
-                                                                                                Taxable
+                                                                                                <FormattedMessage defaultMessage="Taxable" />
                                                                                             </label>
                                                                                         </div>
                                                                                     </div>
@@ -4355,7 +4610,7 @@ export default function Page({ tour }: Props) {
                                                                                     {/* EDITABLE */}
                                                                                     <div className="space-y-2">
                                                                                         <Label className="text-xs uppercase tracking-wide text-muted-foreground">
-                                                                                            Editable
+                                                                                            <FormattedMessage defaultMessage="Editable" />
                                                                                         </Label>
 
                                                                                         <div className="flex h-10 items-center rounded-xl border px-3">
@@ -4378,8 +4633,7 @@ export default function Page({ tour }: Props) {
                                                                                                         )
                                                                                                     }
                                                                                                 />
-                                                                                                Allow
-                                                                                                Edit
+                                                                                                <FormattedMessage defaultMessage="Allow Edit" />
                                                                                             </label>
                                                                                         </div>
                                                                                     </div>
@@ -4429,9 +4683,7 @@ export default function Page({ tour }: Props) {
                                                                                                 ) : (
                                                                                                     <Save className="mr-2 h-4 w-4" />
                                                                                                 )}
-                                                                                                Save
-                                                                                                Add
-                                                                                                Ons
+                                                                                                <FormattedMessage defaultMessage="Save Add Ons" />
                                                                                             </DropdownMenuItem>
 
                                                                                             <DropdownMenuSeparator />
@@ -4447,9 +4699,7 @@ export default function Page({ tour }: Props) {
                                                                                                 }
                                                                                             >
                                                                                                 <Trash2 className="mr-2 h-4 w-4" />
-                                                                                                Delete
-                                                                                                Add
-                                                                                                Ons
+                                                                                                <FormattedMessage defaultMessage="Delete Add Ons" />
                                                                                             </DropdownMenuItem>
                                                                                         </DropdownMenuContent>
                                                                                     </DropdownMenu>
@@ -4469,8 +4719,7 @@ export default function Page({ tour }: Props) {
                                                                         )
                                                                     }
                                                                 >
-                                                                    + Add Add
-                                                                    Ons
+                                                                    <FormattedMessage defaultMessage="+ Add Add Ons" />
                                                                 </Button>
                                                             </div>
                                                         </AccordionContent>
@@ -4498,7 +4747,7 @@ export default function Page({ tour }: Props) {
                                                 )
                                             }
                                         >
-                                            Previous
+                                            <FormattedMessage defaultMessage="Previous" />
                                         </Button>
 
                                         <Button
@@ -4515,7 +4764,7 @@ export default function Page({ tour }: Props) {
                                                 )
                                             }
                                         >
-                                            Next
+                                            <FormattedMessage defaultMessage="Next" />
                                         </Button>
                                     </div>
                                 </div>
@@ -4531,7 +4780,7 @@ export default function Page({ tour }: Props) {
                                 <DialogTitle>
                                     <div className="space-y-2">
                                         <div className="text-lg font-semibold">
-                                            Copy Schedule To New Departure Dates
+                                            <FormattedMessage defaultMessage="Copy Schedule To New Departure Dates" />
                                         </div>
 
                                         <div className="rounded-lg border bg-muted/40 px-3 py-2 text-sm">
@@ -4583,7 +4832,7 @@ export default function Page({ tour }: Props) {
                                 <div className="space-y-2 max-h-40 overflow-auto">
                                     {selectedDates.length === 0 && (
                                         <p className="text-sm text-muted-foreground">
-                                            No date selected
+                                            <FormattedMessage defaultMessage="No date selected" />
                                         </p>
                                     )}
 
@@ -4616,7 +4865,7 @@ export default function Page({ tour }: Props) {
                                                     )
                                                 }
                                             >
-                                                Remove
+                                                <FormattedMessage defaultMessage="Remove" />
                                             </Button>
                                         </div>
                                     ))}
@@ -4629,7 +4878,7 @@ export default function Page({ tour }: Props) {
                                     variant="outline"
                                     onClick={() => setCopyOpen(false)}
                                 >
-                                    Cancel
+                                    <FormattedMessage defaultMessage="Cancel" />
                                 </Button>
 
                                 <Button
@@ -4637,7 +4886,7 @@ export default function Page({ tour }: Props) {
                                     className="bg-blue-600 text-white hover:bg-blue-700"
                                     onClick={submitCopySchedules}
                                 >
-                                    Generate
+                                    <FormattedMessage defaultMessage="Generate" />
                                 </Button>
                             </DialogFooter>
                         </DialogContent>

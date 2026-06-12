@@ -11,6 +11,7 @@ import {
 import usePageProps from '@/hooks/use-page-props';
 import { GlobeIcon } from 'lucide-react';
 import type { DetailedHTMLProps, HTMLAttributes } from 'react';
+import { FormattedMessage } from 'react-intl';
 import type { AnalyticsPageProps } from '..';
 
 type RealtimeTopCountriesProps = DetailedHTMLProps<
@@ -26,9 +27,11 @@ export default function RealtimeTopCountries(props: RealtimeTopCountriesProps) {
             <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                     <GlobeIcon className="h-5 w-5 text-chart-4" />
-                    Top Countries
+                    <FormattedMessage defaultMessage="Top Countries" />
                 </CardTitle>
-                <CardDescription>User location breakdown</CardDescription>
+                <CardDescription>
+                    <FormattedMessage defaultMessage="User location breakdown" />
+                </CardDescription>
             </CardHeader>
             <CardContent>
                 <div className="space-y-4">

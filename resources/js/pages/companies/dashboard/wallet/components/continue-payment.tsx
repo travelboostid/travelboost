@@ -1,6 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { openOnlinePayment } from '@/lib/open-online-payment';
 import { refreshWalletPage } from '@/lib/refresh-wallet-page';
+import { FormattedMessage } from 'react-intl';
 
 type ContinuePaymentProps = {
     payment: {
@@ -15,7 +16,7 @@ type ContinuePaymentProps = {
 
 export default function ContinuePayment({
     payment,
-    children = 'Continue payment',
+    children,
 }: ContinuePaymentProps) {
     const handlePay = () => {
         openOnlinePayment(
@@ -36,7 +37,7 @@ export default function ContinuePayment({
 
     return (
         <Button size="lg" className="h-11 w-full sm:flex-1" onClick={handlePay}>
-            {children}
+            {children ?? <FormattedMessage defaultMessage="Continue payment" />}
         </Button>
     );
 }

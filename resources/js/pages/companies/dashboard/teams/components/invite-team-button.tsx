@@ -25,6 +25,7 @@ import { useForm } from '@inertiajs/react';
 import { PlusIcon, UserPlusIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useState } from 'react';
+import { FormattedMessage, useIntl } from 'react-intl';
 
 export default function InviteTeamButton({
     roles,
@@ -33,6 +34,7 @@ export default function InviteTeamButton({
     roles: any[];
     children?: ReactNode;
 }) {
+    const intl = useIntl();
     const [open, setOpen] = useState(false);
     const { company } = usePageSharedDataProps();
 
@@ -65,12 +67,14 @@ export default function InviteTeamButton({
                         {children || (
                             <Button>
                                 <PlusIcon />
-                                Add Team Member
+                                <FormattedMessage defaultMessage="Add Team Member" />
                             </Button>
                         )}
                     </DialogTrigger>
                 </TooltipTrigger>
-                <TooltipContent>Add team member</TooltipContent>
+                <TooltipContent>
+                    <FormattedMessage defaultMessage="Add team member" />
+                </TooltipContent>
             </Tooltip>
 
             <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-lg">
@@ -81,11 +85,10 @@ export default function InviteTeamButton({
                         </div>
                         <div className="space-y-1">
                             <DialogTitle className="text-lg">
-                                Add Team Member
+                                <FormattedMessage defaultMessage="Add Team Member" />
                             </DialogTitle>
                             <DialogDescription className="text-sm leading-relaxed">
-                                Create a team account that can sign in
-                                immediately after it is added.
+                                <FormattedMessage defaultMessage="Create a team account that can sign in immediately after it is added." />
                             </DialogDescription>
                         </div>
                     </div>
@@ -96,10 +99,14 @@ export default function InviteTeamButton({
                         <FieldGroup>
                             <div className="grid gap-4 md:grid-cols-2">
                                 <Field>
-                                    <Label htmlFor="name">Full Name</Label>
+                                    <Label htmlFor="name">
+                                        <FormattedMessage defaultMessage="Full Name" />
+                                    </Label>
                                     <Input
                                         id="name"
-                                        placeholder="Full name"
+                                        placeholder={intl.formatMessage({
+                                            defaultMessage: 'Full name',
+                                        })}
                                         value={form.data.name}
                                         onChange={(event) =>
                                             form.setData(
@@ -112,10 +119,14 @@ export default function InviteTeamButton({
                                 </Field>
 
                                 <Field>
-                                    <Label htmlFor="username">Username</Label>
+                                    <Label htmlFor="username">
+                                        <FormattedMessage defaultMessage="Username" />
+                                    </Label>
                                     <Input
                                         id="username"
-                                        placeholder="Username"
+                                        placeholder={intl.formatMessage({
+                                            defaultMessage: 'Username',
+                                        })}
                                         value={form.data.username}
                                         onChange={(event) =>
                                             form.setData(
@@ -131,7 +142,9 @@ export default function InviteTeamButton({
                             </div>
 
                             <Field>
-                                <Label htmlFor="email">Email</Label>
+                                <Label htmlFor="email">
+                                    <FormattedMessage defaultMessage="Email" />
+                                </Label>
                                 <Input
                                     id="email"
                                     type="email"
@@ -149,11 +162,15 @@ export default function InviteTeamButton({
 
                             <div className="grid gap-4 md:grid-cols-2">
                                 <Field>
-                                    <Label htmlFor="password">Password</Label>
+                                    <Label htmlFor="password">
+                                        <FormattedMessage defaultMessage="Password" />
+                                    </Label>
                                     <Input
                                         id="password"
                                         type="password"
-                                        placeholder="Password"
+                                        placeholder={intl.formatMessage({
+                                            defaultMessage: 'Password',
+                                        })}
                                         value={form.data.password}
                                         onChange={(event) =>
                                             form.setData(
@@ -169,12 +186,14 @@ export default function InviteTeamButton({
 
                                 <Field>
                                     <Label htmlFor="password_confirmation">
-                                        Confirm Password
+                                        <FormattedMessage defaultMessage="Confirm Password" />
                                     </Label>
                                     <Input
                                         id="password_confirmation"
                                         type="password"
-                                        placeholder="Confirm password"
+                                        placeholder={intl.formatMessage({
+                                            defaultMessage: 'Confirm password',
+                                        })}
                                         value={form.data.password_confirmation}
                                         onChange={(event) =>
                                             form.setData(
@@ -187,7 +206,9 @@ export default function InviteTeamButton({
                             </div>
 
                             <Field>
-                                <Label htmlFor="role">Role</Label>
+                                <Label htmlFor="role">
+                                    <FormattedMessage defaultMessage="Role" />
+                                </Label>
                                 <ToggleGroup
                                     type="single"
                                     variant="outline"
@@ -232,7 +253,7 @@ export default function InviteTeamButton({
                             {form.processing ? (
                                 <Spinner className="mr-2" />
                             ) : null}
-                            Create Account
+                            <FormattedMessage defaultMessage="Create Account" />
                         </Button>
                     </DialogFooter>
                 </form>

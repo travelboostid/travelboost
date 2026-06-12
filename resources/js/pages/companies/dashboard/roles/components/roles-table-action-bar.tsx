@@ -11,6 +11,7 @@ import {
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import type { Table } from '@tanstack/react-table';
 import { DownloadIcon, X } from 'lucide-react';
+import { FormattedMessage } from 'react-intl';
 import type { RoleRow } from '../index';
 import { downloadRolesCsv } from './export-roles-csv';
 
@@ -42,7 +43,9 @@ export default function RolesTableActionBar({
         >
             <ActionBarSelection>
                 <span className="font-medium">{rows.length}</span>
-                <span>selected</span>
+                <span>
+                    <FormattedMessage defaultMessage="selected" />
+                </span>
                 <ActionBarSeparator />
                 <ActionBarClose>
                     <X />
@@ -55,7 +58,7 @@ export default function RolesTableActionBar({
                     onClick={handleExportCsv}
                 >
                     <DownloadIcon />
-                    Export CSV
+                    <FormattedMessage defaultMessage="Export CSV" />
                 </ActionBarItem>
             </ActionBarGroup>
         </ActionBar>

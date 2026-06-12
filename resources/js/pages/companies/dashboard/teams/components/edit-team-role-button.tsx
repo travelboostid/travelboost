@@ -24,9 +24,11 @@ import { useForm } from '@inertiajs/react';
 import { IconUserShield } from '@tabler/icons-react';
 import { PencilIcon } from 'lucide-react';
 import { useState } from 'react';
+import { FormattedMessage, useIntl } from 'react-intl';
 import type { TeamsPageProps } from '..';
 
 export default function EditTeamRoleButton({ team }: { team: any }) {
+    const intl = useIntl();
     const [open, setOpen] = useState(false);
     const { roles, company } = usePageProps<TeamsPageProps>();
 
@@ -56,12 +58,16 @@ export default function EditTeamRoleButton({ team }: { team: any }) {
                             variant="outline"
                             size="icon"
                             className="h-8 w-8 text-destructive"
-                            aria-label="Edit"
+                            aria-label={intl.formatMessage({
+                                defaultMessage: 'Edit',
+                            })}
                         >
                             <IconUserShield className="size-4" />
                         </Button>
                     </TooltipTrigger>
-                    <TooltipContent>Edit Team Role</TooltipContent>
+                    <TooltipContent>
+                        <FormattedMessage defaultMessage="Edit Team Role" />
+                    </TooltipContent>
                 </Tooltip>
             </DialogTrigger>
 
@@ -73,11 +79,10 @@ export default function EditTeamRoleButton({ team }: { team: any }) {
                         </div>
                         <div className="space-y-1">
                             <DialogTitle className="text-lg">
-                                Edit Team Role
+                                <FormattedMessage defaultMessage="Edit Team Role" />
                             </DialogTitle>
                             <DialogDescription className="text-sm leading-relaxed">
-                                Enter the details of the new role you want to
-                                assign. Click save changes when you're done.
+                                <FormattedMessage defaultMessage="Enter the details of the new role you want to assign. Click save changes when you're done." />
                             </DialogDescription>
                         </div>
                     </div>
@@ -87,7 +92,9 @@ export default function EditTeamRoleButton({ team }: { team: any }) {
                     <div className="max-h-[min(60vh,520px)] overflow-y-auto px-6 py-5">
                         <FieldGroup>
                             <Field>
-                                <Label htmlFor="invite_role">Role</Label>
+                                <Label htmlFor="invite_role">
+                                    <FormattedMessage defaultMessage="Role" />
+                                </Label>
                                 <ToggleGroup
                                     type="single"
                                     variant="outline"
@@ -132,7 +139,7 @@ export default function EditTeamRoleButton({ team }: { team: any }) {
                             {form.processing ? (
                                 <Spinner className="mr-2" />
                             ) : null}
-                            Save Changes
+                            <FormattedMessage defaultMessage="Save Changes" />
                         </Button>
                     </DialogFooter>
                 </form>

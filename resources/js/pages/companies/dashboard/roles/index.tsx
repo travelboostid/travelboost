@@ -24,7 +24,7 @@ import { Head } from '@inertiajs/react';
 import type { ColumnDef } from '@tanstack/react-table';
 import { PlusIcon, ShieldIcon, TextIcon } from 'lucide-react';
 import { useMemo } from 'react';
-import { FormattedMessage } from 'react-intl';
+import { FormattedMessage, useIntl } from 'react-intl';
 import AddRoleButton from './components/add-role-button';
 import DeleteRoleButton from './components/delete-role-button';
 import EditRoleButton from './components/edit-role-button';
@@ -86,13 +86,18 @@ function RolePermissions({ role }: { role: RoleRow }) {
                         </Badge>
                     </TooltipTrigger>
                     <TooltipContent>
-                        {perm.description || 'No description provided.'}
+                        {perm.description ?? (
+                            <FormattedMessage defaultMessage="No description provided." />
+                        )}
                     </TooltipContent>
                 </Tooltip>
             ))}
             {remainingPermissionsCount > 0 ? (
                 <Badge variant="outline" className="font-normal">
-                    +{remainingPermissionsCount} more
+                    <FormattedMessage
+                        defaultMessage="+{count} more"
+                        values={{ count: remainingPermissionsCount }}
+                    />
                 </Badge>
             ) : null}
         </div>
@@ -137,6 +142,7 @@ function RoleUsers({ role }: { role: RoleRow }) {
 }
 
 export default function Roles({ data, permissions }: RolesPageProps) {
+    const intl = useIntl();
     const { company, auth } = usePageSharedDataProps();
     const canManageRoles = auth.permissions.includes('role.mutation');
 
@@ -154,14 +160,18 @@ export default function Roles({ data, permissions }: RolesPageProps) {
                         onCheckedChange={(value) =>
                             table.toggleAllPageRowsSelected(!!value)
                         }
-                        aria-label="Select all"
+                        aria-label={intl.formatMessage({
+                            defaultMessage: 'Select all',
+                        })}
                     />
                 ),
                 cell: ({ row }) => (
                     <Checkbox
                         checked={row.getIsSelected()}
                         onCheckedChange={(value) => row.toggleSelected(!!value)}
-                        aria-label="Select row"
+                        aria-label={intl.formatMessage({
+                            defaultMessage: 'Select row',
+                        })}
                     />
                 ),
                 size: 32,
@@ -172,7 +182,12 @@ export default function Roles({ data, permissions }: RolesPageProps) {
                 id: 'display_name',
                 accessorKey: 'display_name',
                 header: ({ column }) => (
-                    <DataTableColumnHeader column={column} label="Role" />
+                    <DataTableColumnHeader
+                        column={column}
+                        label={intl.formatMessage({
+                            defaultMessage: 'Role',
+                        })}
+                    />
                 ),
                 cell: ({ row }) => {
                     const role = row.original;
@@ -192,7 +207,7 @@ export default function Roles({ data, permissions }: RolesPageProps) {
                                         variant="outline"
                                         className="text-xs"
                                     >
-                                        Owner
+                                        <FormattedMessage defaultMessage="Owner" />
                                     </Badge>
                                 ) : null}
                             </div>
@@ -203,8 +218,12 @@ export default function Roles({ data, permissions }: RolesPageProps) {
                     );
                 },
                 meta: {
-                    label: 'Role name',
-                    placeholder: 'Search role name...',
+                    label: intl.formatMessage({
+                        defaultMessage: 'Role name',
+                    }),
+                    placeholder: intl.formatMessage({
+                        defaultMessage: 'Search role name...',
+                    }),
                     variant: 'text',
                     icon: TextIcon,
                 },
@@ -214,7 +233,12 @@ export default function Roles({ data, permissions }: RolesPageProps) {
                 id: 'name',
                 accessorKey: 'name',
                 header: ({ column }) => (
-                    <DataTableColumnHeader column={column} label="Code" />
+                    <DataTableColumnHeader
+                        column={column}
+                        label={intl.formatMessage({
+                            defaultMessage: 'Code',
+                        })}
+                    />
                 ),
                 cell: ({ row }) => (
                     <span className="font-mono text-sm text-muted-foreground">
@@ -228,7 +252,9 @@ export default function Roles({ data, permissions }: RolesPageProps) {
                 header: ({ column }) => (
                     <DataTableColumnHeader
                         column={column}
-                        label="Description"
+                        label={intl.formatMessage({
+                            defaultMessage: 'Description',
+                        })}
                     />
                 ),
                 cell: ({ row }) => (
@@ -249,7 +275,9 @@ export default function Roles({ data, permissions }: RolesPageProps) {
                 header: ({ column }) => (
                     <DataTableColumnHeader
                         column={column}
-                        label="Permissions"
+                        label={intl.formatMessage({
+                            defaultMessage: 'Permissions',
+                        })}
                     />
                 ),
                 cell: ({ row }) => <RolePermissions role={row.original} />,
@@ -259,7 +287,12 @@ export default function Roles({ data, permissions }: RolesPageProps) {
                 id: 'users',
                 accessorFn: (row) => row.users_count,
                 header: ({ column }) => (
-                    <DataTableColumnHeader column={column} label="Users" />
+                    <DataTableColumnHeader
+                        column={column}
+                        label={intl.formatMessage({
+                            defaultMessage: 'Users',
+                        })}
+                    />
                 ),
                 cell: ({ row }) => <RoleUsers role={row.original} />,
                 enableSorting: false,
@@ -270,7 +303,7 @@ export default function Roles({ data, permissions }: RolesPageProps) {
                 enableHiding: false,
                 header: () => (
                     <div className="text-right text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                        Actions
+                        <FormattedMessage defaultMessage="Actions" />
                     </div>
                 ),
                 cell: ({ row }) => {
@@ -290,7 +323,7 @@ export default function Roles({ data, permissions }: RolesPageProps) {
                 },
             },
         ],
-        [canManageRoles, company.id, permissions],
+        [canManageRoles, company.id, intl, permissions],
     );
 
     const { table } = useDataTable({
@@ -310,7 +343,18 @@ export default function Roles({ data, permissions }: RolesPageProps) {
     return (
         <CompanyDashboardLayout
             containerClassName="w-full flex-1 flex flex-col"
-            breadcrumb={[{ title: 'Settings' }, { title: 'Access Roles' }]}
+            breadcrumb={[
+                {
+                    title: intl.formatMessage({
+                        defaultMessage: 'Settings',
+                    }),
+                },
+                {
+                    title: intl.formatMessage({
+                        defaultMessage: 'Access Roles',
+                    }),
+                },
+            ]}
             openMenuIds={['settings']}
             activeMenuIds={['settings.roles']}
             applet={
@@ -324,7 +368,11 @@ export default function Roles({ data, permissions }: RolesPageProps) {
                 ) : undefined
             }
         >
-            <Head title="Access Roles" />
+            <Head
+                title={intl.formatMessage({
+                    defaultMessage: 'Access Roles',
+                })}
+            />
 
             <div className="mx-auto w-full max-w-6xl space-y-6 p-4 pb-20 sm:p-6">
                 <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
