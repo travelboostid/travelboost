@@ -27,9 +27,9 @@ export function Footer() {
                                     PT Erasoft Teknologi Indonessia
                                 </p>
                                 <p className="mt-1 leading-relaxed">
-                                    Jl. Alaydrus No.37, RT.8/RW.2, Petojo
-                                    Utara, Kecamatan Gambir, Kota Jakarta
-                                    Pusat, Daerah Khusus Ibukota Jakarta 10130
+                                    Jl. Alaydrus No.37, RT.8/RW.2, Petojo Utara,
+                                    Kecamatan Gambir, Kota Jakarta Pusat, Daerah
+                                    Khusus Ibukota Jakarta 10130
                                 </p>
                             </div>
                         </div>
@@ -151,8 +151,7 @@ export function Footer() {
                                 </Link>
                             </div>
                             <p className="text-sm text-background/70">
-                                Copyright 2026 TravelBoost. All rights
-                                reserved.
+                                Copyright 2026 TravelBoost. All rights reserved.
                             </p>
                         </div>
 

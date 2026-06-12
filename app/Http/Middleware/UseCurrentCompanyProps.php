@@ -4,10 +4,12 @@ namespace App\Http\Middleware;
 
 use App\Enums\CompanyType;
 use App\Enums\VendorAgentPartnerStatus;
+use App\Models\BookingActionRequest;
 use App\Models\Company;
 use App\Models\VendorAgentPartner;
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -47,9 +49,47 @@ class UseCurrentCompanyProps
                 'isMarketingDisabled' => $isMarketingDisabled,
                 'isExpired' => $isSubscriptionExpired,
             ],
+            'bookingModificationRequestCounts' => fn (): array => $this->bookingModificationRequestCounts($company),
         ]);
 
         return $next($request);
+    }
+
+    /**
+     * @return array{cancellations: int, refunds: int, reschedules: int, restores: int, total: int}
+     */
+    private function bookingModificationRequestCounts(Company $company): array
+    {
+        $emptyCounts = [
+            'cancellations' => 0,
+            'refunds' => 0,
+            'reschedules' => 0,
+            'restores' => 0,
+            'total' => 0,
+        ];
+
+        if ($company->type !== CompanyType::VENDOR) {
+            return $emptyCounts;
+        }
+
+        $countsByAction = BookingActionRequest::query()
+            ->select('target_action', DB::raw('count(*) as aggregate'))
+            ->where('status', 'pending')
+            ->whereHas('booking', fn ($query) => $query->where('vendor_id', $company->id))
+            ->groupBy('target_action')
+            ->pluck('aggregate', 'target_action');
+
+        $counts = [
+            'cancellations' => (int) ($countsByAction['cancel'] ?? 0),
+            'refunds' => (int) ($countsByAction['refund'] ?? 0),
+            'reschedules' => (int) ($countsByAction['reschedule'] ?? 0),
+            'restores' => (int) ($countsByAction['restore'] ?? 0),
+        ];
+
+        return [
+            ...$counts,
+            'total' => array_sum($counts),
+        ];
     }
 
     /**

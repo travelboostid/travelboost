@@ -21,6 +21,7 @@ use App\Models\TourAddOn;
 use App\Models\TourAvailability;
 use App\Models\TourPrice;
 use App\Models\TourSchedule;
+use App\Models\User;
 use App\Notifications\BookingPaymentReviewStatusNotification;
 use App\Services\AgentCommissionResolver;
 use App\Services\BookingDownPaymentRuleService;
@@ -610,9 +611,17 @@ class BookingIndexController extends Controller
         return $this->handleBookingAction($company, $booking, 'refund', $request);
     }
 
-    public function actionRequests(Company $company): Response
+    public function actionRequests(Company $company, Request $request): Response
     {
-        abort_unless(($company->type->value ?? $company->type) === 'vendor', 404);
+        $companyType = $company->type->value ?? $company->type;
+        abort_unless(in_array($companyType, ['agent', 'vendor'], true), 404);
+
+        $allowedActions = ['cancel', 'refund', 'reschedule', 'restore'];
+        $requestedAction = $request->query('action');
+        $activeAction = is_string($requestedAction) && in_array($requestedAction, $allowedActions, true)
+            ? $requestedAction
+            : 'cancel';
+        $search = $request->string('search')->trim()->limit(100, '')->toString();
 
         $requests = BookingActionRequest::query()
             ->with([
@@ -620,51 +629,221 @@ class BookingIndexController extends Controller
                 'booking.tour:id,name,code',
                 'requesterCompany:id,name,username,type',
                 'requesterUser:id,name,email',
+                'reviewerCompany:id,name,username,type',
+                'reviewerUser:id,name,email',
+                'reviewerUser.roles:id,name,display_name',
             ])
-            ->where('status', 'pending')
-            ->whereHas('booking', fn ($query) => $query->where('vendor_id', $company->id))
+            ->when($companyType === 'vendor', fn ($query) => $query->whereHas('booking', fn ($bookingQuery) => $bookingQuery->where('vendor_id', $company->id)))
+            ->when($companyType === 'agent', fn ($query) => $query->where('requester_company_id', $company->id))
+            ->where('target_action', $activeAction)
+            ->when($search !== '', fn (Builder $query) => $this->applyBookingActionRequestSearch($query, $search))
             ->latest()
             ->paginate(15)
-            ->through(fn (BookingActionRequest $request): array => [
-                'id' => $request->id,
-                'target_action' => $request->target_action,
-                'status' => $request->status,
-                'reason' => $request->reason,
-                'created_at' => $request->created_at?->toIso8601String(),
+            ->withQueryString()
+            ->through(fn (BookingActionRequest $actionRequest): array => [
+                'id' => $actionRequest->id,
+                'target_action' => $actionRequest->target_action,
+                'status' => $actionRequest->status,
+                'reason' => $actionRequest->reason,
+                'created_at' => $actionRequest->created_at?->toIso8601String(),
                 'booking' => [
-                    'id' => $request->booking?->id,
-                    'booking_number' => $request->booking?->booking_number,
-                    'contact_name' => $request->booking?->contact_name,
-                    'status' => $this->bookingStatusValue($request->booking),
-                    'grand_total' => $request->booking?->grand_total,
-                    'departure_date' => $request->booking?->departure_date?->toDateString(),
-                    'tour' => $request->booking?->tour
+                    'id' => $actionRequest->booking?->id,
+                    'booking_number' => $actionRequest->booking?->booking_number,
+                    'contact_name' => $actionRequest->booking?->contact_name,
+                    'status' => $this->bookingStatusValue($actionRequest->booking),
+                    'grand_total' => $actionRequest->booking?->grand_total,
+                    'departure_date' => $actionRequest->booking?->departure_date?->toDateString(),
+                    'tour' => $actionRequest->booking?->tour
                         ? [
-                            'id' => $request->booking->tour->id,
-                            'name' => $request->booking->tour->name,
-                            'code' => $request->booking->tour->code,
+                            'id' => $actionRequest->booking->tour->id,
+                            'name' => $actionRequest->booking->tour->name,
+                            'code' => $actionRequest->booking->tour->code,
                         ]
                         : null,
                 ],
-                'requester_company' => $request->requesterCompany
+                'requester_company' => $actionRequest->requesterCompany
                     ? [
-                        'id' => $request->requesterCompany->id,
-                        'name' => $request->requesterCompany->name,
-                        'username' => $request->requesterCompany->username,
+                        'id' => $actionRequest->requesterCompany->id,
+                        'name' => $actionRequest->requesterCompany->name,
+                        'username' => $actionRequest->requesterCompany->username,
                     ]
                     : null,
-                'requester_user' => $request->requesterUser
+                'requester_user' => $actionRequest->requesterUser
                     ? [
-                        'id' => $request->requesterUser->id,
-                        'name' => $request->requesterUser->name,
-                        'email' => $request->requesterUser->email,
+                        'id' => $actionRequest->requesterUser->id,
+                        'name' => $actionRequest->requesterUser->name,
+                        'email' => $actionRequest->requesterUser->email,
                     ]
                     : null,
+                'reviewer' => $this->bookingActionRequestReviewerPayload($actionRequest),
             ]);
 
         return Inertia::render('companies/dashboard/bookings/action-requests', [
             'requests' => $requests,
+            'activeAction' => $activeAction,
+            'search' => $search,
+            'canReviewRequests' => $companyType === 'vendor',
+            'actionRequiredCounts' => $this->bookingModificationActionRequiredCounts($company),
         ]);
+    }
+
+    private function applyBookingActionRequestSearch(Builder $query, string $search): void
+    {
+        $likeSearch = "%{$search}%";
+        $normalizedSearch = '%'.str($search)->lower()->toString().'%';
+
+        $query->where(function (Builder $query) use ($likeSearch, $normalizedSearch): void {
+            $query
+                ->whereRaw($this->textSearchSql('booking_action_requests.id'), [$normalizedSearch])
+                ->orWhereLike('booking_action_requests.target_action', $likeSearch)
+                ->orWhereLike('booking_action_requests.status', $likeSearch)
+                ->orWhereLike('booking_action_requests.reason', $likeSearch)
+                ->orWhereHas('booking', function (Builder $bookingQuery) use ($likeSearch, $normalizedSearch): void {
+                    $bookingQuery
+                        ->whereRaw($this->textSearchSql('bookings.id'), [$normalizedSearch])
+                        ->orWhereLike('bookings.booking_number', $likeSearch)
+                        ->orWhereLike('bookings.contact_name', $likeSearch)
+                        ->orWhereLike('bookings.status', $likeSearch)
+                        ->orWhereRaw($this->textSearchSql('bookings.departure_date'), [$normalizedSearch])
+                        ->orWhereRaw($this->textSearchSql('bookings.grand_total'), [$normalizedSearch])
+                        ->orWhereHas('tour', function (Builder $tourQuery) use ($likeSearch): void {
+                            $tourQuery
+                                ->whereLike('name', $likeSearch)
+                                ->orWhereLike('code', $likeSearch)
+                                ->orWhereLike('destination', $likeSearch);
+                        });
+                })
+                ->orWhereHas('requesterCompany', function (Builder $companyQuery) use ($likeSearch): void {
+                    $companyQuery
+                        ->whereLike('name', $likeSearch)
+                        ->orWhereLike('username', $likeSearch);
+                })
+                ->orWhereHas('requesterUser', function (Builder $userQuery) use ($likeSearch): void {
+                    $userQuery
+                        ->whereLike('name', $likeSearch)
+                        ->orWhereLike('email', $likeSearch);
+                });
+        });
+    }
+
+    private function textSearchSql(string $column): string
+    {
+        $castType = match (DB::connection()->getDriverName()) {
+            'mysql', 'mariadb' => 'CHAR',
+            default => 'TEXT',
+        };
+
+        return "LOWER(CAST({$column} AS {$castType})) LIKE ?";
+    }
+
+    /**
+     * @return array{cancellations: int, refunds: int, reschedules: int, restores: int, total: int}
+     */
+    private function bookingModificationActionRequiredCounts(Company $company): array
+    {
+        $emptyCounts = [
+            'cancellations' => 0,
+            'refunds' => 0,
+            'reschedules' => 0,
+            'restores' => 0,
+            'total' => 0,
+        ];
+
+        if (($company->type->value ?? $company->type) !== 'vendor') {
+            return $emptyCounts;
+        }
+
+        $countsByAction = BookingActionRequest::query()
+            ->select('target_action', DB::raw('count(*) as aggregate'))
+            ->where('status', 'pending')
+            ->whereHas('booking', fn ($query) => $query->where('vendor_id', $company->id))
+            ->groupBy('target_action')
+            ->pluck('aggregate', 'target_action');
+
+        $counts = [
+            'cancellations' => (int) ($countsByAction['cancel'] ?? 0),
+            'refunds' => (int) ($countsByAction['refund'] ?? 0),
+            'reschedules' => (int) ($countsByAction['reschedule'] ?? 0),
+            'restores' => (int) ($countsByAction['restore'] ?? 0),
+        ];
+
+        return [
+            ...$counts,
+            'total' => array_sum($counts),
+        ];
+    }
+
+    /**
+     * @return array{user_name: string, company_name: string|null, role_label: string, action_label: string, reviewed_at: string|null}|null
+     */
+    private function bookingActionRequestReviewerPayload(BookingActionRequest $request): ?array
+    {
+        if (! $request->reviewerUser && ! $request->reviewerCompany) {
+            return null;
+        }
+
+        return [
+            'user_name' => $request->reviewerUser?->name ?? 'System',
+            'company_name' => $request->reviewerCompany?->name,
+            'role_label' => $this->bookingActionRequestReviewerRoleLabel($request->reviewerCompany, $request->reviewerUser),
+            'action_label' => $this->bookingActionRequestReviewerActionLabel($request),
+            'reviewed_at' => $request->reviewed_at?->toIso8601String(),
+        ];
+    }
+
+    private function bookingActionRequestReviewerActionLabel(BookingActionRequest $request): string
+    {
+        if ($request->status === 'rejected') {
+            return 'Rejected by';
+        }
+
+        if ($request->status !== 'approved') {
+            return 'Reviewed by';
+        }
+
+        if ((int) $request->requester_company_id !== (int) $request->reviewer_company_id) {
+            return 'Approved by';
+        }
+
+        return match ($request->target_action) {
+            'cancel' => 'Cancelled by',
+            'refund' => 'Refunded by',
+            'reschedule' => 'Rescheduled by',
+            'restore' => 'Reactivated by',
+            default => 'Approved by',
+        };
+    }
+
+    private function bookingActionRequestReviewerRoleLabel(?Company $company, ?User $user): string
+    {
+        if ($user) {
+            $user->loadMissing('roles');
+
+            $adminRole = $user->roles
+                ->first(fn (Role $role): bool => in_array($role->name, ['admin:superadmin', 'user:admin'], true));
+
+            if ($adminRole) {
+                return $this->companyRoleLabel($adminRole->name);
+            }
+
+            if ($company) {
+                $companyRolePrefix = "company:{$company->id}:";
+                $companyRole = $user->roles
+                    ->first(fn (Role $role): bool => str_starts_with($role->name, $companyRolePrefix));
+
+                if ($companyRole) {
+                    return $this->companyRoleLabel($companyRole->name);
+                }
+            }
+        }
+
+        if ($company) {
+            return str((string) ($company->type->value ?? $company->type))
+                ->title()
+                ->toString();
+        }
+
+        return 'Reviewer';
     }
 
     public function approveActionRequest(Company $company, BookingActionRequest $bookingActionRequest): RedirectResponse
@@ -673,14 +852,13 @@ class BookingIndexController extends Controller
         $this->assertCanReviewBookingActionRequest($company, $bookingActionRequest);
         abort_unless($bookingActionRequest->status === 'pending', 422);
 
-        $this->applyBookingAction($bookingActionRequest->booking, $bookingActionRequest->target_action);
-
-        $bookingActionRequest->update([
-            'status' => 'approved',
-            'reviewer_company_id' => $company->id,
-            'reviewer_user_id' => request()->user()?->id,
-            'reviewed_at' => now(),
-        ]);
+        $this->applyBookingAction(
+            $bookingActionRequest->booking,
+            $bookingActionRequest->target_action,
+            $bookingActionRequest,
+            $company,
+            request()->user()
+        );
 
         return back()->with('success', 'Booking action request approved.');
     }
@@ -727,14 +905,36 @@ class BookingIndexController extends Controller
 
         abort_unless($companyType === 'vendor', 404);
 
-        $this->applyBookingAction($booking, $action);
+        $this->applyBookingAction(
+            $booking,
+            $action,
+            null,
+            $company,
+            $request->user(),
+            [
+                'booking_id' => $booking->id,
+                'requester_company_id' => $company->id,
+                'requester_user_id' => $request->user()->id,
+                'target_action' => $action,
+                'reason' => $request->string('reason')->trim()->toString() ?: null,
+            ]
+        );
 
         return back()->with('success', 'Booking '.($action === 'cancel' ? 'cancelled' : 'refunded').'.');
     }
 
-    private function applyBookingAction(Booking $booking, string $action): void
-    {
-        $lockedBooking = DB::transaction(function () use ($booking, $action): Booking {
+    /**
+     * @param  array{booking_id: int, requester_company_id: int, requester_user_id: int, target_action: string, reason: string|null}|null  $approvedActionRequestAttributes
+     */
+    private function applyBookingAction(
+        Booking $booking,
+        string $action,
+        ?BookingActionRequest $approvedActionRequest = null,
+        ?Company $reviewerCompany = null,
+        ?User $reviewerUser = null,
+        ?array $approvedActionRequestAttributes = null
+    ): void {
+        $lockedBooking = DB::transaction(function () use ($booking, $action, $approvedActionRequest, $reviewerCompany, $reviewerUser, $approvedActionRequestAttributes): Booking {
             $lockedBooking = Booking::query()
                 ->whereKey($booking->id)
                 ->lockForUpdate()
@@ -767,6 +967,27 @@ class BookingIndexController extends Controller
                     ->update(['status' => PaymentStatus::CANCELLED->value]);
 
                 $this->markPendingAgentVendorAttemptsInactive($lockedBooking);
+            }
+
+            $reviewedAt = now();
+
+            if ($approvedActionRequest instanceof BookingActionRequest) {
+                $approvedActionRequest->update([
+                    'status' => 'approved',
+                    'reviewer_company_id' => $reviewerCompany?->id,
+                    'reviewer_user_id' => $reviewerUser?->id,
+                    'reviewed_at' => $reviewedAt,
+                ]);
+            }
+
+            if ($approvedActionRequestAttributes !== null) {
+                BookingActionRequest::query()->create([
+                    ...$approvedActionRequestAttributes,
+                    'status' => 'approved',
+                    'reviewer_company_id' => $reviewerCompany?->id,
+                    'reviewer_user_id' => $reviewerUser?->id,
+                    'reviewed_at' => $reviewedAt,
+                ]);
             }
 
             return $lockedBooking->fresh();
