@@ -36,7 +36,21 @@ Midtrans / PrismaLink / Google
   http://127.0.0.1:8000  ←  php artisan serve
 ```
 
-The team maintains a named Cloudflare Tunnel that routes `tunnel-8000.travelboost.co.id` → your local port **8000**. Only one developer should use this hostname at a time, or webhooks will hit the wrong machine.
+The team maintains a named Cloudflare Tunnel that routes `tunnel-8000.travelboost.co.id` → your local port **8000**.
+
+### Shared tunnel — coordinate with the team
+
+The same tunnel hostname supports **all use cases together** on one machine — Midtrans webhooks, PrismaLink callbacks, Google OAuth, and browsing the app over HTTPS can run at the same time through `tunnel-8000.travelboost.co.id`.
+
+However, **only one teammate can use the tunnel at a time**. The hostname points at whoever is currently running `cloudflared` on their laptop. If two people run it simultaneously, webhooks and redirects may hit the wrong developer's machine.
+
+Before starting the tunnel:
+
+1. **Ask in the team channel** whether someone else is already using it.
+2. **Say when you start and stop** so others know it is free.
+3. **Stop `cloudflared`** when you are done testing so the next person can take over.
+
+If payment webhooks arrive but nothing updates locally, check whether a teammate still has the tunnel running.
 
 ---
 
@@ -164,14 +178,14 @@ Defined in `routes/common.php`:
 
 ## Troubleshooting
 
-| Symptom                               | Likely cause                                         | Fix                                                      |
-| ------------------------------------- | ---------------------------------------------------- | -------------------------------------------------------- |
-| **502** from tunnel URL               | Laravel not running on 8000                          | Start `pnpm dev:min` or `pnpm dev:full`                  |
-| **530** / connection error            | `cloudflared` not running                            | Start the tunnel; verify with `curl -I`                  |
-| Payment stays **pending**             | Webhook URL wrong or tunnel on another dev's machine | Align Midtrans notification URL; coordinate tunnel usage |
-| **404** on webhook                    | Typo in gateway dashboard URL                        | Match paths in the table above exactly                   |
-| Redirect after pay goes to wrong host | Opened app via `localhost` instead of tunnel         | Use `https://tunnel-8000.travelboost.co.id` consistently |
-| PrismaLink **Invalid signature**      | Wrong merchant keys or body altered                  | Use preset sandbox keys; check `PRISMALINK_*` in `.env`  |
+| Symptom                               | Likely cause                                         | Fix                                                                    |
+| ------------------------------------- | ---------------------------------------------------- | ---------------------------------------------------------------------- |
+| **502** from tunnel URL               | Laravel not running on 8000                          | Start `pnpm dev:min` or `pnpm dev:full`                                |
+| **530** / connection error            | `cloudflared` not running                            | Start the tunnel; verify with `curl -I`                                |
+| Payment stays **pending**             | Webhook URL wrong or another teammate has the tunnel | Ask the team who is using it; coordinate before starting `cloudflared` |
+| **404** on webhook                    | Typo in gateway dashboard URL                        | Match paths in the table above exactly                                 |
+| Redirect after pay goes to wrong host | Opened app via `localhost` instead of tunnel         | Use `https://tunnel-8000.travelboost.co.id` consistently               |
+| PrismaLink **Invalid signature**      | Wrong merchant keys or body altered                  | Use preset sandbox keys; check `PRISMALINK_*` in `.env`                |
 
 ---
 
