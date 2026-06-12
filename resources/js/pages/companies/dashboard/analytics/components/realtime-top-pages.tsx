@@ -1,18 +1,11 @@
-'use client';
-
-import { Badge } from '@/components/ui/badge';
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from '@/components/ui/card';
 import usePageProps from '@/hooks/use-page-props';
 import { TrendingUpIcon } from 'lucide-react';
 import type { DetailedHTMLProps, HTMLAttributes } from 'react';
 import { FormattedMessage } from 'react-intl';
 import type { AnalyticsPageProps } from '..';
+import { AnalyticsPanel } from './analytics-panel';
+import { AnalyticsRankedList, formatPageName } from './analytics-ranked-list';
+import { toBreakdownItems } from './analytics-utils';
 
 type RealtimeTopPagesProps = DetailedHTMLProps<
     HTMLAttributes<HTMLDivElement>,
@@ -21,38 +14,23 @@ type RealtimeTopPagesProps = DetailedHTMLProps<
 
 export default function RealtimeTopPages(props: RealtimeTopPagesProps) {
     const { realtimeInsights } = usePageProps<AnalyticsPageProps>();
+    const items = toBreakdownItems(realtimeInsights?.pages, 'value');
 
     return (
-        <Card {...props}>
-            <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                    <TrendingUpIcon className="h-5 w-5 text-chart-2" />
-                    <FormattedMessage defaultMessage="Top Pages" />
-                </CardTitle>
-                <CardDescription>
-                    <FormattedMessage defaultMessage="Most viewed pages" />
-                </CardDescription>
-            </CardHeader>
-            <CardContent>
-                <div className="space-y-4">
-                    {realtimeInsights.pages.map((page: any) => (
-                        <div
-                            key={page.name}
-                            className="flex items-center justify-between"
-                        >
-                            <div className="flex-1">
-                                <p className="font-medium text-foreground">
-                                    {page.name}
-                                </p>
-                                <p className="text-sm text-muted-foreground">
-                                    <FormattedMessage defaultMessage="Page views" />
-                                </p>
-                            </div>
-                            <Badge variant="secondary">{page.value}</Badge>
-                        </div>
-                    ))}
-                </div>
-            </CardContent>
-        </Card>
+        <AnalyticsPanel
+            {...props}
+            icon={TrendingUpIcon}
+            iconClassName="text-emerald-600 dark:text-emerald-400"
+            title={<FormattedMessage defaultMessage="Top pages" />}
+            description={
+                <FormattedMessage defaultMessage="Most viewed pages right now" />
+            }
+        >
+            <AnalyticsRankedList
+                items={items}
+                formatName={formatPageName}
+                valueLabel={<FormattedMessage defaultMessage="Page views" />}
+            />
+        </AnalyticsPanel>
     );
 }

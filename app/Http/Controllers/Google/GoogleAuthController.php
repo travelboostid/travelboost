@@ -4,12 +4,16 @@ namespace App\Http\Controllers\Google;
 
 use App\Http\Controllers\Controller;
 use App\Models\Company;
-use App\Models\CompanyGoogleAccount;
+use App\Services\GoogleAnalyticsService;
 use Illuminate\Http\Request;
-use Laravel\Socialite\Socialite;
+use Laravel\Socialite\Facades\Socialite;
 
 class GoogleAuthController extends Controller
 {
+    public function __construct(
+        private GoogleAnalyticsService $analyticsService
+    ) {}
+
     public function callback(Request $request)
     {
         $googleUser = Socialite::driver('google')
@@ -20,7 +24,6 @@ class GoogleAuthController extends Controller
 
         $intent = $state['intent'] ?? null;
 
-        // TODO: match more intent
         return match ($intent) {
             'connect-analytics' => $this->continueToConnectAnalytics($state, $googleUser),
 
@@ -32,19 +35,7 @@ class GoogleAuthController extends Controller
     {
         $company = Company::findOrFail($state['company_id']);
 
-        CompanyGoogleAccount::updateOrCreate(
-            [
-                'company_id' => $company->id,
-            ],
-            [
-                'google_id' => $googleUser->id,
-                'email' => $googleUser->email,
-                'name' => $googleUser->name,
-                'access_token' => $googleUser->token,
-                'refresh_token' => $googleUser->refreshToken,
-                'scopes' => $googleUser->approvedScopes,
-            ]
-        );
+        $this->analyticsService->upsertGoogleAccount($company, $googleUser);
 
         return redirect()
             ->route('companies.dashboard.analytics.index', [
