@@ -73,13 +73,34 @@ class SyncAvailabilityAction
                         ->where('tour_id', $tourId);
                 })
                 ->orderBy('id')
-                ->firstOrFail();
+                ->first();
+
+            if (! $schedule) {
+                logger()->warning('SyncAvailabilityAction: missing schedule row for direct availability sync', [
+                    'tour_id' => $tourId,
+                    'departure_date' => $departureDate,
+                    'company_id' => $companyId,
+                ]);
+
+                return;
+            }
 
             $availability = TourAvailability::where([
                 'company_id' => $companyId,
                 'tour_id' => $tourId,
                 'schedule_id' => $schedule->id,
-            ])->lockForUpdate()->firstOrFail();
+            ])->lockForUpdate()->first();
+
+            if (! $availability) {
+                logger()->warning('SyncAvailabilityAction: missing availability row for direct availability sync', [
+                    'tour_id' => $tourId,
+                    'departure_date' => $departureDate,
+                    'company_id' => $companyId,
+                    'schedule_id' => $schedule->id,
+                ]);
+
+                return;
+            }
 
             $this->syncAvailabilitySnapshot($availability, $tourId, $departureDate, $companyId);
         });
