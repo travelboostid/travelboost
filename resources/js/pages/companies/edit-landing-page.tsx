@@ -1,4 +1,4 @@
-import { useCompanyUpdateSettings } from '@/api/company/company';
+import { useUpdateCompanySettings } from '@/api/company/company';
 import type { Data } from '@puckeditor/core';
 import { Puck } from '@puckeditor/core';
 import '@puckeditor/core/puck.css';
@@ -22,7 +22,7 @@ export default function PageDesigner({ company }: Props) {
         const rawData = JSON.parse(company.settings.landing_page_data);
         return ensureAboutUsBlock(rawData);
     });
-    const updater = useCompanyUpdateSettings();
+    const updater = useUpdateCompanySettings();
 
     const handlePublish = (data: Data<BasePuckProps, any>) => {
         updater.mutate(
