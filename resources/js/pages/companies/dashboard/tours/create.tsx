@@ -21,7 +21,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { Textarea } from '@/components/ui/textarea';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { router, useForm, usePage } from '@inertiajs/react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { FormattedMessage, useIntl } from 'react-intl';
 import SelectCategory from './components/select-category';
 import SelectContinent from './components/select-continent';
@@ -40,6 +40,8 @@ import {
 } from '@/components/ui/tooltip';
 import { InfoIcon } from 'lucide-react';
 import SelectProductCommissionCategory from './components/select-product-commission-category';
+import SelectVisaCategory from './components/select-visa-category';
+import VisaCategoryPreview from './components/visa-category-preview';
 
 ///////////tab 2
 type RoomPrice = {
@@ -71,7 +73,27 @@ type ProductCommissionCategory = {
     id: number;
     name: string;
 };
+
+type VisaCategory = {
+    id: number;
+    name: string;
+    items: Array<{
+        id: number;
+        description: string;
+        price: number | string;
+        is_taxable: boolean;
+    }>;
+};
 /////////////
+
+function RequiredLabel({ children }: { children: React.ReactNode }) {
+    return (
+        <Label className="flex items-center gap-1.5">
+            <span>{children}</span>
+            <span className="text-rose-500">*</span>
+        </Label>
+    );
+}
 
 export default function Page() {
     const intl = useIntl();
@@ -138,6 +160,7 @@ export default function Page() {
         country_id: '',
         category_id: '',
         product_commission_category_id: '',
+        visa_category_id: '',
         status: 'inactive',
         image_id: '',
         document_id: '',
@@ -145,10 +168,26 @@ export default function Page() {
         currency: 'IDR',
     });
 
-    const { priceCategories, productCommissionCategories } = usePage<{
-        priceCategories: PriceCategory[];
-        productCommissionCategories: ProductCommissionCategory[];
-    }>().props;
+    const { priceCategories, productCommissionCategories, visaCategories } =
+        usePage<{
+            priceCategories: PriceCategory[];
+            productCommissionCategories: ProductCommissionCategory[];
+            visaCategories: VisaCategory[];
+        }>().props;
+
+    const selectedVisaCategory = useMemo(() => {
+        const selectedId = Number(data.visa_category_id || 0);
+
+        if (!selectedId) {
+            return null;
+        }
+
+        return (
+            visaCategories?.find(
+                (category: VisaCategory) => category.id === selectedId,
+            ) ?? null
+        );
+    }, [data.visa_category_id, visaCategories]);
 
     const [schedules, setSchedules] = useState<Schedule[]>([]);
 
@@ -389,38 +428,19 @@ export default function Page() {
                         <TabsContent value="tour" className="space-y-6">
                             {/* <div className="grid gap-6"> changed for show in 2 column */}
                             <div className="mx-auto max-w-7xl space-y-6">
-                                {/* Image */}
-                                {/* <div className="grid gap-2"> */}
-                                <div className="overflow-hidden rounded-3xl border bg-card shadow-sm">
-                                    <div className="border-b bg-muted/40 px-6 py-4">
-                                        <h2 className="text-lg font-semibold">
-                                            <FormattedMessage defaultMessage="Tour Cover" />
-                                        </h2>
-
-                                        <p className="text-sm text-muted-foreground">
-                                            <FormattedMessage defaultMessage="Upload attractive image for your catalog" />
-                                        </p>
-                                    </div>
-                                    <div className="flex flex-col items-center p-6">
-                                        <TourImagePicker
-                                            owner={{
-                                                id: company.id,
-                                                type: 'company',
-                                            }}
-                                            onChange={(media) => {
-                                                const mediaId =
-                                                    typeof media === 'object' &&
-                                                    media
-                                                        ? (
-                                                              media as MediaResource
-                                                          ).id
-                                                        : null;
-
-                                                setData('image_id', mediaId);
-                                            }}
-                                        />
-                                        <InputError message={errors.media_id} />
-                                    </div>
+                                <div className="rounded-3xl border border-slate-200 bg-gradient-to-br from-white via-pink-50/40 to-white p-6 shadow-sm dark:border-slate-800 dark:from-slate-950 dark:via-slate-950 dark:to-slate-900">
+                                    <p className="text-sm font-medium uppercase tracking-[0.22em] text-primary">
+                                        Product Setup
+                                    </p>
+                                    <h1 className="mt-2 text-3xl font-semibold text-slate-950 dark:text-slate-100">
+                                        {data.name.trim() || 'Product Tour'}
+                                    </h1>
+                                    <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
+                                        Configure the master information, travel
+                                        classification, publishing assets, and
+                                        pricing details before managing
+                                        schedules.
+                                    </p>
                                 </div>
 
                                 {/* Code */}
@@ -444,12 +464,11 @@ export default function Page() {
                                             </span>
                                         </div>
                                     </div>
-                                    {/* BODY */}
-                                    <div className="grid grid-cols-1 gap-5 p-6 md:grid-cols-2">
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="code">
+                                    <div className="grid grid-cols-1 gap-5 p-6 lg:grid-cols-12">
+                                        <div className="grid gap-2 lg:col-span-3">
+                                            <RequiredLabel>
                                                 <FormattedMessage defaultMessage="Code" />
-                                            </Label>
+                                            </RequiredLabel>
                                             <Input
                                                 id="code"
                                                 type="text"
@@ -471,11 +490,10 @@ export default function Page() {
                                             />
                                             <InputError message={errors.code} />
                                         </div>
-                                        {/* Name */}
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="name">
+                                        <div className="grid gap-2 lg:col-span-6">
+                                            <RequiredLabel>
                                                 <FormattedMessage defaultMessage="Name" />
-                                            </Label>
+                                            </RequiredLabel>
                                             <Input
                                                 id="name"
                                                 type="text"
@@ -497,28 +515,95 @@ export default function Page() {
                                             />
                                             <InputError message={errors.name} />
                                         </div>
+                                        <div className="grid gap-2 lg:col-span-3">
+                                            <RequiredLabel>
+                                                Status
+                                            </RequiredLabel>
+                                            <Select
+                                                value={data.status}
+                                                onValueChange={(value) =>
+                                                    setData('status', value)
+                                                }
+                                            >
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Select status" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectGroup>
+                                                        <SelectLabel>
+                                                            Status
+                                                        </SelectLabel>
+                                                        <SelectItem value="inactive">
+                                                            Inactive
+                                                        </SelectItem>
+                                                        <SelectItem value="active">
+                                                            Active
+                                                        </SelectItem>
+                                                    </SelectGroup>
+                                                </SelectContent>
+                                            </Select>
+                                            <InputError
+                                                message={errors.status}
+                                            />
+                                        </div>
 
-                                        {/* Description */}
-                                        <div className="grid gap-2 md:col-span-2">
-                                            {/* <div className="grid gap-2 md:col-span-2"> */}
-                                            <Label htmlFor="description">
-                                                <FormattedMessage defaultMessage="Description" />
-                                            </Label>
-                                            {/*<Textarea
-                      id="description"
-                      name="description"
-                      placeholder="Tour description"
-                    /> */}
+                                        <div className="grid gap-5 lg:col-span-12 lg:grid-cols-[minmax(180px,0.8fr)_minmax(0,1.4fr)]">
+                                            <div className="grid gap-2">
+                                                <RequiredLabel>
+                                                    Duration
+                                                </RequiredLabel>
+                                                <Input
+                                                    id="duration_days"
+                                                    type="number"
+                                                    name="duration_days"
+                                                    required
+                                                    placeholder="Duration in days"
+                                                    value={data.duration_days}
+                                                    onChange={(e) =>
+                                                        setData(
+                                                            'duration_days',
+                                                            e.target.value,
+                                                        )
+                                                    }
+                                                />
+                                                <InputError
+                                                    message={
+                                                        errors.duration_days
+                                                    }
+                                                />
+                                            </div>
+                                            <div className="grid gap-2">
+                                                <RequiredLabel>
+                                                    Destination
+                                                </RequiredLabel>
+                                                <Input
+                                                    id="destination"
+                                                    type="text"
+                                                    name="destination"
+                                                    placeholder="Destination"
+                                                    value={data.destination}
+                                                    onChange={(e) =>
+                                                        setData(
+                                                            'destination',
+                                                            e.target.value,
+                                                        )
+                                                    }
+                                                />
+                                                <InputError
+                                                    message={errors.destination}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="grid gap-2 lg:col-span-12">
+                                            <RequiredLabel>
+                                                Description
+                                            </RequiredLabel>
                                             <Textarea
                                                 id="description"
                                                 name="description"
-                                                placeholder={intl.formatMessage(
-                                                    {
-                                                        defaultMessage:
-                                                            'Tour description',
-                                                    },
-                                                )}
-                                                className="min-h-[65px] resize-none"
+                                                placeholder="Describe the tour highlights, experience, and important notes"
+                                                className="min-h-[140px] resize-none"
                                                 onInput={(e) => {
                                                     const el = e.currentTarget;
                                                     el.style.height = 'auto';
@@ -538,86 +623,10 @@ export default function Page() {
                                             />
                                         </div>
 
-                                        {/* Duration */}
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="duration_days">
-                                                <FormattedMessage defaultMessage="Duration in Days" />
-                                            </Label>
-                                            <Input
-                                                id="duration_days"
-                                                type="number"
-                                                name="duration_days"
-                                                required
-                                                placeholder={intl.formatMessage(
-                                                    {
-                                                        defaultMessage:
-                                                            'Duration',
-                                                    },
-                                                )}
-                                                value={data.duration_days}
-                                                onChange={(e) =>
-                                                    setData(
-                                                        'duration_days',
-                                                        e.target.value,
-                                                    )
-                                                }
-                                            />
-                                            <InputError
-                                                message={errors.duration_days}
-                                            />
-                                        </div>
-
-                                        {/* Product Commission Category */}
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="product_commission_category_id">
-                                                <FormattedMessage defaultMessage="Product Commission Category" />
-                                            </Label>
-
-                                            <SelectProductCommissionCategory
-                                                value={
-                                                    data.product_commission_category_id ||
-                                                    undefined
-                                                }
-                                                categories={
-                                                    productCommissionCategories
-                                                }
-                                                onChange={(val) =>
-                                                    setData(
-                                                        'product_commission_category_id',
-                                                        Number(val),
-                                                    )
-                                                }
-                                            />
-
-                                            <InputError
-                                                message={
-                                                    errors.product_commission_category_id
-                                                }
-                                            />
-                                        </div>
-
-                                        {/* Continent */}
-                                        {/* <div className="grid gap-2">
-                    <Label htmlFor="continent">Continent</Label>
-                    <Input
-                      id="continent"
-                      type="text"
-                      name="continent"
-                      placeholder="Continent"
-                    />
-                    <InputError message={errors.continent} />
-                  </div> */}
-                                        {/* Category */}
-                                        {/* <div className="grid gap-2">
-                    <Label htmlFor="continent_id">Continent</Label>
-                    <SelectContinent name="continent_id" />
-
-                    <InputError message={errors.continent_id} />
-                  </div> */}
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="continent_id">
+                                        <div className="grid gap-2 lg:col-span-4">
+                                            <RequiredLabel>
                                                 <FormattedMessage defaultMessage="Continent" />
-                                            </Label>
+                                            </RequiredLabel>
                                             <SelectContinent
                                                 name="continent_id"
                                                 value={continentId ?? undefined}
@@ -628,8 +637,8 @@ export default function Page() {
                                                     setRegionId(null);
                                                     setCountryId(null);
 
-                                                    setData('continent_id', id); // ✅ WAJIB
-                                                    setData('region_id', ''); // reset
+                                                    setData('continent_id', id);
+                                                    setData('region_id', '');
                                                     setData('country_id', '');
                                                 }}
                                             />
@@ -638,10 +647,10 @@ export default function Page() {
                                             />
                                         </div>
 
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="region_id">
+                                        <div className="grid gap-2 lg:col-span-4">
+                                            <RequiredLabel>
                                                 <FormattedMessage defaultMessage="Region" />
-                                            </Label>
+                                            </RequiredLabel>
                                             <SelectRegion
                                                 name="region_id"
                                                 continentId={continentId}
@@ -652,8 +661,8 @@ export default function Page() {
                                                     setRegionId(id);
                                                     setCountryId(null);
 
-                                                    setData('region_id', id); // ✅
-                                                    setData('country_id', ''); // reset
+                                                    setData('region_id', id);
+                                                    setData('country_id', '');
                                                 }}
                                             />
                                             <InputError
@@ -661,10 +670,10 @@ export default function Page() {
                                             />
                                         </div>
 
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="country_id">
+                                        <div className="grid gap-2 lg:col-span-4">
+                                            <RequiredLabel>
                                                 <FormattedMessage defaultMessage="Country" />
-                                            </Label>
+                                            </RequiredLabel>
                                             <SelectCountry
                                                 name="country_id"
                                                 continentId={continentId}
@@ -674,69 +683,115 @@ export default function Page() {
                                                     const id = Number(val);
 
                                                     setCountryId(id);
-                                                    setData('country_id', id); // ✅
+                                                    setData('country_id', id);
                                                 }}
                                             />
                                             <InputError
                                                 message={errors.country_id}
                                             />
                                         </div>
-
-                                        {/* Destination */}
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="destination">
-                                                <FormattedMessage defaultMessage="Destination" />
-                                            </Label>
-                                            <Input
-                                                id="destination"
-                                                type="text"
-                                                name="destination"
-                                                placeholder={intl.formatMessage(
-                                                    {
-                                                        defaultMessage:
-                                                            'Destination',
-                                                    },
-                                                )}
-                                                value={data.destination}
-                                                onChange={(e) =>
-                                                    setData(
-                                                        'destination',
-                                                        e.target.value,
-                                                    )
-                                                }
-                                            />
-                                            <InputError
-                                                message={errors.destination}
-                                            />
-                                        </div>
-
-                                        {/* Category */}
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="category_id">
-                                                <FormattedMessage defaultMessage="Product Catalog Category" />
-                                            </Label>
-                                            <SelectCategory
-                                                name="category_id"
-                                                value={
-                                                    data.category_id ||
-                                                    undefined
-                                                }
-                                                onChange={(val) =>
-                                                    setData(
-                                                        'category_id',
-                                                        Number(val),
-                                                    )
-                                                }
-                                            />
-
-                                            <InputError
-                                                message={errors.category_id}
-                                            />
-                                        </div>
                                     </div>
                                 </div>
 
-                                {/* Document */}
+                                <div className="rounded-3xl border bg-card shadow-sm overflow-hidden">
+                                    <div className="border-b bg-muted/40 px-6 py-4">
+                                        <h2 className="text-lg font-semibold">
+                                            Catalog, Commission & Travel Access
+                                        </h2>
+                                        <p className="text-sm text-muted-foreground">
+                                            Link this product to the right
+                                            catalog grouping, commission
+                                            structure, and visa setup.
+                                        </p>
+                                    </div>
+                                    <div className="space-y-6 p-6">
+                                        <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
+                                            <div className="grid gap-2">
+                                                <Label htmlFor="category_id">
+                                                    Product Catalog Category
+                                                </Label>
+                                                <SelectCategory
+                                                    name="category_id"
+                                                    value={
+                                                        data.category_id ||
+                                                        undefined
+                                                    }
+                                                    onChange={(val) =>
+                                                        setData(
+                                                            'category_id',
+                                                            Number(val),
+                                                        )
+                                                    }
+                                                />
+
+                                                <InputError
+                                                    message={errors.category_id}
+                                                />
+                                            </div>
+
+                                            <div className="grid gap-2">
+                                                <Label htmlFor="product_commission_category_id">
+                                                    Product Commission Category
+                                                </Label>
+
+                                                <SelectProductCommissionCategory
+                                                    value={
+                                                        data.product_commission_category_id ||
+                                                        undefined
+                                                    }
+                                                    categories={
+                                                        productCommissionCategories
+                                                    }
+                                                    onChange={(val) =>
+                                                        setData(
+                                                            'product_commission_category_id',
+                                                            Number(val),
+                                                        )
+                                                    }
+                                                />
+
+                                                <InputError
+                                                    message={
+                                                        errors.product_commission_category_id
+                                                    }
+                                                />
+                                            </div>
+
+                                            <div className="grid gap-2">
+                                                <RequiredLabel>
+                                                    Visa Category
+                                                </RequiredLabel>
+
+                                                <SelectVisaCategory
+                                                    value={
+                                                        data.visa_category_id ||
+                                                        undefined
+                                                    }
+                                                    categories={visaCategories}
+                                                    onChange={(val) =>
+                                                        setData(
+                                                            'visa_category_id',
+                                                            val === '0'
+                                                                ? ''
+                                                                : Number(val),
+                                                        )
+                                                    }
+                                                />
+
+                                                <InputError
+                                                    message={
+                                                        errors.visa_category_id
+                                                    }
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <VisaCategoryPreview
+                                            category={selectedVisaCategory}
+                                        />
+                                    </div>
+                                </div>
+
                                 <div className="overflow-hidden rounded-3xl border bg-card shadow-sm">
                                     {/* <div className="grid gap-2 md:col-span-2"> */}
                                     {/* HEADER */}
@@ -746,96 +801,79 @@ export default function Page() {
                                         </h2>
 
                                         <p className="text-sm text-muted-foreground">
-                                            <FormattedMessage defaultMessage="Configure itinerary document, status and currency" />
+                                            <FormattedMessage defaultMessage="Upload the itinerary file and product visual in a compact, easy-to-review layout." />
                                         </p>
                                     </div>
-                                    {/* BODY */}
-                                    <div className="space-y-6 p-6">
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="name">
-                                                <FormattedMessage defaultMessage="Document Itinerary" />
-                                            </Label>
-                                            <TourDocumentPicker
-                                                owner={{
-                                                    id: company.id,
-                                                    type: 'company',
-                                                }}
-                                                onChange={(media) => {
-                                                    const mediaId =
-                                                        typeof media ===
-                                                            'object' && media
-                                                            ? media.id
-                                                            : null;
+                                    <div className="grid gap-6 p-6 xl:grid-cols-[minmax(0,0.9fr)_minmax(320px,1.1fr)]">
+                                        <div className="space-y-4">
+                                            <div className="grid gap-2">
+                                                <Label htmlFor="name">
+                                                    <FormattedMessage defaultMessage="PDF Itinerary" />
+                                                </Label>
+                                                <div className="max-w-sm">
+                                                    <TourDocumentPicker
+                                                        owner={{
+                                                            id: company.id,
+                                                            type: 'company',
+                                                        }}
+                                                        onChange={(media) => {
+                                                            const mediaId =
+                                                                typeof media ===
+                                                                    'object' &&
+                                                                media
+                                                                    ? media.id
+                                                                    : null;
 
-                                                    setData(
-                                                        'document_id',
-                                                        mediaId,
-                                                    );
-                                                }}
-                                            />
-                                            <InputError
-                                                message={errors.document_id}
-                                            />
+                                                            setData(
+                                                                'document_id',
+                                                                mediaId,
+                                                            );
+                                                        }}
+                                                    />
+                                                </div>
+                                                <InputError
+                                                    message={errors.document_id}
+                                                />
+                                            </div>
                                         </div>
 
-                                        {/* Status */}
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            {/* STATUS */}
-                                            <div className="grid gap-2">
-                                                <Label htmlFor="status">
-                                                    <FormattedMessage defaultMessage="Status at Catalog" />
-                                                </Label>
+                                        <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 dark:border-slate-800 dark:bg-slate-900/40">
+                                            <div className="mb-3">
+                                                <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                                                    Cover Image Preview
+                                                </h3>
+                                                <p className="text-xs text-muted-foreground">
+                                                    Keep the image clear and
+                                                    representative for catalog
+                                                    browsing.
+                                                </p>
+                                            </div>
+                                            <div className="flex justify-center">
+                                                <TourImagePicker
+                                                    owner={{
+                                                        id: company.id,
+                                                        type: 'company',
+                                                    }}
+                                                    onChange={(media) => {
+                                                        const mediaId =
+                                                            typeof media ===
+                                                                'object' &&
+                                                            media
+                                                                ? (
+                                                                      media as MediaResource
+                                                                  ).id
+                                                                : null;
 
-                                                <Select
-                                                    name="status"
-                                                    value={data.status}
-                                                    onValueChange={(val) =>
-                                                        setData('status', val)
-                                                    }
-                                                >
-                                                    <SelectTrigger className="w-full">
-                                                        <SelectValue
-                                                            placeholder={intl.formatMessage(
-                                                                {
-                                                                    defaultMessage:
-                                                                        'Select status',
-                                                                },
-                                                            )}
-                                                        />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectGroup>
-                                                            <SelectLabel>
-                                                                <FormattedMessage defaultMessage="Select status" />
-                                                            </SelectLabel>
-                                                            <SelectItem value="active">
-                                                                <FormattedMessage defaultMessage="Active" />
-                                                            </SelectItem>
-                                                            <SelectItem value="inactive">
-                                                                <FormattedMessage defaultMessage="Inactive" />
-                                                            </SelectItem>
-                                                        </SelectGroup>
-                                                    </SelectContent>
-                                                </Select>
-
-                                                <InputError
-                                                    message={errors.status}
+                                                        setData(
+                                                            'image_id',
+                                                            mediaId,
+                                                        );
+                                                    }}
                                                 />
                                             </div>
-
-                                            {/* CURRENCY */}
-                                            <div className="grid gap-2">
-                                                <Label>
-                                                    <FormattedMessage defaultMessage="Currency" />
-                                                </Label>
-
-                                                <SelectCurrency
-                                                    value={data.currency}
-                                                    onChange={(val) =>
-                                                        setData('currency', val)
-                                                    }
-                                                />
-                                            </div>
+                                            <InputError
+                                                message={errors.media_id}
+                                            />
                                         </div>
                                     </div>
                                 </div>
@@ -852,36 +890,54 @@ export default function Page() {
                                         </p>
                                     </div>
                                     <div className="space-y-6 p-6">
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="showprice">
-                                                <FormattedMessage defaultMessage="Normal Price show on catalog" />
-                                            </Label>
-                                            <Input
-                                                id="showprice_display"
-                                                type="text"
-                                                placeholder={intl.formatMessage(
-                                                    {
-                                                        defaultMessage:
-                                                            'Normal Price',
-                                                    },
-                                                )}
-                                                value={displayPrice}
-                                                onChange={(e) =>
-                                                    handlePriceChange(
-                                                        e.target.value,
-                                                    )
-                                                }
-                                            />
-                                            {/* hidden raw value */}
-                                            <input
-                                                type="hidden"
-                                                name="showprice"
-                                                value={rawPrice}
-                                            />
+                                        <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+                                            <div className="grid gap-2">
+                                                <RequiredLabel>
+                                                    <FormattedMessage defaultMessage="Normal Price show on catalog" />
+                                                </RequiredLabel>
+                                                <Input
+                                                    id="showprice_display"
+                                                    type="text"
+                                                    placeholder={intl.formatMessage(
+                                                        {
+                                                            defaultMessage:
+                                                                'Normal Price',
+                                                        },
+                                                    )}
+                                                    value={displayPrice}
+                                                    onChange={(e) =>
+                                                        handlePriceChange(
+                                                            e.target.value,
+                                                        )
+                                                    }
+                                                />
+                                                {/* hidden raw value */}
+                                                <input
+                                                    type="hidden"
+                                                    name="showprice"
+                                                    value={rawPrice}
+                                                />
 
-                                            <InputError
-                                                message={errors.showprice}
-                                            />
+                                                <InputError
+                                                    message={errors.showprice}
+                                                />
+                                            </div>
+
+                                            <div className="grid gap-2">
+                                                <RequiredLabel>
+                                                    Currency
+                                                </RequiredLabel>
+
+                                                <SelectCurrency
+                                                    value={data.currency}
+                                                    onChange={(val) =>
+                                                        setData('currency', val)
+                                                    }
+                                                />
+                                                <InputError
+                                                    message={errors.currency}
+                                                />
+                                            </div>
                                         </div>
 
                                         <div className="rounded-2xl border border-pink-200 bg-gradient-to-br from-pink-50 to-rose-50 p-5 shadow-sm">

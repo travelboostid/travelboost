@@ -67,7 +67,7 @@ return new class extends Migration
         $vendors = DB::table('companies')->where('type', 'vendor')->get(['id']);
 
         foreach ($vendors as $vendor) {
-            $tierRows = collect(['Whole Seller', 'Seller Besar', 'Seller Umum'])
+            $tierRows = collect(['Wholesaler', 'Seller Besar', 'Seller Umum'])
                 ->map(function (string $name, int $index) use ($vendor, $now): array {
                     return [
                         'company_id' => $vendor->id,

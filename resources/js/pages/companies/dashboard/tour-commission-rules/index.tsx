@@ -900,7 +900,7 @@ function CategoryDepartureDialog({
                         <div className="grid gap-4 md:grid-cols-2">
                             <div className="grid gap-2">
                                 <Label>
-                                    <FormattedMessage defaultMessage="Agent Tier" />
+                                    <FormattedMessage defaultMessage="Agent Category" />
                                 </Label>
                                 <Select
                                     value={String(selectedTierId)}

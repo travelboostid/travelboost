@@ -2,77 +2,94 @@
 
 namespace Database\Seeders\Common;
 
+use App\Models\Continent;
 use App\Models\Country;
+use App\Models\Region;
 use Illuminate\Database\Seeder;
 
 class CountrySeeder extends Seeder
 {
     public function run(): void
     {
-
         $countries = [
+            // Southeast Asia
+            ['name' => 'Myanmar', 'continent' => 'Asia', 'region' => 'Southeast Asia'],
+            ['name' => 'Thailand', 'continent' => 'Asia', 'region' => 'Southeast Asia'],
+            ['name' => 'Laos', 'continent' => 'Asia', 'region' => 'Southeast Asia'],
+            ['name' => 'Cambodia', 'continent' => 'Asia', 'region' => 'Southeast Asia'],
+            ['name' => 'Vietnam', 'continent' => 'Asia', 'region' => 'Southeast Asia'],
+            ['name' => 'Malaysia', 'continent' => 'Asia', 'region' => 'Southeast Asia'],
+            ['name' => 'Indonesia', 'continent' => 'Asia', 'region' => 'Southeast Asia'],
+            ['name' => 'Philippines', 'continent' => 'Asia', 'region' => 'Southeast Asia'],
+            ['name' => 'Singapore', 'continent' => 'Asia', 'region' => 'Southeast Asia'],
+            ['name' => 'Brunei', 'continent' => 'Asia', 'region' => 'Southeast Asia'],
+            ['name' => 'Timor-Leste', 'continent' => 'Asia', 'region' => 'Southeast Asia'],
 
-            // 🌏 Southeast Asia (continent_id = 1, region_id = 2)
-            ['name' => 'Myanmar', 'continent_id' => 1, 'region_id' => 2],
-            ['name' => 'Thailand', 'continent_id' => 1, 'region_id' => 2],
-            ['name' => 'Laos', 'continent_id' => 1, 'region_id' => 2],
-            ['name' => 'Cambodia', 'continent_id' => 1, 'region_id' => 2],
-            ['name' => 'Vietnam', 'continent_id' => 1, 'region_id' => 2],
-            ['name' => 'Malaysia', 'continent_id' => 1, 'region_id' => 2],
-            ['name' => 'Indonesia', 'continent_id' => 1, 'region_id' => 2],
-            ['name' => 'Philippines', 'continent_id' => 1, 'region_id' => 2],
-            ['name' => 'Singapore', 'continent_id' => 1, 'region_id' => 2],
-            ['name' => 'Brunei', 'continent_id' => 1, 'region_id' => 2],
-            ['name' => 'Timor-Leste', 'continent_id' => 1, 'region_id' => 2],
+            // East Asia
+            ['name' => 'China', 'continent' => 'Asia', 'region' => 'East Asia'],
+            ['name' => 'Japan', 'continent' => 'Asia', 'region' => 'East Asia'],
+            ['name' => 'Mongolia', 'continent' => 'Asia', 'region' => 'East Asia'],
+            ['name' => 'North Korea', 'continent' => 'Asia', 'region' => 'East Asia'],
+            ['name' => 'South Korea', 'continent' => 'Asia', 'region' => 'East Asia'],
+            ['name' => 'Taiwan', 'continent' => 'Asia', 'region' => 'East Asia'],
 
-            // 🌏 East Asia (continent_id = 1, region_id = 1)
-            ['name' => 'China', 'continent_id' => 1, 'region_id' => 1],
-            ['name' => 'Japan', 'continent_id' => 1, 'region_id' => 1],
-            ['name' => 'Mongolia', 'continent_id' => 1, 'region_id' => 1],
-            ['name' => 'North Korea', 'continent_id' => 1, 'region_id' => 1],
-            ['name' => 'South Korea', 'continent_id' => 1, 'region_id' => 1],
-            ['name' => 'Taiwan', 'continent_id' => 1, 'region_id' => 1],
+            // South Asia
+            ['name' => 'Afghanistan', 'continent' => 'Asia', 'region' => 'South Asia'],
+            ['name' => 'Bangladesh', 'continent' => 'Asia', 'region' => 'South Asia'],
+            ['name' => 'Bhutan', 'continent' => 'Asia', 'region' => 'South Asia'],
+            ['name' => 'India', 'continent' => 'Asia', 'region' => 'South Asia'],
+            ['name' => 'Maldives', 'continent' => 'Asia', 'region' => 'South Asia'],
+            ['name' => 'Nepal', 'continent' => 'Asia', 'region' => 'South Asia'],
+            ['name' => 'Pakistan', 'continent' => 'Asia', 'region' => 'South Asia'],
+            ['name' => 'Sri Lanka', 'continent' => 'Asia', 'region' => 'South Asia'],
 
-            // 🌏 South Asia (continent_id = 1, region_id = 3)
-            ['name' => 'Afghanistan', 'continent_id' => 1, 'region_id' => 3],
-            ['name' => 'Bangladesh', 'continent_id' => 1, 'region_id' => 3],
-            ['name' => 'Bhutan', 'continent_id' => 1, 'region_id' => 3],
-            ['name' => 'India', 'continent_id' => 1, 'region_id' => 3],
-            ['name' => 'Maldives', 'continent_id' => 1, 'region_id' => 3],
-            ['name' => 'Nepal', 'continent_id' => 1, 'region_id' => 3],
-            ['name' => 'Pakistan', 'continent_id' => 1, 'region_id' => 3],
-            ['name' => 'Sri Lanka', 'continent_id' => 1, 'region_id' => 3],
+            // Central Asia
+            ['name' => 'Kazakhstan', 'continent' => 'Asia', 'region' => 'Central Asia'],
+            ['name' => 'Kyrgyzstan', 'continent' => 'Asia', 'region' => 'Central Asia'],
+            ['name' => 'Tajikistan', 'continent' => 'Asia', 'region' => 'Central Asia'],
+            ['name' => 'Turkmenistan', 'continent' => 'Asia', 'region' => 'Central Asia'],
+            ['name' => 'Uzbekistan', 'continent' => 'Asia', 'region' => 'Central Asia'],
 
-            // 🌏 Central Asia (continent_id = 1, region_id = 4)
-            ['name' => 'Kazakhstan', 'continent_id' => 1, 'region_id' => 4],
-            ['name' => 'Kyrgyzstan', 'continent_id' => 1, 'region_id' => 4],
-            ['name' => 'Tajikistan', 'continent_id' => 1, 'region_id' => 4],
-            ['name' => 'Turkmenistan', 'continent_id' => 1, 'region_id' => 4],
-            ['name' => 'Uzbekistan', 'continent_id' => 1, 'region_id' => 4],
+            // Western Asia / Middle East
+            ['name' => 'Saudi Arabia', 'continent' => 'Asia', 'region' => 'Western Asia (Middle East)'],
+            ['name' => 'Iran', 'continent' => 'Asia', 'region' => 'Western Asia (Middle East)'],
+            ['name' => 'Turkey', 'continent' => 'Asia', 'region' => 'Western Asia (Middle East)'],
+            ['name' => 'Iraq', 'continent' => 'Asia', 'region' => 'Western Asia (Middle East)'],
+            ['name' => 'Israel', 'continent' => 'Asia', 'region' => 'Western Asia (Middle East)'],
+            ['name' => 'United Arab Emirates', 'continent' => 'Asia', 'region' => 'Western Asia (Middle East)'],
+            ['name' => 'Qatar', 'continent' => 'Asia', 'region' => 'Western Asia (Middle East)'],
 
-            // 🌏 Western Asia / Middle East (continent_id = 1, region_id = 5)
-            ['name' => 'Saudi Arabia', 'continent_id' => 1, 'region_id' => 5],
-            ['name' => 'Iran', 'continent_id' => 1, 'region_id' => 5],
-            ['name' => 'Turkey', 'continent_id' => 1, 'region_id' => 5],
-            ['name' => 'Iraq', 'continent_id' => 1, 'region_id' => 5],
-            ['name' => 'Israel', 'continent_id' => 1, 'region_id' => 5],
-            ['name' => 'United Arab Emirates', 'continent_id' => 1, 'region_id' => 5],
-            ['name' => 'Qatar', 'continent_id' => 1, 'region_id' => 5],
+            // North Asia / Siberia
+            ['name' => 'Russia', 'continent' => 'Asia', 'region' => 'North Asia (Siberia)'],
+            ['name' => 'Siberia', 'continent' => 'Asia', 'region' => 'North Asia (Siberia)'],
 
-            // 🌏 North Asia / Siberia (continent_id = 1, region_id = 6)
-            ['name' => 'Russia', 'continent_id' => 1, 'region_id' => 6],
-            ['name' => 'Siberia', 'continent_id' => 1, 'region_id' => 6],
-
-            // 🇦🇺 Australia (continent_id = 5, region_id = 7)
-            ['name' => 'Australia', 'continent_id' => 5, 'region_id' => 7],
+            // Australia
+            ['name' => 'Australia', 'continent' => 'Australia', 'region' => 'Australian Capital Territory'],
         ];
 
         foreach ($countries as $data) {
-            Country::factory()->create([
-                'name' => $data['name'],
-                'continent_id' => $data['continent_id'],
-                'region_id' => $data['region_id'],
-            ]);
+            $continentId = Continent::query()
+                ->where('name', $data['continent'])
+                ->value('id');
+
+            $regionId = Region::query()
+                ->where('name', $data['region'])
+                ->when($continentId, fn ($query) => $query->where('continent_id', $continentId))
+                ->value('id');
+
+            if (! $continentId || ! $regionId) {
+                $this->command?->warn("Skipping country '{$data['name']}' because continent or region was not found.");
+
+                continue;
+            }
+
+            Country::query()->updateOrCreate(
+                ['name' => $data['name']],
+                [
+                    'continent_id' => $continentId,
+                    'region_id' => $regionId,
+                ],
+            );
         }
     }
 }

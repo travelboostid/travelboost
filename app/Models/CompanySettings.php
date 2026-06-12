@@ -20,6 +20,7 @@ class CompanySettings extends Model
         'minimum_down_payment_value',
         'minimum_vat',
         'term_conditions',
+        'cancel_refund_term_conditions',
         'booking_entry_time_limit',
         'manual_bank_transfer',
         'manual_bank_transfer_account_name',

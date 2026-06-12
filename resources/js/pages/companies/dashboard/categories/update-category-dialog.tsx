@@ -14,6 +14,13 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import { Spinner } from '@/components/ui/spinner';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { useForm } from '@inertiajs/react';
@@ -22,8 +29,13 @@ import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
 import { FormattedMessage } from 'react-intl';
 
+type TourCategoryWithManualReservedLimit = TourCategoryResource & {
+    manual_reserved_limit_value?: number | null;
+    manual_reserved_limit_unit?: 'minute' | 'hour' | null;
+};
+
 type UpdateCategoryDialogProps = {
-    category: TourCategoryResource;
+    category: TourCategoryWithManualReservedLimit;
     children: ReactNode;
 };
 
@@ -38,6 +50,11 @@ export default function UpdateCategoryDialog({
         name: category.name,
         description: category.description,
         position_no: String(category.position_no ?? ''),
+        manual_reserved_limit_value: String(
+            category.manual_reserved_limit_value ?? 1,
+        ),
+        manual_reserved_limit_unit:
+            category.manual_reserved_limit_unit ?? 'hour',
     });
 
     useEffect(() => {
@@ -46,6 +63,11 @@ export default function UpdateCategoryDialog({
                 name: category.name,
                 description: category.description,
                 position_no: String(category.position_no ?? ''),
+                manual_reserved_limit_value: String(
+                    category.manual_reserved_limit_value ?? 1,
+                ),
+                manual_reserved_limit_unit:
+                    category.manual_reserved_limit_unit ?? 'hour',
             });
         }
     }, [category, open]);
@@ -135,6 +157,61 @@ export default function UpdateCategoryDialog({
                                 placeholder="e.g. 1"
                             />
                             <InputError message={form.errors.position_no} />
+                        </div>
+
+                        <div className="grid gap-2">
+                            <Label htmlFor="manual_reserved_limit_value">
+                                <FormattedMessage defaultMessage="Manual reservation duration" />
+                            </Label>
+                            <div className="grid grid-cols-[1fr_130px] gap-2">
+                                <Input
+                                    id="manual_reserved_limit_value"
+                                    type="number"
+                                    min="1"
+                                    value={
+                                        form.data.manual_reserved_limit_value
+                                    }
+                                    onChange={(e) =>
+                                        form.setData(
+                                            'manual_reserved_limit_value',
+                                            e.target.value,
+                                        )
+                                    }
+                                    placeholder="1"
+                                />
+                                <Select
+                                    value={form.data.manual_reserved_limit_unit}
+                                    onValueChange={(value) =>
+                                        form.setData(
+                                            'manual_reserved_limit_unit',
+                                            value,
+                                        )
+                                    }
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Unit" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="minute">
+                                            <FormattedMessage defaultMessage="Minute" />
+                                        </SelectItem>
+                                        <SelectItem value="hour">
+                                            <FormattedMessage defaultMessage="Hour" />
+                                        </SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                                <FormattedMessage defaultMessage="Leave this at 1 hour to use the default behavior." />
+                            </p>
+                            <InputError
+                                message={
+                                    form.errors.manual_reserved_limit_value
+                                }
+                            />
+                            <InputError
+                                message={form.errors.manual_reserved_limit_unit}
+                            />
                         </div>
                     </div>
 

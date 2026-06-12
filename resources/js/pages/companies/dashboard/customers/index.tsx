@@ -3,7 +3,9 @@ import { DataTableColumnHeader } from '@/components/data-table/data-table-column
 import { DataTableToolbar } from '@/components/data-table/data-table-toolbar';
 import CompanyDashboardLayout from '@/components/layouts/company-dashboard';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { useDataTable } from '@/hooks/use-data-table';
+import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { cn } from '@/lib/utils';
 import { Head } from '@inertiajs/react';
 import type { ColumnDef } from '@tanstack/react-table';
@@ -12,6 +14,9 @@ import {
     Building2Icon,
     CalendarIcon,
     CircleDashedIcon,
+    FileSpreadsheetIcon,
+    FileTextIcon,
+    PrinterIcon,
     TextIcon,
     UserCircleIcon,
     UserIcon,
@@ -51,6 +56,7 @@ function statusBadgeClass(status?: string | null): string {
 
 export default function CustomersPage({ data }: CustomersPageProps) {
     const intl = useIntl();
+    const { company } = usePageSharedDataProps();
 
     const statusOptions = useMemo(
         () => [
@@ -436,6 +442,9 @@ export default function CustomersPage({ data }: CustomersPageProps) {
         getRowId: (row) => row.id.toString(),
     });
 
+    const exportQuery =
+        typeof window !== 'undefined' ? window.location.search : '';
+
     return (
         <CompanyDashboardLayout
             containerClassName="w-full flex-1 flex flex-col"
@@ -455,18 +464,63 @@ export default function CustomersPage({ data }: CustomersPageProps) {
             />
 
             <div className="mx-auto w-full max-w-[1600px] space-y-6 p-4 sm:p-6">
-                <header>
-                    <div className="flex items-center gap-2.5">
-                        <div className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-                            <UsersIcon className="size-5" />
+                <header className="overflow-hidden rounded-3xl border border-primary/10 bg-gradient-to-br from-primary/[0.07] via-background to-background shadow-sm">
+                    <div className="flex flex-col gap-5 px-5 py-5 sm:px-6 lg:flex-row lg:items-end lg:justify-between">
+                        <div className="min-w-0">
+                            <div className="flex items-center gap-2.5">
+                                <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                                    <UsersIcon className="size-5" />
+                                </div>
+                                <div>
+                                    <h1 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
+                                        <FormattedMessage defaultMessage="Customers" />
+                                    </h1>
+                                    <p className="text-sm leading-6 text-muted-foreground">
+                                        <FormattedMessage defaultMessage="Browse direct and agent-registered customers. Filters run on the server across your full network." />
+                                    </p>
+                                </div>
+                            </div>
                         </div>
-                        <div>
-                            <h1 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
-                                <FormattedMessage defaultMessage="Customers" />
-                            </h1>
-                            <p className="text-sm text-muted-foreground">
-                                <FormattedMessage defaultMessage="Browse direct and agent-registered customers. Filters run on the server across your full network." />
-                            </p>
+
+                        <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                className="h-10 gap-2 rounded-xl"
+                                onClick={() =>
+                                    window.open(
+                                        `/companies/${company.username}/dashboard/customers/print${exportQuery}`,
+                                        '_blank',
+                                    )
+                                }
+                            >
+                                <PrinterIcon className="size-4" />
+                                <FormattedMessage defaultMessage="Print" />
+                            </Button>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                className="h-10 gap-2 rounded-xl border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+                                onClick={() =>
+                                    window.open(
+                                        `/companies/${company.username}/dashboard/customers/export/pdf${exportQuery}`,
+                                        '_blank',
+                                    )
+                                }
+                            >
+                                <FileTextIcon className="size-4" />
+                                <FormattedMessage defaultMessage="Export PDF" />
+                            </Button>
+                            <Button
+                                type="button"
+                                className="h-10 gap-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700"
+                                onClick={() => {
+                                    window.location.href = `/companies/${company.username}/dashboard/customers/export/excel${exportQuery}`;
+                                }}
+                            >
+                                <FileSpreadsheetIcon className="size-4" />
+                                <FormattedMessage defaultMessage="Export Excel" />
+                            </Button>
                         </div>
                     </div>
                 </header>

@@ -1,6 +1,7 @@
 <?php
 
 return [
+    'scheduler_timezone' => env('SCHEDULER_TIMEZONE', 'Asia/Jakarta'),
     'agent_subscription_expiry_check_time' => env('AGENT_SUBSCRIPTION_EXPIRY_CHECK_TIME', '00:00'),
     'permissions' => [
         ['name' => 'user.query', 'display_name' => 'Query User', 'description' => 'Allow viewing users'],
