@@ -24,16 +24,24 @@ export default function SelectProductCommissionCategory({
     onChange,
     categories = [],
 }: Props) {
+    const selectedCategory = categories.find((item) => item.id === value);
     const intl = useIntl();
 
     return (
         <Select value={value ? String(value) : '0'} onValueChange={onChange}>
-            <SelectTrigger className="w-full">
+            <SelectTrigger className="w-full min-w-0">
                 <SelectValue
                     placeholder={intl.formatMessage({
                         defaultMessage: 'Select Product Commission Category',
                     })}
-                />
+                >
+                    <span className="block truncate">
+                        {selectedCategory?.category_name ??
+                            intl.formatMessage({
+                                defaultMessage: 'No Category',
+                            })}
+                    </span>
+                </SelectValue>
             </SelectTrigger>
 
             <SelectContent>

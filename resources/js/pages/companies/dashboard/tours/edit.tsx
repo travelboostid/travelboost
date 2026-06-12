@@ -36,7 +36,14 @@ import { useEffect } from 'react';
 import { TourDocumentPicker } from '@/components/media/tour-document-picker';
 import MoneyInput from '@/components/ui/money-input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Copy, InfoIcon, MoreVertical, Save, Trash2 } from 'lucide-react';
+import {
+    Copy,
+    InfoIcon,
+    MoreVertical,
+    RefreshCw,
+    Save,
+    Trash2,
+} from 'lucide-react';
 
 import { TourImagePicker } from '@/components/media/tour-image-picker';
 import {
@@ -444,13 +451,19 @@ export default function Page({ tour }: Props) {
             return value;
         }
 
-        return parsed.toLocaleString('en-US', {
+        const formatter = new Intl.DateTimeFormat('en-GB', {
             day: '2-digit',
-            month: 'short',
+            month: 'long',
             year: 'numeric',
             hour: '2-digit',
             minute: '2-digit',
+            hour12: false,
         });
+        const parts = formatter.formatToParts(parsed);
+        const getPart = (type: Intl.DateTimeFormatPartTypes): string =>
+            parts.find((part) => part.type === type)?.value ?? '';
+
+        return `${getPart('day')} ${getPart('month')} ${getPart('year')} ${getPart('hour')}.${getPart('minute')}`;
     };
 
     const getManualReservedExpiresAt = (
@@ -494,6 +507,28 @@ export default function Page({ tour }: Props) {
         const unitLabel =
             manualReservedLimitUnit === 'minute' ? 'minutes' : 'hours';
         return `${manualReservedLimitValue} ${unitLabel}`;
+    };
+
+    const getAvailableBeforeManualReserved = (row: AvailabilityRow): number => {
+        return Math.max(0, row.max_pax - row.DP - row.FP - row.BRS - row.WPA);
+    };
+
+    const formatManualReservedScheduleDate = (date: string): string => {
+        if (!date) {
+            return '-';
+        }
+
+        const parsed = new Date(`${date}T00:00:00`);
+
+        if (Number.isNaN(parsed.getTime())) {
+            return date;
+        }
+
+        return parsed.toLocaleDateString('en-US', {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric',
+        });
     };
 
     const getConfiguredManualReservedValue = (row: AvailabilityRow): number => {
@@ -608,7 +643,7 @@ export default function Page({ tour }: Props) {
                 : null,
         manual_reserved_original_available:
             getConfiguredManualReservedValue(row) > 0
-                ? Number(row.available + Number(row.RS ?? 0))
+                ? getAvailableBeforeManualReserved(row)
                 : null,
         manual_reserved_start_date: startDate,
         manual_reserved_start_time: startTime,
@@ -642,10 +677,10 @@ export default function Page({ tour }: Props) {
 
         setManualReservedEditorRow({
             scheduleId: row.schedule_id ?? null,
-            departureDate: row.departure_date,
+            departureDate: formatManualReservedScheduleDate(row.departure_date),
             startAt: `${startDate} ${startTime}`,
             expiresAt: getManualReservedExpiresAt(startDate, startTime),
-            originalAvailable: Number(row.available + Number(row.RS ?? 0)),
+            originalAvailable: getAvailableBeforeManualReserved(row),
             limitLabel: formatManualReservedLimit(),
         });
         setManualReservedEditorStartDate(startDate);
@@ -1083,7 +1118,7 @@ export default function Page({ tour }: Props) {
                 WPA: Number(a.WPA || 0),
                 DP: Number(a.DP || 0),
                 FP: Number(a.FP || 0),
-                RS: Number(a.manual_reserved_pending_value ?? a.RS ?? 0),
+                RS: Number(a.RS ?? 0),
                 BRS: Number(a.BRS || 0),
                 WA: Number(a.WA || 0),
                 CA: Number(a.CA || 0),
@@ -1228,21 +1263,18 @@ export default function Page({ tour }: Props) {
         };
 
         const row = updated[index];
+        const originalRow = findOriginalAvailabilityRow(row);
         const manualReservedStatus = getManualReservedStatus(row);
-        const appliedManualReservedValue =
-            manualReservedStatus.kind === 'active_timed' ||
-            manualReservedStatus.kind === 'active_open'
-                ? row.RS
-                : 0;
+        const appliedManualReservedValue = manualReservedValueChanged(row)
+            ? getConfiguredManualReservedValue(row)
+            : manualReservedStatus.kind === 'active_timed' ||
+                manualReservedStatus.kind === 'active_open'
+              ? Number(originalRow?.RS ?? row.RS ?? 0)
+              : 0;
 
         row.available = Math.max(
             0,
-            row.max_pax -
-                row.DP -
-                row.FP -
-                appliedManualReservedValue -
-                row.BRS -
-                row.WPA,
+            getAvailableBeforeManualReserved(row) - appliedManualReservedValue,
         );
 
         setAvailability(updated);
@@ -2179,7 +2211,7 @@ export default function Page({ tour }: Props) {
                                         </div>
                                     </div>
                                     <div className="grid grid-cols-1 gap-5 p-6 lg:grid-cols-12">
-                                        <div className="grid gap-2 lg:col-span-3 lg:order-1">
+                                        <div className="grid min-w-0 gap-2 lg:col-span-4 lg:order-1">
                                             <RequiredLabel>Code</RequiredLabel>
                                             <Input
                                                 id="code"
@@ -2204,7 +2236,7 @@ export default function Page({ tour }: Props) {
                                             <InputError message={errors.code} />
                                         </div>
                                         {/* Name */}
-                                        <div className="grid gap-2 lg:col-span-6 lg:order-1">
+                                        <div className="grid min-w-0 gap-2 lg:col-span-6 lg:order-1">
                                             <RequiredLabel>
                                                 <FormattedMessage defaultMessage="Name" />
                                             </RequiredLabel>
@@ -2231,7 +2263,7 @@ export default function Page({ tour }: Props) {
                                             <InputError message={errors.name} />
                                         </div>
 
-                                        <div className="grid gap-2 lg:col-span-3 lg:order-1">
+                                        <div className="grid min-w-0 gap-2 lg:col-span-2 lg:order-1">
                                             <RequiredLabel>
                                                 Status
                                             </RequiredLabel>
@@ -2484,8 +2516,11 @@ export default function Page({ tour }: Props) {
                                     </div>
                                     <div className="space-y-6 p-6">
                                         <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
-                                            <div className="grid gap-2">
-                                                <Label htmlFor="category_id">
+                                            <div className="grid min-w-0 gap-2">
+                                                <Label
+                                                    htmlFor="category_id"
+                                                    className="truncate"
+                                                >
                                                     Product Catalog Category
                                                 </Label>
                                                 <SelectCategory
@@ -2507,8 +2542,11 @@ export default function Page({ tour }: Props) {
                                                 />
                                             </div>
 
-                                            <div className="grid gap-2">
-                                                <Label htmlFor="product_commission_category_id">
+                                            <div className="grid min-w-0 gap-2">
+                                                <Label
+                                                    htmlFor="product_commission_category_id"
+                                                    className="truncate"
+                                                >
                                                     Product Commission Category
                                                 </Label>
 
@@ -2535,7 +2573,7 @@ export default function Page({ tour }: Props) {
                                                 />
                                             </div>
 
-                                            <div className="grid gap-2">
+                                            <div className="grid min-w-0 gap-2">
                                                 <RequiredLabel>
                                                     Visa Category
                                                 </RequiredLabel>
@@ -2564,9 +2602,17 @@ export default function Page({ tour }: Props) {
                                             </div>
                                         </div>
 
-                                        <VisaCategoryPreview
-                                            category={selectedVisaCategory}
-                                        />
+                                        <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
+                                            <div className="hidden lg:block" />
+                                            <div className="hidden lg:block" />
+                                            <div className="min-w-0">
+                                                <VisaCategoryPreview
+                                                    category={
+                                                        selectedVisaCategory
+                                                    }
+                                                />
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -2581,38 +2627,7 @@ export default function Page({ tour }: Props) {
                                             <FormattedMessage defaultMessage="Upload the itinerary file and product visual in a compact, easy-to-review layout." />
                                         </p>
                                     </div>
-                                    <div className="grid gap-6 p-6 xl:grid-cols-[minmax(0,0.9fr)_minmax(320px,1.1fr)]">
-                                        <div className="space-y-4">
-                                            <div className="grid gap-2">
-                                                <Label htmlFor="name">
-                                                    <FormattedMessage defaultMessage="PDF Itinerary" />
-                                                </Label>
-                                                <div className="max-w-sm">
-                                                    <TourDocumentPicker
-                                                        owner={{
-                                                            type: 'company',
-                                                            id: company.id,
-                                                        }}
-                                                        value={selectedDocument}
-                                                        onChange={(
-                                                            doc: any,
-                                                        ) => {
-                                                            setSelectedDocument(
-                                                                doc,
-                                                            );
-                                                            setData(
-                                                                'document_id',
-                                                                doc?.id,
-                                                            );
-                                                        }}
-                                                    />
-                                                </div>
-                                                <InputError
-                                                    message={errors.document_id}
-                                                />
-                                            </div>
-                                        </div>
-
+                                    <div className="grid gap-6 p-6 xl:grid-cols-[minmax(220px,3fr)_minmax(320px,7fr)]">
                                         <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 dark:border-slate-800 dark:bg-slate-900/40">
                                             <div className="mb-3">
                                                 <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
@@ -2641,6 +2656,39 @@ export default function Page({ tour }: Props) {
                                                             mediaId || '',
                                                         );
                                                     }}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-4">
+                                            <div className="grid gap-2">
+                                                <Label htmlFor="name">
+                                                    PDF Itinerary
+                                                </Label>
+
+                                                <div className="max-w-none">
+                                                    <TourDocumentPicker
+                                                        owner={{
+                                                            type: 'company',
+                                                            id: company.id,
+                                                        }}
+                                                        value={selectedDocument}
+                                                        onChange={(
+                                                            doc: any,
+                                                        ) => {
+                                                            setSelectedDocument(
+                                                                doc,
+                                                            );
+                                                            setData(
+                                                                'document_id',
+                                                                doc?.id,
+                                                            );
+                                                        }}
+                                                    />
+                                                </div>
+
+                                                <InputError
+                                                    message={errors.document_id}
                                                 />
                                             </div>
                                         </div>
@@ -4273,7 +4321,7 @@ export default function Page({ tour }: Props) {
                                                         </TooltipContent>
                                                     </Tooltip>
                                                 </th>
-                                                <th className="border-b p-2 text-left font-semibold">
+                                                <th className="w-[190px] min-w-[190px] max-w-[210px] border-b p-2 text-left font-semibold">
                                                     RS Status
                                                 </th>
                                                 <th className="border-b p-2 text-right font-semibold">
@@ -4493,7 +4541,7 @@ export default function Page({ tour }: Props) {
                                                                     }
                                                                 />
                                                             </td>
-                                                            <td className="border-b p-2 align-top">
+                                                            <td className="w-[190px] min-w-[190px] max-w-[210px] border-b p-2 align-top">
                                                                 {(() => {
                                                                     const status =
                                                                         getManualReservedStatus(
@@ -4512,29 +4560,41 @@ export default function Page({ tour }: Props) {
                                                                     }
 
                                                                     return (
-                                                                        <div className="max-w-[180px] space-y-2 text-xs leading-relaxed text-muted-foreground">
+                                                                        <div className="w-full max-w-[200px] space-y-2 text-left text-xs leading-5 text-muted-foreground">
                                                                             {status.kind ===
                                                                             'scheduled' ? (
                                                                                 <>
-                                                                                    <p className="font-medium text-foreground">
-                                                                                        {status.isDue
-                                                                                            ? 'Awaiting scheduler'
-                                                                                            : 'Starts'}
-                                                                                        {!status.isDue
-                                                                                            ? ` ${formatManualReservedDateTime(
-                                                                                                  status.startAt.toISOString(),
-                                                                                              )}`
-                                                                                            : ''}
-                                                                                    </p>
+                                                                                    <div className="flex items-center justify-between gap-2">
+                                                                                        <div className="flex min-w-0 items-center gap-2">
+                                                                                            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-amber-700">
+                                                                                                {status.isDue
+                                                                                                    ? 'Pending'
+                                                                                                    : 'Queued'}
+                                                                                            </span>
+                                                                                            <span className="font-medium text-foreground">
+                                                                                                RS{' '}
+                                                                                                {
+                                                                                                    status.configuredValue
+                                                                                                }
+                                                                                            </span>
+                                                                                        </div>
+                                                                                        <Button
+                                                                                            type="button"
+                                                                                            variant="outline"
+                                                                                            size="icon"
+                                                                                            className="h-7 w-7 shrink-0"
+                                                                                            onClick={() =>
+                                                                                                handleManualReservedReset(
+                                                                                                    row,
+                                                                                                )
+                                                                                            }
+                                                                                        >
+                                                                                            <RefreshCw className="h-3.5 w-3.5" />
+                                                                                        </Button>
+                                                                                    </div>
                                                                                     <p>
-                                                                                        RS{' '}
-                                                                                        {
-                                                                                            status.configuredValue
-                                                                                        }
-                                                                                    </p>
-                                                                                    <p>
                                                                                         {status.isDue
-                                                                                            ? 'The start time has been reached and will be applied on the next scheduler run.'
+                                                                                            ? 'Waiting for next scheduler run'
                                                                                             : `Start ${formatManualReservedDateTime(
                                                                                                   status.startAt.toISOString(),
                                                                                               )}`}
@@ -4544,16 +4604,27 @@ export default function Page({ tour }: Props) {
                                                                             {status.kind ===
                                                                             'active_timed' ? (
                                                                                 <>
+                                                                                    <div className="flex items-center justify-between gap-2">
+                                                                                        <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-emerald-700">
+                                                                                            Countdown
+                                                                                        </span>
+                                                                                        <Button
+                                                                                            type="button"
+                                                                                            variant="outline"
+                                                                                            size="icon"
+                                                                                            className="h-7 w-7 shrink-0"
+                                                                                            onClick={() =>
+                                                                                                handleManualReservedReset(
+                                                                                                    row,
+                                                                                                )
+                                                                                            }
+                                                                                        >
+                                                                                            <RefreshCw className="h-3.5 w-3.5" />
+                                                                                        </Button>
+                                                                                    </div>
                                                                                     <p className="font-medium text-foreground">
-                                                                                        Countdown{' '}
                                                                                         {formatManualReservedCountdown(
                                                                                             status.expiresAt,
-                                                                                        )}
-                                                                                    </p>
-                                                                                    <p>
-                                                                                        Ends{' '}
-                                                                                        {formatManualReservedDateTime(
-                                                                                            status.expiresAt.toISOString(),
                                                                                         )}
                                                                                     </p>
                                                                                 </>
@@ -4561,36 +4632,42 @@ export default function Page({ tour }: Props) {
                                                                             {status.kind ===
                                                                             'active_open' ? (
                                                                                 <>
-                                                                                    <p className="font-medium text-foreground">
-                                                                                        Active
-                                                                                    </p>
+                                                                                    <div className="flex items-center justify-between gap-2">
+                                                                                        <div className="flex min-w-0 items-center gap-2">
+                                                                                            <span className="rounded-full bg-sky-100 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-sky-700">
+                                                                                                Active
+                                                                                            </span>
+                                                                                            <span className="font-medium text-foreground">
+                                                                                                RS{' '}
+                                                                                                {
+                                                                                                    status.configuredValue
+                                                                                                }
+                                                                                            </span>
+                                                                                        </div>
+                                                                                        <Button
+                                                                                            type="button"
+                                                                                            variant="outline"
+                                                                                            size="icon"
+                                                                                            className="h-7 w-7 shrink-0"
+                                                                                            onClick={() =>
+                                                                                                handleManualReservedReset(
+                                                                                                    row,
+                                                                                                )
+                                                                                            }
+                                                                                        >
+                                                                                            <RefreshCw className="h-3.5 w-3.5" />
+                                                                                        </Button>
+                                                                                    </div>
                                                                                     <p>
-                                                                                        Started{' '}
+                                                                                        Start{' '}
                                                                                         {status.startAt
                                                                                             ? formatManualReservedDateTime(
                                                                                                   status.startAt.toISOString(),
                                                                                               )
                                                                                             : '-'}
                                                                                     </p>
-                                                                                    <p>
-                                                                                        No
-                                                                                        expiry
-                                                                                    </p>
                                                                                 </>
                                                                             ) : null}
-                                                                            <Button
-                                                                                type="button"
-                                                                                variant="outline"
-                                                                                size="sm"
-                                                                                className="h-7 px-2 text-[11px]"
-                                                                                onClick={() =>
-                                                                                    handleManualReservedReset(
-                                                                                        row,
-                                                                                    )
-                                                                                }
-                                                                            >
-                                                                                Reset
-                                                                            </Button>
                                                                         </div>
                                                                     );
                                                                 })()}

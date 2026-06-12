@@ -146,6 +146,13 @@ class TourAvailabilityController extends Controller
 
     private function resolveManualReservedStartAt(array $row, TourSchedule $schedule): ?Carbon
     {
+        $hasExplicitDate = filled($row['manual_reserved_start_date'] ?? null);
+        $hasExplicitTime = filled($row['manual_reserved_start_time'] ?? null);
+
+        if (! $hasExplicitDate && ! $hasExplicitTime) {
+            return now('UTC');
+        }
+
         $date = $row['manual_reserved_start_date'] ?? $schedule->departure_date;
         $timezone = $this->resolveManualReservedTimezone($row);
         $time = $row['manual_reserved_start_time'] ?? now($timezone)->format('H:i');

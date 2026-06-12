@@ -38,6 +38,7 @@ import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { cn } from '@/lib/utils';
 import { router, useForm, usePage } from '@inertiajs/react';
 import {
+    ChevronDown,
     EditIcon,
     MoreHorizontal,
     PlusIcon,
@@ -417,22 +418,26 @@ export default function Page({
                 ) : (
                     <Accordion type="multiple" className="space-y-4">
                         {categories.map((category) => {
-                            const totalPrice = category.items.reduce(
-                                (sum, item) => sum + Number(item.price || 0),
-                                0,
-                            );
+                            const taxableCount = category.items.filter(
+                                (item) => item.is_taxable,
+                            ).length;
+                            const nonTaxableCount =
+                                category.items.length - taxableCount;
 
                             return (
                                 <AccordionItem
                                     key={category.id}
                                     value={String(category.id)}
-                                    className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-950"
+                                    className="group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-950"
                                 >
-                                    <div className="flex flex-col gap-3 border-b border-slate-200 bg-slate-50/80 px-5 py-4 dark:border-slate-800 dark:bg-slate-900/70 sm:flex-row sm:items-start sm:justify-between">
-                                        <AccordionTrigger className="flex-1 py-0 text-left hover:no-underline">
-                                            <div className="pr-4 text-left">
-                                                <div className="flex flex-wrap items-center gap-3">
-                                                    <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+                                    <div className="flex items-stretch gap-3 border-b border-slate-200 bg-slate-50/80 px-5 py-4 dark:border-slate-800 dark:bg-slate-900/70">
+                                        <AccordionTrigger
+                                            hideChevron
+                                            className="group flex flex-1 items-start py-0 pr-2 text-left hover:no-underline"
+                                        >
+                                            <div className="min-w-0 flex-1 pr-4 text-left">
+                                                <div className="flex min-w-0 flex-wrap items-center gap-3">
+                                                    <h2 className="min-w-0 break-words text-lg font-semibold text-slate-900 dark:text-slate-100">
                                                         {category.name}
                                                     </h2>
                                                     <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
@@ -446,25 +451,18 @@ export default function Page({
                                                 </div>
                                                 <div className="mt-2 flex flex-wrap gap-3 text-xs text-muted-foreground">
                                                     <span>
-                                                        Total value: Rp{' '}
-                                                        {currencyFormatter.format(
-                                                            totalPrice,
-                                                        )}
+                                                        Taxable: {taxableCount}
                                                     </span>
                                                     <span>
-                                                        Taxable:{' '}
-                                                        {
-                                                            category.items.filter(
-                                                                (item) =>
-                                                                    item.is_taxable,
-                                                            ).length
-                                                        }
+                                                        Non-taxable:{' '}
+                                                        {nonTaxableCount}
                                                     </span>
                                                 </div>
                                             </div>
                                         </AccordionTrigger>
 
-                                        <div className="flex items-center gap-2">
+                                        <div className="flex shrink-0 flex-col items-center gap-2">
+                                            <ChevronDown className="h-4 w-4 shrink-0 text-slate-500 transition-transform duration-200 group-data-[state=open]:rotate-180" />
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild>
                                                     <button

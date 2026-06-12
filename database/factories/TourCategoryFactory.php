@@ -16,6 +16,7 @@ class TourCategoryFactory extends Factory
     public function definition(): array
     {
         return [
+            'company_id' => Company::factory(),
             'name' => fake()->unique()->words(2, true),
             'description' => fake()->sentence(),
         ];
