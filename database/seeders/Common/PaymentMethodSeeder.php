@@ -175,10 +175,6 @@ class PaymentMethodSeeder extends Seeder
 
     public function run(): void
     {
-        PaymentMethod::query()
-            ->whereIn('provider', ['midtrans', 'prismalink'])
-            ->delete();
-
         foreach (self::METHODS as $method) {
             foreach (['midtrans', 'prismalink'] as $provider) {
                 if (! isset($method[$provider])) {

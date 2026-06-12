@@ -1,6 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { openOnlinePayment } from '@/lib/open-online-payment';
 import { refreshAgentSubscriptionPage } from '@/lib/refresh-agent-subscription-page';
+import { FormattedMessage } from 'react-intl';
 
 type ContinueSubscriptionPaymentProps = {
     payment: {
@@ -15,7 +16,7 @@ type ContinueSubscriptionPaymentProps = {
 
 export default function ContinueSubscriptionPayment({
     payment,
-    children = 'Continue payment',
+    children,
 }: ContinueSubscriptionPaymentProps) {
     const handlePay = () => {
         openOnlinePayment(
@@ -39,7 +40,7 @@ export default function ContinueSubscriptionPayment({
 
     return (
         <Button size="lg" className="h-11 w-full sm:flex-1" onClick={handlePay}>
-            {children}
+            {children ?? <FormattedMessage defaultMessage="Continue payment" />}
         </Button>
     );
 }

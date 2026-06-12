@@ -9,6 +9,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
+import { FormattedMessage, useIntl } from 'react-intl';
 
 interface SelectCategoryProps {
     name?: string;
@@ -25,6 +26,7 @@ export default function SelectCategory({
     onChange,
     companyId,
 }: SelectCategoryProps) {
+    const intl = useIntl();
     const { company } = usePageSharedDataProps();
     const { data, isLoading } = useGetTourCategories({
         company_id: companyId ?? company?.id,
@@ -44,13 +46,18 @@ export default function SelectCategory({
             <SelectTrigger className="w-full min-w-0">
                 <SelectValue placeholder={isLoading ? 'Loading...' : undefined}>
                     <span className="block truncate">
-                        {selectedCategory?.name ?? 'Select category'}
+                        {selectedCategory?.name ??
+                            intl.formatMessage({
+                                defaultMessage: 'Select category',
+                            })}
                     </span>
                 </SelectValue>
             </SelectTrigger>
             <SelectContent>
                 <SelectGroup>
-                    <SelectLabel>Category</SelectLabel>
+                    <SelectLabel>
+                        <FormattedMessage defaultMessage="Category" />
+                    </SelectLabel>
                     {data?.data.map((cat) => (
                         <SelectItem key={cat.id} value={cat.id.toString()}>
                             {cat.name}

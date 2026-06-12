@@ -6,6 +6,9 @@ use App\Enums\CompanyTeamStatus;
 use App\Enums\CompanyType;
 use App\Enums\UserStatus;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Companies\BulkDestroyCompanyTeamRequest;
+use App\Http\Requests\Companies\BulkUpdateCompanyTeamRequest;
+use App\Http\Requests\Companies\IndexCompanyTeamRequest;
 use App\Http\Requests\Companies\InviteCompanyTeamRequest;
 use App\Http\Requests\UpdateCompanyTeamRequest;
 use App\Models\Company;
@@ -13,7 +16,9 @@ use App\Models\CompanyTeam;
 use App\Models\Role;
 use App\Models\User;
 use App\Notifications\TeamAccountNotification;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
@@ -24,13 +29,13 @@ use Throwable;
 
 class TeamController extends Controller
 {
-    public function index(Company $company): Response
+    public function index(Company $company, IndexCompanyTeamRequest $request): Response
     {
-        $members = $company->teams()
-            ->with(['user.roles'])
-            ->orderByDesc('is_owner')
-            ->orderBy('id')
-            ->get();
+        $validated = $request->validated();
+
+        $members = $this->filteredTeamsQuery($company, $validated)
+            ->paginate($validated['per_page'] ?? 10)
+            ->withQueryString();
 
         $roles = Role::query()
             ->where('name', 'like', "company:{$company->id}:%")
@@ -42,10 +47,62 @@ class TeamController extends Controller
             ->first();
 
         return Inertia::render('companies/dashboard/teams/index', [
-            'members' => $members,
+            'data' => $members,
             'roles' => $roles,
             'canManageMembers' => (bool) $currentMember?->is_owner,
         ]);
+    }
+
+    public function bulkUpdate(
+        BulkUpdateCompanyTeamRequest $request,
+        Company $company,
+    ): RedirectResponse {
+        $this->ensureOwnerAccess($company);
+
+        $validated = $request->validated();
+        $status = CompanyTeamStatus::from($validated['status']);
+
+        $teams = CompanyTeam::query()
+            ->where('company_id', $company->id)
+            ->whereIn('id', $validated['ids'])
+            ->where('is_owner', false)
+            ->with('user')
+            ->get();
+
+        DB::transaction(function () use ($teams, $status): void {
+            foreach ($teams as $team) {
+                if (! $team->user) {
+                    continue;
+                }
+
+                $team->status = $status;
+                $team->save();
+            }
+        });
+
+        return back()->with('success', 'Selected team members updated successfully.');
+    }
+
+    public function bulkDestroy(
+        BulkDestroyCompanyTeamRequest $request,
+        Company $company,
+    ): RedirectResponse {
+        $this->ensureOwnerAccess($company);
+
+        $teams = CompanyTeam::query()
+            ->where('company_id', $company->id)
+            ->whereIn('id', $request->validated('ids'))
+            ->where('is_owner', false)
+            ->with('user')
+            ->get();
+
+        DB::transaction(function () use ($company, $teams): void {
+            foreach ($teams as $team) {
+                $this->removeTeamMember($company, $team);
+            }
+        });
+
+        return back()->with('success', 'Selected team members removed successfully.');
     }
 
     public function invite(InviteCompanyTeamRequest $request, Company $company): RedirectResponse
@@ -223,27 +280,110 @@ class TeamController extends Controller
         }
 
         DB::transaction(function () use ($company, $team): void {
-            if ($team->user) {
-                $existingRoles = $team->user->roles()
-                    ->where('name', 'like', "company:{$company->id}:%")
-                    ->pluck('name')
-                    ->all();
-
-                if ($existingRoles !== []) {
-                    $team->user->removeRoles($existingRoles, "company:{$company->id}");
-                }
-            }
-
-            $user = $team->user;
-            $team->delete();
-
-            if ($user && ! $user->companies()->exists()) {
-                $user->status = UserStatus::INACTIVE;
-                $user->save();
-            }
+            $this->removeTeamMember($company, $team);
         });
 
         return back()->with('success', 'Team member deleted successfully.');
+    }
+
+    /**
+     * @param  array<string, mixed>  $validated
+     */
+    private function filteredTeamsQuery(Company $company, array $validated): Builder
+    {
+        return CompanyTeam::query()
+            ->where('company_id', $company->id)
+            ->with(['user.roles'])
+            ->when($validated['user'] ?? null, function (Builder $query, string $term): void {
+                $query->where(function (Builder $inner) use ($term): void {
+                    $inner->where('invite_email', 'ilike', '%'.$term.'%')
+                        ->orWhereHas('user', function (Builder $userQuery) use ($term): void {
+                            $userQuery->where('name', 'ilike', '%'.$term.'%')
+                                ->orWhere('email', 'ilike', '%'.$term.'%');
+                        });
+                });
+            })
+            ->when($validated['username'] ?? null, function (Builder $query, string $username): void {
+                $query->whereHas('user', function (Builder $userQuery) use ($username): void {
+                    $userQuery->where('username', 'ilike', '%'.$username.'%');
+                });
+            })
+            ->when($validated['role'] ?? null, function (Builder $query, array $roles): void {
+                $query->whereIn('invite_role', $roles);
+            })
+            ->when($validated['status'] ?? null, function (Builder $query, array $statuses): void {
+                $query->whereIn('status', $statuses);
+            })
+            ->when($validated['invited_at'] ?? null, function (Builder $query, string $invitedAt): void {
+                $range = explode(',', $invitedAt);
+
+                if (count($range) === 2) {
+                    $from = Carbon::createFromTimestamp((int) $range[0] / 1000);
+                    $to = Carbon::createFromTimestamp((int) $range[1] / 1000);
+                    $query->whereBetween('invited_at', [$from, $to]);
+
+                    return;
+                }
+
+                $date = Carbon::createFromTimestamp((int) $range[0] / 1000);
+                $query->whereDate('invited_at', $date);
+            })
+            ->when($validated['sort'] ?? '-invited_at', function (Builder $query, string $sort): void {
+                $needsUserJoin = collect(explode(',', $sort))
+                    ->map(fn (string $item) => ltrim($item, '-'))
+                    ->contains(fn (string $field) => in_array($field, ['user', 'username'], true));
+
+                if ($needsUserJoin) {
+                    $query->leftJoin(
+                        'users as team_member_users',
+                        'company_teams.user_id',
+                        '=',
+                        'team_member_users.id',
+                    );
+                }
+
+                foreach (explode(',', $sort) as $item) {
+                    $direction = str_starts_with($item, '-') ? 'desc' : 'asc';
+                    $field = ltrim($item, '-');
+
+                    match ($field) {
+                        'user' => $query->orderByRaw(
+                            "COALESCE(team_member_users.name, company_teams.invite_email) {$direction}"
+                        ),
+                        'username' => $query->orderBy('team_member_users.username', $direction),
+                        'role' => $query->orderBy('invite_role', $direction),
+                        'status' => $query->orderBy('status', $direction),
+                        'invited_at' => $query->orderBy('invited_at', $direction),
+                        'id' => $query->orderBy('company_teams.id', $direction),
+                        default => null,
+                    };
+                }
+
+                $query->select('company_teams.*');
+            })
+            ->orderByDesc('is_owner');
+    }
+
+    private function removeTeamMember(Company $company, CompanyTeam $team): void
+    {
+        if ($team->user) {
+            $existingRoles = $team->user->roles()
+                ->where('name', 'like', "company:{$company->id}:%")
+                ->pluck('name')
+                ->all();
+
+            if ($existingRoles !== []) {
+                $team->user->removeRoles($existingRoles, "company:{$company->id}");
+            }
+        }
+
+        $user = $team->user;
+        $team->delete();
+
+        if ($user && ! $user->companies()->exists()) {
+            $user->status = UserStatus::INACTIVE;
+            $user->save();
+        }
     }
 
     private function ensureOwnerAccess(Company $company): void

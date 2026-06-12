@@ -17,6 +17,7 @@ import {
     PhoneIcon,
     UserIcon,
 } from 'lucide-react';
+import { FormattedMessage, useIntl } from 'react-intl';
 
 type AgentProfileProps = {
     agent: any;
@@ -27,6 +28,8 @@ export default function AgentProfileModal({
     agent,
     trigger,
 }: AgentProfileProps) {
+    const intl = useIntl();
+
     const getImageUrl = (mediaObj: any, fallbackStr?: string) => {
         if (fallbackStr) return fallbackStr;
         if (!mediaObj) return null;
@@ -73,7 +76,7 @@ export default function AgentProfileModal({
                     >
                         <EyeIcon className="w-3.5 h-3.5" />
                         <span className="text-xs font-medium">
-                            View Profile
+                            <FormattedMessage defaultMessage="View Profile" />
                         </span>
                     </Button>
                 )}
@@ -81,10 +84,10 @@ export default function AgentProfileModal({
             <DialogContent className="max-w-md overflow-y-auto max-h-[90vh] dark:bg-slate-900 dark:border-slate-800">
                 <DialogHeader>
                     <DialogTitle className="dark:text-slate-100">
-                        Agent Business Profile
+                        <FormattedMessage defaultMessage="Agent Business Profile" />
                     </DialogTitle>
                     <DialogDescription className="dark:text-slate-400">
-                        Detailed information about the registered agent.
+                        <FormattedMessage defaultMessage="Detailed information about the registered agent." />
                     </DialogDescription>
                 </DialogHeader>
 
@@ -108,7 +111,12 @@ export default function AgentProfileModal({
                                 variant="outline"
                                 className="mt-1 bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 font-medium"
                             >
-                                ID: {agent.username || agent.id}
+                                <FormattedMessage
+                                    defaultMessage="ID: {identifier}"
+                                    values={{
+                                        identifier: agent.username || agent.id,
+                                    }}
+                                />
                             </Badge>
                         </div>
                     </div>
@@ -116,8 +124,8 @@ export default function AgentProfileModal({
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-1.5">
                             <span className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-                                <MailIcon className="w-3.5 h-3.5" /> Email
-                                Address
+                                <MailIcon className="w-3.5 h-3.5" />
+                                <FormattedMessage defaultMessage="Email Address" />
                             </span>
                             <p className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">
                                 {agent.email}
@@ -125,8 +133,8 @@ export default function AgentProfileModal({
                         </div>
                         <div className="space-y-1.5">
                             <span className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-                                <PhoneIcon className="w-3.5 h-3.5" /> Phone
-                                Number
+                                <PhoneIcon className="w-3.5 h-3.5" />
+                                <FormattedMessage defaultMessage="Phone Number" />
                             </span>
                             <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
                                 {agent.phone || '-'}
@@ -136,7 +144,8 @@ export default function AgentProfileModal({
 
                     <div className="space-y-1.5">
                         <span className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-                            <MapPinIcon className="w-3.5 h-3.5" /> Address
+                            <MapPinIcon className="w-3.5 h-3.5" />
+                            <FormattedMessage defaultMessage="Address" />
                         </span>
                         <p className="text-sm font-semibold text-slate-900 dark:text-slate-100 leading-relaxed">
                             {fullAddress}
@@ -147,8 +156,8 @@ export default function AgentProfileModal({
 
                     <div className="space-y-1.5">
                         <span className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-                            <CreditCardIcon className="w-3.5 h-3.5" /> Identity
-                            Number (NIK)
+                            <CreditCardIcon className="w-3.5 h-3.5" />
+                            <FormattedMessage defaultMessage="Identity Number (NIK)" />
                         </span>
                         <p className="text-sm font-semibold text-slate-900 dark:text-slate-100 tracking-wider">
                             {agent.identity_number || '-'}
@@ -157,13 +166,15 @@ export default function AgentProfileModal({
 
                     <div className="space-y-2">
                         <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-                            ID Photo Document (KTP)
+                            <FormattedMessage defaultMessage="ID Photo Document (KTP)" />
                         </span>
                         {ktpUrl ? (
                             <div className="relative group">
                                 <img
                                     src={ktpUrl}
-                                    alt="ID Document"
+                                    alt={intl.formatMessage({
+                                        defaultMessage: 'ID Document',
+                                    })}
                                     className="w-full rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm object-contain bg-slate-50 dark:bg-slate-800/50 min-h-[150px]"
                                 />
                                 <a
@@ -172,14 +183,14 @@ export default function AgentProfileModal({
                                     rel="noreferrer"
                                     className="absolute bottom-2 right-2 bg-black/50 hover:bg-black/70 text-white text-[10px] px-2 py-1 rounded-md backdrop-blur-sm transition-all"
                                 >
-                                    View Full Image
+                                    <FormattedMessage defaultMessage="View Full Image" />
                                 </a>
                             </div>
                         ) : (
                             <div className="flex flex-col items-center justify-center p-8 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50 dark:bg-slate-800/30">
                                 <CreditCardIcon className="w-8 h-8 text-slate-300 dark:text-slate-600 mb-2" />
                                 <p className="text-sm text-slate-400 dark:text-slate-500 italic">
-                                    No document uploaded
+                                    <FormattedMessage defaultMessage="No document uploaded" />
                                 </p>
                             </div>
                         )}

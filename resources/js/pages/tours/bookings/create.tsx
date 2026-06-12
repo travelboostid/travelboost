@@ -2448,7 +2448,9 @@ export default function Page() {
                             <div
                                 className="mt-6 max-h-80 overflow-y-auto rounded-lg border bg-muted/30 p-4 text-sm leading-relaxed text-muted-foreground [&_h1]:mb-3 [&_h1]:text-2xl [&_h1]:font-bold [&_h2]:mb-3 [&_h2]:text-xl [&_h2]:font-semibold [&_h3]:mb-2 [&_h3]:text-lg [&_h3]:font-semibold [&_ol]:ml-6 [&_ol]:list-decimal [&_p]:mb-3 [&_strike]:text-muted-foreground"
                                 dangerouslySetInnerHTML={{
-                                    __html: renderTermsHtml(termConditions || ''),
+                                    __html: renderTermsHtml(
+                                        termConditions || '',
+                                    ),
                                 }}
                             />
                             <p className="mt-6 rounded-lg bg-muted/50 p-4 text-sm font-medium leading-relaxed text-foreground">

@@ -29,6 +29,7 @@ import { Head, router } from '@inertiajs/react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ArrowLeftIcon, InfoIcon } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import { FormattedMessage, useIntl } from 'react-intl';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -243,6 +244,7 @@ function ReadOnlyWizard({
     isAgent: boolean;
     proformaInvoiceUrl: string | null;
 }) {
+    const intl = useIntl();
     const departureDate = booking.departure_date?.split('T')[0] ?? '';
 
     // ── Wizard step state ──────────────────────────────────────────────
@@ -341,16 +343,31 @@ function ReadOnlyWizard({
             openMenuIds={['tours']}
             activeMenuIds={isAgent ? ['tours.bookings'] : ['tours.orders']}
             breadcrumb={[
-                { title: 'Tours' },
                 {
-                    title: 'Bookings',
+                    title: intl.formatMessage({
+                        defaultMessage: 'Tours',
+                    }),
+                },
+                {
+                    title: intl.formatMessage({
+                        defaultMessage: 'Bookings',
+                    }),
                     url: `/companies/${company.username}/dashboard/bookings`,
                 },
                 { title: booking.booking_number },
-                { title: 'View Detail' },
+                {
+                    title: intl.formatMessage({
+                        defaultMessage: 'View Detail',
+                    }),
+                },
             ]}
         >
-            <Head title={`View ${booking.booking_number}`} />
+            <Head
+                title={intl.formatMessage(
+                    { defaultMessage: 'View {bookingNumber}' },
+                    { bookingNumber: booking.booking_number },
+                )}
+            />
 
             <div className="min-h-screen bg-linear-to-b from-background via-background to-muted/30">
                 <div className="mx-auto w-full max-w-5xl px-4 pt-4">
@@ -373,15 +390,14 @@ function ReadOnlyWizard({
                                 <InfoIcon className="size-5 text-sky-600 shrink-0 mt-0.5" />
                                 <div>
                                     <h2 className="text-sm font-semibold text-sky-900">
-                                        Read-Only View
+                                        <FormattedMessage defaultMessage="Read-Only View" />
                                     </h2>
                                     <p className="mt-1 text-sm text-sky-700">
-                                        This booking cannot be edited. It is
-                                        currently in{' '}
+                                        <FormattedMessage defaultMessage="This booking cannot be edited. It is currently in" />{' '}
                                         <strong className="capitalize">
                                             {booking.status}
                                         </strong>{' '}
-                                        status.
+                                        <FormattedMessage defaultMessage="status." />
                                     </p>
                                 </div>
                             </div>
@@ -395,7 +411,7 @@ function ReadOnlyWizard({
                                         className="flex items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
                                     >
                                         <ArrowLeftIcon className="size-4" />
-                                        Back
+                                        <FormattedMessage defaultMessage="Back" />
                                     </button>
                                 </div>
 
@@ -569,7 +585,8 @@ function ReadOnlyWizard({
                                     onClick={goBack}
                                     className="gap-2"
                                 >
-                                    <ArrowLeftIcon className="size-4" /> Back
+                                    <ArrowLeftIcon className="size-4" />{' '}
+                                    <FormattedMessage defaultMessage="Back" />
                                 </Button>
                             </div>
                         </div>

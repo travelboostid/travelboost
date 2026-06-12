@@ -1,89 +1,76 @@
-# Travelboost Project
+# Travelboost
 
-Travelboost is a platform designed to streamline travel planning and management.
-This repository contains the core application along with tools to support development and deployment.
-
----
-
-## 📚 Documentation
-
-- [Standard Operating Procedures (SOP)](./docs/sop.md)
-- [Development Environment Setup](./docs/development-environment-setup.md)
-- [Deployment Guidelines](./docs/deployments.md)
-- [XDebug Setup](./docs/debugging.md)
-- [Architecture Overview](./docs/architecture.md)
-- [Translations](./docs/translations.md)
+Multi-tenant travel platform — Laravel 13, Inertia, React 19.
 
 ---
 
-## 🚀 Getting Started
+## Quick start
 
-Before starting, ask your teammate for the required `.env` configuration.
-We provide preset files (`.env.preset.*`)—place them in the root of the project.
-
-### 1. Clone the repository
+Ask a teammate for `.env` values. Presets live in `.env.preset.*` at the project root.
 
 ```bash
-git clone <this-repository>
-cd <project-folder>
+git clone <repository-url>
+cd travelboost
+pnpm dev:init      # composer + pnpm install, pick env preset
+pnpm dev:full      # Laravel, Vite, queue, Reverb
 ```
 
-### 2. Initialize environment
+Other dev commands: `pnpm dev:min` (server + Vite only), `pnpm dev` (interactive menu).
 
-```bash
-pnpm dev:init
-```
-
-This will:
-
-- Install PHP dependencies (`composer install`)
-- Install JS dependencies (`pnpm install`)
-- Prompt you to select an available `.env` preset
-
-### 3. Run development server
-
-**Full stack (recommended)**
-Includes:
-
-- Laravel server
-- Vite
-- Queue worker
-- Reverb
-
-```bash
-pnpm dev:full
-```
-
-**Minimal setup**
-Includes:
-
-- Laravel server
-- Vite
-
-```bash
-pnpm dev:min
-```
+**Full local setup:** [Local Development](./docs/local-development.md)
 
 ---
 
-## 🛠 Dev CLI
+## Documentation
 
-A helper CLI is available to simplify common tasks:
+### Getting started
 
-```bash
-pnpm dev
-```
+| Doc                                              | When to read                                                 |
+| ------------------------------------------------ | ------------------------------------------------------------ |
+| [Local Development](./docs/local-development.md) | First-time setup, PHP extensions, `pnpm dev:full`            |
+| [Cloudflare Tunnel](./docs/cloudflare-tunnel.md) | Payment webhooks & OAuth via `tunnel-8000.travelboost.co.id` |
+| [Team SOP](./docs/team-sop.md)                   | Git workflow, PRs, coding standards                          |
 
-This will open an interactive menu for:
+### Architecture & product
 
-- Switching environment presets
-- Running development servers
-- Deployment helpers
-- i18n utilities
+| Doc                                            | When to read                            |
+| ---------------------------------------------- | --------------------------------------- |
+| [Architecture](./docs/architecture.md)         | Stack, tenancy, auth, major subsystems  |
+| [Routing](./docs/routing.md)                   | Why `routes/tenant.php` runs first      |
+| [Product Requirements](./docs/requirements.md) | Landing pages, customers, chatbot scope |
+
+### Frontend & API
+
+| Doc                                       | When to read                                     |
+| ----------------------------------------- | ------------------------------------------------ |
+| [Web API & Orval](./docs/webapi-orval.md) | Scramble docs, `/webapi` endpoints, `pnpm orval` |
+| [Translations (i18n)](./docs/i18n.md)     | react-intl, extraction, locale files             |
+
+### Features
+
+| Doc                                              | When to read                                          |
+| ------------------------------------------------ | ----------------------------------------------------- |
+| [Live Chat & Chatbot](./docs/live-chat.md)       | Reverb, auto-reply, troubleshooting                   |
+| [Cloudflare Tunnel](./docs/cloudflare-tunnel.md) | Payment webhooks, PrismaLink/Midtrans sandbox testing |
+
+### Production
+
+| Doc                                                                | When to read                                |
+| ------------------------------------------------------------------ | ------------------------------------------- |
+| [Server Inventory](./docs/server-inventory.md)                     | Host names and IPs                          |
+| [Production App Server](./docs/production-app-server.md)           | PHP, Caddy, Supervisor, first install       |
+| [Production Database Server](./docs/production-database-server.md) | PostgreSQL, pgvector, WAL-G backups         |
+| [Object Storage (S3)](./docs/object-storage.md)                    | Media buckets, credentials, mount with s3fs |
+| [Deployment](./docs/deployment.md)                                 | Pull, migrate, build, restart after release |
+
+### Debugging
+
+| Doc                              | When to read                           |
+| -------------------------------- | -------------------------------------- |
+| [Debugging](./docs/debugging.md) | Xdebug, Telescope, chatbot log tracing |
 
 ---
 
-## 🚢 Deployment
+## Deploy
 
-For deployment instructions, refer to:
-👉 [Deployment Guidelines](./docs/deployments.md)
+See [Deployment](./docs/deployment.md) or run `pnpm dev:deploy` from the dev CLI (`pnpm dev`).

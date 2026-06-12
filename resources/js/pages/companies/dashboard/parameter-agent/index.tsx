@@ -17,7 +17,7 @@ type Settings = {
     document_completed_deadline: number;
 };
 
-export default function ParameterVendorPage() {
+export default function ParameterAgentPage() {
     const intl = useIntl();
 
     const { props } = usePage<{
@@ -88,7 +88,7 @@ export default function ParameterVendorPage() {
         >
             <Head
                 title={intl.formatMessage({
-                    defaultMessage: 'Vendor Parameters',
+                    defaultMessage: 'Agent Parameters',
                 })}
             />
 

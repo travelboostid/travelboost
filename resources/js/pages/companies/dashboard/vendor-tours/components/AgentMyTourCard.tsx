@@ -12,6 +12,7 @@ import {
     IconPdf,
 } from '@tabler/icons-react';
 import { MessageSquareIcon } from 'lucide-react';
+import { FormattedMessage } from 'react-intl';
 import BaseTourCard from './BaseTourCard';
 
 export default function AgentMyTourCard({
@@ -124,7 +125,7 @@ export default function AgentMyTourCard({
                 <div className="mx-4 mt-4 space-y-2 border-t border-slate-100 pt-3 dark:border-slate-800/60">
                     <div className="flex items-center justify-between">
                         <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase">
-                            Vendor Tour Status
+                            <FormattedMessage defaultMessage="Vendor Tour Status" />
                         </span>
                         <span
                             className={`text-[9px] font-black uppercase ${tour.status === 'active' ? 'text-emerald-500' : 'text-red-500'}`}
@@ -134,7 +135,7 @@ export default function AgentMyTourCard({
                     </div>
                     <div className="flex items-center justify-between border-t border-slate-50 dark:border-slate-800/60 pt-1">
                         <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase">
-                            My Catalog Status
+                            <FormattedMessage defaultMessage="My Catalog Status" />
                         </span>
                         <span
                             className={`text-[9px] font-black uppercase ${tour.agent_status === 'active' ? 'text-blue-500' : 'text-red-500'}`}
@@ -159,7 +160,9 @@ export default function AgentMyTourCard({
                             </Button>
                         </TooltipTrigger>
                         <TooltipContent>
-                            <p>Book Tour</p>
+                            <p>
+                                <FormattedMessage defaultMessage="Book Tour" />
+                            </p>
                         </TooltipContent>
                     </Tooltip>
                     <Tooltip delayDuration={200}>
@@ -175,7 +178,9 @@ export default function AgentMyTourCard({
                             </Button>
                         </TooltipTrigger>
                         <TooltipContent>
-                            <p>Itinerary</p>
+                            <p>
+                                <FormattedMessage defaultMessage="Itinerary" />
+                            </p>
                         </TooltipContent>
                     </Tooltip>
                     <Tooltip delayDuration={200}>
@@ -195,7 +200,9 @@ export default function AgentMyTourCard({
                             </Button>
                         </TooltipTrigger>
                         <TooltipContent>
-                            <p>Ask AI</p>
+                            <p>
+                                <FormattedMessage defaultMessage="Ask AI" />
+                            </p>
                         </TooltipContent>
                     </Tooltip>
                     <Tooltip delayDuration={200}>
@@ -211,7 +218,9 @@ export default function AgentMyTourCard({
                             </Button>
                         </TooltipTrigger>
                         <TooltipContent>
-                            <p>Share to Facebook</p>
+                            <p>
+                                <FormattedMessage defaultMessage="Share to Facebook" />
+                            </p>
                         </TooltipContent>
                     </Tooltip>
                 </>

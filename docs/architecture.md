@@ -1,8 +1,8 @@
-# Architecture
+# Architecture Overview
 
 Travelboost is a multi-tenant travel platform built as a **monolithic Laravel application** with an **Inertia + React** frontend. A single codebase serves the main marketing site, company landing pages (subdomains and custom domains), agent/vendor dashboards, affiliate panel, platform admin, and a session-based JSON API used by the React client.
 
-For product-level requirements, see [Requirements](./requirements.md). For routing conventions, see [Routing](./routing.md).
+For product-level requirements, see [Product Requirements](./requirements.md). For routing conventions, see [Routing](./routing.md).
 
 ---
 
@@ -19,7 +19,8 @@ For product-level requirements, see [Requirements](./requirements.md). For routi
 | Real-time         | Laravel Reverb + Laravel Echo                                         |
 | AI                | Laravel AI (`laravel/ai`) via OpenRouter                              |
 | Wallets           | Bavix Laravel Wallet (polymorphic user/company wallets)               |
-| API docs          | Dedoc Scramble (OpenAPI from controllers)                             |
+| API docs          | Dedoc Scramble (OpenAPI from `/webapi` controllers)                   |
+| API client (FE)   | Orval → TanStack Query hooks + TS types in `resources/js/api/`        |
 | Web server (prod) | Caddy with on-demand TLS                                              |
 | Debugging (dev)   | Laravel Telescope, Laravel Pail                                       |
 
@@ -85,6 +86,8 @@ Every web request passes through `DomainResolver` (`app/Http/Middleware/DomainRe
 | `Enums/`                                | Typed constants (`CompanyType`, `BookingStatus`, etc.)         |
 | `Providers/`                            | Fortify, Midtrans, Telescope service providers                 |
 
+See [Web API & Orval](./webapi-orval.md) for Scramble + Orval workflow (`pnpm orval` after Web API changes).
+
 ### `resources/js/` — frontend
 
 | Path                   | Responsibility                                                                                             |
@@ -149,13 +152,13 @@ Resolved context is stored in Laravel `Context` and request attributes:
 
 ### Customer data scoping
 
-Customers belong to a company via `users.company_id`. The same email can register with multiple agents because uniqueness is scoped to `[company_id, email]` (see [Requirements](./requirements.md)).
+Customers belong to a company via `users.company_id`. The same email can register with multiple agents because uniqueness is scoped to `[company_id, email]` (see [Product Requirements](./requirements.md)).
 
 Tenant storefront URLs use `Route::domain('{username}.'.$appHost)` in `routes/customers.php`. The `{username}` must match the resolved tenant company's username.
 
 ### TLS for custom domains
 
-`CaddyController` exposes `/caddy/verify-domain` for Caddy on-demand certificate verification. Domain SSL updates are triggered by the queued `TriggerSslUpdate` listener on `DomainUpdated`.
+`CaddyController` exposes `/caddy/verify-domain` for Caddy on-demand TLS. Custom domain certificates are issued automatically by Caddy — no separate certbot step is required.
 
 ---
 
@@ -255,11 +258,13 @@ Scheduled tasks expire unpaid reservations and send deadline reminders (`routes/
 
 Payment status sync runs via webhooks and a scheduled `MarkExpiredPaymentsJob`.
 
+Local webhook testing uses [Cloudflare Tunnel](./cloudflare-tunnel.md) (`tunnel-8000.travelboost.co.id`).
+
 ### Chat and AI chatbot
 
 Private chat between customers (user or anonymous) and a company, with optional AI auto-reply.
 
-See [Chat and Chatbot](./chat-and-chatbot.md) for the full flow, prerequisites, and troubleshooting.
+See [Live Chat & Chatbot](./live-chat.md) for the full flow, prerequisites, and troubleshooting.
 
 | Component      | Path                                                                     |
 | -------------- | ------------------------------------------------------------------------ |
@@ -361,7 +366,6 @@ Laravel auto-discovers event listeners from type-hinted `handle()` methods.
 | `ChatMessageCreated` | `ChatbotAutoReply`, `UpdateChatRoomLastMessage` | Dispatched by `ChatMessage` model on create |
 | `MediaCreated`       | `CreateMediaKnowledgeBase`                      | Queued — embeds documents for chatbot RAG   |
 | `MediaDeleting`      | `DeleteMediaReferences`                         | Queued                                      |
-| `DomainUpdated`      | `TriggerSslUpdate`                              | Queued — Caddy cert refresh                 |
 | `CompanyTeamCreated` | `SendTeamInvitationNotification`                |                                             |
 | `TourCreated`        | `SendTourCreatedNotification`                   |                                             |
 
@@ -468,25 +472,29 @@ pnpm dev:full   # Reverb + queue + Vite + artisan serve (with bcmath)
 
 Individual processes: `dev:serve`, `dev:reverb`, `dev:queue`, `dev:vite`.
 
-See [Development Environment Setup](./development-environment-setup.md).
+See [Local Development](./local-development.md).
 
 ### Production
 
-- **Caddy** serves PHP via FastCGI (see [App Server Setup](./app-server-setup.md))
+- **Caddy** serves PHP via FastCGI — see [Production App Server](./production-app-server.md)
 - **Supervisor** manages queue workers, scheduler, and Reverb
-- Deploy workflow: [Deployments](./deployments.md) (`pnpm dev:deploy`)
+- Deploy workflow: [Deployment](./deployment.md) (`pnpm dev:deploy`)
 
 ---
 
-## Related Documentation
+## Related docs
 
-| Topic                                    | Document                                                                           |
-| ---------------------------------------- | ---------------------------------------------------------------------------------- |
-| Chat auto-reply flow and troubleshooting | [Chat and Chatbot](./chat-and-chatbot.md)                                          |
-| Route file organization                  | [Routing](./routing.md)                                                            |
-| Product requirements                     | [Requirements](./requirements.md)                                                  |
-| Local dev setup                          | [Development Environment Setup](./development-environment-setup.md)                |
-| Server provisioning                      | [App Server Setup](./app-server-setup.md), [DB Server Setup](./db-server-setup.md) |
-| Xdebug and chatbot debugging             | [Debugging Setup Guide](./debugging.md)                                            |
-| Deployment                               | [Deployments](./deployments.md)                                                    |
-| Translations                             | [Translations](./translations.md)                                                  |
+Full index: [README](../README.md)
+
+| Topic                | Document                                                                                                                 |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| Web API & Orval      | [webapi-orval.md](./webapi-orval.md)                                                                                     |
+| Live chat & chatbot  | [live-chat.md](./live-chat.md)                                                                                           |
+| Routing              | [routing.md](./routing.md)                                                                                               |
+| Product requirements | [requirements.md](./requirements.md)                                                                                     |
+| Local development    | [local-development.md](./local-development.md)                                                                           |
+| Production servers   | [production-app-server.md](./production-app-server.md), [production-database-server.md](./production-database-server.md) |
+| Object storage       | [object-storage.md](./object-storage.md)                                                                                 |
+| Debugging            | [debugging.md](./debugging.md)                                                                                           |
+| Deployment           | [deployment.md](./deployment.md)                                                                                         |
+| Translations         | [i18n.md](./i18n.md)                                                                                                     |

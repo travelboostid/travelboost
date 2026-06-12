@@ -7,6 +7,7 @@ import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { router } from '@inertiajs/react';
 import { AlertCircle, SearchIcon } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
+import { FormattedMessage, useIntl } from 'react-intl';
 import TourCard from './components/TourCard';
 import VendorPartnershipRegistrationButton from './components/vendor-partnership-register-button';
 import { EmptyTours } from './empty-tours';
@@ -28,6 +29,7 @@ export default function Page({
     vendor,
     partnership,
 }: PageProps) {
+    const intl = useIntl();
     const [search, setSearch] = useState(filters.search ?? '');
     const [showInactive, setShowInactive] = useState(false);
     const { company } = usePageSharedDataProps();
@@ -113,7 +115,14 @@ export default function Page({
         <CompanyDashboardLayout
             openMenuIds={openMenuIds}
             activeMenuIds={activeMenuIds}
-            breadcrumb={[{ title: 'Tour Catalogs' }, { title: username }]}
+            breadcrumb={[
+                {
+                    title: intl.formatMessage({
+                        defaultMessage: 'Tour Catalogs',
+                    }),
+                },
+                { title: username },
+            ]}
             containerClassName="bg-slate-50/30 dark:bg-slate-950 min-h-screen pb-20"
             applet={
                 isAgent && !isOwnCatalog ? (
@@ -134,15 +143,20 @@ export default function Page({
                                 </span>
                                 <div className="flex min-w-0 flex-1 flex-col gap-1 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-2">
                                     <span className="font-semibold text-red-600 dark:text-red-400">
-                                        Partnership Required
+                                        <FormattedMessage defaultMessage="Partnership Required" />
                                     </span>
                                     <span className="text-slate-600 dark:text-slate-300">
-                                        Active partnership is required to copy
-                                        tours.
+                                        <FormattedMessage defaultMessage="Active partnership is required to copy tours." />
                                     </span>
                                     <span className="inline-flex w-fit items-center rounded-full bg-red-50 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-red-600 dark:bg-red-950/40 dark:text-red-300">
-                                        Status:{' '}
-                                        {partnership?.status || 'unregistered'}
+                                        <FormattedMessage
+                                            defaultMessage="Status: {status}"
+                                            values={{
+                                                status:
+                                                    partnership?.status ||
+                                                    'unregistered',
+                                            }}
+                                        />
                                     </span>
                                 </div>
                             </div>
@@ -159,7 +173,9 @@ export default function Page({
                             />
                             <input
                                 type="text"
-                                placeholder="Search catalog..."
+                                placeholder={intl.formatMessage({
+                                    defaultMessage: 'Search catalog...',
+                                })}
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
                                 className="w-full rounded-xl border-none bg-white dark:bg-slate-900 px-9 py-2.5 text-sm shadow-sm ring-1 ring-slate-200 dark:ring-slate-800 focus:ring-2 focus:ring-primary outline-none transition-all text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500"
@@ -178,7 +194,7 @@ export default function Page({
                                         htmlFor="show-inactive"
                                         className="text-xs font-bold text-slate-600 dark:text-slate-300 cursor-pointer"
                                     >
-                                        Show Inactive Tours
+                                        <FormattedMessage defaultMessage="Show Inactive Tours" />
                                     </Label>
                                 </div>
                             </div>
@@ -199,7 +215,7 @@ export default function Page({
                             }
                             className={`whitespace-nowrap px-4 py-2 rounded-xl text-xs font-bold transition-all ${!filters.category ? 'bg-primary text-primary-foreground shadow-md' : 'bg-white dark:bg-slate-900 text-slate-500 dark:text-slate-400 ring-1 ring-slate-200 dark:ring-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
                         >
-                            All Categories
+                            <FormattedMessage defaultMessage="All Categories" />
                         </button>
                         {categories.map((cat) => (
                             <button

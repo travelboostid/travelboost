@@ -10,6 +10,7 @@ class GoogleAnalyticsConnection extends Model
         'company_google_account_id',
         'ga_account_id',
         'property_id',
+        'data_stream_id',
         'measurement_id',
         'website_url',
         'timezone',

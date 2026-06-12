@@ -6,6 +6,7 @@ import {
     EmptyTitle,
 } from '@/components/ui/empty';
 import { IconFolderCode } from '@tabler/icons-react';
+import { FormattedMessage } from 'react-intl';
 
 export function EmptyCustomers() {
     return (
@@ -14,10 +15,11 @@ export function EmptyCustomers() {
                 <EmptyMedia variant="icon">
                     <IconFolderCode />
                 </EmptyMedia>
-                <EmptyTitle>No Data Available</EmptyTitle>
+                <EmptyTitle>
+                    <FormattedMessage defaultMessage="No Data Available" />
+                </EmptyTitle>
                 <EmptyDescription>
-                    There are no customers to display. Please check back later
-                    or change your filters.
+                    <FormattedMessage defaultMessage="There are no customers to display. Please check back later or change your filters." />
                 </EmptyDescription>
             </EmptyHeader>
         </Empty>

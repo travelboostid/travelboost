@@ -5,6 +5,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import { useIntl } from 'react-intl';
 
 type VisaCategory = {
     id: number;
@@ -22,6 +23,7 @@ export default function SelectVisaCategory({
     onChange,
     categories = [],
 }: Props) {
+    const intl = useIntl();
     const selectedCategory = categories.find(
         (item) => String(item.id) === String(value ?? '0'),
     );
@@ -29,9 +31,16 @@ export default function SelectVisaCategory({
     return (
         <Select value={value ? String(value) : '0'} onValueChange={onChange}>
             <SelectTrigger className="w-full min-w-0">
-                <SelectValue placeholder={undefined}>
+                <SelectValue
+                    placeholder={intl.formatMessage({
+                        defaultMessage: 'Select Visa Category',
+                    })}
+                >
                     <span className="block truncate">
-                        {selectedCategory?.name ?? 'No Visa Category'}
+                        {selectedCategory?.name ??
+                            intl.formatMessage({
+                                defaultMessage: 'No Visa Category',
+                            })}
                     </span>
                 </SelectValue>
             </SelectTrigger>

@@ -24,6 +24,7 @@ import { IconCalendarEvent, IconPdf } from '@tabler/icons-react';
 import axios from 'axios';
 import { HeartIcon, MessageSquareIcon } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
+import { FormattedMessage } from 'react-intl';
 import BaseTourCard from './BaseTourCard';
 
 export default function PublicTourCard({
@@ -192,12 +193,14 @@ export default function PublicTourCard({
                                 >
                                     <IconPdf size={20} />
                                     <span className="ml-1 text-xs font-semibold sm:hidden">
-                                        Itinerary
+                                        <FormattedMessage defaultMessage="Itinerary" />
                                     </span>
                                 </Button>
                             </TooltipTrigger>
                             <TooltipContent>
-                                <p>Itinerary</p>
+                                <p>
+                                    <FormattedMessage defaultMessage="Itinerary" />
+                                </p>
                             </TooltipContent>
                         </Tooltip>
                         <Tooltip delayDuration={200}>
@@ -215,12 +218,14 @@ export default function PublicTourCard({
                                         <MessageSquareIcon size={20} />
                                     )}
                                     <span className="ml-1 text-xs font-semibold sm:hidden">
-                                        Ask AI
+                                        <FormattedMessage defaultMessage="Ask AI" />
                                     </span>
                                 </Button>
                             </TooltipTrigger>
                             <TooltipContent>
-                                <p>Ask AI</p>
+                                <p>
+                                    <FormattedMessage defaultMessage="Ask AI" />
+                                </p>
                             </TooltipContent>
                         </Tooltip>
                         <Button
@@ -230,7 +235,9 @@ export default function PublicTourCard({
                             onClick={handleBookClick}
                         >
                             <IconCalendarEvent size={20} />
-                            <span className="truncate">View Schedule</span>
+                            <span className="truncate">
+                                <FormattedMessage defaultMessage="View Schedule" />
+                            </span>
                         </Button>
                     </>
                 }
@@ -245,16 +252,15 @@ export default function PublicTourCard({
                         <AlertDialogContent className="rounded-3xl border-none dark:bg-slate-900">
                             <AlertDialogHeader>
                                 <AlertDialogTitle className="text-xl font-bold dark:text-white">
-                                    Login Required
+                                    <FormattedMessage defaultMessage="Login Required" />
                                 </AlertDialogTitle>
                                 <AlertDialogDescription className="dark:text-slate-400">
-                                    Please login or register first to continue
-                                    this action.
+                                    <FormattedMessage defaultMessage="Please login or register first to continue this action." />
                                 </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
                                 <AlertDialogCancel className="rounded-xl font-bold dark:bg-slate-800 dark:text-white">
-                                    Cancel
+                                    <FormattedMessage defaultMessage="Cancel" />
                                 </AlertDialogCancel>
                                 <AlertDialogAction
                                     className="rounded-xl font-bold px-6"
@@ -272,7 +278,7 @@ export default function PublicTourCard({
                                         router.visit('/customers/login');
                                     }}
                                 >
-                                    Login
+                                    <FormattedMessage defaultMessage="Login" />
                                 </AlertDialogAction>
                             </AlertDialogFooter>
                         </AlertDialogContent>

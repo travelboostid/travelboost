@@ -2,6 +2,7 @@ import { cn, formatIDR } from '@/lib/utils';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import { ArrowDownLeft, ArrowUpRight } from 'lucide-react';
+import { useIntl } from 'react-intl';
 import EmptyWalletTransactions from '../empty-wallet-transactions';
 
 dayjs.extend(relativeTime);
@@ -16,9 +17,14 @@ export type WalletTransaction = {
 };
 
 function TransactionItem({ transaction }: { transaction: WalletTransaction }) {
+    const intl = useIntl();
     const isIncome = transaction.type === 'income';
     const Icon = isIncome ? ArrowUpRight : ArrowDownLeft;
-    const description = transaction.meta?.description || 'Wallet transaction';
+    const description =
+        transaction.meta?.description ||
+        intl.formatMessage({
+            defaultMessage: 'Wallet transaction',
+        });
 
     return (
         <div className="flex flex-col gap-3 rounded-xl border bg-background/60 p-3 transition-colors hover:bg-muted/40 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
@@ -80,7 +86,7 @@ export default function TransactionList({
     }
 
     return (
-        <div className="space-y-2.5">
+        <div className="space-y-3">
             {transactions.map((transaction) => (
                 <TransactionItem
                     key={transaction.id}

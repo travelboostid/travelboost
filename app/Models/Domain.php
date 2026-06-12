@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Events\DomainUpdated;
 use Illuminate\Database\Eloquent\Model;
 
 class Domain extends Model
@@ -20,16 +19,6 @@ class Domain extends Model
         'domain_enabled' => 'boolean',
         'subdomain_enabled' => 'boolean',
     ];
-
-    protected static function booted()
-    {
-
-        static::updated(function ($domain) {
-            if ($domain->wasChanged('domain') || $domain->wasChanged('domain_enabled') || $domain->wasChanged('subdomain_enabled')) {
-                event(new DomainUpdated($domain));
-            }
-        });
-    }
 
     public function owner()
     {

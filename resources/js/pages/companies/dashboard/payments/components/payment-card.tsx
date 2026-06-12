@@ -4,16 +4,12 @@ import { cn, formatIDR } from '@/lib/utils';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import { CoinsIcon } from 'lucide-react';
+import { useMemo } from 'react';
+import { useIntl } from 'react-intl';
 import CancelPayment from './cancel-payment';
 import ContinuePayment from './continue-payment';
 
 dayjs.extend(relativeTime);
-
-const PAYABLE_TYPE_MAP: Record<string, string> = {
-    'wallet-topup-payment': 'Wallet top-up',
-    'agent-subscription-payment': 'Agent subscription',
-    'ai-credit-topup-payment': 'AI credits top-up',
-};
 
 function statusBadgeClass(status: string): string {
     switch (status) {
@@ -40,10 +36,28 @@ type Payment = {
 };
 
 export default function PaymentCard({ payment }: { payment: Payment }) {
+    const intl = useIntl();
     const canContinue = ['unpaid', 'pending'].includes(payment.status);
     const canCancel = payment.status === 'pending';
+
+    const payableTypeMap = useMemo(
+        () => ({
+            'wallet-topup-payment': intl.formatMessage({
+                defaultMessage: 'Wallet top-up',
+            }),
+            'agent-subscription-payment': intl.formatMessage({
+                defaultMessage: 'Agent subscription',
+            }),
+            'ai-credit-topup-payment': intl.formatMessage({
+                defaultMessage: 'AI credits top-up',
+            }),
+        }),
+        [intl],
+    );
+
     const typeLabel =
-        PAYABLE_TYPE_MAP[payment.payable_type] ?? payment.payable_type;
+        payableTypeMap[payment.payable_type as keyof typeof payableTypeMap] ??
+        payment.payable_type;
 
     return (
         <div className="flex flex-col gap-3 rounded-xl border bg-background/60 p-4 transition-colors hover:bg-muted/40 sm:flex-row sm:items-center sm:justify-between">
@@ -78,9 +92,9 @@ export default function PaymentCard({ payment }: { payment: Payment }) {
             </div>
 
             {(canContinue || canCancel) && (
-                <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
-                    {canContinue ? <ContinuePayment payment={payment} /> : null}
-                    {canCancel ? <CancelPayment payment={payment} /> : null}
+                <div className="flex shrink-0 gap-2 sm:flex-col sm:items-stretch">
+                    {canContinue && <ContinuePayment payment={payment} />}
+                    {canCancel && <CancelPayment payment={payment} />}
                 </div>
             )}
         </div>

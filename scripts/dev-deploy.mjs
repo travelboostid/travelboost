@@ -24,12 +24,17 @@ const MAIN_CONFIG = {
 function showHelp() {
     console.log(`
 Usage:
-  node deploy.mjs -c <dev|main>
-  node deploy.mjs --config <dev|main>
+  node scripts/dev-deploy.mjs -c <dev|main> [options]
+  pnpm dev:deploy -- -c <dev|main> [options]
 
 Options:
-  -c, --config   Deployment target
-  -h, --help     Show this help
+  -c, --config              Deployment target (default: dev)
+  --frontend-only           Only build frontend and upload assets
+  --skip-composer           Skip remote composer install
+  --skip-migrate            Skip remote php artisan migrate
+  --skip-supervisor         Skip remote supervisorctl restart
+  --skip-frontend-build     Skip local pnpm install/build and asset upload
+  -h, --help                Show this help
 `);
 }
 
@@ -50,12 +55,32 @@ function parseArgs() {
         }
     }
 
+    const frontendOnly = args.includes('--frontend-only');
+
+    const skips = {
+        composer: args.includes('--skip-composer'),
+        migrate: args.includes('--skip-migrate'),
+        supervisor: args.includes('--skip-supervisor'),
+        frontendBuild: args.includes('--skip-frontend-build'),
+    };
+
+    if (frontendOnly && skips.frontendBuild) {
+        console.error(
+            '❌ --frontend-only cannot be used with --skip-frontend-build.',
+        );
+        process.exit(1);
+    }
+
+    let config;
+
     switch (configName) {
         case 'dev':
-            return DEV_CONFIG;
+            config = DEV_CONFIG;
+            break;
 
         case 'main':
-            return MAIN_CONFIG;
+            config = MAIN_CONFIG;
+            break;
 
         default:
             console.error(
@@ -63,9 +88,12 @@ function parseArgs() {
             );
             process.exit(1);
     }
+
+    return { config, skips, frontendOnly };
 }
 
-const CONFIG = parseArgs();
+const { config: CONFIG, skips: SKIP, frontendOnly: FRONTEND_ONLY } =
+    parseArgs();
 
 // HELPERS
 function run(cmd, options = {}) {
@@ -94,62 +122,81 @@ function ssh(cmd) {
 try {
     const { env, branch, remotePath, buildPath, sshUser, sshHost } = CONFIG;
 
-    console.log(`🚀 Deploying ${env}...`);
+    const skippedSteps = Object.entries(SKIP)
+        .filter(([, skipped]) => skipped)
+        .map(([step]) => step);
+
+    console.log(`🚀 Deploying ${env}${FRONTEND_ONLY ? ' (frontend only)' : ''}...`);
+
+    if (!FRONTEND_ONLY && skippedSteps.length > 0) {
+        console.log(`⏭️  Skipping: ${skippedSteps.join(', ')}`);
+    }
 
     // --- 0. Pre-checks ---
     const envFile = fs.readFileSync('.env', 'utf-8');
 
     assert(envFile.includes(`APP_ENV=${env}`), `APP_ENV must be ${env}`);
 
-    // --- 1. Git safety checks ---
-    const currentBranch = getOutput('git rev-parse --abbrev-ref HEAD');
+    if (!FRONTEND_ONLY) {
+        // --- 1. Git safety checks ---
+        const currentBranch = getOutput('git rev-parse --abbrev-ref HEAD');
 
-    assert(
-        currentBranch === branch,
-        `Current branch is "${currentBranch}", must be "${branch}"`,
-    );
+        assert(
+            currentBranch === branch,
+            `Current branch is "${currentBranch}", must be "${branch}"`,
+        );
 
-    const status = getOutput('git status --porcelain');
+        const status = getOutput('git status --porcelain');
 
-    assert(status === '', 'You have uncommitted changes');
+        assert(status === '', 'You have uncommitted changes');
 
-    run('git fetch origin');
+        run('git fetch origin');
 
-    const local = getOutput('git rev-parse HEAD');
-    const remote = getOutput(`git rev-parse origin/${branch}`);
+        const local = getOutput('git rev-parse HEAD');
+        const remote = getOutput(`git rev-parse origin/${branch}`);
 
-    assert(
-        local === remote,
-        `Local branch is not up-to-date with origin/${branch}`,
-    );
+        assert(
+            local === remote,
+            `Local branch is not up-to-date with origin/${branch}`,
+        );
 
-    // --- 2. Upload .env ---
-    run(`scp .env ${sshUser}@${sshHost}:${remotePath}/.env`);
+        // --- 2. Upload .env ---
+        run(`scp .env ${sshUser}@${sshHost}:${remotePath}/.env`);
 
-    // --- 3. Update VPS backend ---
-    run(
-        ssh(
-            `cd ${remotePath} && ` +
-                `git pull origin ${branch} && ` +
-                `composer install --no-dev --optimize-autoloader && ` +
-                `php artisan migrate --force && ` +
-                `php artisan optimize:clear && ` +
-                `sudo supervisorctl restart all`,
-        ),
-    );
+        // --- 3. Update VPS backend ---
+        const remoteSteps = [`cd ${remotePath}`, `git pull origin ${branch}`];
+
+        if (!SKIP.composer) {
+            remoteSteps.push('composer install --no-dev --optimize-autoloader');
+        }
+
+        if (!SKIP.migrate) {
+            remoteSteps.push('php artisan migrate --force');
+        }
+
+        remoteSteps.push('php artisan optimize:clear');
+
+        if (!SKIP.supervisor) {
+            remoteSteps.push('sudo supervisorctl restart all');
+        }
+
+        run(ssh(remoteSteps.join(' && ')));
+    }
 
     // --- 4. Build frontend ---
-    run('pnpm install --frozen-lockfile');
-    run('pnpm build');
+    if (FRONTEND_ONLY || !SKIP.frontendBuild) {
+        run('pnpm install --frozen-lockfile');
+        run('pnpm build');
 
-    // --- 5. Upload assets ---
-    const remoteBuildPath = `${sshUser}@${sshHost}:${remotePath}/${buildPath}`;
+        // --- 5. Upload assets ---
+        const remoteBuildPath = `${sshUser}@${sshHost}:${remotePath}/${buildPath}`;
 
-    try {
-        run(`rsync -avz --delete ${buildPath}/ ${remoteBuildPath}/`);
-    } catch {
-        console.log('⚠️ rsync not found, fallback to scp...');
-        run(`scp -r ${buildPath}/* ${remoteBuildPath}/`);
+        try {
+            run(`rsync -avz --delete ${buildPath}/ ${remoteBuildPath}/`);
+        } catch {
+            console.log('⚠️ rsync not found, fallback to scp...');
+            run(`scp -r ${buildPath}/* ${remoteBuildPath}/`);
+        }
     }
 
     console.log('\n✅ Deploy successful');

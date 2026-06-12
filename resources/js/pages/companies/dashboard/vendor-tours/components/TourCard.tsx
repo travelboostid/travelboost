@@ -16,6 +16,7 @@ import { extractDocumentUrl } from '@/lib/utils';
 import { router } from '@inertiajs/react';
 import axios from 'axios';
 import { useCallback, useEffect, useState } from 'react';
+import { FormattedMessage } from 'react-intl';
 import AgentMyTourCard from './AgentMyTourCard';
 import AgentVendorTourCard from './AgentVendorTourCard';
 import PublicTourCard from './PublicTourCard';
@@ -353,16 +354,15 @@ export default function TourCard({
                 <AlertDialogContent className="rounded-3xl border-none dark:bg-slate-900">
                     <AlertDialogHeader>
                         <AlertDialogTitle className="text-xl font-bold dark:text-white">
-                            Login Required
+                            <FormattedMessage defaultMessage="Login Required" />
                         </AlertDialogTitle>
                         <AlertDialogDescription className="dark:text-slate-400">
-                            Please login or register first to continue this
-                            action.
+                            <FormattedMessage defaultMessage="Please login or register first to continue this action." />
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel className="rounded-xl font-bold dark:bg-slate-800 dark:text-white">
-                            Cancel
+                            <FormattedMessage defaultMessage="Cancel" />
                         </AlertDialogCancel>
                         <AlertDialogAction
                             className="rounded-xl font-bold px-6"
@@ -380,7 +380,7 @@ export default function TourCard({
                                 router.visit('/customers/login');
                             }}
                         >
-                            Login
+                            <FormattedMessage defaultMessage="Login" />
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>

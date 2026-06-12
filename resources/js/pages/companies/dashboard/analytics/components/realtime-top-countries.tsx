@@ -1,17 +1,11 @@
-'use client';
-
-import { Badge } from '@/components/ui/badge';
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from '@/components/ui/card';
 import usePageProps from '@/hooks/use-page-props';
 import { GlobeIcon } from 'lucide-react';
 import type { DetailedHTMLProps, HTMLAttributes } from 'react';
+import { FormattedMessage } from 'react-intl';
 import type { AnalyticsPageProps } from '..';
+import { AnalyticsPanel } from './analytics-panel';
+import { AnalyticsRankedList } from './analytics-ranked-list';
+import { toBreakdownItems } from './analytics-utils';
 
 type RealtimeTopCountriesProps = DetailedHTMLProps<
     HTMLAttributes<HTMLDivElement>,
@@ -20,31 +14,22 @@ type RealtimeTopCountriesProps = DetailedHTMLProps<
 
 export default function RealtimeTopCountries(props: RealtimeTopCountriesProps) {
     const { realtimeInsights } = usePageProps<AnalyticsPageProps>();
+    const items = toBreakdownItems(realtimeInsights?.countries, 'value');
 
     return (
-        <Card {...props}>
-            <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                    <GlobeIcon className="h-5 w-5 text-chart-4" />
-                    Top Countries
-                </CardTitle>
-                <CardDescription>User location breakdown</CardDescription>
-            </CardHeader>
-            <CardContent>
-                <div className="space-y-4">
-                    {realtimeInsights.countries.map((country: any) => (
-                        <div
-                            key={country.name}
-                            className="flex items-center justify-between"
-                        >
-                            <p className="font-medium text-foreground">
-                                {country.name}
-                            </p>
-                            <Badge variant="secondary">{country.value}</Badge>
-                        </div>
-                    ))}
-                </div>
-            </CardContent>
-        </Card>
+        <AnalyticsPanel
+            {...props}
+            icon={GlobeIcon}
+            iconClassName="text-sky-600 dark:text-sky-400"
+            title={<FormattedMessage defaultMessage="Top countries" />}
+            description={
+                <FormattedMessage defaultMessage="Where your live visitors are from" />
+            }
+        >
+            <AnalyticsRankedList
+                items={items}
+                valueLabel={<FormattedMessage defaultMessage="Active users" />}
+            />
+        </AnalyticsPanel>
     );
 }

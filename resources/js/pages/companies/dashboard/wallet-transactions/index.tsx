@@ -20,19 +20,14 @@ import WalletSelectorApplet, {
 } from '@/components/wallet/wallet-selector-applet';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { cn } from '@/lib/utils';
-import { index as walletsIndex } from '@/routes/companies/dashboard/wallets';
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import { format } from 'date-fns';
 import dayjs from 'dayjs';
-import {
-    ArrowLeftIcon,
-    ArrowRightIcon,
-    CalendarIcon,
-    ReceiptTextIcon,
-} from 'lucide-react';
+import { CalendarIcon, ReceiptTextIcon } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import type { DateRange } from 'react-day-picker';
 import { FormattedMessage } from 'react-intl';
+import CurrentWalletCard from './components/current-wallet-card';
 import PeriodSummary from './components/period-summary';
 import TransactionList, {
     type WalletTransaction,
@@ -167,39 +162,23 @@ export default function TransactionsPage({
             <Head title="Wallet Transactions" />
 
             <div className="mx-auto w-full max-w-6xl space-y-6 p-4 sm:p-6">
-                <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-                    <div className="space-y-1">
-                        <Button
-                            asChild
-                            variant="ghost"
-                            size="sm"
-                            className="-ml-2 mb-1 h-8 gap-1.5 px-2 text-muted-foreground"
-                        >
-                            <Link
-                                href={walletsIndex({
-                                    company: company.username,
-                                    query: buildWalletQueryParams(wallet.slug),
-                                })}
-                            >
-                                <ArrowLeftIcon className="size-4" />
-                                <FormattedMessage defaultMessage="Back to wallet" />
-                            </Link>
-                        </Button>
-                        <div className="flex items-center gap-2.5">
-                            <div className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-                                <ReceiptTextIcon className="size-5" />
-                            </div>
-                            <div>
-                                <h1 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
-                                    <FormattedMessage defaultMessage="Wallet transactions" />
-                                </h1>
-                                <p className="text-sm text-muted-foreground">
-                                    <FormattedMessage defaultMessage="Review income, expenses, and activity for the selected period." />
-                                </p>
-                            </div>
+                <header className="space-y-1">
+                    <div className="flex items-center gap-2.5">
+                        <div className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                            <ReceiptTextIcon className="size-5" />
+                        </div>
+                        <div>
+                            <h1 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
+                                <FormattedMessage defaultMessage="Wallet transactions" />
+                            </h1>
+                            <p className="text-sm text-muted-foreground">
+                                <FormattedMessage defaultMessage="Review income, expenses, and activity for the selected period." />
+                            </p>
                         </div>
                     </div>
                 </header>
+
+                <CurrentWalletCard wallet={wallet} />
 
                 <PeriodSummary
                     incomeAmount={income_amount}
@@ -210,43 +189,23 @@ export default function TransactionsPage({
 
                 <Card className="border shadow-sm">
                     <CardHeader className="gap-4 border-b pb-4">
-                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                            <div className="flex items-start gap-3">
-                                <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground">
-                                    <ReceiptTextIcon className="size-4" />
-                                </div>
-                                <div>
-                                    <CardTitle className="text-lg">
-                                        <FormattedMessage defaultMessage="Activity" />
-                                    </CardTitle>
-                                    <CardDescription>
-                                        <FormattedMessage
-                                            defaultMessage="{count} results · latest 50 shown"
-                                            values={{
-                                                count: transactions.length,
-                                            }}
-                                        />
-                                    </CardDescription>
-                                </div>
+                        <div className="flex items-start gap-3">
+                            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground">
+                                <ReceiptTextIcon className="size-4" />
                             </div>
-                            <Button
-                                asChild
-                                variant="ghost"
-                                size="sm"
-                                className="hidden shrink-0 sm:inline-flex"
-                            >
-                                <Link
-                                    href={walletsIndex({
-                                        company: company.username,
-                                        query: buildWalletQueryParams(
-                                            wallet.slug,
-                                        ),
-                                    })}
-                                >
-                                    <FormattedMessage defaultMessage="Wallet overview" />
-                                    <ArrowRightIcon className="size-4" />
-                                </Link>
-                            </Button>
+                            <div>
+                                <CardTitle className="text-lg">
+                                    <FormattedMessage defaultMessage="Activity" />
+                                </CardTitle>
+                                <CardDescription>
+                                    <FormattedMessage
+                                        defaultMessage="{count} results · latest 50 shown"
+                                        values={{
+                                            count: transactions.length,
+                                        }}
+                                    />
+                                </CardDescription>
+                            </div>
                         </div>
 
                         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

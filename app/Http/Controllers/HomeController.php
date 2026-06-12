@@ -28,6 +28,11 @@ class HomeController extends Controller
         return Inertia::render('learn-more/index');
     }
 
+    public function pricing(): Response
+    {
+        return Inertia::render('pricing/index');
+    }
+
     public function privacy(): Response
     {
         return Inertia::render('privacy/index');
@@ -36,6 +41,11 @@ class HomeController extends Controller
     public function termsAndConditions(): Response
     {
         return Inertia::render('terms-and-conditions/index');
+    }
+
+    public function cookiePolicy(): Response
+    {
+        return Inertia::render('cookie-policy/index');
     }
 
     public function tours(): Response

@@ -8,6 +8,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
+import { FormattedMessage, useIntl } from 'react-intl';
 
 interface SelectCurrencyProps {
     name?: string;
@@ -22,6 +23,7 @@ export default function SelectCurrency({
     defaultValue,
     onChange,
 }: SelectCurrencyProps) {
+    const intl = useIntl();
     const { currencies } = usePageSharedDataProps();
 
     return (
@@ -35,14 +37,22 @@ export default function SelectCurrency({
             <SelectTrigger className="w-[120px]">
                 <SelectValue
                     placeholder={
-                        currencies?.length ? 'Select currency' : 'No currency'
+                        currencies?.length
+                            ? intl.formatMessage({
+                                  defaultMessage: 'Select currency',
+                              })
+                            : intl.formatMessage({
+                                  defaultMessage: 'No currency',
+                              })
                     }
                 />
             </SelectTrigger>
 
             <SelectContent position="popper" className="z-[9999]">
                 <SelectGroup>
-                    <SelectLabel>Currency</SelectLabel>
+                    <SelectLabel>
+                        <FormattedMessage defaultMessage="Currency" />
+                    </SelectLabel>
 
                     {currencies?.map((c: any) => (
                         <SelectItem key={c.code} value={c.code}>

@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/table';
 import dayjs from 'dayjs';
 import { Download, Eye } from 'lucide-react';
+import { FormattedMessage, useIntl } from 'react-intl';
 
 interface Payment {
     id: string;
@@ -32,6 +33,8 @@ interface PaymentHistoryProps {
 }
 
 export function PaymentHistory({ payments }: PaymentHistoryProps) {
+    const intl = useIntl();
+
     const getStatusColor = (status: string) => {
         switch (status.toLowerCase()) {
             case 'completed':
@@ -48,9 +51,11 @@ export function PaymentHistory({ payments }: PaymentHistoryProps) {
     return (
         <Card className="border-slate-200 bg-white shadow-sm">
             <CardHeader>
-                <CardTitle>Payment History</CardTitle>
+                <CardTitle>
+                    <FormattedMessage defaultMessage="Payment History" />
+                </CardTitle>
                 <CardDescription>
-                    View your subscription payments and invoices
+                    <FormattedMessage defaultMessage="View your subscription payments and invoices" />
                 </CardDescription>
             </CardHeader>
             <CardContent>
@@ -59,19 +64,19 @@ export function PaymentHistory({ payments }: PaymentHistoryProps) {
                         <TableHeader>
                             <TableRow className="border-slate-200 hover:bg-transparent">
                                 <TableHead className="text-slate-700">
-                                    Date
+                                    <FormattedMessage defaultMessage="Date" />
                                 </TableHead>
                                 <TableHead className="text-slate-700">
-                                    Period
+                                    <FormattedMessage defaultMessage="Period" />
                                 </TableHead>
                                 <TableHead className="text-right text-slate-700">
-                                    Amount
+                                    <FormattedMessage defaultMessage="Amount" />
                                 </TableHead>
                                 <TableHead className="text-slate-700">
-                                    Status
+                                    <FormattedMessage defaultMessage="Status" />
                                 </TableHead>
                                 <TableHead className="text-right text-slate-700">
-                                    Actions
+                                    <FormattedMessage defaultMessage="Actions" />
                                 </TableHead>
                             </TableRow>
                         </TableHeader>
@@ -108,7 +113,10 @@ export function PaymentHistory({ payments }: PaymentHistoryProps) {
                                                 variant="ghost"
                                                 size="sm"
                                                 className="h-8 w-8 p-0 text-slate-600 hover:bg-slate-100"
-                                                title="View invoice"
+                                                title={intl.formatMessage({
+                                                    defaultMessage:
+                                                        'View invoice',
+                                                })}
                                             >
                                                 <Eye className="h-4 w-4" />
                                             </Button>
@@ -116,7 +124,10 @@ export function PaymentHistory({ payments }: PaymentHistoryProps) {
                                                 variant="ghost"
                                                 size="sm"
                                                 className="h-8 w-8 p-0 text-slate-600 hover:bg-slate-100"
-                                                title="Download invoice"
+                                                title={intl.formatMessage({
+                                                    defaultMessage:
+                                                        'Download invoice',
+                                                })}
                                             >
                                                 <Download className="h-4 w-4" />
                                             </Button>
@@ -128,11 +139,10 @@ export function PaymentHistory({ payments }: PaymentHistoryProps) {
                     </Table>
                 </div>
 
-                {/* Empty State */}
                 {payments.length === 0 && (
                     <div className="flex flex-col items-center justify-center py-12 text-center">
                         <p className="text-sm text-slate-600">
-                            No payment history available
+                            <FormattedMessage defaultMessage="No payment history available" />
                         </p>
                     </div>
                 )}

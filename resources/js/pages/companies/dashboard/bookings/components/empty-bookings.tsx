@@ -6,6 +6,7 @@ import {
     EmptyTitle,
 } from '@/components/ui/empty';
 import { IconTicket } from '@tabler/icons-react';
+import { FormattedMessage } from 'react-intl';
 
 export function EmptyBookings() {
     return (
@@ -14,10 +15,11 @@ export function EmptyBookings() {
                 <EmptyMedia variant="icon">
                     <IconTicket />
                 </EmptyMedia>
-                <EmptyTitle>No Bookings Found</EmptyTitle>
+                <EmptyTitle>
+                    <FormattedMessage defaultMessage="No Bookings Found" />
+                </EmptyTitle>
                 <EmptyDescription>
-                    There are no bookings to display. Please check back later or
-                    adjust your filters.
+                    <FormattedMessage defaultMessage="There are no bookings to display. Please check back later or adjust your filters." />
                 </EmptyDescription>
             </EmptyHeader>
         </Empty>

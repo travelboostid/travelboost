@@ -22,6 +22,7 @@ import { Textarea } from '@/components/ui/textarea';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { router, useForm, usePage } from '@inertiajs/react';
 import { useMemo, useState } from 'react';
+import { FormattedMessage, useIntl } from 'react-intl';
 import SelectCategory from './components/select-category';
 import SelectContinent from './components/select-continent';
 import SelectCountry from './components/select-country';
@@ -95,6 +96,7 @@ function RequiredLabel({ children }: { children: React.ReactNode }) {
 }
 
 export default function Page() {
+    const intl = useIntl();
     const [activeTab, setActiveTab] = useState<'tour' | 'schedule'>('tour');
 
     const [continentId, setContinentId] = useState<number | null>(null);
@@ -337,8 +339,13 @@ export default function Page() {
             openMenuIds={['tours']}
             activeMenuIds={['tours.index']}
             breadcrumb={[
-                { title: 'Tours', url: '/dashboard/tours' },
-                { title: 'Create' },
+                {
+                    title: intl.formatMessage({ defaultMessage: 'Tours' }),
+                    url: '/dashboard/tours',
+                },
+                {
+                    title: intl.formatMessage({ defaultMessage: 'Create' }),
+                },
             ]}
         >
             <form
@@ -374,7 +381,7 @@ export default function Page() {
                   shadow-none
                 "
                             >
-                                Master
+                                <FormattedMessage defaultMessage="Master" />
                             </TabsTrigger>
 
                             <TabsTrigger
@@ -387,7 +394,7 @@ export default function Page() {
                   shadow-none
                 "
                             >
-                                Schedule and Price
+                                <FormattedMessage defaultMessage="Schedule and Price" />
                             </TabsTrigger>
 
                             <TabsTrigger
@@ -400,7 +407,7 @@ export default function Page() {
                   shadow-none
                 "
                             >
-                                Availability
+                                <FormattedMessage defaultMessage="Availability" />
                             </TabsTrigger>
 
                             <TabsTrigger
@@ -413,7 +420,7 @@ export default function Page() {
                   shadow-none
                 "
                             >
-                                Adds On
+                                <FormattedMessage defaultMessage="Adds On" />
                             </TabsTrigger>
                         </TabsList>
 
@@ -442,30 +449,37 @@ export default function Page() {
                                     <div className="flex items-start justify-between border-b bg-muted/40 px-6 py-4">
                                         <div>
                                             <h2 className="text-lg font-semibold">
-                                                Basic Information
+                                                <FormattedMessage defaultMessage="Basic Information" />
                                             </h2>
 
                                             <p className="text-sm text-muted-foreground">
-                                                Main information about your tour
+                                                <FormattedMessage defaultMessage="Main information about your tour" />
                                             </p>
                                         </div>
 
                                         <div className="flex items-center gap-2">
                                             <span className="text-sm font-medium">
-                                                Input By :{' '}
+                                                <FormattedMessage defaultMessage="Input By:" />{' '}
                                                 {auth.user?.name || '-'}
                                             </span>
                                         </div>
                                     </div>
                                     <div className="grid grid-cols-1 gap-5 p-6 lg:grid-cols-12">
                                         <div className="grid min-w-0 gap-2 lg:col-span-4">
-                                            <RequiredLabel>Code</RequiredLabel>
+                                            <RequiredLabel>
+                                                <FormattedMessage defaultMessage="Code" />
+                                            </RequiredLabel>
                                             <Input
                                                 id="code"
                                                 type="text"
                                                 name="code"
                                                 required
-                                                placeholder="Tour Code"
+                                                placeholder={intl.formatMessage(
+                                                    {
+                                                        defaultMessage:
+                                                            'Tour Code',
+                                                    },
+                                                )}
                                                 value={data.code}
                                                 onChange={(e) =>
                                                     setData(
@@ -477,13 +491,20 @@ export default function Page() {
                                             <InputError message={errors.code} />
                                         </div>
                                         <div className="grid min-w-0 gap-2 lg:col-span-6">
-                                            <RequiredLabel>Name</RequiredLabel>
+                                            <RequiredLabel>
+                                                <FormattedMessage defaultMessage="Name" />
+                                            </RequiredLabel>
                                             <Input
                                                 id="name"
                                                 type="text"
                                                 name="name"
                                                 required
-                                                placeholder="Tour Name"
+                                                placeholder={intl.formatMessage(
+                                                    {
+                                                        defaultMessage:
+                                                            'Tour Name',
+                                                    },
+                                                )}
                                                 value={data.name}
                                                 onChange={(e) =>
                                                     setData(
@@ -604,7 +625,7 @@ export default function Page() {
 
                                         <div className="grid gap-2 lg:col-span-4">
                                             <RequiredLabel>
-                                                Continent
+                                                <FormattedMessage defaultMessage="Continent" />
                                             </RequiredLabel>
                                             <SelectContinent
                                                 name="continent_id"
@@ -628,7 +649,7 @@ export default function Page() {
 
                                         <div className="grid gap-2 lg:col-span-4">
                                             <RequiredLabel>
-                                                Region
+                                                <FormattedMessage defaultMessage="Region" />
                                             </RequiredLabel>
                                             <SelectRegion
                                                 name="region_id"
@@ -651,7 +672,7 @@ export default function Page() {
 
                                         <div className="grid gap-2 lg:col-span-4">
                                             <RequiredLabel>
-                                                Country
+                                                <FormattedMessage defaultMessage="Country" />
                                             </RequiredLabel>
                                             <SelectCountry
                                                 name="country_id"
@@ -790,13 +811,11 @@ export default function Page() {
                                     {/* HEADER */}
                                     <div className="border-b bg-muted/40 px-6 py-4">
                                         <h2 className="text-lg font-semibold">
-                                            Publishing and Document
+                                            <FormattedMessage defaultMessage="Publishing & Documents" />
                                         </h2>
 
                                         <p className="text-sm text-muted-foreground">
-                                            Upload the itinerary file and
-                                            product visual in a compact,
-                                            easy-to-review layout.
+                                            <FormattedMessage defaultMessage="Upload the itinerary file and product visual in a compact, easy-to-review layout." />
                                         </p>
                                     </div>
                                     <div className="grid gap-6 p-6 xl:grid-cols-[minmax(220px,3fr)_minmax(320px,7fr)]">
@@ -877,24 +896,28 @@ export default function Page() {
                                 <div className="overflow-hidden rounded-3xl border bg-card shadow-sm">
                                     <div className="border-b bg-muted/40 px-6 py-4">
                                         <h2 className="text-lg font-semibold">
-                                            Pricing
+                                            <FormattedMessage defaultMessage="Pricing" />
                                         </h2>
 
                                         <p className="text-sm text-muted-foreground">
-                                            Configure normal and promotional
-                                            prices
+                                            <FormattedMessage defaultMessage="Configure normal and promotional prices" />
                                         </p>
                                     </div>
                                     <div className="space-y-6 p-6">
                                         <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
                                             <div className="grid gap-2">
                                                 <RequiredLabel>
-                                                    Normal Price show on catalog
+                                                    <FormattedMessage defaultMessage="Normal Price show on catalog" />
                                                 </RequiredLabel>
                                                 <Input
                                                     id="showprice_display"
                                                     type="text"
-                                                    placeholder="Normal Price"
+                                                    placeholder={intl.formatMessage(
+                                                        {
+                                                            defaultMessage:
+                                                                'Normal Price',
+                                                        },
+                                                    )}
                                                     value={displayPrice}
                                                     onChange={(e) =>
                                                         handlePriceChange(
@@ -934,12 +957,11 @@ export default function Page() {
                                         <div className="rounded-2xl border border-pink-200 bg-gradient-to-br from-pink-50 to-rose-50 p-5 shadow-sm">
                                             <div className="mb-5">
                                                 <h3 className="font-semibold text-pink-700">
-                                                    Promotion Campaign
+                                                    <FormattedMessage defaultMessage="Promotion Campaign" />
                                                 </h3>
 
                                                 <p className="text-sm text-muted-foreground">
-                                                    Highlight special offer on
-                                                    catalog
+                                                    <FormattedMessage defaultMessage="Highlight special offer on catalog" />
                                                 </p>
                                             </div>
 
@@ -947,14 +969,18 @@ export default function Page() {
                                                 {/* promote title */}
                                                 <div className="grid gap-2">
                                                     <Label htmlFor="promote_title">
-                                                        Title Promotion on
-                                                        Catalog
+                                                        <FormattedMessage defaultMessage="Title Promotion on Catalog" />
                                                     </Label>
                                                     <Input
                                                         id="promote_title"
                                                         type="text"
                                                         name="promote_title"
-                                                        placeholder="Title Promotion"
+                                                        placeholder={intl.formatMessage(
+                                                            {
+                                                                defaultMessage:
+                                                                    'Title Promotion',
+                                                            },
+                                                        )}
                                                         value={
                                                             data.promote_title
                                                         }
@@ -975,13 +1001,17 @@ export default function Page() {
                                                 {/* Promote Price */}
                                                 <div className="grid gap-2">
                                                     <Label htmlFor="promote_price">
-                                                        Promotion Price show on
-                                                        catalog
+                                                        <FormattedMessage defaultMessage="Promotion Price show on catalog" />
                                                     </Label>
                                                     <Input
                                                         id="promote_price_display"
                                                         type="text"
-                                                        placeholder="Promotion Price"
+                                                        placeholder={intl.formatMessage(
+                                                            {
+                                                                defaultMessage:
+                                                                    'Promotion Price',
+                                                            },
+                                                        )}
                                                         value={displayPrice1}
                                                         onChange={(e) =>
                                                             handlePriceChange1(
@@ -1006,14 +1036,18 @@ export default function Page() {
                                                 {/* promote note — full width */}
                                                 <div className="grid gap-2 md:col-span-2">
                                                     <Label htmlFor="promote_note">
-                                                        Promotion Note on
-                                                        Catalog
+                                                        <FormattedMessage defaultMessage="Promotion Note on Catalog" />
                                                     </Label>
                                                     <Input
                                                         id="promote_note"
                                                         type="text"
                                                         name="promote_note"
-                                                        placeholder="Promotion Note"
+                                                        placeholder={intl.formatMessage(
+                                                            {
+                                                                defaultMessage:
+                                                                    'Promotion Note',
+                                                            },
+                                                        )}
                                                         value={
                                                             data.promote_note
                                                         }
@@ -1058,7 +1092,7 @@ export default function Page() {
                                     }}
                                 >
                                     {processing && <Spinner />}
-                                    Save & Continue
+                                    <FormattedMessage defaultMessage="Save & Continue" />
                                 </Button>
                             </div>
                         </TabsContent>
@@ -1073,7 +1107,8 @@ export default function Page() {
                                             onClick={addSchedule}
                                             disabled
                                         >
-                                            + Add New Schedule
+                                            +{' '}
+                                            <FormattedMessage defaultMessage="Add New Schedule" />
                                         </Button>
                                     </div>
                                 </div>
@@ -1082,13 +1117,13 @@ export default function Page() {
                                     {/* LEFT */}
                                     <div className="flex flex-wrap items-center gap-3">
                                         <span className="text-sm text-muted-foreground">
-                                            Departure Date
+                                            <FormattedMessage defaultMessage="Departure Date" />
                                         </span>
 
                                         {/* FROM */}
                                         <div className="flex items-center gap-2">
                                             <span className="text-xs text-muted-foreground">
-                                                From
+                                                <FormattedMessage defaultMessage="From" />
                                             </span>
 
                                             <input
@@ -1100,7 +1135,7 @@ export default function Page() {
                                         {/* TO */}
                                         <div className="flex items-center gap-2">
                                             <span className="text-xs text-muted-foreground">
-                                                To
+                                                <FormattedMessage defaultMessage="To" />
                                             </span>
 
                                             <input
@@ -1112,7 +1147,7 @@ export default function Page() {
 
                                     {/* RIGHT */}
                                     <div className="rounded-lg border bg-muted/40 px-3 py-2 text-sm font-medium">
-                                        Currency:
+                                        <FormattedMessage defaultMessage="Currency:" />
                                     </div>
                                 </div>
 
@@ -1126,20 +1161,20 @@ export default function Page() {
                                                     className="p-3 text-left"
                                                     rowSpan={2}
                                                 >
-                                                    Departure
+                                                    <FormattedMessage defaultMessage="Departure" />
                                                 </th>
                                                 <th
                                                     className="p-3 text-left"
                                                     rowSpan={2}
                                                 >
-                                                    Return
+                                                    <FormattedMessage defaultMessage="Return" />
                                                 </th>
 
                                                 <th
                                                     className="p-3 text-center"
                                                     colSpan={4}
                                                 >
-                                                    Prices
+                                                    <FormattedMessage defaultMessage="Prices" />
                                                 </th>
 
                                                 <th
@@ -1150,14 +1185,16 @@ export default function Page() {
 
                                             <tr className="text-xs text-muted-foreground">
                                                 <th className="p-2">
-                                                    Category
-                                                </th>
-                                                <th className="p-2">Price</th>
-                                                <th className="p-2">
-                                                    Promotion
+                                                    <FormattedMessage defaultMessage="Category" />
                                                 </th>
                                                 <th className="p-2">
-                                                    Commission
+                                                    <FormattedMessage defaultMessage="Price" />
+                                                </th>
+                                                <th className="p-2">
+                                                    <FormattedMessage defaultMessage="Promotion" />
+                                                </th>
+                                                <th className="p-2">
+                                                    <FormattedMessage defaultMessage="Commission" />
                                                 </th>
                                             </tr>
                                         </thead>
@@ -1243,8 +1280,12 @@ export default function Page() {
                                                                             }
                                                                         >
                                                                             <option value="">
-                                                                                Select
-                                                                                Category
+                                                                                {intl.formatMessage(
+                                                                                    {
+                                                                                        defaultMessage:
+                                                                                            'Select Category',
+                                                                                    },
+                                                                                )}
                                                                             </option>
 
                                                                             {priceCategories.map(
@@ -1271,7 +1312,12 @@ export default function Page() {
                                                                         <Input
                                                                             type="number"
                                                                             className="no-spinner"
-                                                                            placeholder="Price"
+                                                                            placeholder={intl.formatMessage(
+                                                                                {
+                                                                                    defaultMessage:
+                                                                                        'Price',
+                                                                                },
+                                                                            )}
                                                                             value={
                                                                                 room.price
                                                                             }
@@ -1295,7 +1341,12 @@ export default function Page() {
                                                                             <Input
                                                                                 type="number"
                                                                                 className="no-spinner"
-                                                                                placeholder="%"
+                                                                                placeholder={intl.formatMessage(
+                                                                                    {
+                                                                                        defaultMessage:
+                                                                                            '%',
+                                                                                    },
+                                                                                )}
                                                                                 value={
                                                                                     room
                                                                                         .promotion
@@ -1345,7 +1396,12 @@ export default function Page() {
                                                                             <Input
                                                                                 type="number"
                                                                                 className="no-spinner"
-                                                                                placeholder="Value"
+                                                                                placeholder={intl.formatMessage(
+                                                                                    {
+                                                                                        defaultMessage:
+                                                                                            'Value',
+                                                                                    },
+                                                                                )}
                                                                                 value={
                                                                                     room
                                                                                         .promotion
@@ -1398,7 +1454,12 @@ export default function Page() {
                                                                             <Input
                                                                                 type="number"
                                                                                 className="no-spinner"
-                                                                                placeholder="%"
+                                                                                placeholder={intl.formatMessage(
+                                                                                    {
+                                                                                        defaultMessage:
+                                                                                            '%',
+                                                                                    },
+                                                                                )}
                                                                                 value={
                                                                                     room
                                                                                         .commission
@@ -1448,7 +1509,12 @@ export default function Page() {
                                                                             <Input
                                                                                 type="number"
                                                                                 className="no-spinner"
-                                                                                placeholder="Value"
+                                                                                placeholder={intl.formatMessage(
+                                                                                    {
+                                                                                        defaultMessage:
+                                                                                            'Value',
+                                                                                    },
+                                                                                )}
                                                                                 value={
                                                                                     room
                                                                                         .commission
@@ -1509,8 +1575,7 @@ export default function Page() {
                                                                                     )
                                                                                 }
                                                                             >
-                                                                                Delete
-                                                                                Room
+                                                                                <FormattedMessage defaultMessage="Delete Room" />
                                                                             </Button>
                                                                         </div>
                                                                     </div>
@@ -1529,7 +1594,8 @@ export default function Page() {
                                                                         )
                                                                     }
                                                                 >
-                                                                    + Add Room
+                                                                    +{' '}
+                                                                    <FormattedMessage defaultMessage="Add Room" />
                                                                 </Button>
                                                             </div>
                                                         </div>
@@ -1546,7 +1612,7 @@ export default function Page() {
                                                                 )
                                                             }
                                                         >
-                                                            Delete
+                                                            <FormattedMessage defaultMessage="Delete" />
                                                         </Button>
                                                     </td>
                                                 </tr>
@@ -1565,7 +1631,12 @@ export default function Page() {
                                             {/* HEADER */}
                                             <div className="flex justify-between items-center">
                                                 <p className="font-medium text-sm">
-                                                    Schedule #{index + 1}
+                                                    <FormattedMessage
+                                                        defaultMessage="Schedule #{number}"
+                                                        values={{
+                                                            number: index + 1,
+                                                        }}
+                                                    />
                                                 </p>
 
                                                 <Button
@@ -1576,7 +1647,7 @@ export default function Page() {
                                                         removeSchedule(index)
                                                     }
                                                 >
-                                                    Delete
+                                                    <FormattedMessage defaultMessage="Delete" />
                                                 </Button>
                                             </div>
 
@@ -1584,7 +1655,7 @@ export default function Page() {
                                             <div className="grid grid-cols-2 gap-2">
                                                 <div>
                                                     <p className="text-xs text-muted-foreground">
-                                                        Departure
+                                                        <FormattedMessage defaultMessage="Departure" />
                                                     </p>
                                                     <Input
                                                         type="date"
@@ -1603,7 +1674,7 @@ export default function Page() {
 
                                                 <div>
                                                     <p className="text-xs text-muted-foreground">
-                                                        Return
+                                                        <FormattedMessage defaultMessage="Return" />
                                                     </p>
                                                     <Input
                                                         type="date"
@@ -1630,8 +1701,14 @@ export default function Page() {
                                                             {/* ROOM HEADER */}
                                                             <div className="flex justify-between items-center">
                                                                 <p className="text-xs font-medium text-muted-foreground">
-                                                                    Room #
-                                                                    {rIndex + 1}
+                                                                    <FormattedMessage
+                                                                        defaultMessage="Room #{number}"
+                                                                        values={{
+                                                                            number:
+                                                                                rIndex +
+                                                                                1,
+                                                                        }}
+                                                                    />
                                                                 </p>
 
                                                                 <Button
@@ -1646,14 +1723,14 @@ export default function Page() {
                                                                         )
                                                                     }
                                                                 >
-                                                                    Delete Room
+                                                                    <FormattedMessage defaultMessage="Delete Room" />
                                                                 </Button>
                                                             </div>
 
                                                             {/* ROOM TYPE */}
                                                             <div className="space-y-1">
                                                                 <p className="text-xs text-muted-foreground">
-                                                                    Category
+                                                                    <FormattedMessage defaultMessage="Category" />
                                                                 </p>
 
                                                                 <select
@@ -1678,8 +1755,12 @@ export default function Page() {
                                                                     }
                                                                 >
                                                                     <option value="">
-                                                                        Select
-                                                                        Category
+                                                                        {intl.formatMessage(
+                                                                            {
+                                                                                defaultMessage:
+                                                                                    'Select Category',
+                                                                            },
+                                                                        )}
                                                                     </option>
 
                                                                     {priceCategories.map(
@@ -1706,11 +1787,16 @@ export default function Page() {
                                                             {/* PRICE */}
                                                             <div>
                                                                 <p className="text-xs text-muted-foreground">
-                                                                    Price
+                                                                    <FormattedMessage defaultMessage="Price" />
                                                                 </p>
                                                                 <Input
                                                                     type="number"
-                                                                    placeholder="Price"
+                                                                    placeholder={intl.formatMessage(
+                                                                        {
+                                                                            defaultMessage:
+                                                                                'Price',
+                                                                        },
+                                                                    )}
                                                                     value={
                                                                         room.price
                                                                     }
@@ -1732,7 +1818,7 @@ export default function Page() {
                                                             {/* PROMOTION */}
                                                             <div className="space-y-1">
                                                                 <p className="text-xs text-muted-foreground">
-                                                                    Promotion
+                                                                    <FormattedMessage defaultMessage="Promotion" />
                                                                 </p>
 
                                                                 <div className="grid grid-cols-2 gap-2">
@@ -1740,7 +1826,12 @@ export default function Page() {
                                                                     <Input
                                                                         type="number"
                                                                         className="no-spinner"
-                                                                        placeholder="%"
+                                                                        placeholder={intl.formatMessage(
+                                                                            {
+                                                                                defaultMessage:
+                                                                                    '%',
+                                                                            },
+                                                                        )}
                                                                         value={
                                                                             room
                                                                                 .promotion
@@ -1790,7 +1881,12 @@ export default function Page() {
                                                                     <Input
                                                                         type="number"
                                                                         className="no-spinner"
-                                                                        placeholder="Value"
+                                                                        placeholder={intl.formatMessage(
+                                                                            {
+                                                                                defaultMessage:
+                                                                                    'Value',
+                                                                            },
+                                                                        )}
                                                                         value={
                                                                             room
                                                                                 .promotion
@@ -1841,7 +1937,7 @@ export default function Page() {
                                                             {/* COMMISSION */}
                                                             <div className="space-y-1">
                                                                 <p className="text-xs text-muted-foreground">
-                                                                    Commission
+                                                                    <FormattedMessage defaultMessage="Commission" />
                                                                 </p>
 
                                                                 <div className="grid grid-cols-2 gap-2">
@@ -1849,7 +1945,12 @@ export default function Page() {
                                                                     <Input
                                                                         type="number"
                                                                         className="no-spinner"
-                                                                        placeholder="%"
+                                                                        placeholder={intl.formatMessage(
+                                                                            {
+                                                                                defaultMessage:
+                                                                                    '%',
+                                                                            },
+                                                                        )}
                                                                         value={
                                                                             room
                                                                                 .commission
@@ -1899,7 +2000,12 @@ export default function Page() {
                                                                     <Input
                                                                         type="number"
                                                                         className="no-spinner"
-                                                                        placeholder="Value"
+                                                                        placeholder={intl.formatMessage(
+                                                                            {
+                                                                                defaultMessage:
+                                                                                    'Value',
+                                                                            },
+                                                                        )}
                                                                         value={
                                                                             room
                                                                                 .commission
@@ -1960,7 +2066,8 @@ export default function Page() {
                                                     }
                                                     className="w-full"
                                                 >
-                                                    + Add Room
+                                                    +{' '}
+                                                    <FormattedMessage defaultMessage="Add Room" />
                                                 </Button>
                                             </div>
                                         </div>
@@ -1975,7 +2082,7 @@ export default function Page() {
                                         processing || schedules.length === 0
                                     }
                                 >
-                                    Save Schedule
+                                    <FormattedMessage defaultMessage="Save Schedule" />
                                 </Button>
                             </div>
                         </TabsContent>
@@ -1987,13 +2094,13 @@ export default function Page() {
                                     {/* LEFT */}
                                     <div className="flex flex-wrap items-center gap-3">
                                         <span className="text-sm text-muted-foreground">
-                                            Departure Date
+                                            <FormattedMessage defaultMessage="Departure Date" />
                                         </span>
 
                                         {/* FROM */}
                                         <div className="flex items-center gap-2">
                                             <span className="text-xs text-muted-foreground">
-                                                From
+                                                <FormattedMessage defaultMessage="From" />
                                             </span>
 
                                             <input
@@ -2005,7 +2112,7 @@ export default function Page() {
                                         {/* TO */}
                                         <div className="flex items-center gap-2">
                                             <span className="text-xs text-muted-foreground">
-                                                To
+                                                <FormattedMessage defaultMessage="To" />
                                             </span>
 
                                             <input
@@ -2017,7 +2124,7 @@ export default function Page() {
 
                                     {/* RIGHT */}
                                     <div className="rounded-lg border bg-muted/40 px-3 py-2 text-sm font-medium">
-                                        Quantity: pax
+                                        <FormattedMessage defaultMessage="Quantity: pax" />
                                     </div>
                                 </div>
 
@@ -2045,10 +2152,10 @@ export default function Page() {
                                         <thead className="sticky top-0 z-30 bg-muted">
                                             <tr>
                                                 <th className="sticky left-0 z-40 bg-muted border-b p-3 text-left font-semibold">
-                                                    Departure → Return
+                                                    <FormattedMessage defaultMessage="Departure → Return" />
                                                 </th>
                                                 <th className="border-b p-2 text-right font-semibold">
-                                                    Max Pax
+                                                    <FormattedMessage defaultMessage="Max Pax" />
                                                 </th>
                                                 <th className="border-b p-2 text-right font-semibold">
                                                     <Tooltip>
@@ -2061,7 +2168,7 @@ export default function Page() {
                                                         </TooltipTrigger>
 
                                                         <TooltipContent>
-                                                            Manual Reserved
+                                                            <FormattedMessage defaultMessage="Manual Reserved" />
                                                         </TooltipContent>
                                                     </Tooltip>
                                                 </th>
@@ -2076,7 +2183,7 @@ export default function Page() {
                                                         </TooltipTrigger>
 
                                                         <TooltipContent>
-                                                            Waiting Payment
+                                                            <FormattedMessage defaultMessage="Waiting Payment" />
                                                         </TooltipContent>
                                                     </Tooltip>
                                                 </th>
@@ -2091,8 +2198,7 @@ export default function Page() {
                                                         </TooltipTrigger>
 
                                                         <TooltipContent>
-                                                            Waiting Payment
-                                                            Approval
+                                                            <FormattedMessage defaultMessage="Waiting Payment Approval" />
                                                         </TooltipContent>
                                                     </Tooltip>
                                                 </th>
@@ -2107,7 +2213,7 @@ export default function Page() {
                                                         </TooltipTrigger>
 
                                                         <TooltipContent>
-                                                            Down Payment
+                                                            <FormattedMessage defaultMessage="Down Payment" />
                                                         </TooltipContent>
                                                     </Tooltip>
                                                 </th>
@@ -2122,7 +2228,7 @@ export default function Page() {
                                                         </TooltipTrigger>
 
                                                         <TooltipContent>
-                                                            Full Payment
+                                                            <FormattedMessage defaultMessage="Full Payment" />
                                                         </TooltipContent>
                                                     </Tooltip>
                                                 </th>
@@ -2137,7 +2243,7 @@ export default function Page() {
                                                         </TooltipTrigger>
 
                                                         <TooltipContent>
-                                                            Booking Reserved
+                                                            <FormattedMessage defaultMessage="Booking Reserved" />
                                                         </TooltipContent>
                                                     </Tooltip>
                                                 </th>
@@ -2152,7 +2258,7 @@ export default function Page() {
                                                         </TooltipTrigger>
 
                                                         <TooltipContent>
-                                                            Cancel
+                                                            <FormattedMessage defaultMessage="Cancel" />
                                                         </TooltipContent>
                                                     </Tooltip>
                                                 </th>
@@ -2167,7 +2273,7 @@ export default function Page() {
                                                         </TooltipTrigger>
 
                                                         <TooltipContent>
-                                                            Refund
+                                                            <FormattedMessage defaultMessage="Refund" />
                                                         </TooltipContent>
                                                     </Tooltip>
                                                 </th>
@@ -2182,7 +2288,7 @@ export default function Page() {
                                                         </TooltipTrigger>
 
                                                         <TooltipContent>
-                                                            Expired
+                                                            <FormattedMessage defaultMessage="Expired" />
                                                         </TooltipContent>
                                                     </Tooltip>
                                                 </th>
@@ -2197,12 +2303,12 @@ export default function Page() {
                                                         </TooltipTrigger>
 
                                                         <TooltipContent>
-                                                            Waiting List
+                                                            <FormattedMessage defaultMessage="Waiting List" />
                                                         </TooltipContent>
                                                     </Tooltip>
                                                 </th>
                                                 <th className="border-b p-2 text-right font-semibold">
-                                                    Available
+                                                    <FormattedMessage defaultMessage="Available" />
                                                 </th>
                                                 <th className="sticky right-0 z-40 bg-muted border-b p-2 text-right font-semibold"></th>
                                             </tr>
@@ -2222,13 +2328,13 @@ export default function Page() {
                                 <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2">
                                     <div className="flex flex-wrap items-center gap-2">
                                         <span className="text-sm text-muted-foreground">
-                                            Departure Date
+                                            <FormattedMessage defaultMessage="Departure Date" />
                                         </span>
 
                                         {/* FROM */}
                                         <div className="flex items-center gap-2">
                                             <span className="text-xs text-muted-foreground">
-                                                From
+                                                <FormattedMessage defaultMessage="From" />
                                             </span>
 
                                             <input
@@ -2240,7 +2346,7 @@ export default function Page() {
                                         {/* TO */}
                                         <div className="flex items-center gap-2">
                                             <span className="text-xs text-muted-foreground">
-                                                To
+                                                <FormattedMessage defaultMessage="To" />
                                             </span>
 
                                             <input
@@ -2250,7 +2356,7 @@ export default function Page() {
                                         </div>
                                     </div>
                                     <div className="rounded-lg border bg-muted/40 px-3 py-2 text-sm font-medium">
-                                        Currency:
+                                        <FormattedMessage defaultMessage="Currency:" />
                                     </div>
                                 </div>
                             </div>

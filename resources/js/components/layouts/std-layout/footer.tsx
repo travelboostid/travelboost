@@ -64,6 +64,14 @@ export function Footer() {
                             </li>
                             <li>
                                 <Link
+                                    href="/pricing"
+                                    className="text-sm text-background/70 transition-colors hover:text-background"
+                                >
+                                    Pricing
+                                </Link>
+                            </li>
+                            <li>
+                                <Link
                                     href="/#get-started"
                                     className="text-sm text-background/70 transition-colors hover:text-background"
                                 >
@@ -144,7 +152,7 @@ export function Footer() {
                                     Syarat & Ketentuan
                                 </Link>
                                 <Link
-                                    href="#"
+                                    href="/cookie-policy"
                                     className="text-sm text-background/70 transition-colors hover:text-background"
                                 >
                                     Kebijakan Cookie

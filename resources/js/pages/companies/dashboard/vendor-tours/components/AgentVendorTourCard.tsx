@@ -34,6 +34,7 @@ import {
     UsersRoundIcon,
 } from 'lucide-react';
 import { useState } from 'react';
+import { FormattedMessage } from 'react-intl';
 import BaseTourCard from './BaseTourCard';
 
 const formatCurrency = (value: any, currency = 'IDR') =>
@@ -475,7 +476,7 @@ export default function AgentVendorTourCard({
                     <div className="mx-4 mt-4 border-t border-slate-100 pt-3 dark:border-slate-800/60">
                         <div className="flex items-center justify-between">
                             <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase">
-                                Vendor Tour Status
+                                <FormattedMessage defaultMessage="Vendor Tour Status" />
                             </span>
                             <span
                                 className={`text-[9px] font-black uppercase ${tour.status === 'active' ? 'text-emerald-500' : 'text-red-500'}`}
@@ -508,28 +509,29 @@ export default function AgentVendorTourCard({
                                     </div>
                                 </TooltipTrigger>
                                 <TooltipContent>
-                                    <p>Add to Catalog</p>
+                                    <p>
+                                        <FormattedMessage defaultMessage="Add to Catalog" />
+                                    </p>
                                 </TooltipContent>
                             </Tooltip>
                             <AlertDialogContent className="rounded-3xl border-none dark:bg-slate-900">
                                 <AlertDialogHeader>
                                     <AlertDialogTitle className="text-xl font-bold dark:text-white">
-                                        Add to Catalog
+                                        <FormattedMessage defaultMessage="Add to Catalog" />
                                     </AlertDialogTitle>
                                     <AlertDialogDescription className="dark:text-slate-400">
-                                        Copy this product to your personal
-                                        catalog?
+                                        <FormattedMessage defaultMessage="Copy this product to your personal catalog?" />
                                     </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
                                     <AlertDialogCancel className="rounded-xl font-bold dark:bg-slate-800 dark:text-white">
-                                        Cancel
+                                        <FormattedMessage defaultMessage="Cancel" />
                                     </AlertDialogCancel>
                                     <AlertDialogAction
                                         onClick={onCopy}
                                         className="rounded-xl font-bold px-6"
                                     >
-                                        Yes, Copy Now
+                                        <FormattedMessage defaultMessage="Yes, Copy Now" />
                                     </AlertDialogAction>
                                 </AlertDialogFooter>
                             </AlertDialogContent>
@@ -547,7 +549,9 @@ export default function AgentVendorTourCard({
                                 </Button>
                             </TooltipTrigger>
                             <TooltipContent>
-                                <p>Detail Information</p>
+                                <p>
+                                    <FormattedMessage defaultMessage="Detail Information" />
+                                </p>
                             </TooltipContent>
                         </Tooltip>
                         <Tooltip delayDuration={200}>
@@ -563,7 +567,9 @@ export default function AgentVendorTourCard({
                                 </Button>
                             </TooltipTrigger>
                             <TooltipContent>
-                                <p>Itinerary</p>
+                                <p>
+                                    <FormattedMessage defaultMessage="Itinerary" />
+                                </p>
                             </TooltipContent>
                         </Tooltip>
                         <Tooltip delayDuration={200}>
@@ -583,7 +589,9 @@ export default function AgentVendorTourCard({
                                 </Button>
                             </TooltipTrigger>
                             <TooltipContent>
-                                <p>Ask AI</p>
+                                <p>
+                                    <FormattedMessage defaultMessage="Ask AI" />
+                                </p>
                             </TooltipContent>
                         </Tooltip>
                     </>
@@ -601,14 +609,16 @@ export default function AgentVendorTourCard({
                             <div className="min-w-0">
                                 <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-semibold text-white/80 backdrop-blur">
                                     <InfoIcon className="h-3.5 w-3.5 text-sky-200" />
-                                    Detail Information
+                                    <FormattedMessage defaultMessage="Detail Information" />
                                 </div>
                                 <DialogTitle className="text-2xl font-semibold leading-tight text-white sm:text-3xl">
                                     {tour.name}
                                 </DialogTitle>
                                 <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-white/70">
                                     <span className="rounded-full bg-white/10 px-3 py-1 font-mono text-xs">
-                                        {tour.code || 'No tour code'}
+                                        {tour.code || (
+                                            <FormattedMessage defaultMessage="No tour code" />
+                                        )}
                                     </span>
                                     <span>{tour.destination || '-'}</span>
                                 </div>
@@ -616,7 +626,7 @@ export default function AgentVendorTourCard({
                             <div className="grid grid-cols-3 gap-2 rounded-2xl border border-white/10 bg-white/10 p-2 backdrop-blur sm:min-w-[21rem]">
                                 <div className="rounded-xl bg-white/10 px-3 py-2">
                                     <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/50">
-                                        Schedules
+                                        <FormattedMessage defaultMessage="Schedules" />
                                     </p>
                                     <p className="mt-1 text-lg font-semibold">
                                         {schedules.length}
@@ -624,7 +634,7 @@ export default function AgentVendorTourCard({
                                 </div>
                                 <div className="rounded-xl bg-white/10 px-3 py-2">
                                     <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/50">
-                                        Available
+                                        <FormattedMessage defaultMessage="Available" />
                                     </p>
                                     <p className="mt-1 text-lg font-semibold text-emerald-200">
                                         {totalAvailability}
@@ -632,7 +642,7 @@ export default function AgentVendorTourCard({
                                 </div>
                                 <div className="rounded-xl bg-white/10 px-3 py-2">
                                     <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/50">
-                                        Max Pax
+                                        <FormattedMessage defaultMessage="Max Pax" />
                                     </p>
                                     <p className="mt-1 text-lg font-semibold">
                                         {totalMaxPax}
@@ -649,7 +659,7 @@ export default function AgentVendorTourCard({
                                         <MapPinIcon className="h-5 w-5" />
                                     </div>
                                     <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
-                                        Destination
+                                        <FormattedMessage defaultMessage="Destination" />
                                     </p>
                                     <p className="mt-2 text-sm font-semibold leading-6 text-slate-800 dark:text-slate-100">
                                         {tour.destination || '-'}
@@ -660,12 +670,19 @@ export default function AgentVendorTourCard({
                                         <ClockIcon className="h-5 w-5" />
                                     </div>
                                     <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
-                                        Duration
+                                        <FormattedMessage defaultMessage="Duration" />
                                     </p>
                                     <p className="mt-2 text-sm font-semibold leading-6 text-slate-800 dark:text-slate-100">
-                                        {tour.duration_days
-                                            ? `${tour.duration_days} days`
-                                            : '-'}
+                                        {tour.duration_days ? (
+                                            <FormattedMessage
+                                                defaultMessage="{count} days"
+                                                values={{
+                                                    count: tour.duration_days,
+                                                }}
+                                            />
+                                        ) : (
+                                            '-'
+                                        )}
                                     </p>
                                 </div>
                                 <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
@@ -673,7 +690,7 @@ export default function AgentVendorTourCard({
                                         <CircleDollarSignIcon className="h-5 w-5" />
                                     </div>
                                     <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
-                                        Normal Price in Catalog
+                                        <FormattedMessage defaultMessage="Normal Price in Catalog" />
                                     </p>
                                     <p className="mt-2 break-words text-sm font-semibold leading-6 text-slate-800 dark:text-slate-100">
                                         {formatCurrency(
@@ -687,10 +704,15 @@ export default function AgentVendorTourCard({
                                         <UsersRoundIcon className="h-5 w-5" />
                                     </div>
                                     <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
-                                        Total Availability
+                                        <FormattedMessage defaultMessage="Total Availability" />
                                     </p>
                                     <p className="mt-2 text-sm font-semibold leading-6 text-slate-800 dark:text-slate-100">
-                                        {totalAvailability} seats
+                                        <FormattedMessage
+                                            defaultMessage="{count} seats"
+                                            values={{
+                                                count: totalAvailability,
+                                            }}
+                                        />
                                     </p>
                                 </div>
                             </div>
@@ -699,16 +721,17 @@ export default function AgentVendorTourCard({
                                 <div className="flex items-center justify-between gap-3">
                                     <div>
                                         <h4 className="text-sm font-semibold uppercase tracking-[0.14em] text-slate-700 dark:text-slate-200">
-                                            Schedule & Pricing
+                                            <FormattedMessage defaultMessage="Schedule & Pricing" />
                                         </h4>
                                         <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                                            Available departures based on the
-                                            booking deadline parameter.
+                                            <FormattedMessage defaultMessage="Available departures based on the booking deadline parameter." />
                                         </p>
                                     </div>
                                     <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-500 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">
-                                        {schedules.length} Schedule
-                                        {schedules.length === 1 ? '' : 's'}
+                                        <FormattedMessage
+                                            defaultMessage="{count, plural, one {# Schedule} other {# Schedules}}"
+                                            values={{ count: schedules.length }}
+                                        />
                                     </span>
                                 </div>
 
@@ -752,8 +775,7 @@ export default function AgentVendorTourCard({
                                                                             )}
                                                                         </p>
                                                                         <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
-                                                                            Departure
-                                                                            schedule
+                                                                            <FormattedMessage defaultMessage="Departure schedule" />
                                                                         </p>
                                                                     </div>
                                                                 </div>
@@ -761,7 +783,7 @@ export default function AgentVendorTourCard({
                                                             <div className="grid grid-cols-2 gap-2 sm:min-w-[17rem]">
                                                                 <div className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-950">
                                                                     <p className="text-[10px] font-semibold uppercase text-slate-400">
-                                                                        Max Pax
+                                                                        <FormattedMessage defaultMessage="Max Pax" />
                                                                     </p>
                                                                     <p className="mt-1 text-base font-semibold text-slate-800 dark:text-slate-100">
                                                                         {Number(
@@ -772,7 +794,7 @@ export default function AgentVendorTourCard({
                                                                 </div>
                                                                 <div className="rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 dark:border-emerald-900/50 dark:bg-emerald-950/30">
                                                                     <p className="text-[10px] font-semibold uppercase text-slate-400">
-                                                                        Availability
+                                                                        <FormattedMessage defaultMessage="Availability" />
                                                                     </p>
                                                                     <p className="mt-1 text-base font-semibold text-emerald-600 dark:text-emerald-400">
                                                                         {Number(
@@ -787,13 +809,13 @@ export default function AgentVendorTourCard({
                                                         <div className="overflow-hidden">
                                                             <div className="hidden grid-cols-[minmax(0,1fr)_minmax(150px,0.65fr)_minmax(210px,0.75fr)] bg-slate-50 px-5 py-3 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400 dark:bg-slate-950 sm:grid">
                                                                 <span>
-                                                                    Category
+                                                                    <FormattedMessage defaultMessage="Category" />
                                                                 </span>
                                                                 <span>
-                                                                    Price
+                                                                    <FormattedMessage defaultMessage="Price" />
                                                                 </span>
                                                                 <span>
-                                                                    Commission
+                                                                    <FormattedMessage defaultMessage="Commission" />
                                                                 </span>
                                                             </div>
                                                             {prices.length >
@@ -831,7 +853,7 @@ export default function AgentVendorTourCard({
                                                                             >
                                                                                 <div>
                                                                                     <p className="text-[10px] font-semibold uppercase text-slate-400 sm:hidden">
-                                                                                        Category
+                                                                                        <FormattedMessage defaultMessage="Category" />
                                                                                     </p>
                                                                                     <p className="font-medium text-slate-800 dark:text-slate-100">
                                                                                         {getPriceCategoryName(
@@ -841,7 +863,7 @@ export default function AgentVendorTourCard({
                                                                                 </div>
                                                                                 <div>
                                                                                     <p className="text-[10px] font-semibold uppercase text-slate-400 sm:hidden">
-                                                                                        Price
+                                                                                        <FormattedMessage defaultMessage="Price" />
                                                                                     </p>
                                                                                     <div className="space-y-1">
                                                                                         {promotionLabel ? (
@@ -859,10 +881,12 @@ export default function AgentVendorTourCard({
                                                                                                     )}
                                                                                                 </p>
                                                                                                 <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-300">
-                                                                                                    Promotion{' '}
-                                                                                                    {
-                                                                                                        promotionLabel
-                                                                                                    }
+                                                                                                    <FormattedMessage
+                                                                                                        defaultMessage="Promotion {amount}"
+                                                                                                        values={{
+                                                                                                            amount: promotionLabel,
+                                                                                                        }}
+                                                                                                    />
                                                                                                 </p>
                                                                                             </>
                                                                                         ) : (
@@ -877,7 +901,7 @@ export default function AgentVendorTourCard({
                                                                                 </div>
                                                                                 <div>
                                                                                     <p className="text-[10px] font-semibold uppercase text-slate-400 sm:hidden">
-                                                                                        Commission
+                                                                                        <FormattedMessage defaultMessage="Commission" />
                                                                                     </p>
                                                                                     <p className="font-semibold text-pink-600 dark:text-pink-300">
                                                                                         {
@@ -898,9 +922,7 @@ export default function AgentVendorTourCard({
                                                                 )
                                                             ) : (
                                                                 <div className="border-t border-slate-100 px-5 py-5 text-sm font-medium text-slate-400 dark:border-slate-800">
-                                                                    No pricing
-                                                                    category
-                                                                    available.
+                                                                    <FormattedMessage defaultMessage="No pricing category available." />
                                                                 </div>
                                                             )}
                                                         </div>
@@ -911,7 +933,7 @@ export default function AgentVendorTourCard({
                                     </div>
                                 ) : (
                                     <div className="rounded-2xl border border-dashed border-slate-200 p-6 text-center text-sm font-medium text-slate-400 dark:border-slate-800">
-                                        No schedule available.
+                                        <FormattedMessage defaultMessage="No schedule available." />
                                     </div>
                                 )}
                             </div>

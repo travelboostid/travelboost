@@ -1,4 +1,5 @@
 import { IconTrendingDown, IconTrendingUp } from '@tabler/icons-react';
+import { FormattedMessage } from 'react-intl';
 
 import { Badge } from '@/components/ui/badge';
 import {
@@ -15,7 +16,9 @@ export function SectionCards() {
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
             <Card className="bg-linear-to-t from-primary/5 to-card shadow-xs dark:bg-card">
                 <CardHeader>
-                    <CardDescription>Total Revenue</CardDescription>
+                    <CardDescription>
+                        <FormattedMessage defaultMessage="Total Revenue" />
+                    </CardDescription>
                     <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
                         $1,250.00
                     </CardTitle>
@@ -28,17 +31,19 @@ export function SectionCards() {
                 </CardHeader>
                 <CardFooter className="flex-col items-start gap-1.5 text-sm">
                     <div className="line-clamp-1 flex gap-2 font-medium">
-                        Trending up this month{' '}
+                        <FormattedMessage defaultMessage="Trending up this month" />{' '}
                         <IconTrendingUp className="size-4" />
                     </div>
                     <div className="text-muted-foreground">
-                        Visitors for the last 6 months
+                        <FormattedMessage defaultMessage="Visitors for the last 6 months" />
                     </div>
                 </CardFooter>
             </Card>
             <Card className="bg-linear-to-t from-primary/5 to-card shadow-xs dark:bg-card">
                 <CardHeader>
-                    <CardDescription>New Customers</CardDescription>
+                    <CardDescription>
+                        <FormattedMessage defaultMessage="New Customers" />
+                    </CardDescription>
                     <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
                         1,234
                     </CardTitle>
@@ -51,17 +56,19 @@ export function SectionCards() {
                 </CardHeader>
                 <CardFooter className="flex-col items-start gap-1.5 text-sm">
                     <div className="line-clamp-1 flex gap-2 font-medium">
-                        Down 20% this period{' '}
+                        <FormattedMessage defaultMessage="Down 20% this period" />{' '}
                         <IconTrendingDown className="size-4" />
                     </div>
                     <div className="text-muted-foreground">
-                        Acquisition needs attention
+                        <FormattedMessage defaultMessage="Acquisition needs attention" />
                     </div>
                 </CardFooter>
             </Card>
             <Card className="bg-linear-to-t from-primary/5 to-card shadow-xs dark:bg-card">
                 <CardHeader>
-                    <CardDescription>Active Accounts</CardDescription>
+                    <CardDescription>
+                        <FormattedMessage defaultMessage="Active Accounts" />
+                    </CardDescription>
                     <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
                         45,678
                     </CardTitle>
@@ -74,17 +81,19 @@ export function SectionCards() {
                 </CardHeader>
                 <CardFooter className="flex-col items-start gap-1.5 text-sm">
                     <div className="line-clamp-1 flex gap-2 font-medium">
-                        Strong user retention{' '}
+                        <FormattedMessage defaultMessage="Strong user retention" />{' '}
                         <IconTrendingUp className="size-4" />
                     </div>
                     <div className="text-muted-foreground">
-                        Engagement exceed targets
+                        <FormattedMessage defaultMessage="Engagement exceed targets" />
                     </div>
                 </CardFooter>
             </Card>
             <Card className="bg-linear-to-t from-primary/5 to-card shadow-xs dark:bg-card">
                 <CardHeader>
-                    <CardDescription>Growth Rate</CardDescription>
+                    <CardDescription>
+                        <FormattedMessage defaultMessage="Growth Rate" />
+                    </CardDescription>
                     <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
                         4.5%
                     </CardTitle>
@@ -97,11 +106,11 @@ export function SectionCards() {
                 </CardHeader>
                 <CardFooter className="flex-col items-start gap-1.5 text-sm">
                     <div className="line-clamp-1 flex gap-2 font-medium">
-                        Steady performance increase{' '}
+                        <FormattedMessage defaultMessage="Steady performance increase" />{' '}
                         <IconTrendingUp className="size-4" />
                     </div>
                     <div className="text-muted-foreground">
-                        Meets growth projections
+                        <FormattedMessage defaultMessage="Meets growth projections" />
                     </div>
                 </CardFooter>
             </Card>

@@ -2,6 +2,7 @@
 
 namespace Database\Seeders\Common;
 
+use App\Models\Continent;
 use App\Models\Region;
 use Illuminate\Database\Seeder;
 
@@ -9,52 +10,67 @@ class RegionSeeder extends Seeder
 {
     public function run(): void
     {
-
         $regions = [
-            // 🌏 ASIA (continent_id = 1)
-            ['name' => 'East Asia', 'continent_id' => 1],
-            ['name' => 'Southeast Asia', 'continent_id' => 1],
-            ['name' => 'South Asia', 'continent_id' => 1],
-            ['name' => 'Central Asia', 'continent_id' => 1],
-            ['name' => 'Western Asia (Middle East)', 'continent_id' => 1],
-            ['name' => 'North Asia (Siberia)', 'continent_id' => 1],
+            // Asia
+            ['name' => 'East Asia', 'continent' => 'Asia'],
+            ['name' => 'Southeast Asia', 'continent' => 'Asia'],
+            ['name' => 'South Asia', 'continent' => 'Asia'],
+            ['name' => 'Central Asia', 'continent' => 'Asia'],
+            ['name' => 'Western Asia (Middle East)', 'continent' => 'Asia'],
+            ['name' => 'North Asia (Siberia)', 'continent' => 'Asia'],
 
-            // 🇦🇺 AUSTRALIA / OCEANIA (continent_id = 5)
-            ['name' => 'Australian Capital Territory', 'continent_id' => 5],
-            ['name' => 'New South Wales', 'continent_id' => 5],
-            ['name' => 'Northern Territory', 'continent_id' => 5],
-            ['name' => 'Queensland', 'continent_id' => 5],
-            ['name' => 'South Australia', 'continent_id' => 5],
-            ['name' => 'Tasmania', 'continent_id' => 5],
-            ['name' => 'Victoria', 'continent_id' => 5],
-            ['name' => 'Western Australia', 'continent_id' => 5],
+            // Australia / Oceania
+            ['name' => 'Australian Capital Territory', 'continent' => 'Australia'],
+            ['name' => 'New South Wales', 'continent' => 'Australia'],
+            ['name' => 'Northern Territory', 'continent' => 'Australia'],
+            ['name' => 'Queensland', 'continent' => 'Australia'],
+            ['name' => 'South Australia', 'continent' => 'Australia'],
+            ['name' => 'Tasmania', 'continent' => 'Australia'],
+            ['name' => 'Victoria', 'continent' => 'Australia'],
+            ['name' => 'Western Australia', 'continent' => 'Australia'],
 
-            // 🇪🇺 EUROPE (continent_id = 2)
-            ['name' => 'Northern Europe', 'continent_id' => 2],
-            ['name' => 'Southern Europe', 'continent_id' => 2],
-            ['name' => 'Eastern Europe', 'continent_id' => 2],
-            ['name' => 'Western Europe', 'continent_id' => 2],
-            ['name' => 'Central Europe', 'continent_id' => 2],
+            // Europe
+            ['name' => 'Northern Europe', 'continent' => 'Europe'],
+            ['name' => 'Southern Europe', 'continent' => 'Europe'],
+            ['name' => 'Eastern Europe', 'continent' => 'Europe'],
+            ['name' => 'Western Europe', 'continent' => 'Europe'],
+            ['name' => 'Central Europe', 'continent' => 'Europe'],
 
-            // 🌍 AFRICA (continent_id = 3)
-            ['name' => 'Northern Africa', 'continent_id' => 3],
-            ['name' => 'Central or Middle Africa', 'continent_id' => 3],
-            ['name' => 'Southern Africa', 'continent_id' => 3],
-            ['name' => 'East Africa', 'continent_id' => 3],
-            ['name' => 'Western Africa', 'continent_id' => 3],
+            // Africa
+            ['name' => 'Northern Africa', 'continent' => 'Africa'],
+            ['name' => 'Central or Middle Africa', 'continent' => 'Africa'],
+            ['name' => 'Southern Africa', 'continent' => 'Africa'],
+            ['name' => 'East Africa', 'continent' => 'Africa'],
+            ['name' => 'Western Africa', 'continent' => 'Africa'],
 
-            // 🌎 AMERICA (continent_id = 4)
-            ['name' => 'North America', 'continent_id' => 4],
-            ['name' => 'Central America', 'continent_id' => 4],
-            ['name' => 'Caribbean (West Indies)', 'continent_id' => 4],
-            ['name' => 'South America', 'continent_id' => 4],
+            // America
+            ['name' => 'North America', 'continent' => 'America'],
+            ['name' => 'Central America', 'continent' => 'America'],
+            ['name' => 'Caribbean (West Indies)', 'continent' => 'America'],
+            ['name' => 'South America', 'continent' => 'America'],
         ];
 
         foreach ($regions as $data) {
-            Region::factory()->create([
-                'name' => $data['name'],
-                'continent_id' => $data['continent_id'],
-            ]);
+            $continentId = Continent::query()
+                ->where('name', $data['continent'])
+                ->value('id');
+
+            if (! $continentId) {
+                $this->command?->warn("Continent '{$data['continent']}' not found. Skipping region '{$data['name']}'.");
+
+                continue;
+            }
+
+            Region::query()->updateOrCreate(
+                [
+                    'name' => $data['name'],
+                    'continent_id' => $continentId,
+                ],
+                [
+                    'name' => $data['name'],
+                    'continent_id' => $continentId,
+                ],
+            );
         }
     }
 }
