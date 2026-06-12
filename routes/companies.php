@@ -16,6 +16,7 @@ use App\Http\Controllers\Companies\Dashboard\CustomerController;
 use App\Http\Controllers\Companies\Dashboard\DashboardBookingController;
 use App\Http\Controllers\Companies\Dashboard\GoogleAccountController;
 use App\Http\Controllers\Companies\Dashboard\GoogleAnalyticsController;
+use App\Http\Controllers\Companies\Dashboard\HomeController;
 use App\Http\Controllers\Companies\Dashboard\LinkedAccountsController;
 use App\Http\Controllers\Companies\Dashboard\NotificationController;
 use App\Http\Controllers\Companies\Dashboard\PageController;

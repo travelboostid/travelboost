@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use App\Enums\AgentSubscriptionStatus;
 use App\Models\AgentSubscription;
+use App\Models\Company;
 use Closure;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -13,7 +14,16 @@ class EnsureAgentSubscriptionIsActive
 {
     public function handle(Request $request, Closure $next): Response
     {
+        /** @var Company|string|null $company */
         $company = $request->route('company');
+
+        if (is_string($company)) {
+            $company = Company::query()
+                ->where('username', $company)
+                ->firstOrFail();
+
+            $request->route()?->setParameter('company', $company);
+        }
 
         $subscription = AgentSubscription::with('package')
             ->where('company_id', $company->id)
