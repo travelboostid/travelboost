@@ -23,6 +23,7 @@ import {
     UsersIcon,
 } from 'lucide-react';
 import { useMemo } from 'react';
+import { FormattedMessage, useIntl } from 'react-intl';
 import {
     CustomerActions,
     type CustomerRow,
@@ -39,25 +40,6 @@ type CustomersPageProps = {
     };
 };
 
-const STATUS_OPTIONS = [
-    { label: 'Active', value: 'active' },
-    { label: 'Pending', value: 'pending' },
-    { label: 'Inactive', value: 'inactive' },
-    { label: 'Suspended', value: 'suspended' },
-    { label: 'Rejected', value: 'rejected' },
-];
-
-const GENDER_OPTIONS = [
-    { label: 'Male', value: 'male' },
-    { label: 'Female', value: 'female' },
-    { label: 'Unspecified', value: 'unspecified' },
-];
-
-const REGISTRATION_SOURCE_OPTIONS = [
-    { label: 'Direct registration', value: 'direct' },
-    { label: 'Via agent', value: 'agent' },
-];
-
 function statusBadgeClass(status?: string | null): string {
     switch (status) {
         case 'active':
@@ -73,14 +55,78 @@ function statusBadgeClass(status?: string | null): string {
 }
 
 export default function CustomersPage({ data }: CustomersPageProps) {
+    const intl = useIntl();
     const { company } = usePageSharedDataProps();
+
+    const statusOptions = useMemo(
+        () => [
+            {
+                label: intl.formatMessage({ defaultMessage: 'Active' }),
+                value: 'active',
+            },
+            {
+                label: intl.formatMessage({ defaultMessage: 'Pending' }),
+                value: 'pending',
+            },
+            {
+                label: intl.formatMessage({ defaultMessage: 'Inactive' }),
+                value: 'inactive',
+            },
+            {
+                label: intl.formatMessage({ defaultMessage: 'Suspended' }),
+                value: 'suspended',
+            },
+            {
+                label: intl.formatMessage({ defaultMessage: 'Rejected' }),
+                value: 'rejected',
+            },
+        ],
+        [intl],
+    );
+
+    const genderOptions = useMemo(
+        () => [
+            {
+                label: intl.formatMessage({ defaultMessage: 'Male' }),
+                value: 'male',
+            },
+            {
+                label: intl.formatMessage({ defaultMessage: 'Female' }),
+                value: 'female',
+            },
+            {
+                label: intl.formatMessage({
+                    defaultMessage: 'Unspecified',
+                }),
+                value: 'unspecified',
+            },
+        ],
+        [intl],
+    );
+
+    const registrationSourceOptions = useMemo(
+        () => [
+            {
+                label: intl.formatMessage({
+                    defaultMessage: 'Direct registration',
+                }),
+                value: 'direct',
+            },
+            {
+                label: intl.formatMessage({ defaultMessage: 'Via agent' }),
+                value: 'agent',
+            },
+        ],
+        [intl],
+    );
+
     const columns = useMemo<ColumnDef<CustomerRow>[]>(
         () => [
             {
                 id: 'actions',
                 header: () => (
                     <div className="px-2 text-center text-[11px] font-bold tracking-wider text-primary">
-                        Actions
+                        <FormattedMessage defaultMessage="Actions" />
                     </div>
                 ),
                 cell: ({ row }) => <CustomerActions customer={row.original} />,
@@ -92,7 +138,12 @@ export default function CustomersPage({ data }: CustomersPageProps) {
                 id: 'name',
                 accessorKey: 'name',
                 header: ({ column }) => (
-                    <DataTableColumnHeader column={column} label="Customer" />
+                    <DataTableColumnHeader
+                        column={column}
+                        label={intl.formatMessage({
+                            defaultMessage: 'Customer',
+                        })}
+                    />
                 ),
                 cell: ({ row }) => (
                     <div className="flex min-w-[220px] items-center gap-3">
@@ -113,8 +164,12 @@ export default function CustomersPage({ data }: CustomersPageProps) {
                     </div>
                 ),
                 meta: {
-                    label: 'Customer name',
-                    placeholder: 'Search name...',
+                    label: intl.formatMessage({
+                        defaultMessage: 'Customer name',
+                    }),
+                    placeholder: intl.formatMessage({
+                        defaultMessage: 'Search name...',
+                    }),
                     variant: 'text',
                     icon: TextIcon,
                 },
@@ -124,7 +179,12 @@ export default function CustomersPage({ data }: CustomersPageProps) {
                 id: 'username',
                 accessorKey: 'username',
                 header: ({ column }) => (
-                    <DataTableColumnHeader column={column} label="Username" />
+                    <DataTableColumnHeader
+                        column={column}
+                        label={intl.formatMessage({
+                            defaultMessage: 'Username',
+                        })}
+                    />
                 ),
                 cell: ({ row }) => (
                     <span className="font-mono text-sm text-muted-foreground">
@@ -132,8 +192,12 @@ export default function CustomersPage({ data }: CustomersPageProps) {
                     </span>
                 ),
                 meta: {
-                    label: 'Username',
-                    placeholder: 'Search username...',
+                    label: intl.formatMessage({
+                        defaultMessage: 'Username',
+                    }),
+                    placeholder: intl.formatMessage({
+                        defaultMessage: 'Search username...',
+                    }),
                     variant: 'text',
                     icon: UserIcon,
                 },
@@ -143,7 +207,12 @@ export default function CustomersPage({ data }: CustomersPageProps) {
                 id: 'email',
                 accessorKey: 'email',
                 header: ({ column }) => (
-                    <DataTableColumnHeader column={column} label="Email" />
+                    <DataTableColumnHeader
+                        column={column}
+                        label={intl.formatMessage({
+                            defaultMessage: 'Email',
+                        })}
+                    />
                 ),
                 cell: ({ row }) => (
                     <div
@@ -154,8 +223,12 @@ export default function CustomersPage({ data }: CustomersPageProps) {
                     </div>
                 ),
                 meta: {
-                    label: 'Email',
-                    placeholder: 'Search email...',
+                    label: intl.formatMessage({
+                        defaultMessage: 'Email',
+                    }),
+                    placeholder: intl.formatMessage({
+                        defaultMessage: 'Search email...',
+                    }),
                     variant: 'text',
                     icon: TextIcon,
                 },
@@ -165,7 +238,12 @@ export default function CustomersPage({ data }: CustomersPageProps) {
                 id: 'phone',
                 accessorKey: 'phone',
                 header: ({ column }) => (
-                    <DataTableColumnHeader column={column} label="Phone" />
+                    <DataTableColumnHeader
+                        column={column}
+                        label={intl.formatMessage({
+                            defaultMessage: 'Phone',
+                        })}
+                    />
                 ),
                 cell: ({ row }) => (
                     <span className="whitespace-nowrap text-sm">
@@ -177,19 +255,30 @@ export default function CustomersPage({ data }: CustomersPageProps) {
                 id: 'agent_name',
                 accessorFn: (row) => row.company?.name ?? 'Direct',
                 header: ({ column }) => (
-                    <DataTableColumnHeader column={column} label="Agent" />
+                    <DataTableColumnHeader
+                        column={column}
+                        label={intl.formatMessage({
+                            defaultMessage: 'Agent',
+                        })}
+                    />
                 ),
                 cell: ({ row }) => (
                     <Badge
                         variant="secondary"
                         className="max-w-[180px] truncate font-medium uppercase"
                     >
-                        {row.original.company?.name ?? 'Direct'}
+                        {row.original.company?.name ?? (
+                            <FormattedMessage defaultMessage="Direct" />
+                        )}
                     </Badge>
                 ),
                 meta: {
-                    label: 'Agent name',
-                    placeholder: 'Search agent...',
+                    label: intl.formatMessage({
+                        defaultMessage: 'Agent name',
+                    }),
+                    placeholder: intl.formatMessage({
+                        defaultMessage: 'Search agent...',
+                    }),
                     variant: 'text',
                     icon: Building2Icon,
                 },
@@ -199,17 +288,28 @@ export default function CustomersPage({ data }: CustomersPageProps) {
                 id: 'registration_source',
                 accessorFn: (row) => (row.company?.name ? 'agent' : 'direct'),
                 header: ({ column }) => (
-                    <DataTableColumnHeader column={column} label="Source" />
+                    <DataTableColumnHeader
+                        column={column}
+                        label={intl.formatMessage({
+                            defaultMessage: 'Source',
+                        })}
+                    />
                 ),
                 cell: ({ row }) => (
                     <Badge variant="outline" className="capitalize">
-                        {row.original.company?.name ? 'Via agent' : 'Direct'}
+                        {row.original.company?.name ? (
+                            <FormattedMessage defaultMessage="Via agent" />
+                        ) : (
+                            <FormattedMessage defaultMessage="Direct" />
+                        )}
                     </Badge>
                 ),
                 meta: {
-                    label: 'Registration source',
+                    label: intl.formatMessage({
+                        defaultMessage: 'Registration source',
+                    }),
                     variant: 'select',
-                    options: REGISTRATION_SOURCE_OPTIONS,
+                    options: registrationSourceOptions,
                     icon: UsersIcon,
                 },
                 enableColumnFilter: true,
@@ -218,7 +318,12 @@ export default function CustomersPage({ data }: CustomersPageProps) {
                 id: 'address',
                 accessorKey: 'address',
                 header: ({ column }) => (
-                    <DataTableColumnHeader column={column} label="Address" />
+                    <DataTableColumnHeader
+                        column={column}
+                        label={intl.formatMessage({
+                            defaultMessage: 'Address',
+                        })}
+                    />
                 ),
                 cell: ({ row }) => (
                     <div
@@ -233,7 +338,12 @@ export default function CustomersPage({ data }: CustomersPageProps) {
                 id: 'gender',
                 accessorKey: 'gender',
                 header: ({ column }) => (
-                    <DataTableColumnHeader column={column} label="Gender" />
+                    <DataTableColumnHeader
+                        column={column}
+                        label={intl.formatMessage({
+                            defaultMessage: 'Gender',
+                        })}
+                    />
                 ),
                 cell: ({ row }) => (
                     <span className="capitalize text-sm">
@@ -241,9 +351,11 @@ export default function CustomersPage({ data }: CustomersPageProps) {
                     </span>
                 ),
                 meta: {
-                    label: 'Gender',
+                    label: intl.formatMessage({
+                        defaultMessage: 'Gender',
+                    }),
                     variant: 'multiSelect',
-                    options: GENDER_OPTIONS,
+                    options: genderOptions,
                     icon: UserIcon,
                 },
                 enableColumnFilter: true,
@@ -252,7 +364,12 @@ export default function CustomersPage({ data }: CustomersPageProps) {
                 id: 'status',
                 accessorKey: 'status',
                 header: ({ column }) => (
-                    <DataTableColumnHeader column={column} label="Status" />
+                    <DataTableColumnHeader
+                        column={column}
+                        label={intl.formatMessage({
+                            defaultMessage: 'Status',
+                        })}
+                    />
                 ),
                 cell: ({ row }) => (
                     <Badge
@@ -266,9 +383,11 @@ export default function CustomersPage({ data }: CustomersPageProps) {
                     </Badge>
                 ),
                 meta: {
-                    label: 'Status',
+                    label: intl.formatMessage({
+                        defaultMessage: 'Status',
+                    }),
                     variant: 'multiSelect',
-                    options: STATUS_OPTIONS,
+                    options: statusOptions,
                     icon: CircleDashedIcon,
                 },
                 enableColumnFilter: true,
@@ -277,7 +396,12 @@ export default function CustomersPage({ data }: CustomersPageProps) {
                 id: 'created_at',
                 accessorKey: 'created_at',
                 header: ({ column }) => (
-                    <DataTableColumnHeader column={column} label="Join date" />
+                    <DataTableColumnHeader
+                        column={column}
+                        label={intl.formatMessage({
+                            defaultMessage: 'Join date',
+                        })}
+                    />
                 ),
                 cell: ({ row }) => (
                     <span className="whitespace-nowrap text-sm text-muted-foreground">
@@ -285,14 +409,16 @@ export default function CustomersPage({ data }: CustomersPageProps) {
                     </span>
                 ),
                 meta: {
-                    label: 'Join date',
+                    label: intl.formatMessage({
+                        defaultMessage: 'Join date',
+                    }),
                     variant: 'dateRange',
                     icon: CalendarIcon,
                 },
                 enableColumnFilter: true,
             },
         ],
-        [],
+        [genderOptions, intl, registrationSourceOptions, statusOptions],
     );
 
     const { table } = useDataTable({
@@ -316,15 +442,26 @@ export default function CustomersPage({ data }: CustomersPageProps) {
         getRowId: (row) => row.id.toString(),
     });
 
-    const exportQuery = typeof window !== 'undefined' ? window.location.search : '';
+    const exportQuery =
+        typeof window !== 'undefined' ? window.location.search : '';
 
     return (
         <CompanyDashboardLayout
             containerClassName="w-full flex-1 flex flex-col"
-            breadcrumb={[{ title: 'Customers' }]}
+            breadcrumb={[
+                {
+                    title: intl.formatMessage({
+                        defaultMessage: 'Customers',
+                    }),
+                },
+            ]}
             activeMenuIds={['customers']}
         >
-            <Head title="Customers" />
+            <Head
+                title={intl.formatMessage({
+                    defaultMessage: 'Customers',
+                })}
+            />
 
             <div className="mx-auto w-full max-w-[1600px] space-y-6 p-4 sm:p-6">
                 <header className="overflow-hidden rounded-3xl border border-primary/10 bg-gradient-to-br from-primary/[0.07] via-background to-background shadow-sm">
@@ -336,12 +473,10 @@ export default function CustomersPage({ data }: CustomersPageProps) {
                                 </div>
                                 <div>
                                     <h1 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
-                                        Customers
+                                        <FormattedMessage defaultMessage="Customers" />
                                     </h1>
                                     <p className="text-sm leading-6 text-muted-foreground">
-                                        Browse direct and agent-registered customers.
-                                        Filters run on the server across your full
-                                        network.
+                                        <FormattedMessage defaultMessage="Browse direct and agent-registered customers. Filters run on the server across your full network." />
                                     </p>
                                 </div>
                             </div>
@@ -360,7 +495,7 @@ export default function CustomersPage({ data }: CustomersPageProps) {
                                 }
                             >
                                 <PrinterIcon className="size-4" />
-                                Print
+                                <FormattedMessage defaultMessage="Print" />
                             </Button>
                             <Button
                                 type="button"
@@ -374,7 +509,7 @@ export default function CustomersPage({ data }: CustomersPageProps) {
                                 }
                             >
                                 <FileTextIcon className="size-4" />
-                                Export PDF
+                                <FormattedMessage defaultMessage="Export PDF" />
                             </Button>
                             <Button
                                 type="button"
@@ -384,7 +519,7 @@ export default function CustomersPage({ data }: CustomersPageProps) {
                                 }}
                             >
                                 <FileSpreadsheetIcon className="size-4" />
-                                Export Excel
+                                <FormattedMessage defaultMessage="Export Excel" />
                             </Button>
                         </div>
                     </div>

@@ -31,7 +31,7 @@ import {
 } from '@/components/ui/table';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { cn } from '@/lib/utils';
-import { router, usePage } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
 import {
     flexRender,
     getCoreRowModel,
@@ -57,6 +57,7 @@ import {
     XIcon,
 } from 'lucide-react';
 import * as React from 'react';
+import { FormattedMessage, useIntl } from 'react-intl';
 import AddCategoryDialog from './add-category-dialog';
 import UpdateCategoryDialog from './update-category-dialog';
 
@@ -135,7 +136,7 @@ function RowAction({
                                     className="cursor-pointer"
                                 >
                                     <EditIcon className="mr-2 h-4 w-4" />
-                                    Edit
+                                    <FormattedMessage defaultMessage="Edit" />
                                 </DropdownMenuItem>
                             </UpdateCategoryDialog>
                         </DropdownMenuGroup>
@@ -148,7 +149,7 @@ function RowAction({
                                 className="cursor-pointer text-red-600 focus:bg-red-50 focus:text-red-600"
                             >
                                 <TrashIcon className="mr-2 h-4 w-4" />
-                                Delete
+                                <FormattedMessage defaultMessage="Delete" />
                             </DropdownMenuItem>
                         </DropdownMenuGroup>
                     </DropdownMenuContent>
@@ -158,16 +159,19 @@ function RowAction({
             <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle>Delete Category</AlertDialogTitle>
+                        <AlertDialogTitle>
+                            <FormattedMessage defaultMessage="Delete category" />
+                        </AlertDialogTitle>
                         <AlertDialogDescription>
-                            This action cannot be undone. The category will be
-                            removed permanently if it is not used by any tours.
+                            <FormattedMessage defaultMessage="This action cannot be undone. The category will be removed permanently if it is not used by any tours." />
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogCancel>
+                            <FormattedMessage defaultMessage="Cancel" />
+                        </AlertDialogCancel>
                         <AlertDialogAction onClick={handleDelete}>
-                            Delete
+                            <FormattedMessage defaultMessage="Delete" />
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
@@ -181,7 +185,7 @@ export const columns: ColumnDef<TourCategoryWithManualReservedLimit>[] = [
         id: 'actions',
         header: () => (
             <div className="px-2 text-center text-[11px] font-bold tracking-wider text-primary">
-                Actions
+                <FormattedMessage defaultMessage="Actions" />
             </div>
         ),
         enableSorting: false,
@@ -191,7 +195,10 @@ export const columns: ColumnDef<TourCategoryWithManualReservedLimit>[] = [
     {
         accessorKey: 'name',
         header: ({ column }) => (
-            <SortableHeader column={column} title="Category" />
+            <SortableHeader
+                column={column}
+                title={<FormattedMessage defaultMessage="Category" />}
+            />
         ),
         cell: ({ row }) => (
             <div className="flex min-w-[240px] items-center gap-3">
@@ -215,7 +222,10 @@ export const columns: ColumnDef<TourCategoryWithManualReservedLimit>[] = [
     {
         accessorKey: 'position_no',
         header: ({ column }) => (
-            <SortableHeader column={column} title="Position" />
+            <SortableHeader
+                column={column}
+                title={<FormattedMessage defaultMessage="Position" />}
+            />
         ),
         cell: ({ row }) => (
             <span className="whitespace-nowrap text-sm font-medium text-slate-500 dark:text-slate-300">
@@ -228,21 +238,26 @@ export const columns: ColumnDef<TourCategoryWithManualReservedLimit>[] = [
         header: ({ column }) => (
             <SortableHeader
                 column={column}
-                title="Manual Reservation Duration"
+                title={
+                    <FormattedMessage defaultMessage="Manual reservation duration" />
+                }
             />
         ),
         cell: ({ row }) => (
             <span className="whitespace-nowrap text-sm font-medium text-slate-500 dark:text-slate-300">
                 {row.original.manual_reserved_limit_value &&
-                row.original.manual_reserved_limit_unit
-                    ? `${row.original.manual_reserved_limit_value} ${row.original.manual_reserved_limit_unit}`
-                    : 'No limit'}
+                row.original.manual_reserved_limit_unit ? (
+                    `${row.original.manual_reserved_limit_value} ${row.original.manual_reserved_limit_unit}`
+                ) : (
+                    <FormattedMessage defaultMessage="No limit" />
+                )}
             </span>
         ),
     },
 ];
 
 export default function Page({ data }: { data: any }) {
+    const intl = useIntl();
     const { errors } = usePage().props as any;
     const [sorting, setSorting] = React.useState<SortingState>([]);
     const [columnFilters, setColumnFilters] =
@@ -296,17 +311,35 @@ export default function Page({ data }: { data: any }) {
 
     return (
         <CompanyDashboardLayout
-            breadcrumb={[{ title: 'Tours' }, { title: 'Product Categories' }]}
+            breadcrumb={[
+                {
+                    title: intl.formatMessage({
+                        defaultMessage: 'Tours',
+                    }),
+                },
+                {
+                    title: intl.formatMessage({
+                        defaultMessage: 'Product Categories',
+                    }),
+                },
+            ]}
             openMenuIds={['tours']}
             activeMenuIds={['tours.categories']}
             applet={
                 <AddCategoryDialog>
                     <Button>
-                        <PlusIcon /> Add Category
+                        <PlusIcon />
+                        <FormattedMessage defaultMessage="Add Category" />
                     </Button>
                 </AddCategoryDialog>
             }
         >
+            <Head
+                title={intl.formatMessage({
+                    defaultMessage: 'Product Categories',
+                })}
+            />
+
             <div className="mx-auto flex w-full max-w-[1600px] flex-1 flex-col gap-6 p-4 pb-20 md:p-6">
                 {errors.delete_error && (
                     <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -321,7 +354,10 @@ export default function Page({ data }: { data: any }) {
                                 <Search className="size-3.5" />
                             </span>
                             <Input
-                                placeholder="Search category, description, position, or limit"
+                                placeholder={intl.formatMessage({
+                                    defaultMessage:
+                                        'Search category, description, position, or limit',
+                                })}
                                 value={globalFilter}
                                 onChange={(event) =>
                                     setGlobalFilter(event.target.value)
@@ -331,7 +367,9 @@ export default function Page({ data }: { data: any }) {
                             {globalFilter.trim() !== '' && (
                                 <button
                                     type="button"
-                                    aria-label="Clear search"
+                                    aria-label={intl.formatMessage({
+                                        defaultMessage: 'Clear search',
+                                    })}
                                     onClick={() => setGlobalFilter('')}
                                     className="absolute right-2 top-1/2 flex size-6 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                                 >
@@ -347,7 +385,7 @@ export default function Page({ data }: { data: any }) {
                                 type="button"
                                 className="ml-auto h-9 w-full rounded-xl border border-slate-200 bg-white px-4 text-xs font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:hover:bg-slate-900 sm:w-auto"
                             >
-                                View Columns
+                                <FormattedMessage defaultMessage="View Columns" />
                                 <ChevronDown className="ml-2 inline h-4 w-4 opacity-50" />
                             </button>
                         </DropdownMenuTrigger>
@@ -448,9 +486,9 @@ export default function Page({ data }: { data: any }) {
                                     <TableRow>
                                         <TableCell
                                             colSpan={columns.length}
-                                            className="h-40"
+                                            className="h-40 text-center"
                                         >
-                                            No results.
+                                            <FormattedMessage defaultMessage="No results." />
                                         </TableCell>
                                     </TableRow>
                                 )}

@@ -27,6 +27,7 @@ import {
     RotateCcwIcon,
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { FormattedMessage, useIntl } from 'react-intl';
 
 const cleanRoomType = (roomType: string | null | undefined) => {
     const normalized = String(roomType || '')
@@ -45,6 +46,7 @@ const TourAutocomplete = ({
     value: string;
     onChange: (val: string) => void;
 }) => {
+    const intl = useIntl();
     const [query, setQuery] = useState('');
     const [open, setOpen] = useState(false);
     const ref = useRef<HTMLDivElement>(null);
@@ -94,7 +96,9 @@ const TourAutocomplete = ({
                     setQuery(selectedTourLabel);
                     setOpen(true);
                 }}
-                placeholder="Search tour code or name..."
+                placeholder={intl.formatMessage({
+                    defaultMessage: 'Search tour code or name...',
+                })}
                 className="h-11 rounded-xl bg-white dark:border-slate-700 dark:bg-slate-900 dark:text-white"
             />
             {open && filteredTours.length > 0 && (
@@ -120,6 +124,7 @@ const TourAutocomplete = ({
 };
 
 export default function RoomListing() {
+    const intl = useIntl();
     const { tours, availableDates, roomData, agentGroups, filters } =
         usePage<any>().props;
     const { company } = usePageSharedDataProps();
@@ -221,10 +226,25 @@ export default function RoomListing() {
         <CompanyDashboardLayout
             openMenuIds={['reports']}
             activeMenuIds={['reports.room-listings']}
-            breadcrumb={[{ title: 'Reports' }, { title: 'Room Listing' }]}
+            breadcrumb={[
+                {
+                    title: intl.formatMessage({
+                        defaultMessage: 'Reports',
+                    }),
+                },
+                {
+                    title: intl.formatMessage({
+                        defaultMessage: 'Room Listing',
+                    }),
+                },
+            ]}
             containerClassName="min-h-screen bg-slate-50/60 dark:bg-slate-950"
         >
-            <Head title="Room Listing" />
+            <Head
+                title={intl.formatMessage({
+                    defaultMessage: 'Room Listing',
+                })}
+            />
 
             <div
                 id="print-area"
@@ -235,7 +255,7 @@ export default function RoomListing() {
                         <div className="min-w-0 rounded-2xl border border-slate-100 bg-slate-50/70 p-4 dark:border-slate-800 dark:bg-slate-950/40">
                             <label className="mb-2 flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
                                 <span className="h-1.5 w-1.5 rounded-full bg-[#cc3f8e]" />
-                                Tour Product
+                                <FormattedMessage defaultMessage="Tour Product" />
                             </label>
                             <TourAutocomplete
                                 tours={tours}
@@ -256,7 +276,7 @@ export default function RoomListing() {
                         <div className="min-w-0 rounded-2xl border border-slate-100 bg-slate-50/70 p-4 dark:border-slate-800 dark:bg-slate-950/40">
                             <label className="mb-2 flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
                                 <span className="h-1.5 w-1.5 rounded-full bg-slate-400 dark:bg-slate-500" />
-                                Departure Date
+                                <FormattedMessage defaultMessage="Departure Date" />
                             </label>
                             <div className="flex flex-col gap-2 sm:flex-row">
                                 <Select
@@ -277,8 +297,14 @@ export default function RoomListing() {
                                         <SelectValue
                                             placeholder={
                                                 hasTourSelected
-                                                    ? 'Select departure date'
-                                                    : 'Select a tour product first'
+                                                    ? intl.formatMessage({
+                                                          defaultMessage:
+                                                              'Select departure date',
+                                                      })
+                                                    : intl.formatMessage({
+                                                          defaultMessage:
+                                                              'Select a tour product first',
+                                                      })
                                             }
                                         />
                                     </SelectTrigger>
@@ -305,10 +331,14 @@ export default function RoomListing() {
                                         !hasTourSelected &&
                                         !hasDepartureSelected
                                     }
-                                    title="Reset search"
+                                    title={intl.formatMessage({
+                                        defaultMessage: 'Reset search',
+                                    })}
                                 >
                                     <RotateCcwIcon size={16} />
-                                    <span>Reset</span>
+                                    <span>
+                                        <FormattedMessage defaultMessage="Reset" />
+                                    </span>
                                 </Button>
                             </div>
                         </div>
@@ -319,8 +349,7 @@ export default function RoomListing() {
                     <div className="flex max-w-2xl items-start gap-3 rounded-2xl border border-blue-100 bg-blue-50/70 px-4 py-3 text-sm text-blue-900 dark:border-blue-900/40 dark:bg-blue-950/30 dark:text-blue-200">
                         <InfoIcon className="mt-0.5 h-4 w-4 shrink-0" />
                         <p>
-                            Only tour bookings with full payment status are
-                            displayed in this room listing report.
+                            <FormattedMessage defaultMessage="Only tour bookings with full payment status are displayed in this room listing report." />
                         </p>
                     </div>
                     <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:justify-end">
@@ -330,7 +359,8 @@ export default function RoomListing() {
                             onClick={handlePrintNative}
                             disabled={!hasCompleteFilters || !roomData?.length}
                         >
-                            <PrinterIcon size={16} /> Print
+                            <PrinterIcon size={16} />{' '}
+                            <FormattedMessage defaultMessage="Print" />
                         </Button>
                         <Button
                             variant="outline"
@@ -338,14 +368,16 @@ export default function RoomListing() {
                             onClick={handleExportPDF}
                             disabled={!hasCompleteFilters || !roomData?.length}
                         >
-                            <FileIcon size={16} /> Export PDF
+                            <FileIcon size={16} />{' '}
+                            <FormattedMessage defaultMessage="Export PDF" />
                         </Button>
                         <Button
                             className="h-11 min-w-[148px] justify-center gap-2 rounded-xl bg-emerald-600 px-5 text-white shadow-sm transition hover:bg-emerald-700"
                             onClick={handleExportExcel}
                             disabled={!hasCompleteFilters || !roomData?.length}
                         >
-                            <DownloadIcon size={16} /> Export Excel
+                            <DownloadIcon size={16} />{' '}
+                            <FormattedMessage defaultMessage="Export Excel" />
                         </Button>
                     </div>
                 </div>
@@ -355,13 +387,15 @@ export default function RoomListing() {
                         {company.photo_url && (
                             <img
                                 src={company.photo_url}
-                                alt="Company logo"
+                                alt={intl.formatMessage({
+                                    defaultMessage: 'Company logo',
+                                })}
                                 className="h-14 w-auto object-contain"
                             />
                         )}
                         <div>
                             <h1 className="text-[22px] font-black uppercase tracking-tight text-black">
-                                Room Listing
+                                <FormattedMessage defaultMessage="Room Listing" />
                             </h1>
                             <p className="mt-1 text-[11px] font-bold uppercase text-black">
                                 {company.name}
@@ -371,17 +405,25 @@ export default function RoomListing() {
 
                     <div className="text-right text-black">
                         <div className="text-[11px] font-bold uppercase">
-                            {selectedTour
-                                ? `${selectedTour.code} - ${selectedTour.name}`
-                                : 'No Tour Selected'}
+                            {selectedTour ? (
+                                `${selectedTour.code} - ${selectedTour.name}`
+                            ) : (
+                                <FormattedMessage defaultMessage="No Tour Selected" />
+                            )}
                         </div>
                         <div className="mt-1 text-[10px] font-semibold">
-                            Departure Date:{' '}
-                            {filters.departure_date
-                                ? dayjs(filters.departure_date).format(
-                                      'DD MMMM YYYY',
-                                  )
-                                : 'Not selected'}
+                            {filters.departure_date ? (
+                                <FormattedMessage
+                                    defaultMessage="Departure Date: {date}"
+                                    values={{
+                                        date: dayjs(
+                                            filters.departure_date,
+                                        ).format('DD MMMM YYYY'),
+                                    }}
+                                />
+                            ) : (
+                                <FormattedMessage defaultMessage="Not selected" />
+                            )}
                         </div>
                     </div>
                 </div>
@@ -393,58 +435,58 @@ export default function RoomListing() {
                                 <TableHeader className="bg-slate-50 dark:bg-slate-900 print:bg-slate-100">
                                     <TableRow className="border-b border-slate-200 dark:border-slate-800">
                                         <TableHead className="border-r border-slate-200 px-2 py-3 text-center text-[11px] font-bold uppercase text-slate-900 dark:border-slate-800 dark:text-slate-200 print:w-[3%]">
-                                            No
+                                            <FormattedMessage defaultMessage="No" />
                                         </TableHead>
                                         <TableHead className="min-w-[72px] border-r border-slate-200 px-2 py-3 text-center text-[11px] font-bold uppercase text-slate-900 dark:border-slate-800 dark:text-slate-200 print:w-[5%]">
-                                            Title
+                                            <FormattedMessage defaultMessage="Title" />
                                         </TableHead>
                                         <TableHead className="min-w-[220px] border-r border-slate-200 px-3 py-3 text-[11px] font-bold uppercase text-slate-900 dark:border-slate-800 dark:text-slate-200 print:w-[14%]">
-                                            Passenger Name
+                                            <FormattedMessage defaultMessage="Passenger Name" />
                                         </TableHead>
                                         <TableHead className="border-r border-slate-200 px-2 py-3 text-center text-[11px] font-bold uppercase text-slate-900 dark:border-slate-800 dark:text-slate-200 print:w-[8%]">
-                                            Room Type
+                                            <FormattedMessage defaultMessage="Room Type" />
                                         </TableHead>
                                         <TableHead className="min-w-[64px] border-r border-slate-200 px-2 py-3 text-center text-[11px] font-bold uppercase text-slate-900 dark:border-slate-800 dark:text-slate-200 print:w-[4%]">
-                                            Room No.
+                                            <FormattedMessage defaultMessage="Room No." />
                                         </TableHead>
                                         <TableHead className="min-w-[56px] border-r border-slate-200 px-2 py-3 text-center text-[11px] font-bold uppercase text-slate-900 dark:border-slate-800 dark:text-slate-200 print:w-[4%]">
-                                            Room
+                                            <FormattedMessage defaultMessage="Room" />
                                         </TableHead>
                                         <TableHead className="min-w-[56px] border-r border-slate-200 px-2 py-3 text-center text-[11px] font-bold uppercase text-slate-900 dark:border-slate-800 dark:text-slate-200 print:w-[4%]">
-                                            Seat
+                                            <FormattedMessage defaultMessage="Seat" />
                                         </TableHead>
                                         <TableHead className="border-r border-slate-200 px-2 py-3 text-center text-[11px] font-bold uppercase text-slate-900 dark:border-slate-800 dark:text-slate-200 print:w-[4%]">
-                                            Visa
+                                            <FormattedMessage defaultMessage="Visa" />
                                         </TableHead>
                                         <TableHead className="min-w-[150px] border-r border-slate-200 px-3 py-3 text-[11px] font-bold uppercase text-slate-900 dark:border-slate-800 dark:text-slate-200 print:w-[14%]">
-                                            Remarks
+                                            <FormattedMessage defaultMessage="Remarks" />
                                         </TableHead>
                                         <TableHead className="border-r border-slate-200 px-2 py-3 text-[11px] font-bold uppercase text-slate-900 dark:border-slate-800 dark:text-slate-200 print:w-[10%]">
-                                            Passport Number
+                                            <FormattedMessage defaultMessage="Passport Number" />
                                         </TableHead>
                                         <TableHead className="border-r border-slate-200 px-2 py-3 text-center text-[11px] font-bold uppercase text-slate-900 dark:border-slate-800 dark:text-slate-200 print:w-[8%]">
-                                            Issue Date
+                                            <FormattedMessage defaultMessage="Issue Date" />
                                         </TableHead>
                                         <TableHead className="border-r border-slate-200 px-2 py-3 text-center text-[11px] font-bold uppercase text-slate-900 dark:border-slate-800 dark:text-slate-200 print:w-[8%]">
-                                            Expiry Date
+                                            <FormattedMessage defaultMessage="Expiry Date" />
                                         </TableHead>
                                         <TableHead className="border-r border-slate-200 px-2 py-3 text-[11px] font-bold uppercase text-slate-900 dark:border-slate-800 dark:text-slate-200 print:w-[8%]">
-                                            Place of Birth
+                                            <FormattedMessage defaultMessage="Place of Birth" />
                                         </TableHead>
                                         <TableHead className="border-r border-slate-200 px-2 py-3 text-center text-[11px] font-bold uppercase text-slate-900 dark:border-slate-800 dark:text-slate-200 print:w-[8%]">
-                                            Date of Birth
+                                            <FormattedMessage defaultMessage="Date of Birth" />
                                         </TableHead>
                                         <TableHead className="border-r border-slate-200 px-2 py-3 text-center text-[11px] font-bold uppercase text-slate-900 dark:border-slate-800 dark:text-slate-200 print:w-[9%]">
-                                            Contact
+                                            <FormattedMessage defaultMessage="Contact" />
                                         </TableHead>
                                         <TableHead className="border-r border-slate-200 px-2 py-3 text-center text-[11px] font-bold uppercase text-slate-900 dark:border-slate-800 dark:text-slate-200 print:w-[4%]">
-                                            Age
+                                            <FormattedMessage defaultMessage="Age" />
                                         </TableHead>
                                         <TableHead className="border-r border-slate-200 px-2 py-3 text-center text-[11px] font-bold uppercase text-slate-900 dark:border-slate-800 dark:text-slate-200 print:w-[10%]">
                                             Agent Name
                                         </TableHead>
                                         <TableHead className="px-2 py-3 text-center text-[11px] font-bold uppercase text-slate-900 dark:text-slate-200 print:w-[4%]">
-                                            Val
+                                            <FormattedMessage defaultMessage="Val" />
                                         </TableHead>
                                     </TableRow>
                                 </TableHeader>
@@ -456,10 +498,12 @@ export default function RoomListing() {
                                             agentCounter % 2 === 0
                                                 ? 'bg-slate-50/50 dark:bg-slate-900/30'
                                                 : 'bg-white dark:bg-slate-950';
-                                        const bookings = agentGroup.bookings || [];
+                                        const bookings =
+                                            agentGroup.bookings || [];
                                         const agentTotalPax = bookings.reduce(
                                             (count: number, booking: any) =>
-                                                count + Number(booking.total_pax || 0),
+                                                count +
+                                                Number(booking.total_pax || 0),
                                             0,
                                         );
 
@@ -472,7 +516,9 @@ export default function RoomListing() {
                                                     colSpan={18}
                                                     className="px-3 py-2 text-[11px] font-black uppercase tracking-[0.18em] text-slate-700 dark:text-slate-200 print:text-[8pt]"
                                                 >
-                                                    Agent: {agentGroup.agent_name} ({agentTotalPax} pax)
+                                                    Agent:{' '}
+                                                    {agentGroup.agent_name} (
+                                                    {agentTotalPax} pax)
                                                 </TableCell>
                                             </TableRow>,
                                             ...bookings.flatMap(
@@ -641,7 +687,9 @@ export default function RoomListing() {
                                                                                     }
                                                                                     className="border-r border-slate-200 p-2 text-center align-middle text-[11px] font-semibold dark:border-slate-800 dark:text-slate-300"
                                                                                 >
-                                                                                    {agentGroup.agent_name}
+                                                                                    {
+                                                                                        agentGroup.agent_name
+                                                                                    }
                                                                                 </TableCell>
                                                                             )}
                                                                             <TableCell
@@ -670,7 +718,7 @@ export default function RoomListing() {
                         {roomRecap.length > 0 && (
                             <div className="border-t border-slate-200 p-4 dark:border-slate-800 print:border-t print:border-black print:p-3">
                                 <h3 className="mb-3 text-xs font-black uppercase tracking-[0.18em] text-slate-600 dark:text-slate-300 print:text-black">
-                                    Room Recap
+                                    <FormattedMessage defaultMessage="Room Recap" />
                                 </h3>
                                 <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 print:grid-cols-3">
                                     {roomRecap.map((item) => (
@@ -682,10 +730,12 @@ export default function RoomListing() {
                                                 {item.roomType}
                                             </span>
                                             <span className="font-bold text-slate-950 dark:text-white print:text-black">
-                                                {item.count}{' '}
-                                                {item.count === 1
-                                                    ? 'room'
-                                                    : 'rooms'}
+                                                <FormattedMessage
+                                                    defaultMessage="{count, plural, one {# room} other {# rooms}}"
+                                                    values={{
+                                                        count: item.count,
+                                                    }}
+                                                />
                                             </span>
                                         </div>
                                     ))}
@@ -696,9 +746,11 @@ export default function RoomListing() {
                 ) : (
                     <div className="rounded-3xl border-2 border-dashed border-slate-200 bg-slate-50 p-16 text-center text-slate-400 dark:border-slate-800 dark:bg-slate-900/50 dark:text-slate-600 print:hidden">
                         <p className="text-lg font-medium text-slate-600 dark:text-slate-300">
-                            {hasTourSelected
-                                ? 'Select a departure date to generate the room listing.'
-                                : 'Select a tour product first, then choose a departure date.'}
+                            {hasTourSelected ? (
+                                <FormattedMessage defaultMessage="Select a departure date to generate the room listing." />
+                            ) : (
+                                <FormattedMessage defaultMessage="Select a tour product first, then choose a departure date." />
+                            )}
                         </p>
                     </div>
                 )}

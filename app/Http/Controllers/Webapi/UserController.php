@@ -6,15 +6,16 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\UserIndexRequest;
 use App\Http\Resources\UserResource;
 use App\Models\User;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class UserController extends Controller
 {
     /**
-     * Display a listing of the users.
+     * List users with optional search and role filters.
      *
      * @operationId getUsers
      */
-    public function index(UserIndexRequest $request)
+    public function index(UserIndexRequest $request): AnonymousResourceCollection
     {
         $query = User::query()
             ->with('roles');

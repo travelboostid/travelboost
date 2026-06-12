@@ -7,23 +7,21 @@ use Illuminate\Database\Seeder;
 
 class ContinentSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
     public function run(): void
     {
         $continents = [
-            ['name' => 'Asia'],
-            ['name' => 'Europe'],
-            ['name' => 'Africa'],
-            ['name' => 'America'],
-            ['name' => 'Australia'],
+            'Asia',
+            'Europe',
+            'Africa',
+            'America',
+            'Australia',
         ];
 
-        foreach ($continents as $data) {
-            Continent::factory()->create([
-                'name' => $data['name'],
-            ]);
+        foreach ($continents as $name) {
+            Continent::query()->updateOrCreate(
+                ['name' => $name],
+                ['name' => $name],
+            );
         }
     }
 }

@@ -1,11 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="utf-8">
+    <meta charset="utf-8" />
     <title>{{ $title ?? 'Report' }}</title>
     <style>
         body {
-            font-family: DejaVu Sans, Arial, sans-serif;
+            font-family:
+                DejaVu Sans,
+                Arial,
+                sans-serif;
             color: #0f172a;
             margin: 24px;
             font-size: 12px;
@@ -73,24 +76,29 @@
 
     <table>
         <thead>
-        <tr>
-            @foreach (($columns ?? []) as $column)
-                <th>{{ $column }}</th>
-            @endforeach
-        </tr>
-        </thead>
-        <tbody>
-        @forelse (($rows ?? []) as $row)
             <tr>
                 @foreach (($columns ?? []) as $column)
-                    <td>{{ data_get($row, $column, '-') }}</td>
+                    <th>{{ $column }}</th>
                 @endforeach
             </tr>
-        @empty
-            <tr>
-                <td colspan="{{ max(1, count($columns ?? [])) }}" class="empty">No data available.</td>
-            </tr>
-        @endforelse
+        </thead>
+        <tbody>
+            @forelse (($rows ?? []) as $row)
+                <tr>
+                    @foreach (($columns ?? []) as $column)
+                        <td>{{ data_get($row, $column, '-') }}</td>
+                    @endforeach
+                </tr>
+            @empty
+                <tr>
+                    <td
+                        colspan="{{ max(1, count($columns ?? [])) }}"
+                        class="empty"
+                    >
+                        No data available.
+                    </td>
+                </tr>
+            @endforelse
         </tbody>
     </table>
 

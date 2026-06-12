@@ -6,6 +6,7 @@ import {
     EmptyTitle,
 } from '@/components/ui/empty';
 import { IconFolderCode } from '@tabler/icons-react';
+import { FormattedMessage } from 'react-intl';
 
 export function EmptyTours() {
     return (
@@ -14,10 +15,11 @@ export function EmptyTours() {
                 <EmptyMedia variant="icon">
                     <IconFolderCode />
                 </EmptyMedia>
-                <EmptyTitle>No Tours Yet</EmptyTitle>
+                <EmptyTitle>
+                    <FormattedMessage defaultMessage="No Tours Yet" />
+                </EmptyTitle>
                 <EmptyDescription>
-                    This vendor haven&apos;t created any tours yet. Please do
-                    check later or try to contact the vendor.
+                    <FormattedMessage defaultMessage="This vendor hasn't created any tours yet. Please check back later or contact the vendor." />
                 </EmptyDescription>
             </EmptyHeader>
         </Empty>

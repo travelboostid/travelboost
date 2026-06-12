@@ -21,6 +21,8 @@ class UpdateCompanyRequest extends FormRequest
     {
         /** @var Company $company */
         $company = $this->route('agent') ?? $this->route('vendor');
+        $usernameChanged = $this->filled('username')
+            && $this->input('username') !== $company->username;
 
         return [
             'name' => ['sometimes', 'string', 'max:255'],
@@ -30,6 +32,7 @@ class UpdateCompanyRequest extends FormRequest
                 'regex:/^[a-zA-Z0-9_]{3,255}$/',
                 'max:255',
                 Rule::unique('companies', 'username')->ignore($company->id),
+                Rule::when($usernameChanged, Rule::unique('users', 'username')),
             ],
             'email' => [
                 'sometimes',

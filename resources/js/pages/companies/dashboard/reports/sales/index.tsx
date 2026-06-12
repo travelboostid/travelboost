@@ -23,6 +23,7 @@ import {
     Wallet,
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
+import { FormattedMessage, useIntl } from 'react-intl';
 
 type SalesReportRow = {
     id: number;
@@ -83,6 +84,7 @@ export default function SalesReportPage({
     options,
     companyType,
 }: SalesReportProps) {
+    const intl = useIntl();
     const { company } = usePageSharedDataProps();
     const [localFilters, setLocalFilters] = useState({
         period_from: filters.period_from || '',
@@ -93,7 +95,6 @@ export default function SalesReportPage({
     });
 
     const isVendor = companyType === 'vendor';
-    const commissionLabel = isVendor ? 'Commission Paid' : 'Commission Earned';
 
     const queryParams = useMemo(() => {
         const params: Record<string, string> = {};
@@ -134,47 +135,78 @@ export default function SalesReportPage({
         return params ? `${path}?${params}` : path;
     };
 
-    const summaryCards = [
-        {
-            label: 'Bookings',
-            value: summary.total_bookings.toLocaleString('id-ID'),
-            icon: TicketCheck,
-        },
-        {
-            label: 'Total Pax',
-            value: summary.total_pax.toLocaleString('id-ID'),
-            icon: UsersRound,
-        },
-        {
-            label: 'Total Sales',
-            value: formatIDR(Number(summary.total_sales || 0)),
-            icon: Wallet,
-        },
-        {
-            label: commissionLabel,
-            value: formatIDR(Number(summary.total_commission || 0)),
-            icon: HandCoins,
-        },
-    ];
+    const summaryCards = useMemo(
+        () => [
+            {
+                id: 'bookings',
+                label: <FormattedMessage defaultMessage="Bookings" />,
+                value: summary.total_bookings.toLocaleString('id-ID'),
+                icon: TicketCheck,
+            },
+            {
+                id: 'pax',
+                label: <FormattedMessage defaultMessage="Total Pax" />,
+                value: summary.total_pax.toLocaleString('id-ID'),
+                icon: UsersRound,
+            },
+            {
+                id: 'sales',
+                label: <FormattedMessage defaultMessage="Total Sales" />,
+                value: formatIDR(Number(summary.total_sales || 0)),
+                icon: Wallet,
+            },
+            {
+                id: 'commission',
+                label: isVendor ? (
+                    <FormattedMessage defaultMessage="Commission Paid" />
+                ) : (
+                    <FormattedMessage defaultMessage="Commission Earned" />
+                ),
+                value: formatIDR(Number(summary.total_commission || 0)),
+                icon: HandCoins,
+            },
+        ],
+        [
+            isVendor,
+            summary.total_bookings,
+            summary.total_commission,
+            summary.total_pax,
+            summary.total_sales,
+        ],
+    );
 
     return (
         <CompanyDashboardLayout
             activeMenuIds={['reports.sales']}
             openMenuIds={['reports']}
-            breadcrumb={[{ title: 'Reports' }, { title: 'Sales Report' }]}
+            breadcrumb={[
+                {
+                    title: intl.formatMessage({
+                        defaultMessage: 'Reports',
+                    }),
+                },
+                {
+                    title: intl.formatMessage({
+                        defaultMessage: 'Sales Report',
+                    }),
+                },
+            ]}
             containerClassName="min-h-screen bg-slate-50/60 dark:bg-slate-950"
         >
-            <Head title="Sales Report" />
+            <Head
+                title={intl.formatMessage({
+                    defaultMessage: 'Sales Report',
+                })}
+            />
 
             <div className="mx-auto max-w-[1500px] space-y-5 p-4">
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
                     <div>
                         <h1 className="text-2xl font-semibold tracking-tight text-slate-950 dark:text-slate-100">
-                            Sales Report
+                            <FormattedMessage defaultMessage="Sales Report" />
                         </h1>
                         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                            Full payment sales recap with booking, tour, and
-                            commission details.
+                            <FormattedMessage defaultMessage="Full payment sales recap with booking, tour, and commission details." />
                         </p>
                     </div>
                     <Button
@@ -183,7 +215,7 @@ export default function SalesReportPage({
                         onClick={() => window.open(exportUrl())}
                     >
                         <FileSpreadsheet className="h-4 w-4" />
-                        Export Excel
+                        <FormattedMessage defaultMessage="Export Excel" />
                     </Button>
                 </div>
 
@@ -193,7 +225,7 @@ export default function SalesReportPage({
 
                         return (
                             <Card
-                                key={item.label}
+                                key={item.id}
                                 className="border-slate-200 shadow-sm dark:border-slate-800 dark:bg-slate-900"
                             >
                                 <CardContent className="flex items-center justify-between gap-4 p-5">
@@ -240,7 +272,9 @@ export default function SalesReportPage({
                                 }
                                 className="h-11 rounded-md border border-input bg-background px-3 text-sm shadow-xs outline-none transition-colors focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
                             >
-                                <option value="">All Agents</option>
+                                <option value="">
+                                    <FormattedMessage defaultMessage="All Agents" />
+                                </option>
                                 {options.agents.map((agent) => (
                                     <option key={agent.id} value={agent.id}>
                                         {agent.name}
@@ -255,7 +289,9 @@ export default function SalesReportPage({
                             }
                             className="h-11 rounded-md border border-input bg-background px-3 text-sm shadow-xs outline-none transition-colors focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
                         >
-                            <option value="">All Tour Codes</option>
+                            <option value="">
+                                <FormattedMessage defaultMessage="All Tour Codes" />
+                            </option>
                             {options.tourCodes.map((tour) => (
                                 <option key={tour.code} value={tour.code}>
                                     {tour.code} - {tour.name}
@@ -273,7 +309,9 @@ export default function SalesReportPage({
                             }
                             className="h-11 rounded-md border border-input bg-background px-3 text-sm shadow-xs outline-none transition-colors disabled:cursor-not-allowed disabled:opacity-50 focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
                         >
-                            <option value="">All Departure Dates</option>
+                            <option value="">
+                                <FormattedMessage defaultMessage="All Departure Dates" />
+                            </option>
                             {options.departureDates.map((date) => (
                                 <option key={date} value={date}>
                                     {dateLabel(date)}
@@ -287,7 +325,7 @@ export default function SalesReportPage({
                     <CardHeader className="border-b border-slate-100 bg-white px-5 py-4 dark:border-slate-800 dark:bg-slate-950/40">
                         <CardTitle className="flex items-center gap-2 text-base font-semibold text-slate-950 dark:text-slate-100">
                             <CalendarDays className="h-5 w-5 text-primary" />
-                            Sales Recap
+                            <FormattedMessage defaultMessage="Sales Recap" />
                         </CardTitle>
                     </CardHeader>
                     <div className="overflow-x-auto">
@@ -295,54 +333,64 @@ export default function SalesReportPage({
                             <TableHeader className="bg-slate-50 dark:bg-slate-950/40">
                                 <TableRow className="text-xs uppercase tracking-wide">
                                     <TableHead className="w-14 px-5">
-                                        No
+                                        <FormattedMessage defaultMessage="No" />
                                     </TableHead>
                                     <TableHead className="min-w-32">
-                                        {isVendor ? 'Agent Code' : 'Vendor'}
+                                        {isVendor ? (
+                                            <FormattedMessage defaultMessage="Agent Code" />
+                                        ) : (
+                                            <FormattedMessage defaultMessage="Vendor" />
+                                        )}
                                     </TableHead>
                                     <TableHead className="min-w-56">
-                                        {isVendor
-                                            ? 'Agent Name'
-                                            : 'Vendor Name'}
+                                        {isVendor ? (
+                                            <FormattedMessage defaultMessage="Agent Name" />
+                                        ) : (
+                                            <FormattedMessage defaultMessage="Vendor Name" />
+                                        )}
                                     </TableHead>
                                     <TableHead className="min-w-32">
-                                        Tour Code
+                                        <FormattedMessage defaultMessage="Tour Code" />
                                     </TableHead>
                                     <TableHead className="min-w-64">
-                                        Tour Name
+                                        <FormattedMessage defaultMessage="Tour Name" />
                                     </TableHead>
                                     <TableHead className="min-w-52">
-                                        Departure Date
+                                        <FormattedMessage defaultMessage="Departure Date" />
                                     </TableHead>
                                     <TableHead className="min-w-40">
-                                        Booking Number
+                                        <FormattedMessage defaultMessage="Booking Number" />
                                     </TableHead>
                                     <TableHead className="min-w-52">
-                                        Customer
+                                        <FormattedMessage defaultMessage="Customer" />
                                     </TableHead>
                                     <TableHead className="min-w-36 text-right">
-                                        Tour Price
+                                        <FormattedMessage defaultMessage="Tour Price" />
                                     </TableHead>
                                     <TableHead className="min-w-20 text-center">
-                                        Pax
+                                        <FormattedMessage defaultMessage="Pax" />
                                     </TableHead>
                                     <TableHead className="min-w-40 text-right">
-                                        Tour Price x Pax
+                                        <FormattedMessage defaultMessage="Tour Price x Pax" />
                                     </TableHead>
                                     <TableHead className="min-w-32 text-right">
-                                        VAT
+                                        <FormattedMessage defaultMessage="VAT" />
                                     </TableHead>
                                     <TableHead className="min-w-32 text-right">
-                                        Add On
+                                        <FormattedMessage defaultMessage="Add On" />
                                     </TableHead>
                                     <TableHead className="min-w-32 text-right">
-                                        Promo
+                                        <FormattedMessage defaultMessage="Promo" />
                                     </TableHead>
                                     <TableHead className="min-w-40 text-right">
-                                        Total
+                                        <FormattedMessage defaultMessage="Total" />
                                     </TableHead>
                                     <TableHead className="min-w-44 pr-5 text-right">
-                                        {commissionLabel}
+                                        {isVendor ? (
+                                            <FormattedMessage defaultMessage="Commission Paid" />
+                                        ) : (
+                                            <FormattedMessage defaultMessage="Commission Earned" />
+                                        )}
                                     </TableHead>
                                 </TableRow>
                             </TableHeader>
@@ -353,7 +401,7 @@ export default function SalesReportPage({
                                             colSpan={16}
                                             className="h-40 text-center text-slate-500"
                                         >
-                                            No full payment sales found.
+                                            <FormattedMessage defaultMessage="No full payment sales found." />
                                         </TableCell>
                                     </TableRow>
                                 ) : (

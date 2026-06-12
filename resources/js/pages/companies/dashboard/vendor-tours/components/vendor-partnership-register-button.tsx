@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { NotebookPenIcon } from 'lucide-react';
 import { useState } from 'react';
+import { FormattedMessage } from 'react-intl';
 
 type VendorPartnershipRegistrationButtonProps = {
     vendor: any;
@@ -62,22 +63,26 @@ export default function VendorPartnershipRegistrationButton({
     return (
         <>
             {!partnership && (
-                <Button onClick={handleRegister}>Registration to Vendor</Button>
+                <Button onClick={handleRegister}>
+                    <FormattedMessage defaultMessage="Registration to Vendor" />
+                </Button>
             )}
             {partnership?.status === 'pending' && (
                 <Button onClick={() => setShowRegistrationDetails(true)}>
-                    Waiting Approval
+                    <FormattedMessage defaultMessage="Waiting Approval" />
                 </Button>
             )}
             {partnership?.status === 'active' && (
-                <Button disabled>Registered</Button>
+                <Button disabled>
+                    <FormattedMessage defaultMessage="Registered" />
+                </Button>
             )}
             {partnership?.status === 'rejected' && (
                 <Button
                     onClick={() => setShowRegistrationDetails(true)}
                     variant="destructive"
                 >
-                    Registration Rejected
+                    <FormattedMessage defaultMessage="Registration Rejected" />
                 </Button>
             )}
             {partnership?.status === 'suspended' && (
@@ -85,7 +90,7 @@ export default function VendorPartnershipRegistrationButton({
                     onClick={() => setShowRegistrationDetails(true)}
                     variant="destructive"
                 >
-                    Registration Suspended
+                    <FormattedMessage defaultMessage="Registration Suspended" />
                 </Button>
             )}
             <AlertDialog
@@ -95,22 +100,31 @@ export default function VendorPartnershipRegistrationButton({
                 <AlertDialogContent>
                     <AlertDialogHeader>
                         <AlertDialogTitle>
-                            Registration Details
+                            <FormattedMessage defaultMessage="Registration Details" />
                         </AlertDialogTitle>
                         <AlertDialogDescription className="space-y-2">
                             <div>
-                                Your registration status is currently{' '}
-                                <strong>{partnership?.status}</strong>
+                                <FormattedMessage
+                                    defaultMessage="Your registration status is currently {status}"
+                                    values={{
+                                        status: (
+                                            <strong>
+                                                {partnership?.status}
+                                            </strong>
+                                        ),
+                                    }}
+                                />
                             </div>
                             {partnership?.note && (
                                 <>
                                     <div>
-                                        The vendor left a note for you regarding
-                                        your current registration status:
+                                        <FormattedMessage defaultMessage="The vendor left a note for you regarding your current registration status:" />
                                     </div>
                                     <Alert className="max-w-md">
                                         <NotebookPenIcon />
-                                        <AlertTitle>Note</AlertTitle>
+                                        <AlertTitle>
+                                            <FormattedMessage defaultMessage="Note" />
+                                        </AlertTitle>
                                         <AlertDescription>
                                             {partnership.note}
                                         </AlertDescription>
@@ -123,10 +137,10 @@ export default function VendorPartnershipRegistrationButton({
                         <AlertDialogCancel
                             onClick={() => setShowRegistrationDetails(false)}
                         >
-                            Close
+                            <FormattedMessage defaultMessage="Close" />
                         </AlertDialogCancel>
                         <AlertDialogAction onClick={handleFollowup}>
-                            Followup
+                            <FormattedMessage defaultMessage="Follow up" />
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>

@@ -11,6 +11,7 @@ import usePageProps from '@/hooks/use-page-props';
 import { showAccountSetupOrSelections } from '@/routes/companies/dashboard/analytics';
 import { Link } from '@inertiajs/react';
 import { IconBrandGoogleAnalytics } from '@tabler/icons-react';
+import { FormattedMessage } from 'react-intl';
 
 export function GoogleAnalyticsUnlinked() {
     const { company } = usePageProps();
@@ -22,17 +23,17 @@ export function GoogleAnalyticsUnlinked() {
                     <IconBrandGoogleAnalytics className="h-10 w-10" />
                 </EmptyMedia>
 
-                <EmptyTitle>One Step Ahead!</EmptyTitle>
+                <EmptyTitle>
+                    <FormattedMessage defaultMessage="One Step Ahead!" />
+                </EmptyTitle>
 
                 <EmptyDescription>
-                    Link your Google Analytics property to start collecting
-                    real-time insights, understand user behavior, and measure
-                    your company’s performance.
+                    <FormattedMessage defaultMessage="Link your Google Analytics property to start collecting real-time insights, understand user behavior, and measure your company's performance." />
                 </EmptyDescription>
                 <EmptyContent className="flex-row justify-center gap-2 pt-4">
                     <Link href={showAccountSetupOrSelections(company.username)}>
                         <Button variant="default">
-                            Connect Analytics Property
+                            <FormattedMessage defaultMessage="Connect Analytics Property" />
                         </Button>
                     </Link>
                 </EmptyContent>

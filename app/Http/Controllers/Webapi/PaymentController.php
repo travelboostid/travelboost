@@ -25,6 +25,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 use Throwable;
@@ -160,19 +161,21 @@ class PaymentController extends Controller
             ], 409);
         }
 
-        $topup = WalletTopupPayment::create([
-            'user_id' => $user->id,
-            'amount' => $validated['amount'],
-        ]);
+        $payment = DB::transaction(function () use ($validated, $user, $paymentMethod): Payment {
+            $topup = WalletTopupPayment::create([
+                'user_id' => $user->id,
+                'amount' => $validated['amount'],
+            ]);
 
-        $payment = $topup->payment()->create([
-            'owner_type' => $validated['owner_type'],
-            'owner_id' => $validated['owner_id'],
-            'provider' => $paymentMethod->provider,
-            'payment_method' => $paymentMethod->method,
-            'amount' => $topup->amount,
-            'status' => 'unpaid',
-        ]);
+            return $topup->payment()->create([
+                'owner_type' => $validated['owner_type'],
+                'owner_id' => $validated['owner_id'],
+                'provider' => $paymentMethod->provider,
+                'payment_method' => $paymentMethod->method,
+                'amount' => $topup->amount,
+                'status' => 'unpaid',
+            ]);
+        });
 
         $context = [
             'finish_url' => $this->paymentFinishUrl(),
@@ -193,7 +196,58 @@ class PaymentController extends Controller
             $context['selected_payment_method'] = $paymentMethod;
         }
 
-        return $this->initiateGatewayPayment($payment, $request, $user, $context);
+        try {
+            $this->initiateGatewayPayment($payment, $request, $user, $context);
+        } catch (PrismaLinkException $exception) {
+            Log::warning('PrismaLink payment initiation failed', [
+                'payment_id' => $payment->id,
+                'provider' => 'prismalink',
+                'message' => $exception->getMessage(),
+                'response_code' => $exception->responseCode,
+            ]);
+
+            $payment->loadMissing('payable');
+            $payment->payable?->delete();
+            $payment->delete();
+
+            return response()->json([
+                'message' => $exception->getMessage(),
+                'response_code' => $exception->responseCode,
+                'response_description' => data_get($exception->response, 'response_description'),
+            ], 422);
+        } catch (MidtransException $exception) {
+            Log::warning('Midtrans payment initiation failed', [
+                'payment_id' => $payment->id,
+                'provider' => 'midtrans',
+                'message' => $exception->getMessage(),
+                'status_code' => $exception->statusCode,
+            ]);
+
+            $payment->loadMissing('payable');
+            $payment->payable?->delete();
+            $payment->delete();
+
+            return response()->json([
+                'message' => $exception->getMessage(),
+                'status_code' => $exception->statusCode,
+            ], 422);
+        } catch (Throwable $exception) {
+            Log::warning('Payment gateway initiation failed', [
+                'payment_id' => $payment->id,
+                'provider' => $paymentMethod->provider,
+                'message' => $exception->getMessage(),
+            ]);
+
+            $payment->loadMissing('payable');
+            $payment->payable?->delete();
+            $payment->delete();
+
+            return response()->json([
+                'message' => 'Payment gateway is temporarily unavailable.',
+            ], 422);
+        }
+
+        return new PaymentResource($payment->fresh());
     }
 
     /**
@@ -218,18 +272,21 @@ class PaymentController extends Controller
         }
 
         $package = AgentSubscriptionPackage::findOrFail($validated['package_id']);
-        $subscriptionPayment = AgentSubscriptionPayment::create([
-            'package_id' => $validated['package_id'],
-        ]);
 
-        $payment = $subscriptionPayment->payment()->create([
-            'owner_id' => $validated['company_id'],
-            'owner_type' => 'company',
-            'provider' => $paymentMethod->provider,
-            'payment_method' => $paymentMethod->method,
-            'amount' => $package->price,
-            'status' => 'unpaid',
-        ]);
+        $payment = DB::transaction(function () use ($validated, $paymentMethod, $package): Payment {
+            $subscriptionPayment = AgentSubscriptionPayment::create([
+                'package_id' => $validated['package_id'],
+            ]);
+
+            return $subscriptionPayment->payment()->create([
+                'owner_id' => $validated['company_id'],
+                'owner_type' => 'company',
+                'provider' => $paymentMethod->provider,
+                'payment_method' => $paymentMethod->method,
+                'amount' => $package->price,
+                'status' => 'unpaid',
+            ]);
+        });
 
         $context = [
             'finish_url' => $this->paymentFinishUrl(),
@@ -250,7 +307,58 @@ class PaymentController extends Controller
             $context['selected_payment_method'] = $paymentMethod;
         }
 
-        return $this->initiateGatewayPayment($payment, $request, $user, $context);
+        try {
+            $this->initiateGatewayPayment($payment, $request, $user, $context);
+        } catch (PrismaLinkException $exception) {
+            Log::warning('PrismaLink payment initiation failed', [
+                'payment_id' => $payment->id,
+                'provider' => 'prismalink',
+                'message' => $exception->getMessage(),
+                'response_code' => $exception->responseCode,
+            ]);
+
+            $payment->loadMissing('payable');
+            $payment->payable?->delete();
+            $payment->delete();
+
+            return response()->json([
+                'message' => $exception->getMessage(),
+                'response_code' => $exception->responseCode,
+                'response_description' => data_get($exception->response, 'response_description'),
+            ], 422);
+        } catch (MidtransException $exception) {
+            Log::warning('Midtrans payment initiation failed', [
+                'payment_id' => $payment->id,
+                'provider' => 'midtrans',
+                'message' => $exception->getMessage(),
+                'status_code' => $exception->statusCode,
+            ]);
+
+            $payment->loadMissing('payable');
+            $payment->payable?->delete();
+            $payment->delete();
+
+            return response()->json([
+                'message' => $exception->getMessage(),
+                'status_code' => $exception->statusCode,
+            ], 422);
+        } catch (Throwable $exception) {
+            Log::warning('Payment gateway initiation failed', [
+                'payment_id' => $payment->id,
+                'provider' => $paymentMethod->provider,
+                'message' => $exception->getMessage(),
+            ]);
+
+            $payment->loadMissing('payable');
+            $payment->payable?->delete();
+            $payment->delete();
+
+            return response()->json([
+                'message' => 'Payment gateway is temporarily unavailable.',
+            ], 422);
+        }
+
+        return new PaymentResource($payment->fresh());
     }
 
     /**
@@ -275,18 +383,20 @@ class PaymentController extends Controller
             ], 422);
         }
 
-        $topup = AiCreditTopupPayment::create([
-            'amount' => $validated['amount'],
-        ]);
+        $payment = DB::transaction(function () use ($validated, $paymentMethod): Payment {
+            $topup = AiCreditTopupPayment::create([
+                'amount' => $validated['amount'],
+            ]);
 
-        $payment = $topup->payment()->create([
-            'owner_id' => $validated['company_id'],
-            'owner_type' => 'company',
-            'provider' => $paymentMethod->provider,
-            'payment_method' => $paymentMethod->method,
-            'amount' => $topup->amount,
-            'status' => 'unpaid',
-        ]);
+            return $topup->payment()->create([
+                'owner_id' => $validated['company_id'],
+                'owner_type' => 'company',
+                'provider' => $paymentMethod->provider,
+                'payment_method' => $paymentMethod->method,
+                'amount' => $topup->amount,
+                'status' => 'unpaid',
+            ]);
+        });
 
         $context = [
             'finish_url' => $this->paymentFinishUrl(),
@@ -307,7 +417,58 @@ class PaymentController extends Controller
             $context['selected_payment_method'] = $paymentMethod;
         }
 
-        return $this->initiateGatewayPayment($payment, $request, $user, $context);
+        try {
+            $this->initiateGatewayPayment($payment, $request, $user, $context);
+        } catch (PrismaLinkException $exception) {
+            Log::warning('PrismaLink payment initiation failed', [
+                'payment_id' => $payment->id,
+                'provider' => 'prismalink',
+                'message' => $exception->getMessage(),
+                'response_code' => $exception->responseCode,
+            ]);
+
+            $payment->loadMissing('payable');
+            $payment->payable?->delete();
+            $payment->delete();
+
+            return response()->json([
+                'message' => $exception->getMessage(),
+                'response_code' => $exception->responseCode,
+                'response_description' => data_get($exception->response, 'response_description'),
+            ], 422);
+        } catch (MidtransException $exception) {
+            Log::warning('Midtrans payment initiation failed', [
+                'payment_id' => $payment->id,
+                'provider' => 'midtrans',
+                'message' => $exception->getMessage(),
+                'status_code' => $exception->statusCode,
+            ]);
+
+            $payment->loadMissing('payable');
+            $payment->payable?->delete();
+            $payment->delete();
+
+            return response()->json([
+                'message' => $exception->getMessage(),
+                'status_code' => $exception->statusCode,
+            ], 422);
+        } catch (Throwable $exception) {
+            Log::warning('Payment gateway initiation failed', [
+                'payment_id' => $payment->id,
+                'provider' => $paymentMethod->provider,
+                'message' => $exception->getMessage(),
+            ]);
+
+            $payment->loadMissing('payable');
+            $payment->payable?->delete();
+            $payment->delete();
+
+            return response()->json([
+                'message' => 'Payment gateway is temporarily unavailable.',
+            ], 422);
+        }
+
+        return new PaymentResource($payment->fresh());
     }
 
     /**
@@ -324,51 +485,12 @@ class PaymentController extends Controller
         Request $request,
         User $user,
         array $context,
-    ): PaymentResource|JsonResponse {
-        try {
-            if ($payment->provider === 'prismalink') {
-                $this->initiatePrismaLinkPayment($payment, $request, $user, $context);
-            } else {
-                $this->initiateMidtransPayment($payment, $user, $context);
-            }
-        } catch (PrismaLinkException $exception) {
-            Log::warning('PrismaLink payment initiation failed', [
-                'payment_id' => $payment->id,
-                'provider' => $payment->provider,
-                'message' => $exception->getMessage(),
-                'response_code' => $exception->responseCode,
-            ]);
-
-            return response()->json([
-                'message' => $exception->getMessage(),
-                'response_code' => $exception->responseCode,
-                'response_description' => data_get($exception->response, 'response_description'),
-            ], 422);
-        } catch (MidtransException $exception) {
-            Log::warning('Midtrans payment initiation failed', [
-                'payment_id' => $payment->id,
-                'provider' => $payment->provider,
-                'message' => $exception->getMessage(),
-                'status_code' => $exception->statusCode,
-            ]);
-
-            return response()->json([
-                'message' => $exception->getMessage(),
-                'status_code' => $exception->statusCode,
-            ], 422);
-        } catch (Throwable $exception) {
-            Log::warning('Payment gateway initiation failed', [
-                'payment_id' => $payment->id,
-                'provider' => $payment->provider,
-                'message' => $exception->getMessage(),
-            ]);
-
-            return response()->json([
-                'message' => 'Payment gateway is temporarily unavailable.',
-            ], 422);
+    ): void {
+        if ($payment->provider === 'prismalink') {
+            $this->initiatePrismaLinkPayment($payment, $request, $user, $context);
+        } else {
+            $this->initiateMidtransPayment($payment, $user, $context);
         }
-
-        return new PaymentResource($payment->fresh());
     }
 
     /**

@@ -6,16 +6,17 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\PaymentIndexRequest;
 use App\Http\Resources\WithdrawalResource;
 use App\Models\Withdrawal;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\Auth;
 
 class WithdrawalController extends Controller
 {
     /**
-     * get payment list
+     * List withdrawals for the authenticated user.
      *
      * @operationId getWithdrawals
      */
-    public function index(PaymentIndexRequest $request)
+    public function index(PaymentIndexRequest $request): AnonymousResourceCollection
     {
         $withdrawals = Withdrawal::query()
             ->where('user_id', Auth::id())

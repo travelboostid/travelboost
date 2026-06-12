@@ -6,11 +6,10 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
-import { buildWalletQueryParams } from '@/components/wallet/wallet-selector-applet';
 import usePageProps from '@/hooks/use-page-props';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { cn, formatIDR } from '@/lib/utils';
-import { index } from '@/routes/companies/dashboard/wallet-transaction';
+import { index as walletTransactionsIndex } from '@/routes/companies/dashboard/wallet-transaction';
 import { Link } from '@inertiajs/react';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
@@ -28,20 +27,32 @@ dayjs.extend(relativeTime);
 
 type Transaction = WalletPageProps['transactions'][number];
 
+function walletTransactionsHref(companyUsername: string, walletSlug: string) {
+    return walletTransactionsIndex.url(
+        { company: companyUsername },
+        { query: { wallet: walletSlug } },
+    );
+}
+
 function TransactionItem({ transaction }: { transaction: Transaction }) {
+    const { company } = usePageSharedDataProps();
+    const { wallet } = usePageProps<WalletPageProps>();
     const isIncome = transaction.amount > 0;
     const Icon = isIncome ? ArrowUpRight : ArrowDownLeft;
     const description = transaction.meta?.description || 'Wallet transaction';
 
     return (
-        <div className="flex flex-col gap-3 rounded-xl border bg-background/60 p-3 transition-colors hover:bg-muted/40 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+        <Link
+            href={walletTransactionsHref(company.username, wallet.slug)}
+            className="group flex flex-col gap-3 rounded-xl border bg-background/60 p-3 transition-colors hover:border-primary/20 hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none sm:flex-row sm:items-center sm:justify-between sm:gap-4"
+        >
             <div className="flex min-w-0 items-start gap-3">
                 <div
                     className={cn(
-                        'flex size-10 shrink-0 items-center justify-center rounded-full',
+                        'flex size-10 shrink-0 items-center justify-center rounded-full transition-colors',
                         isIncome
-                            ? 'bg-primary/10 text-primary'
-                            : 'bg-destructive/10 text-destructive',
+                            ? 'bg-primary/10 text-primary group-hover:bg-primary/15'
+                            : 'bg-destructive/10 text-destructive group-hover:bg-destructive/15',
                     )}
                 >
                     <Icon className="size-4" />
@@ -61,23 +72,29 @@ function TransactionItem({ transaction }: { transaction: Transaction }) {
                     </p>
                 </div>
             </div>
-            <p
-                className={cn(
-                    'shrink-0 text-right text-sm font-semibold tabular-nums sm:text-base',
-                    isIncome ? 'text-primary' : 'text-destructive',
-                )}
-            >
-                {isIncome ? '+' : '-'}
-                {formatIDR(Math.abs(transaction.amount))}
-            </p>
-        </div>
+            <div className="flex shrink-0 items-center justify-end gap-2 sm:justify-start">
+                <p
+                    className={cn(
+                        'text-right text-sm font-semibold tabular-nums sm:text-base',
+                        isIncome ? 'text-primary' : 'text-destructive',
+                    )}
+                >
+                    {isIncome ? '+' : '-'}
+                    {formatIDR(Math.abs(transaction.amount))}
+                </p>
+                <ArrowRightIcon className="size-4 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+            </div>
+        </Link>
     );
 }
 
 export default function RecentTransactions() {
     const { company } = usePageSharedDataProps();
     const { transactions, wallet } = usePageProps<WalletPageProps>();
-    const walletQuery = buildWalletQueryParams(wallet.slug);
+    const transactionsHref = walletTransactionsHref(
+        company.username,
+        wallet.slug,
+    );
 
     return (
         <Card className="h-full border shadow-sm">
@@ -102,12 +119,7 @@ export default function RecentTransactions() {
                         size="sm"
                         className="hidden shrink-0 sm:inline-flex"
                     >
-                        <Link
-                            href={index({
-                                company: company.username,
-                                query: walletQuery,
-                            })}
-                        >
+                        <Link href={transactionsHref}>
                             <FormattedMessage defaultMessage="View all" />
                             <ArrowRightIcon className="size-4" />
                         </Link>
@@ -131,12 +143,7 @@ export default function RecentTransactions() {
 
                 {transactions.length > 0 ? (
                     <Button asChild variant="outline" className="h-11 w-full">
-                        <Link
-                            href={index({
-                                company: company.username,
-                                query: walletQuery,
-                            })}
-                        >
+                        <Link href={transactionsHref}>
                             <FormattedMessage defaultMessage="See more transactions" />
                             <ArrowRightIcon className="size-4" />
                         </Link>

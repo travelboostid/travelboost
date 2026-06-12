@@ -9,14 +9,15 @@ class WalletRepairSeeder extends Seeder
 {
     public function run(): void
     {
-        User::all()->each(function ($user) {
-            if (! $user->wallet) {
-                $user->wallet()->create([
+        User::query()->each(function (User $user): void {
+            $user->wallet()->firstOrCreate(
+                [],
+                [
                     'name' => config('wallet.wallet.default.name'),
                     'slug' => config('wallet.wallet.default.slug'),
                     'description' => 'Primary wallet for user transactions',
-                ]);
-            }
+                ],
+            );
         });
     }
 }

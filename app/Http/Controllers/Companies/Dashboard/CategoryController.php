@@ -26,6 +26,8 @@ class CategoryController extends Controller
 
     public function store(StoreTourCategoryRequest $request, Company $company)
     {
+        $this->authorize('create', TourCategory::class);
+
         $exists = TourCategory::query()
             ->where('company_id', $company->id)
             ->whereRaw('LOWER(name) = ?', [strtolower($request->name)])
@@ -44,6 +46,8 @@ class CategoryController extends Controller
 
     public function update(UpdateTourCategoryRequest $request, Company $company, TourCategory $category)
     {
+        $this->authorize('update', $category);
+
         $category->update($request->validated());
 
         return redirect()->back();
@@ -51,6 +55,8 @@ class CategoryController extends Controller
 
     public function destroy(Company $company, TourCategory $category)
     {
+        $this->authorize('delete', $category);
+
         $usedInTours = Tour::query()
             ->where('category_id', $category->id)
             ->exists();

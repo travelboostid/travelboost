@@ -149,6 +149,8 @@ Route::prefix('companies')->middleware(['can:access-company-pages', 'use-analyti
 
         Route::put('profile', [ProfileController::class, 'update'])->name('settings.profile.update');
         Route::post('teams/invite', [TeamController::class, 'invite'])->name('teams.invite');
+        Route::put('teams/bulk-update', [TeamController::class, 'bulkUpdate'])->name('teams.bulk-update');
+        Route::delete('teams/bulk-destroy', [TeamController::class, 'bulkDestroy'])->name('teams.bulk-destroy');
         Route::resource('teams', TeamController::class);
         Route::post('teams/{team}/resend-invitation', [TeamController::class, 'resendInvitation'])->name('teams.resend-invitation');
         Route::resource('roles', RoleController::class);

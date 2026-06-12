@@ -1,6 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { openOnlinePayment } from '@/lib/open-online-payment';
 import { refreshPageAfterPayment } from '@/lib/refresh-after-payment';
+import { FormattedMessage } from 'react-intl';
 
 export default function ContinuePayment({ payment }: { payment: any }) {
     const handlePay = () => {
@@ -22,7 +23,7 @@ export default function ContinuePayment({ payment }: { payment: any }) {
 
     return (
         <Button size="sm" variant="default" onClick={handlePay}>
-            Continue Payment
+            <FormattedMessage defaultMessage="Continue Payment" />
         </Button>
     );
 }

@@ -7,6 +7,7 @@ import {
     Dialog,
     DialogClose,
     DialogContent,
+    DialogDescription,
     DialogFooter,
     DialogHeader,
     DialogTitle,
@@ -25,8 +26,10 @@ import { Spinner } from '@/components/ui/spinner';
 import { Switch } from '@/components/ui/switch';
 import usePageProps from '@/hooks/use-page-props';
 import { useForm } from '@inertiajs/react';
+import { PencilIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { FormattedMessage } from 'react-intl';
 import type { BankAccountsPageProps } from '..';
 
 type UpdateBankAccountDialogProps = {
@@ -51,6 +54,19 @@ export default function UpdateBankAccountDialog({
         is_default: bankAccount.is_default,
     });
 
+    useEffect(() => {
+        if (open) {
+            form.setData({
+                provider: bankAccount.provider,
+                account_number: bankAccount.account_number,
+                account_name: bankAccount.account_name,
+                branch: bankAccount.branch || '',
+                status: bankAccount.status || 'pending',
+                is_default: bankAccount.is_default,
+            });
+        }
+    }, [bankAccount, open]);
+
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
 
@@ -59,7 +75,7 @@ export default function UpdateBankAccountDialog({
                 .url,
             {
                 preserveScroll: true,
-                onError: () => setOpen(true), // 🔥 keep modal open on validation error
+                onError: () => setOpen(true),
                 onSuccess: () => {
                     setOpen(false);
                 },
@@ -67,189 +83,195 @@ export default function UpdateBankAccountDialog({
         );
     };
 
+    const handleOpenChange = (nextOpen: boolean) => {
+        setOpen(nextOpen);
+    };
+
     const bankAccountStatus = useMemo(() => {
+        const status = bankAccount.status ?? 'pending';
         const components = {
             pending: (
-                <div className="flex gap-2 items-center">
-                    <Badge
-                        variant="ghost"
-                        className="text-sm bg-yellow-100 text-yellow-800"
-                    >
-                        PENDING
-                    </Badge>
-                    <span className="text-sm text-muted-foreground">
-                        Awaiting verification
-                    </span>
-                </div>
+                <Badge
+                    variant="ghost"
+                    className="bg-yellow-100 text-yellow-800"
+                >
+                    PENDING
+                </Badge>
             ),
             verified: (
-                <div className="flex gap-2 items-center">
-                    <Badge
-                        variant="ghost"
-                        className="text-sm bg-green-100 text-green-800"
-                    >
-                        VERIFIED
-                    </Badge>
-                    <span className="text-sm text-muted-foreground">
-                        Verified and active
-                    </span>
-                </div>
+                <Badge variant="ghost" className="bg-green-100 text-green-800">
+                    VERIFIED
+                </Badge>
             ),
             rejected: (
-                <div className="flex gap-2 items-center">
-                    <Badge
-                        variant="ghost"
-                        className="text-sm bg-red-100 text-red-800"
-                    >
-                        REJECTED
-                    </Badge>
-                    <span className="text-sm text-muted-foreground">
-                        Rejected - requires update
-                    </span>
-                </div>
-            ),
-            unknown: (
-                <div className="flex gap-2 items-center">
-                    <Badge
-                        variant="ghost"
-                        className="text-sm bg-muted/10 text-muted-foreground"
-                    >
-                        UNKNOWN
-                    </Badge>
-                    <span className="text-sm text-muted-foreground">
-                        Status unknown
-                    </span>
-                </div>
+                <Badge variant="ghost" className="bg-red-100 text-red-800">
+                    REJECTED
+                </Badge>
             ),
         };
 
         return (
-            components[bankAccount.status as keyof typeof components] ||
-            components['unknown']
+            components[status as keyof typeof components] ?? (
+                <Badge
+                    variant="ghost"
+                    className="bg-muted/10 text-muted-foreground"
+                >
+                    UNKNOWN
+                </Badge>
+            )
         );
     }, [bankAccount.status]);
 
     return (
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog open={open} onOpenChange={handleOpenChange}>
             <DialogTrigger asChild>{children}</DialogTrigger>
 
-            <DialogContent className="sm:max-w-md">
-                <DialogHeader>
-                    <DialogTitle>Update Bank Account</DialogTitle>
+            <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-md">
+                <DialogHeader className="space-y-3 border-b px-6 py-5 text-left">
+                    <div className="flex items-start gap-3">
+                        <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                            <PencilIcon className="size-5" />
+                        </div>
+                        <div className="space-y-1">
+                            <DialogTitle className="text-lg">
+                                <FormattedMessage defaultMessage="Update bank account" />
+                            </DialogTitle>
+                            <DialogDescription className="text-sm leading-relaxed">
+                                <FormattedMessage defaultMessage="Update the bank account details for withdrawals." />
+                            </DialogDescription>
+                        </div>
+                    </div>
                 </DialogHeader>
 
-                {/* ❗ ONLY ONE submit button, ONLY ONE form */}
-                <form onSubmit={handleSubmit} className="space-y-6">
-                    {/* Account Status (Admin only) */}
-                    <div className="grid gap-2">
-                        <Label htmlFor="status">Status</Label>
-                        {bankAccountStatus}
-                        <InputError message={form.errors.status} />
-                    </div>
-
-                    {/* Provider Selection */}
-                    <div className="grid gap-2">
-                        <Label htmlFor="provider">Provider *</Label>
-                        <Select
-                            value={form.data.provider}
-                            onValueChange={(value) =>
-                                form.setData('provider', value)
-                            }
-                        >
-                            <SelectTrigger>
-                                <SelectValue placeholder="Select provider" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {bankAccountProviders.map((provider) => (
-                                    <SelectItem
-                                        key={provider.code}
-                                        value={provider.code}
-                                    >
-                                        {provider.name}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                        <InputError message={form.errors.provider} />
-                    </div>
-
-                    {/* Account Number */}
-                    <div className="grid gap-2">
-                        <Label htmlFor="account_number">Account Number *</Label>
-                        <Input
-                            id="account_number"
-                            placeholder="Enter account number"
-                            value={form.data.account_number}
-                            onChange={(e) =>
-                                form.setData('account_number', e.target.value)
-                            }
-                            maxLength={50}
-                        />
-                        <InputError message={form.errors.account_number} />
-                    </div>
-
-                    {/* Account Name */}
-                    <div className="grid gap-2">
-                        <Label htmlFor="account_name">Account Name *</Label>
-                        <Input
-                            id="account_name"
-                            placeholder="Enter account holder name"
-                            value={form.data.account_name}
-                            onChange={(e) =>
-                                form.setData('account_name', e.target.value)
-                            }
-                            maxLength={100}
-                        />
-                        <InputError message={form.errors.account_name} />
-                    </div>
-
-                    {/* Branch (Optional) */}
-                    <div className="grid gap-2">
-                        <Label htmlFor="branch">Branch (Optional)</Label>
-                        <Input
-                            id="branch"
-                            placeholder="Enter branch name"
-                            value={form.data.branch}
-                            onChange={(e) =>
-                                form.setData('branch', e.target.value)
-                            }
-                            maxLength={100}
-                        />
-                        <InputError message={form.errors.branch} />
-                    </div>
-
-                    {/* Set as Default */}
-                    <div className="flex items-center justify-between space-x-2">
-                        <div className="space-y-0.5">
-                            <Label htmlFor="is_default">
-                                Set as default account
+                <form onSubmit={handleSubmit}>
+                    <div className="space-y-5 px-6 py-5">
+                        <div className="grid gap-2">
+                            <Label htmlFor="status">
+                                <FormattedMessage defaultMessage="Status" />
                             </Label>
-                            <p className="text-sm text-muted-foreground">
-                                This account will be used as the primary
-                                destination for payments
-                            </p>
+                            {bankAccountStatus}
+                            <InputError message={form.errors.status} />
                         </div>
-                        <Switch
-                            id="is_default"
-                            checked={form.data.is_default}
-                            onCheckedChange={(checked) =>
-                                form.setData('is_default', checked)
-                            }
-                        />
-                    </div>
-                    <InputError message={form.errors.is_default} />
 
-                    <DialogFooter>
+                        <div className="grid gap-2">
+                            <Label htmlFor="provider">
+                                <FormattedMessage defaultMessage="Bank" />
+                            </Label>
+                            <Select
+                                value={form.data.provider}
+                                onValueChange={(value) =>
+                                    form.setData('provider', value)
+                                }
+                            >
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select bank" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {bankAccountProviders.map((provider) => (
+                                        <SelectItem
+                                            key={provider.code}
+                                            value={provider.code}
+                                        >
+                                            {provider.name}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            <InputError message={form.errors.provider} />
+                        </div>
+
+                        <div className="grid gap-2">
+                            <Label htmlFor="account_number">
+                                <FormattedMessage defaultMessage="Account number" />
+                            </Label>
+                            <Input
+                                id="account_number"
+                                placeholder="1234567890"
+                                value={form.data.account_number}
+                                onChange={(e) =>
+                                    form.setData(
+                                        'account_number',
+                                        e.target.value,
+                                    )
+                                }
+                                maxLength={50}
+                            />
+                            <InputError message={form.errors.account_number} />
+                        </div>
+
+                        <div className="grid gap-2">
+                            <Label htmlFor="account_name">
+                                <FormattedMessage defaultMessage="Account holder name" />
+                            </Label>
+                            <Input
+                                id="account_name"
+                                placeholder="As shown on your bank statement"
+                                value={form.data.account_name}
+                                onChange={(e) =>
+                                    form.setData('account_name', e.target.value)
+                                }
+                                maxLength={100}
+                            />
+                            <InputError message={form.errors.account_name} />
+                        </div>
+
+                        <div className="grid gap-2">
+                            <Label htmlFor="branch">
+                                <FormattedMessage defaultMessage="Branch (optional)" />
+                            </Label>
+                            <Input
+                                id="branch"
+                                placeholder="Branch name"
+                                value={form.data.branch}
+                                onChange={(e) =>
+                                    form.setData('branch', e.target.value)
+                                }
+                                maxLength={100}
+                            />
+                            <InputError message={form.errors.branch} />
+                        </div>
+
+                        <div className="flex items-center justify-between gap-4 rounded-lg border bg-muted/20 px-4 py-3">
+                            <div className="space-y-0.5">
+                                <Label htmlFor="is_default">
+                                    <FormattedMessage defaultMessage="Default account" />
+                                </Label>
+                                <p className="text-sm text-muted-foreground">
+                                    <FormattedMessage defaultMessage="Primary destination for withdrawals." />
+                                </p>
+                            </div>
+                            <Switch
+                                id="is_default"
+                                checked={form.data.is_default}
+                                onCheckedChange={(checked) =>
+                                    form.setData('is_default', checked)
+                                }
+                            />
+                        </div>
+                        <InputError message={form.errors.is_default} />
+                    </div>
+
+                    <DialogFooter className="flex-col gap-2 border-t bg-muted/20 px-6 py-4 sm:flex-col">
+                        <Button
+                            type="submit"
+                            size="lg"
+                            className="w-full"
+                            disabled={form.processing}
+                        >
+                            {form.processing ? (
+                                <Spinner className="mr-2" />
+                            ) : null}
+                            <FormattedMessage defaultMessage="Save changes" />
+                        </Button>
                         <DialogClose asChild>
-                            <Button type="button" variant="outline">
-                                Cancel
+                            <Button
+                                type="button"
+                                variant="outline"
+                                className="w-full"
+                            >
+                                <FormattedMessage defaultMessage="Cancel" />
                             </Button>
                         </DialogClose>
-
-                        <Button type="submit" disabled={form.processing}>
-                            {form.processing && <Spinner className="mr-2" />}
-                            Save Changes
-                        </Button>
                     </DialogFooter>
                 </form>
             </DialogContent>

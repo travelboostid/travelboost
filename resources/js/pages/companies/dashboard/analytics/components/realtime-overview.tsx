@@ -3,6 +3,7 @@ import usePageProps from '@/hooks/use-page-props';
 import { cn } from '@/lib/utils';
 import { EyeIcon, UsersIcon, ZapIcon } from 'lucide-react';
 import type { HTMLAttributes } from 'react';
+import { FormattedMessage } from 'react-intl';
 import type { AnalyticsPageProps } from '..';
 
 type RealtimeOverviewProps = HTMLAttributes<HTMLDivElement>;
@@ -23,7 +24,7 @@ export default function RealtimeOverview({
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">
-                        Active Users
+                        <FormattedMessage defaultMessage="Active Users" />
                     </CardTitle>
                     <UsersIcon className="h-4 w-4 text-chart-1" />
                 </CardHeader>
@@ -32,7 +33,7 @@ export default function RealtimeOverview({
                         {totalActiveUsers}
                     </div>
                     <p className="text-xs text-muted-foreground">
-                        Currently active
+                        <FormattedMessage defaultMessage="Currently active" />
                     </p>
                 </CardContent>
             </Card>
@@ -40,7 +41,7 @@ export default function RealtimeOverview({
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">
-                        Page Views
+                        <FormattedMessage defaultMessage="Page Views" />
                     </CardTitle>
                     <EyeIcon className="h-4 w-4 text-chart-2" />
                 </CardHeader>
@@ -49,7 +50,7 @@ export default function RealtimeOverview({
                         {totalPageViews}
                     </div>
                     <p className="text-xs text-muted-foreground">
-                        Today&apos;s views
+                        <FormattedMessage defaultMessage="Today's views" />
                     </p>
                 </CardContent>
             </Card>
@@ -57,7 +58,7 @@ export default function RealtimeOverview({
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">
-                        Events
+                        <FormattedMessage defaultMessage="Events" />
                     </CardTitle>
                     <ZapIcon className="h-4 w-4 text-chart-3" />
                 </CardHeader>
@@ -66,7 +67,7 @@ export default function RealtimeOverview({
                         {totalEvents}
                     </div>
                     <p className="text-xs text-muted-foreground">
-                        Total events
+                        <FormattedMessage defaultMessage="Total events" />
                     </p>
                 </CardContent>
             </Card>

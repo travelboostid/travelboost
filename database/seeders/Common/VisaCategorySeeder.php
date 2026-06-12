@@ -34,52 +34,57 @@ class VisaCategorySeeder extends Seeder
             ],
         ];
 
+        $now = now();
+
         foreach ($vendors as $vendor) {
             foreach ($categories as $category) {
                 $slug = Str::slug($category['name']);
-                $existingId = DB::table('visa_categories')
+
+                DB::table('visa_categories')->updateOrInsert(
+                    [
+                        'company_id' => $vendor->id,
+                        'slug' => $slug,
+                    ],
+                    [
+                        'name' => $category['name'],
+                        'updated_at' => $now,
+                        'created_at' => $now,
+                    ],
+                );
+
+                $visaCategoryId = DB::table('visa_categories')
                     ->where('company_id', $vendor->id)
                     ->where('slug', $slug)
                     ->value('id');
-
-                if ($existingId) {
-                    DB::table('visa_categories')
-                        ->where('id', $existingId)
-                        ->update([
-                            'name' => $category['name'],
-                            'updated_at' => now(),
-                        ]);
-
-                    $visaCategoryId = $existingId;
-                } else {
-                    $visaCategoryId = DB::table('visa_categories')->insertGetId([
-                        'company_id' => $vendor->id,
-                        'name' => $category['name'],
-                        'slug' => $slug,
-                        'created_at' => now(),
-                        'updated_at' => now(),
-                    ]);
-                }
 
                 if (! $visaCategoryId) {
                     continue;
                 }
 
-                DB::table('visa_category_items')
-                    ->where('visa_category_id', $visaCategoryId)
-                    ->delete();
+                $itemDescriptions = [];
 
                 foreach ($category['items'] as $itemIndex => $item) {
-                    DB::table('visa_category_items')->insert([
-                        'visa_category_id' => $visaCategoryId,
-                        'description' => $item['description'],
-                        'price' => $item['price'],
-                        'is_taxable' => $item['is_taxable'],
-                        'sort_order' => $itemIndex,
-                        'created_at' => now(),
-                        'updated_at' => now(),
-                    ]);
+                    $itemDescriptions[] = $item['description'];
+
+                    DB::table('visa_category_items')->updateOrInsert(
+                        [
+                            'visa_category_id' => $visaCategoryId,
+                            'description' => $item['description'],
+                        ],
+                        [
+                            'price' => $item['price'],
+                            'is_taxable' => $item['is_taxable'],
+                            'sort_order' => $itemIndex,
+                            'updated_at' => $now,
+                            'created_at' => $now,
+                        ],
+                    );
                 }
+
+                DB::table('visa_category_items')
+                    ->where('visa_category_id', $visaCategoryId)
+                    ->whereNotIn('description', $itemDescriptions)
+                    ->delete();
             }
         }
     }

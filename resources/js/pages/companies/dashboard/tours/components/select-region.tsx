@@ -8,9 +8,10 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import { FormattedMessage, useIntl } from 'react-intl';
 
 interface SelectRegionProps {
-    continentId: number | null; // ⬅️ WAJIB
+    continentId: number | null;
     name?: string;
     value?: string | number;
     defaultValue?: string | number;
@@ -24,6 +25,7 @@ export default function SelectRegion({
     defaultValue,
     onChange,
 }: SelectRegionProps) {
+    const intl = useIntl();
     const { data, isLoading } = useGetRegions(
         continentId ? { continent_id: continentId } : undefined,
     );
@@ -37,12 +39,22 @@ export default function SelectRegion({
         >
             <SelectTrigger className="w-full max-w-xs">
                 <SelectValue
-                    placeholder={isLoading ? 'Loading...' : 'Select region'}
+                    placeholder={
+                        isLoading
+                            ? intl.formatMessage({
+                                  defaultMessage: 'Loading...',
+                              })
+                            : intl.formatMessage({
+                                  defaultMessage: 'Select region',
+                              })
+                    }
                 />
             </SelectTrigger>
             <SelectContent>
                 <SelectGroup>
-                    <SelectLabel>Region</SelectLabel>
+                    <SelectLabel>
+                        <FormattedMessage defaultMessage="Region" />
+                    </SelectLabel>
                     {data?.data.map((cat) => (
                         <SelectItem key={cat.id} value={cat.id.toString()}>
                             {cat.name}

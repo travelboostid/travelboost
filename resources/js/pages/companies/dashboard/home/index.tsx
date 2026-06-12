@@ -6,6 +6,7 @@ import { Head, Link } from '@inertiajs/react';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import { ArrowUpRight, Bell, LayoutDashboard, Sparkles } from 'lucide-react';
+import { FormattedMessage, useIntl } from 'react-intl';
 import { ChartAreaInteractive } from './components/chart-area-interactive';
 import { SectionCards } from './components/section-cards';
 import SubscriptionAlert from './components/subscription-alert';
@@ -51,6 +52,7 @@ function CurrencyAmount({
 }
 
 export default function Home() {
+    const intl = useIntl();
     const {
         company,
         stats,
@@ -64,27 +66,45 @@ export default function Home() {
     return (
         <CompanyDashboardLayout
             activeMenuIds={[`home`]}
-            breadcrumb={[{ title: 'Dashboard' }]}
+            breadcrumb={[
+                {
+                    title: intl.formatMessage({
+                        defaultMessage: 'Dashboard',
+                    }),
+                },
+            ]}
             containerClassName="bg-slate-50/30 dark:bg-slate-950 min-h-screen"
         >
-            <Head title="Dashboard" />
+            <Head
+                title={intl.formatMessage({
+                    defaultMessage: 'Dashboard',
+                })}
+            />
             <div className="px-4 py-4 sm:px-6 lg:px-8 lg:py-8">
                 <div className="max-w-7xl mx-auto space-y-8">
                     <header className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                         <div className="min-w-0">
                             <h1 className="text-3xl font-bold tracking-tight text-slate-4000 dark:text-slate-100">
-                                Dashboard
+                                <FormattedMessage defaultMessage="Dashboard" />
                             </h1>
                             <p className="text-slate-500 dark:text-slate-400 mt-1 flex min-w-0 items-center gap-2">
-                                <LayoutDashboard size={14} /> Global performance
-                                analytics for{' '}
-                                <span className="truncate">{company.name}</span>
+                                <LayoutDashboard size={14} />
+                                <FormattedMessage
+                                    defaultMessage="Global performance analytics for {companyName}"
+                                    values={{
+                                        companyName: (
+                                            <span className="truncate">
+                                                {company.name}
+                                            </span>
+                                        ),
+                                    }}
+                                />
                             </p>
                         </div>
                         <div className="flex w-full items-start justify-between gap-3 md:w-auto md:items-center md:justify-end">
                             <div className="flex min-w-0 flex-1 flex-col md:flex-none md:items-end">
                                 <span className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400 dark:text-slate-500">
-                                    Wallet Balance
+                                    <FormattedMessage defaultMessage="Wallet Balance" />
                                 </span>
                                 <CurrencyAmount
                                     value={formatIDR(
@@ -97,7 +117,7 @@ export default function Home() {
                                     href={`/companies/${company.username}/dashboard/withdrawals`}
                                     className="mt-2 inline-flex w-fit items-center justify-center gap-1.5 rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100"
                                 >
-                                    Withdrawal
+                                    <FormattedMessage defaultMessage="Withdrawal" />
                                     <ArrowUpRight size={13} />
                                 </Link>
                             </div>
@@ -140,7 +160,7 @@ export default function Home() {
                                         </div>
                                         <div className="min-w-0 flex-1">
                                             <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">
-                                                AI Credit
+                                                <FormattedMessage defaultMessage="AI Credit" />
                                             </span>
                                             <div className="mt-1">
                                                 <CurrencyAmount
@@ -153,7 +173,7 @@ export default function Home() {
                                                 />
                                             </div>
                                             <p className="mt-1.5 text-xs font-medium text-slate-500 dark:text-slate-400">
-                                                Available Credits
+                                                <FormattedMessage defaultMessage="Available Credits" />
                                             </p>
                                         </div>
                                     </div>
@@ -161,7 +181,7 @@ export default function Home() {
                                         href={`/companies/${company.username}/dashboard/${company.type === 'agent' ? 'chatbot' : 'ai-credits'}`}
                                         className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-xs font-semibold text-white shadow-sm transition hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100"
                                     >
-                                        Top Up
+                                        <FormattedMessage defaultMessage="Top Up" />
                                         <ArrowUpRight size={14} />
                                     </Link>
                                 </CardContent>
@@ -169,12 +189,12 @@ export default function Home() {
 
                             <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 ring-1 ring-slate-200 dark:ring-slate-800 shadow-sm">
                                 <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center justify-between">
-                                    Notification
+                                    <FormattedMessage defaultMessage="Notification" />
                                     <Link
                                         href={`/companies/${company.username}/dashboard/notifications`}
                                         className="text-xs text-primary hover:underline"
                                     >
-                                        View All
+                                        <FormattedMessage defaultMessage="View All" />
                                     </Link>
                                 </h4>
                                 <div className="mt-6 space-y-5">

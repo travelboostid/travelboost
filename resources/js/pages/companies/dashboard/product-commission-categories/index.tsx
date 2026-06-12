@@ -40,7 +40,7 @@ import {
 } from '@/components/ui/table';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { cn } from '@/lib/utils';
-import { router, useForm, usePage } from '@inertiajs/react';
+import { Head, router, useForm, usePage } from '@inertiajs/react';
 import {
     flexRender,
     getCoreRowModel,
@@ -67,6 +67,7 @@ import {
 } from 'lucide-react';
 import type React from 'react';
 import * as ReactLib from 'react';
+import { FormattedMessage, useIntl } from 'react-intl';
 
 type CommissionCategory = {
     id: number;
@@ -118,6 +119,7 @@ function CategoryFormDialog({
     category?: CommissionCategory;
     children: React.ReactNode;
 }) {
+    const intl = useIntl();
     const { company } = usePageSharedDataProps();
     const [open, setOpen] = ReactLib.useState(false);
     const form = useForm(buildCategoryFormState(category));
@@ -157,55 +159,72 @@ function CategoryFormDialog({
     return (
         <Dialog open={open} onOpenChange={handleOpenChange}>
             <DialogTrigger asChild>{children}</DialogTrigger>
-            <DialogContent>
-                <DialogHeader>
+            <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-md">
+                <DialogHeader className="border-b px-6 py-5 text-left">
                     <DialogTitle>
-                        {category
-                            ? 'Edit Product Commission Category'
-                            : 'Add Product Commission Category'}
+                        {category ? (
+                            <FormattedMessage defaultMessage="Edit Product Commission Category" />
+                        ) : (
+                            <FormattedMessage defaultMessage="Add Product Commission Category" />
+                        )}
                     </DialogTitle>
                 </DialogHeader>
-                <form onSubmit={submit} className="space-y-4">
-                    <div className="grid gap-2">
-                        <Label>Name</Label>
-                        <Input
-                            value={form.data.name}
-                            onChange={(event) =>
-                                form.setData('name', event.target.value)
-                            }
-                            placeholder="Promo"
-                        />
-                        {form.errors.name && (
-                            <p className="text-sm text-red-500">
-                                {form.errors.name}
-                            </p>
-                        )}
+                <form onSubmit={submit}>
+                    <div className="space-y-4 px-6 py-5">
+                        <div className="grid gap-2">
+                            <Label>
+                                <FormattedMessage defaultMessage="Name" />
+                            </Label>
+                            <Input
+                                value={form.data.name}
+                                onChange={(event) =>
+                                    form.setData('name', event.target.value)
+                                }
+                                placeholder={intl.formatMessage({
+                                    defaultMessage: 'Promo',
+                                })}
+                            />
+                            {form.errors.name && (
+                                <p className="text-sm text-red-500">
+                                    {form.errors.name}
+                                </p>
+                            )}
+                        </div>
+                        <div className="grid gap-2">
+                            <Label>
+                                <FormattedMessage defaultMessage="Sort Order" />
+                            </Label>
+                            <Input
+                                type="number"
+                                value={form.data.sort_order}
+                                onChange={(event) =>
+                                    form.setData(
+                                        'sort_order',
+                                        Number(event.target.value),
+                                    )
+                                }
+                            />
+                        </div>
+                        <div className="flex items-center justify-between rounded-xl border px-4 py-3">
+                            <Label>
+                                <FormattedMessage defaultMessage="Active" />
+                            </Label>
+                            <Switch
+                                checked={form.data.is_active}
+                                onCheckedChange={(checked) =>
+                                    form.setData('is_active', checked)
+                                }
+                            />
+                        </div>
                     </div>
-                    <div className="grid gap-2">
-                        <Label>Sort Order</Label>
-                        <Input
-                            type="number"
-                            value={form.data.sort_order}
-                            onChange={(event) =>
-                                form.setData(
-                                    'sort_order',
-                                    Number(event.target.value),
-                                )
-                            }
-                        />
-                    </div>
-                    <div className="flex items-center justify-between rounded-xl border px-4 py-3">
-                        <Label>Active</Label>
-                        <Switch
-                            checked={form.data.is_active}
-                            onCheckedChange={(checked) =>
-                                form.setData('is_active', checked)
-                            }
-                        />
-                    </div>
-                    <DialogFooter>
-                        <Button type="submit" disabled={form.processing}>
-                            Save
+                    <DialogFooter className="flex-col gap-2 border-t bg-muted/20 px-6 py-4 sm:flex-col">
+                        <Button
+                            type="submit"
+                            size="lg"
+                            className="w-full"
+                            disabled={form.processing}
+                        >
+                            <FormattedMessage defaultMessage="Save" />
                         </Button>
                     </DialogFooter>
                 </form>
@@ -241,7 +260,7 @@ function RowAction({ category }: { category: CommissionCategory }) {
                                     className="cursor-pointer"
                                 >
                                     <EditIcon className="mr-2 h-4 w-4" />
-                                    Edit
+                                    <FormattedMessage defaultMessage="Edit" />
                                 </DropdownMenuItem>
                             </CategoryFormDialog>
                         </DropdownMenuGroup>
@@ -254,7 +273,7 @@ function RowAction({ category }: { category: CommissionCategory }) {
                                 className="cursor-pointer text-red-600 focus:bg-red-50 focus:text-red-600"
                             >
                                 <TrashIcon className="mr-2 h-4 w-4" />
-                                Delete
+                                <FormattedMessage defaultMessage="Delete" />
                             </DropdownMenuItem>
                         </DropdownMenuGroup>
                     </DropdownMenuContent>
@@ -265,16 +284,16 @@ function RowAction({ category }: { category: CommissionCategory }) {
                 <AlertDialogContent>
                     <AlertDialogHeader>
                         <AlertDialogTitle>
-                            Delete Product Commission Category
+                            <FormattedMessage defaultMessage="Delete Product Commission Category" />
                         </AlertDialogTitle>
                         <AlertDialogDescription>
-                            This action cannot be undone. The category will be
-                            removed permanently if it is not used by tours or
-                            commission rules.
+                            <FormattedMessage defaultMessage="This action cannot be undone. The category will be removed permanently if it is not used by tours or commission rules." />
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogCancel>
+                            <FormattedMessage defaultMessage="Cancel" />
+                        </AlertDialogCancel>
                         <AlertDialogAction
                             onClick={() =>
                                 router.delete(
@@ -283,7 +302,7 @@ function RowAction({ category }: { category: CommissionCategory }) {
                                 )
                             }
                         >
-                            Delete
+                            <FormattedMessage defaultMessage="Delete" />
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
@@ -297,7 +316,7 @@ export const columns: ColumnDef<CommissionCategory>[] = [
         id: 'actions',
         header: () => (
             <div className="px-2 text-center text-[11px] font-bold tracking-wider text-primary">
-                Actions
+                <FormattedMessage defaultMessage="Actions" />
             </div>
         ),
         enableSorting: false,
@@ -309,7 +328,9 @@ export const columns: ColumnDef<CommissionCategory>[] = [
         header: ({ column }) => (
             <SortableHeader
                 column={column}
-                title="Product Commission Category"
+                title={
+                    <FormattedMessage defaultMessage="Product Commission Category" />
+                }
             />
         ),
         cell: ({ row }) => (
@@ -319,7 +340,10 @@ export const columns: ColumnDef<CommissionCategory>[] = [
                         {row.original.name}
                     </p>
                     <p className="truncate text-xs text-slate-500 dark:text-slate-400">
-                        Sort order {row.original.sort_order}
+                        <FormattedMessage
+                            defaultMessage="Sort order {order}"
+                            values={{ order: row.original.sort_order }}
+                        />
                     </p>
                 </div>
             </div>
@@ -328,7 +352,10 @@ export const columns: ColumnDef<CommissionCategory>[] = [
     {
         accessorKey: 'sort_order',
         header: ({ column }) => (
-            <SortableHeader column={column} title="Sort Order" />
+            <SortableHeader
+                column={column}
+                title={<FormattedMessage defaultMessage="Sort Order" />}
+            />
         ),
         cell: ({ row }) => (
             <span className="whitespace-nowrap text-sm font-medium text-slate-600 dark:text-slate-300">
@@ -339,7 +366,10 @@ export const columns: ColumnDef<CommissionCategory>[] = [
     {
         accessorKey: 'is_active',
         header: ({ column }) => (
-            <SortableHeader column={column} title="Status" />
+            <SortableHeader
+                column={column}
+                title={<FormattedMessage defaultMessage="Status" />}
+            />
         ),
         cell: ({ row }) => (
             <Badge
@@ -351,7 +381,11 @@ export const columns: ColumnDef<CommissionCategory>[] = [
                         : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300',
                 )}
             >
-                {row.original.is_active ? 'Active' : 'Inactive'}
+                {row.original.is_active ? (
+                    <FormattedMessage defaultMessage="Active" />
+                ) : (
+                    <FormattedMessage defaultMessage="Inactive" />
+                )}
             </Badge>
         ),
     },
@@ -362,6 +396,7 @@ export default function Page({
 }: {
     categories: CommissionCategory[];
 }) {
+    const intl = useIntl();
     const { errors } = usePage().props as any;
     const [sorting, setSorting] = ReactLib.useState<SortingState>([]);
     const [columnFilters, setColumnFilters] =
@@ -409,19 +444,34 @@ export default function Page({
     return (
         <CompanyDashboardLayout
             breadcrumb={[
-                { title: 'Commission Setup' },
-                { title: 'Product Commission Categories' },
+                {
+                    title: intl.formatMessage({
+                        defaultMessage: 'Commission Setup',
+                    }),
+                },
+                {
+                    title: intl.formatMessage({
+                        defaultMessage: 'Product Commission Categories',
+                    }),
+                },
             ]}
             openMenuIds={['commission-setup']}
             activeMenuIds={['commission-setup.product-categories']}
             applet={
                 <CategoryFormDialog>
                     <Button>
-                        <PlusIcon className="h-4 w-4" /> Add Category
+                        <PlusIcon className="h-4 w-4" />
+                        <FormattedMessage defaultMessage="Add Category" />
                     </Button>
                 </CategoryFormDialog>
             }
         >
+            <Head
+                title={intl.formatMessage({
+                    defaultMessage: 'Product Commission Categories',
+                })}
+            />
+
             <div className="mx-auto flex w-full max-w-[1600px] flex-1 flex-col gap-6 p-4 pb-20 md:p-6">
                 {errors.delete_error && (
                     <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -436,7 +486,10 @@ export default function Page({
                                 <Search className="size-3.5" />
                             </span>
                             <Input
-                                placeholder="Search category, order, or status"
+                                placeholder={intl.formatMessage({
+                                    defaultMessage:
+                                        'Search category, order, or status',
+                                })}
                                 value={globalFilter}
                                 onChange={(event) =>
                                     setGlobalFilter(event.target.value)
@@ -446,7 +499,9 @@ export default function Page({
                             {globalFilter.trim() !== '' && (
                                 <button
                                     type="button"
-                                    aria-label="Clear search"
+                                    aria-label={intl.formatMessage({
+                                        defaultMessage: 'Clear search',
+                                    })}
                                     onClick={() => setGlobalFilter('')}
                                     className="absolute right-2 top-1/2 flex size-6 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                                 >
@@ -462,7 +517,7 @@ export default function Page({
                                 type="button"
                                 className="ml-auto h-9 w-full rounded-xl border border-slate-200 bg-white px-4 text-xs font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:hover:bg-slate-900 sm:w-auto"
                             >
-                                View Columns
+                                <FormattedMessage defaultMessage="View Columns" />
                                 <ChevronDown className="ml-2 inline h-4 w-4 opacity-50" />
                             </button>
                         </DropdownMenuTrigger>
@@ -565,7 +620,7 @@ export default function Page({
                                             colSpan={columns.length}
                                             className="h-40"
                                         >
-                                            No results.
+                                            <FormattedMessage defaultMessage="No results." />
                                         </TableCell>
                                     </TableRow>
                                 )}

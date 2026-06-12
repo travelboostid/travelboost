@@ -73,6 +73,7 @@ import {
     TrashIcon,
 } from 'lucide-react';
 import * as React from 'react';
+import { FormattedMessage, useIntl, type IntlShape } from 'react-intl';
 import { toast } from 'sonner';
 
 dayjs.extend(relativeTime);
@@ -105,6 +106,7 @@ const isActiveAvailability = (
 };
 
 function RowActions({ tour }: { tour: TourResource }) {
+    const intl = useIntl();
     const { company } = usePageSharedDataProps();
     const { errors } = usePage().props;
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
@@ -116,7 +118,11 @@ function RowActions({ tour }: { tour: TourResource }) {
                 preserveScroll: true,
                 onSuccess: () => {
                     if (!errors.delete_error) {
-                        toast.success('Tour deleted successfully');
+                        toast.success(
+                            intl.formatMessage({
+                                defaultMessage: 'Tour deleted successfully',
+                            }),
+                        );
                         setIsDeleteDialogOpen(false);
                     }
                 },
@@ -148,19 +154,20 @@ function RowActions({ tour }: { tour: TourResource }) {
                     >
                         <DialogTrigger asChild>
                             <DropdownMenuItem className="cursor-pointer">
-                                <EyeIcon className="mr-2 h-4 w-4" /> View
-                                Details
+                                <EyeIcon className="mr-2 h-4 w-4" />
+                                <FormattedMessage defaultMessage="View Details" />
                             </DropdownMenuItem>
                         </DialogTrigger>
                         <DropdownMenuItem className="cursor-pointer">
-                            <HistoryIcon className="mr-2 h-4 w-4" /> Booking
-                            History
+                            <HistoryIcon className="mr-2 h-4 w-4" />
+                            <FormattedMessage defaultMessage="Booking History" />
                         </DropdownMenuItem>
                         <DropdownMenuItem asChild className="cursor-pointer">
                             <Link
                                 href={`/companies/${company.username}/dashboard/tours/${tour.id}/edit`}
                             >
-                                <EditIcon className="mr-2 h-4 w-4" /> Edit Tour
+                                <EditIcon className="mr-2 h-4 w-4" />
+                                <FormattedMessage defaultMessage="Edit Tour" />
                             </Link>
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
@@ -168,7 +175,8 @@ function RowActions({ tour }: { tour: TourResource }) {
                             className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50"
                             onClick={() => setIsDeleteDialogOpen(true)}
                         >
-                            <TrashIcon className="mr-2 h-4 w-4" /> Delete
+                            <TrashIcon className="mr-2 h-4 w-4" />
+                            <FormattedMessage defaultMessage="Delete" />
                         </DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>
@@ -185,7 +193,9 @@ function RowActions({ tour }: { tour: TourResource }) {
                             <div className="flex items-center gap-2 mb-2">
                                 <Badge className="bg-primary hover:bg-primary text-white border-none">
                                     {(tour as any).category?.name ||
-                                        'Uncategorized'}
+                                        intl.formatMessage({
+                                            defaultMessage: 'Uncategorized',
+                                        })}
                                 </Badge>
                                 <Badge
                                     variant={
@@ -207,27 +217,38 @@ function RowActions({ tour }: { tour: TourResource }) {
                             </h2>
                             <div className="flex items-center text-slate-300 text-sm">
                                 <MapPinIcon className="h-4 w-4 mr-1" />
-                                {tour.destination || 'Multiple Destinations'}
+                                {tour.destination ||
+                                    intl.formatMessage({
+                                        defaultMessage: 'Multiple Destinations',
+                                    })}
                             </div>
                         </div>
                     </div>
                     <div className="p-6 md:p-8 space-y-8">
                         <div>
                             <h3 className="text-lg font-semibold text-slate-900 mb-3">
-                                Tour Description
+                                <FormattedMessage defaultMessage="Tour Description" />
                             </h3>
                             <p className="text-slate-600 leading-relaxed whitespace-pre-wrap text-sm">
                                 {tour.description ||
-                                    'No description available for this tour.'}
+                                    intl.formatMessage({
+                                        defaultMessage:
+                                            'No description available for this tour.',
+                                    })}
                             </p>
                         </div>
                         <div className="flex items-center justify-between pt-6 border-t border-slate-200">
                             <div className="flex flex-col">
                                 <span className="text-sm font-medium text-slate-500">
-                                    Duration
+                                    <FormattedMessage defaultMessage="Duration" />
                                 </span>
                                 <span className="text-lg font-semibold text-slate-900">
-                                    {tour.duration_days || '-'} Days
+                                    <FormattedMessage
+                                        defaultMessage="{days} Days"
+                                        values={{
+                                            days: tour.duration_days || '-',
+                                        }}
+                                    />
                                 </span>
                             </div>
                             <Button
@@ -240,8 +261,8 @@ function RowActions({ tour }: { tour: TourResource }) {
                                     target="_blank"
                                     rel="noreferrer"
                                 >
-                                    <FileTextIcon className="mr-2 h-4 w-4" />{' '}
-                                    View PDF Brochure
+                                    <FileTextIcon className="mr-2 h-4 w-4" />
+                                    <FormattedMessage defaultMessage="View PDF Brochure" />
                                 </a>
                             </Button>
                         </div>
@@ -256,11 +277,10 @@ function RowActions({ tour }: { tour: TourResource }) {
                 <AlertDialogContent className="rounded-2xl">
                     <AlertDialogHeader>
                         <AlertDialogTitle>
-                            Are you absolutely sure?
+                            <FormattedMessage defaultMessage="Are you absolutely sure?" />
                         </AlertDialogTitle>
                         <AlertDialogDescription>
-                            This action cannot be undone. This will permanently
-                            delete the tour and all associated schedule data.
+                            <FormattedMessage defaultMessage="This action cannot be undone. This will permanently delete the tour and all associated schedule data." />
                             {errors.delete_error && (
                                 <div className="mt-4 p-3 bg-red-50 text-red-600 rounded-lg text-sm font-medium border border-red-100">
                                     {errors.delete_error}
@@ -269,12 +289,14 @@ function RowActions({ tour }: { tour: TourResource }) {
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogCancel>
+                            <FormattedMessage defaultMessage="Cancel" />
+                        </AlertDialogCancel>
                         <AlertDialogAction
                             onClick={handleDelete}
                             className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
                         >
-                            Delete Tour
+                            <FormattedMessage defaultMessage="Delete Tour" />
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
@@ -284,6 +306,7 @@ function RowActions({ tour }: { tour: TourResource }) {
 }
 
 function CategoryCell({ row }: { row: any }) {
+    const intl = useIntl();
     const { company } = usePageSharedDataProps();
     const { data, isLoading } = useGetTourCategories({
         company_id: company.id,
@@ -309,7 +332,12 @@ function CategoryCell({ row }: { row: any }) {
             {
                 preserveScroll: true,
                 preserveState: true,
-                onSuccess: () => toast.success('Category updated successfully'),
+                onSuccess: () =>
+                    toast.success(
+                        intl.formatMessage({
+                            defaultMessage: 'Category updated successfully',
+                        }),
+                    ),
             },
         );
     };
@@ -322,10 +350,16 @@ function CategoryCell({ row }: { row: any }) {
                 disabled={isLoading}
             >
                 <SelectTrigger className="w-[140px] h-9 text-xs border-slate-200 bg-white rounded-lg shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100">
-                    <SelectValue placeholder="Select Category" />
+                    <SelectValue
+                        placeholder={intl.formatMessage({
+                            defaultMessage: 'Select Category',
+                        })}
+                    />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl">
-                    <SelectItem value="none">No Category</SelectItem>
+                    <SelectItem value="none">
+                        <FormattedMessage defaultMessage="No Category" />
+                    </SelectItem>
                     {data?.data.map((cat: any) => (
                         <SelectItem key={cat.id} value={cat.id.toString()}>
                             {cat.name}
@@ -338,6 +372,7 @@ function CategoryCell({ row }: { row: any }) {
 }
 
 function StatusCell({ row }: { row: any }) {
+    const intl = useIntl();
     const { company } = usePageSharedDataProps();
     const tour = row.original;
 
@@ -355,7 +390,12 @@ function StatusCell({ row }: { row: any }) {
             {
                 preserveScroll: true,
                 preserveState: true,
-                onSuccess: () => toast.success('Status updated successfully'),
+                onSuccess: () =>
+                    toast.success(
+                        intl.formatMessage({
+                            defaultMessage: 'Status updated successfully',
+                        }),
+                    ),
             },
         );
     };
@@ -372,11 +412,19 @@ function StatusCell({ row }: { row: any }) {
                             : 'bg-slate-50 text-slate-500 border-slate-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300'
                     }`}
                 >
-                    <SelectValue placeholder="Select Status" />
+                    <SelectValue
+                        placeholder={intl.formatMessage({
+                            defaultMessage: 'Select Status',
+                        })}
+                    />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl">
-                    <SelectItem value="active">ACTIVE</SelectItem>
-                    <SelectItem value="inactive">INACTIVE</SelectItem>
+                    <SelectItem value="active">
+                        {intl.formatMessage({ defaultMessage: 'ACTIVE' })}
+                    </SelectItem>
+                    <SelectItem value="inactive">
+                        {intl.formatMessage({ defaultMessage: 'INACTIVE' })}
+                    </SelectItem>
                 </SelectContent>
             </Select>
         </div>
@@ -384,6 +432,7 @@ function StatusCell({ row }: { row: any }) {
 }
 
 function ProductCommissionCategoryCell({ row }: { row: any }) {
+    const intl = useIntl();
     const { company } = usePageSharedDataProps();
     const {
         props: { productCommissionCategories = [] },
@@ -417,7 +466,10 @@ function ProductCommissionCategoryCell({ row }: { row: any }) {
                 preserveState: true,
                 onSuccess: () =>
                     toast.success(
-                        'Product commission category updated successfully',
+                        intl.formatMessage({
+                            defaultMessage:
+                                'Product commission category updated successfully',
+                        }),
                     ),
             },
         );
@@ -427,10 +479,16 @@ function ProductCommissionCategoryCell({ row }: { row: any }) {
         <div onClick={(e) => e.stopPropagation()}>
             <Select value={value} onValueChange={handleChange}>
                 <SelectTrigger className="w-[170px] h-9 text-xs border-slate-200 bg-white rounded-lg shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100">
-                    <SelectValue placeholder="Select PCC" />
+                    <SelectValue
+                        placeholder={intl.formatMessage({
+                            defaultMessage: 'Select PCC',
+                        })}
+                    />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl">
-                    <SelectItem value="none">No PCC</SelectItem>
+                    <SelectItem value="none">
+                        <FormattedMessage defaultMessage="No PCC" />
+                    </SelectItem>
                     {productCommissionCategories.map((item) => (
                         <SelectItem key={item.id} value={String(item.id)}>
                             {item.category_name}
@@ -474,165 +532,182 @@ const getStickyActionColumnClassName = (columnId: string) =>
         ? 'sticky left-0 z-20 w-[3.25rem] min-w-[3.25rem] max-w-[3.25rem] border-r border-border/70 bg-white/95 px-0 text-center shadow-[10px_0_14px_-16px_rgba(15,23,42,0.55)] backdrop-blur dark:bg-slate-950/95'
         : '';
 
-export const columns: ColumnDef<TourResource>[] = [
-    {
-        id: 'actions',
-        header: () => (
-            <div className="px-1 text-center text-[11px] font-bold tracking-wider text-primary">
-                Actions
-            </div>
-        ),
-        cell: ({ row }) => <RowActions tour={row.original} />,
-        enableHiding: false,
-        enableSorting: false,
-    },
-    {
-        id: 'name',
-        accessorFn: (row) => row.name,
-        header: ({ column }) => (
-            <SortableHeader column={column} title="Tour Details" />
-        ),
-        cell: ({ row }) => (
-            <div className="flex flex-col gap-1.5 max-w-[250px] xl:max-w-[350px]">
-                <span
-                    className="font-semibold text-slate-900 truncate dark:text-slate-100"
-                    title={row.original.name}
-                >
-                    {row.original.name}
-                </span>
-                <span className="uppercase font-mono text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-md w-fit border border-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
-                    {row.original.code || '-'}
-                </span>
-            </div>
-        ),
-    },
-    {
-        id: 'destination',
-        accessorFn: (row) => row.destination,
-        header: ({ column }) => (
-            <SortableHeader column={column} title="Destination" />
-        ),
-        cell: ({ getValue }) => (
-            <div
-                className="max-w-[150px] xl:max-w-[200px] truncate text-slate-600 font-medium dark:text-slate-300"
-                title={getValue<string>()}
-            >
-                {getValue<string>() || '-'}
-            </div>
-        ),
-    },
-    {
-        id: 'image',
-        header: 'Cover Image',
-        cell: ({ row }) => {
-            const image = row.original.image;
-            const src = image
-                ? extractImageSrc(image as any).src
-                : 'https://placehold.co/400x300/f8fafc/94a3b8?text=No+Image';
-
-            return (
-                <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm w-20 h-12 flex items-center justify-center shrink-0">
-                    <img
-                        src={src}
-                        alt="Tour"
-                        className="w-full h-full object-cover"
-                    />
+function getColumns(intl: IntlShape): ColumnDef<TourResource>[] {
+    return [
+        {
+            id: 'actions',
+            header: () => (
+                <div className="px-1 text-center text-[11px] font-bold tracking-wider text-primary">
+                    <FormattedMessage defaultMessage="Actions" />
                 </div>
-            );
+            ),
+            cell: ({ row }) => <RowActions tour={row.original} />,
+            enableHiding: false,
+            enableSorting: false,
         },
-        enableSorting: false,
-    },
-    {
-        id: 'seats',
-        accessorFn: (row: any) =>
-            row.availabilities
-                ?.filter((item: any) =>
-                    isActiveAvailability(
-                        item,
-                        Number(row.booking_deadline_days || 0),
-                    ),
-                )
-                .reduce(
-                    (sum: number, item: any) =>
-                        sum + (Number(item.available) || 0),
-                    0,
-                ) || 0,
-        header: ({ column }) => (
-            <SortableHeader
-                column={column}
-                title={
-                    <span className="inline-block text-left leading-tight">
-                        Total
-                        <br />
-                        Seats
-                    </span>
-                }
-                className="w-[92px] justify-start"
-            />
-        ),
-        cell: ({ getValue }) => {
-            const seats = getValue<number>();
-            return (
-                <div className="flex min-w-[72px] items-center gap-1.5">
+        {
+            id: 'name',
+            accessorFn: (row) => row.name,
+            header: ({ column }) => (
+                <SortableHeader
+                    column={column}
+                    title={<FormattedMessage defaultMessage="Tour Details" />}
+                />
+            ),
+            cell: ({ row }) => (
+                <div className="flex flex-col gap-1.5 max-w-[250px] xl:max-w-[350px]">
                     <span
-                        className={`h-2 w-2 rounded-full ${seats > 0 ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-red-500'}`}
-                    />
-                    <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">
-                        {seats}
+                        className="font-semibold text-slate-900 truncate dark:text-slate-100"
+                        title={row.original.name}
+                    >
+                        {row.original.name}
+                    </span>
+                    <span className="uppercase font-mono text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-md w-fit border border-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                        {row.original.code || '-'}
                     </span>
                 </div>
-            );
+            ),
         },
-    },
-    {
-        id: 'category',
-        accessorFn: (row) => (row as any).category?.name,
-        header: ({ column }) => (
-            <SortableHeader column={column} title="Category" />
-        ),
-        cell: ({ row }) => <CategoryCell row={row} />,
-    },
-    {
-        id: 'product_commission_category',
-        accessorFn: (row) =>
-            (row as any).product_commission_category?.category_name ||
-            (row as any).productCommissionCategory?.category_name,
-        header: ({ column }) => (
-            <SortableHeader
-                column={column}
-                title={
-                    <span className="inline-block text-left leading-tight">
-                        Product Comm.
-                        <br />
-                        Category
-                    </span>
-                }
-                className="justify-start"
-            />
-        ),
-        cell: ({ row }) => <ProductCommissionCategoryCell row={row} />,
-    },
-    {
-        id: 'status',
-        accessorFn: (row) => row.status,
-        header: ({ column }) => (
-            <SortableHeader column={column} title="Status" />
-        ),
-        cell: ({ row }) => <StatusCell row={row} />,
-    },
-    {
-        id: 'created_at',
-        accessorFn: (row) => row.created_at,
-        header: ({ column }) => (
-            <SortableHeader column={column} title="Created At" />
-        ),
-        cell: ({ getValue }) => (
-            <div className="text-sm font-medium text-slate-500 whitespace-nowrap dark:text-slate-300">
-                {dayjs(getValue<string>()).format('DD MMM YYYY')}
-            </div>
-        ),
-    },
-];
+        {
+            id: 'destination',
+            accessorFn: (row) => row.destination,
+            header: ({ column }) => (
+                <SortableHeader
+                    column={column}
+                    title={<FormattedMessage defaultMessage="Destination" />}
+                />
+            ),
+            cell: ({ getValue }) => (
+                <div
+                    className="max-w-[150px] xl:max-w-[200px] truncate text-slate-600 font-medium dark:text-slate-300"
+                    title={getValue<string>()}
+                >
+                    {getValue<string>() || '-'}
+                </div>
+            ),
+        },
+        {
+            id: 'image',
+            header: () => <FormattedMessage defaultMessage="Cover Image" />,
+            cell: ({ row }) => {
+                const image = row.original.image;
+                const src = image
+                    ? extractImageSrc(image as any).src
+                    : 'https://placehold.co/400x300/f8fafc/94a3b8?text=No+Image';
+
+                return (
+                    <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm w-20 h-12 flex items-center justify-center shrink-0">
+                        <img
+                            src={src}
+                            alt={intl.formatMessage({ defaultMessage: 'Tour' })}
+                            className="w-full h-full object-cover"
+                        />
+                    </div>
+                );
+            },
+            enableSorting: false,
+        },
+        {
+            id: 'seats',
+            accessorFn: (row: any) =>
+                row.availabilities
+                    ?.filter((item: any) =>
+                        isActiveAvailability(
+                            item,
+                            Number(row.booking_deadline_days || 0),
+                        ),
+                    )
+                    .reduce(
+                        (sum: number, item: any) =>
+                            sum + (Number(item.available) || 0),
+                        0,
+                    ) || 0,
+            header: ({ column }) => (
+                <SortableHeader
+                    column={column}
+                    title={
+                        <span className="inline-block text-left leading-tight">
+                            <FormattedMessage defaultMessage="Total" />
+                            <br />
+                            <FormattedMessage defaultMessage="Seats" />
+                        </span>
+                    }
+                    className="w-[92px] justify-start"
+                />
+            ),
+            cell: ({ getValue }) => {
+                const seats = getValue<number>();
+                return (
+                    <div className="flex min-w-[72px] items-center gap-1.5">
+                        <span
+                            className={`h-2 w-2 rounded-full ${seats > 0 ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-red-500'}`}
+                        />
+                        <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+                            {seats}
+                        </span>
+                    </div>
+                );
+            },
+        },
+        {
+            id: 'category',
+            accessorFn: (row) => (row as any).category?.name,
+            header: ({ column }) => (
+                <SortableHeader
+                    column={column}
+                    title={<FormattedMessage defaultMessage="Category" />}
+                />
+            ),
+            cell: ({ row }) => <CategoryCell row={row} />,
+        },
+        {
+            id: 'product_commission_category',
+            accessorFn: (row) =>
+                (row as any).product_commission_category?.category_name ||
+                (row as any).productCommissionCategory?.category_name,
+            header: ({ column }) => (
+                <SortableHeader
+                    column={column}
+                    title={
+                        <span className="inline-block text-left leading-tight">
+                            <FormattedMessage defaultMessage="Product Comm." />
+                            <br />
+                            <FormattedMessage defaultMessage="Category" />
+                        </span>
+                    }
+                    className="justify-start"
+                />
+            ),
+            cell: ({ row }) => <ProductCommissionCategoryCell row={row} />,
+        },
+        {
+            id: 'status',
+            accessorFn: (row) => row.status,
+            header: ({ column }) => (
+                <SortableHeader
+                    column={column}
+                    title={<FormattedMessage defaultMessage="Status" />}
+                />
+            ),
+            cell: ({ row }) => <StatusCell row={row} />,
+        },
+        {
+            id: 'created_at',
+            accessorFn: (row) => row.created_at,
+            header: ({ column }) => (
+                <SortableHeader
+                    column={column}
+                    title={<FormattedMessage defaultMessage="Created At" />}
+                />
+            ),
+            cell: ({ getValue }) => (
+                <div className="text-sm font-medium text-slate-500 whitespace-nowrap dark:text-slate-300">
+                    {dayjs(getValue<string>()).format('DD MMM YYYY')}
+                </div>
+            ),
+        },
+    ];
+}
 
 type PageProps = {
     data: any;
@@ -644,6 +719,7 @@ type PageProps = {
 };
 
 export default function Page({ data, bookingDeadlineDays = 0 }: PageProps) {
+    const intl = useIntl();
     const [sorting, setSorting] = React.useState<SortingState>([]);
     const [columnFilters, setColumnFilters] =
         React.useState<ColumnFiltersState>([]);
@@ -652,6 +728,8 @@ export default function Page({ data, bookingDeadlineDays = 0 }: PageProps) {
     const [activeTab, setActiveTab] = React.useState('active');
     const [globalFilter, setGlobalFilter] = React.useState('');
     const { company } = usePageSharedDataProps();
+
+    const columns = React.useMemo(() => getColumns(intl), [intl]);
 
     const dataWithDeadline = React.useMemo(
         () =>
@@ -720,7 +798,13 @@ export default function Page({ data, bookingDeadlineDays = 0 }: PageProps) {
         <CompanyDashboardLayout
             openMenuIds={['tours']}
             activeMenuIds={['tours.index']}
-            breadcrumb={[{ title: 'Tours' }]}
+            breadcrumb={[
+                {
+                    title: intl.formatMessage({
+                        defaultMessage: 'Tours',
+                    }),
+                },
+            ]}
             containerClassName="w-full flex-1 flex flex-col bg-slate-50/30 dark:bg-slate-950"
         >
             <div className="w-full space-y-6 p-4 md:p-8 max-w-[1600px] mx-auto pb-20">
@@ -729,7 +813,10 @@ export default function Page({ data, bookingDeadlineDays = 0 }: PageProps) {
                         <div className="relative w-full sm:w-[700px] border border-slate-200 rounded-xl shadow-sm dark:border-slate-800">
                             <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                             <Input
-                                placeholder="Search tour, vendor, or category..."
+                                placeholder={intl.formatMessage({
+                                    defaultMessage:
+                                        'Search tour, vendor, or category...',
+                                })}
                                 value={globalFilter ?? ''}
                                 onChange={(e) =>
                                     setGlobalFilter(e.target.value)
@@ -745,8 +832,8 @@ export default function Page({ data, bookingDeadlineDays = 0 }: PageProps) {
                             size="lg"
                             className="w-full sm:w-auto shadow-lg rounded-full px-8 bg-primary hover:bg-primary/90 transition-all hover:scale-105"
                         >
-                            <PlusIcon className="mr-2 h-5 w-5" /> Create New
-                            Tour
+                            <PlusIcon className="mr-2 h-5 w-5" />
+                            <FormattedMessage defaultMessage="Create New Tour" />
                         </Button>
                     </Link>
                 </div>
@@ -762,19 +849,19 @@ export default function Page({ data, bookingDeadlineDays = 0 }: PageProps) {
                                 value="all"
                                 className="rounded-lg data-[state=active]:shadow-sm"
                             >
-                                All Tours
+                                <FormattedMessage defaultMessage="All Tours" />
                             </TabsTrigger>
                             <TabsTrigger
                                 value="active"
                                 className="rounded-lg data-[state=active]:shadow-sm data-[state=active]:text-emerald-600"
                             >
-                                Active
+                                <FormattedMessage defaultMessage="Active" />
                             </TabsTrigger>
                             <TabsTrigger
                                 value="inactive"
                                 className="rounded-lg data-[state=active]:shadow-sm data-[state=active]:text-slate-600"
                             >
-                                Inactive
+                                <FormattedMessage defaultMessage="Inactive" />
                             </TabsTrigger>
                         </TabsList>
                     </Tabs>
@@ -786,7 +873,7 @@ export default function Page({ data, bookingDeadlineDays = 0 }: PageProps) {
                                     variant="outline"
                                     className="h-11 px-6 rounded-xl border-slate-200 bg-white hover:bg-slate-50 shadow-sm w-full sm:w-auto dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
                                 >
-                                    Columns{' '}
+                                    <FormattedMessage defaultMessage="Columns" />
                                     <ChevronDown className="ml-2 h-4 w-4 opacity-50" />
                                 </Button>
                             </DropdownMenuTrigger>
@@ -880,7 +967,9 @@ export default function Page({ data, bookingDeadlineDays = 0 }: PageProps) {
                                                 <span className="text-lg mb-1">
                                                     📭
                                                 </span>
-                                                <p>No tours found.</p>
+                                                <p>
+                                                    <FormattedMessage defaultMessage="No tours found." />
+                                                </p>
                                             </div>
                                         </TableCell>
                                     </TableRow>
@@ -898,7 +987,7 @@ export default function Page({ data, bookingDeadlineDays = 0 }: PageProps) {
                             disabled={!table.getCanPreviousPage()}
                             className="border-slate-200 px-6"
                         >
-                            Previous
+                            <FormattedMessage defaultMessage="Previous" />
                         </Button>
                         <Button
                             variant="outline"
@@ -906,7 +995,7 @@ export default function Page({ data, bookingDeadlineDays = 0 }: PageProps) {
                             disabled={!table.getCanNextPage()}
                             className="border-slate-200 px-6"
                         >
-                            Next
+                            <FormattedMessage defaultMessage="Next" />
                         </Button>
                     </div>
                 </div>

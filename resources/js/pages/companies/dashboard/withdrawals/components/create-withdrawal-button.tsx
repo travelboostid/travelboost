@@ -127,132 +127,144 @@ export function CreateWithdrawalButton() {
                     </div>
                 </DialogHeader>
 
-                <form onSubmit={handleSubmit} className="space-y-5 px-6 py-5">
-                    <div className="grid gap-2">
-                        <Label htmlFor="wallet_id">
-                            <FormattedMessage defaultMessage="Source wallet" />
-                        </Label>
-                        <Select
-                            value={
-                                form.data.wallet_id
-                                    ? String(form.data.wallet_id)
-                                    : undefined
-                            }
-                            onValueChange={(val) =>
-                                form.setData('wallet_id', Number(val))
-                            }
-                        >
-                            <SelectTrigger>
-                                <SelectValue placeholder="Select wallet" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectGroup>
-                                    <SelectLabel>
-                                        <FormattedMessage defaultMessage="Wallet" />
-                                    </SelectLabel>
-                                    {wallets?.map((wallet) => (
-                                        <SelectItem
-                                            key={String(wallet.id)}
-                                            value={String(wallet.id)}
+                <form onSubmit={handleSubmit}>
+                    <div className="space-y-5 px-6 py-5">
+                        <div className="grid gap-2">
+                            <Label htmlFor="wallet_id">
+                                <FormattedMessage defaultMessage="Source wallet" />
+                            </Label>
+                            <Select
+                                value={
+                                    form.data.wallet_id
+                                        ? String(form.data.wallet_id)
+                                        : undefined
+                                }
+                                onValueChange={(val) =>
+                                    form.setData('wallet_id', Number(val))
+                                }
+                            >
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select wallet" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectGroup>
+                                        <SelectLabel>
+                                            <FormattedMessage defaultMessage="Wallet" />
+                                        </SelectLabel>
+                                        {wallets?.map((wallet) => (
+                                            <SelectItem
+                                                key={String(wallet.id)}
+                                                value={String(wallet.id)}
+                                            >
+                                                {String(wallet.name)} ·{' '}
+                                                {formatIDR(
+                                                    Number(wallet.balance),
+                                                )}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectGroup>
+                                </SelectContent>
+                            </Select>
+                            <InputError message={form.errors.wallet_id} />
+                        </div>
+
+                        <div className="space-y-2.5">
+                            <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                                <FormattedMessage defaultMessage="Quick amounts" />
+                            </p>
+                            <div className="grid grid-cols-2 gap-2">
+                                {PRESET_AMOUNTS.map((preset) => {
+                                    const selected =
+                                        form.data.amount === preset;
+                                    const disabled =
+                                        preset > selectedWalletBalance;
+
+                                    return (
+                                        <button
+                                            key={preset}
+                                            type="button"
+                                            disabled={disabled}
+                                            className={cn(
+                                                'rounded-xl border px-3 py-3 text-left transition-all',
+                                                disabled &&
+                                                    'cursor-not-allowed opacity-50',
+                                                selected
+                                                    ? 'border-destructive bg-destructive/5 ring-1 ring-destructive/30'
+                                                    : 'border-border bg-background hover:border-destructive/30 hover:bg-muted/30',
+                                            )}
+                                            onClick={() =>
+                                                form.setData('amount', preset)
+                                            }
                                         >
-                                            {String(wallet.name)} ·{' '}
-                                            {formatIDR(Number(wallet.balance))}
-                                        </SelectItem>
-                                    ))}
-                                </SelectGroup>
-                            </SelectContent>
-                        </Select>
-                        <InputError message={form.errors.wallet_id} />
-                    </div>
-
-                    <div className="space-y-2.5">
-                        <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                            <FormattedMessage defaultMessage="Quick amounts" />
-                        </p>
-                        <div className="grid grid-cols-2 gap-2">
-                            {PRESET_AMOUNTS.map((preset) => {
-                                const selected = form.data.amount === preset;
-                                const disabled = preset > selectedWalletBalance;
-
-                                return (
-                                    <button
-                                        key={preset}
-                                        type="button"
-                                        disabled={disabled}
-                                        className={cn(
-                                            'rounded-xl border px-3 py-3 text-left transition-all',
-                                            disabled &&
-                                                'cursor-not-allowed opacity-50',
-                                            selected
-                                                ? 'border-destructive bg-destructive/5 ring-1 ring-destructive/30'
-                                                : 'border-border bg-background hover:border-destructive/30 hover:bg-muted/30',
-                                        )}
-                                        onClick={() =>
-                                            form.setData('amount', preset)
-                                        }
-                                    >
-                                        <p className="text-sm font-semibold tabular-nums text-foreground">
-                                            {formatIDR(preset)}
-                                        </p>
-                                    </button>
-                                );
-                            })}
+                                            <p className="text-sm font-semibold tabular-nums text-foreground">
+                                                {formatIDR(preset)}
+                                            </p>
+                                        </button>
+                                    );
+                                })}
+                            </div>
                         </div>
-                    </div>
 
-                    <div className="grid gap-2">
-                        <Label htmlFor="withdraw-amount">
-                            <FormattedMessage defaultMessage="Custom amount" />
-                        </Label>
-                        <MoneyInput
-                            name="amount"
-                            placeholder="100.000"
-                            value={form.data.amount || ''}
-                            onChange={(raw) =>
-                                form.setData('amount', raw ? Number(raw) : 0)
-                            }
-                        />
-                        <p className="text-xs text-muted-foreground">
-                            <FormattedMessage
-                                defaultMessage="Minimum {amount}"
-                                values={{ amount: formatIDR(MIN_AMOUNT) }}
+                        <div className="grid gap-2">
+                            <Label htmlFor="withdraw-amount">
+                                <FormattedMessage defaultMessage="Custom amount" />
+                            </Label>
+                            <MoneyInput
+                                name="amount"
+                                placeholder="100.000"
+                                value={form.data.amount || ''}
+                                onChange={(raw) =>
+                                    form.setData(
+                                        'amount',
+                                        raw ? Number(raw) : 0,
+                                    )
+                                }
                             />
-                        </p>
-                        <InputError message={form.errors.amount} />
-                    </div>
-
-                    <div className="grid gap-2">
-                        <Label htmlFor="bank-account-id">
-                            <FormattedMessage defaultMessage="Destination account" />
-                        </Label>
-                        <SelectBank
-                            name="bank_account_id"
-                            value={form.data.bank_account_id}
-                            onChange={(value) =>
-                                form.setData('bank_account_id', String(value))
-                            }
-                        />
-                        <InputError message={form.errors.bank_account_id} />
-                    </div>
-
-                    {form.data.amount > selectedWalletBalance ? (
-                        <p className="text-sm text-destructive">
-                            <FormattedMessage defaultMessage="Amount exceeds available balance." />
-                        </p>
-                    ) : null}
-
-                    {isValid ? (
-                        <div className="rounded-xl border bg-muted/20 px-4 py-3">
                             <p className="text-xs text-muted-foreground">
-                                <FormattedMessage defaultMessage="You will withdraw" />
+                                <FormattedMessage
+                                    defaultMessage="Minimum {amount}"
+                                    values={{ amount: formatIDR(MIN_AMOUNT) }}
+                                />
                             </p>
-                            <p className="mt-1 text-2xl font-bold tabular-nums text-destructive">
-                                {formatIDR(form.data.amount)}
-                            </p>
+                            <InputError message={form.errors.amount} />
                         </div>
-                    ) : null}
 
-                    <DialogFooter className="flex-col gap-2 border-t bg-muted/20 px-0 py-0 pt-4 sm:flex-col">
+                        <div className="grid gap-2">
+                            <Label htmlFor="bank-account-id">
+                                <FormattedMessage defaultMessage="Destination account" />
+                            </Label>
+                            <SelectBank
+                                name="bank_account_id"
+                                value={form.data.bank_account_id}
+                                onChange={(value) =>
+                                    form.setData(
+                                        'bank_account_id',
+                                        String(value),
+                                    )
+                                }
+                            />
+                            <InputError message={form.errors.bank_account_id} />
+                        </div>
+
+                        {form.data.amount > selectedWalletBalance ? (
+                            <p className="text-sm text-destructive">
+                                <FormattedMessage defaultMessage="Amount exceeds available balance." />
+                            </p>
+                        ) : null}
+
+                        {isValid ? (
+                            <div className="rounded-xl border bg-muted/20 px-4 py-3">
+                                <p className="text-xs text-muted-foreground">
+                                    <FormattedMessage defaultMessage="You will withdraw" />
+                                </p>
+                                <p className="mt-1 text-2xl font-bold tabular-nums text-destructive">
+                                    {formatIDR(form.data.amount)}
+                                </p>
+                            </div>
+                        ) : null}
+                    </div>
+
+                    <DialogFooter className="flex-col gap-2 border-t bg-muted/20 px-6 py-4 sm:flex-col">
                         <Button
                             type="submit"
                             size="lg"

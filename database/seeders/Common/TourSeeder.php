@@ -3,6 +3,9 @@
 namespace Database\Seeders\Common;
 
 use App\Models\Company;
+use App\Models\Continent;
+use App\Models\Country;
+use App\Models\Region;
 use App\Models\Tour;
 use App\Models\TourCategory;
 use Illuminate\Database\Seeder;
@@ -12,27 +15,33 @@ class TourSeeder extends Seeder
 {
     public function run(): void
     {
-        $root = Company::where('username', 'root')->first();
+        $root = Company::query()->where('username', 'root')->first();
 
         if ($root) {
-            TourCategory::factory()
-                ->count(2)
-                ->forCompany($root)
-                ->create();
+            if (TourCategory::query()->where('company_id', $root->id)->doesntExist()) {
+                TourCategory::factory()
+                    ->count(2)
+                    ->forCompany($root)
+                    ->create();
+            }
 
-            Tour::factory()
-                ->count(2)
-                ->for($root, 'company')
-                ->create();
+            if (Tour::query()->where('company_id', $root->id)->doesntExist()) {
+                Tour::factory()
+                    ->count(2)
+                    ->for($root, 'company')
+                    ->create();
+            }
         }
 
-        $vendor = Company::where('username', 'vendor')->first();
+        $vendor = Company::query()->where('username', 'vendor')->first();
 
         if (! $vendor) {
-            $this->command->warn("Company 'vendor' not found. Skipping China tour seeding.");
+            $this->command?->warn("Company 'vendor' not found. Skipping China tour seeding.");
 
             return;
         }
+
+        $geo = $this->chinaGeoIds();
 
         $tours = [
             [
@@ -94,7 +103,7 @@ class TourSeeder extends Seeder
             [
                 'code' => 'CHN-008',
                 'name' => 'Yunnan Diversity Explorer',
-                'description' => 'Temukan keanekaragaman budaya dan alam Yunnan: Kota Tua Lijiang, Lembah Batu Berbentuk Hati, Tiger Leaping Gorge, dan desa-desa etnik Naxi.',
+                'description' => 'Temukan keanekaragaman budaya dan alam Yunnan: Kota Tua Lijiang, Lembah Batu Berbentuk Hati, Tiger Leaping Gorge, dan desa-desa etnis Naxi.',
                 'duration_days' => 6,
                 'destination' => 'Kunming & Lijiang',
                 'showprice' => 10500000,
@@ -117,50 +126,29 @@ class TourSeeder extends Seeder
             ],
         ];
 
-        $now = now();
         $vendorVisaCategoryId = DB::table('visa_categories')
             ->where('company_id', $vendor->id)
             ->where('slug', 'visa-group-a')
             ->value('id');
 
         foreach ($tours as $tour) {
-            DB::table('tours')->insert([
-                'code' => $tour['code'],
-                'name' => $tour['name'],
-                'description' => $tour['description'],
-                'duration_days' => $tour['duration_days'],
-                'status' => 'active',
-                'destination' => $tour['destination'],
-                'continent_name' => 'Asia',
-                'region_name' => 'East Asia',
-                'country_name' => 'China',
-                'showprice' => $tour['showprice'],
-                'earlybird' => 0,
-                'earlybird_note' => '',
-                'promoprice' => 0,
-                'promote_price' => 0,
-                'company_id' => $vendor->id,
-                'continent_id' => 1,
-                'region_id' => 1,
-                'country_id' => 12,
-                'category_id' => null,
-                'visa_category_id' => $vendorVisaCategoryId,
-                'image_id' => null,
-                'document_id' => null,
-                'created_at' => $now,
-                'updated_at' => $now,
-            ]);
+            $this->upsertTour($vendor->id, $tour, $geo, $vendorVisaCategoryId);
         }
 
-        $this->command->info("10 China tours seeded for vendor company (ID: {$vendor->id}).");
+        $this->command?->info("10 China tours seeded for vendor company (ID: {$vendor->id}).");
 
-        $greatChina = Company::where('username', 'greatchinatour')->first();
+        $greatChina = Company::query()->where('username', 'greatchinatour')->first();
 
         if (! $greatChina) {
-            $this->command->warn("Company 'greatchinatour' not found. Skipping greatchinatour seeding.");
+            $this->command?->warn("Company 'greatchinatour' not found. Skipping greatchinatour seeding.");
 
             return;
         }
+
+        $greatChinaVisaCategoryId = DB::table('visa_categories')
+            ->where('company_id', $greatChina->id)
+            ->where('slug', 'visa-group-a')
+            ->value('id');
 
         $greatChinaTours = [
             [
@@ -308,13 +296,33 @@ class TourSeeder extends Seeder
         ];
 
         foreach ($greatChinaTours as $tour) {
-            $greatChinaVisaCategoryId = DB::table('visa_categories')
-                ->where('company_id', $greatChina->id)
-                ->where('slug', 'visa-group-a')
-                ->value('id');
+            $this->upsertTour($greatChina->id, $tour, $geo, $greatChinaVisaCategoryId);
+        }
 
-            DB::table('tours')->insert([
+        $this->command?->info("10 Great China tours seeded for greatchinatour company (ID: {$greatChina->id}).");
+    }
+
+    /**
+     * @param  array{
+     *     code: string,
+     *     name: string,
+     *     description: string,
+     *     duration_days: int,
+     *     destination: string,
+     *     showprice: int
+     * }  $tour
+     * @param  array{continent_id: ?int, region_id: ?int, country_id: ?int}  $geo
+     */
+    private function upsertTour(int $companyId, array $tour, array $geo, ?int $visaCategoryId): void
+    {
+        $now = now();
+
+        DB::table('tours')->updateOrInsert(
+            [
+                'company_id' => $companyId,
                 'code' => $tour['code'],
+            ],
+            [
                 'name' => $tour['name'],
                 'description' => $tour['description'],
                 'duration_days' => $tour['duration_days'],
@@ -328,19 +336,36 @@ class TourSeeder extends Seeder
                 'earlybird_note' => '',
                 'promoprice' => 0,
                 'promote_price' => 0,
-                'company_id' => $greatChina->id,
-                'continent_id' => 1,
-                'region_id' => 1,
-                'country_id' => 12,
+                'company_id' => $companyId,
+                'continent_id' => $geo['continent_id'],
+                'region_id' => $geo['region_id'],
+                'country_id' => $geo['country_id'],
                 'category_id' => null,
-                'visa_category_id' => $greatChinaVisaCategoryId,
+                'visa_category_id' => $visaCategoryId,
                 'image_id' => null,
                 'document_id' => null,
-                'created_at' => $now,
                 'updated_at' => $now,
-            ]);
-        }
+                'created_at' => $now,
+            ],
+        );
+    }
 
-        $this->command->info("10 Great China tours seeded for greatchinatour company (ID: {$greatChina->id}).");
+    /**
+     * @return array{continent_id: ?int, region_id: ?int, country_id: ?int}
+     */
+    private function chinaGeoIds(): array
+    {
+        $continentId = Continent::query()->where('name', 'Asia')->value('id');
+        $regionId = Region::query()
+            ->where('name', 'East Asia')
+            ->when($continentId, fn ($query) => $query->where('continent_id', $continentId))
+            ->value('id');
+        $countryId = Country::query()->where('name', 'China')->value('id');
+
+        return [
+            'continent_id' => $continentId ? (int) $continentId : null,
+            'region_id' => $regionId ? (int) $regionId : null,
+            'country_id' => $countryId ? (int) $countryId : null,
+        ];
     }
 }

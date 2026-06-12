@@ -23,10 +23,7 @@ export default function SelectVisaCategory({
     categories = [],
 }: Props) {
     return (
-        <Select
-            value={value ? String(value) : '0'}
-            onValueChange={onChange}
-        >
+        <Select value={value ? String(value) : '0'} onValueChange={onChange}>
             <SelectTrigger className="w-full">
                 <SelectValue placeholder="Select Visa Category" />
             </SelectTrigger>

@@ -10,12 +10,10 @@ import {
 import usePageProps from '@/hooks/use-page-props';
 import { Smartphone } from 'lucide-react';
 import type { DetailedHTMLProps, HTMLAttributes } from 'react';
+import { FormattedMessage, useIntl } from 'react-intl';
 import { Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
 import type { AnalyticsPageProps } from '..';
 
-/**
- * Stable string hash → number
- */
 function hashString(str: string) {
     let hash = 0;
     for (let i = 0; i < str.length; i++) {
@@ -24,17 +22,11 @@ function hashString(str: string) {
     return hash;
 }
 
-/**
- * Deterministic, visually balanced HSL color
- */
 function getColorFromLabel(label: string) {
     const hue = hashString(label) % 360;
     return `hsl(${hue} 70% 55%)`;
 }
 
-/**
- * Attach color directly to data (Cell replacement approach)
- */
 function applyChartColors<T extends { name: string }>(data: T[]) {
     return data.map((item) => ({
         ...item,
@@ -49,6 +41,7 @@ type RealtimeDeviceBreakdownProps = DetailedHTMLProps<
 export default function RealtimeDeviceBreakdown(
     props: RealtimeDeviceBreakdownProps,
 ) {
+    const intl = useIntl();
     const { realtimeInsights } = usePageProps<AnalyticsPageProps>();
 
     const devicesWithColors = applyChartColors(realtimeInsights.devices);
@@ -58,9 +51,11 @@ export default function RealtimeDeviceBreakdown(
             <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                     <Smartphone className="h-5 w-5 text-chart-1" />
-                    Device Breakdown
+                    <FormattedMessage defaultMessage="Device Breakdown" />
                 </CardTitle>
-                <CardDescription>User distribution by device</CardDescription>
+                <CardDescription>
+                    <FormattedMessage defaultMessage="User distribution by device" />
+                </CardDescription>
             </CardHeader>
 
             <CardContent>
@@ -76,7 +71,16 @@ export default function RealtimeDeviceBreakdown(
                             dataKey="value"
                         />
 
-                        <Tooltip formatter={(value) => `${value} user(s)`} />
+                        <Tooltip
+                            formatter={(value) =>
+                                intl.formatMessage(
+                                    {
+                                        defaultMessage: '{count} user(s)',
+                                    },
+                                    { count: value },
+                                )
+                            }
+                        />
                     </PieChart>
                 </ResponsiveContainer>
             </CardContent>

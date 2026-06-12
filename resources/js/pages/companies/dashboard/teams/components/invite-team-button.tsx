@@ -12,6 +12,7 @@ import {
 import { Field, FieldGroup } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Spinner } from '@/components/ui/spinner';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import {
     Tooltip,
@@ -21,9 +22,10 @@ import {
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { invite } from '@/routes/companies/dashboard/teams';
 import { useForm } from '@inertiajs/react';
-import { PlusIcon } from 'lucide-react';
+import { PlusIcon, UserPlusIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useState } from 'react';
+import { FormattedMessage, useIntl } from 'react-intl';
 
 export default function InviteTeamButton({
     roles,
@@ -32,6 +34,7 @@ export default function InviteTeamButton({
     roles: any[];
     children?: ReactNode;
 }) {
+    const intl = useIntl();
     const [open, setOpen] = useState(false);
     const { company } = usePageSharedDataProps();
 
@@ -64,145 +67,193 @@ export default function InviteTeamButton({
                         {children || (
                             <Button>
                                 <PlusIcon />
-                                Add Team Member
+                                <FormattedMessage defaultMessage="Add Team Member" />
                             </Button>
                         )}
                     </DialogTrigger>
                 </TooltipTrigger>
-                <TooltipContent>Add team member</TooltipContent>
+                <TooltipContent>
+                    <FormattedMessage defaultMessage="Add team member" />
+                </TooltipContent>
             </Tooltip>
 
-            <DialogContent className="sm:max-w-xl">
-                <form onSubmit={handleSubmit} className="grid gap-4">
-                    <DialogHeader>
-                        <DialogTitle>Add Team Member</DialogTitle>
-                        <DialogDescription>
-                            Create a team account that can sign in immediately
-                            after it is added.
-                        </DialogDescription>
-                    </DialogHeader>
-
-                    <FieldGroup>
-                        <div className="grid gap-4 md:grid-cols-2">
-                            <Field>
-                                <Label htmlFor="name">Full Name</Label>
-                                <Input
-                                    id="name"
-                                    placeholder="Full name"
-                                    value={form.data.name}
-                                    onChange={(event) =>
-                                        form.setData('name', event.target.value)
-                                    }
-                                />
-                                <InputError message={form.errors.name} />
-                            </Field>
-
-                            <Field>
-                                <Label htmlFor="username">Username</Label>
-                                <Input
-                                    id="username"
-                                    placeholder="Username"
-                                    value={form.data.username}
-                                    onChange={(event) =>
-                                        form.setData(
-                                            'username',
-                                            event.target.value,
-                                        )
-                                    }
-                                />
-                                <InputError message={form.errors.username} />
-                            </Field>
+            <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-lg">
+                <DialogHeader className="space-y-3 border-b px-6 py-5 text-left">
+                    <div className="flex items-start gap-3">
+                        <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                            <UserPlusIcon className="size-5" />
                         </div>
+                        <div className="space-y-1">
+                            <DialogTitle className="text-lg">
+                                <FormattedMessage defaultMessage="Add Team Member" />
+                            </DialogTitle>
+                            <DialogDescription className="text-sm leading-relaxed">
+                                <FormattedMessage defaultMessage="Create a team account that can sign in immediately after it is added." />
+                            </DialogDescription>
+                        </div>
+                    </div>
+                </DialogHeader>
 
-                        <Field>
-                            <Label htmlFor="email">Email</Label>
-                            <Input
-                                id="email"
-                                type="email"
-                                placeholder="email@example.com"
-                                value={form.data.email}
-                                onChange={(event) =>
-                                    form.setData('email', event.target.value)
-                                }
-                            />
-                            <InputError message={form.errors.email} />
-                        </Field>
+                <form onSubmit={handleSubmit}>
+                    <div className="max-h-[min(60vh,520px)] overflow-y-auto px-6 py-5">
+                        <FieldGroup>
+                            <div className="grid gap-4 md:grid-cols-2">
+                                <Field>
+                                    <Label htmlFor="name">
+                                        <FormattedMessage defaultMessage="Full Name" />
+                                    </Label>
+                                    <Input
+                                        id="name"
+                                        placeholder={intl.formatMessage({
+                                            defaultMessage: 'Full name',
+                                        })}
+                                        value={form.data.name}
+                                        onChange={(event) =>
+                                            form.setData(
+                                                'name',
+                                                event.target.value,
+                                            )
+                                        }
+                                    />
+                                    <InputError message={form.errors.name} />
+                                </Field>
 
-                        <div className="grid gap-4 md:grid-cols-2">
+                                <Field>
+                                    <Label htmlFor="username">
+                                        <FormattedMessage defaultMessage="Username" />
+                                    </Label>
+                                    <Input
+                                        id="username"
+                                        placeholder={intl.formatMessage({
+                                            defaultMessage: 'Username',
+                                        })}
+                                        value={form.data.username}
+                                        onChange={(event) =>
+                                            form.setData(
+                                                'username',
+                                                event.target.value,
+                                            )
+                                        }
+                                    />
+                                    <InputError
+                                        message={form.errors.username}
+                                    />
+                                </Field>
+                            </div>
+
                             <Field>
-                                <Label htmlFor="password">Password</Label>
-                                <Input
-                                    id="password"
-                                    type="password"
-                                    placeholder="Password"
-                                    value={form.data.password}
-                                    onChange={(event) =>
-                                        form.setData(
-                                            'password',
-                                            event.target.value,
-                                        )
-                                    }
-                                />
-                                <InputError message={form.errors.password} />
-                            </Field>
-
-                            <Field>
-                                <Label htmlFor="password_confirmation">
-                                    Confirm Password
+                                <Label htmlFor="email">
+                                    <FormattedMessage defaultMessage="Email" />
                                 </Label>
                                 <Input
-                                    id="password_confirmation"
-                                    type="password"
-                                    placeholder="Confirm password"
-                                    value={form.data.password_confirmation}
+                                    id="email"
+                                    type="email"
+                                    placeholder="email@example.com"
+                                    value={form.data.email}
                                     onChange={(event) =>
                                         form.setData(
-                                            'password_confirmation',
+                                            'email',
                                             event.target.value,
                                         )
                                     }
                                 />
+                                <InputError message={form.errors.email} />
                             </Field>
-                        </div>
 
-                        <Field>
-                            <Label htmlFor="role">Role</Label>
-                            <ToggleGroup
-                                type="single"
-                                variant="outline"
-                                spacing={2}
-                                size="lg"
-                                className="grid grid-cols-1 gap-2 rounded-xl"
-                                value={form.data.role}
-                                onValueChange={(value) =>
-                                    form.setData('role', value)
-                                }
-                            >
-                                {roles.map((role) => (
-                                    <ToggleGroupItem
-                                        name="role"
-                                        key={role.name}
-                                        value={role.name}
-                                        aria-label={role.name}
-                                        className="block h-auto w-auto p-4 text-left"
-                                    >
-                                        <div className="font-bold">
-                                            {role.display_name}
-                                        </div>
-                                        <div className="text-xs text-muted-foreground">
-                                            {role.description}
-                                        </div>
-                                    </ToggleGroupItem>
-                                ))}
-                            </ToggleGroup>
+                            <div className="grid gap-4 md:grid-cols-2">
+                                <Field>
+                                    <Label htmlFor="password">
+                                        <FormattedMessage defaultMessage="Password" />
+                                    </Label>
+                                    <Input
+                                        id="password"
+                                        type="password"
+                                        placeholder={intl.formatMessage({
+                                            defaultMessage: 'Password',
+                                        })}
+                                        value={form.data.password}
+                                        onChange={(event) =>
+                                            form.setData(
+                                                'password',
+                                                event.target.value,
+                                            )
+                                        }
+                                    />
+                                    <InputError
+                                        message={form.errors.password}
+                                    />
+                                </Field>
 
-                            <InputError message={form.errors.role} />
-                        </Field>
-                    </FieldGroup>
+                                <Field>
+                                    <Label htmlFor="password_confirmation">
+                                        <FormattedMessage defaultMessage="Confirm Password" />
+                                    </Label>
+                                    <Input
+                                        id="password_confirmation"
+                                        type="password"
+                                        placeholder={intl.formatMessage({
+                                            defaultMessage: 'Confirm password',
+                                        })}
+                                        value={form.data.password_confirmation}
+                                        onChange={(event) =>
+                                            form.setData(
+                                                'password_confirmation',
+                                                event.target.value,
+                                            )
+                                        }
+                                    />
+                                </Field>
+                            </div>
 
-                    <DialogFooter className="mt-4">
-                        <Button type="submit" disabled={form.processing}>
-                            {form.processing ? 'Creating...' : 'Create Account'}
+                            <Field>
+                                <Label htmlFor="role">
+                                    <FormattedMessage defaultMessage="Role" />
+                                </Label>
+                                <ToggleGroup
+                                    type="single"
+                                    variant="outline"
+                                    spacing={2}
+                                    size="lg"
+                                    className="grid grid-cols-1 gap-2 rounded-xl"
+                                    value={form.data.role}
+                                    onValueChange={(value) =>
+                                        form.setData('role', value)
+                                    }
+                                >
+                                    {roles.map((role) => (
+                                        <ToggleGroupItem
+                                            name="role"
+                                            key={role.name}
+                                            value={role.name}
+                                            aria-label={role.name}
+                                            className="block h-auto w-auto p-4 text-left"
+                                        >
+                                            <div className="font-bold">
+                                                {role.display_name}
+                                            </div>
+                                            <div className="text-xs text-muted-foreground">
+                                                {role.description}
+                                            </div>
+                                        </ToggleGroupItem>
+                                    ))}
+                                </ToggleGroup>
+
+                                <InputError message={form.errors.role} />
+                            </Field>
+                        </FieldGroup>
+                    </div>
+
+                    <DialogFooter className="flex-col gap-2 border-t bg-muted/20 px-6 py-4 sm:flex-col">
+                        <Button
+                            type="submit"
+                            size="lg"
+                            className="w-full"
+                            disabled={form.processing}
+                        >
+                            {form.processing ? (
+                                <Spinner className="mr-2" />
+                            ) : null}
+                            <FormattedMessage defaultMessage="Create Account" />
                         </Button>
                     </DialogFooter>
                 </form>

@@ -29,7 +29,13 @@ return [
         /*
          * Description rendered on the home page of the API documentation (`/docs/api`).
          */
-        'description' => '',
+        'description' => <<<'MD'
+Travelboost JSON API consumed by the React client at `/webapi`.
+
+Only routes under `/webapi` are documented here (see `config/scramble.php`).
+
+After changing Webapi controllers, Form Requests, or API Resources, run `pnpm orval` to regenerate TypeScript clients. See `docs/webapi-orval.md`.
+MD,
     ],
 
     /*

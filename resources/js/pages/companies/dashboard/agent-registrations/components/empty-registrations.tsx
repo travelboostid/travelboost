@@ -6,6 +6,7 @@ import {
     EmptyTitle,
 } from '@/components/ui/empty';
 import { IconFolderCode } from '@tabler/icons-react';
+import { FormattedMessage } from 'react-intl';
 
 export function EmptyRegistrations() {
     return (
@@ -14,9 +15,11 @@ export function EmptyRegistrations() {
                 <EmptyMedia variant="icon">
                     <IconFolderCode />
                 </EmptyMedia>
-                <EmptyTitle>No Data Available</EmptyTitle>
+                <EmptyTitle>
+                    <FormattedMessage defaultMessage="No Data Available" />
+                </EmptyTitle>
                 <EmptyDescription>
-                    There are no vendor registrations to display.
+                    <FormattedMessage defaultMessage="There are no vendor registrations to display." />
                 </EmptyDescription>
             </EmptyHeader>
         </Empty>

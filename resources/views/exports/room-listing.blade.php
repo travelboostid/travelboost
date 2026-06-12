@@ -308,7 +308,14 @@
                 <tr>
                     <td
                         colspan="18"
-                        style="border: 1px solid #94a3b8; background-color: #e2e8f0; color: #0f172a; font-weight: 700; text-transform: uppercase; padding: 6px 8px;"
+                        style="
+                            border: 1px solid #94a3b8;
+                            background-color: #e2e8f0;
+                            color: #0f172a;
+                            font-weight: 700;
+                            text-transform: uppercase;
+                            padding: 6px 8px;
+                        "
                     >
                         Agent: {{ $agentName }} ({{ $agentTotalPax }} pax)
                     </td>
@@ -346,10 +353,14 @@
                 }
               @endphp
                             <tr>
-                                <td style="{{ $cellStyle }} text-align: center;">
+                                <td
+                                    style="{{ $cellStyle }} text-align: center;"
+                                >
                                     {{ $globalIndex++ }}
                                 </td>
-                                <td style="{{ $cellStyle }} text-align: center; font-weight: 700;">
+                                <td
+                                    style="{{ $cellStyle }} text-align: center; font-weight: 700;"
+                                >
                                     {{ $passenger->title ?: '-' }}
                                 </td>
                                 <td style="{{ $cellStyle }} font-weight: 700;">
@@ -406,7 +417,9 @@
                                 >
                                     {{ $passenger->pob ?: '-' }}
                                 </td>
-                                <td style="{{ $cellStyle }} text-align: center;">
+                                <td
+                                    style="{{ $cellStyle }} text-align: center;"
+                                >
                                     {{ $passenger->dob ? \Carbon\Carbon::parse($passenger->dob)->format('d/m/Y') : '-' }}
                                 </td>
 
@@ -419,7 +432,9 @@
                                     </td>
                                 @endif
 
-                                <td style="{{ $cellStyle }} text-align: center;">
+                                <td
+                                    style="{{ $cellStyle }} text-align: center;"
+                                >
                                     {{ $age }}
                                 </td>
                                 @if ($isFirstInBooking)

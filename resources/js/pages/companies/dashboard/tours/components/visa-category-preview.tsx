@@ -36,7 +36,8 @@ export default function VisaCategoryPreview({ category }: Props) {
                     >
                         <span className="truncate">{item.description}</span>
                         <span className="whitespace-nowrap font-medium text-slate-700 dark:text-slate-200">
-                            Rp {currencyFormatter.format(Number(item.price || 0))}
+                            Rp{' '}
+                            {currencyFormatter.format(Number(item.price || 0))}
                         </span>
                         <span className="whitespace-nowrap text-[11px] uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">
                             {item.is_taxable ? 'Taxable' : 'Non-tax'}

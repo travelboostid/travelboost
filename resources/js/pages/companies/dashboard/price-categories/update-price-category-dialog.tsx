@@ -5,6 +5,7 @@ import {
     Dialog,
     DialogClose,
     DialogContent,
+    DialogDescription,
     DialogFooter,
     DialogHeader,
     DialogTitle,
@@ -12,11 +13,33 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import { Spinner } from '@/components/ui/spinner';
+import { Textarea } from '@/components/ui/textarea';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { useForm } from '@inertiajs/react';
+import { PencilIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
+import { FormattedMessage } from 'react-intl';
+
+const ROOM_TYPES = [
+    'Adult Single',
+    'Adult Double',
+    'Adult Twin',
+    'Adult Triple',
+    'Adult Quad',
+    'Adult Extra Bed',
+    'Child With Extra Bed',
+    'Child No Bed',
+    'Infant',
+];
 
 type PriceCategory = {
     id: number;
@@ -44,22 +67,14 @@ export default function UpdatePriceCategoryDialog({
     });
 
     useEffect(() => {
-        form.setData('name', item?.name);
-        form.setData('room_type', item?.room_type);
-        form.setData('description', item?.description || '');
-    }, [item]);
-
-    const ROOM_TYPES = [
-        'Adult Single',
-        'Adult Double',
-        'Adult Twin',
-        'Adult Triple',
-        'Adult Quad',
-        'Adult Extra Bed',
-        'Child With Extra Bed',
-        'Child No Bed',
-        'Infant',
-    ];
+        if (open) {
+            form.setData({
+                name: item?.name,
+                room_type: item?.room_type,
+                description: item?.description || '',
+            });
+        }
+    }, [item, open]);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -81,79 +96,110 @@ export default function UpdatePriceCategoryDialog({
         );
     };
 
+    const handleOpenChange = (nextOpen: boolean) => {
+        setOpen(nextOpen);
+    };
+
     return (
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog open={open} onOpenChange={handleOpenChange}>
             <DialogTrigger asChild>{children}</DialogTrigger>
 
-            <DialogContent className="sm:max-w-[425px]">
-                <DialogHeader>
-                    <DialogTitle>Update Price Category</DialogTitle>
+            <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-md">
+                <DialogHeader className="space-y-3 border-b px-6 py-5 text-left">
+                    <div className="flex items-start gap-3">
+                        <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                            <PencilIcon className="size-5" />
+                        </div>
+                        <div className="space-y-1">
+                            <DialogTitle className="text-lg">
+                                <FormattedMessage defaultMessage="Update price category" />
+                            </DialogTitle>
+                            <DialogDescription className="text-sm leading-relaxed">
+                                <FormattedMessage defaultMessage="Update the price category details." />
+                            </DialogDescription>
+                        </div>
+                    </div>
                 </DialogHeader>
 
-                <form onSubmit={handleSubmit} className="grid gap-6">
-                    {/* NAME */}
-                    <div className="grid gap-2">
-                        <Label htmlFor="name">Category Name</Label>
-                        <Input
-                            id="name"
-                            value={form.data.name}
-                            onChange={(e) =>
-                                form.setData('name', e.target.value)
-                            }
-                            placeholder="Category name"
-                        />
-                        <InputError message={form.errors.name} />
+                <form onSubmit={handleSubmit}>
+                    <div className="space-y-5 px-6 py-5">
+                        <div className="grid gap-2">
+                            <Label htmlFor="name">
+                                <FormattedMessage defaultMessage="Category name" />
+                            </Label>
+                            <Input
+                                id="name"
+                                value={form.data.name}
+                                onChange={(e) =>
+                                    form.setData('name', e.target.value)
+                                }
+                                placeholder="e.g. Standard"
+                            />
+                            <InputError message={form.errors.name} />
+                        </div>
+
+                        <div className="grid gap-2">
+                            <Label htmlFor="room_type">
+                                <FormattedMessage defaultMessage="Room type" />
+                            </Label>
+                            <Select
+                                value={form.data.room_type}
+                                onValueChange={(value) =>
+                                    form.setData('room_type', value)
+                                }
+                            >
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select room type" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {ROOM_TYPES.map((type) => (
+                                        <SelectItem key={type} value={type}>
+                                            {type}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            <InputError message={form.errors.room_type} />
+                        </div>
+
+                        <div className="grid gap-2">
+                            <Label htmlFor="description">
+                                <FormattedMessage defaultMessage="Description" />
+                            </Label>
+                            <Textarea
+                                id="description"
+                                value={form.data.description}
+                                onChange={(e) =>
+                                    form.setData('description', e.target.value)
+                                }
+                                placeholder="Brief description of this price category"
+                                rows={3}
+                            />
+                            <InputError message={form.errors.description} />
+                        </div>
                     </div>
 
-                    {/* ROOM TYPE */}
-                    <div className="grid gap-2">
-                        <Label htmlFor="room_type">Room Type</Label>
-
-                        <select
-                            id="room_type"
-                            value={form.data.room_type || ''}
-                            onChange={(e) =>
-                                form.setData('room_type', e.target.value)
-                            }
-                            className="border rounded-md h-9 px-3 text-sm"
+                    <DialogFooter className="flex-col gap-2 border-t bg-muted/20 px-6 py-4 sm:flex-col">
+                        <Button
+                            type="submit"
+                            size="lg"
+                            className="w-full"
+                            disabled={form.processing}
                         >
-                            <option value="">Select Room Type</option>
-
-                            {ROOM_TYPES.map((type) => (
-                                <option key={type} value={type}>
-                                    {type}
-                                </option>
-                            ))}
-                        </select>
-
-                        <InputError message={form.errors.room_type} />
-                    </div>
-
-                    {/* DESCRIPTION */}
-                    <div className="grid gap-2">
-                        <Label htmlFor="description">Description</Label>
-                        <Input
-                            id="description"
-                            value={form.data.description}
-                            onChange={(e) =>
-                                form.setData('description', e.target.value)
-                            }
-                            placeholder="Description"
-                        />
-                        <InputError message={form.errors.description} />
-                    </div>
-
-                    <DialogFooter>
+                            {form.processing ? (
+                                <Spinner className="mr-2" />
+                            ) : null}
+                            <FormattedMessage defaultMessage="Save changes" />
+                        </Button>
                         <DialogClose asChild>
-                            <Button type="button" variant="outline">
-                                Cancel
+                            <Button
+                                type="button"
+                                variant="outline"
+                                className="w-full"
+                            >
+                                <FormattedMessage defaultMessage="Cancel" />
                             </Button>
                         </DialogClose>
-
-                        <Button type="submit" disabled={form.processing}>
-                            {form.processing && <Spinner className="mr-2" />}
-                            Save
-                        </Button>
                     </DialogFooter>
                 </form>
             </DialogContent>
