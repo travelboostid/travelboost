@@ -679,6 +679,10 @@ class PrismaLinkService
                     'product_details' => strlen((string) ($body['product_details'] ?? '')),
                     'user_ip_address' => strlen((string) ($body['user_ip_address'] ?? '')),
                 ],
+                'callback_urls' => [
+                    'backend' => $body['backend_callback_url'] ?? null,
+                    'frontend' => $body['frontend_callback_url'] ?? null,
+                ],
             ]);
         }
 

@@ -68,8 +68,9 @@ export function groupPaymentMethodsByCategory(
     methods: PaymentMethodResource[];
 }> {
     const grouped = new Map<string, PaymentMethodResource[]>();
+    const list = Array.isArray(methods) ? methods : [];
 
-    for (const method of methods) {
+    for (const method of list) {
         const category = method.category ?? 'other';
         const existing = grouped.get(category) ?? [];
         existing.push(method);
@@ -103,5 +104,7 @@ export function findPaymentMethodById(
         return null;
     }
 
-    return methods.find((method) => method.id === methodId) ?? null;
+    return Array.isArray(methods)
+        ? (methods.find((method) => method.id === methodId) ?? null)
+        : null;
 }

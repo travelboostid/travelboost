@@ -16,6 +16,8 @@ use App\Models\TourCommissionRuleScheduleAdjustment;
 use App\Models\TourPrice;
 use App\Models\TourSchedule;
 use App\Models\VendorAgentPartner;
+use App\Models\VisaCategory;
+use App\Models\VisaCategoryItem;
 use App\Services\BookingPricingService;
 use Database\Seeders\Common\RolePermissionSeeder;
 use Illuminate\Support\Facades\DB;
@@ -220,6 +222,79 @@ test('booking pricing service includes only taxable add ons in vat base', functi
         ->and($quote['grand_total'])->toBe(16_070_000.0)
         ->and($quote['addons'][0]['is_taxable'])->toBeTrue()
         ->and($quote['addons'][1]['is_taxable'])->toBeFalse();
+});
+
+test('booking pricing service snapshots passenger visa selections and includes taxable visa in vat base', function () {
+    ['tour' => $tour, 'schedule' => $schedule] = createPricingScenario();
+
+    $visaCategory = VisaCategory::create([
+        'company_id' => $tour->company_id,
+        'name' => 'Visa Group A',
+        'slug' => 'visa-group-a',
+    ]);
+    $taxableVisa = VisaCategoryItem::create([
+        'visa_category_id' => $visaCategory->id,
+        'description' => 'Taxable China Visa',
+        'price' => 1_000_000,
+        'is_taxable' => true,
+    ]);
+    $nonTaxableVisa = VisaCategoryItem::create([
+        'visa_category_id' => $visaCategory->id,
+        'description' => 'Non Taxable Visa Service',
+        'price' => 500_000,
+        'is_taxable' => false,
+    ]);
+    $tour->forceFill(['visa_category_id' => $visaCategory->id])->save();
+
+    $quote = app(BookingPricingService::class)->quoteForBookingData($tour, $schedule->departure_date, [
+        ['first_name' => 'Adult One', 'price_category' => 'Adult Single', 'visa_category_item_id' => $taxableVisa->id],
+        ['first_name' => 'Adult Two', 'price_category' => 'Adult Single', 'visa_category_item_id' => $nonTaxableVisa->id],
+    ]);
+
+    expect($quote['visa_total'])->toBe(1_500_000.0)
+        ->and($quote['taxable_visa_total'])->toBe(1_000_000.0)
+        ->and($quote['tax_amount'])->toBe(2_750_000.0)
+        ->and($quote['grand_total'])->toBe(28_310_000.0)
+        ->and($quote['passengers'][0]['visa_category_item_id'])->toBe($taxableVisa->id)
+        ->and($quote['passengers'][0]['visa_type_description'])->toBe('Taxable China Visa')
+        ->and($quote['passengers'][0]['visa_type_price'])->toBe(1_000_000.0)
+        ->and($quote['passengers'][0]['visa_type_is_taxable'])->toBeTrue()
+        ->and($quote['passengers'][1]['visa_category_item_id'])->toBe($nonTaxableVisa->id)
+        ->and($quote['passengers'][1]['visa_type_description'])->toBe('Non Taxable Visa Service')
+        ->and($quote['passengers'][1]['visa_type_price'])->toBe(500_000.0)
+        ->and($quote['passengers'][1]['visa_type_is_taxable'])->toBeFalse();
+
+    $booking = Booking::factory()->create([
+        'vendor_id' => $tour->company_id,
+        'tour_id' => $tour->id,
+        'departure_date' => $schedule->departure_date,
+        'status' => BookingStatus::BOOKING_RESERVED,
+        'pax_adult' => 2,
+        'pax_child' => 0,
+        'pax_infant' => 0,
+        'total_price' => $quote['subtotal_guests'],
+        'tax_amount' => $quote['tax_amount'],
+        'platform_fee' => $quote['platform_fee'],
+        'commission_amount' => $quote['agent_commission'],
+        'grand_total' => $quote['grand_total'],
+    ]);
+    $booking->passengers()->createMany($quote['passengers']);
+
+    $taxableVisa->update([
+        'description' => 'Updated Master Visa',
+        'price' => 9_000_000,
+        'is_taxable' => false,
+    ]);
+
+    $snapshotQuote = app(BookingPricingService::class)->quoteForBooking($booking->fresh());
+
+    expect($snapshotQuote['visa_total'])->toBe(1_500_000.0)
+        ->and($snapshotQuote['taxable_visa_total'])->toBe(1_000_000.0)
+        ->and($snapshotQuote['tax_amount'])->toBe(2_750_000.0)
+        ->and($snapshotQuote['grand_total'])->toBe(28_310_000.0)
+        ->and($snapshotQuote['passengers'][0]['visa_type_description'])->toBe('Taxable China Visa')
+        ->and((float) $snapshotQuote['passengers'][0]['visa_type_price'])->toBe(1_000_000.0)
+        ->and((bool) $snapshotQuote['passengers'][0]['visa_type_is_taxable'])->toBeTrue();
 });
 
 test('booking pricing service resolves agent commission from tier matrix and schedule rules', function () {

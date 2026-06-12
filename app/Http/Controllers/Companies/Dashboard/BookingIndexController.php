@@ -17,6 +17,7 @@ use App\Models\BookingPassenger;
 use App\Models\Company;
 use App\Models\Payment;
 use App\Models\Role;
+use App\Models\Tour;
 use App\Models\TourAddOn;
 use App\Models\TourAvailability;
 use App\Models\TourPrice;
@@ -262,7 +263,7 @@ class BookingIndexController extends Controller
             'user:id,name',
             'inputByUser:id,name',
             'inputByCompany:id,name,type',
-            'passengers:id,booking_id,title,first_name,last_name,price_category,price_amount,passport_number,passport_issue_date,passport_expiry_date,passport_file_path,visa_number,visa_file_path',
+            'passengers:id,booking_id,title,first_name,last_name,price_category,price_amount,passport_number,passport_issue_date,passport_expiry_date,passport_file_path,visa_number,visa_file_path,visa_category_item_id,visa_type_description,visa_type_price,visa_type_is_taxable',
             'payments',
             'actionRequests' => fn ($query) => $query->where('status', 'pending')->latest(),
         ];
@@ -508,6 +509,7 @@ class BookingIndexController extends Controller
                         'label' => $addon->name ?: 'Add-on',
                         'amount' => (float) $addon->price,
                     ])
+                    ->concat($this->nonTaxableVisaSummaryRows($booking))
                     ->values()
                     ->all(),
                 'invoiceGrandTotal' => $invoiceGrandTotal,
@@ -1199,6 +1201,7 @@ class BookingIndexController extends Controller
                         'label' => $addon->name ?: 'Add-on',
                         'amount' => (float) $addon->price,
                     ])
+                    ->concat($this->nonTaxableVisaSummaryRows($booking))
                     ->values()
                     ->all(),
                 'invoiceGrandTotal' => $invoiceGrandTotal,
@@ -1224,6 +1227,7 @@ class BookingIndexController extends Controller
     {
         $booking->load([
             'tour',
+            'tour.visaCategory.items',
             'tour.company.companySetting',
             'vendor:id,name,payment_mode,commission',
             'vendor.companySetting',
@@ -1341,6 +1345,7 @@ class BookingIndexController extends Controller
             'booking' => $booking,
             'tourPrices' => $tourPrices,
             'addOns' => $addOns,
+            'visaCategoryItems' => $tour ? $this->visaCategoryItemsPayload($tour) : [],
             'minimumDownPaymentPct' => $minimumDownPaymentPct,
             'downPaymentRule' => $downPaymentRule,
             'minimumVatPct' => (float) ($tour?->company?->companySetting?->minimum_vat ?? 11),
@@ -1399,6 +1404,25 @@ class BookingIndexController extends Controller
             ->all();
     }
 
+    /**
+     * @return array<int, array{id: int, description: string, price: float, isTaxable: bool}>
+     */
+    private function visaCategoryItemsPayload(Tour $tour): array
+    {
+        $tour->loadMissing('visaCategory.items');
+
+        return $tour->visaCategory?->items
+            ->sortBy('sort_order')
+            ->values()
+            ->map(fn ($item): array => [
+                'id' => (int) $item->id,
+                'description' => (string) $item->description,
+                'price' => (float) $item->price,
+                'isTaxable' => (bool) $item->is_taxable,
+            ])
+            ->all() ?? [];
+    }
+
     private function buildInvoicePaymentDetails(Booking $booking, ?Collection $taxableAddons = null): array
     {
         $schedule = $this->resolveInvoiceSchedule($booking);
@@ -1432,6 +1456,8 @@ class BookingIndexController extends Controller
             })
             ->values();
 
+        $taxableVisaRows = $this->visaPaymentRows($booking->passengers, true);
+
         $addonRows = ($taxableAddons ?? $booking->addons)
             ->map(fn ($addon): array => [
                 'description' => $addon->name ?: 'Add-on',
@@ -1442,9 +1468,43 @@ class BookingIndexController extends Controller
             ]);
 
         return $passengerRows
+            ->concat($taxableVisaRows)
             ->concat($addonRows)
             ->values()
             ->all();
+    }
+
+    private function visaPaymentRows(Collection $passengers, bool $taxable): Collection
+    {
+        return $passengers
+            ->filter(fn ($passenger): bool => (float) $passenger->visa_type_price > 0
+                && (bool) $passenger->visa_type_is_taxable === $taxable)
+            ->groupBy(fn ($passenger): string => implode('|', [
+                (string) $passenger->visa_type_description,
+                (string) $passenger->visa_type_price,
+            ]))
+            ->map(function (Collection $group): array {
+                $first = $group->first();
+                $description = (string) ($first->visa_type_description ?: 'Visa Type');
+
+                return [
+                    'description' => 'Visa: '.$description,
+                    'quantity' => $group->count(),
+                    'unit_price' => (float) $first->visa_type_price,
+                    'discount' => 0.0,
+                    'amount' => (float) $group->sum('visa_type_price'),
+                ];
+            })
+            ->values();
+    }
+
+    private function nonTaxableVisaSummaryRows(Booking $booking): Collection
+    {
+        return $this->visaPaymentRows($booking->passengers, false)
+            ->map(fn (array $row): array => [
+                'label' => $row['description'].' (x'.$row['quantity'].')',
+                'amount' => (float) $row['amount'],
+            ]);
     }
 
     private function resolveInvoiceSchedule(Booking $booking): ?TourSchedule

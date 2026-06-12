@@ -556,6 +556,7 @@ class PaymentController extends Controller
             'user_name' => $user->name,
             'user_email' => $user->email,
             'remarks' => $context['remarks'] ?? null,
+            'backend_callback_url' => $this->prismaLinkBackendCallbackUrl(),
             'frontend_callback_url' => $this->prismaLinkFrontendCallbackUrl(),
         ];
 
@@ -601,6 +602,17 @@ class PaymentController extends Controller
     private function paymentFinishUrl(): string
     {
         return route('companies.show', absolute: true);
+    }
+
+    private function prismaLinkBackendCallbackUrl(): string
+    {
+        $configured = config('prismalink.backend_callback_url');
+
+        if (is_string($configured) && $configured !== '') {
+            return $configured;
+        }
+
+        return route('prismalink.backend-callback', absolute: true);
     }
 
     private function prismaLinkFrontendCallbackUrl(): string

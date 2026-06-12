@@ -9,6 +9,7 @@ use App\Models\Tour;
 use App\Models\TourAddOn;
 use App\Models\TourPrice;
 use App\Models\TourSchedule;
+use App\Models\VisaCategoryItem;
 use DateTimeInterface;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -84,15 +85,19 @@ class BookingPricingService
         $discountedSubtotal = 0.0;
         $agentCommission = 0.0;
         $travelboostCommission = 0.0;
+        $visaTotal = 0.0;
+        $taxableVisaTotal = 0.0;
         $agentBreakdown = [];
         $travelboostBreakdown = [];
+        $visaItemsById = $this->visaItemsById($tour);
 
         $quotedPassengers = collect($passengers)
-            ->map(function (array $passenger, int $index) use ($tour, $schedule, $tourPrices, $includeAgentCommission, $agentId, &$subtotalGuests, &$discountedSubtotal, &$agentCommission, &$travelboostCommission, &$agentBreakdown, &$travelboostBreakdown): array {
+            ->map(function (array $passenger, int $index) use ($tour, $schedule, $tourPrices, $visaItemsById, $includeAgentCommission, $agentId, &$subtotalGuests, &$discountedSubtotal, &$agentCommission, &$travelboostCommission, &$visaTotal, &$taxableVisaTotal, &$agentBreakdown, &$travelboostBreakdown): array {
                 $categoryName = trim((string) data_get($passenger, 'price_category', ''));
                 $tourPrice = $this->matchTourPrice($tourPrices, $categoryName);
                 $originalPrice = $tourPrice ? (float) $tourPrice->price : (float) data_get($passenger, 'price_amount', 0);
                 $discountedPrice = $tourPrice ? $this->discountedPrice($tourPrice) : $originalPrice;
+                $visaSnapshot = $this->passengerVisaSnapshot($passenger, $visaItemsById);
                 $agentCommissionResolution = $tourPrice && $includeAgentCommission
                     ? app(AgentCommissionResolver::class)->resolve($tour, $schedule, $tourPrice, $discountedPrice, $agentId)
                     : ['amount' => 0.0, 'breakdown' => ['source' => 'not_applicable']];
@@ -103,6 +108,11 @@ class BookingPricingService
                 $discountedSubtotal += $discountedPrice;
                 $agentCommission += $passengerAgentCommission;
                 $travelboostCommission += $passengerTravelboostCommission;
+                $visaTotal += (float) $visaSnapshot['visa_type_price'];
+
+                if ((bool) $visaSnapshot['visa_type_is_taxable']) {
+                    $taxableVisaTotal += (float) $visaSnapshot['visa_type_price'];
+                }
 
                 if ($passengerAgentCommission > 0) {
                     $agentBreakdown[] = [
@@ -124,6 +134,10 @@ class BookingPricingService
                 }
 
                 $passenger['price_amount'] = $discountedPrice;
+                $passenger['visa_category_item_id'] = $visaSnapshot['visa_category_item_id'];
+                $passenger['visa_type_description'] = $visaSnapshot['visa_type_description'];
+                $passenger['visa_type_price'] = $visaSnapshot['visa_type_price'];
+                $passenger['visa_type_is_taxable'] = $visaSnapshot['visa_type_is_taxable'];
 
                 return $passenger;
             })
@@ -136,8 +150,8 @@ class BookingPricingService
             ->filter(fn (array $addon): bool => (bool) ($addon['is_taxable'] ?? false))
             ->sum('price');
         $promotionDiscount = max(0.0, $subtotalGuests - $discountedSubtotal);
-        $taxAmount = (float) round(($discountedSubtotal + $taxableAddonsTotal) * ($vatRate / 100));
-        $grandTotal = $discountedSubtotal + $taxAmount + $platformFee + $addonsTotal;
+        $taxAmount = (float) round(($discountedSubtotal + $taxableAddonsTotal + $taxableVisaTotal) * ($vatRate / 100));
+        $grandTotal = $discountedSubtotal + $taxAmount + $platformFee + $addonsTotal + $visaTotal;
 
         return [
             'subtotal_guests' => $subtotalGuests,
@@ -149,6 +163,8 @@ class BookingPricingService
             'tax_rate' => $vatRate,
             'addons_total' => $addonsTotal,
             'taxable_addons_total' => $taxableAddonsTotal,
+            'visa_total' => $visaTotal,
+            'taxable_visa_total' => $taxableVisaTotal,
             'agent_commission' => (float) $agentCommission,
             'travelboost_commission' => (float) $travelboostCommission,
             'grand_total' => (float) $grandTotal,
@@ -192,7 +208,15 @@ class BookingPricingService
     {
         $booking->loadMissing(['passengers', 'addons', 'vendor.companySetting', 'tour.company.companySetting']);
 
-        if ($booking->passengers->isEmpty() || $booking->addons->isEmpty()) {
+        if ($booking->passengers->isEmpty()) {
+            return $booking;
+        }
+
+        $hasVisaSnapshots = $booking->passengers->contains(
+            fn ($passenger): bool => (float) $passenger->visa_type_price > 0
+        );
+
+        if ($booking->addons->isEmpty() && ! $hasVisaSnapshots) {
             return $booking;
         }
 
@@ -346,6 +370,50 @@ class BookingPricingService
     }
 
     /**
+     * @return Collection<int, VisaCategoryItem>
+     */
+    private function visaItemsById(Tour $tour): Collection
+    {
+        if (! $tour->visa_category_id) {
+            return collect();
+        }
+
+        return VisaCategoryItem::query()
+            ->where('visa_category_id', $tour->visa_category_id)
+            ->get()
+            ->keyBy('id');
+    }
+
+    /**
+     * @param  Collection<int, VisaCategoryItem>  $visaItemsById
+     * @return array{visa_category_item_id: int|null, visa_type_description: string|null, visa_type_price: float, visa_type_is_taxable: bool}
+     */
+    private function passengerVisaSnapshot(array $passenger, Collection $visaItemsById): array
+    {
+        $visaCategoryItemId = data_get($passenger, 'visa_category_item_id');
+
+        if ($visaCategoryItemId) {
+            $visaItem = $visaItemsById->get((int) $visaCategoryItemId);
+
+            if ($visaItem instanceof VisaCategoryItem) {
+                return [
+                    'visa_category_item_id' => $visaItem->id,
+                    'visa_type_description' => $visaItem->description,
+                    'visa_type_price' => (float) $visaItem->price,
+                    'visa_type_is_taxable' => (bool) $visaItem->is_taxable,
+                ];
+            }
+        }
+
+        return [
+            'visa_category_item_id' => null,
+            'visa_type_description' => null,
+            'visa_type_price' => 0.0,
+            'visa_type_is_taxable' => false,
+        ];
+    }
+
+    /**
      * @return array<string, mixed>
      */
     private function bookingSnapshotQuote(Booking $booking): array
@@ -359,13 +427,17 @@ class BookingPricingService
             ->all();
         $discountedSubtotal = (float) $booking->passengers->sum('price_amount');
         $subtotalGuests = (float) $booking->total_price;
+        $visaTotal = (float) $booking->passengers->sum('visa_type_price');
+        $taxableVisaTotal = (float) $booking->passengers
+            ->filter(fn ($passenger): bool => (bool) $passenger->visa_type_is_taxable)
+            ->sum('visa_type_price');
         $addonsTotal = (float) $booking->addons->sum('price');
         $taxableAddonsTotal = (float) $booking->addons
             ->filter(fn ($addon): bool => (bool) $addon->is_taxable)
             ->sum('price');
         $taxRate = (float) ($booking->vendor?->companySetting?->minimum_vat ?? $booking->tour?->company?->companySetting?->minimum_vat ?? self::DEFAULT_PPN_RATE);
-        $taxAmount = (float) round(($discountedSubtotal + $taxableAddonsTotal) * ($taxRate / 100));
-        $grandTotal = $discountedSubtotal + $taxAmount + (float) $booking->platform_fee + $addonsTotal;
+        $taxAmount = (float) round(($discountedSubtotal + $taxableAddonsTotal + $taxableVisaTotal) * ($taxRate / 100));
+        $grandTotal = $discountedSubtotal + $taxAmount + (float) $booking->platform_fee + $addonsTotal + $visaTotal;
         $travelboostBreakdown = $booking->passengers
             ->values()
             ->map(function ($passenger, int $index): array {
@@ -395,6 +467,8 @@ class BookingPricingService
             'tax_rate' => $taxRate,
             'addons_total' => $addonsTotal,
             'taxable_addons_total' => $taxableAddonsTotal,
+            'visa_total' => $visaTotal,
+            'taxable_visa_total' => $taxableVisaTotal,
             'agent_commission' => $agentCommission,
             'travelboost_commission' => $travelboostCommission,
             'grand_total' => (float) $grandTotal,
@@ -505,6 +579,8 @@ class BookingPricingService
             'taxable_addons_total' => (float) $booking->addons
                 ->filter(fn ($addon): bool => (bool) $addon->is_taxable)
                 ->sum('price'),
+            'visa_total' => 0.0,
+            'taxable_visa_total' => 0.0,
             'agent_commission' => 0.0,
             'travelboost_commission' => 0.0,
             'grand_total' => (float) $booking->grand_total,

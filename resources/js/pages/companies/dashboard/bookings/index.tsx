@@ -41,6 +41,7 @@ import {
 import { formatIDR } from '@/constants/booking';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { openOnlinePayment } from '@/lib/open-online-payment';
+import { hasOnlinePaymentInstructions } from '@/lib/payment-instructions';
 import { cn } from '@/lib/utils';
 import { Head, Link, router } from '@inertiajs/react';
 import {
@@ -1219,6 +1220,15 @@ function RowActions({
                 },
             )
             .then((response) => {
+                const payment = response.data?.payment as
+                    | {
+                          id?: number | string;
+                          provider?: string | null;
+                          amount?: number | string | null;
+                          status?: string | null;
+                          payload?: Record<string, unknown>;
+                      }
+                    | undefined;
                 const paymentId = response.data?.payment?.id as
                     | number
                     | string
@@ -1226,8 +1236,16 @@ function RowActions({
                 const payload = response.data?.payment?.payload as
                     | Record<string, unknown>
                     | undefined;
+                const provider = payment?.provider ?? 'midtrans';
+                const paymentAmount = Number(
+                    payment?.amount ?? customerPaymentAmount,
+                );
 
-                if (!payload?.order_id) {
+                if (
+                    !payload ||
+                    (!hasOnlinePaymentInstructions(provider, payload) &&
+                        Object.keys(payload).length === 0)
+                ) {
                     setPaymentActionError(
                         intl.formatMessage({
                             defaultMessage:
@@ -1241,9 +1259,11 @@ function RowActions({
                 openOnlinePayment(
                     {
                         id: paymentId,
-                        status: 'pending',
-                        provider: 'midtrans',
-                        amount: customerPaymentAmount,
+                        status: payment?.status ?? 'pending',
+                        provider,
+                        amount: Number.isFinite(paymentAmount)
+                            ? paymentAmount
+                            : customerPaymentAmount,
                         payload,
                     },
                     {

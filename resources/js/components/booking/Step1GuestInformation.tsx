@@ -31,6 +31,7 @@ import type {
     GuestEntry,
     SavedPassengerOption,
     TourPrice,
+    VisaCategoryItemOption,
 } from '@/types/booking';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
@@ -152,6 +153,7 @@ function GuestDetailForm({
     tourPrices,
     departureDate,
     savedPassengers,
+    visaCategoryItems,
     onSavedPassengerSelect,
     readOnly = false,
 }: {
@@ -160,6 +162,7 @@ function GuestDetailForm({
     onChange: (g: GuestEntry) => void;
     onRemove?: () => void;
     tourPrices: TourPrice[];
+    visaCategoryItems: VisaCategoryItemOption[];
     departureDate: string;
     savedPassengers: SavedPassengerOption[];
     onSavedPassengerSelect?: (
@@ -177,6 +180,30 @@ function GuestDetailForm({
     const availablePrices = tourPrices.filter((p) =>
         allowedCategories.includes(p.categoryName),
     );
+    const visaOptions = useMemo(() => {
+        const options = [...visaCategoryItems];
+
+        if (
+            guest.visaCategoryItemId &&
+            guest.visaTypeDescription &&
+            !options.some((item) => item.id === guest.visaCategoryItemId)
+        ) {
+            options.push({
+                id: guest.visaCategoryItemId,
+                description: guest.visaTypeDescription,
+                price: guest.visaTypePrice,
+                isTaxable: guest.visaTypeIsTaxable,
+            });
+        }
+
+        return options;
+    }, [
+        guest.visaCategoryItemId,
+        guest.visaTypeDescription,
+        guest.visaTypeIsTaxable,
+        guest.visaTypePrice,
+        visaCategoryItems,
+    ]);
 
     const computeDiscountedPrice = (
         tp: TourPrice,
@@ -228,6 +255,28 @@ function GuestDetailForm({
                 roomTypeDescription: selected.description,
             });
         }
+    };
+
+    const handleVisaTypeChange = (visaCategoryItemId: string) => {
+        if (readOnly) {
+            return;
+        }
+
+        const selected = visaOptions.find(
+            (item) => item.id === Number(visaCategoryItemId),
+        );
+
+        if (!selected) {
+            return;
+        }
+
+        onChange({
+            ...guest,
+            visaCategoryItemId: selected.id,
+            visaTypeDescription: selected.description,
+            visaTypePrice: selected.price,
+            visaTypeIsTaxable: selected.isTaxable,
+        });
     };
 
     const age = calculateAgeAtDeparture(guest.dateOfBirth, departureDate);
@@ -507,7 +556,12 @@ function GuestDetailForm({
             </div>
 
             {/* Row 2: Date of Birth, Place of Birth */}
-            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <div
+                className={cn(
+                    'mt-3 grid gap-3 sm:grid-cols-2',
+                    visaOptions.length > 0 && 'lg:grid-cols-3',
+                )}
+            >
                 <div className="grid gap-1">
                     <Label className="text-[11px] text-muted-foreground">
                         Date of Birth{' '}
@@ -553,6 +607,36 @@ function GuestDetailForm({
                         className="h-9 text-sm"
                     />
                 </div>
+                {visaOptions.length > 0 && (
+                    <div className="grid gap-1">
+                        <Label className="text-[11px] text-muted-foreground">
+                            Visa Type <RequiredMark />
+                        </Label>
+                        <Select
+                            value={
+                                guest.visaCategoryItemId
+                                    ? String(guest.visaCategoryItemId)
+                                    : ''
+                            }
+                            onValueChange={handleVisaTypeChange}
+                            disabled={readOnly}
+                        >
+                            <SelectTrigger className="h-9 w-full text-sm">
+                                <SelectValue placeholder="Select visa" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {visaOptions.map((item) => (
+                                    <SelectItem
+                                        key={item.id}
+                                        value={String(item.id)}
+                                    >
+                                        {item.description}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                )}
             </div>
 
             {/* Row 3: Price Category + Price + Room Type */}
@@ -638,6 +722,7 @@ type Step1Props = {
     onGuestUpdate: (g: GuestEntry) => void;
     onGuestRemove: (guestId: string) => void;
     tourPrices: TourPrice[];
+    visaCategoryItems?: VisaCategoryItemOption[];
     maxGuests?: number;
     departureDate: string;
     showAddAsGuest?: boolean;
@@ -672,6 +757,7 @@ export default function Step1GuestInformation({
     onGuestUpdate,
     onGuestRemove,
     tourPrices,
+    visaCategoryItems = [],
     maxGuests = 99,
     departureDate,
     showAddAsGuest = true,
@@ -706,7 +792,8 @@ export default function Step1GuestInformation({
             g.firstName.trim() !== '' &&
             g.lastName.trim() !== '' &&
             g.dateOfBirth.trim() !== '' &&
-            g.priceCategory !== null,
+            g.priceCategory !== null &&
+            (visaCategoryItems.length === 0 || g.visaCategoryItemId !== null),
     ).length;
 
     const handleContactGuestToggle = () => {
@@ -1091,6 +1178,7 @@ export default function Step1GuestInformation({
                                             : () => onGuestRemove(guest.id)
                                     }
                                     tourPrices={tourPrices}
+                                    visaCategoryItems={visaCategoryItems}
                                     departureDate={departureDate}
                                     savedPassengers={savedPassengers}
                                     onSavedPassengerSelect={

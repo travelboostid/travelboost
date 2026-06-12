@@ -19,6 +19,8 @@ use App\Models\TourPrice;
 use App\Models\TourSchedule;
 use App\Models\User;
 use App\Models\VendorAgentPartner;
+use App\Models\VisaCategory;
+use App\Models\VisaCategoryItem;
 use App\Services\BookingPricingService;
 use Database\Seeders\Common\RolePermissionSeeder;
 use Illuminate\Http\UploadedFile;
@@ -1475,6 +1477,182 @@ test('store recalculates booking totals from schedule prices and ignores tampere
         ->and((float) $booking->addons()->first()->price)->toBe((float) $addOn->price);
 });
 
+test('store requires and snapshots visa type when tour has visa category items', function () {
+    ['user' => $user, 'company' => $company, 'tour' => $tour, 'schedule' => $schedule] = createBookingCreateScenario('visatypevendor');
+    $company->companySetting()->updateOrCreate([], ['minimum_vat' => 11]);
+
+    $adultTwin = PriceCategory::create([
+        'company_id' => $company->id,
+        'name' => 'Adult Twin',
+        'room_type' => 'twin',
+    ]);
+    TourPrice::create([
+        'company_id' => $company->id,
+        'tour_code' => $tour->code,
+        'schedule_id' => $schedule->id,
+        'price_category_id' => $adultTwin->id,
+        'currency' => 'IDR',
+        'price' => 1_000_000,
+    ]);
+    $visaCategory = VisaCategory::create([
+        'company_id' => $company->id,
+        'name' => 'Visa Group A',
+        'slug' => 'visa-group-a-visatypevendor',
+    ]);
+    $taxableVisa = VisaCategoryItem::create([
+        'visa_category_id' => $visaCategory->id,
+        'description' => 'Taxable Visa',
+        'price' => 300_000,
+        'is_taxable' => true,
+    ]);
+    $nonTaxableVisa = VisaCategoryItem::create([
+        'visa_category_id' => $visaCategory->id,
+        'description' => 'Document Handling',
+        'price' => 100_000,
+        'is_taxable' => false,
+    ]);
+    $tour->forceFill(['visa_category_id' => $visaCategory->id])->save();
+
+    $basePayload = [
+        'booking_number' => 'BKG-VISA-TYPE-SNAPSHOT',
+        'tour_id' => $tour->id,
+        'departure_date' => $schedule->departure_date,
+        'pax_adult' => 2,
+        'pax_child' => 0,
+        'pax_infant' => 0,
+        'vendor_id' => $company->id,
+        'contact_name' => 'Visa Type',
+        'contact_email' => 'visa-type@example.com',
+        'contact_phone' => '08123456789',
+        'payment_type' => 'full_payment',
+        'payment_method' => 'manual_transfer',
+        'passengers' => [
+            [
+                'first_name' => 'Missing',
+                'last_name' => 'Visa',
+                'pob' => 'Jakarta',
+                'price_category' => 'Adult Twin',
+                'price_amount' => 1,
+            ],
+            [
+                'first_name' => 'Also',
+                'last_name' => 'Missing',
+                'pob' => 'Jakarta',
+                'price_category' => 'Adult Twin',
+                'price_amount' => 1,
+            ],
+        ],
+        'total_price' => 1,
+        'tax_amount' => 1,
+        'platform_fee' => 1,
+        'commission_amount' => 1,
+        'grand_total' => 1,
+    ];
+
+    $this->actingAs($user)
+        ->post(route('bookings.store', [
+            'username' => $company->username,
+            'tour' => $tour,
+        ]), $basePayload)
+        ->assertSessionHasErrors('passengers.0.visa_category_item_id');
+
+    $basePayload['passengers'][0]['visa_category_item_id'] = $taxableVisa->id;
+    $basePayload['passengers'][1]['visa_category_item_id'] = $nonTaxableVisa->id;
+
+    $this->actingAs($user)
+        ->post(route('bookings.store', [
+            'username' => $company->username,
+            'tour' => $tour,
+        ]), $basePayload)
+        ->assertRedirect();
+
+    $booking = Booking::where('booking_number', 'BKG-VISA-TYPE-SNAPSHOT')->firstOrFail();
+    $passengers = $booking->passengers()->orderBy('id')->get();
+
+    expect((float) $booking->total_price)->toBe(2_000_000.0)
+        ->and((float) $booking->tax_amount)->toBe(253_000.0)
+        ->and((float) $booking->platform_fee)->toBe(50_000.0)
+        ->and((float) $booking->grand_total)->toBe(2_703_000.0)
+        ->and($passengers[0]->visa_category_item_id)->toBe($taxableVisa->id)
+        ->and($passengers[0]->visa_type_description)->toBe('Taxable Visa')
+        ->and((float) $passengers[0]->visa_type_price)->toBe(300_000.0)
+        ->and($passengers[0]->visa_type_is_taxable)->toBeTrue()
+        ->and($passengers[1]->visa_category_item_id)->toBe($nonTaxableVisa->id)
+        ->and($passengers[1]->visa_type_description)->toBe('Document Handling')
+        ->and((float) $passengers[1]->visa_type_price)->toBe(100_000.0)
+        ->and($passengers[1]->visa_type_is_taxable)->toBeFalse();
+});
+
+test('store rejects visa type from another visa category', function () {
+    ['user' => $user, 'company' => $company, 'tour' => $tour, 'schedule' => $schedule] = createBookingCreateScenario('visatypeinvalidvendor');
+
+    $adultTwin = PriceCategory::create([
+        'company_id' => $company->id,
+        'name' => 'Adult Twin',
+        'room_type' => 'twin',
+    ]);
+    TourPrice::create([
+        'company_id' => $company->id,
+        'tour_code' => $tour->code,
+        'schedule_id' => $schedule->id,
+        'price_category_id' => $adultTwin->id,
+        'currency' => 'IDR',
+        'price' => 1_000_000,
+    ]);
+    $tourVisaCategory = VisaCategory::create([
+        'company_id' => $company->id,
+        'name' => 'Tour Visa',
+        'slug' => 'tour-visa-invalidvendor',
+    ]);
+    $otherVisaCategory = VisaCategory::create([
+        'company_id' => $company->id,
+        'name' => 'Other Visa',
+        'slug' => 'other-visa-invalidvendor',
+    ]);
+    $otherVisa = VisaCategoryItem::create([
+        'visa_category_id' => $otherVisaCategory->id,
+        'description' => 'Other Visa',
+        'price' => 100_000,
+        'is_taxable' => true,
+    ]);
+    $tour->forceFill(['visa_category_id' => $tourVisaCategory->id])->save();
+
+    $this->actingAs($user)
+        ->post(route('bookings.store', [
+            'username' => $company->username,
+            'tour' => $tour,
+        ]), [
+            'booking_number' => 'BKG-VISA-TYPE-INVALID',
+            'tour_id' => $tour->id,
+            'departure_date' => $schedule->departure_date,
+            'pax_adult' => 1,
+            'pax_child' => 0,
+            'pax_infant' => 0,
+            'vendor_id' => $company->id,
+            'contact_name' => 'Invalid Visa Type',
+            'contact_email' => 'invalid-visa@example.com',
+            'contact_phone' => '08123456789',
+            'payment_type' => 'full_payment',
+            'payment_method' => 'manual_transfer',
+            'passengers' => [
+                [
+                    'first_name' => 'Invalid',
+                    'last_name' => 'Visa',
+                    'pob' => 'Jakarta',
+                    'price_category' => 'Adult Twin',
+                    'price_amount' => 1,
+                    'visa_category_item_id' => $otherVisa->id,
+                ],
+            ],
+            'total_price' => 1,
+            'tax_amount' => 1,
+            'platform_fee' => 1,
+            'commission_amount' => 1,
+            'grand_total' => 1,
+        ])
+        ->assertSessionHasErrors('passengers.0.visa_category_item_id');
+});
+
 test('reserve recalculates booking totals from schedule prices and ignores tampered frontend totals', function () {
     ['user' => $user, 'company' => $company, 'tour' => $tour, 'schedule' => $schedule] = createBookingCreateScenario('authoritativereserve');
     $company->companySetting()->updateOrCreate([], ['minimum_vat' => 11]);
@@ -2813,6 +2991,34 @@ test('customer resume hydrates saved booking add ons with quantity', function ()
         ->where('existingBooking.addons.0.name', 'VISA')
         ->where('addOns.0.label', 'VISA')
         ->where('addOns.0.qty', 1));
+});
+
+test('booking create exposes editable taxable add on with zero quantity', function () {
+    ['user' => $user, 'company' => $company, 'tour' => $tour, 'schedule' => $schedule] = createBookingCreateScenario('editabletaxableaddonvendor');
+
+    TourAddOn::create([
+        'company_id' => $company->id,
+        'tour_id' => $tour->id,
+        'schedule_id' => $schedule->id,
+        'description' => 'Taxable Visa Add-on',
+        'price' => 500_000,
+        'edit_status' => true,
+        'is_taxable' => true,
+    ]);
+
+    $response = $this->actingAs($user)->get(route('bookings.create', [
+        'username' => $company->username,
+        'tour' => $tour,
+        'date' => $schedule->departure_date,
+    ]));
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->component('tours/bookings/create')
+        ->where('addOns.0.label', 'Taxable Visa Add-on')
+        ->where('addOns.0.qty', 0)
+        ->where('addOns.0.hasQty', true)
+        ->where('addOns.0.isTaxable', true));
 });
 
 test('customer can update booking snapshot before balance payment without resetting status', function () {

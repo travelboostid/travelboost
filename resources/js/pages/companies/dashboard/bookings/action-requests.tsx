@@ -88,24 +88,28 @@ type PageProps = {
 const tabDefinitions = [
     {
         value: 'cancel',
+        id: 'companies.dashboard.bookingCorrection.tabs.cancellations',
         defaultMessage: 'Cancellations',
         countKey: 'cancellations',
         icon: XIcon,
     },
     {
         value: 'refund',
+        id: 'companies.dashboard.bookingCorrection.tabs.refunds',
         defaultMessage: 'Refunds',
         countKey: 'refunds',
         icon: RotateCcwIcon,
     },
     {
         value: 'reschedule',
+        id: 'companies.dashboard.bookingCorrection.tabs.reschedules',
         defaultMessage: 'Reschedules',
         countKey: 'reschedules',
         icon: Clock3Icon,
     },
     {
         value: 'restore',
+        id: 'companies.dashboard.bookingCorrection.tabs.reactivation',
         defaultMessage: 'Reactivation',
         countKey: 'restores',
         icon: HistoryIcon,
@@ -143,11 +147,32 @@ function paginationLabel(
     return label
         .replace(
             '&laquo; Previous',
-            intl.formatMessage({ defaultMessage: 'Previous' }),
+            intl.formatMessage({
+                id: 'pagination.previous',
+                defaultMessage: 'Previous',
+            }),
         )
-        .replace('Next &raquo;', intl.formatMessage({ defaultMessage: 'Next' }))
-        .replace('&laquo;', intl.formatMessage({ defaultMessage: 'Previous' }))
-        .replace('&raquo;', intl.formatMessage({ defaultMessage: 'Next' }));
+        .replace(
+            'Next &raquo;',
+            intl.formatMessage({
+                id: 'pagination.next',
+                defaultMessage: 'Next',
+            }),
+        )
+        .replace(
+            '&laquo;',
+            intl.formatMessage({
+                id: 'pagination.previous',
+                defaultMessage: 'Previous',
+            }),
+        )
+        .replace(
+            '&raquo;',
+            intl.formatMessage({
+                id: 'pagination.next',
+                defaultMessage: 'Next',
+            }),
+        );
 }
 
 export default function Page({
@@ -169,6 +194,7 @@ export default function Page({
             tabDefinitions.map((tab) => ({
                 ...tab,
                 label: intl.formatMessage({
+                    id: tab.id,
                     defaultMessage: tab.defaultMessage,
                 }),
             })),
@@ -245,11 +271,17 @@ export default function Page({
     const emptyLabel =
         search.trim() === ''
             ? intl.formatMessage(
-                  { defaultMessage: 'No {action} yet.' },
+                  {
+                      id: 'companies.dashboard.bookingCorrection.empty.default',
+                      defaultMessage: 'No {action} yet.',
+                  },
                   { action: activeTab.label.toLowerCase() },
               )
             : intl.formatMessage(
-                  { defaultMessage: 'No {action} match your search.' },
+                  {
+                      id: 'companies.dashboard.bookingCorrection.empty.search',
+                      defaultMessage: 'No {action} match your search.',
+                  },
                   { action: activeTab.label.toLowerCase() },
               );
 
@@ -286,11 +318,13 @@ export default function Page({
             breadcrumb={[
                 {
                     title: intl.formatMessage({
+                        id: 'companies.dashboard.bookingCorrection.breadcrumb.tours',
                         defaultMessage: 'Tours',
                     }),
                 },
                 {
                     title: intl.formatMessage({
+                        id: 'companies.dashboard.bookingCorrection.title',
                         defaultMessage: 'Booking Correction',
                     }),
                 },
@@ -298,6 +332,7 @@ export default function Page({
         >
             <Head
                 title={intl.formatMessage({
+                    id: 'companies.dashboard.bookingCorrection.title',
                     defaultMessage: 'Booking Correction',
                 })}
             />
@@ -344,6 +379,7 @@ export default function Page({
                                     setGlobalFilter(event.target.value)
                                 }
                                 placeholder={intl.formatMessage({
+                                    id: 'companies.dashboard.bookingCorrection.search.placeholder',
                                     defaultMessage:
                                         'Search tour, booking ID, departure, customer, agent',
                                 })}
@@ -353,6 +389,7 @@ export default function Page({
                                 <button
                                     type="button"
                                     aria-label={intl.formatMessage({
+                                        id: 'companies.dashboard.bookingCorrection.search.clear',
                                         defaultMessage: 'Clear search',
                                     })}
                                     onClick={handleClearSearch}
@@ -442,11 +479,14 @@ function RequestPagination({
                 <span className="font-semibold text-foreground">
                     {requests.to ?? 0}
                 </span>{' '}
-                <FormattedMessage defaultMessage="of" />{' '}
+                <FormattedMessage id="pagination.of" defaultMessage="of" />{' '}
                 <span className="font-semibold text-foreground">
                     {requests.total}
                 </span>{' '}
-                <FormattedMessage defaultMessage="request(s)" />
+                <FormattedMessage
+                    id="companies.dashboard.bookingCorrection.pagination.requests"
+                    defaultMessage="request(s)"
+                />
             </p>
 
             {requests.last_page > 1 && (
@@ -523,17 +563,20 @@ function RequestRow({
                     <p className="break-words text-sm font-semibold text-foreground">
                         {request.booking?.tour?.name ??
                             intl.formatMessage({
+                                id: 'companies.dashboard.bookingCorrection.fallback.untitledTour',
                                 defaultMessage: 'Untitled tour',
                             })}
                     </p>
                     <p className="mt-1 text-xs text-muted-foreground">
                         {request.booking?.contact_name ??
                             intl.formatMessage({
+                                id: 'companies.dashboard.bookingCorrection.fallback.bookingContact',
                                 defaultMessage: 'Booking contact',
                             })}{' '}
                         -{' '}
                         {request.requester_company?.name ??
                             intl.formatMessage({
+                                id: 'companies.dashboard.bookingCorrection.fallback.agent',
                                 defaultMessage: 'Agent',
                             })}{' '}
                         - {formatDate(request.created_at)}
@@ -543,18 +586,21 @@ function RequestRow({
                 <div className="grid gap-2 text-xs text-muted-foreground sm:grid-cols-3">
                     <MetaValue
                         label={intl.formatMessage({
+                            id: 'companies.dashboard.bookingCorrection.meta.bookingStatus',
                             defaultMessage: 'Booking status',
                         })}
                         value={request.booking?.status ?? '-'}
                     />
                     <MetaValue
                         label={intl.formatMessage({
+                            id: 'companies.dashboard.bookingCorrection.meta.departure',
                             defaultMessage: 'Departure',
                         })}
                         value={formatDate(request.booking?.departure_date)}
                     />
                     <MetaValue
                         label={intl.formatMessage({
+                            id: 'companies.dashboard.bookingCorrection.meta.grandTotal',
                             defaultMessage: 'Grand total',
                         })}
                         value={formatIDR(request.booking?.grand_total ?? 0)}
@@ -599,7 +645,10 @@ function RequestRow({
                         onClick={() => onSubmitDecision(request.id, 'reject')}
                     >
                         <XIcon className="size-4" />
-                        <FormattedMessage defaultMessage="Reject" />
+                        <FormattedMessage
+                            id="companies.dashboard.bookingCorrection.actions.reject"
+                            defaultMessage="Reject"
+                        />
                     </Button>
                     <Button
                         type="button"
@@ -608,7 +657,10 @@ function RequestRow({
                         onClick={() => onSubmitDecision(request.id, 'approve')}
                     >
                         <CheckIcon className="size-4" />
-                        <FormattedMessage defaultMessage="Approve" />
+                        <FormattedMessage
+                            id="companies.dashboard.bookingCorrection.actions.approve"
+                            defaultMessage="Approve"
+                        />
                     </Button>
                 </div>
             )}
