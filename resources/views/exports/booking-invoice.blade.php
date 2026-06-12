@@ -759,12 +759,6 @@
                             {{ $formatCurrency($vatAmount) }}
                         </td>
                     </tr>
-                    <tr>
-                        <td>Platform Fee</td>
-                        <td class="amount">
-                            {{ $formatCurrency($platformFeeAmount) }}
-                        </td>
-                    </tr>
                     @foreach ($nonTaxableAddonSummaryRows as $addonSummary)
                         <tr>
                             <td>{{ $addonSummary['label'] }}</td>
@@ -773,6 +767,12 @@
                             </td>
                         </tr>
                     @endforeach
+                    <tr>
+                        <td>Platform Fee</td>
+                        <td class="amount">
+                            {{ $formatCurrency($platformFeeAmount) }}
+                        </td>
+                    </tr>
                     <tr class="total">
                         <td>Grand Total</td>
                         <td class="amount">
