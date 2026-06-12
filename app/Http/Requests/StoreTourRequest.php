@@ -49,6 +49,11 @@ class StoreTourRequest extends FormRequest
                 Rule::exists('product_commission_categories', 'id')
                     ->where('company_id', $company?->id),
             ],
+            'visa_category_id' => [
+                'nullable',
+                Rule::exists('visa_categories', 'id')
+                    ->where('company_id', $company?->id),
+            ],
             'parent_id' => 'nullable|exists:tours,id',
             'image_id' => 'nullable|exists:medias,id',
             'document_id' => 'nullable|exists:medias,id',
@@ -84,6 +89,7 @@ class StoreTourRequest extends FormRequest
             'category_id' => 'category',
             // TODO: add more
             'product_commission_category_id' => 'product commission category',
+            'visa_category_id' => 'visa category',
         ];
     }
 

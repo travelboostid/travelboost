@@ -38,6 +38,7 @@ use App\Http\Controllers\Companies\Dashboard\TourPriceController;
 use App\Http\Controllers\Companies\Dashboard\TourScheduleController;
 use App\Http\Controllers\Companies\Dashboard\VendorRegistrationController;
 use App\Http\Controllers\Companies\Dashboard\VendorTourCatalogController;
+use App\Http\Controllers\Companies\Dashboard\VisaCategoryController;
 use App\Http\Controllers\Companies\Dashboard\WalletController;
 use App\Http\Controllers\Companies\Dashboard\WalletTransactionsController;
 use App\Http\Controllers\Companies\Dashboard\WithdrawalController;
@@ -76,9 +77,13 @@ Route::prefix('companies')->middleware(['can:access-company-pages', 'use-analyti
             Route::get('/tours/{tour}/brochure', [VendorTourCatalogController::class, 'viewBrochure'])->name('tour.view-brochure');
         });
 
+        Route::get('agent-registrations/export/excel', [AgentRegistrationController::class, 'exportExcel'])->name('agent-registrations.export.excel');
+        Route::get('agent-registrations/export/pdf', [AgentRegistrationController::class, 'exportPdf'])->name('agent-registrations.export.pdf');
+        Route::get('agent-registrations/print', [AgentRegistrationController::class, 'print'])->name('agent-registrations.print');
         Route::resource('agent-registrations', AgentRegistrationController::class);
         Route::resource('agent-tiers', AgentTierController::class)->except(['create', 'show', 'edit']);
         Route::resource('product-commission-categories', ProductCommissionCategoryController::class)->except(['create', 'show', 'edit']);
+        Route::resource('visa-categories', VisaCategoryController::class)->except(['create', 'show', 'edit']);
         Route::get('tour-commission-rules/additional', [TourCommissionRuleController::class, 'additional'])->name('tour-commission-rules.additional');
         Route::put('tour-commission-rules/additional/{additionalRule}', [TourCommissionRuleController::class, 'updateAdditional'])->name('tour-commission-rules.additional.update');
         Route::delete('tour-commission-rules/additional/{additionalRule}', [TourCommissionRuleController::class, 'destroyAdditional'])->name('tour-commission-rules.additional.destroy');
@@ -147,6 +152,9 @@ Route::prefix('companies')->middleware(['can:access-company-pages', 'use-analyti
         Route::resource('teams', TeamController::class);
         Route::post('teams/{team}/resend-invitation', [TeamController::class, 'resendInvitation'])->name('teams.resend-invitation');
         Route::resource('roles', RoleController::class);
+        Route::get('customers/export/excel', [CustomerController::class, 'exportExcel'])->name('customers.export.excel');
+        Route::get('customers/export/pdf', [CustomerController::class, 'exportPdf'])->name('customers.export.pdf');
+        Route::get('customers/print', [CustomerController::class, 'print'])->name('customers.print');
         Route::resource('customers', CustomerController::class);
         Route::post('customers/{customer}/send-notification', [CustomerController::class, 'sendNotification'])
             ->name('customers.send-notification');

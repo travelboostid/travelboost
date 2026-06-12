@@ -13,26 +13,20 @@ class TourCategory extends Model
         'name',
         'description',
         'position_no',
+        'manual_reserved_limit_value',
+        'manual_reserved_limit_unit',
         'company_id',
     ];
 
-    /*
-      |--------------------------------------------------------------------------
-      | Relationships
-      |--------------------------------------------------------------------------
-      */
+    protected $casts = [
+        'manual_reserved_limit_value' => 'integer',
+    ];
 
-    /**
-     * Get the owner of the category (Vendor or Agent).
-     */
     public function company()
     {
         return $this->belongsTo(Company::class, 'company_id');
     }
 
-    /**
-     * Optional: If you have tours under this category
-     */
     public function tours()
     {
         return $this->hasMany(Tour::class);
@@ -41,5 +35,15 @@ class TourCategory extends Model
     public function agentTours()
     {
         return $this->hasMany(AgentTour::class);
+    }
+
+    public function getManualReservedLimitValueAttribute($value): int
+    {
+        return (int) ($value ?: 1);
+    }
+
+    public function getManualReservedLimitUnitAttribute($value): string
+    {
+        return $value ?: 'hour';
     }
 }

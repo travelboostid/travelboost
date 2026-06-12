@@ -896,7 +896,7 @@ function CategoryDepartureDialog({
                     <div className="min-h-0 space-y-5 overflow-auto p-6">
                         <div className="grid gap-4 md:grid-cols-2">
                             <div className="grid gap-2">
-                                <Label>Agent Tier</Label>
+                                <Label>Agent Category</Label>
                                 <Select
                                     value={String(selectedTierId)}
                                     onValueChange={(value) =>

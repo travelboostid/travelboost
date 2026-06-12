@@ -14,40 +14,6 @@ use Midtrans\CoreApi;
 use RuntimeException;
 use Throwable;
 
-class MidtransException extends RuntimeException
-{
-    public function __construct(
-        string $message,
-        public readonly ?string $statusCode = null,
-        public readonly ?array $response = null,
-    ) {
-        parent::__construct($message);
-    }
-
-    public static function fromThrowable(Throwable $exception): self
-    {
-        $message = $exception->getMessage();
-        $response = null;
-        $statusCode = null;
-
-        if (preg_match('/API response:\s*(\{.*\})\s*$/s', $message, $matches) === 1) {
-            $decoded = json_decode($matches[1], true);
-
-            if (is_array($decoded)) {
-                $response = $decoded;
-                $statusCode = isset($decoded['status_code']) ? (string) $decoded['status_code'] : null;
-                $statusMessage = isset($decoded['status_message']) ? (string) $decoded['status_message'] : null;
-
-                if ($statusMessage !== null && $statusMessage !== '') {
-                    $message = $statusMessage;
-                }
-            }
-        }
-
-        return new self($message, $statusCode, $response);
-    }
-}
-
 class MidtransService
 {
     public const CHARGE_LIFETIME_MINUTES = 180;
@@ -287,6 +253,8 @@ class MidtransService
 
             if ($materializedQrUrl !== null) {
                 $instructions['qr_url'] = $materializedQrUrl;
+            } else {
+                $instructions['qr_url'] = $qrImageUrl;
             }
         }
 
@@ -297,13 +265,13 @@ class MidtransService
     {
         $serverKey = (string) config('midtrans.server_key', '');
 
-        if ($serverKey === '') {
-            return null;
+        $request = Http::accept('image/png');
+
+        if ($serverKey !== '') {
+            $request = $request->withBasicAuth($serverKey, '');
         }
 
-        $response = Http::withBasicAuth($serverKey, '')
-            ->accept('image/png')
-            ->get($qrCodeUrl);
+        $response = $request->get($qrCodeUrl);
 
         if (! $response->successful()) {
             Log::warning('Midtrans QRIS image fetch failed', [

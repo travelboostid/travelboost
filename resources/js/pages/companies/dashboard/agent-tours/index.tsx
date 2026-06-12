@@ -777,7 +777,6 @@ export default function Page({ data }: PageProps) {
         React.useState<ColumnFiltersState>([]);
     const [columnVisibility, setColumnVisibility] =
         React.useState<VisibilityState>({ image: false });
-    const [rowSelection, setRowSelection] = React.useState({});
     const [activeTab, setActiveTab] = React.useState('active');
     const [globalFilter, setGlobalFilter] = React.useState('');
 
@@ -827,14 +826,12 @@ export default function Page({ data }: PageProps) {
         getSortedRowModel: getSortedRowModel(),
         getFilteredRowModel: getFilteredRowModel(),
         onColumnVisibilityChange: setColumnVisibility,
-        onRowSelectionChange: setRowSelection,
         onGlobalFilterChange: setGlobalFilter,
         globalFilterFn,
         state: {
             sorting,
             columnFilters,
             columnVisibility,
-            rowSelection,
             globalFilter,
         },
     });
@@ -957,10 +954,6 @@ export default function Page({ data }: PageProps) {
                                     table.getRowModel().rows.map((row) => (
                                         <TableRow
                                             key={row.id}
-                                            data-state={
-                                                row.getIsSelected() &&
-                                                'selected'
-                                            }
                                             className="hover:bg-slate-50/80 transition-colors border-b border-slate-100 last:border-none dark:border-slate-800 dark:hover:bg-slate-900/70"
                                         >
                                             {row
@@ -1006,17 +999,7 @@ export default function Page({ data }: PageProps) {
                     </div>
                 </div>
 
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 px-2">
-                    <p className="text-sm font-medium text-slate-500 bg-white px-4 py-2 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">
-                        <span className="text-slate-900 dark:text-slate-100">
-                            {table.getFilteredSelectedRowModel().rows.length}
-                        </span>{' '}
-                        of{' '}
-                        <span className="text-slate-900 dark:text-slate-100">
-                            {table.getFilteredRowModel().rows.length}
-                        </span>{' '}
-                        row(s) selected.
-                    </p>
+                <div className="flex justify-end pt-4 px-2">
                     <div className="flex gap-2">
                         <Button
                             variant="outline"

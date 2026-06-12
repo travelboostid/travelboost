@@ -7,16 +7,8 @@ use App\Models\TourAvailability;
 use App\Models\TourSchedule;
 use Illuminate\Support\Facades\DB;
 
-/**
- * Synchronizes the tour_availabilities snapshot for a given schedule slot.
- */
 class SyncAvailabilityAction
 {
-    /**
-     * Authoritative mapping from booking status backing value to snapshot column.
-     *
-     * @var array<string, string>
-     */
     private const STATUS_COLUMN_MAP = [
         'awaiting payment' => 'WP',
         'waiting payment approval' => 'WPA',
@@ -30,18 +22,8 @@ class SyncAvailabilityAction
         'waiting list' => 'WL',
     ];
 
-    /**
-     * Statuses that are intentionally not booking-derived availability columns.
-     *
-     * @var list<string>
-     */
     private const IGNORED_STATUSES = ['manual reserved'];
 
-    /**
-     * Snapshot columns that reduce available seat count.
-     *
-     * @var list<string>
-     */
     private const AVAILABILITY_COLUMNS = ['DP', 'FP', 'RS', 'BRS', 'WPA'];
 
     public function executeForBooking(Booking $booking): void
@@ -81,7 +63,7 @@ class SyncAvailabilityAction
 
     public function execute(int $tourId, string $departureDate, int $companyId): void
     {
-        DB::transaction(function () use ($tourId, $departureDate, $companyId) {
+        DB::transaction(function () use ($tourId, $departureDate, $companyId): void {
             $schedule = TourSchedule::where('tour_id', $tourId)
                 ->whereDate('departure_date', $departureDate)
                 ->where('company_id', $companyId)
@@ -129,6 +111,24 @@ class SyncAvailabilityAction
 
     private function syncAvailabilitySnapshot(TourAvailability $availability, int $tourId, string $departureDate, int $companyId): void
     {
+        if ($this->manualReservedShouldActivate($availability)) {
+            $this->activateManualReserved($availability);
+            $availability->refresh();
+        }
+
+        if ($this->manualReservedIsExpired($availability)) {
+            $availability->update([
+                'RS' => 0,
+                'available' => (int) ($availability->manual_reserved_original_available ?? $availability->max_pax),
+                'manual_reserved_pending_value' => null,
+                'manual_reserved_started_at' => null,
+                'manual_reserved_expires_at' => null,
+                'manual_reserved_original_available' => null,
+            ]);
+
+            $availability->refresh();
+        }
+
         $totals = Booking::query()
             ->select('status', DB::raw('COALESCE(SUM(COALESCE(pax_adult, 0) + COALESCE(pax_child, 0) + COALESCE(pax_infant, 0)), 0) as total_pax'))
             ->where('tour_id', $tourId)
@@ -166,6 +166,33 @@ class SyncAvailabilityAction
         $availability->update([
             ...$snapshotValues,
             'available' => $available,
+        ]);
+    }
+
+    private function manualReservedShouldActivate(TourAvailability $availability): bool
+    {
+        return (int) ($availability->manual_reserved_pending_value ?? 0) > 0
+            && (int) $availability->RS === 0
+            && $availability->manual_reserved_started_at !== null
+            && $availability->manual_reserved_started_at->lessThanOrEqualTo(now('UTC'));
+    }
+
+    private function manualReservedIsExpired(TourAvailability $availability): bool
+    {
+        return $availability->manual_reserved_expires_at !== null
+            && $availability->manual_reserved_expires_at->isPast();
+    }
+
+    private function activateManualReserved(TourAvailability $availability): void
+    {
+        $reservedSeats = (int) ($availability->manual_reserved_pending_value ?? 0);
+        $originalAvailable = max(0, (int) $availability->available);
+
+        $availability->update([
+            'RS' => $reservedSeats,
+            'available' => max(0, $originalAvailable - $reservedSeats),
+            'manual_reserved_pending_value' => null,
+            'manual_reserved_original_available' => $originalAvailable,
         ]);
     }
 }

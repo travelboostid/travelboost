@@ -11,7 +11,7 @@
 
             body {
                 font-family: Helvetica, Arial, sans-serif;
-                font-size: 8pt;
+                font-size: 7.2pt;
                 color: #0f172a;
                 margin: 0;
                 padding: 0;
@@ -98,7 +98,7 @@
                     Tour Product
                 </td>
                 <td
-                    colspan="5"
+                    colspan="7"
                     style="
                         font-size: 10pt;
                         font-weight: 700;
@@ -123,7 +123,7 @@
                     Departure Date
                 </td>
                 <td
-                    colspan="5"
+                    colspan="7"
                     style="
                         font-size: 10pt;
                         font-weight: 700;
@@ -147,10 +147,10 @@
                 >
                     {{ $company->name }}
                 </td>
-                <td colspan="7" style="border-bottom: 2px solid #111827"></td>
+                <td colspan="9" style="border-bottom: 2px solid #111827"></td>
             </tr>
             <tr>
-                <td colspan="16"></td>
+                <td colspan="18"></td>
             </tr>
         </table>
     @else
@@ -197,7 +197,7 @@
         <thead>
             <tr>
                 @php
-          $headerStyle = "background-color: #f1f5f9; border: 1px solid #cbd5e1; font-weight: 700; text-transform: uppercase; text-align: center; vertical-align: middle; padding: 8px 4px; font-size: 7.5pt; color: #0f172a;";
+          $headerStyle = "background-color: #f1f5f9; border: 1px solid #cbd5e1; font-weight: 700; text-transform: uppercase; text-align: center; vertical-align: middle; padding: 6px 3px; font-size: 6.7pt; color: #0f172a;";
         @endphp
                 <th
                     style="{{ $headerStyle }}"
@@ -206,7 +206,12 @@
                 </th>
                 <th
                     style="{{ $headerStyle }}"
-                    {!! !$isExcel ? 'width="18%"' : '' !!}
+                    {!! !$isExcel ? 'width="6%"' : '' !!}
+                    >Title
+                </th>
+                <th
+                    style="{{ $headerStyle }}"
+                    {!! !$isExcel ? 'width="15%"' : '' !!}
                     >Passenger Name
                 </th>
                 <th
@@ -276,6 +281,11 @@
                 </th>
                 <th
                     style="{{ $headerStyle }}"
+                    {!! !$isExcel ? 'width="11%"' : '' !!}
+                    >Agent Name
+                </th>
+                <th
+                    style="{{ $headerStyle }}"
                     {!! !$isExcel ? 'width="4%"' : '' !!}
                     >Val
                 </th>
@@ -284,123 +294,153 @@
         <tbody>
             @php
         $globalIndex = 1;
-        $bookingCounter = 0;
+        $agentCounter = 0;
         $roomCounter = 0;
       @endphp
-            @foreach ($groupedData as $bookingNumber => $bookingData)
+            @foreach ($groupedData as $agentGroup)
                 @php
-          $bookingCounter++;
-          $rowBackground = $bookingCounter % 2 === 0 ? 'background-color: #f8fafc;' : 'background-color: #ffffff;';
-          $isFirstInBooking = true;
+          $agentCounter++;
+          $agentBackground = $agentCounter % 2 === 0 ? '#f8fafc' : '#ffffff';
+          $agentBookings = $agentGroup['bookings'];
+          $agentName = $agentGroup['agent_name'];
+          $agentTotalPax = collect($agentBookings)->sum('total_pax');
         @endphp
-                @foreach ($bookingData['rooms'] as $roomGroup)
+                <tr>
+                    <td
+                        colspan="18"
+                        style="border: 1px solid #94a3b8; background-color: #e2e8f0; color: #0f172a; font-weight: 700; text-transform: uppercase; padding: 6px 8px;"
+                    >
+                        Agent: {{ $agentName }} ({{ $agentTotalPax }} pax)
+                    </td>
+                </tr>
+                @foreach ($agentBookings as $bookingData)
                     @php
-            $roomType = $roomGroup['room_type'];
-            $passengers = $roomGroup['passengers'];
-            $isFirstInRoom = true;
-            $roomPassengerCount = count($passengers);
-            $roomCounter++;
-            $roomNumber = $roomGroup['room_number'] ?? $roomCounter;
+            $rowBackground = "background-color: {$agentBackground};";
+            $isFirstInBooking = true;
+            $bookingNumber = $bookingData['booking_number'];
+            $bookingRooms = $bookingData['rooms'];
+            $totalPaxInBooking = $bookingData['total_pax'];
           @endphp
-                    @foreach ($passengers as $passenger)
+                    @foreach ($bookingRooms as $roomGroup)
                         @php
-              $cellStyle = "border: 1px solid #cbd5e1; padding: 6px 4px; vertical-align: middle; color: #0f172a; " . $rowBackground;
-              $fullName = trim(($passenger->title ? $passenger->title . '. ' : '') . $passenger->first_name . ' ' . $passenger->last_name);
-              $age = $passenger->dob ? \Carbon\Carbon::parse($passenger->dob)->age : '-';
-              $validityMonths = '-';
-              $isWarning = false;
-
-              if ($passenger->passport_expiry_date) {
-                $expiryDate = \Carbon\Carbon::parse($passenger->passport_expiry_date);
-                $referenceDate = $departure_date ? \Carbon\Carbon::parse($departure_date) : now();
-                $validityMonths = (int) round($referenceDate->diffInMonths($expiryDate, false));
-                $isWarning = $validityMonths < 6;
-              }
+              $roomType = $roomGroup['room_type'];
+              $passengers = $roomGroup['passengers'];
+              $isFirstInRoom = true;
+              $roomPassengerCount = count($passengers);
+              $roomCounter++;
+              $roomNumber = $roomGroup['room_number'] ?? $roomCounter;
             @endphp
-                        <tr>
-                            <td style="{{ $cellStyle }} text-align: center;">
-                                {{ $globalIndex++ }}
-                            </td>
-                            <td style="{{ $cellStyle }} font-weight: 700;">
-                                {{ $fullName }}
-                            </td>
+                        @foreach ($passengers as $passenger)
+                            @php
+                $cellStyle = "border: 1px solid #cbd5e1; padding: 6px 4px; vertical-align: middle; color: #0f172a; " . $rowBackground;
+                $fullName = trim($passenger->first_name . ' ' . $passenger->last_name);
+                $age = $passenger->dob ? \Carbon\Carbon::parse($passenger->dob)->age : '-';
+                $validityMonths = '-';
+                $isWarning = false;
 
-                            @if ($isFirstInRoom)
-                                <td
-                                    rowspan="{{ $roomPassengerCount }}"
-                                    style="{{ $cellStyle }} text-align: center; text-transform: uppercase; font-size: 7pt;"
-                                >
-                                    {{ $roomType }}
+                if ($passenger->passport_expiry_date) {
+                  $expiryDate = \Carbon\Carbon::parse($passenger->passport_expiry_date);
+                  $referenceDate = $departure_date ? \Carbon\Carbon::parse($departure_date) : now();
+                  $validityMonths = (int) round($referenceDate->diffInMonths($expiryDate, false));
+                  $isWarning = $validityMonths < 6;
+                }
+              @endphp
+                            <tr>
+                                <td style="{{ $cellStyle }} text-align: center;">
+                                    {{ $globalIndex++ }}
                                 </td>
-                                <td
-                                    rowspan="{{ $roomPassengerCount }}"
-                                    style="{{ $cellStyle }} text-align: center; font-weight: 700;"
-                                >
-                                    {{ $roomNumber }}
+                                <td style="{{ $cellStyle }} text-align: center; font-weight: 700;">
+                                    {{ $passenger->title ?: '-' }}
                                 </td>
+                                <td style="{{ $cellStyle }} font-weight: 700;">
+                                    {{ $fullName !== '' ? $fullName : '-' }}
+                                </td>
+
+                                @if ($isFirstInRoom)
+                                    <td
+                                        rowspan="{{ $roomPassengerCount }}"
+                                        style="{{ $cellStyle }} text-align: center; text-transform: uppercase; font-size: 7pt;"
+                                    >
+                                        {{ $roomType }}
+                                    </td>
+                                    <td
+                                        rowspan="{{ $roomPassengerCount }}"
+                                        style="{{ $cellStyle }} text-align: center; font-weight: 700;"
+                                    >
+                                        {{ $roomNumber }}
+                                    </td>
+                                    <td
+                                        rowspan="{{ $roomPassengerCount }}"
+                                        style="{{ $cellStyle }} text-align: center;"
+                                    ></td>
+                                @endif
+
                                 <td
-                                    rowspan="{{ $roomPassengerCount }}"
                                     style="{{ $cellStyle }} text-align: center;"
                                 ></td>
-                            @endif
-
-                            <td
-                                style="{{ $cellStyle }} text-align: center;"
-                            ></td>
-                            <td
-                                style="{{ $cellStyle }} text-align: center;"
-                            ></td>
-                            <td
-                                style="{{ $cellStyle }} font-size: 7pt; font-style: italic; color: #475569;"
-                            >
-                                {{ $passenger->note ?: '-' }}
-                            </td>
-                            <td
-                                style="{{ $cellStyle }} text-align: center; font-size: 8pt; mso-number-format: '\@'; font-family: monospace;"
-                            >
-                                {{ $passenger->passport_number ?: '-' }}
-                            </td>
-                            <td
-                                style="{{ $cellStyle }} text-align: center; font-size: 8pt;"
-                            >
-                                {{ $passenger->passport_issue_date ? \Carbon\Carbon::parse($passenger->passport_issue_date)->format('d/m/Y') : '-' }}
-                            </td>
-                            <td
-                                style="{{ $cellStyle }} text-align: center; font-size: 8pt; font-weight: 700;"
-                            >
-                                {{ $passenger->passport_expiry_date ? \Carbon\Carbon::parse($passenger->passport_expiry_date)->format('d/m/Y') : '-' }}
-                            </td>
-                            <td
-                                style="{{ $cellStyle }} text-transform: uppercase;"
-                            >
-                                {{ $passenger->pob ?: '-' }}
-                            </td>
-                            <td style="{{ $cellStyle }} text-align: center;">
-                                {{ $passenger->dob ? \Carbon\Carbon::parse($passenger->dob)->format('d/m/Y') : '-' }}
-                            </td>
-
-                            @if ($isFirstInBooking)
                                 <td
-                                    rowspan="{{ $bookingData['total_pax'] }}"
-                                    style="{{ $cellStyle }} text-align: center; font-size: 8pt; mso-number-format: '\@';"
+                                    style="{{ $cellStyle }} text-align: center;"
+                                ></td>
+                                <td
+                                    style="{{ $cellStyle }} font-size: 7pt; font-style: italic; color: #475569;"
                                 >
-                                    {{ $bookingData['contact_phone'] ?: '-' }}
+                                    {{ $passenger->note ?: '-' }}
                                 </td>
-                            @endif
+                                <td
+                                    style="{{ $cellStyle }} text-align: center; font-size: 8pt; mso-number-format: '\@'; font-family: monospace;"
+                                >
+                                    {{ $passenger->passport_number ?: '-' }}
+                                </td>
+                                <td
+                                    style="{{ $cellStyle }} text-align: center; font-size: 8pt;"
+                                >
+                                    {{ $passenger->passport_issue_date ? \Carbon\Carbon::parse($passenger->passport_issue_date)->format('d/m/Y') : '-' }}
+                                </td>
+                                <td
+                                    style="{{ $cellStyle }} text-align: center; font-size: 8pt; font-weight: 700;"
+                                >
+                                    {{ $passenger->passport_expiry_date ? \Carbon\Carbon::parse($passenger->passport_expiry_date)->format('d/m/Y') : '-' }}
+                                </td>
+                                <td
+                                    style="{{ $cellStyle }} text-transform: uppercase;"
+                                >
+                                    {{ $passenger->pob ?: '-' }}
+                                </td>
+                                <td style="{{ $cellStyle }} text-align: center;">
+                                    {{ $passenger->dob ? \Carbon\Carbon::parse($passenger->dob)->format('d/m/Y') : '-' }}
+                                </td>
 
-                            <td style="{{ $cellStyle }} text-align: center;">
-                                {{ $age }}
-                            </td>
-                            <td
-                                style="{{ $cellStyle }} text-align: center; font-weight: 700; {{ $isWarning ? 'background-color: #fee2e2; color: #dc2626;' : '' }}"
-                            >
-                                {{ $validityMonths }}
-                            </td>
-                        </tr>
-                        @php
-              $isFirstInBooking = false;
-              $isFirstInRoom = false;
-            @endphp
+                                @if ($isFirstInBooking)
+                                    <td
+                                        rowspan="{{ $totalPaxInBooking }}"
+                                        style="{{ $cellStyle }} text-align: center; font-size: 8pt; mso-number-format: '\@';"
+                                    >
+                                        {{ $bookingData['contact_phone'] ?: '-' }}
+                                    </td>
+                                @endif
+
+                                <td style="{{ $cellStyle }} text-align: center;">
+                                    {{ $age }}
+                                </td>
+                                @if ($isFirstInBooking)
+                                    <td
+                                        rowspan="{{ $totalPaxInBooking }}"
+                                        style="{{ $cellStyle }} text-align: center; font-weight: 700;"
+                                    >
+                                        {{ $agentName }}
+                                    </td>
+                                @endif
+                                <td
+                                    style="{{ $cellStyle }} text-align: center; font-weight: 700; {{ $isWarning ? 'background-color: #fee2e2; color: #dc2626;' : '' }}"
+                                >
+                                    {{ $validityMonths }}
+                                </td>
+                            </tr>
+                            @php
+                $isFirstInBooking = false;
+                $isFirstInRoom = false;
+              @endphp
+                        @endforeach
                     @endforeach
                 @endforeach
             @endforeach

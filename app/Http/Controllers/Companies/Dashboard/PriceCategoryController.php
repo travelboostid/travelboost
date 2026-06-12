@@ -7,10 +7,11 @@ use App\Models\Company;
 use App\Models\PriceCategory;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Inertia\Response;
 
 class PriceCategoryController extends Controller
 {
-    public function index(Request $request, Company $company)
+    public function index(Request $request, Company $company): Response
     {
         $categories = PriceCategory::where('company_id', $company->id)
             ->orderBy('id')

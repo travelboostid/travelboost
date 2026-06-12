@@ -396,6 +396,7 @@ class BookingIndexController extends Controller
     public function invoice(Company $company, Booking $booking, Request $request): HttpResponse
     {
         $companyType = $company->type->value ?? $company->type;
+        $isRequestedProforma = $this->canRenderDashboardProformaInvoice($booking, $request);
 
         abort_unless(in_array($companyType, ['agent', 'vendor'], true), 404);
         abort_unless(
@@ -403,7 +404,11 @@ class BookingIndexController extends Controller
             || ($companyType === 'vendor' && (int) $booking->vendor_id === (int) $company->id),
             404
         );
-        abort_unless(in_array($this->bookingStatusValue($booking), self::INVOICEABLE_STATUSES, true), 404);
+        abort_unless(
+            $isRequestedProforma
+            || in_array($this->bookingStatusValue($booking), self::INVOICEABLE_STATUSES, true),
+            404
+        );
 
         $booking->load([
             'user',
@@ -423,7 +428,7 @@ class BookingIndexController extends Controller
             ->sortBy(fn (Payment $payment): string => (string) ($payment->paid_at ?? $payment->created_at))
             ->values();
 
-        abort_if($paidPayments->isEmpty(), 404);
+        abort_if($paidPayments->isEmpty() && ! $isRequestedProforma, 404);
 
         $paymentDate = $paidPayments->last()?->paid_at ?? $paidPayments->last()?->created_at;
         $invoiceSchedule = $this->resolveInvoiceSchedule($booking);
@@ -438,7 +443,12 @@ class BookingIndexController extends Controller
         $paymentDetailsTotal = (float) collect($paymentDetails)->sum('amount');
         $vatAmount = (float) $booking->tax_amount;
         $paymentReceiver = app(BookingPaymentReceiverService::class)->resolveForBooking($booking);
-        $invoiceOptions = $this->invoiceOptions($company, $booking, $paymentReceiver['payment_mode']);
+        $invoiceOptions = $this->invoiceOptions(
+            $company,
+            $booking,
+            $paymentReceiver['payment_mode'],
+            $isRequestedProforma
+        );
         $requestedInvoiceType = $request->string('type')->toString();
         $invoiceType = collect($invoiceOptions)
             ->pluck('type')
@@ -450,7 +460,8 @@ class BookingIndexController extends Controller
         $isVendorToAgentInvoice = $invoiceType === 'vendor_to_agent';
         $isAgentToCustomerInvoice = $invoiceType === 'agent_to_customer';
         $isCustomerInvoice = ! $isVendorToAgentInvoice;
-        $isProforma = $this->bookingStatusValue($booking) === BookingStatus::DOWN_PAYMENT->value;
+        $isProforma = $isRequestedProforma
+            || $this->bookingStatusValue($booking) === BookingStatus::DOWN_PAYMENT->value;
         $paidAmount = (float) $paidPayments->sum('amount');
         $invoiceGrandTotal = $isVendorToAgentInvoice
             ? $paymentDetailsTotal + $vatAmount
@@ -467,7 +478,7 @@ class BookingIndexController extends Controller
         $customerPhone = $booking->contact_phone ?: $booking->user?->phone;
         $vatRate = $this->resolveInvoiceVatRate($booking);
         $deadline = $this->deadlinePayload($booking, $this->vendorSettings($booking)?->full_payment_deadline);
-        $filename = 'Invoice_'.$invoiceNumber.'.pdf';
+        $filename = ($isProforma ? 'Proforma_Invoice_' : 'Invoice_').$invoiceNumber.'.pdf';
 
         $pdf = Pdf::setOption(['isRemoteEnabled' => true])
             ->loadView('exports.booking-invoice', [
@@ -1586,9 +1597,16 @@ class BookingIndexController extends Controller
     /**
      * @return list<array{type: string, label: string}>
      */
-    private function invoiceOptions(Company $company, Booking $booking, ?string $paymentMode = null): array
-    {
-        if (! in_array($this->bookingStatusValue($booking), self::INVOICEABLE_STATUSES, true)) {
+    private function invoiceOptions(
+        Company $company,
+        Booking $booking,
+        ?string $paymentMode = null,
+        bool $allowProforma = false,
+    ): array {
+        if (
+            ! $allowProforma
+            && ! in_array($this->bookingStatusValue($booking), self::INVOICEABLE_STATUSES, true)
+        ) {
             return [];
         }
 
@@ -1596,7 +1614,8 @@ class BookingIndexController extends Controller
         $paymentMode ??= app(BookingPaymentReceiverService::class)
             ->resolveForBooking($booking)['payment_mode'];
         $orderSource = $this->bookingOrderSource($booking);
-        $isProforma = $this->bookingStatusValue($booking) === BookingStatus::DOWN_PAYMENT->value;
+        $isProforma = $allowProforma
+            || $this->bookingStatusValue($booking) === BookingStatus::DOWN_PAYMENT->value;
         $invoiceLabel = $isProforma ? 'Proforma Invoice' : 'Invoice';
 
         if ($companyType === 'vendor') {
@@ -2448,6 +2467,21 @@ class BookingIndexController extends Controller
                 $status === BookingStatus::WAITING_PAYMENT_APPROVAL->value
                 && $booking->reserved_type === 'payment_in_progress'
             );
+    }
+
+    private function canRenderDashboardProformaInvoice(Booking $booking, Request $request): bool
+    {
+        if (! $request->boolean('proforma')) {
+            return false;
+        }
+
+        $status = $this->bookingStatusValue($booking);
+
+        if ($status === BookingStatus::BOOKING_RESERVED->value) {
+            return true;
+        }
+
+        return $this->proformaInvoiceAvailable($booking);
     }
 
     private function isDueSoon(mixed $daysRemaining): bool

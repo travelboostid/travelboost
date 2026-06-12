@@ -2,6 +2,8 @@
 
 namespace Database\Seeders\Production;
 
+use Illuminate\Support\Str;
+
 class IslamicChinaTravelTourSeeder extends ProductionTourCatalogSeeder
 {
     protected function vendorUsername(): string
@@ -11,7 +13,7 @@ class IslamicChinaTravelTourSeeder extends ProductionTourCatalogSeeder
 
     protected function tours(): array
     {
-        return [
+        return $this->normalizeAddOns([
             [
                 'code' => 'ICT-001-001',
                 'name' => '8D Lingshan Wangxian Valley',
@@ -830,6 +832,25 @@ class IslamicChinaTravelTourSeeder extends ProductionTourCatalogSeeder
                     ],
                 ],
             ],
-        ];
+        ]);
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $tours
+     * @return list<array<string, mixed>>
+     */
+    private function normalizeAddOns(array $tours): array
+    {
+        return array_map(function (array $tour): array {
+            $tour['add_ons'] = collect($tour['add_ons'] ?? [])
+                ->reject(fn (mixed $_price, string $description): bool => Str::contains(Str::lower($description), 'visa'))
+                ->map(fn (mixed $price): array => [
+                    'price' => (int) $price,
+                    'is_taxable' => true,
+                ])
+                ->all();
+
+            return $tour;
+        }, $tours);
     }
 }

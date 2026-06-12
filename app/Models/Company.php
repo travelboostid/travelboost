@@ -113,6 +113,11 @@ class Company extends Model
         return $this->hasMany(ProductCommissionCategory::class);
     }
 
+    public function visaCategories()
+    {
+        return $this->hasMany(VisaCategory::class);
+    }
+
     public function tourCommissionRules()
     {
         return $this->hasMany(TourCommissionRule::class);
