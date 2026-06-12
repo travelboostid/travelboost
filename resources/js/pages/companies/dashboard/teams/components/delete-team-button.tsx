@@ -20,6 +20,7 @@ import { destroy } from '@/routes/companies/dashboard/teams';
 import { useForm } from '@inertiajs/react';
 import { Trash2Icon } from 'lucide-react';
 import { useState } from 'react';
+import { FormattedMessage, useIntl } from 'react-intl';
 
 export default function DeleteTeamButton({
     team,
@@ -28,6 +29,7 @@ export default function DeleteTeamButton({
     team: any;
     disabled?: boolean;
 }) {
+    const intl = useIntl();
     const { company } = usePageSharedDataProps();
     const [open, setOpen] = useState(false);
     const form = useForm();
@@ -52,26 +54,33 @@ export default function DeleteTeamButton({
                             variant="outline"
                             size="icon"
                             className="h-8 w-8 text-destructive"
-                            aria-label="Delete team member"
+                            aria-label={intl.formatMessage({
+                                defaultMessage: 'Delete team member',
+                            })}
                         >
                             <Trash2Icon className="size-4" />
                         </Button>
                     </AlertDialogTrigger>
                 </TooltipTrigger>
-                <TooltipContent>Delete team member</TooltipContent>
+                <TooltipContent>
+                    <FormattedMessage defaultMessage="Delete team member" />
+                </TooltipContent>
             </Tooltip>
             <AlertDialogContent>
                 <AlertDialogHeader>
-                    <AlertDialogTitle>Delete team member?</AlertDialogTitle>
+                    <AlertDialogTitle>
+                        <FormattedMessage defaultMessage="Delete team member?" />
+                    </AlertDialogTitle>
                     <AlertDialogDescription>
-                        This will remove the team member from this company
-                        immediately.
+                        <FormattedMessage defaultMessage="This will remove the team member from this company immediately." />
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogCancel>
+                        <FormattedMessage defaultMessage="Cancel" />
+                    </AlertDialogCancel>
                     <AlertDialogAction onClick={handleDelete}>
-                        Delete
+                        <FormattedMessage defaultMessage="Delete" />
                     </AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>

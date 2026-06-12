@@ -22,6 +22,7 @@ import {
     UsersRound,
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
+import { FormattedMessage, useIntl } from 'react-intl';
 
 type CommissionReportRow = {
     id: number;
@@ -77,6 +78,7 @@ export default function CommissionReportPage({
     options,
     companyType,
 }: CommissionReportProps) {
+    const intl = useIntl();
     const { company } = usePageSharedDataProps();
     const [localFilters, setLocalFilters] = useState({
         period_from: filters.period_from || '',
@@ -88,7 +90,6 @@ export default function CommissionReportPage({
     });
 
     const isVendor = companyType === 'vendor';
-    const commissionLabel = isVendor ? 'Commission Paid' : 'Commission Earned';
 
     const queryParams = useMemo(() => {
         const params: Record<string, string> = {};
@@ -129,42 +130,71 @@ export default function CommissionReportPage({
         return params ? `${path}?${params}` : path;
     };
 
-    const summaryCards = [
-        {
-            label: 'Records',
-            value: summary.total_records.toLocaleString('id-ID'),
-            icon: TicketCheck,
-        },
-        {
-            label: 'Total Pax',
-            value: summary.total_pax.toLocaleString('id-ID'),
-            icon: UsersRound,
-        },
-        {
-            label: commissionLabel,
-            value: formatIDR(Number(summary.total_commission || 0)),
-            icon: HandCoins,
-        },
-    ];
+    const summaryCards = useMemo(
+        () => [
+            {
+                id: 'records',
+                label: <FormattedMessage defaultMessage="Records" />,
+                value: summary.total_records.toLocaleString('id-ID'),
+                icon: TicketCheck,
+            },
+            {
+                id: 'pax',
+                label: <FormattedMessage defaultMessage="Total Pax" />,
+                value: summary.total_pax.toLocaleString('id-ID'),
+                icon: UsersRound,
+            },
+            {
+                id: 'commission',
+                label: isVendor ? (
+                    <FormattedMessage defaultMessage="Commission Paid" />
+                ) : (
+                    <FormattedMessage defaultMessage="Commission Earned" />
+                ),
+                value: formatIDR(Number(summary.total_commission || 0)),
+                icon: HandCoins,
+            },
+        ],
+        [
+            isVendor,
+            summary.total_commission,
+            summary.total_pax,
+            summary.total_records,
+        ],
+    );
 
     return (
         <CompanyDashboardLayout
             activeMenuIds={['reports.commissions']}
             openMenuIds={['reports']}
-            breadcrumb={[{ title: 'Reports' }, { title: 'Commission Report' }]}
+            breadcrumb={[
+                {
+                    title: intl.formatMessage({
+                        defaultMessage: 'Reports',
+                    }),
+                },
+                {
+                    title: intl.formatMessage({
+                        defaultMessage: 'Commission Report',
+                    }),
+                },
+            ]}
             containerClassName="min-h-screen bg-slate-50/60 dark:bg-slate-950"
         >
-            <Head title="Commission Report" />
+            <Head
+                title={intl.formatMessage({
+                    defaultMessage: 'Commission Report',
+                })}
+            />
 
             <div className="mx-auto max-w-[1400px] space-y-5 p-4">
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
                     <div>
                         <h1 className="text-2xl font-semibold tracking-tight text-slate-950 dark:text-slate-100">
-                            Commission Report
+                            <FormattedMessage defaultMessage="Commission Report" />
                         </h1>
                         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                            Full payment commission recap for tour sales and
-                            reconciliation.
+                            <FormattedMessage defaultMessage="Full payment commission recap for tour sales and reconciliation." />
                         </p>
                     </div>
                     <Button
@@ -173,7 +203,7 @@ export default function CommissionReportPage({
                         onClick={() => window.open(exportUrl())}
                     >
                         <FileSpreadsheet className="h-4 w-4" />
-                        Export Excel
+                        <FormattedMessage defaultMessage="Export Excel" />
                     </Button>
                 </div>
 
@@ -183,7 +213,7 @@ export default function CommissionReportPage({
 
                         return (
                             <Card
-                                key={item.label}
+                                key={item.id}
                                 className="border-slate-200 shadow-sm dark:border-slate-800 dark:bg-slate-900"
                             >
                                 <CardContent className="flex items-center justify-between gap-4 p-5">
@@ -230,7 +260,9 @@ export default function CommissionReportPage({
                                 }
                                 className="h-11 rounded-md border border-input bg-background px-3 text-sm shadow-xs outline-none transition-colors focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
                             >
-                                <option value="">All Agents</option>
+                                <option value="">
+                                    <FormattedMessage defaultMessage="All Agents" />
+                                </option>
                                 {options.agents.map((agent) => (
                                     <option key={agent.id} value={agent.id}>
                                         {agent.name}
@@ -248,7 +280,9 @@ export default function CommissionReportPage({
                                 }
                                 className="h-11 rounded-md border border-input bg-background px-3 text-sm shadow-xs outline-none transition-colors focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
                             >
-                                <option value="">All Vendors</option>
+                                <option value="">
+                                    <FormattedMessage defaultMessage="All Vendors" />
+                                </option>
                                 {options.vendors.map((vendor) => (
                                     <option key={vendor.id} value={vendor.id}>
                                         {vendor.name}
@@ -263,7 +297,9 @@ export default function CommissionReportPage({
                             }
                             className="h-11 rounded-md border border-input bg-background px-3 text-sm shadow-xs outline-none transition-colors focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
                         >
-                            <option value="">All Tour Codes</option>
+                            <option value="">
+                                <FormattedMessage defaultMessage="All Tour Codes" />
+                            </option>
                             {options.tourCodes.map((tour) => (
                                 <option key={tour.code} value={tour.code}>
                                     {tour.code} - {tour.name}
@@ -281,7 +317,9 @@ export default function CommissionReportPage({
                             }
                             className="h-11 rounded-md border border-input bg-background px-3 text-sm shadow-xs outline-none transition-colors disabled:cursor-not-allowed disabled:opacity-50 focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
                         >
-                            <option value="">All Departure Dates</option>
+                            <option value="">
+                                <FormattedMessage defaultMessage="All Departure Dates" />
+                            </option>
                             {options.departureDates.map((date) => (
                                 <option key={date} value={date}>
                                     {dateLabel(date)}
@@ -295,7 +333,7 @@ export default function CommissionReportPage({
                     <CardHeader className="border-b border-slate-100 bg-white px-5 py-4 dark:border-slate-800 dark:bg-slate-950/40">
                         <CardTitle className="flex items-center gap-2 text-base font-semibold text-slate-950 dark:text-slate-100">
                             <CalendarDays className="h-5 w-5 text-primary" />
-                            Commission Recap
+                            <FormattedMessage defaultMessage="Commission Recap" />
                         </CardTitle>
                     </CardHeader>
                     <div className="overflow-x-auto">
@@ -303,36 +341,46 @@ export default function CommissionReportPage({
                             <TableHeader className="bg-slate-50 dark:bg-slate-950/40">
                                 <TableRow className="text-xs uppercase tracking-wide">
                                     <TableHead className="w-14 px-5">
-                                        No
+                                        <FormattedMessage defaultMessage="No" />
                                     </TableHead>
                                     <TableHead className="min-w-32">
-                                        {isVendor ? 'Agent Code' : 'Vendor'}
+                                        {isVendor ? (
+                                            <FormattedMessage defaultMessage="Agent Code" />
+                                        ) : (
+                                            <FormattedMessage defaultMessage="Vendor" />
+                                        )}
                                     </TableHead>
                                     <TableHead className="min-w-56">
-                                        {isVendor
-                                            ? 'Agent Name'
-                                            : 'Vendor Name'}
+                                        {isVendor ? (
+                                            <FormattedMessage defaultMessage="Agent Name" />
+                                        ) : (
+                                            <FormattedMessage defaultMessage="Vendor Name" />
+                                        )}
                                     </TableHead>
                                     <TableHead className="min-w-32">
-                                        Tour Code
+                                        <FormattedMessage defaultMessage="Tour Code" />
                                     </TableHead>
                                     <TableHead className="min-w-64">
-                                        Tour Name
+                                        <FormattedMessage defaultMessage="Tour Name" />
                                     </TableHead>
                                     <TableHead className="min-w-52">
-                                        Departure Date
+                                        <FormattedMessage defaultMessage="Departure Date" />
                                     </TableHead>
                                     <TableHead className="min-w-40">
-                                        Booking Number
+                                        <FormattedMessage defaultMessage="Booking Number" />
                                     </TableHead>
                                     <TableHead className="min-w-52">
-                                        Customer
+                                        <FormattedMessage defaultMessage="Customer" />
                                     </TableHead>
                                     <TableHead className="min-w-20 text-center">
-                                        Pax
+                                        <FormattedMessage defaultMessage="Pax" />
                                     </TableHead>
                                     <TableHead className="min-w-44 pr-5 text-right">
-                                        {commissionLabel}
+                                        {isVendor ? (
+                                            <FormattedMessage defaultMessage="Commission Paid" />
+                                        ) : (
+                                            <FormattedMessage defaultMessage="Commission Earned" />
+                                        )}
                                     </TableHead>
                                 </TableRow>
                             </TableHeader>
@@ -343,7 +391,7 @@ export default function CommissionReportPage({
                                             colSpan={10}
                                             className="h-40 text-center text-slate-500"
                                         >
-                                            No commission report data found.
+                                            <FormattedMessage defaultMessage="No commission report data found." />
                                         </TableCell>
                                     </TableRow>
                                 ) : (

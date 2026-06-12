@@ -14,18 +14,23 @@ class RolePermissionSeeder extends Seeder
         $permissions = config('travelboost.permissions');
 
         foreach ($permissions as $permission) {
-            Permission::firstOrCreate([
-                'name' => $permission['name'],
-                'display_name' => $permission['display_name'],
-                'description' => $permission['description'],
-            ]);
+            Permission::query()->updateOrCreate(
+                ['name' => $permission['name']],
+                [
+                    'display_name' => $permission['display_name'],
+                    'description' => $permission['description'],
+                ],
+            );
         }
+
         foreach ($roles as $role) {
-            $r = Role::firstOrCreate([
-                'name' => $role['name'],
-                'display_name' => $role['display_name'],
-                'description' => $role['description'],
-            ]);
+            $r = Role::query()->updateOrCreate(
+                ['name' => $role['name']],
+                [
+                    'display_name' => $role['display_name'],
+                    'description' => $role['description'],
+                ],
+            );
             $r->syncPermissions($role['permissions']);
         }
     }

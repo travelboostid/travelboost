@@ -342,31 +342,32 @@ abstract class ProductionTourCatalogSeeder extends Seeder
         };
 
         $slug = Str::slug($categoryName);
+        $now = now();
 
-        $existingId = DB::table('product_commission_categories')
+        DB::table('product_commission_categories')->updateOrInsert(
+            [
+                'company_id' => $companyId,
+                'slug' => $slug,
+            ],
+            [
+                'category_name' => $categoryName,
+                'description' => $categoryName,
+                'sort_order' => match ($slug) {
+                    'produk-umum' => 1,
+                    'promo' => 2,
+                    'super-promo' => 3,
+                    default => 99,
+                },
+                'is_active' => true,
+                'updated_at' => $now,
+                'created_at' => $now,
+            ],
+        );
+
+        return (int) DB::table('product_commission_categories')
             ->where('company_id', $companyId)
             ->where('slug', $slug)
             ->value('id');
-
-        if ($existingId) {
-            return (int) $existingId;
-        }
-
-        return (int) DB::table('product_commission_categories')->insertGetId([
-            'company_id' => $companyId,
-            'category_name' => $categoryName,
-            'description' => $categoryName,
-            'slug' => $slug,
-            'sort_order' => match ($slug) {
-                'produk-umum' => 1,
-                'promo' => 2,
-                'super-promo' => 3,
-                default => 99,
-            },
-            'is_active' => true,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
     }
 
     private function visaCategoryId(int $companyId, string $sourceName): ?int

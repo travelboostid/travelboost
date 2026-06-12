@@ -21,7 +21,8 @@ import {
     SearchIcon,
     XIcon,
 } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { FormattedMessage, useIntl } from 'react-intl';
 
 type ActionKey = 'cancel' | 'refund' | 'reschedule' | 'restore';
 
@@ -84,28 +85,28 @@ type PageProps = {
     actionRequiredCounts: ActionCounts;
 };
 
-const tabs = [
+const tabDefinitions = [
     {
         value: 'cancel',
-        label: 'Cancellations',
+        defaultMessage: 'Cancellations',
         countKey: 'cancellations',
         icon: XIcon,
     },
     {
         value: 'refund',
-        label: 'Refunds',
+        defaultMessage: 'Refunds',
         countKey: 'refunds',
         icon: RotateCcwIcon,
     },
     {
         value: 'reschedule',
-        label: 'Reschedules',
+        defaultMessage: 'Reschedules',
         countKey: 'reschedules',
         icon: Clock3Icon,
     },
     {
         value: 'restore',
-        label: 'Reactivation',
+        defaultMessage: 'Reactivation',
         countKey: 'restores',
         icon: HistoryIcon,
     },
@@ -135,12 +136,18 @@ function reviewerText(request: ActionRequest) {
     return `${request.reviewer.action_label} ${request.reviewer.role_label} (${request.reviewer.user_name})`;
 }
 
-function paginationLabel(label: string): string {
+function paginationLabel(
+    label: string,
+    intl: ReturnType<typeof useIntl>,
+): string {
     return label
-        .replace('&laquo; Previous', 'Previous')
-        .replace('Next &raquo;', 'Next')
-        .replace('&laquo;', 'Previous')
-        .replace('&raquo;', 'Next');
+        .replace(
+            '&laquo; Previous',
+            intl.formatMessage({ defaultMessage: 'Previous' }),
+        )
+        .replace('Next &raquo;', intl.formatMessage({ defaultMessage: 'Next' }))
+        .replace('&laquo;', intl.formatMessage({ defaultMessage: 'Previous' }))
+        .replace('&raquo;', intl.formatMessage({ defaultMessage: 'Next' }));
 }
 
 export default function Page({
@@ -150,11 +157,23 @@ export default function Page({
     canReviewRequests,
     actionRequiredCounts,
 }: PageProps) {
+    const intl = useIntl();
     const { company } = usePageSharedDataProps() as {
         company: { username: string };
     };
     const [processingId, setProcessingId] = useState<number | null>(null);
     const [globalFilter, setGlobalFilter] = useState(search);
+
+    const tabs = useMemo(
+        () =>
+            tabDefinitions.map((tab) => ({
+                ...tab,
+                label: intl.formatMessage({
+                    defaultMessage: tab.defaultMessage,
+                }),
+            })),
+        [intl],
+    );
 
     const activeTab = tabs.find((tab) => tab.value === activeAction) ?? tabs[0];
 
@@ -225,8 +244,14 @@ export default function Page({
 
     const emptyLabel =
         search.trim() === ''
-            ? `No ${activeTab.label.toLowerCase()} yet.`
-            : `No ${activeTab.label.toLowerCase()} match your search.`;
+            ? intl.formatMessage(
+                  { defaultMessage: 'No {action} yet.' },
+                  { action: activeTab.label.toLowerCase() },
+              )
+            : intl.formatMessage(
+                  { defaultMessage: 'No {action} match your search.' },
+                  { action: activeTab.label.toLowerCase() },
+              );
 
     const submitDecision = (
         requestId: number,
@@ -258,9 +283,24 @@ export default function Page({
         <CompanyDashboardLayout
             openMenuIds={['tours']}
             activeMenuIds={['tours.booking-correction']}
-            breadcrumb={[{ title: 'Tours' }, { title: 'Booking Correction' }]}
+            breadcrumb={[
+                {
+                    title: intl.formatMessage({
+                        defaultMessage: 'Tours',
+                    }),
+                },
+                {
+                    title: intl.formatMessage({
+                        defaultMessage: 'Booking Correction',
+                    }),
+                },
+            ]}
         >
-            <Head title="Booking Correction" />
+            <Head
+                title={intl.formatMessage({
+                    defaultMessage: 'Booking Correction',
+                })}
+            />
 
             <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 p-4 md:p-6">
                 <Tabs
@@ -303,13 +343,18 @@ export default function Page({
                                 onChange={(event) =>
                                     setGlobalFilter(event.target.value)
                                 }
-                                placeholder="Search tour, booking ID, departure, customer, agent"
+                                placeholder={intl.formatMessage({
+                                    defaultMessage:
+                                        'Search tour, booking ID, departure, customer, agent',
+                                })}
                                 className="h-9 w-full rounded-lg border-slate-200 bg-background pl-9 pr-9 text-xs font-medium shadow-inner shadow-slate-100/70 transition-all placeholder:text-[13px] placeholder:font-normal placeholder:text-muted-foreground/70 focus-visible:border-primary/50 focus-visible:ring-2 focus-visible:ring-primary/20 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:shadow-black/20 dark:placeholder:text-slate-500"
                             />
                             {globalFilter.trim() !== '' && (
                                 <button
                                     type="button"
-                                    aria-label="Clear search"
+                                    aria-label={intl.formatMessage({
+                                        defaultMessage: 'Clear search',
+                                    })}
                                     onClick={handleClearSearch}
                                     className="absolute right-2 top-1/2 flex size-6 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                                 >
@@ -381,6 +426,8 @@ function RequestPagination({
 }: {
     requests: PaginatedActionRequests;
 }) {
+    const intl = useIntl();
+
     if (requests.total === 0) {
         return null;
     }
@@ -395,11 +442,11 @@ function RequestPagination({
                 <span className="font-semibold text-foreground">
                     {requests.to ?? 0}
                 </span>{' '}
-                of{' '}
+                <FormattedMessage defaultMessage="of" />{' '}
                 <span className="font-semibold text-foreground">
                     {requests.total}
                 </span>{' '}
-                request(s)
+                <FormattedMessage defaultMessage="request(s)" />
             </p>
 
             {requests.last_page > 1 && (
@@ -421,7 +468,7 @@ function RequestPagination({
                             disabled={!link.url}
                             className="min-w-9 border-slate-200"
                         >
-                            {paginationLabel(link.label)}
+                            {paginationLabel(link.label, intl)}
                         </Button>
                     ))}
                 </div>
@@ -444,6 +491,7 @@ function RequestRow({
         decision: 'approve' | 'reject',
     ) => void;
 }) {
+    const intl = useIntl();
     const canReview = canReviewRequests && request.status === 'pending';
     const reviewedBy = reviewerText(request);
 
@@ -473,26 +521,42 @@ function RequestRow({
 
                 <div className="min-w-0">
                     <p className="break-words text-sm font-semibold text-foreground">
-                        {request.booking?.tour?.name ?? 'Untitled tour'}
+                        {request.booking?.tour?.name ??
+                            intl.formatMessage({
+                                defaultMessage: 'Untitled tour',
+                            })}
                     </p>
                     <p className="mt-1 text-xs text-muted-foreground">
-                        {request.booking?.contact_name ?? 'Booking contact'} -{' '}
-                        {request.requester_company?.name ?? 'Agent'} -{' '}
-                        {formatDate(request.created_at)}
+                        {request.booking?.contact_name ??
+                            intl.formatMessage({
+                                defaultMessage: 'Booking contact',
+                            })}{' '}
+                        -{' '}
+                        {request.requester_company?.name ??
+                            intl.formatMessage({
+                                defaultMessage: 'Agent',
+                            })}{' '}
+                        - {formatDate(request.created_at)}
                     </p>
                 </div>
 
                 <div className="grid gap-2 text-xs text-muted-foreground sm:grid-cols-3">
                     <MetaValue
-                        label="Booking status"
+                        label={intl.formatMessage({
+                            defaultMessage: 'Booking status',
+                        })}
                         value={request.booking?.status ?? '-'}
                     />
                     <MetaValue
-                        label="Departure"
+                        label={intl.formatMessage({
+                            defaultMessage: 'Departure',
+                        })}
                         value={formatDate(request.booking?.departure_date)}
                     />
                     <MetaValue
-                        label="Grand total"
+                        label={intl.formatMessage({
+                            defaultMessage: 'Grand total',
+                        })}
                         value={formatIDR(request.booking?.grand_total ?? 0)}
                     />
                 </div>
@@ -535,7 +599,7 @@ function RequestRow({
                         onClick={() => onSubmitDecision(request.id, 'reject')}
                     >
                         <XIcon className="size-4" />
-                        Reject
+                        <FormattedMessage defaultMessage="Reject" />
                     </Button>
                     <Button
                         type="button"
@@ -544,7 +608,7 @@ function RequestRow({
                         onClick={() => onSubmitDecision(request.id, 'approve')}
                     >
                         <CheckIcon className="size-4" />
-                        Approve
+                        <FormattedMessage defaultMessage="Approve" />
                     </Button>
                 </div>
             )}

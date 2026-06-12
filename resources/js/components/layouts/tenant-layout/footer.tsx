@@ -119,7 +119,7 @@ export function Footer() {
                             </li>
                             <li>
                                 <Link
-                                    href="#"
+                                    href="/cookie-policy"
                                     className="text-background/70 hover:text-background transition-colors text-sm"
                                 >
                                     Kebijakan Cookie

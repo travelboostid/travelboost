@@ -1,6 +1,7 @@
 import { formatIDR } from '@/lib/utils';
 import { TrendingUp, Users, Wallet } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import { FormattedMessage } from 'react-intl';
 
 const normalizeCurrency = (value: string) =>
     value.replace(/^Rp[\s\u00a0]*/i, '');
@@ -32,6 +33,18 @@ function CurrencyAmount({ value }: { value: string }) {
     );
 }
 
+type MetricConfig = {
+    key: string;
+    label: React.ReactNode;
+    value: string | number;
+    isCurrency?: boolean;
+    sub: React.ReactNode;
+    icon: React.ReactNode;
+    color: string;
+    className?: string;
+    control?: React.ReactNode;
+};
+
 export function SectionCards({ stats, company }: any) {
     const isVendor = company.type === 'vendor';
     const [revenuePeriod, setRevenuePeriod] = useState<'monthly' | 'yearly'>(
@@ -50,59 +63,72 @@ export function SectionCards({ stats, company }: any) {
     }, [revenuePeriod, stats.sales]);
 
     const revenueSubLabel =
-        revenuePeriod === 'yearly' ? 'Current Year' : 'Current Month';
+        revenuePeriod === 'yearly' ? (
+            <FormattedMessage defaultMessage="Current Year" />
+        ) : (
+            <FormattedMessage defaultMessage="Current Month" />
+        );
 
-    const metrics = isVendor
+    const periodToggle = (
+        period: 'monthly' | 'yearly',
+        setPeriod: (value: 'monthly' | 'yearly') => void,
+    ) => (
+        <div className="absolute top-4 right-4 inline-flex rounded-full border border-slate-200 bg-slate-50 p-0.5 dark:border-slate-700 dark:bg-slate-800">
+            {(
+                [
+                    { value: 'monthly' as const, message: 'Month' as const },
+                    { value: 'yearly' as const, message: 'Year' as const },
+                ] as const
+            ).map((option) => (
+                <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => setPeriod(option.value)}
+                    className={`rounded-full px-2.5 py-1 text-[10px] font-semibold transition ${
+                        period === option.value
+                            ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-700 dark:text-slate-100'
+                            : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
+                    }`}
+                >
+                    {option.message === 'Month' ? (
+                        <FormattedMessage defaultMessage="Month" />
+                    ) : (
+                        <FormattedMessage defaultMessage="Year" />
+                    )}
+                </button>
+            ))}
+        </div>
+    );
+
+    const metrics: MetricConfig[] = isVendor
         ? [
               {
                   key: 'revenue',
-                  label: 'Revenue',
+                  label: <FormattedMessage defaultMessage="Revenue" />,
                   value: revenueValue,
                   isCurrency: true,
                   sub: revenueSubLabel,
                   icon: <Wallet className="text-primary" size={16} />,
                   color: 'bg-primary/10 dark:bg-primary/20',
                   className: 'md:col-span-2',
-                  control: (
-                      <div className="absolute top-4 right-4 inline-flex rounded-full border border-slate-200 bg-slate-50 p-0.5 dark:border-slate-700 dark:bg-slate-800">
-                          {[
-                              { value: 'monthly', label: 'Month' },
-                              { value: 'yearly', label: 'Year' },
-                          ].map((option) => (
-                              <button
-                                  key={option.value}
-                                  type="button"
-                                  onClick={() =>
-                                      setRevenuePeriod(
-                                          option.value as 'monthly' | 'yearly',
-                                      )
-                                  }
-                                  className={`rounded-full px-2.5 py-1 text-[10px] font-semibold transition ${
-                                      revenuePeriod === option.value
-                                          ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-700 dark:text-slate-100'
-                                          : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
-                                  }`}
-                              >
-                                  {option.label}
-                              </button>
-                          ))}
-                      </div>
-                  ),
+                  control: periodToggle(revenuePeriod, setRevenuePeriod),
               },
               {
                   key: 'active-agents',
-                  label: 'Active Agents',
+                  label: <FormattedMessage defaultMessage="Active Agents" />,
                   value: stats.counters?.active_agents || 0,
-                  sub: 'Registered Partners',
+                  sub: (
+                      <FormattedMessage defaultMessage="Registered Partners" />
+                  ),
                   icon: <TrendingUp className="text-emerald-500" size={16} />,
                   color: 'bg-emerald-50 dark:bg-emerald-500/10',
                   className: 'md:col-span-1',
               },
               {
                   key: 'network',
-                  label: 'Network',
+                  label: <FormattedMessage defaultMessage="Network" />,
                   value: stats.counters?.customers || 0,
-                  sub: 'Active Customers',
+                  sub: <FormattedMessage defaultMessage="Active Customers" />,
                   icon: <Users className="text-orange-500" size={16} />,
                   color: 'bg-orange-50 dark:bg-orange-500/10',
                   className: 'md:col-span-1',
@@ -111,49 +137,22 @@ export function SectionCards({ stats, company }: any) {
         : [
               {
                   key: 'revenue',
-                  label: 'Revenue',
+                  label: <FormattedMessage defaultMessage="Revenue" />,
                   value: formatIDR(
                       revenuePeriod === 'yearly'
                           ? stats.sales?.yearly?.idr || 0
                           : stats.sales?.monthly?.idr || 0,
                   ),
                   isCurrency: true,
-                  sub:
-                      revenuePeriod === 'yearly'
-                          ? 'Current Year'
-                          : 'Current Month',
+                  sub: revenueSubLabel,
                   icon: <Wallet className="text-primary" size={16} />,
                   color: 'bg-primary/10 dark:bg-primary/20',
                   className: 'md:col-span-2',
-                  control: (
-                      <div className="absolute top-4 right-4 inline-flex rounded-full border border-slate-200 bg-slate-50 p-0.5 dark:border-slate-700 dark:bg-slate-800">
-                          {[
-                              { value: 'monthly', label: 'Month' },
-                              { value: 'yearly', label: 'Year' },
-                          ].map((option) => (
-                              <button
-                                  key={option.value}
-                                  type="button"
-                                  onClick={() =>
-                                      setRevenuePeriod(
-                                          option.value as 'monthly' | 'yearly',
-                                      )
-                                  }
-                                  className={`rounded-full px-2.5 py-1 text-[10px] font-semibold transition ${
-                                      revenuePeriod === option.value
-                                          ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-700 dark:text-slate-100'
-                                          : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
-                                  }`}
-                              >
-                                  {option.label}
-                              </button>
-                          ))}
-                      </div>
-                  ),
+                  control: periodToggle(revenuePeriod, setRevenuePeriod),
               },
               {
                   key: 'commission',
-                  label: 'Commission',
+                  label: <FormattedMessage defaultMessage="Commission" />,
                   value: formatIDR(
                       commissionPeriod === 'yearly'
                           ? stats.commission?.yearly || 0
@@ -161,43 +160,21 @@ export function SectionCards({ stats, company }: any) {
                   ),
                   isCurrency: true,
                   sub:
-                      commissionPeriod === 'yearly'
-                          ? 'Current Year'
-                          : 'Current Month',
+                      commissionPeriod === 'yearly' ? (
+                          <FormattedMessage defaultMessage="Current Year" />
+                      ) : (
+                          <FormattedMessage defaultMessage="Current Month" />
+                      ),
                   icon: <TrendingUp className="text-emerald-500" size={16} />,
                   color: 'bg-emerald-50 dark:bg-emerald-500/10',
                   className: 'md:col-span-2',
-                  control: (
-                      <div className="absolute top-4 right-4 inline-flex rounded-full border border-slate-200 bg-slate-50 p-0.5 dark:border-slate-700 dark:bg-slate-800">
-                          {[
-                              { value: 'monthly', label: 'Month' },
-                              { value: 'yearly', label: 'Year' },
-                          ].map((option) => (
-                              <button
-                                  key={option.value}
-                                  type="button"
-                                  onClick={() =>
-                                      setCommissionPeriod(
-                                          option.value as 'monthly' | 'yearly',
-                                      )
-                                  }
-                                  className={`rounded-full px-2.5 py-1 text-[10px] font-semibold transition ${
-                                      commissionPeriod === option.value
-                                          ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-700 dark:text-slate-100'
-                                          : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
-                                  }`}
-                              >
-                                  {option.label}
-                              </button>
-                          ))}
-                      </div>
-                  ),
+                  control: periodToggle(commissionPeriod, setCommissionPeriod),
               },
               {
                   key: 'network',
-                  label: 'Network',
+                  label: <FormattedMessage defaultMessage="Network" />,
                   value: stats.counters?.customers || 0,
-                  sub: 'Active Customers',
+                  sub: <FormattedMessage defaultMessage="Active Customers" />,
                   icon: <Users className="text-orange-500" size={16} />,
                   color: 'bg-orange-50 dark:bg-orange-500/10',
                   className: 'md:col-span-1',

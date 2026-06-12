@@ -13,6 +13,7 @@
         "format": "prettier --write resources/",
         "format:check": "prettier --check resources/",
         "lint": "eslint . --fix",
+        "orval": "orval --config orval.config.js",
         "types": "tsc --noEmit",
         "dev:init": "pnpm install && composer install && pnpm dev:setenv",
         "dev:min": "concurrently \"pnpm dev:vite\" \"pnpm dev:serve\"",

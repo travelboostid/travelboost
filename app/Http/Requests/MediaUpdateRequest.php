@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Media;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -12,7 +13,10 @@ class MediaUpdateRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return true;
+        $media = $this->route('media');
+
+        return $media instanceof Media
+            && $this->user()->can('update', $media);
     }
 
     /**

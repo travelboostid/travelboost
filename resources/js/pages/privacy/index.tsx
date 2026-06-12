@@ -172,6 +172,14 @@ export default function Privacy() {
                             mengontrol penggunaan cookies melalui pengaturan
                             browser Anda. Jika Anda menolak cookies, beberapa
                             fungsi dari layanan kami mungkin tidak tersedia.
+                            Detail lengkap tersedia di{' '}
+                            <Link
+                                href="/cookie-policy"
+                                className="text-primary hover:underline"
+                            >
+                                Kebijakan Cookie
+                            </Link>
+                            .
                         </p>
                     </div>
 

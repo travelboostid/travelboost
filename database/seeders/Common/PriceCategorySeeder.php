@@ -9,7 +9,6 @@ class PriceCategorySeeder extends Seeder
 {
     public function run(): void
     {
-        // ambil semua company
         $companies = DB::table('companies')->pluck('id');
 
         $categories = [
@@ -60,21 +59,23 @@ class PriceCategorySeeder extends Seeder
             ],
         ];
 
-        $data = [];
+        $now = now();
 
         foreach ($companies as $companyId) {
             foreach ($categories as $cat) {
-                $data[] = [
-                    'company_id' => $companyId,
-                    'name' => $cat['name'],
-                    'room_type' => $cat['room_type'],
-                    'description' => $cat['description'],
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ];
+                DB::table('price_categories')->updateOrInsert(
+                    [
+                        'company_id' => $companyId,
+                        'name' => $cat['name'],
+                    ],
+                    [
+                        'room_type' => $cat['room_type'],
+                        'description' => $cat['description'],
+                        'updated_at' => $now,
+                        'created_at' => $now,
+                    ],
+                );
             }
         }
-
-        DB::table('price_categories')->insert($data);
     }
 }

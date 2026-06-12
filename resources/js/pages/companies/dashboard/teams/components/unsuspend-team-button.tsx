@@ -20,8 +20,10 @@ import { update } from '@/routes/companies/dashboard/teams';
 import { useForm } from '@inertiajs/react';
 import { UserCheckIcon } from 'lucide-react';
 import { useState } from 'react';
+import { FormattedMessage, useIntl } from 'react-intl';
 
 export default function UnsuspendTeamButton({ team }: { team: any }) {
+    const intl = useIntl();
     const { company } = usePageSharedDataProps();
     const [open, setOpen] = useState(false);
     const form = useForm({
@@ -48,27 +50,33 @@ export default function UnsuspendTeamButton({ team }: { team: any }) {
                             variant="outline"
                             size="icon"
                             className="h-8 w-8 text-destructive"
-                            aria-label="Unsuspend"
+                            aria-label={intl.formatMessage({
+                                defaultMessage: 'Unsuspend',
+                            })}
                         >
                             <UserCheckIcon className="size-4" />
                         </Button>
                     </TooltipTrigger>
-                    <TooltipContent>Unsuspend</TooltipContent>
+                    <TooltipContent>
+                        <FormattedMessage defaultMessage="Unsuspend" />
+                    </TooltipContent>
                 </Tooltip>
             </AlertDialogTrigger>
             <AlertDialogContent>
                 <AlertDialogHeader>
-                    <AlertDialogTitle>Unsuspend user?</AlertDialogTitle>
+                    <AlertDialogTitle>
+                        <FormattedMessage defaultMessage="Unsuspend user?" />
+                    </AlertDialogTitle>
                     <AlertDialogDescription>
-                        Are you sure you want to unsuspend this user? They will
-                        be able to access all company resources. You can suspend
-                        them again at any time by clicking the suspend button.
+                        <FormattedMessage defaultMessage="Are you sure you want to unsuspend this user? They will be able to access all company resources. You can suspend them again at any time by clicking the suspend button." />
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogCancel>
+                        <FormattedMessage defaultMessage="Cancel" />
+                    </AlertDialogCancel>
                     <AlertDialogAction onClick={handleUnsuspend}>
-                        Unsuspend
+                        <FormattedMessage defaultMessage="Unsuspend" />
                     </AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>

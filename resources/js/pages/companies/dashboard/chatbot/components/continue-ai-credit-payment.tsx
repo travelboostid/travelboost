@@ -1,6 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { openOnlinePayment } from '@/lib/open-online-payment';
 import { refreshChatbotPage } from '@/lib/refresh-chatbot-page';
+import { FormattedMessage } from 'react-intl';
 
 type ContinueAiCreditPaymentProps = {
     payment: {
@@ -15,7 +16,7 @@ type ContinueAiCreditPaymentProps = {
 
 export default function ContinueAiCreditPayment({
     payment,
-    children = 'Continue payment',
+    children,
 }: ContinueAiCreditPaymentProps) {
     const handlePay = () => {
         openOnlinePayment(
@@ -39,7 +40,7 @@ export default function ContinueAiCreditPayment({
 
     return (
         <Button size="lg" className="h-11 w-full sm:flex-1" onClick={handlePay}>
-            {children}
+            {children ?? <FormattedMessage defaultMessage="Continue payment" />}
         </Button>
     );
 }

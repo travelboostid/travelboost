@@ -20,11 +20,14 @@ import { resendInvitation } from '@/routes/companies/dashboard/teams';
 import { useForm } from '@inertiajs/react';
 import { RepeatIcon } from 'lucide-react';
 import { useState } from 'react';
+import { FormattedMessage, useIntl } from 'react-intl';
 
 export default function ResendInvitationButton({ team }: { team: any }) {
+    const intl = useIntl();
     const { company } = usePageSharedDataProps();
     const [open, setOpen] = useState(false);
     const form = useForm();
+
     const handleResend = () => {
         form.post(
             resendInvitation({ company: company.username, team: team.id }).url,
@@ -36,6 +39,7 @@ export default function ResendInvitationButton({ team }: { team: any }) {
             },
         );
     };
+
     return (
         <AlertDialog open={open} onOpenChange={setOpen}>
             <AlertDialogTrigger>
@@ -45,26 +49,33 @@ export default function ResendInvitationButton({ team }: { team: any }) {
                             variant="outline"
                             size="icon"
                             className="h-8 w-8"
-                            aria-label="Resend Invitation"
+                            aria-label={intl.formatMessage({
+                                defaultMessage: 'Resend Invitation',
+                            })}
                         >
                             <RepeatIcon className="size-4" />
                         </Button>
                     </TooltipTrigger>
-                    <TooltipContent>Resend Invitation</TooltipContent>
+                    <TooltipContent>
+                        <FormattedMessage defaultMessage="Resend Invitation" />
+                    </TooltipContent>
                 </Tooltip>
             </AlertDialogTrigger>
             <AlertDialogContent>
                 <AlertDialogHeader>
-                    <AlertDialogTitle>Resend Invitation?</AlertDialogTitle>
+                    <AlertDialogTitle>
+                        <FormattedMessage defaultMessage="Resend Invitation?" />
+                    </AlertDialogTitle>
                     <AlertDialogDescription>
-                        This will resend the invitation to the recipient. Make
-                        sure they check their inbox and spam folder.
+                        <FormattedMessage defaultMessage="This will resend the invitation to the recipient. Make sure they check their inbox and spam folder." />
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogCancel>
+                        <FormattedMessage defaultMessage="Cancel" />
+                    </AlertDialogCancel>
                     <AlertDialogAction onClick={handleResend}>
-                        Resend
+                        <FormattedMessage defaultMessage="Resend" />
                     </AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>

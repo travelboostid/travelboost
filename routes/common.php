@@ -33,8 +33,10 @@ Route::get('/home', [BaseHomeController::class, 'index'])->name('home');
 Route::get('/about', [BaseHomeController::class, 'about'])->name('about');
 Route::get('/contact', [BaseHomeController::class, 'contact'])->name('contact');
 Route::get('/learn-more', [BaseHomeController::class, 'learnMore'])->name('learn-more');
+Route::get('/pricing', [BaseHomeController::class, 'pricing'])->name('pricing');
 Route::get('/privacy', [BaseHomeController::class, 'privacy'])->name('privacy');
 Route::get('/terms-and-conditions', [BaseHomeController::class, 'termsAndConditions'])->name('terms-and-conditions');
+Route::get('/cookie-policy', [BaseHomeController::class, 'cookiePolicy'])->name('cookie-policy');
 Route::get('/tours', [BaseHomeController::class, 'tours'])->name('tours');
 
 Route::middleware('guest')->group(function () {

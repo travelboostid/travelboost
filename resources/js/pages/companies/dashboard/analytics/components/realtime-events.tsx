@@ -10,12 +10,10 @@ import {
 import usePageProps from '@/hooks/use-page-props';
 import { ActivityIcon } from 'lucide-react';
 import type { DetailedHTMLProps, HTMLAttributes } from 'react';
+import { FormattedMessage, useIntl } from 'react-intl';
 import { Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
 import type { AnalyticsPageProps } from '..';
 
-/**
- * Stable hash for consistent colors per event name
- */
 function hashString(str: string) {
     let hash = 0;
     for (let i = 0; i < str.length; i++) {
@@ -24,17 +22,11 @@ function hashString(str: string) {
     return hash;
 }
 
-/**
- * Deterministic HSL color generator
- */
 function getColorFromLabel(label: string) {
     const hue = hashString(label) % 360;
     return `hsl(${hue} 70% 55%)`;
 }
 
-/**
- * Attach colors directly to data (Cell replacement pattern)
- */
 function applyChartColors<T extends { name: string }>(data: T[]) {
     return data.map((item) => ({
         ...item,
@@ -48,6 +40,7 @@ type RealtimeEventsProps = DetailedHTMLProps<
 >;
 
 export default function RealtimeEvents(props: RealtimeEventsProps) {
+    const intl = useIntl();
     const { realtimeInsights } = usePageProps<AnalyticsPageProps>();
 
     const eventsWithColors = applyChartColors(realtimeInsights.events);
@@ -57,9 +50,11 @@ export default function RealtimeEvents(props: RealtimeEventsProps) {
             <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                     <ActivityIcon className="h-5 w-5 text-chart-5" />
-                    Event Types
+                    <FormattedMessage defaultMessage="Event Types" />
                 </CardTitle>
-                <CardDescription>Event distribution</CardDescription>
+                <CardDescription>
+                    <FormattedMessage defaultMessage="Event distribution" />
+                </CardDescription>
             </CardHeader>
 
             <CardContent>
@@ -75,7 +70,16 @@ export default function RealtimeEvents(props: RealtimeEventsProps) {
                             dataKey="value"
                         />
 
-                        <Tooltip formatter={(value) => `${value} event(s)`} />
+                        <Tooltip
+                            formatter={(value) =>
+                                intl.formatMessage(
+                                    {
+                                        defaultMessage: '{count} event(s)',
+                                    },
+                                    { count: value },
+                                )
+                            }
+                        />
                     </PieChart>
                 </ResponsiveContainer>
             </CardContent>

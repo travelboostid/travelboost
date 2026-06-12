@@ -2,6 +2,7 @@ import CompanyDashboardLayout from '@/components/layouts/company-dashboard';
 import usePageProps from '@/hooks/use-page-props';
 import { Head } from '@inertiajs/react';
 import 'dayjs/locale/id';
+import { useIntl } from 'react-intl';
 import { GoogleAccountUnlinked } from './components/google-account-unlinked';
 import { GoogleAnalyticsUnlinked } from './components/google-analytics-unlinked';
 import RealtimeDeviceBreakdown from './components/realtime-device-breakdown';
@@ -23,6 +24,7 @@ export default function AnalyticsPage({
     insights,
     realtimeInsights,
 }: AnalyticsPageProps) {
+    const intl = useIntl();
     const { company, ...other } = usePageProps();
     console.log(insights);
     console.log('rt', realtimeInsights);
@@ -30,10 +32,20 @@ export default function AnalyticsPage({
     return (
         <CompanyDashboardLayout
             containerClassName="p-4"
-            breadcrumb={[{ title: 'Analytics' }]}
+            breadcrumb={[
+                {
+                    title: intl.formatMessage({
+                        defaultMessage: 'Analytics',
+                    }),
+                },
+            ]}
             activeMenuIds={['customers']}
         >
-            <Head title="Google Analytics" />
+            <Head
+                title={intl.formatMessage({
+                    defaultMessage: 'Google Analytics',
+                })}
+            />
             {!account && <GoogleAccountUnlinked />}
             {account && !analytics && <GoogleAnalyticsUnlinked />}
             {realtimeInsights && (

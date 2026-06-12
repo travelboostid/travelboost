@@ -8,8 +8,10 @@ import {
     DialogTrigger,
 } from '@/components/ui/dialog';
 import { extractImageSrc } from '@/lib/utils';
+import { FormattedMessage, useIntl } from 'react-intl';
 
 export default function TourDetailDialog({ children, tour }: any) {
+    const intl = useIntl();
     const t = tour.tour || tour;
     const image = t.image
         ? extractImageSrc(t.image).src
@@ -33,10 +35,16 @@ export default function TourDetailDialog({ children, tour }: any) {
                         {t.name}
                     </DialogTitle>
                     <DialogDescription>
-                        Tour Code:{' '}
-                        <span className="font-mono font-bold text-slate-700">
-                            {t.code}
-                        </span>
+                        <FormattedMessage
+                            defaultMessage="Tour Code: {code}"
+                            values={{
+                                code: (
+                                    <span className="font-mono font-bold text-slate-700">
+                                        {t.code}
+                                    </span>
+                                ),
+                            }}
+                        />
                     </DialogDescription>
                 </DialogHeader>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-2">
@@ -50,7 +58,7 @@ export default function TourDetailDialog({ children, tour }: any) {
                     <div className="space-y-4">
                         <div>
                             <h4 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">
-                                Destination
+                                <FormattedMessage defaultMessage="Destination" />
                             </h4>
                             <p className="font-semibold text-sm">
                                 {destination}
@@ -59,17 +67,22 @@ export default function TourDetailDialog({ children, tour }: any) {
                         <div className="grid grid-cols-2 gap-4">
                             <div>
                                 <h4 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">
-                                    Duration
+                                    <FormattedMessage defaultMessage="Duration" />
                                 </h4>
                                 <p className="font-semibold text-sm">
-                                    {t.duration_days
-                                        ? `${t.duration_days} Days`
-                                        : '-'}
+                                    {t.duration_days ? (
+                                        <FormattedMessage
+                                            defaultMessage="{days} Days"
+                                            values={{ days: t.duration_days }}
+                                        />
+                                    ) : (
+                                        '-'
+                                    )}
                                 </p>
                             </div>
                             <div>
                                 <h4 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">
-                                    Status
+                                    <FormattedMessage defaultMessage="Status" />
                                 </h4>
                                 <Badge
                                     variant={
@@ -79,13 +92,16 @@ export default function TourDetailDialog({ children, tour }: any) {
                                     }
                                     className="uppercase text-[10px]"
                                 >
-                                    {t.status || 'Unknown'}
+                                    {t.status ||
+                                        intl.formatMessage({
+                                            defaultMessage: 'Unknown',
+                                        })}
                                 </Badge>
                             </div>
                         </div>
                         <div>
                             <h4 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">
-                                Vendor
+                                <FormattedMessage defaultMessage="Vendor" />
                             </h4>
                             <p className="font-semibold text-sm">
                                 {t.company?.name || '-'}
@@ -95,10 +111,13 @@ export default function TourDetailDialog({ children, tour }: any) {
                 </div>
                 <div className="mt-4">
                     <h4 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-2">
-                        Description / Itinerary
+                        <FormattedMessage defaultMessage="Description / Itinerary" />
                     </h4>
                     <div className="bg-slate-50/50 p-4 rounded-lg border border-border text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">
-                        {t.description || 'No description available.'}
+                        {t.description ||
+                            intl.formatMessage({
+                                defaultMessage: 'No description available.',
+                            })}
                     </div>
                 </div>
             </DialogContent>

@@ -8,6 +8,7 @@ import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { Head, router } from '@inertiajs/react';
 import { ChevronDownIcon, InfoIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { FormattedMessage, useIntl } from 'react-intl';
 
 type Schedule = {
     id: number;
@@ -63,6 +64,7 @@ export default function SeatAvailabilityIndex({
     availabilities,
     filters,
 }: Props) {
+    const intl = useIntl();
     const [search, setSearch] = useState(filters.search || '');
 
     const today = new Date().toISOString().split('T')[0];
@@ -181,23 +183,38 @@ export default function SeatAvailabilityIndex({
             openMenuIds={['reports']}
             activeMenuIds={['reports.seat-availabilities']}
             breadcrumb={[
-                { title: 'Reports' },
-                { title: 'Seat Availabilities' },
+                {
+                    title: intl.formatMessage({
+                        defaultMessage: 'Reports',
+                    }),
+                },
+                {
+                    title: intl.formatMessage({
+                        defaultMessage: 'Seat Availabilities',
+                    }),
+                },
             ]}
         >
-            <Head title="Seat Availability" />
+            <Head
+                title={intl.formatMessage({
+                    defaultMessage: 'Seat Availability',
+                })}
+            />
 
             <div className="space-y-6 p-4 md:p-6">
                 {/* SEARCH */}
                 <div className="grid gap-4 md:grid-cols-3">
                     <div>
                         <label className="mb-1 block text-xs font-medium text-muted-foreground">
-                            Search Tour
+                            <FormattedMessage defaultMessage="Search Tour" />
                         </label>
 
                         <input
                             type="text"
-                            placeholder="Search by tour name or tour code ..."
+                            placeholder={intl.formatMessage({
+                                defaultMessage:
+                                    'Search by tour name or tour code ...',
+                            })}
                             value={search}
                             onChange={(e) => handleSearch(e.target.value)}
                             className="w-full rounded-xl border px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-primary"
@@ -206,7 +223,7 @@ export default function SeatAvailabilityIndex({
 
                     <div>
                         <label className="mb-1 block text-xs font-medium text-muted-foreground">
-                            Departure Date From
+                            <FormattedMessage defaultMessage="Departure Date From" />
                         </label>
 
                         <input
@@ -246,18 +263,31 @@ export default function SeatAvailabilityIndex({
                                             </h2>
 
                                             <span className="text-sm text-muted-foreground">
-                                                • {item.tour.duration_days} Days
+                                                •{' '}
+                                                <FormattedMessage
+                                                    defaultMessage="{count} Days"
+                                                    values={{
+                                                        count: item.tour
+                                                            .duration_days,
+                                                    }}
+                                                />
                                             </span>
                                         </div>
 
                                         <p className="mt-1 text-sm text-muted-foreground">
-                                            Displaying{' '}
-                                            {Math.min(
-                                                getVisibleCount(item.tour.id),
-                                                item.schedules.length,
-                                            )}{' '}
-                                            of {item.schedules.length} available
-                                            departures
+                                            <FormattedMessage
+                                                defaultMessage="Displaying {visible} of {total} available departures"
+                                                values={{
+                                                    visible: Math.min(
+                                                        getVisibleCount(
+                                                            item.tour.id,
+                                                        ),
+                                                        item.schedules.length,
+                                                    ),
+                                                    total: item.schedules
+                                                        .length,
+                                                }}
+                                            />
                                         </p>
                                     </div>
 
@@ -275,15 +305,15 @@ export default function SeatAvailabilityIndex({
                                             <thead className="sticky top-0 bg-slate-100 z-10">
                                                 <tr>
                                                     <th className="border px-3 py-3 text-left">
-                                                        Departure
+                                                        <FormattedMessage defaultMessage="Departure" />
                                                     </th>
 
                                                     <th className="border px-3 py-3 text-left">
-                                                        Return
+                                                        <FormattedMessage defaultMessage="Return" />
                                                     </th>
 
                                                     <th className="border px-3 py-3 text-center">
-                                                        Max Pax
+                                                        <FormattedMessage defaultMessage="Max Pax" />
                                                     </th>
                                                     {!isAgent && (
                                                         <>
@@ -302,8 +332,7 @@ export default function SeatAvailabilityIndex({
                                                                     </TooltipTrigger>
 
                                                                     <TooltipContent>
-                                                                        Manual
-                                                                        Reserved
+                                                                        <FormattedMessage defaultMessage="Manual Reserved" />
                                                                     </TooltipContent>
                                                                 </Tooltip>
                                                             </th>
@@ -322,8 +351,7 @@ export default function SeatAvailabilityIndex({
                                                                     </TooltipTrigger>
 
                                                                     <TooltipContent>
-                                                                        Waiting
-                                                                        Payment
+                                                                        <FormattedMessage defaultMessage="Waiting Payment" />
                                                                     </TooltipContent>
                                                                 </Tooltip>
                                                             </th>
@@ -342,9 +370,7 @@ export default function SeatAvailabilityIndex({
                                                                     </TooltipTrigger>
 
                                                                     <TooltipContent>
-                                                                        Waiting
-                                                                        Payment
-                                                                        Approval
+                                                                        <FormattedMessage defaultMessage="Waiting Payment Approval" />
                                                                     </TooltipContent>
                                                                 </Tooltip>
                                                             </th>
@@ -363,8 +389,7 @@ export default function SeatAvailabilityIndex({
                                                                     </TooltipTrigger>
 
                                                                     <TooltipContent>
-                                                                        Down
-                                                                        Payment
+                                                                        <FormattedMessage defaultMessage="Down Payment" />
                                                                     </TooltipContent>
                                                                 </Tooltip>
                                                             </th>
@@ -383,8 +408,7 @@ export default function SeatAvailabilityIndex({
                                                                     </TooltipTrigger>
 
                                                                     <TooltipContent>
-                                                                        Full
-                                                                        Payment
+                                                                        <FormattedMessage defaultMessage="Full Payment" />
                                                                     </TooltipContent>
                                                                 </Tooltip>
                                                             </th>
@@ -403,8 +427,7 @@ export default function SeatAvailabilityIndex({
                                                                     </TooltipTrigger>
 
                                                                     <TooltipContent>
-                                                                        Booking
-                                                                        Reserved
+                                                                        <FormattedMessage defaultMessage="Booking Reserved" />
                                                                     </TooltipContent>
                                                                 </Tooltip>
                                                             </th>
@@ -423,7 +446,7 @@ export default function SeatAvailabilityIndex({
                                                                     </TooltipTrigger>
 
                                                                     <TooltipContent>
-                                                                        Cancel
+                                                                        <FormattedMessage defaultMessage="Cancel" />
                                                                     </TooltipContent>
                                                                 </Tooltip>
                                                             </th>
@@ -442,7 +465,7 @@ export default function SeatAvailabilityIndex({
                                                                     </TooltipTrigger>
 
                                                                     <TooltipContent>
-                                                                        Refund
+                                                                        <FormattedMessage defaultMessage="Refund" />
                                                                     </TooltipContent>
                                                                 </Tooltip>
                                                             </th>
@@ -461,7 +484,7 @@ export default function SeatAvailabilityIndex({
                                                                     </TooltipTrigger>
 
                                                                     <TooltipContent>
-                                                                        Expired
+                                                                        <FormattedMessage defaultMessage="Expired" />
                                                                     </TooltipContent>
                                                                 </Tooltip>
                                                             </th>
@@ -480,15 +503,14 @@ export default function SeatAvailabilityIndex({
                                                                     </TooltipTrigger>
 
                                                                     <TooltipContent>
-                                                                        Waiting
-                                                                        List
+                                                                        <FormattedMessage defaultMessage="Waiting List" />
                                                                     </TooltipContent>
                                                                 </Tooltip>
                                                             </th>
                                                         </>
                                                     )}
                                                     <th className="border px-3 py-3 text-center">
-                                                        Available
+                                                        <FormattedMessage defaultMessage="Available" />
                                                     </th>
                                                 </tr>
                                             </thead>
@@ -655,7 +677,7 @@ export default function SeatAvailabilityIndex({
                                                             }
                                                             className="py-8 text-center text-muted-foreground"
                                                         >
-                                                            No schedules found
+                                                            <FormattedMessage defaultMessage="No schedules found" />
                                                         </td>
                                                     </tr>
                                                 )}
@@ -672,7 +694,7 @@ export default function SeatAvailabilityIndex({
                                                     }
                                                     className="rounded-xl border bg-white px-4 py-2 text-sm font-medium transition hover:bg-slate-100"
                                                 >
-                                                    Load More Schedules
+                                                    <FormattedMessage defaultMessage="Load More Schedules" />
                                                 </button>
                                             </div>
                                         )}
@@ -684,7 +706,7 @@ export default function SeatAvailabilityIndex({
 
                     {availabilities.data.length === 0 && (
                         <div className="rounded-2xl border bg-white p-10 text-center text-muted-foreground">
-                            No availability data found
+                            <FormattedMessage defaultMessage="No availability data found" />
                         </div>
                     )}
                 </div>

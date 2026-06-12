@@ -15,6 +15,7 @@ import { update } from '@/routes/companies/dashboard/agent-registrations';
 import { useForm } from '@inertiajs/react';
 import { UserCheckIcon } from 'lucide-react';
 import { useState } from 'react';
+import { FormattedMessage } from 'react-intl';
 
 export default function ApproveRegistrationButton({
     registration,
@@ -50,16 +51,19 @@ export default function ApproveRegistrationButton({
             </AlertDialogTrigger>
             <AlertDialogContent>
                 <AlertDialogHeader>
-                    <AlertDialogTitle>Approve registration?</AlertDialogTitle>
+                    <AlertDialogTitle>
+                        <FormattedMessage defaultMessage="Approve registration?" />
+                    </AlertDialogTitle>
                     <AlertDialogDescription>
-                        This will approve the registration and allow the agent
-                        to access your tours.
+                        <FormattedMessage defaultMessage="This will approve the registration and allow the agent to access your tours." />
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogCancel>
+                        <FormattedMessage defaultMessage="Cancel" />
+                    </AlertDialogCancel>
                     <AlertDialogAction onClick={handleApprove}>
-                        Approve
+                        <FormattedMessage defaultMessage="Approve" />
                     </AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>

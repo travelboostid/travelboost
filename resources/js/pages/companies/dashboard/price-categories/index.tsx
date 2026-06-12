@@ -33,7 +33,7 @@ import {
 } from '@/components/ui/table';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { cn } from '@/lib/utils';
-import { router } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import {
     ArrowDown,
     ArrowUp,
@@ -46,6 +46,7 @@ import {
     TrashIcon,
     XIcon,
 } from 'lucide-react';
+import { FormattedMessage, useIntl } from 'react-intl';
 
 import AddPriceCategoryDialog from './add-price-category-dialog';
 import UpdatePriceCategoryDialog from './update-price-category-dialog';
@@ -88,10 +89,19 @@ function SortableHeader({
 }
 
 function RowAction({ item }: { item: PriceCategory }) {
+    const intl = useIntl();
     const { company } = usePageSharedDataProps();
 
     const handleDelete = () => {
-        if (!confirm('Delete this category?')) return;
+        if (
+            !confirm(
+                intl.formatMessage({
+                    defaultMessage: 'Delete this category?',
+                }),
+            )
+        ) {
+            return;
+        }
 
         router.delete(
             `/companies/${company.username}/dashboard/price-categories/${item.id}`,
@@ -120,7 +130,7 @@ function RowAction({ item }: { item: PriceCategory }) {
                                 className="cursor-pointer"
                             >
                                 <EditIcon className="mr-2 h-4 w-4" />
-                                Edit
+                                <FormattedMessage defaultMessage="Edit" />
                             </DropdownMenuItem>
                         </UpdatePriceCategoryDialog>
                     </DropdownMenuGroup>
@@ -133,7 +143,7 @@ function RowAction({ item }: { item: PriceCategory }) {
                             className="cursor-pointer text-red-600 focus:bg-red-50 focus:text-red-600"
                         >
                             <TrashIcon className="mr-2 h-4 w-4" />
-                            Delete
+                            <FormattedMessage defaultMessage="Delete" />
                         </DropdownMenuItem>
                     </DropdownMenuGroup>
                 </DropdownMenuContent>
@@ -147,7 +157,7 @@ export const columns: ColumnDef<PriceCategory>[] = [
         id: 'actions',
         header: () => (
             <div className="px-2 text-center text-[11px] font-bold tracking-wider text-primary">
-                Actions
+                <FormattedMessage defaultMessage="Actions" />
             </div>
         ),
         enableSorting: false,
@@ -157,7 +167,10 @@ export const columns: ColumnDef<PriceCategory>[] = [
     {
         accessorKey: 'name',
         header: ({ column }) => (
-            <SortableHeader column={column} title="Category" />
+            <SortableHeader
+                column={column}
+                title={<FormattedMessage defaultMessage="Category" />}
+            />
         ),
         cell: ({ row }) => (
             <div className="flex min-w-[240px] items-center gap-3">
@@ -181,7 +194,10 @@ export const columns: ColumnDef<PriceCategory>[] = [
     {
         accessorKey: 'room_type',
         header: ({ column }) => (
-            <SortableHeader column={column} title="Room Type" />
+            <SortableHeader
+                column={column}
+                title={<FormattedMessage defaultMessage="Room Type" />}
+            />
         ),
         cell: ({ row }) => (
             <span className="whitespace-nowrap text-sm font-medium text-slate-500 dark:text-slate-300">
@@ -192,6 +208,7 @@ export const columns: ColumnDef<PriceCategory>[] = [
 ];
 
 export default function Page({ categories }: any) {
+    const intl = useIntl();
     const [sorting, setSorting] = React.useState<SortingState>([]);
     const [columnFilters, setColumnFilters] =
         React.useState<ColumnFiltersState>([]);
@@ -240,17 +257,35 @@ export default function Page({ categories }: any) {
 
     return (
         <CompanyDashboardLayout
-            breadcrumb={[{ title: 'Tours' }, { title: 'Price Categories' }]}
+            breadcrumb={[
+                {
+                    title: intl.formatMessage({
+                        defaultMessage: 'Tours',
+                    }),
+                },
+                {
+                    title: intl.formatMessage({
+                        defaultMessage: 'Price Categories',
+                    }),
+                },
+            ]}
             openMenuIds={['tours']}
             activeMenuIds={['tours.price-categories']}
             applet={
                 <AddPriceCategoryDialog>
                     <Button>
-                        <PlusIcon /> Add Price Category
+                        <PlusIcon />
+                        <FormattedMessage defaultMessage="Add Price Category" />
                     </Button>
                 </AddPriceCategoryDialog>
             }
         >
+            <Head
+                title={intl.formatMessage({
+                    defaultMessage: 'Price Categories',
+                })}
+            />
+
             <div className="mx-auto flex w-full max-w-[1600px] flex-1 flex-col gap-6 p-4 pb-20 md:p-6">
                 <div className="order-first flex flex-col gap-3 rounded-xl border border-slate-200/80 bg-card/95 p-3 shadow-sm dark:border-slate-800 dark:bg-slate-950/80 sm:flex-row sm:items-center sm:justify-between">
                     <div className="w-full min-w-0 sm:max-w-md">
@@ -259,7 +294,10 @@ export default function Page({ categories }: any) {
                                 <Search className="size-3.5" />
                             </span>
                             <Input
-                                placeholder="Search category, room type, or description"
+                                placeholder={intl.formatMessage({
+                                    defaultMessage:
+                                        'Search category, room type, or description',
+                                })}
                                 value={globalFilter}
                                 onChange={(event) =>
                                     setGlobalFilter(event.target.value)
@@ -269,7 +307,9 @@ export default function Page({ categories }: any) {
                             {globalFilter.trim() !== '' && (
                                 <button
                                     type="button"
-                                    aria-label="Clear search"
+                                    aria-label={intl.formatMessage({
+                                        defaultMessage: 'Clear search',
+                                    })}
                                     onClick={() => setGlobalFilter('')}
                                     className="absolute right-2 top-1/2 flex size-6 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                                 >
@@ -285,7 +325,7 @@ export default function Page({ categories }: any) {
                                 type="button"
                                 className="ml-auto h-9 w-full rounded-xl border border-slate-200 bg-white px-4 text-xs font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:hover:bg-slate-900 sm:w-auto"
                             >
-                                View Columns
+                                <FormattedMessage defaultMessage="View Columns" />
                                 <ChevronDown className="ml-2 inline h-4 w-4 opacity-50" />
                             </button>
                         </DropdownMenuTrigger>
@@ -386,9 +426,9 @@ export default function Page({ categories }: any) {
                                     <TableRow>
                                         <TableCell
                                             colSpan={columns.length}
-                                            className="h-40"
+                                            className="h-40 text-center"
                                         >
-                                            No results.
+                                            <FormattedMessage defaultMessage="No results." />
                                         </TableCell>
                                     </TableRow>
                                 )}

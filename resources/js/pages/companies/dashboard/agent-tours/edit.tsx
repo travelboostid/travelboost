@@ -26,6 +26,7 @@ import { Textarea } from '@/components/ui/textarea';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { extractImageSrc } from '@/lib/utils';
 import { Form } from '@inertiajs/react';
+import { FormattedMessage, useIntl } from 'react-intl';
 import { toast } from 'sonner';
 import SelectCategory from './components/select-category';
 
@@ -33,11 +34,14 @@ type Props = {
     tour: any;
 };
 export default function Page({ tour }: Props) {
+    const intl = useIntl();
     const { company } = usePageSharedDataProps();
     const handleSuccess = () => {
-        toast.success('Success', {
+        toast.success(intl.formatMessage({ defaultMessage: 'Success' }), {
             position: 'top-center',
-            description: 'Tour data updated successfully',
+            description: intl.formatMessage({
+                defaultMessage: 'Tour data updated successfully',
+            }),
         });
     };
 
@@ -46,8 +50,13 @@ export default function Page({ tour }: Props) {
             openMenuIds={['tours']}
             activeMenuIds={['agent-tours.index']}
             breadcrumb={[
-                { title: 'Tours', url: '/dashboard/tours' },
-                { title: 'Edit' },
+                {
+                    title: intl.formatMessage({ defaultMessage: 'Tours' }),
+                    url: '/dashboard/tours',
+                },
+                {
+                    title: intl.formatMessage({ defaultMessage: 'Edit' }),
+                },
             ]}
         >
             <Form
@@ -58,9 +67,10 @@ export default function Page({ tour }: Props) {
                 {({ errors, processing }) => (
                     <div className="container mx-auto space-y-4 p-4">
                         <div className="grid gap-6">
-                            {/* Image */}
                             <div className="grid gap-2">
-                                <Label htmlFor="name">Image</Label>
+                                <Label htmlFor="name">
+                                    <FormattedMessage defaultMessage="Image" />
+                                </Label>
                                 <MediaPicker
                                     params={{
                                         owner_type: 'company',
@@ -97,7 +107,7 @@ export default function Page({ tour }: Props) {
                                                 onClick={change}
                                                 type="button"
                                             >
-                                                Change
+                                                <FormattedMessage defaultMessage="Change" />
                                             </Button>
                                         </div>
                                     )}
@@ -105,116 +115,139 @@ export default function Page({ tour }: Props) {
                                 <InputError message={errors.media_id} />
                             </div>
 
-                            {/* Code */}
                             <div className="grid gap-2">
-                                <Label htmlFor="code">Code</Label>
+                                <Label htmlFor="code">
+                                    <FormattedMessage defaultMessage="Code" />
+                                </Label>
                                 <Input
                                     id="code"
                                     type="text"
                                     name="code"
                                     required
-                                    placeholder="Tour Code"
+                                    placeholder={intl.formatMessage({
+                                        defaultMessage: 'Tour Code',
+                                    })}
                                     defaultValue={tour.code}
                                 />
                                 <InputError message={errors.code} />
                             </div>
-                            {/* Name */}
                             <div className="grid gap-2">
-                                <Label htmlFor="name">Name</Label>
+                                <Label htmlFor="name">
+                                    <FormattedMessage defaultMessage="Name" />
+                                </Label>
                                 <Input
                                     id="name"
                                     type="text"
                                     name="name"
                                     required
-                                    placeholder="Tour Name"
+                                    placeholder={intl.formatMessage({
+                                        defaultMessage: 'Tour Name',
+                                    })}
                                     defaultValue={tour.name}
                                 />
                                 <InputError message={errors.name} />
                             </div>
 
-                            {/* Description */}
                             <div className="grid gap-2">
-                                <Label htmlFor="description">Description</Label>
+                                <Label htmlFor="description">
+                                    <FormattedMessage defaultMessage="Description" />
+                                </Label>
                                 <Textarea
                                     id="description"
                                     name="description"
-                                    placeholder="Tour description"
+                                    placeholder={intl.formatMessage({
+                                        defaultMessage: 'Tour description',
+                                    })}
                                     defaultValue={tour.description}
                                 />
                                 <InputError message={errors.description} />
                             </div>
 
-                            {/* Duration */}
                             <div className="grid gap-2">
                                 <Label htmlFor="duration_days">
-                                    Duration in Days
+                                    <FormattedMessage defaultMessage="Duration in Days" />
                                 </Label>
                                 <Input
                                     id="duration_days"
                                     type="number"
                                     name="duration_days"
                                     required
-                                    placeholder="Duration"
+                                    placeholder={intl.formatMessage({
+                                        defaultMessage: 'Duration',
+                                    })}
                                     defaultValue={tour.duration_days}
                                 />
                                 <InputError message={errors.duration_days} />
                             </div>
 
-                            {/* Continent */}
                             <div className="grid gap-2">
-                                <Label htmlFor="continent">Continent</Label>
+                                <Label htmlFor="continent">
+                                    <FormattedMessage defaultMessage="Continent" />
+                                </Label>
                                 <Input
                                     id="continent"
                                     type="text"
                                     name="continent"
-                                    placeholder="Continent"
+                                    placeholder={intl.formatMessage({
+                                        defaultMessage: 'Continent',
+                                    })}
                                     defaultValue={tour.continent}
                                 />
                                 <InputError message={errors.continent} />
                             </div>
 
-                            {/* Region */}
                             <div className="grid gap-2">
-                                <Label htmlFor="region">Region</Label>
+                                <Label htmlFor="region">
+                                    <FormattedMessage defaultMessage="Region" />
+                                </Label>
                                 <Input
                                     id="region"
                                     type="text"
                                     name="region"
-                                    placeholder="Region"
+                                    placeholder={intl.formatMessage({
+                                        defaultMessage: 'Region',
+                                    })}
                                     defaultValue={tour.region}
                                 />
                                 <InputError message={errors.region} />
                             </div>
 
-                            {/* Country */}
                             <div className="grid gap-2">
-                                <Label htmlFor="country">Country</Label>
+                                <Label htmlFor="country">
+                                    <FormattedMessage defaultMessage="Country" />
+                                </Label>
                                 <Input
                                     id="country"
                                     type="text"
                                     name="country"
-                                    placeholder="Country"
+                                    placeholder={intl.formatMessage({
+                                        defaultMessage: 'Country',
+                                    })}
                                     defaultValue={tour.country}
                                 />
                                 <InputError message={errors.country} />
                             </div>
 
-                            {/* Destination */}
                             <div className="grid gap-2">
-                                <Label htmlFor="destination">Destination</Label>
+                                <Label htmlFor="destination">
+                                    <FormattedMessage defaultMessage="Destination" />
+                                </Label>
                                 <Input
                                     id="destination"
                                     type="text"
                                     name="destination"
-                                    placeholder="Destination"
+                                    placeholder={intl.formatMessage({
+                                        defaultMessage: 'Destination',
+                                    })}
                                     defaultValue={tour.destination}
                                 />
                                 <InputError message={errors.destination} />
                             </div>
 
-                            {/* Category */}
                             <div className="grid gap-2">
-                                <Label htmlFor="category_id">Category</Label>
+                                <Label htmlFor="category_id">
+                                    <FormattedMessage defaultMessage="Category" />
+                                </Label>
                                 <SelectCategory
                                     name="category_id"
                                     defaultValue={tour.category_id}
@@ -223,9 +256,10 @@ export default function Page({ tour }: Props) {
                                 <InputError message={errors.category_id} />
                             </div>
 
-                            {/* Document */}
                             <div className="grid gap-2">
-                                <Label htmlFor="name">Document</Label>
+                                <Label htmlFor="name">
+                                    <FormattedMessage defaultMessage="Document" />
+                                </Label>
                                 <MediaPicker
                                     params={{
                                         owner_type: 'company',
@@ -243,7 +277,10 @@ export default function Page({ tour }: Props) {
                                             <ItemContent>
                                                 <ItemTitle>
                                                     {(media as any)?.name ||
-                                                        'No document selected'}
+                                                        intl.formatMessage({
+                                                            defaultMessage:
+                                                                'No document selected',
+                                                        })}
                                                 </ItemTitle>
                                             </ItemContent>
                                             <input
@@ -261,7 +298,7 @@ export default function Page({ tour }: Props) {
                                                     onClick={change}
                                                     type="button"
                                                 >
-                                                    Change
+                                                    <FormattedMessage defaultMessage="Change" />
                                                 </Button>
                                             </ItemActions>
                                         </Item>
@@ -270,26 +307,31 @@ export default function Page({ tour }: Props) {
                                 <InputError message={errors.document_id} />
                             </div>
 
-                            {/* Status */}
                             <div className="grid gap-2">
-                                <Label htmlFor="status">Status</Label>
+                                <Label htmlFor="status">
+                                    <FormattedMessage defaultMessage="Status" />
+                                </Label>
                                 <Select
                                     name="status"
                                     defaultValue={tour.status}
                                 >
                                     <SelectTrigger className="w-full max-w-48">
-                                        <SelectValue placeholder="Select a fruit" />
+                                        <SelectValue
+                                            placeholder={intl.formatMessage({
+                                                defaultMessage: 'Select status',
+                                            })}
+                                        />
                                     </SelectTrigger>
                                     <SelectContent>
                                         <SelectGroup>
                                             <SelectLabel>
-                                                Select status
+                                                <FormattedMessage defaultMessage="Select status" />
                                             </SelectLabel>
                                             <SelectItem value="active">
-                                                Active
+                                                <FormattedMessage defaultMessage="Active" />
                                             </SelectItem>
                                             <SelectItem value="inactive">
-                                                Inactive
+                                                <FormattedMessage defaultMessage="Inactive" />
                                             </SelectItem>
                                         </SelectGroup>
                                     </SelectContent>
@@ -298,7 +340,8 @@ export default function Page({ tour }: Props) {
                             </div>
                         </div>
                         <Button type="submit" disabled={processing}>
-                            {processing && <Spinner />}Update
+                            {processing && <Spinner />}
+                            <FormattedMessage defaultMessage="Update" />
                         </Button>
                     </div>
                 )}

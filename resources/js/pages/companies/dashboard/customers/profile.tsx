@@ -33,6 +33,7 @@ import {
     UserIcon,
 } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
+import { FormattedMessage, useIntl } from 'react-intl';
 import { toast } from 'sonner';
 
 type CustomerProfile = {
@@ -61,6 +62,7 @@ const getMediaId = (media: any) => media?.id ?? media?.data?.id ?? undefined;
 export default function CustomerProfilePage({
     profile,
 }: CustomerProfilePageProps) {
+    const intl = useIntl();
     const { url } = usePage();
     const [passwordOpen, setPasswordOpen] = useState(() => {
         const params = new URLSearchParams(url.split('?')[1] || '');
@@ -102,9 +104,19 @@ export default function CustomerProfilePage({
 
         profileForm.patch('/customers/profile', {
             preserveScroll: true,
-            onSuccess: () => toast.success('Profile updated successfully.'),
+            onSuccess: () =>
+                toast.success(
+                    intl.formatMessage({
+                        defaultMessage: 'Profile updated successfully.',
+                    }),
+                ),
             onError: () =>
-                toast.error('Please check the profile form and try again.'),
+                toast.error(
+                    intl.formatMessage({
+                        defaultMessage:
+                            'Please check the profile form and try again.',
+                    }),
+                ),
         });
     };
 
@@ -116,14 +128,22 @@ export default function CustomerProfilePage({
             onSuccess: () => {
                 passwordForm.reset();
                 setPasswordOpen(false);
-                toast.success('Password updated successfully.');
+                toast.success(
+                    intl.formatMessage({
+                        defaultMessage: 'Password updated successfully.',
+                    }),
+                );
             },
         });
     };
 
     return (
         <TenantLayout>
-            <Head title="Customer Profile" />
+            <Head
+                title={intl.formatMessage({
+                    defaultMessage: 'Customer Profile',
+                })}
+            />
 
             <main className="bg-background py-10 text-foreground sm:py-14">
                 <div className="mx-auto w-full max-w-5xl px-4 sm:px-6 lg:px-8">
@@ -131,14 +151,13 @@ export default function CustomerProfilePage({
                         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                             <div className="space-y-2">
                                 <p className="text-xs font-semibold uppercase tracking-[0.28em] text-primary">
-                                    Travel Desk
+                                    <FormattedMessage defaultMessage="Travel Desk" />
                                 </p>
                                 <h1 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
-                                    Customer Profile
+                                    <FormattedMessage defaultMessage="Customer Profile" />
                                 </h1>
                                 <p className="max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base">
-                                    Manage your account identity, contact
-                                    details, and address for future bookings.
+                                    <FormattedMessage defaultMessage="Manage your account identity, contact details, and address for future bookings." />
                                 </p>
                             </div>
                             <Button
@@ -148,7 +167,7 @@ export default function CustomerProfilePage({
                                 onClick={() => setPasswordOpen(true)}
                             >
                                 <KeyRoundIcon className="size-4" />
-                                Change Password
+                                <FormattedMessage defaultMessage="Change Password" />
                             </Button>
                         </div>
                     </div>
@@ -171,7 +190,10 @@ export default function CustomerProfilePage({
                                 />
                                 <div className="text-center">
                                     <p className="text-base font-semibold text-foreground">
-                                        {profileForm.data.name || 'Customer'}
+                                        {profileForm.data.name ||
+                                            intl.formatMessage({
+                                                defaultMessage: 'Customer',
+                                            })}
                                     </p>
                                     <p className="text-sm text-muted-foreground">
                                         @{profileForm.data.username}
@@ -191,17 +213,19 @@ export default function CustomerProfilePage({
                                     </div>
                                     <div>
                                         <h2 className="text-lg font-semibold text-foreground">
-                                            Personal Information
+                                            <FormattedMessage defaultMessage="Personal Information" />
                                         </h2>
                                         <p className="text-sm text-muted-foreground">
-                                            Keep your booking identity accurate.
+                                            <FormattedMessage defaultMessage="Keep your booking identity accurate." />
                                         </p>
                                     </div>
                                 </div>
 
                                 <div className="grid gap-4 sm:grid-cols-2">
                                     <div className="space-y-2">
-                                        <Label htmlFor="name">Full Name</Label>
+                                        <Label htmlFor="name">
+                                            <FormattedMessage defaultMessage="Full Name" />
+                                        </Label>
                                         <Input
                                             id="name"
                                             value={profileForm.data.name}
@@ -218,7 +242,7 @@ export default function CustomerProfilePage({
                                     </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="username">
-                                            Username
+                                            <FormattedMessage defaultMessage="Username" />
                                         </Label>
                                         <Input
                                             id="username"
@@ -237,7 +261,9 @@ export default function CustomerProfilePage({
                                         />
                                     </div>
                                     <div className="space-y-2">
-                                        <Label htmlFor="email">Email</Label>
+                                        <Label htmlFor="email">
+                                            <FormattedMessage defaultMessage="Email" />
+                                        </Label>
                                         <Input
                                             id="email"
                                             type="email"
@@ -254,7 +280,9 @@ export default function CustomerProfilePage({
                                         />
                                     </div>
                                     <div className="space-y-2">
-                                        <Label htmlFor="phone">Phone</Label>
+                                        <Label htmlFor="phone">
+                                            <FormattedMessage defaultMessage="Phone" />
+                                        </Label>
                                         <Input
                                             id="phone"
                                             value={profileForm.data.phone}
@@ -270,7 +298,9 @@ export default function CustomerProfilePage({
                                         />
                                     </div>
                                     <div className="space-y-2 sm:col-span-2">
-                                        <Label>Gender</Label>
+                                        <Label>
+                                            <FormattedMessage defaultMessage="Gender" />
+                                        </Label>
                                         <Select
                                             value={profileForm.data.gender}
                                             onValueChange={(value) =>
@@ -281,17 +311,24 @@ export default function CustomerProfilePage({
                                             }
                                         >
                                             <SelectTrigger className="w-full">
-                                                <SelectValue placeholder="Select gender" />
+                                                <SelectValue
+                                                    placeholder={intl.formatMessage(
+                                                        {
+                                                            defaultMessage:
+                                                                'Select gender',
+                                                        },
+                                                    )}
+                                                />
                                             </SelectTrigger>
                                             <SelectContent>
                                                 <SelectItem value="unspecified">
-                                                    Prefer not to say
+                                                    <FormattedMessage defaultMessage="Prefer not to say" />
                                                 </SelectItem>
                                                 <SelectItem value="male">
-                                                    Male
+                                                    <FormattedMessage defaultMessage="Male" />
                                                 </SelectItem>
                                                 <SelectItem value="female">
-                                                    Female
+                                                    <FormattedMessage defaultMessage="Female" />
                                                 </SelectItem>
                                             </SelectContent>
                                         </Select>
@@ -309,11 +346,10 @@ export default function CustomerProfilePage({
                                     </div>
                                     <div>
                                         <h2 className="text-lg font-semibold text-foreground">
-                                            Address
+                                            <FormattedMessage defaultMessage="Address" />
                                         </h2>
                                         <p className="text-sm text-muted-foreground">
-                                            Used for invoices and booking
-                                            correspondence.
+                                            <FormattedMessage defaultMessage="Used for invoices and booking correspondence." />
                                         </p>
                                     </div>
                                 </div>
@@ -321,7 +357,7 @@ export default function CustomerProfilePage({
                                 <div className="grid gap-4 sm:grid-cols-2">
                                     <div className="space-y-2 sm:col-span-2">
                                         <Label htmlFor="address">
-                                            Detail Address
+                                            <FormattedMessage defaultMessage="Detail Address" />
                                         </Label>
                                         <Textarea
                                             id="address"
@@ -339,7 +375,9 @@ export default function CustomerProfilePage({
                                         />
                                     </div>
                                     <div className="space-y-2">
-                                        <Label>Province</Label>
+                                        <Label>
+                                            <FormattedMessage defaultMessage="Province" />
+                                        </Label>
                                         <GeoProvinceSelector
                                             value={String(
                                                 profileForm.data.province_id ||
@@ -371,7 +409,9 @@ export default function CustomerProfilePage({
                                         />
                                     </div>
                                     <div className="space-y-2">
-                                        <Label>City</Label>
+                                        <Label>
+                                            <FormattedMessage defaultMessage="City" />
+                                        </Label>
                                         <GeoCitySelector
                                             provinceId={
                                                 profileForm.data.province_id
@@ -399,7 +439,9 @@ export default function CustomerProfilePage({
                                         />
                                     </div>
                                     <div className="space-y-2">
-                                        <Label>District</Label>
+                                        <Label>
+                                            <FormattedMessage defaultMessage="District" />
+                                        </Label>
                                         <GeoDistrictSelector
                                             cityId={profileForm.data.city_id}
                                             value={String(
@@ -424,7 +466,9 @@ export default function CustomerProfilePage({
                                         />
                                     </div>
                                     <div className="space-y-2">
-                                        <Label>Village</Label>
+                                        <Label>
+                                            <FormattedMessage defaultMessage="Village" />
+                                        </Label>
                                         <GeoVillageSelector
                                             districtId={
                                                 profileForm.data.district_id
@@ -448,7 +492,7 @@ export default function CustomerProfilePage({
                                     </div>
                                     <div className="space-y-2 sm:col-span-2">
                                         <Label htmlFor="postal_code">
-                                            Postal Code
+                                            <FormattedMessage defaultMessage="Postal Code" />
                                         </Label>
                                         <Input
                                             id="postal_code"
@@ -476,7 +520,7 @@ export default function CustomerProfilePage({
                                     disabled={profileForm.processing}
                                 >
                                     <SaveIcon className="size-4" />
-                                    Save Profile
+                                    <FormattedMessage defaultMessage="Save Profile" />
                                 </Button>
                             </div>
                         </section>
@@ -490,15 +534,17 @@ export default function CustomerProfilePage({
                         <div className="mb-1 flex size-11 items-center justify-center rounded-2xl bg-primary/10 text-primary">
                             <MailIcon className="size-5" />
                         </div>
-                        <DialogTitle>Change Password</DialogTitle>
+                        <DialogTitle>
+                            <FormattedMessage defaultMessage="Change Password" />
+                        </DialogTitle>
                         <DialogDescription>
-                            Use a strong password to keep your bookings secure.
+                            <FormattedMessage defaultMessage="Use a strong password to keep your bookings secure." />
                         </DialogDescription>
                     </DialogHeader>
                     <form onSubmit={submitPassword} className="space-y-4">
                         <div className="space-y-2">
                             <Label htmlFor="current_password">
-                                Current Password
+                                <FormattedMessage defaultMessage="Current Password" />
                             </Label>
                             <Input
                                 id="current_password"
@@ -516,7 +562,9 @@ export default function CustomerProfilePage({
                             />
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="password">New Password</Label>
+                            <Label htmlFor="password">
+                                <FormattedMessage defaultMessage="New Password" />
+                            </Label>
                             <Input
                                 id="password"
                                 type="password"
@@ -534,7 +582,7 @@ export default function CustomerProfilePage({
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="password_confirmation">
-                                Confirm New Password
+                                <FormattedMessage defaultMessage="Confirm New Password" />
                             </Label>
                             <Input
                                 id="password_confirmation"
@@ -554,13 +602,13 @@ export default function CustomerProfilePage({
                                 variant="outline"
                                 onClick={() => setPasswordOpen(false)}
                             >
-                                Cancel
+                                <FormattedMessage defaultMessage="Cancel" />
                             </Button>
                             <Button
                                 type="submit"
                                 disabled={passwordForm.processing}
                             >
-                                Save Password
+                                <FormattedMessage defaultMessage="Save Password" />
                             </Button>
                         </DialogFooter>
                     </form>

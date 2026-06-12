@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Enums\MediaType;
+use App\Models\Media;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rules\Enum;
@@ -14,7 +15,21 @@ class MediaIndexRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return true;
+        $user = $this->user();
+
+        if ($user->hasRole('user:admin')) {
+            return true;
+        }
+
+        if ($this->filled('owner_type') && $this->filled('owner_id')) {
+            return $user->can('viewOwnerMedia', [
+                Media::class,
+                $this->input('owner_type'),
+                (int) $this->input('owner_id'),
+            ]);
+        }
+
+        return false;
     }
 
     /**

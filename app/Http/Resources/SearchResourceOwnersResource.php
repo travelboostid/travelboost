@@ -8,16 +8,20 @@ use Illuminate\Http\Resources\Json\JsonResource;
 class SearchResourceOwnersResource extends JsonResource
 {
     /**
-     * Transform the resource into an array.
-     *
      * @return array<string, mixed>
      */
     public function toArray(Request $request): array
     {
+        /** @var array<string, mixed> $payload */
+        $payload = $this->resource;
+
         return [
-            'users' => $this['users'] ?? [],
-            'companies' => $this['companies'] ?? [],
-            'affiliates' => $this['affiliates'] ?? [],
+            /** @var list<UserResource> */
+            'users' => $payload['users'],
+            /** @var list<CompanyResource> */
+            'companies' => $payload['companies'],
+            /** @var list<AffiliateProfileResource> */
+            'affiliates' => $payload['affiliates'],
         ];
     }
 }

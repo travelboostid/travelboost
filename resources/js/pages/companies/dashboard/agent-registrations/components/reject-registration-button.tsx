@@ -16,12 +16,14 @@ import { update } from '@/routes/companies/dashboard/agent-registrations';
 import { useForm } from '@inertiajs/react';
 import { UserX2Icon } from 'lucide-react';
 import { useState } from 'react';
+import { FormattedMessage, useIntl } from 'react-intl';
 
 export default function RejectRegistrationButton({
     registration,
 }: {
     registration: any;
 }) {
+    const intl = useIntl();
     const { company } = usePageSharedDataProps();
     const [open, setOpen] = useState(false);
     const form = useForm({
@@ -55,24 +57,28 @@ export default function RejectRegistrationButton({
             </AlertDialogTrigger>
             <AlertDialogContent>
                 <AlertDialogHeader>
-                    <AlertDialogTitle>Reject Registration</AlertDialogTitle>
+                    <AlertDialogTitle>
+                        <FormattedMessage defaultMessage="Reject Registration" />
+                    </AlertDialogTitle>
                     <AlertDialogDescription>
-                        This action will reject the registration. The agent will
-                        be notified and can re-apply if they wish. Are you sure
-                        you want to proceed?
+                        <FormattedMessage defaultMessage="This action will reject the registration. The agent will be notified and can re-apply if they wish. Are you sure you want to proceed?" />
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <Textarea
                     cols={5}
-                    placeholder="Write a note for the agent"
+                    placeholder={intl.formatMessage({
+                        defaultMessage: 'Write a note for the agent',
+                    })}
                     value={form.data.note}
                     onChange={(e) => form.setData('note', e.target.value)}
                     className="w-full"
                 />
                 <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogCancel>
+                        <FormattedMessage defaultMessage="Cancel" />
+                    </AlertDialogCancel>
                     <AlertDialogAction onClick={handleReject}>
-                        Reject
+                        <FormattedMessage defaultMessage="Reject" />
                     </AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>

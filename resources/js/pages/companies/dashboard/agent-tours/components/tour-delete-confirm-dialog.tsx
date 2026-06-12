@@ -12,9 +12,11 @@ import {
 } from '@/components/ui/alert-dialog';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { router } from '@inertiajs/react';
+import { FormattedMessage, useIntl } from 'react-intl';
 import { toast } from 'sonner';
 
 export default function TourDeleteConfirmDialog({ children, tour }: any) {
+    const intl = useIntl();
     const { company } = usePageSharedDataProps();
     const handleDelete = () => {
         router.delete(
@@ -22,10 +24,17 @@ export default function TourDeleteConfirmDialog({ children, tour }: any) {
             {
                 preserveScroll: true,
                 onSuccess: () => {
-                    toast.success('Success', {
-                        position: 'top-center',
-                        description: 'Tour deleted successfully',
-                    });
+                    toast.success(
+                        intl.formatMessage({
+                            defaultMessage: 'Success',
+                        }),
+                        {
+                            position: 'top-center',
+                            description: intl.formatMessage({
+                                defaultMessage: 'Tour deleted successfully',
+                            }),
+                        },
+                    );
                 },
             },
         );
@@ -37,17 +46,18 @@ export default function TourDeleteConfirmDialog({ children, tour }: any) {
             <AlertDialogContent>
                 <AlertDialogHeader>
                     <AlertDialogTitle>
-                        Are you absolutely sure?
+                        <FormattedMessage defaultMessage="Are you absolutely sure?" />
                     </AlertDialogTitle>
                     <AlertDialogDescription>
-                        This action cannot be undone. This will permanently
-                        delete the tour.
+                        <FormattedMessage defaultMessage="This action cannot be undone. This will permanently delete the tour." />
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogCancel>
+                        <FormattedMessage defaultMessage="Cancel" />
+                    </AlertDialogCancel>
                     <AlertDialogAction onClick={handleDelete}>
-                        Continue
+                        <FormattedMessage defaultMessage="Continue" />
                     </AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>

@@ -17,32 +17,40 @@ class AffiliateSeeder extends Seeder
         $partners = [];
         for ($i = 1; $i <= 2; $i++) {
             $username = 'partner-'.$nums[$i];
-            $user = User::create([
-                'name' => 'Partner '.ucfirst($nums[$i]),
-                'username' => $username,
-                'email' => $i === 1 ? 'veelian31@gmail.com' : "partner{$i}@tb.com",
-                'password' => Hash::make($username),
-                'email_verified_at' => now(),
-                'status' => 'active',
-            ]);
-            $user->addRole('user:affiliate');
+            $user = User::query()->updateOrCreate(
+                ['username' => $username],
+                [
+                    'name' => 'Partner '.ucfirst($nums[$i]),
+                    'email' => $i === 1 ? 'veelian31@gmail.com' : "partner{$i}@tb.com",
+                    'password' => Hash::make($username),
+                    'email_verified_at' => now(),
+                    'status' => 'active',
+                ],
+            );
+            $user->syncRoles(['user:affiliate']);
 
-            $profile = AffiliateProfile::create([
-                'user_id' => $user->id,
-                'upline_id' => null,
-                'tier' => 'partner',
-                'status' => 'approved',
-                'referral_code' => $username,
-                'approved_at' => now(),
-            ]);
+            $profile = AffiliateProfile::query()->updateOrCreate(
+                ['user_id' => $user->id],
+                [
+                    'upline_id' => null,
+                    'tier' => 'partner',
+                    'status' => 'approved',
+                    'referral_code' => $username,
+                    'approved_at' => now(),
+                ],
+            );
 
-            Domain::create([
-                'owner_id' => $profile->id,
-                'owner_type' => AffiliateProfile::class,
-                'subdomain' => $username,
-                'domain_enabled' => true,
-                'subdomain_enabled' => true,
-            ]);
+            Domain::query()->updateOrCreate(
+                [
+                    'owner_id' => $profile->id,
+                    'owner_type' => AffiliateProfile::class,
+                ],
+                [
+                    'subdomain' => $username,
+                    'domain_enabled' => true,
+                    'subdomain_enabled' => true,
+                ],
+            );
 
             $partners[$i] = $user->id;
         }
@@ -52,32 +60,40 @@ class AffiliateSeeder extends Seeder
             $username = 'ma-'.$nums[$i];
             $upline = ($i === 1 || $i === 2) ? $partners[1] : $partners[2];
 
-            $user = User::create([
-                'name' => 'Master Affiliate '.ucfirst($nums[$i]),
-                'username' => $username,
-                'email' => $i === 1 ? 'irvxxdhanty@gmail.com' : "ma{$i}@tb.com",
-                'password' => Hash::make($username),
-                'email_verified_at' => now(),
-                'status' => 'active',
-            ]);
-            $user->addRole('user:affiliate');
+            $user = User::query()->updateOrCreate(
+                ['username' => $username],
+                [
+                    'name' => 'Master Affiliate '.ucfirst($nums[$i]),
+                    'email' => $i === 1 ? 'irvxxdhanty@gmail.com' : "ma{$i}@tb.com",
+                    'password' => Hash::make($username),
+                    'email_verified_at' => now(),
+                    'status' => 'active',
+                ],
+            );
+            $user->syncRoles(['user:affiliate']);
 
-            $profile = AffiliateProfile::create([
-                'user_id' => $user->id,
-                'upline_id' => $upline,
-                'tier' => 'master_affiliate',
-                'status' => 'approved',
-                'referral_code' => $username,
-                'approved_at' => now(),
-            ]);
+            $profile = AffiliateProfile::query()->updateOrCreate(
+                ['user_id' => $user->id],
+                [
+                    'upline_id' => $upline,
+                    'tier' => 'master_affiliate',
+                    'status' => 'approved',
+                    'referral_code' => $username,
+                    'approved_at' => now(),
+                ],
+            );
 
-            Domain::create([
-                'owner_id' => $profile->id,
-                'owner_type' => AffiliateProfile::class,
-                'subdomain' => $username,
-                'domain_enabled' => true,
-                'subdomain_enabled' => true,
-            ]);
+            Domain::query()->updateOrCreate(
+                [
+                    'owner_id' => $profile->id,
+                    'owner_type' => AffiliateProfile::class,
+                ],
+                [
+                    'subdomain' => $username,
+                    'domain_enabled' => true,
+                    'subdomain_enabled' => true,
+                ],
+            );
 
             $mas[$i] = $user->id;
         }
@@ -86,35 +102,43 @@ class AffiliateSeeder extends Seeder
             $username = 'affiliate-'.$nums[$i];
             $userStatus = ($i % 4 === 0) ? 'inactive' : 'active';
             $profileStatus = ($i % 3 === 0) ? 'pending' : 'approved';
-
             $subdomainEnabled = ($profileStatus === 'approved' && $userStatus !== 'inactive');
+            $uplineId = $mas[($i % count($mas)) + 1];
 
-            $user = User::create([
-                'name' => 'Affiliate '.ucfirst($nums[$i]),
-                'username' => $username,
-                'email' => "affiliate{$i}@tb.com",
-                'password' => Hash::make($username),
-                'email_verified_at' => ($userStatus === 'active') ? now() : null,
-                'status' => $userStatus,
-            ]);
-            $user->addRole('user:affiliate');
+            $user = User::query()->updateOrCreate(
+                ['username' => $username],
+                [
+                    'name' => 'Affiliate '.ucfirst($nums[$i]),
+                    'email' => "affiliate{$i}@tb.com",
+                    'password' => Hash::make($username),
+                    'email_verified_at' => ($userStatus === 'active') ? now() : null,
+                    'status' => $userStatus,
+                ],
+            );
+            $user->syncRoles(['user:affiliate']);
 
-            $profile = AffiliateProfile::create([
-                'user_id' => $user->id,
-                'upline_id' => $mas[array_rand($mas)],
-                'tier' => 'affiliate',
-                'status' => $profileStatus,
-                'referral_code' => $username,
-                'approved_at' => ($profileStatus === 'approved') ? now() : null,
-            ]);
+            $profile = AffiliateProfile::query()->updateOrCreate(
+                ['user_id' => $user->id],
+                [
+                    'upline_id' => $uplineId,
+                    'tier' => 'affiliate',
+                    'status' => $profileStatus,
+                    'referral_code' => $username,
+                    'approved_at' => ($profileStatus === 'approved') ? now() : null,
+                ],
+            );
 
-            Domain::create([
-                'owner_id' => $profile->id,
-                'owner_type' => AffiliateProfile::class,
-                'subdomain' => $username,
-                'domain_enabled' => true,
-                'subdomain_enabled' => $subdomainEnabled,
-            ]);
+            Domain::query()->updateOrCreate(
+                [
+                    'owner_id' => $profile->id,
+                    'owner_type' => AffiliateProfile::class,
+                ],
+                [
+                    'subdomain' => $username,
+                    'domain_enabled' => true,
+                    'subdomain_enabled' => $subdomainEnabled,
+                ],
+            );
         }
     }
 }

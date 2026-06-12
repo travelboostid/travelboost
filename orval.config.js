@@ -13,8 +13,16 @@ const {
 } = process.env;
 const baseUrl = `${appScheme}://${appHost}${appPort ? `:${appPort}` : ''}`;
 
+/**
+ * Orval generates React Query hooks + TypeScript models from Scramble OpenAPI.
+ *
+ * Scramble (`config/scramble.php`) only exports routes under `/webapi`.
+ * Axios uses `baseURL: '/webapi'`, so OpenAPI paths are relative (e.g. `/medias`).
+ *
+ * After backend API changes: `pnpm orval`
+ */
 export default defineConfig({
-    traveboostQuery: {
+    travelboost: {
         output: {
             mode: 'tags-split',
             target: 'resources/js/api/traveboost.ts',
