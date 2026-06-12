@@ -17,6 +17,7 @@ use App\Http\Controllers\Companies\Dashboard\DashboardBookingController;
 use App\Http\Controllers\Companies\Dashboard\GoogleAccountController;
 use App\Http\Controllers\Companies\Dashboard\GoogleAnalyticsController;
 use App\Http\Controllers\Companies\Dashboard\HomeController;
+use App\Http\Controllers\Companies\Dashboard\LinkedAccountsController;
 use App\Http\Controllers\Companies\Dashboard\NotificationController;
 use App\Http\Controllers\Companies\Dashboard\PageController;
 use App\Http\Controllers\Companies\Dashboard\ParameterAgentController;
@@ -126,6 +127,7 @@ Route::prefix('companies')->middleware(['can:access-company-pages', 'use-analyti
         Route::resource('withdrawals', WithdrawalController::class);
         Route::post('withdrawals/{withdrawal}/cancel', [WithdrawalController::class, 'cancel'])->name('withdrawals.cancel');
         Route::get('profile', [ProfileController::class, 'show'])->name('settings.profile.show');
+        Route::get('linked-accounts', [LinkedAccountsController::class, 'index'])->name('settings.linked-accounts.index');
 
         Route::get(
             'parameter-vendor',
@@ -211,7 +213,9 @@ Route::prefix('companies')->middleware(['can:access-company-pages', 'use-analyti
         Route::get('analytics/select-or-setup-account', [GoogleAnalyticsController::class, 'showAccountSetupOrSelections'])->name('analytics.showAccountSetupOrSelections');
         Route::get('analytics/setup-account', [GoogleAnalyticsController::class, 'setupAccount'])->name('analytics.setupAccount');
         Route::post('analytics/select-account', [GoogleAnalyticsController::class, 'selectAccount'])->name('analytics.selectAccount');
+        Route::delete('analytics/connection', [GoogleAnalyticsController::class, 'unlinkConnection'])->name('analytics.unlinkConnection');
         Route::get('google/connect', [GoogleAccountController::class, 'connect'])->name('google.connect');
+        Route::delete('google/disconnect', [GoogleAccountController::class, 'disconnect'])->name('google.disconnect');
     });
 });
 

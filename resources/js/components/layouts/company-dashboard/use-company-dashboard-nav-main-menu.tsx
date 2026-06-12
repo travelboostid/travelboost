@@ -407,6 +407,15 @@ export function useCompanyDashboardNavMainMenu() {
                         permissions.includes('company-settings.query'),
                 },
                 {
+                    id: 'settings.linked-accounts',
+                    title: (
+                        <FormattedMessage defaultMessage="Linked accounts" />
+                    ),
+                    urlOrAction: `/companies/${company.username}/dashboard/linked-accounts`,
+                    shouldDisplay: (_roles, permissions) =>
+                        permissions.includes('company-settings.query'),
+                },
+                {
                     id: 'settings.parameter-vendor',
                     title: <FormattedMessage defaultMessage="Parameters" />,
                     urlOrAction: `/companies/${company.username}/dashboard/parameter-vendor`,

@@ -4,75 +4,51 @@ namespace App\Http\Controllers\Companies\Dashboard;
 
 use App\Http\Controllers\Controller;
 use App\Models\Company;
-use App\Models\CompanyGoogleAccount;
-use Google\Analytics\Admin\V1beta\Account;
-use Google\Analytics\Admin\V1beta\Client\AnalyticsAdminServiceClient;
-use Google\Analytics\Admin\V1beta\ListAccountsRequest;
-use Google\Analytics\Admin\V1beta\ListDataStreamsRequest;
-use Google\Analytics\Admin\V1beta\ListPropertiesRequest;
-use Google\Analytics\Admin\V1beta\ProvisionAccountTicketRequest;
-use Google\Analytics\Data\V1beta\Client\BetaAnalyticsDataClient;
-use Google\Analytics\Data\V1beta\DateRange;
-use Google\Analytics\Data\V1beta\Dimension;
-use Google\Analytics\Data\V1beta\Metric;
-use Google\Analytics\Data\V1beta\RunRealtimeReportRequest;
-use Google\Analytics\Data\V1beta\RunReportRequest;
+use App\Services\GoogleAnalyticsService;
 use Google\ApiCore\ApiException;
-use Google\Auth\Credentials\UserRefreshCredentials;
-use Google\Client;
-use Google\Service\GoogleAnalyticsAdmin;
-use Google\Service\GoogleAnalyticsAdmin\GoogleAnalyticsAdminV1betaDataStream;
-use Google\Service\GoogleAnalyticsAdmin\GoogleAnalyticsAdminV1betaProperty;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
-use Laravel\Socialite\Facades\Socialite;
+use RuntimeException;
 
 class GoogleAnalyticsController extends Controller
 {
+    public function __construct(
+        private GoogleAnalyticsService $analyticsService
+    ) {}
+
     public function index(Request $request, Company $company)
     {
         $account = $company->googleAccount;
         $analytics = $account?->analyticsConnection;
 
-        $insights = null;
-        $realtimeInsights = null;
+        $props = [
+            'account' => $account,
+            'analytics' => $analytics,
+        ];
 
         if ($account && $analytics) {
-            $insights = Cache::remember(
-                sprintf(
-                    'ga-dashboard:%s:%s:30d',
-                    $analytics->property_id,
-                    $analytics->data_stream_id
+            $props['insights'] = Inertia::defer(
+                fn () => Cache::remember(
+                    $this->analyticsService->dashboardCacheKey($analytics),
+                    now()->addHour(),
+                    fn () => $this->analyticsService->getDashboardInsights($account, $analytics)
                 ),
-                now()->addHour(),
-                fn () => $this->getAnalyticsDashboardInsights(
-                    $account,
-                    $analytics->property_id,
-                    $analytics->data_stream_id
-                )
+                'analytics-overview'
             );
-            $realtimeInsights = Cache::remember(
-                sprintf(
-                    'ga-realtime-dashboard:%s:30d',
-                    $analytics->property_id,
+            $props['realtimeInsights'] = Inertia::defer(
+                fn () => Cache::remember(
+                    $this->analyticsService->realtimeCacheKey($analytics),
+                    now()->addSeconds(20),
+                    fn () => $this->analyticsService->getRealtimeInsights($account, $analytics)
                 ),
-                now()->addSeconds(20),
-                fn () => $this->getRealtimeInsights(
-                    $account,
-                    $analytics->property_id,
-                )
+                'analytics-realtime'
             );
         }
 
         return Inertia::render(
             'companies/dashboard/analytics/index',
-            [
-                'account' => $account,
-                'analytics' => $analytics,
-                'insights' => $insights,
-                'realtimeInsights' => $realtimeInsights,
-            ]
+            $props
         );
     }
 
@@ -81,778 +57,115 @@ class GoogleAnalyticsController extends Controller
         $googleAccount = $company->googleAccount;
 
         if ($googleAccount?->analyticsConnection) {
-            return redirect('/');
+            return redirect()->route('companies.dashboard.analytics.index', $company);
         }
-        $analyticAccounts = Cache::remember(
-            "analytics-accounts:{$company->id}",
-            now()->addHour(),
-            fn () => $this->getAvailableAnalyticsAccounts($company)
-        );
 
         return Inertia::render('companies/dashboard/analytics/select-or-setup-account', [
             'googleAccount' => $googleAccount,
-            'analyticAccounts' => $analyticAccounts,
+            'analyticAccounts' => Inertia::defer(
+                fn () => Cache::remember(
+                    $this->analyticsService->accountsCacheKey($company),
+                    now()->addHour(),
+                    fn () => $this->analyticsService->listAvailableAccounts($company)
+                )
+            ),
         ]);
     }
 
     public function selectAccount(Request $request, Company $company)
     {
+        $googleAccount = $company->googleAccount;
+
+        abort_unless($googleAccount !== null, 404);
+
+        if ($request->input('website_url') === '-') {
+            $request->merge(['website_url' => null]);
+        }
+
         $validated = $request->validate([
             'company_google_account_id' => [
                 'required',
                 'integer',
                 'exists:company_google_accounts,id',
             ],
-
             'ga_account_id' => [
                 'required',
                 'digits_between:1,20',
             ],
-
             'property_id' => [
                 'required',
                 'digits_between:1,20',
             ],
-
             'data_stream_id' => [
                 'required',
                 'digits_between:1,20',
             ],
-
             'measurement_id' => [
                 'required',
                 'string',
                 'regex:/^G-[A-Z0-9]+$/',
                 'max:20',
             ],
-
             'website_url' => [
                 'nullable',
                 'url:https',
                 'max:2048',
             ],
-
             'timezone' => [
-                'required',
+                'nullable',
                 'string',
                 'max:100',
             ],
-
             'currency' => [
-                'required',
+                'nullable',
                 'string',
                 'size:3',
             ],
         ]);
-        $created = $company->googleAccount->analyticsConnection()->create($validated);
 
-        return back();
+        abort_unless(
+            (int) $validated['company_google_account_id'] === (int) $googleAccount->id,
+            403,
+        );
+
+        abort_if($googleAccount->analyticsConnection !== null, 422);
+
+        $this->analyticsService->connectProperty($company, $googleAccount, $validated);
+
+        return redirect()->route('companies.dashboard.analytics.index', $company);
     }
 
-    private function getAvailableAnalyticsAccounts(Company $company): array
+    public function unlinkConnection(Request $request, Company $company)
     {
-        $google = $company->googleAccount;
-
-        if (! $google || ! $google->refresh_token) {
-            return [];
-        }
-
-        $scope = 'https://googleapis.com';
-
-        $auth = new UserRefreshCredentials($scope, [
-            'client_id' => config('services.google.client_id'),
-            'client_secret' => config('services.google.client_secret'),
-            'refresh_token' => $google->refresh_token,
-        ]);
-
-        $adminClient = new AnalyticsAdminServiceClient([
-            'credentials' => $auth,
-        ]);
-
         try {
-            $accounts = [];
-
-            foreach ($adminClient->listAccounts(new ListAccountsRequest) as $account) {
-                $accounts[] = [
-                    'id' => basename($account->getName()),
-                    'resource' => $account->getName(),
-                    'display_name' => $account->getDisplayName(),
-                    'region_code' => $account->getRegionCode(),
-                    'properties' => $this->getAnalyticsProperties(
-                        $adminClient,
-                        $account->getName()
-                    ),
-                ];
-            }
-
-            return $accounts;
-        } catch (\Throwable $e) {
-            \Log::error(
-                'Failed fetching Google Analytics accounts for Company ID '.$company->id,
-                ['exception' => $e]
-            );
-
-            return [];
-        }
-    }
-
-    private function getAnalyticsProperties(
-        AnalyticsAdminServiceClient $adminClient,
-        string $accountResource
-    ): array {
-        $properties = [];
-
-        try {
-            $request = (new ListPropertiesRequest)
-                ->setFilter('parent:'.$accountResource);
-
-            foreach ($adminClient->listProperties($request) as $property) {
-                $properties[] = [
-                    'id' => basename($property->getName()),
-                    'resource' => $property->getName(),
-                    'display_name' => $property->getDisplayName(),
-                    'property_type' => $property->getPropertyType(),
-                    'industry_category' => $property->getIndustryCategory(),
-                    'time_zone' => $property->getTimeZone(),
-                    'currency_code' => $property->getCurrencyCode(),
-                    'streams' => $this->getAnalyticsStreams(
-                        $adminClient,
-                        $property->getName()
-                    ),
-                ];
-            }
-        } catch (\Throwable $e) {
-            \Log::warning(
-                'Failed fetching properties for account '.$accountResource,
-                ['exception' => $e]
-            );
+            $this->analyticsService->unlinkProperty($company);
+        } catch (RuntimeException) {
+            abort(404);
         }
 
-        return $properties;
-    }
-
-    private function getAnalyticsStreams(
-        AnalyticsAdminServiceClient $adminClient,
-        string $propertyResource
-    ): array {
-        $streams = [];
-
-        try {
-            $request = (new ListDataStreamsRequest)
-                ->setParent($propertyResource);
-
-            foreach ($adminClient->listDataStreams($request) as $stream) {
-                $webStream = $stream->getWebStreamData();
-
-                $streams[] = [
-                    'id' => basename($stream->getName()),
-                    'resource' => $stream->getName(),
-                    'display_name' => $stream->getDisplayName(),
-                    'type' => $stream->getType(),
-
-                    // null untuk Android/iOS stream
-                    'measurement_id' => $webStream?->getMeasurementId(),
-
-                    'default_uri' => $webStream?->getDefaultUri(),
-                ];
-            }
-        } catch (\Throwable $e) {
-            \Log::warning(
-                'Failed fetching streams for property '.$propertyResource,
-                ['exception' => $e]
-            );
-        }
-
-        return $streams;
+        return redirect()->route(
+            'companies.dashboard.analytics.showAccountSetupOrSelections',
+            $company
+        );
     }
 
     public function setupAccount(Request $request, Company $company)
     {
-        $google = $company->googleAccount;
-        // 1. Fix: Use correct explicit scope for account generation
-        $scope = 'https://www.googleapis.com/auth/analytics.edit';
+        $googleAccount = $company->googleAccount;
 
-        // 2. Fix: Wrapped client_secret correctly inside the config() helper
-        $auth = new UserRefreshCredentials(
-            $scope,
-            [
-                'client_id' => config('services.google.client_id'),
-                'client_secret' => config('services.google.client_secret'),
-                'refresh_token' => $google->refresh_token,
-            ]
-        );
-
-        // 3. Initialize the Client with the auth context
-        $adminClient = new AnalyticsAdminServiceClient([
-            'credentials' => $auth,
-        ]);
+        abort_unless($googleAccount !== null, 404);
 
         try {
-            // 4. Construct the Account layout template
-            $accountTemplate = new Account;
-            $accountTemplate->setDisplayName('Blog Platform Analytics');
-            $accountTemplate->setRegionCode('US');
+            $onboardingUrl = $this->analyticsService->provisionAccountTicketUrl(
+                $googleAccount,
+                url()->current()
+            );
 
-            // 5. Fix: Renamed variable to avoid overwriting Laravel's $request
-            $ticketRequest = new ProvisionAccountTicketRequest;
-            $ticketRequest->setAccount($accountTemplate);
-            $ticketRequest->setRedirectUri(url()->current());
-
-            // 6. Execute the API call
-            $response = $adminClient->provisionAccountTicket($ticketRequest);
-
-            // 7. Extract the unique Google UI onboarding URL
-            $onboardingUrl = $response->getUri();
-
-            // 8. Fix: Use Laravel's built-in redirect instead of manual PHP headers
             return redirect()->away($onboardingUrl);
-
         } catch (ApiException $e) {
-            // Catch specific Google API errors for cleaner debugging
             return response()->json(['error' => 'Google API Exception: '.$e->getMessage()], 400);
-        } catch (\Exception $e) {
-            return response()->json(['error' => 'General System Error: '.$e->getMessage()], 500);
+        } catch (RuntimeException $e) {
+            return response()->json(['error' => $e->getMessage()], 400);
         }
-    }
-
-    public function createAnalyticsCallback()
-    {
-        // Inside your /dashboard/analytics-callback route file:
-
-        if (isset($_GET['accountTicketId'])) {
-            $ticketId = $_GET['accountTicketId'];
-
-            // 1. Re-initialize your AnalyticsAdminServiceClient (same as Step 2)
-            // 2. Use $adminClient->listAccountSummaries() or $adminClient->listAccounts()
-            //    to query the user's newly initialized profile.
-
-            // 3. Locate the newest Account ID/Property ID, store them securely
-            //    in your database alongside their new G-XXXXXXXXXX Measurement ID.
-
-            // 4. Redirect the user back to their blog settings screen with a success message!
-        }
-    }
-
-    public function redirect(Request $request)
-    {
-        return Socialite::driver('google')
-            ->scopes([
-                'https://www.googleapis.com/auth/analytics.readonly',
-                'https://www.googleapis.com/auth/analytics.edit',
-            ])
-            ->with([
-                'access_type' => 'offline',
-                'prompt' => 'consent',
-            ])
-            ->redirect();
-    }
-
-    public function callback(Request $request)
-    {
-        $googleUser = Socialite::driver('google')->user();
-
-        $company = $request->user()->company;
-
-        CompanyGoogleAccount::updateOrCreate(
-            [
-                'company_id' => $company->id,
-            ],
-            [
-                'google_id' => $googleUser->id,
-                'email' => $googleUser->email,
-                'name' => $googleUser->name,
-                'access_token' => $googleUser->token,
-                'refresh_token' => $googleUser->refreshToken,
-            ]
-        );
-
-        return redirect()
-            ->route('settings.integrations')
-            ->with('success', 'Google Analytics connected.');
-    }
-
-    public function setup(Request $request)
-    {
-        $company = $request->user()->company;
-        $connection = $company->googleConnection;
-
-        // 1. Google Client
-        $client = new Client;
-        $client->setAccessToken($connection->access_token);
-
-        $admin = new GoogleAnalyticsAdmin($client);
-
-        // -----------------------------
-        // 2. You need GA Account ID first
-        // (simplified: assume user already has account)
-        // Example format: accounts/123456
-        // -----------------------------
-        $accountId = $request->input('account_id');
-
-        // -----------------------------
-        // 3. CREATE GA4 PROPERTY
-        // -----------------------------
-        $property = new GoogleAnalyticsAdminV1betaProperty([
-            'parent' => "accounts/{$accountId}",
-            'displayName' => $company->name,
-            'timeZone' => 'Asia/Jakarta',
-            'currencyCode' => 'IDR',
-        ]);
-
-        $createdProperty = $admin->properties->create($property);
-
-        $propertyName = $createdProperty->getName();
-        // e.g. properties/123456789
-
-        // -----------------------------
-        // 4. CREATE WEB STREAM
-        // -----------------------------
-        $stream = new GoogleAnalyticsAdminV1betaDataStream([
-            'displayName' => $company->name.' Web',
-            'webStreamData' => [
-                'defaultUri' => $request->input('website_url'),
-            ],
-        ]);
-
-        $createdStream = $admin->properties_dataStreams->create(
-            $propertyName,
-            $stream
-        );
-
-        // measurement ID: G-XXXX
-        $measurementId = $createdStream->getWebStreamData()->getMeasurementId();
-
-        // -----------------------------
-        // 5. SAVE TO DB
-        // -----------------------------
-        $connection->update([
-            'property_id' => $propertyName,
-            'measurement_id' => $measurementId,
-        ]);
-
-        return response()->json([
-            'property_id' => $propertyName,
-            'measurement_id' => $measurementId,
-        ]);
-    }
-
-    private function getAnalyticsDashboardInsights(
-        CompanyGoogleAccount $googleAccount,
-        string $propertyId,
-        ?string $streamId = null
-    ): array {
-        return [
-            'overview' => $this->getOverviewInsights(
-                $googleAccount,
-                $propertyId,
-                $streamId
-            ),
-
-            'devices' => $this->getBreakdownInsights(
-                $googleAccount,
-                $propertyId,
-                $streamId,
-                'deviceCategory',
-                'activeUsers',
-                'users'
-            ),
-
-            'channels' => $this->getBreakdownInsights(
-                $googleAccount,
-                $propertyId,
-                $streamId,
-                'sessionDefaultChannelGroup',
-                'sessions',
-                'sessions'
-            ),
-
-            'social_sources' => $this->getSocialSourceInsights(
-                $googleAccount,
-                $propertyId,
-                $streamId
-            ),
-
-            'countries' => $this->getBreakdownInsights(
-                $googleAccount,
-                $propertyId,
-                $streamId,
-                'country',
-                'activeUsers',
-                'users',
-                10
-            ),
-
-            'browsers' => $this->getBreakdownInsights(
-                $googleAccount,
-                $propertyId,
-                $streamId,
-                'browser',
-                'activeUsers',
-                'users',
-                10
-            ),
-        ];
-    }
-
-    private function getRealtimeInsights(
-        CompanyGoogleAccount $googleAccount,
-        string $propertyId
-    ): array {
-        return [
-            'overview' => $this->getRealtimeOverview(
-                $googleAccount,
-                $propertyId,
-            ),
-
-            'devices' => $this->getRealtimeBreakdown(
-                $googleAccount,
-                $propertyId,
-                'deviceCategory',
-            ),
-
-            'countries' => $this->getRealtimeBreakdown(
-                $googleAccount,
-                $propertyId,
-                'country',
-            ),
-
-            'pages' => $this->getRealtimePages(
-                $googleAccount,
-                $propertyId,
-            ),
-
-            'events' => $this->getRealtimeEvents(
-                $googleAccount,
-                $propertyId,
-            ),
-        ];
-    }
-
-    private function getRealtimePages(
-        CompanyGoogleAccount $googleAccount,
-        string $propertyId
-    ): array {
-        return $this->getRealtimeBreakdown(
-            $googleAccount,
-            $propertyId,
-            'unifiedScreenName', // ✅ FIXED
-            'screenPageViews',
-            20
-        );
-    }
-
-    private function getRealtimeEvents(
-        CompanyGoogleAccount $googleAccount,
-        string $propertyId
-    ): array {
-        return $this->getRealtimeBreakdown(
-            $googleAccount,
-            $propertyId,
-            'eventName',
-            'eventCount',
-            20
-        );
-    }
-
-    private function getRealtimeOverview(
-        CompanyGoogleAccount $googleAccount,
-        string $propertyId
-    ): array {
-        $rows = $this->runRealtimeReport(
-            $googleAccount,
-            $propertyId,
-            [],
-            [
-                'activeUsers',
-                'eventCount',
-                'screenPageViews',
-            ]
-        );
-
-        $row = $rows[0] ?? null;
-
-        return [
-            'active_users' => (int) ($row['metrics'][0] ?? 0),
-            'events' => (int) ($row['metrics'][1] ?? 0),
-            'page_views' => (int) ($row['metrics'][2] ?? 0),
-        ];
-    }
-
-    private function getRealtimeBreakdown(
-        CompanyGoogleAccount $googleAccount,
-        string $propertyId,
-        string $dimension,
-        string $metric = 'activeUsers',
-        int $limit = 10
-    ): array {
-        $rows = $this->runRealtimeReport(
-            $googleAccount,
-            $propertyId,
-            [$dimension],
-            [$metric],
-            $limit
-        );
-
-        return collect($rows)
-            ->map(fn ($row) => [
-                'name' => $row['dimensions'][0] ?? 'unknown',
-                'value' => (int) ($row['metrics'][0] ?? 0),
-            ])
-            ->values()
-            ->all();
-    }
-
-    private function runRealtimeReport(
-        CompanyGoogleAccount $googleAccount,
-        string $propertyId,
-        array $dimensions = [],
-        array $metrics = [],
-        int $limit = 20
-    ): array {
-        $client = $this->makeAnalyticsClient($googleAccount);
-
-        $response = $client->runRealtimeReport(
-            new RunRealtimeReportRequest([
-                'property' => "properties/{$propertyId}",
-
-                'dimensions' => collect($dimensions)
-                    ->map(fn ($name) => new Dimension([
-                        'name' => $name,
-                    ]))
-                    ->all(),
-
-                'metrics' => collect($metrics)
-                    ->map(fn ($name) => new Metric([
-                        'name' => $name,
-                    ]))
-                    ->all(),
-
-                'limit' => $limit,
-            ])
-        );
-
-        return collect($response->getRows())
-            ->map(fn ($row) => [
-                'dimensions' => collect($row->getDimensionValues())
-                    ->map(fn ($v) => $v->getValue())
-                    ->all(),
-
-                'metrics' => collect($row->getMetricValues())
-                    ->map(fn ($v) => $v->getValue())
-                    ->all(),
-            ])
-            ->all();
-    }
-
-    private function getOverviewInsights(
-        CompanyGoogleAccount $googleAccount,
-        string $propertyId,
-        ?string $streamId
-    ): array {
-        $rows = $this->runReport(
-            $googleAccount,
-            $propertyId,
-            $streamId,
-            [],
-            [
-                'activeUsers',
-                'sessions',
-                'screenPageViews',
-                'bounceRate',
-            ]
-        );
-
-        $row = $rows[0] ?? null;
-
-        if (! $row) {
-            return [
-                'users' => 0,
-                'sessions' => 0,
-                'page_views' => 0,
-                'bounce_rate' => 0,
-            ];
-        }
-
-        return [
-            'users' => (int) $row['metrics'][0],
-            'sessions' => (int) $row['metrics'][1],
-            'page_views' => (int) $row['metrics'][2],
-            'bounce_rate' => round((float) $row['metrics'][3], 1),
-        ];
-    }
-
-    private function getBreakdownInsights(
-        CompanyGoogleAccount $googleAccount,
-        string $propertyId,
-        ?string $streamId,
-        string $dimension,
-        string $metric,
-        string $valueKey,
-        int $limit = 20
-    ): array {
-        $rows = $this->runReport(
-            $googleAccount,
-            $propertyId,
-            $streamId,
-            [$dimension],
-            [$metric],
-            $limit
-        );
-
-        $items = collect($rows)
-            ->map(fn ($row) => [
-                'name' => $row['dimensions'][0],
-                $valueKey => (int) $row['metrics'][0],
-            ])
-            ->values()
-            ->all();
-
-        return $this->addPercentages($items, $valueKey);
-    }
-
-    private function getSocialSourceInsights(
-        CompanyGoogleAccount $googleAccount,
-        string $propertyId,
-        ?string $streamId
-    ): array {
-        $rows = $this->runReport(
-            $googleAccount,
-            $propertyId,
-            $streamId,
-            ['sessionSource'],
-            ['sessions'],
-            50
-        );
-
-        $socialSources = [
-            'facebook',
-            'instagram',
-            'linkedin',
-            'tiktok',
-            'twitter',
-            'x',
-            'youtube',
-            'pinterest',
-        ];
-
-        $items = collect($rows)
-            ->filter(function ($row) use ($socialSources) {
-                return in_array(
-                    strtolower($row['dimensions'][0]),
-                    $socialSources,
-                    true
-                );
-            })
-            ->map(fn ($row) => [
-                'name' => $row['dimensions'][0],
-                'sessions' => (int) $row['metrics'][0],
-            ])
-            ->values()
-            ->all();
-
-        return $this->addPercentages($items, 'sessions');
-    }
-
-    private function addPercentages(
-        array $items,
-        string $valueKey
-    ): array {
-        $total = collect($items)->sum($valueKey);
-
-        return collect($items)
-            ->map(function ($item) use ($total, $valueKey) {
-                $item['percentage'] = $total > 0
-                    ? round(($item[$valueKey] / $total) * 100, 1)
-                    : 0;
-
-                return $item;
-            })
-            ->values()
-            ->all();
-    }
-
-    private function runReport(
-        CompanyGoogleAccount $googleAccount,
-        string $propertyId,
-        ?string $streamId,
-        array $dimensions,
-        array $metrics,
-        int $limit = 100
-    ): array {
-        $client = $this->makeAnalyticsClient($googleAccount);
-
-        $request = $this->buildReportRequest(
-            $propertyId,
-            $streamId,
-            $dimensions,
-            $metrics,
-            $limit
-        );
-
-        $report = $client->runReport($request);
-
-        return collect($report->getRows())
-            ->map(fn ($row) => [
-                'dimensions' => collect($row->getDimensionValues())
-                    ->map(fn ($v) => $v->getValue())
-                    ->all(),
-
-                'metrics' => collect($row->getMetricValues())
-                    ->map(fn ($v) => $v->getValue())
-                    ->all(),
-            ])
-            ->all();
-    }
-
-    private function buildReportRequest(
-        string $propertyId,
-        ?string $streamId,
-        array $dimensions,
-        array $metrics,
-        int $limit
-    ): RunReportRequest {
-        $request = new RunReportRequest;
-
-        $request->setProperty('properties/'.$propertyId);
-
-        // Date range (required)
-        $dateRange = new DateRange([
-            'start_date' => '30daysAgo',
-            'end_date' => 'today',
-        ]);
-
-        $request->setDateRanges([$dateRange]);
-
-        // Dimensions
-        $request->setDimensions(
-            array_map(fn ($d) => new Dimension(['name' => $d]), $dimensions)
-        );
-
-        // Metrics
-        $request->setMetrics(
-            array_map(fn ($m) => new Metric(['name' => $m]), $metrics)
-        );
-
-        // Limit rows
-        $request->setLimit($limit);
-
-        return $request;
-    }
-
-    private function makeAnalyticsClient(
-        CompanyGoogleAccount $googleAccount
-    ): BetaAnalyticsDataClient {
-        $auth = new UserRefreshCredentials(
-            'https://googleapis.com',
-            [
-                'client_id' => config('services.google.client_id'),
-                'client_secret' => config('services.google.client_secret'),
-                'refresh_token' => $googleAccount->refresh_token,
-            ]
-        );
-
-        return new BetaAnalyticsDataClient([
-            'credentials' => $auth,
-        ]);
     }
 }

@@ -1,76 +1,50 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import usePageProps from '@/hooks/use-page-props';
 import { cn } from '@/lib/utils';
 import { EyeIcon, UsersIcon, ZapIcon } from 'lucide-react';
-import type { HTMLAttributes } from 'react';
-import { FormattedMessage } from 'react-intl';
+import { FormattedMessage, FormattedNumber } from 'react-intl';
 import type { AnalyticsPageProps } from '..';
+import { AnalyticsStatCards } from './analytics-stat-cards';
 
-type RealtimeOverviewProps = HTMLAttributes<HTMLDivElement>;
+type RealtimeOverviewProps = {
+    className?: string;
+};
 
-export default function RealtimeOverview({
-    className,
-    ...otherProps
-}: RealtimeOverviewProps) {
+export default function RealtimeOverview({ className }: RealtimeOverviewProps) {
     const { realtimeInsights } = usePageProps<AnalyticsPageProps>();
-    const totalPageViews = realtimeInsights.overview.page_views;
-    const totalActiveUsers = realtimeInsights.overview.active_users;
-    const totalEvents = realtimeInsights.overview.events;
+    const overview = realtimeInsights?.overview;
+
+    if (!overview) {
+        return null;
+    }
+
     return (
-        <div
-            className={cn('grid gap-4 md:grid-cols-3', className)}
-            {...otherProps}
-        >
-            <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">
-                        <FormattedMessage defaultMessage="Active Users" />
-                    </CardTitle>
-                    <UsersIcon className="h-4 w-4 text-chart-1" />
-                </CardHeader>
-                <CardContent>
-                    <div className="text-2xl font-bold text-foreground">
-                        {totalActiveUsers}
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                        <FormattedMessage defaultMessage="Currently active" />
-                    </p>
-                </CardContent>
-            </Card>
-
-            <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">
-                        <FormattedMessage defaultMessage="Page Views" />
-                    </CardTitle>
-                    <EyeIcon className="h-4 w-4 text-chart-2" />
-                </CardHeader>
-                <CardContent>
-                    <div className="text-2xl font-bold text-foreground">
-                        {totalPageViews}
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                        <FormattedMessage defaultMessage="Today's views" />
-                    </p>
-                </CardContent>
-            </Card>
-
-            <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">
-                        <FormattedMessage defaultMessage="Events" />
-                    </CardTitle>
-                    <ZapIcon className="h-4 w-4 text-chart-3" />
-                </CardHeader>
-                <CardContent>
-                    <div className="text-2xl font-bold text-foreground">
-                        {totalEvents}
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                        <FormattedMessage defaultMessage="Total events" />
-                    </p>
-                </CardContent>
-            </Card>
-        </div>
+        <AnalyticsStatCards
+            className={cn('sm:grid-cols-3', className)}
+            items={[
+                {
+                    label: <FormattedMessage defaultMessage="Active users" />,
+                    value: <FormattedNumber value={overview.active_users} />,
+                    hint: (
+                        <FormattedMessage defaultMessage="Right now on your site" />
+                    ),
+                    icon: UsersIcon,
+                    iconClassName: 'text-blue-600 dark:text-blue-400',
+                },
+                {
+                    label: <FormattedMessage defaultMessage="Page views" />,
+                    value: <FormattedNumber value={overview.page_views} />,
+                    hint: <FormattedMessage defaultMessage="Last 30 minutes" />,
+                    icon: EyeIcon,
+                    iconClassName: 'text-emerald-600 dark:text-emerald-400',
+                },
+                {
+                    label: <FormattedMessage defaultMessage="Events" />,
+                    value: <FormattedNumber value={overview.events} />,
+                    hint: <FormattedMessage defaultMessage="Last 30 minutes" />,
+                    icon: ZapIcon,
+                    iconClassName: 'text-amber-600 dark:text-amber-400',
+                },
+            ]}
+        />
     );
 }

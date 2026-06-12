@@ -22,11 +22,19 @@ class UseCurrentCompanyProps
      */
     public function handle(Request $request, Closure $next)
     {
-        /** @var Company | null */
+        /** @var Company|string|null $company */
         $company = $request->route('company');
 
         if ($company == null) {
             return $next($request);
+        }
+
+        if (is_string($company)) {
+            $company = Company::query()
+                ->where('username', $company)
+                ->firstOrFail();
+
+            $request->route()?->setParameter('company', $company);
         }
 
         $company->loadMissing(['settings']);
