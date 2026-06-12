@@ -30,6 +30,11 @@ class UpdateTourRequest extends FormRequest
                     Rule::exists('product_commission_categories', 'id')
                         ->where('company_id', $company?->id),
                 ],
+                'visa_category_id' => [
+                    'nullable',
+                    Rule::exists('visa_categories', 'id')
+                        ->where('company_id', $company?->id),
+                ],
             ];
         }
 
@@ -50,6 +55,11 @@ class UpdateTourRequest extends FormRequest
             'product_commission_category_id' => [
                 'required',
                 Rule::exists('product_commission_categories', 'id')
+                    ->where('company_id', $company?->id),
+            ],
+            'visa_category_id' => [
+                'nullable',
+                Rule::exists('visa_categories', 'id')
                     ->where('company_id', $company?->id),
             ],
             'parent_id' => 'nullable|exists:tours,id',

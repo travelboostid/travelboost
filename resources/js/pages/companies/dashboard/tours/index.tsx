@@ -649,7 +649,6 @@ export default function Page({ data, bookingDeadlineDays = 0 }: PageProps) {
         React.useState<ColumnFiltersState>([]);
     const [columnVisibility, setColumnVisibility] =
         React.useState<VisibilityState>({ image: false });
-    const [rowSelection, setRowSelection] = React.useState({});
     const [activeTab, setActiveTab] = React.useState('active');
     const [globalFilter, setGlobalFilter] = React.useState('');
     const { company } = usePageSharedDataProps();
@@ -707,14 +706,12 @@ export default function Page({ data, bookingDeadlineDays = 0 }: PageProps) {
         getSortedRowModel: getSortedRowModel(),
         getFilteredRowModel: getFilteredRowModel(),
         onColumnVisibilityChange: setColumnVisibility,
-        onRowSelectionChange: setRowSelection,
         onGlobalFilterChange: setGlobalFilter,
         globalFilterFn,
         state: {
             sorting,
             columnFilters,
             columnVisibility,
-            rowSelection,
             globalFilter,
         },
     });
@@ -822,7 +819,7 @@ export default function Page({ data, bookingDeadlineDays = 0 }: PageProps) {
                 </div>
 
                 <div className="rounded-xl border border-border bg-card shadow-sm w-full overflow-hidden dark:border-slate-800 dark:bg-slate-950/80 dark:shadow-none">
-                    <div className="w-full max-h-[65vh] overflow-auto relative [scrollbar-gutter:stable]">
+                    <div className="w-full overflow-x-auto relative [scrollbar-gutter:stable]">
                         <Table
                             unwrapped
                             className="w-full border-separate border-spacing-0 text-sm"
@@ -855,10 +852,6 @@ export default function Page({ data, bookingDeadlineDays = 0 }: PageProps) {
                                     table.getRowModel().rows.map((row) => (
                                         <TableRow
                                             key={row.id}
-                                            data-state={
-                                                row.getIsSelected() &&
-                                                'selected'
-                                            }
                                             className="group border-none transition-colors hover:bg-slate-50 dark:hover:bg-slate-900/50"
                                         >
                                             {row
@@ -897,17 +890,7 @@ export default function Page({ data, bookingDeadlineDays = 0 }: PageProps) {
                     </div>
                 </div>
 
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2">
-                    <p className="text-sm text-muted-foreground bg-slate-50 px-3 py-1.5 rounded-md border border-slate-100 dark:bg-slate-950 dark:border-slate-800 dark:text-slate-400">
-                        <span className="font-semibold text-foreground">
-                            {table.getFilteredSelectedRowModel().rows.length}
-                        </span>{' '}
-                        of{' '}
-                        <span className="font-semibold text-foreground">
-                            {table.getFilteredRowModel().rows.length}
-                        </span>{' '}
-                        row(s) selected.
-                    </p>
+                <div className="flex justify-end pt-2">
                     <div className="flex gap-2">
                         <Button
                             variant="outline"

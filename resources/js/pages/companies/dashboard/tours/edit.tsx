@@ -1,3 +1,4 @@
+import { store as storeTourAvailability } from '@/actions/App/Http/Controllers/Companies/Dashboard/TourAvailabilityController';
 import { update } from '@/actions/App/Http/Controllers/Companies/Dashboard/TourController';
 import type { MediaResource } from '@/api/model';
 import InputError from '@/components/input-error';
@@ -18,7 +19,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { Textarea } from '@/components/ui/textarea';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { router, useForm, usePage } from '@inertiajs/react';
-import { useMemo, useState } from 'react';
+import { Fragment, useCallback, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import SelectCategory from './components/select-category';
 import SelectContinent from './components/select-continent';
@@ -26,6 +27,8 @@ import SelectCountry from './components/select-country';
 import SelectCurrency from './components/select-currency';
 import SelectProductCommissionCategory from './components/select-product-commission-category';
 import SelectRegion from './components/select-region';
+import SelectVisaCategory from './components/select-visa-category';
+import VisaCategoryPreview from './components/visa-category-preview';
 
 import { useEffect } from 'react';
 
@@ -91,6 +94,12 @@ type Schedule = {
     add_ons?: any;
     promotion?: Adjustment;
     commission?: Adjustment;
+    manual_reserved_started_at?: string | null;
+    manual_reserved_expires_at?: string | null;
+    manual_reserved_pending_value?: number | null;
+    manual_reserved_original_available?: number | null;
+    manual_reserved_start_date?: string | null;
+    manual_reserved_start_time?: string | null;
     //promotion: Adjustment
     //commission: Adjustment
 };
@@ -98,6 +107,17 @@ type Schedule = {
 type PriceCategory = {
     id: number;
     name: string;
+};
+
+type VisaCategory = {
+    id: number;
+    name: string;
+    items: Array<{
+        id: number;
+        description: string;
+        price: number | string;
+        is_taxable: boolean;
+    }>;
 };
 
 type Props = {
@@ -131,14 +151,44 @@ type AvailabilityField =
     | 'WL'
     | 'available';
 
+type LocalDateTimeParts = {
+    date: string;
+    time: string;
+};
+
 type AvailabilityRow = Record<AvailabilityField, number> & {
     id?: number | null;
+    schedule_id?: number | null;
 
     departure_date: string;
     return_date: string;
+    manual_reserved_started_at?: string | null;
+    manual_reserved_expires_at?: string | null;
+    manual_reserved_pending_value?: number | null;
+    manual_reserved_original_available?: number | null;
+    manual_reserved_start_date?: string | null;
+    manual_reserved_start_time?: string | null;
 
     schedule: string;
 };
+
+type ManualReservedSummary = {
+    scheduleId: number | null;
+    departureDate: string;
+    startAt: string;
+    expiresAt: string | null;
+    originalAvailable: number;
+    limitLabel: string | null;
+};
+
+function RequiredLabel({ children }: { children: React.ReactNode }) {
+    return (
+        <Label className="flex items-center gap-1.5">
+            <span>{children}</span>
+            <span className="text-rose-500">*</span>
+        </Label>
+    );
+}
 
 const EDITABLE_AVAILABILITY_FIELDS: AvailabilityField[] = ['max_pax', 'RS'];
 
@@ -158,7 +208,7 @@ const AVAILABILITY_MOBILE_FIELDS: { key: AvailabilityField; label: string }[] =
     ];
 
 export default function Page({ tour }: Props) {
-    const { props } = usePage() as any; // ✅ di sini
+    const { props } = usePage() as any; // âœ… di sini
 
     const [activeTab, setActiveTab] = useState<'tour' | 'schedule'>('tour');
 
@@ -189,8 +239,23 @@ export default function Page({ tour }: Props) {
         tour.document || null,
     );
 
+    const [manualReservedEditorOpen, setManualReservedEditorOpen] =
+        useState(false);
+    const [manualReservedEditorRow, setManualReservedEditorRow] =
+        useState<ManualReservedSummary | null>(null);
+    const [manualReservedEditorStartDate, setManualReservedEditorStartDate] =
+        useState('');
+    const [manualReservedEditorStartTime, setManualReservedEditorStartTime] =
+        useState('00:00');
+    const [manualReservedSummaryOpen, setManualReservedSummaryOpen] =
+        useState(false);
+    const [manualReservedSummaryRows, setManualReservedSummaryRows] = useState<
+        ManualReservedSummary[]
+    >([]);
+
     const { company } = usePageSharedDataProps();
-    const { productCommissionCategories } = usePage().props as any;
+    const { productCommissionCategories, visaCategories } = usePage()
+        .props as any;
     const handleSuccess = () => {
         toast.success('Success', {
             position: 'top-center',
@@ -222,6 +287,7 @@ export default function Page({ tour }: Props) {
         category_id: tour.category_id || '',
         product_commission_category_id:
             tour.product_commission_category_id || '',
+        visa_category_id: tour.visa_category_id || '',
         status: tour.status || 'inactive',
 
         image_id: tour.image?.id || '',
@@ -235,6 +301,353 @@ export default function Page({ tour }: Props) {
     const { priceCategories } = usePage<{
         priceCategories: PriceCategory[];
     }>().props;
+
+    const selectedVisaCategory = useMemo(() => {
+        const selectedId = Number(data.visa_category_id || 0);
+
+        if (!selectedId) {
+            return null;
+        }
+
+        return (
+            (visaCategories as VisaCategory[]).find(
+                (category) => category.id === selectedId,
+            ) ?? null
+        );
+    }, [data.visa_category_id, visaCategories]);
+
+    const manualReservedLimitValue = tour.category?.manual_reserved_limit_value
+        ? Number(tour.category.manual_reserved_limit_value)
+        : null;
+    const manualReservedLimitUnit = tour.category?.manual_reserved_limit_unit
+        ? String(tour.category.manual_reserved_limit_unit)
+        : null;
+    const hasManualReservedLimit =
+        Boolean(tour.category) &&
+        manualReservedLimitValue !== null &&
+        manualReservedLimitValue > 0 &&
+        (manualReservedLimitUnit === 'minute' ||
+            manualReservedLimitUnit === 'hour');
+    const manualReservedLimitLabel = hasManualReservedLimit
+        ? `${manualReservedLimitValue} ${manualReservedLimitUnit}${manualReservedLimitValue! > 1 ? 's' : ''}`
+        : null;
+    const manualReservedLimitDescription = hasManualReservedLimit
+        ? `Time limit: ${manualReservedLimitLabel}`
+        : 'No category limit set. Manual reserved will stay active until it is reset.';
+    const browserTimeZone =
+        Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Jakarta';
+    const [manualReservedNow, setManualReservedNow] = useState(() =>
+        Date.now(),
+    );
+
+    useEffect(() => {
+        const interval = window.setInterval(() => {
+            setManualReservedNow(Date.now());
+        }, 1000);
+
+        return () => window.clearInterval(interval);
+    }, []);
+
+    const getCurrentLocalDateTime = (): LocalDateTimeParts => {
+        const now = new Date();
+        const pad = (value: number): string => String(value).padStart(2, '0');
+
+        return {
+            date: `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`,
+            time: `${pad(now.getHours())}:${pad(now.getMinutes())}`,
+        };
+    };
+
+    const parseServerUtcDateTime = useCallback(
+        (value: string | null | undefined): Date | null => {
+            if (!value) {
+                return null;
+            }
+
+            const normalizedValue = value.includes('T')
+                ? value
+                : value.replace(' ', 'T');
+            const hasExplicitTimeZone = /(?:Z|[+-]\d{2}:\d{2})$/i.test(
+                normalizedValue,
+            );
+            const parsed = new Date(
+                hasExplicitTimeZone ? normalizedValue : `${normalizedValue}Z`,
+            );
+
+            if (Number.isNaN(parsed.getTime())) {
+                return null;
+            }
+
+            return parsed;
+        },
+        [],
+    );
+
+    const getLocalDateTimeParts = useCallback(
+        (
+            value: string | null | undefined,
+            fallbackDate: string,
+            fallbackTime = '00:00',
+        ): LocalDateTimeParts => {
+            if (!value) {
+                return {
+                    date: fallbackDate,
+                    time: fallbackTime,
+                };
+            }
+
+            const parsed = parseServerUtcDateTime(value);
+
+            if (!parsed) {
+                return {
+                    date: fallbackDate,
+                    time: fallbackTime,
+                };
+            }
+
+            const formatter = new Intl.DateTimeFormat('en-CA', {
+                timeZone: browserTimeZone,
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false,
+            });
+
+            const parts = formatter.formatToParts(parsed);
+            const getPart = (type: Intl.DateTimeFormatPartTypes): string =>
+                parts.find((part) => part.type === type)?.value ?? '';
+
+            return {
+                date: `${getPart('year')}-${getPart('month')}-${getPart('day')}`,
+                time: `${getPart('hour')}:${getPart('minute')}`,
+            };
+        },
+        [browserTimeZone, parseServerUtcDateTime],
+    );
+
+    const formatManualReservedDateTime = (
+        value: string | null | undefined,
+    ): string => {
+        if (!value) {
+            return '-';
+        }
+
+        const parsed = new Date(value.replace(' ', 'T'));
+
+        if (Number.isNaN(parsed.getTime())) {
+            return value;
+        }
+
+        return parsed.toLocaleString('en-US', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+        });
+    };
+
+    const getManualReservedExpiresAt = (
+        startDate: string,
+        startTime: string,
+    ): string | null => {
+        if (!startDate) {
+            return null;
+        }
+
+        const startAt = new Date(`${startDate}T${startTime || '00:00'}:00`);
+
+        if (Number.isNaN(startAt.getTime())) {
+            return null;
+        }
+
+        if (!hasManualReservedLimit || !manualReservedLimitUnit) {
+            return null;
+        }
+
+        const expiresAt = new Date(startAt);
+
+        if (manualReservedLimitUnit === 'minute') {
+            expiresAt.setMinutes(
+                expiresAt.getMinutes() + (manualReservedLimitValue ?? 0),
+            );
+        } else {
+            expiresAt.setHours(
+                expiresAt.getHours() + (manualReservedLimitValue ?? 0),
+            );
+        }
+
+        return format(expiresAt, "yyyy-MM-dd'T'HH:mm:ss");
+    };
+
+    const formatManualReservedLimit = () => {
+        if (!hasManualReservedLimit || !manualReservedLimitUnit) {
+            return null;
+        }
+
+        const unitLabel =
+            manualReservedLimitUnit === 'minute' ? 'minutes' : 'hours';
+        return `${manualReservedLimitValue} ${unitLabel}`;
+    };
+
+    const getConfiguredManualReservedValue = (row: AvailabilityRow): number => {
+        const pendingValue = Number(row.manual_reserved_pending_value ?? 0);
+
+        return pendingValue > 0 ? pendingValue : Number(row.RS ?? 0);
+    };
+
+    const getManualReservedStatus = (row: AvailabilityRow) => {
+        const pendingValue = Number(row.manual_reserved_pending_value ?? 0);
+        const configuredValue = getConfiguredManualReservedValue(row);
+        const startAt = parseServerUtcDateTime(row.manual_reserved_started_at);
+        const expiresAt = parseServerUtcDateTime(
+            row.manual_reserved_expires_at,
+        );
+        const hasActiveValue =
+            Number(row.RS ?? 0) > 0 && pendingValue <= 0 && startAt !== null;
+        const now = manualReservedNow;
+
+        if (pendingValue > 0 && startAt && startAt.getTime() > now) {
+            return {
+                kind: 'scheduled' as const,
+                configuredValue,
+                startAt,
+                expiresAt,
+                isDue: false,
+            };
+        }
+
+        if (pendingValue > 0 && startAt) {
+            return {
+                kind: 'scheduled' as const,
+                configuredValue,
+                startAt,
+                expiresAt,
+                isDue: true,
+            };
+        }
+
+        if (hasActiveValue && expiresAt && expiresAt.getTime() > now) {
+            return {
+                kind: 'active_timed' as const,
+                configuredValue,
+                startAt,
+                expiresAt,
+            };
+        }
+
+        if (hasActiveValue && !expiresAt) {
+            return {
+                kind: 'active_open' as const,
+                configuredValue,
+                startAt,
+                expiresAt: null,
+            };
+        }
+
+        return {
+            kind: 'idle' as const,
+            configuredValue: 0,
+            startAt: null,
+            expiresAt: null,
+        };
+    };
+
+    const formatManualReservedCountdown = (target: Date): string => {
+        const remainingMs = target.getTime() - manualReservedNow;
+
+        if (remainingMs <= 0) {
+            return '00:00:00';
+        }
+
+        const totalSeconds = Math.floor(remainingMs / 1000);
+        const hours = String(Math.floor(totalSeconds / 3600)).padStart(2, '0');
+        const minutes = String(Math.floor((totalSeconds % 3600) / 60)).padStart(
+            2,
+            '0',
+        );
+        const seconds = String(totalSeconds % 60).padStart(2, '0');
+
+        return `${hours}:${minutes}:${seconds}`;
+    };
+
+    const buildAvailabilityPayloadRow = (
+        row: AvailabilityRow,
+        startDate = row.manual_reserved_start_date ?? row.departure_date,
+        startTime = row.manual_reserved_start_time ?? '00:00',
+    ) => ({
+        company_id: company.id,
+        tour_id: tour.id,
+        schedule_id: row.schedule_id ?? null,
+        manual_reserved_timezone: browserTimeZone,
+        max_pax: row.max_pax,
+        WP: row.WP,
+        WPA: row.WPA,
+        DP: row.DP,
+        FP: row.FP,
+        RS: getConfiguredManualReservedValue(row),
+        BRS: row.BRS,
+        CA: row.CA,
+        RF: row.RF,
+        EX: row.EX,
+        WL: row.WL,
+        available: row.available,
+        manual_reserved_started_at:
+            getConfiguredManualReservedValue(row) > 0
+                ? `${startDate}T${startTime}:00`
+                : null,
+        manual_reserved_expires_at:
+            getConfiguredManualReservedValue(row) > 0
+                ? getManualReservedExpiresAt(startDate, startTime)
+                : null,
+        manual_reserved_original_available:
+            getConfiguredManualReservedValue(row) > 0
+                ? Number(row.available + Number(row.RS ?? 0))
+                : null,
+        manual_reserved_start_date: startDate,
+        manual_reserved_start_time: startTime,
+    });
+
+    const formatManualReservedSummaryTime = (
+        dateValue: string,
+        timeValue: string,
+    ): string => {
+        if (!dateValue) {
+            return '-';
+        }
+
+        const parsed = new Date(`${dateValue}T${timeValue || '00:00'}:00`);
+
+        if (Number.isNaN(parsed.getTime())) {
+            return '-';
+        }
+
+        return parsed.toLocaleString('en-US', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+        });
+    };
+
+    const openManualReservedEditor = (row: AvailabilityRow): void => {
+        const { date: startDate, time: startTime } = getCurrentLocalDateTime();
+
+        setManualReservedEditorRow({
+            scheduleId: row.schedule_id ?? null,
+            departureDate: row.departure_date,
+            startAt: `${startDate} ${startTime}`,
+            expiresAt: getManualReservedExpiresAt(startDate, startTime),
+            originalAvailable: Number(row.available + Number(row.RS ?? 0)),
+            limitLabel: formatManualReservedLimit(),
+        });
+        setManualReservedEditorStartDate(startDate);
+        setManualReservedEditorStartTime(startTime);
+        setManualReservedEditorOpen(true);
+    };
 
     const isDuplicateDeparture = (date: string, currentIndex: number) => {
         return schedules.some((s, i) => {
@@ -337,7 +750,7 @@ export default function Page({ tour }: Props) {
         );
         setDisplayPrice(formatted);
 
-        // 🔥 WAJIB
+        // ðŸ”¥ WAJIB
         setData('showprice', numeric);
     }, [tour.showprice, setData]);
     //
@@ -345,7 +758,7 @@ export default function Page({ tour }: Props) {
     const handlePriceChange1 = (value: string) => {
         let numeric1 = value.replace(/\D/g, '');
 
-        if (numeric1 === '') numeric1 = '0'; // 🔥 default 0
+        if (numeric1 === '') numeric1 = '0'; // ðŸ”¥ default 0
 
         setRawPrice1(numeric1);
         setData('promote_price', numeric1);
@@ -367,12 +780,12 @@ export default function Page({ tour }: Props) {
         );
         setDisplayPrice1(formatted);
 
-        // 🔥 WAJIB
+        // ðŸ”¥ WAJIB
         setData('promote_price', numeric);
     }, [tour.promote_price, setData]);
     //
 
-    // 🔥 TAMBAHKAN DI SINI 17042026
+    // ðŸ”¥ TAMBAHKAN DI SINI 17042026
     /*useEffect(() => {
   console.log('FROM SERVER:', tour.schedules)
 }, [])*/
@@ -456,7 +869,7 @@ export default function Page({ tour }: Props) {
         field: keyof Schedule,
         value: string,
     ) => {
-        // 🔥 VALIDASI DUPLIKAT DEPARTURE DATE
+        // ðŸ”¥ VALIDASI DUPLIKAT DEPARTURE DATE
         if (field === 'departure_date') {
             if (isDuplicateDeparture(value, index)) {
                 toast.error('Departure date has been used');
@@ -468,12 +881,12 @@ export default function Page({ tour }: Props) {
             const updated = [...prev];
             const row = { ...updated[index], [field]: value };
 
-            // 🔥 AUTO SET return_date
+            // ðŸ”¥ AUTO SET return_date
             if (field === 'departure_date' && data.duration_days) {
                 row.return_date = addDays(value, Number(data.duration_days));
             }
 
-            // 🔥 VALIDASI: return tidak boleh sebelum departure
+            // ðŸ”¥ VALIDASI: return tidak boleh sebelum departure
             if (
                 row.return_date &&
                 row.departure_date &&
@@ -638,7 +1051,7 @@ export default function Page({ tour }: Props) {
                 departure_date: s.departure_date,
                 return_date: s.return_date,
 
-                schedule: `${formatDate(s.departure_date)} → ${formatDate(s.return_date)}`,
+                schedule: `${formatDate(s.departure_date)} -> ${formatDate(s.return_date)}`,
 
                 max_pax,
 
@@ -646,7 +1059,7 @@ export default function Page({ tour }: Props) {
                 WPA: Number(a.WPA || 0),
                 DP: Number(a.DP || 0),
                 FP: Number(a.FP || 0),
-                RS: Number(a.RS || 0),
+                RS: Number(a.manual_reserved_pending_value ?? a.RS ?? 0),
                 BRS: Number(a.BRS || 0),
                 WA: Number(a.WA || 0),
                 CA: Number(a.CA || 0),
@@ -654,9 +1067,35 @@ export default function Page({ tour }: Props) {
                 EX: Number(a.EX || 0),
                 WL: Number(a.WL || 0),
                 available: Number(a.available || 0),
+                manual_reserved_started_at: a.manual_reserved_started_at
+                    ? String(a.manual_reserved_started_at)
+                    : null,
+                manual_reserved_expires_at: a.manual_reserved_expires_at
+                    ? String(a.manual_reserved_expires_at)
+                    : null,
+                manual_reserved_pending_value:
+                    a.manual_reserved_pending_value != null
+                        ? Number(a.manual_reserved_pending_value)
+                        : null,
+                manual_reserved_original_available:
+                    a.manual_reserved_original_available != null
+                        ? Number(a.manual_reserved_original_available)
+                        : null,
+                manual_reserved_start_date: getLocalDateTimeParts(
+                    a.manual_reserved_started_at
+                        ? String(a.manual_reserved_started_at)
+                        : null,
+                    s.departure_date,
+                ).date,
+                manual_reserved_start_time: getLocalDateTimeParts(
+                    a.manual_reserved_started_at
+                        ? String(a.manual_reserved_started_at)
+                        : null,
+                    s.departure_date,
+                ).time,
             };
         });
-    }, [schedules]);
+    }, [getLocalDateTimeParts, schedules]);
 
     const [availability, setAvailability] = useState<AvailabilityRow[]>([]);
 
@@ -665,6 +1104,88 @@ export default function Page({ tour }: Props) {
     }, [availabilityData]);
 
     const [savingAvailability, setSavingAvailability] = useState(false);
+
+    const findOriginalAvailabilityRow = (
+        row: AvailabilityRow,
+    ): AvailabilityRow | undefined => {
+        return availabilityData.find(
+            (originalRow) => originalRow.schedule_id === row.schedule_id,
+        );
+    };
+
+    const manualReservedValueChanged = (row: AvailabilityRow): boolean => {
+        const originalRow = findOriginalAvailabilityRow(row);
+
+        return (
+            getConfiguredManualReservedValue(row) !==
+            getConfiguredManualReservedValue(originalRow ?? row)
+        );
+    };
+
+    const shouldPromptManualReserved = (row: AvailabilityRow): boolean => {
+        return manualReservedValueChanged(row) && row.RS > 0;
+    };
+
+    const submitAvailabilityPayload = (
+        payload: ReturnType<typeof buildAvailabilityPayloadRow>[],
+        {
+            onSuccess,
+            onError,
+            onFinish,
+        }: {
+            onSuccess?: () => void;
+            onError?: () => void;
+            onFinish?: () => void;
+        } = {},
+    ): void => {
+        setSavingAvailability(true);
+
+        router.post(
+            storeTourAvailability({
+                company: company.username,
+            }).url,
+            { availabilities: payload },
+            {
+                onSuccess: () => {
+                    onSuccess?.();
+                    toast.success('Availability saved');
+                },
+                onError: () => {
+                    onError?.();
+                    toast.error('Failed to save availability');
+                },
+                onFinish: () => {
+                    onFinish?.();
+                    setSavingAvailability(false);
+                },
+            },
+        );
+    };
+
+    const handleAvailabilitySave = (row: AvailabilityRow): void => {
+        if (shouldPromptManualReserved(row)) {
+            openManualReservedEditor(row);
+
+            return;
+        }
+
+        submitAvailabilityPayload([buildAvailabilityPayloadRow(row)]);
+    };
+
+    const handleManualReservedReset = (row: AvailabilityRow): void => {
+        submitAvailabilityPayload([
+            buildAvailabilityPayloadRow({
+                ...row,
+                RS: 0,
+                manual_reserved_pending_value: null,
+                manual_reserved_started_at: null,
+                manual_reserved_expires_at: null,
+                manual_reserved_original_available: null,
+                manual_reserved_start_date: row.departure_date,
+                manual_reserved_start_time: '00:00',
+            }),
+        ]);
+    };
 
     /*useEffect(() => {
     setAvailability(availabilityData)
@@ -683,28 +1204,35 @@ export default function Page({ tour }: Props) {
         };
 
         const row = updated[index];
+        const manualReservedStatus = getManualReservedStatus(row);
+        const appliedManualReservedValue =
+            manualReservedStatus.kind === 'active_timed' ||
+            manualReservedStatus.kind === 'active_open'
+                ? row.RS
+                : 0;
 
-        // 🔥 hitung ulang dari row (bukan dari luar scope) AV = Max PAX - DP -FP - RS - BR + CA + RF - WA
-        row.available =
+        row.available = Math.max(
+            0,
             row.max_pax -
-            row.DP -
-            row.FP -
-            row.RS -
-            row.BRS +
-            row.CA +
-            row.RF +
-            row.WPA +
-            row.WA +
-            row.WPA;
+                row.DP -
+                row.FP -
+                appliedManualReservedValue -
+                row.BRS -
+                row.WPA,
+        );
 
         setAvailability(updated);
     };
 
     const buildAvailabilityPayload = () => {
+        return availability.map((row) => buildAvailabilityPayloadRow(row));
+    };
+
+    const buildAvailabilityPayloadLegacy = () => {
         return availability.map((row, i) => ({
             company_id: company.id,
-            tour_id: tour.id, // ⚠️ di DB namanya tour_code tapi isinya id
-            schedule_id: schedules[i]?.id ?? null, // pastikan schedule punya id dari DB
+            tour_id: tour.id,
+            schedule_id: schedules[i]?.id ?? null,
             max_pax: row.max_pax,
             WP: row.WP,
             WPA: row.WPA,
@@ -717,8 +1245,19 @@ export default function Page({ tour }: Props) {
             EX: row.EX,
             WL: row.WL,
             available: row.available,
+            manual_reserved_started_at: row.manual_reserved_started_at ?? null,
+            manual_reserved_expires_at: row.manual_reserved_expires_at ?? null,
+            manual_reserved_pending_value:
+                row.manual_reserved_pending_value ?? null,
+            manual_reserved_original_available:
+                row.manual_reserved_original_available ?? null,
+            manual_reserved_start_date:
+                row.manual_reserved_start_date ?? row.departure_date,
+            manual_reserved_start_time:
+                row.manual_reserved_start_time ?? '00:00',
         }));
     };
+    void buildAvailabilityPayloadLegacy;
 
     //20042026
     useEffect(() => {
@@ -1137,6 +1676,30 @@ export default function Page({ tour }: Props) {
 
             setSchedules(updatedSchedules);
 
+            const manualReservedSummary = createdSchedules.map((schedule) => {
+                const startDate =
+                    source.availability?.manual_reserved_start_date ??
+                    schedule.departure_date;
+                const startTime =
+                    source.availability?.manual_reserved_start_time ?? '00:00';
+                const startAt = `${startDate} ${startTime}`;
+                const expiresAt = getManualReservedExpiresAt(
+                    startDate,
+                    startTime,
+                );
+
+                return {
+                    scheduleId: schedule.id ?? null,
+                    departureDate: schedule.departure_date,
+                    startAt,
+                    expiresAt,
+                    originalAvailable: Number(
+                        source.availability?.available ?? 0,
+                    ),
+                    limitLabel: manualReservedLimitLabel,
+                };
+            });
+
             // AVAILABILITY
             await axios.post(
                 `/companies/${company.username}/dashboard/tour-availabilities`,
@@ -1144,11 +1707,33 @@ export default function Page({ tour }: Props) {
                     availabilities: createdSchedules.map((s) => ({
                         schedule_id: s.id,
                         tour_id: tour.id,
+                        manual_reserved_timezone: browserTimeZone,
                         max_pax: source.availability?.max_pax || 0,
                         available: source.availability?.available || 0,
+                        manual_reserved_start_date: getLocalDateTimeParts(
+                            source.availability?.manual_reserved_started_at
+                                ? String(
+                                      source.availability
+                                          .manual_reserved_started_at,
+                                  )
+                                : null,
+                            s.departure_date,
+                        ).date,
+                        manual_reserved_start_time: getLocalDateTimeParts(
+                            source.availability?.manual_reserved_started_at
+                                ? String(
+                                      source.availability
+                                          .manual_reserved_started_at,
+                                  )
+                                : null,
+                            s.departure_date,
+                        ).time,
                     })),
                 },
             );
+
+            setManualReservedSummaryRows(manualReservedSummary);
+            setManualReservedSummaryOpen(true);
 
             // ADD ONS
             await axios.post(
@@ -1346,15 +1931,15 @@ export default function Page({ tour }: Props) {
             schedules
           })
 
-          // 🔥 update state dulu
+          // ðŸ”¥ update state dulu
           setData((prev) => ({
             ...prev,
             showprice: Number(rawPrice),
             promote_price: Number(rawPrice1),
-            schedules: schedules, // ✅ langsung object (JANGAN stringify)
+            schedules: schedules, // âœ… langsung object (JANGAN stringify)
           }))
 
-          // 🔥 kirim TANPA data:
+          // ðŸ”¥ kirim TANPA data:
           put(update.url({
             company: company.username,
             tour: tour.id
@@ -1382,7 +1967,7 @@ export default function Page({ tour }: Props) {
                             tour: tour.id,
                         }),
                         {
-                            data: payload, // 🔥 WAJIB
+                            data: payload, // ðŸ”¥ WAJIB
                             forceFormData: false,
                             onSuccess: () => {
                                 handleSuccess();
@@ -1399,7 +1984,7 @@ export default function Page({ tour }: Props) {
               ...data,
               showprice: Number(rawPrice),
               promote_price: Number(rawPrice1),
-              schedules: schedules, // 🔥 langsung kirim
+              schedules: schedules, // ðŸ”¥ langsung kirim
             },
             forceFormData: false, 
             onSuccess: () => {
@@ -1469,45 +2054,24 @@ export default function Page({ tour }: Props) {
                             </TabsTrigger>
                         </TabsList>
 
-                        {/* ================= TAB 1 — TOUR ================= */}
+                        {/* ================= TAB 1 â€” TOUR ================= */}
                         <TabsContent value="tour" className="space-y-6">
                             {/* <div className="grid gap-6"> changed for show in 2 column */}
                             <div className="mx-auto max-w-7xl space-y-6">
                                 {/* Image */}
-                                {/* <div className="grid gap-2"> */}
-                                <div className="overflow-hidden rounded-3xl border bg-card shadow-sm">
-                                    <div className="border-b bg-muted/40 px-6 py-4">
-                                        <h2 className="text-lg font-semibold">
-                                            {data.code} {data.name}
-                                        </h2>
-
-                                        <p className="text-sm text-muted-foreground">
-                                            Upload attractive image for your
-                                            catalog
-                                        </p>
-                                    </div>
-
-                                    <div className="p-6">
-                                        <div className="flex justify-center">
-                                            <TourImagePicker
-                                                defaultValue={tour.image}
-                                                owner={{
-                                                    type: 'company',
-                                                    id: company.id,
-                                                }}
-                                                onChange={(media) => {
-                                                    const mediaId = (
-                                                        media as MediaResource
-                                                    )?.id;
-
-                                                    setData(
-                                                        'image_id',
-                                                        mediaId || '',
-                                                    );
-                                                }}
-                                            />
-                                        </div>
-                                    </div>
+                                <div className="rounded-3xl border border-slate-200 bg-gradient-to-br from-white via-pink-50/40 to-white p-6 shadow-sm dark:border-slate-800 dark:from-slate-950 dark:via-slate-950 dark:to-slate-900">
+                                    <p className="text-sm font-medium uppercase tracking-[0.22em] text-primary">
+                                        Product Setup
+                                    </p>
+                                    <h1 className="mt-2 text-3xl font-semibold text-slate-950 dark:text-slate-100">
+                                        {data.name.trim() || 'Product Tour'}
+                                    </h1>
+                                    <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
+                                        Refine the master information, travel
+                                        classification, publishing assets, and
+                                        pricing details before managing
+                                        schedules.
+                                    </p>
                                 </div>
 
                                 {/* Code */}
@@ -1531,10 +2095,9 @@ export default function Page({ tour }: Props) {
                                             </span>
                                         </div>
                                     </div>
-                                    {/* BODY */}
-                                    <div className="grid grid-cols-1 gap-5 p-6 md:grid-cols-2">
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="code">Code</Label>
+                                    <div className="grid grid-cols-1 gap-5 p-6 lg:grid-cols-12">
+                                        <div className="grid gap-2 lg:col-span-3 lg:order-1">
+                                            <RequiredLabel>Code</RequiredLabel>
                                             <Input
                                                 id="code"
                                                 type="text"
@@ -1553,8 +2116,8 @@ export default function Page({ tour }: Props) {
                                             <InputError message={errors.code} />
                                         </div>
                                         {/* Name */}
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="name">Name</Label>
+                                        <div className="grid gap-2 lg:col-span-6 lg:order-1">
+                                            <RequiredLabel>Name</RequiredLabel>
                                             <Input
                                                 id="name"
                                                 type="text"
@@ -1573,17 +2136,92 @@ export default function Page({ tour }: Props) {
                                             <InputError message={errors.name} />
                                         </div>
 
-                                        {/* Description */}
-                                        <div className="grid gap-2 md:col-span-2">
-                                            <Label htmlFor="description">
+                                        <div className="grid gap-2 lg:col-span-3 lg:order-1">
+                                            <RequiredLabel>
+                                                Status
+                                            </RequiredLabel>
+                                            <Select
+                                                value={data.status}
+                                                onValueChange={(value) =>
+                                                    setData('status', value)
+                                                }
+                                            >
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Select status" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectGroup>
+                                                        <SelectLabel>
+                                                            Status
+                                                        </SelectLabel>
+                                                        <SelectItem value="inactive">
+                                                            Inactive
+                                                        </SelectItem>
+                                                        <SelectItem value="active">
+                                                            Active
+                                                        </SelectItem>
+                                                    </SelectGroup>
+                                                </SelectContent>
+                                            </Select>
+                                            <InputError
+                                                message={errors.status}
+                                            />
+                                        </div>
+
+                                        <div className="grid gap-2 lg:col-span-4 lg:order-2">
+                                            <RequiredLabel>
+                                                Duration
+                                            </RequiredLabel>
+                                            <Input
+                                                id="duration_days"
+                                                type="number"
+                                                name="duration_days"
+                                                required
+                                                placeholder="Duration in days"
+                                                value={data.duration_days}
+                                                onChange={(e) =>
+                                                    setData(
+                                                        'duration_days',
+                                                        e.target.value,
+                                                    )
+                                                }
+                                            />
+                                            <InputError
+                                                message={errors.duration_days}
+                                            />
+                                        </div>
+
+                                        <div className="grid gap-2 lg:col-span-8 lg:order-2">
+                                            <RequiredLabel>
+                                                Destination
+                                            </RequiredLabel>
+                                            <Input
+                                                id="destination"
+                                                type="text"
+                                                name="destination"
+                                                placeholder="Destination"
+                                                value={data.destination}
+                                                onChange={(e) =>
+                                                    setData(
+                                                        'destination',
+                                                        e.target.value,
+                                                    )
+                                                }
+                                            />
+                                            <InputError
+                                                message={errors.destination}
+                                            />
+                                        </div>
+
+                                        <div className="grid gap-2 md:col-span-2 lg:col-span-12 lg:order-3">
+                                            <RequiredLabel>
                                                 Description
-                                            </Label>
+                                            </RequiredLabel>
                                             <Textarea
                                                 id="description"
                                                 name="description"
-                                                placeholder="Tour description"
-                                                //defaultValue={tour.description}
-                                                className="min-h-[65px] resize-none"
+                                                placeholder="Describe the tour highlights, experience, and important notes"
+                                                className="min-h-[140px] resize-none"
                                                 onInput={(e) => {
                                                     const el = e.currentTarget;
                                                     el.style.height = 'auto';
@@ -1603,33 +2241,8 @@ export default function Page({ tour }: Props) {
                                             />
                                         </div>
 
-                                        {/* Duration */}
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="duration_days">
-                                                Duration in Days
-                                            </Label>
-                                            <Input
-                                                id="duration_days"
-                                                type="number"
-                                                name="duration_days"
-                                                required
-                                                placeholder="Duration"
-                                                //defaultValue={tour.duration_days}
-                                                value={data.duration_days}
-                                                onChange={(e) =>
-                                                    setData(
-                                                        'duration_days',
-                                                        e.target.value,
-                                                    )
-                                                }
-                                            />
-                                            <InputError
-                                                message={errors.duration_days}
-                                            />
-                                        </div>
-
                                         {/* Product Commission Category */}
-                                        <div className="grid gap-2">
+                                        <div className="hidden">
                                             <Label htmlFor="product_commission_category_id">
                                                 Product Commission Category
                                             </Label>
@@ -1657,10 +2270,10 @@ export default function Page({ tour }: Props) {
                                             />
                                         </div>
 
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="continent_id">
+                                        <div className="grid gap-2 lg:col-span-4 lg:order-4">
+                                            <RequiredLabel>
                                                 Continent
-                                            </Label>
+                                            </RequiredLabel>
                                             <SelectContinent
                                                 name="continent_id"
                                                 value={continentId ?? undefined}
@@ -1674,7 +2287,7 @@ export default function Page({ tour }: Props) {
                                                     setRegionId(null);
                                                     setCountryId(null);
 
-                                                    setData('continent_id', id); // ✅ WAJIB
+                                                    setData('continent_id', id); // âœ… WAJIB
                                                     setData('region_id', ''); // reset
                                                     setData('country_id', '');
                                                 }}
@@ -1685,10 +2298,10 @@ export default function Page({ tour }: Props) {
                                             />
                                         </div>
 
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="region_id">
+                                        <div className="grid gap-2 lg:col-span-4 lg:order-4">
+                                            <RequiredLabel>
                                                 Region
-                                            </Label>
+                                            </RequiredLabel>
                                             <SelectRegion
                                                 name="region_id"
                                                 continentId={continentId}
@@ -1701,7 +2314,7 @@ export default function Page({ tour }: Props) {
                                                     setRegionId(id);
                                                     setCountryId(null);
 
-                                                    setData('region_id', id); // ✅
+                                                    setData('region_id', id); // âœ…
                                                     setData('country_id', ''); // reset
                                                 }}
                                             />
@@ -1710,10 +2323,10 @@ export default function Page({ tour }: Props) {
                                             />
                                         </div>
 
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="country_id">
+                                        <div className="grid gap-2 lg:col-span-4 lg:order-4">
+                                            <RequiredLabel>
                                                 Country
-                                            </Label>
+                                            </RequiredLabel>
                                             <SelectCountry
                                                 name="country_id"
                                                 continentId={continentId}
@@ -1724,7 +2337,7 @@ export default function Page({ tour }: Props) {
                                                     const id = Number(val);
 
                                                     setCountryId(id);
-                                                    setData('country_id', id); // ✅
+                                                    setData('country_id', id); // âœ…
                                                 }}
                                             />
 
@@ -1733,32 +2346,8 @@ export default function Page({ tour }: Props) {
                                             />
                                         </div>
 
-                                        {/* Destination */}
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="destination">
-                                                Destination
-                                            </Label>
-                                            <Input
-                                                id="destination"
-                                                type="text"
-                                                name="destination"
-                                                placeholder="Destination"
-                                                //defaultValue={tour.destination}
-                                                value={data.destination}
-                                                onChange={(e) =>
-                                                    setData(
-                                                        'destination',
-                                                        e.target.value,
-                                                    )
-                                                }
-                                            />
-                                            <InputError
-                                                message={errors.destination}
-                                            />
-                                        </div>
-
                                         {/* Category */}
-                                        <div className="grid gap-2">
+                                        <div className="hidden">
                                             <Label htmlFor="category_id">
                                                 Product Catalog Category
                                             </Label>
@@ -1787,91 +2376,180 @@ export default function Page({ tour }: Props) {
                                     </div>
                                 </div>
 
-                                {/* Document */}
+                                <div className="rounded-3xl border bg-card shadow-sm overflow-hidden">
+                                    <div className="border-b bg-muted/40 px-6 py-4">
+                                        <h2 className="text-lg font-semibold">
+                                            Catalog, Commission & Travel Access
+                                        </h2>
+                                        <p className="text-sm text-muted-foreground">
+                                            Link this product to the right
+                                            catalog grouping, commission
+                                            structure, and visa setup.
+                                        </p>
+                                    </div>
+                                    <div className="space-y-6 p-6">
+                                        <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
+                                            <div className="grid gap-2">
+                                                <Label htmlFor="category_id">
+                                                    Product Catalog Category
+                                                </Label>
+                                                <SelectCategory
+                                                    name="category_id"
+                                                    value={
+                                                        data.category_id ||
+                                                        undefined
+                                                    }
+                                                    onChange={(val) =>
+                                                        setData(
+                                                            'category_id',
+                                                            Number(val),
+                                                        )
+                                                    }
+                                                />
+
+                                                <InputError
+                                                    message={errors.category_id}
+                                                />
+                                            </div>
+
+                                            <div className="grid gap-2">
+                                                <Label htmlFor="product_commission_category_id">
+                                                    Product Commission Category
+                                                </Label>
+
+                                                <SelectProductCommissionCategory
+                                                    value={
+                                                        data.product_commission_category_id ||
+                                                        undefined
+                                                    }
+                                                    categories={
+                                                        productCommissionCategories
+                                                    }
+                                                    onChange={(val) =>
+                                                        setData(
+                                                            'product_commission_category_id',
+                                                            Number(val),
+                                                        )
+                                                    }
+                                                />
+
+                                                <InputError
+                                                    message={
+                                                        errors.product_commission_category_id
+                                                    }
+                                                />
+                                            </div>
+
+                                            <div className="grid gap-2">
+                                                <RequiredLabel>
+                                                    Visa Category
+                                                </RequiredLabel>
+
+                                                <SelectVisaCategory
+                                                    value={
+                                                        data.visa_category_id ||
+                                                        undefined
+                                                    }
+                                                    categories={visaCategories}
+                                                    onChange={(val) =>
+                                                        setData(
+                                                            'visa_category_id',
+                                                            val === '0'
+                                                                ? ''
+                                                                : Number(val),
+                                                        )
+                                                    }
+                                                />
+
+                                                <InputError
+                                                    message={
+                                                        errors.visa_category_id
+                                                    }
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <VisaCategoryPreview
+                                            category={selectedVisaCategory}
+                                        />
+                                    </div>
+                                </div>
+
                                 <div className="overflow-hidden rounded-3xl border bg-card shadow-sm">
                                     {/* HEADER */}
                                     <div className="border-b bg-muted/40 px-6 py-4">
                                         <h2 className="text-lg font-semibold">
-                                            Publishing & Documents
+                                            Publishing and Document
                                         </h2>
 
                                         <p className="text-sm text-muted-foreground">
-                                            Configure itinerary document, status
-                                            and currency
+                                            Upload the itinerary file and
+                                            product visual in a compact,
+                                            easy-to-review layout.
                                         </p>
                                     </div>
-                                    {/* BODY */}
-                                    <div className="space-y-6 p-6">
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="name">
-                                                Document Itinerary
-                                            </Label>
-
-                                            <TourDocumentPicker
-                                                owner={{
-                                                    type: 'company',
-                                                    id: company.id,
-                                                }}
-                                                value={selectedDocument}
-                                                onChange={(doc: any) => {
-                                                    setSelectedDocument(doc);
-                                                    setData(
-                                                        'document_id',
-                                                        doc?.id,
-                                                    );
-                                                }}
-                                            />
-
-                                            <InputError
-                                                message={errors.document_id}
-                                            />
-                                        </div>
-
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            {/* Status */}
+                                    <div className="grid gap-6 p-6 xl:grid-cols-[minmax(0,0.9fr)_minmax(320px,1.1fr)]">
+                                        <div className="space-y-4">
                                             <div className="grid gap-2">
-                                                <Label htmlFor="status">
-                                                    Status
+                                                <Label htmlFor="name">
+                                                    PDF Itinerary
                                                 </Label>
-                                                <Select
-                                                    name="status"
-                                                    //</div>defaultValue={tour.status}
-                                                    value={data.status}
-                                                    onValueChange={(val) =>
-                                                        setData('status', val)
-                                                    }
-                                                >
-                                                    <SelectTrigger className="w-full">
-                                                        <SelectValue placeholder="Select status" />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectGroup>
-                                                            <SelectLabel>
-                                                                Select status
-                                                            </SelectLabel>
-                                                            <SelectItem value="active">
-                                                                Active
-                                                            </SelectItem>
-                                                            <SelectItem value="inactive">
-                                                                Inactive
-                                                            </SelectItem>
-                                                        </SelectGroup>
-                                                    </SelectContent>
-                                                </Select>
+
+                                                <div className="max-w-sm">
+                                                    <TourDocumentPicker
+                                                        owner={{
+                                                            type: 'company',
+                                                            id: company.id,
+                                                        }}
+                                                        value={selectedDocument}
+                                                        onChange={(
+                                                            doc: any,
+                                                        ) => {
+                                                            setSelectedDocument(
+                                                                doc,
+                                                            );
+                                                            setData(
+                                                                'document_id',
+                                                                doc?.id,
+                                                            );
+                                                        }}
+                                                    />
+                                                </div>
+
                                                 <InputError
-                                                    message={errors.status}
+                                                    message={errors.document_id}
                                                 />
                                             </div>
+                                        </div>
 
-                                            {/* CURRENCY */}
-                                            <div className="grid gap-2">
-                                                <Label>Currency</Label>
+                                        <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 dark:border-slate-800 dark:bg-slate-900/40">
+                                            <div className="mb-3">
+                                                <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                                                    Cover Image Preview
+                                                </h3>
+                                                <p className="text-xs text-muted-foreground">
+                                                    Keep the image clear and
+                                                    representative for catalog
+                                                    browsing.
+                                                </p>
+                                            </div>
+                                            <div className="flex justify-center">
+                                                <TourImagePicker
+                                                    defaultValue={tour.image}
+                                                    owner={{
+                                                        type: 'company',
+                                                        id: company.id,
+                                                    }}
+                                                    onChange={(media) => {
+                                                        const mediaId = (
+                                                            media as MediaResource
+                                                        )?.id;
 
-                                                <SelectCurrency
-                                                    value={data.currency}
-                                                    onChange={(val) =>
-                                                        setData('currency', val)
-                                                    }
+                                                        setData(
+                                                            'image_id',
+                                                            mediaId || '',
+                                                        );
+                                                    }}
                                                 />
                                             </div>
                                         </div>
@@ -1891,29 +2569,47 @@ export default function Page({ tour }: Props) {
                                         </p>
                                     </div>
                                     <div className="space-y-6 p-6">
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="showprice">
-                                                Normal Price show on catalog
-                                            </Label>
-                                            <Input
-                                                id="showprice_display"
-                                                type="text"
-                                                placeholder="Normal Price"
-                                                value={displayPrice}
-                                                onChange={(e) =>
-                                                    handlePriceChange(
-                                                        e.target.value,
-                                                    )
-                                                }
-                                            />
-                                            <input
-                                                type="hidden"
-                                                name="showprice"
-                                                value={rawPrice}
-                                            />
-                                            <InputError
-                                                message={errors.showprice}
-                                            />
+                                        <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+                                            <div className="grid gap-2">
+                                                <RequiredLabel>
+                                                    Normal Price show on catalog
+                                                </RequiredLabel>
+                                                <Input
+                                                    id="showprice_display"
+                                                    type="text"
+                                                    placeholder="Normal Price"
+                                                    value={displayPrice}
+                                                    onChange={(e) =>
+                                                        handlePriceChange(
+                                                            e.target.value,
+                                                        )
+                                                    }
+                                                />
+                                                <input
+                                                    type="hidden"
+                                                    name="showprice"
+                                                    value={rawPrice}
+                                                />
+                                                <InputError
+                                                    message={errors.showprice}
+                                                />
+                                            </div>
+
+                                            <div className="grid gap-2">
+                                                <RequiredLabel>
+                                                    Currency
+                                                </RequiredLabel>
+
+                                                <SelectCurrency
+                                                    value={data.currency}
+                                                    onChange={(val) =>
+                                                        setData('currency', val)
+                                                    }
+                                                />
+                                                <InputError
+                                                    message={errors.currency}
+                                                />
+                                            </div>
                                         </div>
 
                                         <div className="rounded-2xl border border-pink-200 bg-gradient-to-br from-pink-50 to-rose-50 p-5 shadow-sm">
@@ -1987,7 +2683,7 @@ export default function Page({ tour }: Props) {
                                                     />
                                                 </div>
 
-                                                {/* promote note — full width */}
+                                                {/* promote note â€” full width */}
                                                 <div className="grid gap-2 md:col-span-2">
                                                     <Label htmlFor="promote_note">
                                                         Promotion Note on
@@ -2028,7 +2724,7 @@ export default function Page({ tour }: Props) {
                             </div>
                         </TabsContent>
 
-                        {/* ================= TAB 2 — JADWAL ================= */}
+                        {/* ================= TAB 2 â€” JADWAL ================= */}
 
                         <TabsContent value="schedule">
                             <div className="space-y-4">
@@ -3309,7 +4005,7 @@ export default function Page({ tour }: Props) {
                             </div>
                         </TabsContent>
 
-                        {/* ================= TAB 3 — AVAILABILITY ================= */}
+                        {/* ================= TAB 3 â€” AVAILABILITY ================= */}
 
                         <TabsContent value="availability">
                             <div className="space-y-4">
@@ -3409,7 +4105,7 @@ export default function Page({ tour }: Props) {
                                         <thead className="sticky top-0 z-30 bg-muted">
                                             <tr>
                                                 <th className="sticky left-0 z-40 bg-muted border-b p-3 text-left font-semibold">
-                                                    Departure → Return
+                                                    Departure {'->'} Return
                                                 </th>
                                                 <th className="border-b p-2 text-right font-semibold">
                                                     Max Pax
@@ -3425,9 +4121,14 @@ export default function Page({ tour }: Props) {
                                                         </TooltipTrigger>
 
                                                         <TooltipContent>
-                                                            Manual Reserved
+                                                            {
+                                                                manualReservedLimitDescription
+                                                            }
                                                         </TooltipContent>
                                                     </Tooltip>
+                                                </th>
+                                                <th className="border-b p-2 text-left font-semibold">
+                                                    RS Status
                                                 </th>
                                                 <th className="border-b p-2 text-right font-semibold">
                                                     <Tooltip>
@@ -3647,6 +4348,108 @@ export default function Page({ tour }: Props) {
                                                                     }
                                                                 />
                                                             </td>
+                                                            <td className="border-b p-2 align-top">
+                                                                {(() => {
+                                                                    const status =
+                                                                        getManualReservedStatus(
+                                                                            row,
+                                                                        );
+
+                                                                    if (
+                                                                        status.kind ===
+                                                                        'idle'
+                                                                    ) {
+                                                                        return (
+                                                                            <span className="text-xs text-muted-foreground">
+                                                                                -
+                                                                            </span>
+                                                                        );
+                                                                    }
+
+                                                                    return (
+                                                                        <div className="max-w-[180px] space-y-2 text-xs leading-relaxed text-muted-foreground">
+                                                                            {status.kind ===
+                                                                            'scheduled' ? (
+                                                                                <>
+                                                                                    <p className="font-medium text-foreground">
+                                                                                        {status.isDue
+                                                                                            ? 'Awaiting scheduler'
+                                                                                            : 'Starts'}
+                                                                                        {!status.isDue
+                                                                                            ? ` ${formatManualReservedDateTime(
+                                                                                                  status.startAt.toISOString(),
+                                                                                              )}`
+                                                                                            : ''}
+                                                                                    </p>
+                                                                                    <p>
+                                                                                        RS{' '}
+                                                                                        {
+                                                                                            status.configuredValue
+                                                                                        }
+                                                                                    </p>
+                                                                                    <p>
+                                                                                        {status.isDue
+                                                                                            ? 'The start time has been reached and will be applied on the next scheduler run.'
+                                                                                            : `Start ${formatManualReservedDateTime(
+                                                                                                  status.startAt.toISOString(),
+                                                                                              )}`}
+                                                                                    </p>
+                                                                                </>
+                                                                            ) : null}
+                                                                            {status.kind ===
+                                                                            'active_timed' ? (
+                                                                                <>
+                                                                                    <p className="font-medium text-foreground">
+                                                                                        Countdown{' '}
+                                                                                        {formatManualReservedCountdown(
+                                                                                            status.expiresAt,
+                                                                                        )}
+                                                                                    </p>
+                                                                                    <p>
+                                                                                        Ends{' '}
+                                                                                        {formatManualReservedDateTime(
+                                                                                            status.expiresAt.toISOString(),
+                                                                                        )}
+                                                                                    </p>
+                                                                                </>
+                                                                            ) : null}
+                                                                            {status.kind ===
+                                                                            'active_open' ? (
+                                                                                <>
+                                                                                    <p className="font-medium text-foreground">
+                                                                                        Active
+                                                                                    </p>
+                                                                                    <p>
+                                                                                        Started{' '}
+                                                                                        {status.startAt
+                                                                                            ? formatManualReservedDateTime(
+                                                                                                  status.startAt.toISOString(),
+                                                                                              )
+                                                                                            : '-'}
+                                                                                    </p>
+                                                                                    <p>
+                                                                                        No
+                                                                                        expiry
+                                                                                    </p>
+                                                                                </>
+                                                                            ) : null}
+                                                                            <Button
+                                                                                type="button"
+                                                                                variant="outline"
+                                                                                size="sm"
+                                                                                className="h-7 px-2 text-[11px]"
+                                                                                onClick={() =>
+                                                                                    handleManualReservedReset(
+                                                                                        row,
+                                                                                    )
+                                                                                }
+                                                                            >
+                                                                                Reset
+                                                                            </Button>
+                                                                        </div>
+                                                                    );
+                                                                })()}
+                                                            </td>
 
                                                             {/* WP */}
                                                             <td className="border-b p-2 text-right">
@@ -3788,47 +4591,10 @@ export default function Page({ tour }: Props) {
                                                                                 disabled={
                                                                                     savingAvailability
                                                                                 }
-                                                                                onClick={async () => {
-                                                                                    setSavingAvailability(
-                                                                                        true,
+                                                                                onClick={() => {
+                                                                                    handleAvailabilitySave(
+                                                                                        row,
                                                                                     );
-
-                                                                                    try {
-                                                                                        const payload =
-                                                                                            buildAvailabilityPayload();
-
-                                                                                        router.post(
-                                                                                            `/companies/${company.username}/dashboard/tour-availabilities`,
-                                                                                            {
-                                                                                                availabilities:
-                                                                                                    payload,
-                                                                                            },
-                                                                                            {
-                                                                                                onSuccess:
-                                                                                                    () => {
-                                                                                                        toast.success(
-                                                                                                            'Availability saved',
-                                                                                                        );
-                                                                                                    },
-                                                                                                onError:
-                                                                                                    () => {
-                                                                                                        toast.error(
-                                                                                                            'Failed to save availability',
-                                                                                                        );
-                                                                                                    },
-                                                                                                onFinish:
-                                                                                                    () => {
-                                                                                                        setSavingAvailability(
-                                                                                                            false,
-                                                                                                        );
-                                                                                                    },
-                                                                                            },
-                                                                                        );
-                                                                                    } catch (err) {
-                                                                                        setSavingAvailability(
-                                                                                            false,
-                                                                                        );
-                                                                                    }
                                                                                 }}
                                                                             >
                                                                                 {savingAvailability ? (
@@ -3937,52 +4703,12 @@ export default function Page({ tour }: Props) {
                                                                 disabled={
                                                                     savingAvailability
                                                                 }
-                                                                onClick={async () => {
-                                                                    setSavingAvailability(
-                                                                        true,
+                                                                onClick={() => {
+                                                                    handleAvailabilitySave(
+                                                                        availability[
+                                                                            actualIndex
+                                                                        ],
                                                                     );
-
-                                                                    try {
-                                                                        const payload =
-                                                                            buildAvailabilityPayload();
-
-                                                                        console.log(
-                                                                            'SEND AVAILABILITY:',
-                                                                            payload,
-                                                                        );
-
-                                                                        router.post(
-                                                                            `/companies/${company.username}/dashboard/tour-availabilities`,
-                                                                            {
-                                                                                availabilities:
-                                                                                    payload,
-                                                                            },
-                                                                            {
-                                                                                onSuccess:
-                                                                                    () => {
-                                                                                        toast.success(
-                                                                                            'Availability saved',
-                                                                                        );
-                                                                                    },
-                                                                                onError:
-                                                                                    () => {
-                                                                                        toast.error(
-                                                                                            'Failed to save availability',
-                                                                                        );
-                                                                                    },
-                                                                                onFinish:
-                                                                                    () => {
-                                                                                        setSavingAvailability(
-                                                                                            false,
-                                                                                        );
-                                                                                    },
-                                                                            },
-                                                                        );
-                                                                    } catch (err) {
-                                                                        setSavingAvailability(
-                                                                            false,
-                                                                        );
-                                                                    }
                                                                 }}
                                                             >
                                                                 {savingAvailability ? (
@@ -3999,79 +4725,40 @@ export default function Page({ tour }: Props) {
 
                                                 {/* Input grid */}
                                                 <div className="grid grid-cols-2 gap-2 text-sm">
-                                                    {[
-                                                        {
-                                                            key: 'max_pax',
-                                                            label: 'Max Pax',
-                                                        },
-                                                        {
-                                                            key: 'RS',
-                                                            label: 'Manual Reserved (RS)',
-                                                        },
-                                                        {
-                                                            key: 'WP',
-                                                            label: 'Waiting Payment (WP)',
-                                                        },
-                                                        {
-                                                            key: 'WPA',
-                                                            label: 'Waiting Payment Approval (WA)',
-                                                        },
-                                                        {
-                                                            key: 'DP',
-                                                            label: 'Down Payment (DP)',
-                                                        },
-                                                        {
-                                                            key: 'FP',
-                                                            label: 'Full Payment (FP)',
-                                                        },
-                                                        {
-                                                            key: 'BRS',
-                                                            label: 'Booking Reserved (BR)',
-                                                        },
-                                                        {
-                                                            key: 'CA',
-                                                            label: 'Cancel (CA)',
-                                                        },
-                                                        {
-                                                            key: 'RF',
-                                                            label: 'Refund (RF)',
-                                                        },
-                                                        {
-                                                            key: 'EX',
-                                                            label: 'Expired (EX)',
-                                                        },
-                                                        {
-                                                            key: 'WL',
-                                                            label: 'Waiting List (WL)',
-                                                        },
-                                                    ].map((field) => (
-                                                        <>
-                                                            <div className="text-muted-foreground">
-                                                                {field.label}
-                                                            </div>
+                                                    {AVAILABILITY_MOBILE_FIELDS.map(
+                                                        (field) => (
+                                                            <Fragment
+                                                                key={field.key}
+                                                            >
+                                                                <div className="text-muted-foreground">
+                                                                    {
+                                                                        field.label
+                                                                    }
+                                                                </div>
 
-                                                            <MoneyInput
-                                                                className="text-right"
-                                                                value={
-                                                                    row[
-                                                                        field
-                                                                            .key
-                                                                    ]
-                                                                }
-                                                                onChange={(
-                                                                    val,
-                                                                ) =>
-                                                                    updateAvailability(
-                                                                        actualIndex,
-                                                                        field.key,
-                                                                        Number(
-                                                                            val,
-                                                                        ),
-                                                                    )
-                                                                }
-                                                            />
-                                                        </>
-                                                    ))}
+                                                                <MoneyInput
+                                                                    className="text-right"
+                                                                    value={
+                                                                        row[
+                                                                            field
+                                                                                .key
+                                                                        ]
+                                                                    }
+                                                                    onChange={(
+                                                                        val,
+                                                                    ) =>
+                                                                        updateAvailability(
+                                                                            actualIndex,
+                                                                            field.key,
+                                                                            Number(
+                                                                                val,
+                                                                            ),
+                                                                        )
+                                                                    }
+                                                                />
+                                                            </Fragment>
+                                                        ),
+                                                    )}
                                                 </div>
                                             </div>
                                         );
@@ -4116,7 +4803,7 @@ export default function Page({ tour }: Props) {
                             <div className="mt-20 flex items-center justify-between px-4 py-3"></div>
                         </TabsContent>
 
-                        {/* ================= TAB 4 — ADD ONS ================= */}
+                        {/* ================= TAB 4 â€” ADD ONS ================= */}
                         <TabsContent value="addons">
                             <div className="space-y-4">
                                 <h2 className="text-lg font-semibold">
@@ -4222,7 +4909,7 @@ export default function Page({ tour }: Props) {
                                                                         {formatDate(
                                                                             schedule.departure_date,
                                                                         )}{' '}
-                                                                        →{' '}
+                                                                        {'->'}{' '}
                                                                         {formatDate(
                                                                             schedule.return_date,
                                                                         )}
@@ -4544,7 +5231,7 @@ export default function Page({ tour }: Props) {
                                                     {formatDate(
                                                         selectedSchedule.departure_date,
                                                     )}{' '}
-                                                    →{' '}
+                                                    {'->'}{' '}
                                                     {formatDate(
                                                         selectedSchedule.return_date,
                                                     )}
@@ -4638,6 +5325,222 @@ export default function Page({ tour }: Props) {
                                     onClick={submitCopySchedules}
                                 >
                                     Generate
+                                </Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
+
+                    <Dialog
+                        open={manualReservedEditorOpen}
+                        onOpenChange={setManualReservedEditorOpen}
+                    >
+                        <DialogContent className="sm:max-w-[520px]">
+                            <DialogHeader>
+                                <DialogTitle>
+                                    Set Manual Reserved Start Time
+                                </DialogTitle>
+                            </DialogHeader>
+
+                            <div className="space-y-4">
+                                <div className="rounded-xl border bg-muted/30 p-4 text-sm text-muted-foreground">
+                                    {manualReservedEditorRow
+                                        ? `Schedule ${manualReservedEditorRow.departureDate}. ${manualReservedLimitDescription}.`
+                                        : 'Select a start date and time for this manual reserved value.'}
+                                </div>
+
+                                <div className="grid gap-4 sm:grid-cols-2">
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="manual_reserved_start_date">
+                                            Start Date
+                                        </Label>
+                                        <Input
+                                            id="manual_reserved_start_date"
+                                            type="date"
+                                            value={
+                                                manualReservedEditorStartDate
+                                            }
+                                            onChange={(event) =>
+                                                setManualReservedEditorStartDate(
+                                                    event.target.value,
+                                                )
+                                            }
+                                        />
+                                    </div>
+
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="manual_reserved_start_time">
+                                            Start Time
+                                        </Label>
+                                        <Input
+                                            id="manual_reserved_start_time"
+                                            type="time"
+                                            value={
+                                                manualReservedEditorStartTime
+                                            }
+                                            onChange={(event) =>
+                                                setManualReservedEditorStartTime(
+                                                    event.target.value,
+                                                )
+                                            }
+                                        />
+                                    </div>
+                                </div>
+                                <p className="text-sm text-muted-foreground">
+                                    RS value will start counting on{' '}
+                                    {formatManualReservedSummaryTime(
+                                        manualReservedEditorStartDate,
+                                        manualReservedEditorStartTime,
+                                    )}
+                                    {hasManualReservedLimit
+                                        ? ` and will automatically reset to 0 at ${formatManualReservedDateTime(
+                                              getManualReservedExpiresAt(
+                                                  manualReservedEditorStartDate,
+                                                  manualReservedEditorStartTime,
+                                              ),
+                                          )}.`
+                                        : ' and will remain active until it is reset manually.'}
+                                </p>
+                            </div>
+
+                            <DialogFooter>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() =>
+                                        setManualReservedEditorOpen(false)
+                                    }
+                                >
+                                    Cancel
+                                </Button>
+                                <Button
+                                    type="button"
+                                    onClick={() => {
+                                        if (!manualReservedEditorRow) {
+                                            return;
+                                        }
+
+                                        const selectedAvailability =
+                                            availability.find(
+                                                (row) =>
+                                                    row.schedule_id ===
+                                                    manualReservedEditorRow.scheduleId,
+                                            );
+
+                                        if (!selectedAvailability) {
+                                            toast.error(
+                                                'Availability row was not found.',
+                                            );
+
+                                            return;
+                                        }
+
+                                        submitAvailabilityPayload(
+                                            [
+                                                buildAvailabilityPayloadRow(
+                                                    selectedAvailability,
+                                                    manualReservedEditorStartDate,
+                                                    manualReservedEditorStartTime,
+                                                ),
+                                            ],
+                                            {
+                                                onSuccess: () => {
+                                                    setManualReservedSummaryRows(
+                                                        [
+                                                            {
+                                                                scheduleId:
+                                                                    manualReservedEditorRow.scheduleId,
+                                                                departureDate:
+                                                                    manualReservedEditorRow.departureDate,
+                                                                startAt: `${manualReservedEditorStartDate} ${manualReservedEditorStartTime}`,
+                                                                expiresAt:
+                                                                    getManualReservedExpiresAt(
+                                                                        manualReservedEditorStartDate,
+                                                                        manualReservedEditorStartTime,
+                                                                    ),
+                                                                originalAvailable:
+                                                                    Number(
+                                                                        selectedAvailability.available +
+                                                                            selectedAvailability.RS,
+                                                                    ),
+                                                                limitLabel:
+                                                                    manualReservedLimitLabel,
+                                                            },
+                                                        ],
+                                                    );
+                                                    setManualReservedEditorOpen(
+                                                        false,
+                                                    );
+                                                    setManualReservedSummaryOpen(
+                                                        true,
+                                                    );
+                                                },
+                                            },
+                                        );
+                                    }}
+                                >
+                                    Save
+                                </Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
+
+                    <Dialog
+                        open={manualReservedSummaryOpen}
+                        onOpenChange={setManualReservedSummaryOpen}
+                    >
+                        <DialogContent className="sm:max-w-[640px]">
+                            <DialogHeader>
+                                <DialogTitle>Manual Reserved Saved</DialogTitle>
+                            </DialogHeader>
+                            <div className="space-y-3">
+                                {manualReservedSummaryRows.map((row) => (
+                                    <div
+                                        key={
+                                            row.scheduleId ?? row.departureDate
+                                        }
+                                        className="rounded-xl border p-4 text-sm"
+                                    >
+                                        <div className="font-medium">
+                                            Schedule {row.departureDate}
+                                        </div>
+                                        <div className="mt-2 space-y-1 text-muted-foreground">
+                                            <p>
+                                                RS value will start counting on{' '}
+                                                {formatManualReservedDateTime(
+                                                    row.startAt,
+                                                )}
+                                                .
+                                            </p>
+                                            {row.expiresAt ? (
+                                                <p>
+                                                    It will automatically reset
+                                                    to 0 at{' '}
+                                                    {formatManualReservedDateTime(
+                                                        row.expiresAt,
+                                                    )}
+                                                    .
+                                                </p>
+                                            ) : (
+                                                <p>
+                                                    It will remain active until
+                                                    it is reset manually.
+                                                </p>
+                                            )}
+                                            {row.limitLabel ? (
+                                                <p>Limit: {row.limitLabel}</p>
+                                            ) : null}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                            <DialogFooter>
+                                <Button
+                                    type="button"
+                                    onClick={() =>
+                                        setManualReservedSummaryOpen(false)
+                                    }
+                                >
+                                    Close
                                 </Button>
                             </DialogFooter>
                         </DialogContent>

@@ -118,6 +118,10 @@ class TourSeeder extends Seeder
         ];
 
         $now = now();
+        $vendorVisaCategoryId = DB::table('visa_categories')
+            ->where('company_id', $vendor->id)
+            ->where('slug', 'visa-group-a')
+            ->value('id');
 
         foreach ($tours as $tour) {
             DB::table('tours')->insert([
@@ -140,6 +144,7 @@ class TourSeeder extends Seeder
                 'region_id' => 1,
                 'country_id' => 12,
                 'category_id' => null,
+                'visa_category_id' => $vendorVisaCategoryId,
                 'image_id' => null,
                 'document_id' => null,
                 'created_at' => $now,
@@ -303,6 +308,11 @@ class TourSeeder extends Seeder
         ];
 
         foreach ($greatChinaTours as $tour) {
+            $greatChinaVisaCategoryId = DB::table('visa_categories')
+                ->where('company_id', $greatChina->id)
+                ->where('slug', 'visa-group-a')
+                ->value('id');
+
             DB::table('tours')->insert([
                 'code' => $tour['code'],
                 'name' => $tour['name'],
@@ -323,6 +333,7 @@ class TourSeeder extends Seeder
                 'region_id' => 1,
                 'country_id' => 12,
                 'category_id' => null,
+                'visa_category_id' => $greatChinaVisaCategoryId,
                 'image_id' => null,
                 'document_id' => null,
                 'created_at' => $now,

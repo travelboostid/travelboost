@@ -36,30 +36,6 @@ const cleanRoomType = (roomType: string | null | undefined) => {
     return normalized || 'TBA';
 };
 
-const getRoomCapacity = (row: any) => {
-    const explicitCapacity = Number(row.room_capacity);
-
-    if (Number.isFinite(explicitCapacity) && explicitCapacity > 0) {
-        return explicitCapacity;
-    }
-
-    const roomType = String(row.room_type || '').toLowerCase();
-
-    if (roomType.includes('quad')) {
-        return 4;
-    }
-
-    if (roomType.includes('triple')) {
-        return 3;
-    }
-
-    if (roomType.includes('twin') || roomType.includes('double')) {
-        return 2;
-    }
-
-    return 1;
-};
-
 const TourAutocomplete = ({
     tours,
     value,
@@ -144,7 +120,8 @@ const TourAutocomplete = ({
 };
 
 export default function RoomListing() {
-    const { tours, availableDates, roomData, filters } = usePage<any>().props;
+    const { tours, availableDates, roomData, agentGroups, filters } =
+        usePage<any>().props;
     const { company } = usePageSharedDataProps();
 
     const hasTourSelected = Boolean(filters.tour_id);
@@ -176,70 +153,18 @@ export default function RoomListing() {
     }, [tours, filters.tour_id]);
 
     const groupedData = useMemo(() => {
-        const groups: Record<
-            string,
-            Array<{ roomType: string; passengerList: typeof roomData }>
-        > = {};
-        const temporaryGroups: Record<
-            string,
-            Record<string, typeof roomData>
-        > = {};
-
-        if (!roomData) {
-            return groups;
-        }
-
-        roomData.forEach((row: any) => {
-            if (!temporaryGroups[row.booking_number]) {
-                temporaryGroups[row.booking_number] = {};
-            }
-
-            const roomType = cleanRoomType(row.room_type);
-            const roomGroupKey = row.room_group_key
-                ? `${roomType}-${row.room_group_key}`
-                : roomType;
-
-            if (!temporaryGroups[row.booking_number][roomGroupKey]) {
-                temporaryGroups[row.booking_number][roomGroupKey] = [];
-            }
-
-            temporaryGroups[row.booking_number][roomGroupKey].push(row);
-        });
-
-        Object.entries(temporaryGroups).forEach(([bookingNumber, rooms]) => {
-            groups[bookingNumber] = [];
-
-            Object.values(rooms).forEach((rows) => {
-                const roomType = cleanRoomType(rows[0]?.room_type);
-
-                if (rows.some((row: any) => row.room_group_key)) {
-                    groups[bookingNumber].push({
-                        roomType,
-                        passengerList: rows,
-                    });
-
-                    return;
-                }
-
-                const capacity = Math.max(1, getRoomCapacity(rows[0]));
-                for (let index = 0; index < rows.length; index += capacity) {
-                    groups[bookingNumber].push({
-                        roomType,
-                        passengerList: rows.slice(index, index + capacity),
-                    });
-                }
-            });
-        });
-
-        return groups;
-    }, [roomData]);
+        return Array.isArray(agentGroups) ? agentGroups : [];
+    }, [agentGroups]);
 
     const roomRecap = useMemo(() => {
         const recap: Record<string, number> = {};
 
-        Object.values(groupedData).forEach((rooms) => {
-            rooms.forEach((room) => {
-                recap[room.roomType] = (recap[room.roomType] || 0) + 1;
+        groupedData.forEach((agentGroup: any) => {
+            (agentGroup.bookings || []).forEach((booking: any) => {
+                (booking.rooms || []).forEach((room: any) => {
+                    const roomType = cleanRoomType(room.room_type);
+                    recap[roomType] = (recap[roomType] || 0) + 1;
+                });
             });
         });
 
@@ -289,7 +214,7 @@ export default function RoomListing() {
     };
 
     let globalIndex = 1;
-    let bookingCounter = 0;
+    let agentCounter = 0;
     let roomCounter = 0;
 
     return (
@@ -470,7 +395,10 @@ export default function RoomListing() {
                                         <TableHead className="border-r border-slate-200 px-2 py-3 text-center text-[11px] font-bold uppercase text-slate-900 dark:border-slate-800 dark:text-slate-200 print:w-[3%]">
                                             No
                                         </TableHead>
-                                        <TableHead className="min-w-[200px] border-r border-slate-200 px-3 py-3 text-[11px] font-bold uppercase text-slate-900 dark:border-slate-800 dark:text-slate-200 print:w-[18%]">
+                                        <TableHead className="min-w-[72px] border-r border-slate-200 px-2 py-3 text-center text-[11px] font-bold uppercase text-slate-900 dark:border-slate-800 dark:text-slate-200 print:w-[5%]">
+                                            Title
+                                        </TableHead>
+                                        <TableHead className="min-w-[220px] border-r border-slate-200 px-3 py-3 text-[11px] font-bold uppercase text-slate-900 dark:border-slate-800 dark:text-slate-200 print:w-[14%]">
                                             Passenger Name
                                         </TableHead>
                                         <TableHead className="border-r border-slate-200 px-2 py-3 text-center text-[11px] font-bold uppercase text-slate-900 dark:border-slate-800 dark:text-slate-200 print:w-[8%]">
@@ -512,190 +440,230 @@ export default function RoomListing() {
                                         <TableHead className="border-r border-slate-200 px-2 py-3 text-center text-[11px] font-bold uppercase text-slate-900 dark:border-slate-800 dark:text-slate-200 print:w-[4%]">
                                             Age
                                         </TableHead>
+                                        <TableHead className="border-r border-slate-200 px-2 py-3 text-center text-[11px] font-bold uppercase text-slate-900 dark:border-slate-800 dark:text-slate-200 print:w-[10%]">
+                                            Agent Name
+                                        </TableHead>
                                         <TableHead className="px-2 py-3 text-center text-[11px] font-bold uppercase text-slate-900 dark:text-slate-200 print:w-[4%]">
                                             Val
                                         </TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {Object.entries(groupedData).map(
-                                        ([bookingNumber, roomGroups]) => {
-                                            bookingCounter++;
+                                    {groupedData.map((agentGroup: any) => {
+                                        agentCounter++;
 
-                                            const rowBgClass =
-                                                bookingCounter % 2 === 0
-                                                    ? 'bg-slate-50/50 dark:bg-slate-900/30'
-                                                    : 'bg-white dark:bg-slate-950';
+                                        const rowBgClass =
+                                            agentCounter % 2 === 0
+                                                ? 'bg-slate-50/50 dark:bg-slate-900/30'
+                                                : 'bg-white dark:bg-slate-950';
+                                        const bookings = agentGroup.bookings || [];
+                                        const agentTotalPax = bookings.reduce(
+                                            (count: number, booking: any) =>
+                                                count + Number(booking.total_pax || 0),
+                                            0,
+                                        );
 
-                                            const totalPaxInBooking =
-                                                roomGroups.reduce(
-                                                    (count, rows) =>
-                                                        count +
-                                                        rows.passengerList
-                                                            .length,
-                                                    0,
-                                                );
+                                        return [
+                                            <TableRow
+                                                key={`agent-${agentGroup.agent_name}`}
+                                                className="border-b border-slate-300 bg-slate-100/90 dark:border-slate-700 dark:bg-slate-900 print-agent-row"
+                                            >
+                                                <TableCell
+                                                    colSpan={18}
+                                                    className="px-3 py-2 text-[11px] font-black uppercase tracking-[0.18em] text-slate-700 dark:text-slate-200 print:text-[8pt]"
+                                                >
+                                                    Agent: {agentGroup.agent_name} ({agentTotalPax} pax)
+                                                </TableCell>
+                                            </TableRow>,
+                                            ...bookings.flatMap(
+                                                (bookingData: any) => {
+                                                    const roomGroups =
+                                                        bookingData.rooms || [];
+                                                    const totalPaxInBooking =
+                                                        Number(
+                                                            bookingData.total_pax ||
+                                                                0,
+                                                        );
 
-                                            return roomGroups.map(
-                                                (
-                                                    { roomType, passengerList },
-                                                    roomIndex,
-                                                ) => {
-                                                    const fallbackRoomNumber =
-                                                        ++roomCounter;
-                                                    const roomNumber =
-                                                        passengerList[0]
-                                                            ?.room_number ||
-                                                        fallbackRoomNumber;
-
-                                                    return passengerList.map(
+                                                    return roomGroups.flatMap(
                                                         (
-                                                            row: any,
-                                                            passengerIndex: number,
+                                                            roomGroup: any,
+                                                            roomIndex: number,
                                                         ) => {
-                                                            const isFirstInBooking =
-                                                                roomIndex ===
-                                                                    0 &&
-                                                                passengerIndex ===
-                                                                    0;
-                                                            const isFirstInRoom =
-                                                                passengerIndex ===
-                                                                0;
-                                                            const totalPaxInRoom =
-                                                                passengerList.length;
-                                                            const fullName =
-                                                                `${row.title ? row.title + '. ' : ''}${row.first_name} ${row.last_name || ''}`.trim();
-                                                            const validityMonths =
-                                                                calculateValidity(
-                                                                    row.passport_expiry_date,
+                                                            const passengerList =
+                                                                roomGroup.passengers ||
+                                                                [];
+                                                            const roomType =
+                                                                cleanRoomType(
+                                                                    roomGroup.room_type,
                                                                 );
-                                                            const isPassportWarning =
-                                                                typeof validityMonths ===
-                                                                    'number' &&
-                                                                validityMonths <
-                                                                    6;
+                                                            const roomNumber =
+                                                                roomGroup.room_number ||
+                                                                ++roomCounter;
 
-                                                            return (
-                                                                <TableRow
-                                                                    key={`${bookingNumber}-${roomType}-${roomIndex}-${passengerIndex}`}
-                                                                    className={`border-b border-slate-200 dark:border-slate-800 ${rowBgClass} ${isFirstInBooking ? 'border-t-2 border-t-slate-400 dark:border-t-slate-500 print-border-thick' : ''} break-inside-avoid hover:bg-slate-50 dark:hover:bg-slate-900/50`}
-                                                                >
-                                                                    <TableCell className="border-r border-slate-200 p-2 text-center text-[12px] font-medium dark:border-slate-800 dark:text-slate-300">
-                                                                        {
-                                                                            globalIndex++
-                                                                        }
-                                                                    </TableCell>
-                                                                    <TableCell className="border-r border-slate-200 p-2 text-[12px] font-bold text-slate-900 dark:border-slate-800 dark:text-white">
-                                                                        {
-                                                                            fullName
-                                                                        }
-                                                                    </TableCell>
-                                                                    {isFirstInRoom && (
-                                                                        <>
-                                                                            <TableCell
-                                                                                rowSpan={
-                                                                                    totalPaxInRoom
-                                                                                }
-                                                                                className="border-r border-slate-200 p-2 text-center align-middle text-[11px] font-medium uppercase dark:border-slate-800"
-                                                                            >
-                                                                                {
-                                                                                    roomType
-                                                                                }
-                                                                            </TableCell>
-                                                                            <TableCell
-                                                                                rowSpan={
-                                                                                    totalPaxInRoom
-                                                                                }
-                                                                                className="border-r border-slate-200 p-2 text-center align-middle text-[12px] font-bold dark:border-slate-800 dark:text-slate-200"
-                                                                            >
-                                                                                {
-                                                                                    roomNumber
-                                                                                }
-                                                                            </TableCell>
-                                                                            <TableCell
-                                                                                rowSpan={
-                                                                                    totalPaxInRoom
-                                                                                }
-                                                                                className="border-r border-slate-200 p-2 dark:border-slate-800"
-                                                                            />
-                                                                        </>
-                                                                    )}
-                                                                    <TableCell className="border-r border-slate-200 p-2 dark:border-slate-800" />
-                                                                    <TableCell className="border-r border-slate-200 p-2 text-center text-[11px] dark:border-slate-800 dark:text-slate-300" />
-                                                                    <TableCell className="border-r border-slate-200 p-2 text-[11px] italic leading-tight text-slate-500 dark:border-slate-800 dark:text-slate-400">
-                                                                        {row.note ||
-                                                                            '-'}
-                                                                    </TableCell>
-                                                                    <TableCell className="border-r border-slate-200 p-2 font-mono text-[12px] tracking-tighter dark:border-slate-800 dark:text-slate-300">
-                                                                        {row.passport_number ||
-                                                                            '-'}
-                                                                    </TableCell>
-                                                                    <TableCell className="border-r border-slate-200 p-2 text-center text-[11px] dark:border-slate-800 dark:text-slate-300">
-                                                                        {row.passport_issue_date
-                                                                            ? dayjs(
-                                                                                  row.passport_issue_date,
-                                                                              ).format(
-                                                                                  'DD/MM/YYYY',
-                                                                              )
-                                                                            : '-'}
-                                                                    </TableCell>
-                                                                    <TableCell className="border-r border-slate-200 p-2 text-center text-[11px] font-bold dark:border-slate-800 dark:text-slate-200">
-                                                                        {row.passport_expiry_date
-                                                                            ? dayjs(
-                                                                                  row.passport_expiry_date,
-                                                                              ).format(
-                                                                                  'DD/MM/YYYY',
-                                                                              )
-                                                                            : '-'}
-                                                                    </TableCell>
-                                                                    <TableCell className="border-r border-slate-200 p-2 text-[11px] uppercase dark:border-slate-800 dark:text-slate-300">
-                                                                        {row.pob ||
-                                                                            '-'}
-                                                                    </TableCell>
-                                                                    <TableCell className="border-r border-slate-200 p-2 text-center text-[11px] dark:border-slate-800 dark:text-slate-300">
-                                                                        {row.dob
-                                                                            ? dayjs(
-                                                                                  row.dob,
-                                                                              ).format(
-                                                                                  'DD/MM/YYYY',
-                                                                              )
-                                                                            : '-'}
-                                                                    </TableCell>
-                                                                    {isFirstInBooking && (
-                                                                        <TableCell
-                                                                            rowSpan={
-                                                                                totalPaxInBooking
-                                                                            }
-                                                                            className="border-r border-slate-200 p-2 text-center align-middle text-[10px] dark:border-slate-800 dark:text-slate-400"
+                                                            return passengerList.map(
+                                                                (
+                                                                    row: any,
+                                                                    passengerIndex: number,
+                                                                ) => {
+                                                                    const isFirstInBooking =
+                                                                        roomIndex ===
+                                                                            0 &&
+                                                                        passengerIndex ===
+                                                                            0;
+                                                                    const isFirstInRoom =
+                                                                        passengerIndex ===
+                                                                        0;
+                                                                    const totalPaxInRoom =
+                                                                        passengerList.length;
+                                                                    const fullName =
+                                                                        `${row.first_name} ${row.last_name || ''}`.trim();
+                                                                    const validityMonths =
+                                                                        calculateValidity(
+                                                                            row.passport_expiry_date,
+                                                                        );
+                                                                    const isPassportWarning =
+                                                                        typeof validityMonths ===
+                                                                            'number' &&
+                                                                        validityMonths <
+                                                                            6;
+
+                                                                    return (
+                                                                        <TableRow
+                                                                            key={`${agentGroup.agent_name}-${bookingData.booking_number}-${roomType}-${roomIndex}-${passengerIndex}`}
+                                                                            className={`border-b border-slate-200 dark:border-slate-800 ${rowBgClass} ${isFirstInBooking ? 'border-t-2 border-t-slate-400 dark:border-t-slate-500 print-border-thick' : ''} break-inside-avoid hover:bg-slate-50 dark:hover:bg-slate-900/50`}
                                                                         >
-                                                                            {row.contact_phone ||
-                                                                                '-'}
-                                                                        </TableCell>
-                                                                    )}
-                                                                    <TableCell className="border-r border-slate-200 p-2 text-center text-[12px] dark:border-slate-800 dark:text-slate-300">
-                                                                        {calculateAge(
-                                                                            row.dob,
-                                                                        ) ||
-                                                                            '-'}
-                                                                    </TableCell>
-                                                                    <TableCell
-                                                                        className={`p-2 text-center text-[12px] font-black ${
-                                                                            isPassportWarning
-                                                                                ? 'bg-red-50/50 text-red-600 dark:bg-red-900/20 dark:text-red-400 print-bg-red'
-                                                                                : 'dark:text-slate-300'
-                                                                        }`}
-                                                                    >
-                                                                        {validityMonths ??
-                                                                            '-'}
-                                                                    </TableCell>
-                                                                </TableRow>
+                                                                            <TableCell className="border-r border-slate-200 p-2 text-center text-[12px] font-medium dark:border-slate-800 dark:text-slate-300">
+                                                                                {
+                                                                                    globalIndex++
+                                                                                }
+                                                                            </TableCell>
+                                                                            <TableCell className="border-r border-slate-200 p-2 text-center text-[12px] font-semibold text-slate-700 dark:border-slate-800 dark:text-slate-200">
+                                                                                {row.title ||
+                                                                                    '-'}
+                                                                            </TableCell>
+                                                                            <TableCell className="border-r border-slate-200 p-2 text-[12px] font-bold text-slate-900 dark:border-slate-800 dark:text-white">
+                                                                                {fullName ||
+                                                                                    '-'}
+                                                                            </TableCell>
+                                                                            {isFirstInRoom && (
+                                                                                <>
+                                                                                    <TableCell
+                                                                                        rowSpan={
+                                                                                            totalPaxInRoom
+                                                                                        }
+                                                                                        className="border-r border-slate-200 p-2 text-center align-middle text-[11px] font-medium uppercase dark:border-slate-800"
+                                                                                    >
+                                                                                        {
+                                                                                            roomType
+                                                                                        }
+                                                                                    </TableCell>
+                                                                                    <TableCell
+                                                                                        rowSpan={
+                                                                                            totalPaxInRoom
+                                                                                        }
+                                                                                        className="border-r border-slate-200 p-2 text-center align-middle text-[12px] font-bold dark:border-slate-800 dark:text-slate-200"
+                                                                                    >
+                                                                                        {
+                                                                                            roomNumber
+                                                                                        }
+                                                                                    </TableCell>
+                                                                                    <TableCell
+                                                                                        rowSpan={
+                                                                                            totalPaxInRoom
+                                                                                        }
+                                                                                        className="border-r border-slate-200 p-2 dark:border-slate-800"
+                                                                                    />
+                                                                                </>
+                                                                            )}
+                                                                            <TableCell className="border-r border-slate-200 p-2 dark:border-slate-800" />
+                                                                            <TableCell className="border-r border-slate-200 p-2 text-center text-[11px] dark:border-slate-800 dark:text-slate-300" />
+                                                                            <TableCell className="border-r border-slate-200 p-2 text-[11px] italic leading-tight text-slate-500 dark:border-slate-800 dark:text-slate-400">
+                                                                                {row.note ||
+                                                                                    '-'}
+                                                                            </TableCell>
+                                                                            <TableCell className="border-r border-slate-200 p-2 font-mono text-[12px] tracking-tighter dark:border-slate-800 dark:text-slate-300">
+                                                                                {row.passport_number ||
+                                                                                    '-'}
+                                                                            </TableCell>
+                                                                            <TableCell className="border-r border-slate-200 p-2 text-center text-[11px] dark:border-slate-800 dark:text-slate-300">
+                                                                                {row.passport_issue_date
+                                                                                    ? dayjs(
+                                                                                          row.passport_issue_date,
+                                                                                      ).format(
+                                                                                          'DD/MM/YYYY',
+                                                                                      )
+                                                                                    : '-'}
+                                                                            </TableCell>
+                                                                            <TableCell className="border-r border-slate-200 p-2 text-center text-[11px] font-bold dark:border-slate-800 dark:text-slate-200">
+                                                                                {row.passport_expiry_date
+                                                                                    ? dayjs(
+                                                                                          row.passport_expiry_date,
+                                                                                      ).format(
+                                                                                          'DD/MM/YYYY',
+                                                                                      )
+                                                                                    : '-'}
+                                                                            </TableCell>
+                                                                            <TableCell className="border-r border-slate-200 p-2 text-[11px] uppercase dark:border-slate-800 dark:text-slate-300">
+                                                                                {row.pob ||
+                                                                                    '-'}
+                                                                            </TableCell>
+                                                                            <TableCell className="border-r border-slate-200 p-2 text-center text-[11px] dark:border-slate-800 dark:text-slate-300">
+                                                                                {row.dob
+                                                                                    ? dayjs(
+                                                                                          row.dob,
+                                                                                      ).format(
+                                                                                          'DD/MM/YYYY',
+                                                                                      )
+                                                                                    : '-'}
+                                                                            </TableCell>
+                                                                            {isFirstInBooking && (
+                                                                                <TableCell
+                                                                                    rowSpan={
+                                                                                        totalPaxInBooking
+                                                                                    }
+                                                                                    className="border-r border-slate-200 p-2 text-center align-middle text-[10px] dark:border-slate-800 dark:text-slate-400"
+                                                                                >
+                                                                                    {row.contact_phone ||
+                                                                                        '-'}
+                                                                                </TableCell>
+                                                                            )}
+                                                                            <TableCell className="border-r border-slate-200 p-2 text-center text-[12px] dark:border-slate-800 dark:text-slate-300">
+                                                                                {calculateAge(
+                                                                                    row.dob,
+                                                                                ) ||
+                                                                                    '-'}
+                                                                            </TableCell>
+                                                                            {isFirstInBooking && (
+                                                                                <TableCell
+                                                                                    rowSpan={
+                                                                                        totalPaxInBooking
+                                                                                    }
+                                                                                    className="border-r border-slate-200 p-2 text-center align-middle text-[11px] font-semibold dark:border-slate-800 dark:text-slate-300"
+                                                                                >
+                                                                                    {agentGroup.agent_name}
+                                                                                </TableCell>
+                                                                            )}
+                                                                            <TableCell
+                                                                                className={`p-2 text-center text-[12px] font-black ${
+                                                                                    isPassportWarning
+                                                                                        ? 'bg-red-50/50 text-red-600 dark:bg-red-900/20 dark:text-red-400 print-bg-red'
+                                                                                        : 'dark:text-slate-300'
+                                                                                }`}
+                                                                            >
+                                                                                {validityMonths ??
+                                                                                    '-'}
+                                                                            </TableCell>
+                                                                        </TableRow>
+                                                                    );
+                                                                },
                                                             );
                                                         },
                                                     );
                                                 },
-                                            );
-                                        },
-                                    )}
+                                            ),
+                                        ];
+                                    })}
                                 </TableBody>
                             </Table>
                         </div>
@@ -778,11 +746,12 @@ export default function RoomListing() {
           table {
             width: 100% !important;
             border: 1px solid black !important;
+            table-layout: fixed !important;
           }
 
           th, td {
             border: 0.5pt solid black !important;
-            padding: 4px 3px !important;
+            padding: 3px 2.5px !important;
             background-color: transparent !important;
             word-break: break-word;
             white-space: normal !important;
@@ -791,15 +760,21 @@ export default function RoomListing() {
           th {
             background-color: #f1f5f9 !important;
             font-weight: bold !important;
-            font-size: 7.4pt !important;
+            font-size: 6.8pt !important;
           }
 
           td {
-            font-size: 7pt !important;
+            font-size: 6.4pt !important;
           }
 
           .print-border-thick {
             border-top: 1.5pt solid black !important;
+          }
+
+          .print-agent-row td {
+            background-color: #e2e8f0 !important;
+            font-size: 7pt !important;
+            font-weight: 700 !important;
           }
 
           .print-bg-red {

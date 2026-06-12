@@ -116,6 +116,10 @@ test('room listing loads rows after both tour and departure date are selected', 
     $response->assertInertia(fn (Assert $page) => $page
         ->component('companies/dashboard/reports/room-listings/index')
         ->has('roomData', 1)
+        ->has('agentGroups', 1)
+        ->where('agentGroups.0.agent_name', 'Direct')
+        ->where('agentGroups.0.bookings.0.total_pax', 1)
+        ->where('roomData.0.title', 'Mr')
         ->where('roomData.0.first_name', 'John')
         ->where('roomData.0.room_type', 'Twin Room')
         ->where('roomData.0.note', 'Near elevator'));

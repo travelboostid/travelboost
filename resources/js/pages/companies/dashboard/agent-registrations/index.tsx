@@ -61,8 +61,11 @@ import {
     ArrowUpDown,
     ChevronDown,
     EyeIcon,
+    FileSpreadsheet,
+    FileText,
     MoreHorizontal,
     NotebookPenIcon,
+    Printer,
     Search,
     ShieldBanIcon,
     UserCheckIcon,
@@ -755,6 +758,19 @@ export default function Page({ data, agentTiers }: PageProps) {
     });
 
     const tableRows = table.getRowModel().rows;
+    const buildExportQuery = () => {
+        const params = new URLSearchParams();
+
+        if (activeStatus !== 'all') {
+            params.set('status', activeStatus);
+        }
+
+        if (globalFilter.trim() !== '') {
+            params.set('search', globalFilter.trim());
+        }
+
+        return params.toString();
+    };
 
     return (
         <CompanyDashboardLayout
@@ -767,92 +783,153 @@ export default function Page({ data, agentTiers }: PageProps) {
             activeMenuIds={['agent-registrations']}
         >
             <div className="mx-auto flex w-full max-w-[1600px] flex-1 flex-col gap-6 p-4 pb-20 md:p-8">
-                <div className="order-first flex flex-col gap-3 rounded-xl border border-slate-200/80 bg-card/95 p-3 shadow-sm dark:border-slate-800 dark:bg-slate-950/80 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="w-full min-w-0 sm:max-w-md">
-                        <div className="relative">
-                            <span className="pointer-events-none absolute left-2 top-1/2 flex size-6 -translate-y-1/2 items-center justify-center rounded-lg bg-primary/10 text-primary ring-1 ring-primary/15 dark:bg-primary/15">
-                                <Search className="size-3.5" />
-                            </span>
-                            <Input
-                                placeholder="Search agent, email, note, payment mode, or tier"
-                                value={globalFilter}
-                                onChange={(event) =>
-                                    setGlobalFilter(event.target.value)
-                                }
-                                className="h-9 w-full rounded-lg border-slate-200 bg-background pl-9 pr-9 text-xs font-medium shadow-inner shadow-slate-100/70 transition-all placeholder:text-[13px] placeholder:font-normal placeholder:text-muted-foreground/70 focus-visible:border-primary/50 focus-visible:ring-2 focus-visible:ring-primary/20 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:shadow-black/20 dark:placeholder:text-slate-500"
-                            />
-                            {globalFilter.trim() !== '' && (
-                                <button
-                                    type="button"
-                                    aria-label="Clear search"
-                                    onClick={() => setGlobalFilter('')}
-                                    className="absolute right-2 top-1/2 flex size-6 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                                >
-                                    <XIcon className="size-3.5" />
-                                </button>
-                            )}
+                <div className="order-first rounded-3xl border border-slate-200/80 bg-card/95 p-5 shadow-sm dark:border-slate-800 dark:bg-slate-950/80 sm:p-6">
+                    <div className="flex flex-col gap-5">
+                        <div>
+                            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary/80">
+                                Agent Network
+                            </p>
+                            <h1 className="mt-1 text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
+                                Agent Registrations
+                            </h1>
+                            <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
+                                Review registration status, payment settings, and tier assignment in one responsive workspace.
+                            </p>
                         </div>
-                    </div>
 
-                    <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
-                        <div className="flex flex-wrap gap-1.5">
-                            {STATUS_TABS.map((tab) => {
-                                const isActive = activeStatus === tab.value;
-
-                                return (
-                                    <button
-                                        key={tab.value}
-                                        type="button"
-                                        onClick={() =>
-                                            setActiveStatus(tab.value)
+                        <div className="flex flex-col gap-3">
+                            <div className="flex flex-col gap-3 xl:flex-row xl:items-center">
+                                <div className="relative flex-1">
+                                    <span className="pointer-events-none absolute left-2 top-1/2 flex size-8 -translate-y-1/2 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/15 dark:bg-primary/15">
+                                        <Search className="size-4" />
+                                    </span>
+                                    <Input
+                                        placeholder="Search agent, email, note, payment mode, or tier"
+                                        value={globalFilter}
+                                        onChange={(event) =>
+                                            setGlobalFilter(event.target.value)
                                         }
-                                        className={`rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-wider transition-all ${
-                                            isActive
-                                                ? 'border-primary/30 bg-primary/10 text-primary dark:border-primary/40 dark:bg-primary/20'
-                                                : 'border-slate-200 bg-white text-muted-foreground hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300 dark:hover:bg-slate-900'
-                                        }`}
-                                    >
-                                        {tab.label}
-                                    </button>
-                                );
-                            })}
-                        </div>
+                                        className="h-11 w-full rounded-xl border-slate-200 bg-background pl-12 pr-10 text-sm font-medium shadow-inner shadow-slate-100/70 transition-all placeholder:font-normal placeholder:text-muted-foreground/70 focus-visible:border-primary/50 focus-visible:ring-2 focus-visible:ring-primary/20 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:shadow-black/20 dark:placeholder:text-slate-500"
+                                    />
+                                    {globalFilter.trim() !== '' && (
+                                        <button
+                                            type="button"
+                                            aria-label="Clear search"
+                                            onClick={() => setGlobalFilter('')}
+                                            className="absolute right-2 top-1/2 flex size-7 -translate-y-1/2 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                                        >
+                                            <XIcon className="size-4" />
+                                        </button>
+                                    )}
+                                </div>
 
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button
-                                    variant="outline"
-                                    className="ml-auto h-9 w-full border-slate-200 bg-white text-xs dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:hover:bg-slate-900 sm:w-auto"
-                                >
-                                    View Columns{' '}
-                                    <ChevronDown className="ml-2 h-4 w-4 opacity-50" />
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent
-                                align="end"
-                                className="w-[220px] rounded-xl"
-                            >
-                                <DropdownMenuGroup>
-                                    {table
-                                        .getAllColumns()
-                                        .filter((column) => column.getCanHide())
-                                        .map((column) => (
-                                            <DropdownMenuCheckboxItem
-                                                key={column.id}
-                                                className="cursor-pointer capitalize"
-                                                checked={column.getIsVisible()}
-                                                onCheckedChange={(value) =>
-                                                    column.toggleVisibility(
-                                                        !!value,
-                                                    )
-                                                }
+                                <div className="flex flex-wrap items-center gap-2 xl:justify-end">
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        className="h-10 gap-2 rounded-xl"
+                                        onClick={() =>
+                                            window.open(
+                                                `/companies/${company.username}/dashboard/agent-registrations/print?${buildExportQuery()}`,
+                                                '_blank',
+                                            )
+                                        }
+                                    >
+                                        <Printer className="h-4 w-4" />
+                                        Print
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        className="h-10 gap-2 rounded-xl border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 dark:border-red-900/50 dark:text-red-400 dark:hover:bg-red-900/20"
+                                        onClick={() =>
+                                            window.open(
+                                                `/companies/${company.username}/dashboard/agent-registrations/export/pdf?${buildExportQuery()}`,
+                                                '_blank',
+                                            )
+                                        }
+                                    >
+                                        <FileText className="h-4 w-4" />
+                                        Export PDF
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        className="h-10 gap-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700"
+                                        onClick={() => {
+                                            window.location.href = `/companies/${company.username}/dashboard/agent-registrations/export/excel?${buildExportQuery()}`;
+                                        }}
+                                    >
+                                        <FileSpreadsheet className="h-4 w-4" />
+                                        Export Excel
+                                    </Button>
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button
+                                                variant="outline"
+                                                className="h-10 rounded-xl border-slate-200 bg-white text-sm dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:hover:bg-slate-900"
                                             >
-                                                {column.id.replace(/_/g, ' ')}
-                                            </DropdownMenuCheckboxItem>
-                                        ))}
-                                </DropdownMenuGroup>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
+                                                View Columns
+                                                <ChevronDown className="ml-2 h-4 w-4 opacity-50" />
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent
+                                            align="end"
+                                            className="w-[220px] rounded-xl"
+                                        >
+                                            <DropdownMenuGroup>
+                                                {table
+                                                    .getAllColumns()
+                                                    .filter((column) =>
+                                                        column.getCanHide(),
+                                                    )
+                                                    .map((column) => (
+                                                        <DropdownMenuCheckboxItem
+                                                            key={column.id}
+                                                            className="cursor-pointer capitalize"
+                                                            checked={column.getIsVisible()}
+                                                            onCheckedChange={(
+                                                                value,
+                                                            ) =>
+                                                                column.toggleVisibility(
+                                                                    !!value,
+                                                                )
+                                                            }
+                                                        >
+                                                            {column.id.replace(
+                                                                /_/g,
+                                                                ' ',
+                                                            )}
+                                                        </DropdownMenuCheckboxItem>
+                                                    ))}
+                                            </DropdownMenuGroup>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+                                </div>
+                            </div>
+
+                            <div className="flex flex-wrap gap-1.5">
+                                {STATUS_TABS.map((tab) => {
+                                    const isActive = activeStatus === tab.value;
+
+                                    return (
+                                        <button
+                                            key={tab.value}
+                                            type="button"
+                                            onClick={() =>
+                                                setActiveStatus(tab.value)
+                                            }
+                                            className={`rounded-full border px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider transition-all ${
+                                                isActive
+                                                    ? 'border-primary/30 bg-primary/10 text-primary dark:border-primary/40 dark:bg-primary/20'
+                                                    : 'border-slate-200 bg-white text-muted-foreground hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300 dark:hover:bg-slate-900'
+                                            }`}
+                                        >
+                                            {tab.label}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
                     </div>
                 </div>
 

@@ -12,7 +12,6 @@ class TourSchedule extends Model
         'company_id',
         'departure_date',
         'return_date',
-        'quota',
         'cutoff_date',
         'is_active',
         'note',

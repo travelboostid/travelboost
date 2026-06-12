@@ -76,6 +76,19 @@ const DEFAULT_TNC = `1. The price shown is valid only for the selected departure
 4. All bookings are non-refundable unless stated otherwise.
 5. Changes to guest details or departure dates are subject to administrative fees.
 6. In the event of tour cancellation by the organizer, a full refund will be provided.`;
+
+function renderTermsHtml(value: string): string {
+    if (!value.trim()) {
+        return DEFAULT_TNC.replace(/\n/g, '<br />');
+    }
+
+    if (value.includes('<')) {
+        return value;
+    }
+
+    return value.replace(/\n/g, '<br />');
+}
+
 const CONTACT_GUEST_ID = 'booking-contact-guest';
 const DEFAULT_PAYMENT_UNAVAILABLE_MESSAGE =
     'Payment is temporarily unavailable. Please try again later or contact customer support.';
@@ -1002,7 +1015,9 @@ export default function Page() {
             ? existingBooking.booking_number
             : null);
     const proformaInvoiceUrl = existingBooking?.id
-        ? `/mybookings/${existingBooking.id}/invoice`
+        ? isDashboardBooking
+            ? `${bookingActionBaseUrl}/${existingBooking.id}/invoice?proforma=1`
+            : `/mybookings/${existingBooking.id}/invoice`
         : null;
     const selectedSchedule = useMemo(() => {
         const schedules = Array.isArray(tour?.schedules) ? tour.schedules : [];
@@ -2430,11 +2445,12 @@ export default function Page() {
                                     Terms & Conditions
                                 </h2>
                             </div>
-                            <div className="mt-6 max-h-80 overflow-y-auto rounded-lg border bg-muted/30 p-4">
-                                <p className="whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">
-                                    {termConditions || DEFAULT_TNC}
-                                </p>
-                            </div>
+                            <div
+                                className="mt-6 max-h-80 overflow-y-auto rounded-lg border bg-muted/30 p-4 text-sm leading-relaxed text-muted-foreground [&_h1]:mb-3 [&_h1]:text-2xl [&_h1]:font-bold [&_h2]:mb-3 [&_h2]:text-xl [&_h2]:font-semibold [&_h3]:mb-2 [&_h3]:text-lg [&_h3]:font-semibold [&_ol]:ml-6 [&_ol]:list-decimal [&_p]:mb-3 [&_strike]:text-muted-foreground"
+                                dangerouslySetInnerHTML={{
+                                    __html: renderTermsHtml(termConditions || ''),
+                                }}
+                            />
                             <p className="mt-6 rounded-lg bg-muted/50 p-4 text-sm font-medium leading-relaxed text-foreground">
                                 By clicking &quot;I Agree &amp; Continue&quot;,
                                 you agree to the Terms &amp; Conditions. A{' '}

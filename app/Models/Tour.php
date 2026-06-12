@@ -24,6 +24,7 @@ class Tour extends Model
         'destination',
         'category_id',
         'product_commission_category_id',
+        'visa_category_id',
         'parent_id',
         'company_id',
         'user_id',
@@ -92,6 +93,11 @@ class Tour extends Model
     public function productCommissionCategory()
     {
         return $this->belongsTo(ProductCommissionCategory::class);
+    }
+
+    public function visaCategory()
+    {
+        return $this->belongsTo(VisaCategory::class);
     }
 
     public function image()

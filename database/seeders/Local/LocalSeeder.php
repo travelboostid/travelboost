@@ -15,6 +15,7 @@ use Database\Seeders\Common\RegionSeeder;
 use Database\Seeders\Common\RolePermissionSeeder;
 use Database\Seeders\Common\TourSeeder;
 use Database\Seeders\Common\UserSeeder;
+use Database\Seeders\Common\VisaCategorySeeder;
 use Illuminate\Database\Seeder;
 
 class LocalSeeder extends Seeder
@@ -33,6 +34,7 @@ class LocalSeeder extends Seeder
             ContinentSeeder::class,
             RegionSeeder::class,
             CountrySeeder::class,
+            VisaCategorySeeder::class,
             TourSeeder::class,
             AffiliateCommissionRateSeeder::class,
             AffiliateSeeder::class,
