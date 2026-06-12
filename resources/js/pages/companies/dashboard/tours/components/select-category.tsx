@@ -29,6 +29,10 @@ export default function SelectCategory({
     const { data, isLoading } = useGetTourCategories({
         company_id: companyId ?? company?.id,
     });
+    const selectedCategory = data?.data.find(
+        (category) =>
+            String(category.id) === String(value ?? defaultValue ?? ''),
+    );
 
     return (
         <Select
@@ -37,10 +41,12 @@ export default function SelectCategory({
             defaultValue={defaultValue?.toString()}
             onValueChange={(val) => onChange && onChange(val)}
         >
-            <SelectTrigger className="w-full max-w-xs">
-                <SelectValue
-                    placeholder={isLoading ? 'Loading...' : 'Select category'}
-                />
+            <SelectTrigger className="w-full min-w-0">
+                <SelectValue placeholder={isLoading ? 'Loading...' : undefined}>
+                    <span className="block truncate">
+                        {selectedCategory?.name ?? 'Select category'}
+                    </span>
+                </SelectValue>
             </SelectTrigger>
             <SelectContent>
                 <SelectGroup>

@@ -22,13 +22,18 @@ export default function SelectVisaCategory({
     onChange,
     categories = [],
 }: Props) {
+    const selectedCategory = categories.find(
+        (item) => String(item.id) === String(value ?? '0'),
+    );
+
     return (
-        <Select
-            value={value ? String(value) : '0'}
-            onValueChange={onChange}
-        >
-            <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select Visa Category" />
+        <Select value={value ? String(value) : '0'} onValueChange={onChange}>
+            <SelectTrigger className="w-full min-w-0">
+                <SelectValue placeholder={undefined}>
+                    <span className="block truncate">
+                        {selectedCategory?.name ?? 'No Visa Category'}
+                    </span>
+                </SelectValue>
             </SelectTrigger>
 
             <SelectContent>

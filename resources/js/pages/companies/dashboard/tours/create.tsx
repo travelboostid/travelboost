@@ -458,7 +458,7 @@ export default function Page() {
                                         </div>
                                     </div>
                                     <div className="grid grid-cols-1 gap-5 p-6 lg:grid-cols-12">
-                                        <div className="grid gap-2 lg:col-span-3">
+                                        <div className="grid min-w-0 gap-2 lg:col-span-4">
                                             <RequiredLabel>Code</RequiredLabel>
                                             <Input
                                                 id="code"
@@ -476,7 +476,7 @@ export default function Page() {
                                             />
                                             <InputError message={errors.code} />
                                         </div>
-                                        <div className="grid gap-2 lg:col-span-6">
+                                        <div className="grid min-w-0 gap-2 lg:col-span-6">
                                             <RequiredLabel>Name</RequiredLabel>
                                             <Input
                                                 id="name"
@@ -494,7 +494,7 @@ export default function Page() {
                                             />
                                             <InputError message={errors.name} />
                                         </div>
-                                        <div className="grid gap-2 lg:col-span-3">
+                                        <div className="grid min-w-0 gap-2 lg:col-span-2">
                                             <RequiredLabel>
                                                 Status
                                             </RequiredLabel>
@@ -685,8 +685,11 @@ export default function Page() {
                                     </div>
                                     <div className="space-y-6 p-6">
                                         <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
-                                            <div className="grid gap-2">
-                                                <Label htmlFor="category_id">
+                                            <div className="grid min-w-0 gap-2">
+                                                <Label
+                                                    htmlFor="category_id"
+                                                    className="truncate"
+                                                >
                                                     Product Catalog Category
                                                 </Label>
                                                 <SelectCategory
@@ -708,8 +711,11 @@ export default function Page() {
                                                 />
                                             </div>
 
-                                            <div className="grid gap-2">
-                                                <Label htmlFor="product_commission_category_id">
+                                            <div className="grid min-w-0 gap-2">
+                                                <Label
+                                                    htmlFor="product_commission_category_id"
+                                                    className="truncate"
+                                                >
                                                     Product Commission Category
                                                 </Label>
 
@@ -736,7 +742,7 @@ export default function Page() {
                                                 />
                                             </div>
 
-                                            <div className="grid gap-2">
+                                            <div className="grid min-w-0 gap-2">
                                                 <RequiredLabel>
                                                     Visa Category
                                                 </RequiredLabel>
@@ -765,9 +771,17 @@ export default function Page() {
                                             </div>
                                         </div>
 
-                                        <VisaCategoryPreview
-                                            category={selectedVisaCategory}
-                                        />
+                                        <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
+                                            <div className="hidden lg:block" />
+                                            <div className="hidden lg:block" />
+                                            <div className="min-w-0">
+                                                <VisaCategoryPreview
+                                                    category={
+                                                        selectedVisaCategory
+                                                    }
+                                                />
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -785,39 +799,7 @@ export default function Page() {
                                             easy-to-review layout.
                                         </p>
                                     </div>
-                                    <div className="grid gap-6 p-6 xl:grid-cols-[minmax(0,0.9fr)_minmax(320px,1.1fr)]">
-                                        <div className="space-y-4">
-                                            <div className="grid gap-2">
-                                                <Label htmlFor="name">
-                                                    PDF Itinerary
-                                                </Label>
-                                                <div className="max-w-sm">
-                                                    <TourDocumentPicker
-                                                        owner={{
-                                                            id: company.id,
-                                                            type: 'company',
-                                                        }}
-                                                        onChange={(media) => {
-                                                            const mediaId =
-                                                                typeof media ===
-                                                                    'object' &&
-                                                                media
-                                                                    ? media.id
-                                                                    : null;
-
-                                                            setData(
-                                                                'document_id',
-                                                                mediaId,
-                                                            );
-                                                        }}
-                                                    />
-                                                </div>
-                                                <InputError
-                                                    message={errors.document_id}
-                                                />
-                                            </div>
-                                        </div>
-
+                                    <div className="grid gap-6 p-6 xl:grid-cols-[minmax(220px,3fr)_minmax(320px,7fr)]">
                                         <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 dark:border-slate-800 dark:bg-slate-900/40">
                                             <div className="mb-3">
                                                 <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
@@ -855,6 +837,38 @@ export default function Page() {
                                             <InputError
                                                 message={errors.media_id}
                                             />
+                                        </div>
+
+                                        <div className="space-y-4">
+                                            <div className="grid gap-2">
+                                                <Label htmlFor="name">
+                                                    PDF Itinerary
+                                                </Label>
+                                                <div className="max-w-none">
+                                                    <TourDocumentPicker
+                                                        owner={{
+                                                            id: company.id,
+                                                            type: 'company',
+                                                        }}
+                                                        onChange={(media) => {
+                                                            const mediaId =
+                                                                typeof media ===
+                                                                    'object' &&
+                                                                media
+                                                                    ? media.id
+                                                                    : null;
+
+                                                            setData(
+                                                                'document_id',
+                                                                mediaId,
+                                                            );
+                                                        }}
+                                                    />
+                                                </div>
+                                                <InputError
+                                                    message={errors.document_id}
+                                                />
+                                            </div>
                                         </div>
                                     </div>
                                 </div>

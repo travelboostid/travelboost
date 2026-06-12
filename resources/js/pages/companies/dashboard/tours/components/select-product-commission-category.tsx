@@ -23,10 +23,16 @@ export default function SelectProductCommissionCategory({
     onChange,
     categories = [],
 }: Props) {
+    const selectedCategory = categories.find((item) => item.id === value);
+
     return (
         <Select value={value ? String(value) : '0'} onValueChange={onChange}>
-            <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select Product Commission Category" />
+            <SelectTrigger className="w-full min-w-0">
+                <SelectValue placeholder={undefined}>
+                    <span className="block truncate">
+                        {selectedCategory?.category_name ?? 'No Category'}
+                    </span>
+                </SelectValue>
             </SelectTrigger>
 
             <SelectContent>
