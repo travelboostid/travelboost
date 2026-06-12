@@ -25,10 +25,11 @@ Other dev commands: `pnpm dev:min` (server + Vite only), `pnpm dev` (interactive
 
 ### Getting started
 
-| Doc                                              | When to read                                      |
-| ------------------------------------------------ | ------------------------------------------------- |
-| [Local Development](./docs/local-development.md) | First-time setup, PHP extensions, `pnpm dev:full` |
-| [Team SOP](./docs/team-sop.md)                   | Git workflow, PRs, coding standards               |
+| Doc                                              | When to read                                                 |
+| ------------------------------------------------ | ------------------------------------------------------------ |
+| [Local Development](./docs/local-development.md) | First-time setup, PHP extensions, `pnpm dev:full`            |
+| [Cloudflare Tunnel](./docs/cloudflare-tunnel.md) | Payment webhooks & OAuth via `tunnel-8000.travelboost.co.id` |
+| [Team SOP](./docs/team-sop.md)                   | Git workflow, PRs, coding standards                          |
 
 ### Architecture & product
 
@@ -47,9 +48,10 @@ Other dev commands: `pnpm dev:min` (server + Vite only), `pnpm dev` (interactive
 
 ### Features
 
-| Doc                                        | When to read                        |
-| ------------------------------------------ | ----------------------------------- |
-| [Live Chat & Chatbot](./docs/live-chat.md) | Reverb, auto-reply, troubleshooting |
+| Doc                                              | When to read                                          |
+| ------------------------------------------------ | ----------------------------------------------------- |
+| [Live Chat & Chatbot](./docs/live-chat.md)       | Reverb, auto-reply, troubleshooting                   |
+| [Cloudflare Tunnel](./docs/cloudflare-tunnel.md) | Payment webhooks, PrismaLink/Midtrans sandbox testing |
 
 ### Production
 

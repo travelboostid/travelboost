@@ -258,6 +258,8 @@ Scheduled tasks expire unpaid reservations and send deadline reminders (`routes/
 
 Payment status sync runs via webhooks and a scheduled `MarkExpiredPaymentsJob`.
 
+Local webhook testing uses [Cloudflare Tunnel](./cloudflare-tunnel.md) (`tunnel-8000.travelboost.co.id`).
+
 ### Chat and AI chatbot
 
 Private chat between customers (user or anonymous) and a company, with optional AI auto-reply.

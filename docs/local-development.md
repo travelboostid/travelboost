@@ -164,3 +164,5 @@ Requires the Laravel server to be running (`pnpm dev:serve` or `pnpm dev:full`) 
 Full conventions: [Web API & Orval](./webapi-orval.md).
 
 See [Live Chat & Chatbot](./live-chat.md) for how chat auto-reply works and how to troubleshoot it.
+
+For payment gateway webhooks (Midtrans, PrismaLink) and other HTTPS callbacks to your local machine, see [Cloudflare Tunnel](./cloudflare-tunnel.md).
