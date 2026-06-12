@@ -9,11 +9,17 @@ use App\Models\TourCategory;
 use App\Models\TourSchedule;
 use App\Models\User;
 use Database\Seeders\Common\RolePermissionSeeder;
+use Illuminate\Support\Carbon;
 
 beforeEach(function () {
     $this->withoutVite();
     $this->seed(RolePermissionSeeder::class);
     $this->user = User::factory()->create();
+    $this->travelTo(Carbon::parse('2026-06-08 00:00:00', 'UTC'));
+});
+
+afterEach(function () {
+    $this->travelBack();
 });
 
 test('availability save stores scheduled manual reserved times in utc based on the submitted timezone', function () {

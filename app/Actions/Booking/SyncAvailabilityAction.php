@@ -155,7 +155,7 @@ class SyncAvailabilityAction
         return (int) ($availability->manual_reserved_pending_value ?? 0) > 0
             && (int) $availability->RS === 0
             && $availability->manual_reserved_started_at !== null
-            && $availability->manual_reserved_started_at->isPastOrNow();
+            && $availability->manual_reserved_started_at->lessThanOrEqualTo(now('UTC'));
     }
 
     private function activateManualReserved(TourAvailability $availability): void

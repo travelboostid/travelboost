@@ -253,6 +253,8 @@ class MidtransService
 
             if ($materializedQrUrl !== null) {
                 $instructions['qr_url'] = $materializedQrUrl;
+            } else {
+                $instructions['qr_url'] = $qrImageUrl;
             }
         }
 

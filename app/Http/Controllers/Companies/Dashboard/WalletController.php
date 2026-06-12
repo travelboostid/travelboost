@@ -32,24 +32,24 @@ class WalletController extends Controller
         $lastMonthStart = now()->subMonth()->startOfMonth();
         $lastMonthEnd = now()->subMonth()->endOfMonth();
 
-        $thisIncome = $wallet->walletTransactions()
+        $thisIncome = (int) $wallet->walletTransactions()
             ->where('amount', '>', 0)
             ->whereBetween('created_at', [$thisMonthStart, $thisMonthEnd])
             ->sum('amount');
 
-        $thisExpense = abs(
+        $thisExpense = (int) abs(
             $wallet->walletTransactions()
                 ->where('amount', '<', 0)
                 ->whereBetween('created_at', [$thisMonthStart, $thisMonthEnd])
                 ->sum('amount')
         );
 
-        $lastIncome = $wallet->walletTransactions()
+        $lastIncome = (int) $wallet->walletTransactions()
             ->where('amount', '>', 0)
             ->whereBetween('created_at', [$lastMonthStart, $lastMonthEnd])
             ->sum('amount');
 
-        $lastExpense = abs(
+        $lastExpense = (int) abs(
             $wallet->walletTransactions()
                 ->where('amount', '<', 0)
                 ->whereBetween('created_at', [$lastMonthStart, $lastMonthEnd])

@@ -42,11 +42,11 @@ class WalletTransactionsController extends Controller
 
         $transactionCount = (clone $periodQuery)->count();
 
-        $incomeAmount = (clone $periodQuery)
+        $incomeAmount = (int) (clone $periodQuery)
             ->where('amount', '>', 0)
             ->sum('amount');
 
-        $expenseAmount = abs(
+        $expenseAmount = (int) abs(
             (clone $periodQuery)
                 ->where('amount', '<', 0)
                 ->sum('amount')
