@@ -60,14 +60,19 @@ class RoomListingController extends Controller
                 ->pluck('date');
         }
 
+        $agentGroups = $hasCompleteFilters
+            ? $this->buildAgentGroups($this->roomListingBookings($company, $tourId, $departureDate))
+            : [];
+
         $roomData = $hasCompleteFilters
-          ? $this->buildRoomData($company, $tourId, $departureDate)
-          : [];
+            ? $this->flattenRoomData($agentGroups)
+            : [];
 
         return Inertia::render('companies/dashboard/reports/room-listings/index', [
             'tours' => $tours,
             'availableDates' => $availableDates,
             'roomData' => $roomData,
+            'agentGroups' => $agentGroups,
             'filters' => [
                 'tour_id' => $tourId,
                 'departure_date' => $departureDate,
@@ -147,21 +152,23 @@ class RoomListingController extends Controller
                 {
                     return [
                         'A' => 5,
-                        'B' => 28,
-                        'C' => 12,
-                        'D' => 9,
+                        'B' => 9,
+                        'C' => 24,
+                        'D' => 12,
                         'E' => 8,
                         'F' => 8,
-                        'G' => 7,
-                        'H' => 24,
-                        'I' => 16,
-                        'J' => 13,
+                        'G' => 8,
+                        'H' => 7,
+                        'I' => 22,
+                        'J' => 16,
                         'K' => 13,
-                        'L' => 16,
-                        'M' => 13,
-                        'N' => 14,
-                        'O' => 6,
-                        'P' => 6,
+                        'L' => 13,
+                        'M' => 16,
+                        'N' => 13,
+                        'O' => 14,
+                        'P' => 12,
+                        'Q' => 18,
+                        'R' => 6,
                     ];
                 }
 
@@ -177,32 +184,32 @@ class RoomListingController extends Controller
                         ->getAlignment()
                         ->setVertical(Alignment::VERTICAL_CENTER);
 
-                    $sheet->getStyle('A1:P4')->getAlignment()
+                    $sheet->getStyle('A1:R4')->getAlignment()
                         ->setHorizontal(Alignment::HORIZONTAL_LEFT)
                         ->setVertical(Alignment::VERTICAL_CENTER);
 
-                    $sheet->getStyle('A6:P6')->getAlignment()
+                    $sheet->getStyle('A6:R6')->getAlignment()
                         ->setHorizontal(Alignment::HORIZONTAL_CENTER)
                         ->setVertical(Alignment::VERTICAL_CENTER);
 
-                    $sheet->getStyle('A6:P6')->getFill()
+                    $sheet->getStyle('A6:R6')->getFill()
                         ->setFillType(Fill::FILL_SOLID)
                         ->getStartColor()
                         ->setRGB('EAF2FF');
 
-                    $sheet->getStyle('A6:P6')->getBorders()->getAllBorders()
+                    $sheet->getStyle('A6:R6')->getBorders()->getAllBorders()
                         ->setBorderStyle(Border::BORDER_THIN)
                         ->getColor()
                         ->setRGB('B8C7D9');
 
-                    $sheet->getStyle('A1:P3')->getFill()
+                    $sheet->getStyle('A1:R3')->getFill()
                         ->setFillType(Fill::FILL_SOLID)
                         ->getStartColor()
                         ->setRGB('FFFFFF');
 
                     $highestRow = max(7, $sheet->getHighestRow());
 
-                    $sheet->getStyle('A7:P'.$highestRow)->getBorders()->getAllBorders()
+                    $sheet->getStyle('A7:R'.$highestRow)->getBorders()->getAllBorders()
                         ->setBorderStyle(Border::BORDER_THIN)
                         ->getColor()
                         ->setRGB('D8E1EC');
@@ -246,7 +253,7 @@ class RoomListingController extends Controller
                                 ->getColor()
                                 ->setRGB('64748B');
 
-                            $worksheet->getStyle('L1:P2')->getFont()
+                            $worksheet->getStyle('L1:R2')->getFont()
                                 ->setBold(true)
                                 ->setSize(10)
                                 ->getColor()
@@ -258,7 +265,7 @@ class RoomListingController extends Controller
                                 ->getColor()
                                 ->setRGB('334155');
 
-                            $worksheet->getStyle('A1:P4')->getBorders()->getBottom()
+                            $worksheet->getStyle('A1:R4')->getBorders()->getBottom()
                                 ->setBorderStyle(Border::BORDER_MEDIUM)
                                 ->getColor()
                                 ->setRGB('0F172A');
@@ -296,20 +303,50 @@ class RoomListingController extends Controller
             ->where('company_id', $company->id)
             ->findOrFail($tourId);
 
-        $bookings = Booking::query()
+        $agentGroups = $this->buildAgentGroups(
+            $this->roomListingBookings($company, $tourId, $departureDate)
+        );
+
+        return [
+            'company' => $company,
+            'tour' => $tour,
+            'departure_date' => $departureDate,
+            'groupedData' => $agentGroups,
+            'roomRecap' => $this->buildRoomRecap($agentGroups),
+        ];
+    }
+
+    private function roomListingBookings(
+        Company $company,
+        string $tourId,
+        string $departureDate,
+    ) {
+        return Booking::query()
             ->where('vendor_id', $company->id)
             ->whereIn('status', ['full payment'])
-            ->with(['passengers', 'rooms'])
+            ->with(['passengers', 'rooms', 'agent:id,name'])
             ->where('tour_id', $tourId)
             ->whereDate('departure_date', $departureDate)
-            ->orderBy('booking_number')
+            ->orderBy('created_at')
+            ->orderBy('id')
             ->get();
+    }
 
-        $groupedData = [];
-
+    private function buildAgentGroups($bookings): array
+    {
+        $agentGroups = [];
         $globalRoomNumber = 0;
 
         foreach ($bookings as $booking) {
+            $agentName = $booking->agent?->name ?: 'Direct';
+
+            if (! isset($agentGroups[$agentName])) {
+                $agentGroups[$agentName] = [
+                    'agent_name' => $agentName,
+                    'bookings' => [],
+                ];
+            }
+
             $rooms = collect($this->buildRoomGroups($booking->passengers, $booking->rooms))
                 ->map(function (array $roomGroup) use (&$globalRoomNumber): array {
                     $roomGroup['room_number'] = (string) (++$globalRoomNumber);
@@ -318,7 +355,9 @@ class RoomListingController extends Controller
                 })
                 ->all();
 
-            $groupedData[$booking->booking_number] = [
+            $agentGroups[$agentName]['bookings'][] = [
+                'booking_id' => $booking->id,
+                'booking_number' => $booking->booking_number,
                 'contact_phone' => $booking->contact_phone,
                 'contact_notes' => $booking->contact_notes,
                 'rooms' => $rooms,
@@ -326,67 +365,46 @@ class RoomListingController extends Controller
             ];
         }
 
-        return [
-            'company' => $company,
-            'tour' => $tour,
-            'departure_date' => $departureDate,
-            'groupedData' => $groupedData,
-            'roomRecap' => $this->buildRoomRecap($groupedData),
-        ];
+        return array_values($agentGroups);
     }
 
-    private function buildRoomData(
-        Company $company,
-        string $tourId,
-        string $departureDate,
-    ): array {
-        $bookings = Booking::query()
-            ->where('vendor_id', $company->id)
-            ->whereIn('status', ['full payment'])
-            ->with(['passengers', 'rooms', 'agent:id,name'])
-            ->where('tour_id', $tourId)
-            ->whereDate('departure_date', $departureDate)
-            ->orderBy('booking_number')
-            ->get();
-
+    private function flattenRoomData(array $agentGroups): array
+    {
         $roomData = [];
 
-        $globalRoomNumber = 0;
+        foreach ($agentGroups as $agentGroup) {
+            foreach ($agentGroup['bookings'] as $bookingData) {
+                foreach ($bookingData['rooms'] as $roomIndex => $roomGroup) {
+                    $passengers = collect($roomGroup['passengers'])->values();
 
-        foreach ($bookings as $booking) {
-            $roomGroups = $this->buildRoomGroups($booking->passengers, $booking->rooms);
-
-            foreach ($roomGroups as $roomIndex => $roomGroup) {
-                $passengers = collect($roomGroup['passengers'])->values();
-                $displayRoomNumber = (string) (++$globalRoomNumber);
-
-                foreach ($passengers as $passenger) {
-                    $roomData[] = [
-                        'booking_number' => $booking->booking_number,
-                        'agent_name' => $booking->agent ? $booking->agent->name : 'Direct',
-                        'contact_phone' => $booking->contact_phone,
-                        'contact_notes' => $booking->contact_notes,
-                        'title' => $passenger->title,
-                        'first_name' => $passenger->first_name,
-                        'last_name' => $passenger->last_name,
-                        'gender' => $passenger->gender,
-                        'dob' => $passenger->dob ? $passenger->dob->format('Y-m-d') : null,
-                        'pob' => $passenger->pob,
-                        'passport_number' => $passenger->passport_number,
-                        'passport_issue_date' => $passenger->passport_issue_date
-                          ? $passenger->passport_issue_date->format('Y-m-d')
-                          : null,
-                        'passport_expiry_date' => $passenger->passport_expiry_date
-                          ? $passenger->passport_expiry_date->format('Y-m-d')
-                          : null,
-                        'room_type' => $roomGroup['room_type'],
-                        'room_capacity' => max(1, $passengers->count()),
-                        'room_number' => $displayRoomNumber,
-                        'room_group_key' => $roomGroup['room_key'] ?? "room-{$roomIndex}",
-                        'price_category' => $passenger->price_category,
-                        'visa_number' => $passenger->visa_number,
-                        'note' => $passenger->note,
-                    ];
+                    foreach ($passengers as $passenger) {
+                        $roomData[] = [
+                            'booking_number' => $bookingData['booking_number'],
+                            'agent_name' => $agentGroup['agent_name'],
+                            'contact_phone' => $bookingData['contact_phone'],
+                            'contact_notes' => $bookingData['contact_notes'],
+                            'title' => $passenger->title,
+                            'first_name' => $passenger->first_name,
+                            'last_name' => $passenger->last_name,
+                            'gender' => $passenger->gender,
+                            'dob' => $passenger->dob ? $passenger->dob->format('Y-m-d') : null,
+                            'pob' => $passenger->pob,
+                            'passport_number' => $passenger->passport_number,
+                            'passport_issue_date' => $passenger->passport_issue_date
+                                ? $passenger->passport_issue_date->format('Y-m-d')
+                                : null,
+                            'passport_expiry_date' => $passenger->passport_expiry_date
+                                ? $passenger->passport_expiry_date->format('Y-m-d')
+                                : null,
+                            'room_type' => $roomGroup['room_type'],
+                            'room_capacity' => max(1, $passengers->count()),
+                            'room_number' => $roomGroup['room_number'],
+                            'room_group_key' => $roomGroup['room_key'] ?? "room-{$roomIndex}",
+                            'price_category' => $passenger->price_category,
+                            'visa_number' => $passenger->visa_number,
+                            'note' => $passenger->note,
+                        ];
+                    }
                 }
             }
         }
@@ -531,14 +549,16 @@ class RoomListingController extends Controller
         };
     }
 
-    private function buildRoomRecap(array $groupedData): array
+    private function buildRoomRecap(array $agentGroups): array
     {
         $recap = [];
 
-        foreach ($groupedData as $bookingData) {
-            foreach ($bookingData['rooms'] as $roomGroup) {
-                $roomType = $roomGroup['room_type'];
-                $recap[$roomType] = ($recap[$roomType] ?? 0) + 1;
+        foreach ($agentGroups as $agentGroup) {
+            foreach ($agentGroup['bookings'] as $bookingData) {
+                foreach ($bookingData['rooms'] as $roomGroup) {
+                    $roomType = $roomGroup['room_type'];
+                    $recap[$roomType] = ($recap[$roomType] ?? 0) + 1;
+                }
             }
         }
 

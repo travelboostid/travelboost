@@ -1,4 +1,14 @@
 import CompanyDashboardLayout from '@/components/layouts/company-dashboard';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -9,6 +19,14 @@ import {
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui/dialog';
+import {
+    DropdownMenu,
+    DropdownMenuCheckboxItem,
+    DropdownMenuContent,
+    DropdownMenuGroup,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
@@ -21,10 +39,34 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
+import { cn } from '@/lib/utils';
 import { router, useForm, usePage } from '@inertiajs/react';
-import { ArrowUpDownIcon, EditIcon, PlusIcon, TrashIcon } from 'lucide-react';
+import {
+    flexRender,
+    getCoreRowModel,
+    getFilteredRowModel,
+    getPaginationRowModel,
+    getSortedRowModel,
+    useReactTable,
+    type ColumnDef,
+    type ColumnFiltersState,
+    type SortingState,
+    type VisibilityState,
+} from '@tanstack/react-table';
+import {
+    ArrowDown,
+    ArrowUp,
+    ArrowUpDown,
+    ChevronDown,
+    EditIcon,
+    MoreHorizontal,
+    PlusIcon,
+    Search,
+    TrashIcon,
+    XIcon,
+} from 'lucide-react';
 import type React from 'react';
-import { useMemo, useState } from 'react';
+import * as ReactLib from 'react';
 
 type AgentTier = {
     id: number;
@@ -33,30 +75,38 @@ type AgentTier = {
     is_active: boolean;
 };
 
-type SortKey = 'name' | 'sort_order' | 'is_active';
-type SortDirection = 'asc' | 'desc';
+const buildTierFormState = (tier?: AgentTier) => ({
+    name: tier?.name ?? '',
+    sort_order: tier?.sort_order ?? 0,
+    is_active: tier?.is_active ?? true,
+});
 
 function SortableHeader({
+    column,
     title,
-    sortKey,
-    activeSortKey,
-    onSort,
+    className,
 }: {
-    title: string;
-    sortKey: SortKey;
-    activeSortKey: SortKey;
-    onSort: (key: SortKey) => void;
+    column: any;
+    title: React.ReactNode;
+    className?: string;
 }) {
     return (
         <button
             type="button"
-            onClick={() => onSort(sortKey)}
-            className={`inline-flex items-center gap-2 font-semibold ${
-                activeSortKey === sortKey ? 'text-primary' : 'text-slate-600'
-            }`}
+            onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+            className={cn(
+                'flex h-8 items-center font-bold text-primary',
+                className,
+            )}
         >
-            {title}
-            <ArrowUpDownIcon className="h-4 w-4 opacity-60" />
+            <span>{title}</span>
+            {column.getIsSorted() === 'desc' ? (
+                <ArrowDown className="ml-2 h-4 w-4" />
+            ) : column.getIsSorted() === 'asc' ? (
+                <ArrowUp className="ml-2 h-4 w-4" />
+            ) : (
+                <ArrowUpDown className="ml-2 h-4 w-4 opacity-50" />
+            )}
         </button>
     );
 }
@@ -69,18 +119,25 @@ function TierFormDialog({
     children: React.ReactNode;
 }) {
     const { company } = usePageSharedDataProps();
-    const [open, setOpen] = useState(false);
-    const form = useForm({
-        name: tier?.name ?? '',
-        sort_order: tier?.sort_order ?? 0,
-        is_active: tier?.is_active ?? true,
-    });
+    const [open, setOpen] = ReactLib.useState(false);
+    const form = useForm(buildTierFormState(tier));
 
-    const submit = (e: React.FormEvent) => {
-        e.preventDefault();
+    const handleOpenChange = (nextOpen: boolean) => {
+        setOpen(nextOpen);
+
+        if (nextOpen) {
+            form.setData(buildTierFormState(tier));
+        }
+    };
+
+    const submit = (event: React.FormEvent) => {
+        event.preventDefault();
         const options = {
             preserveScroll: true,
-            onSuccess: () => setOpen(false),
+            onSuccess: () => {
+                form.setData(buildTierFormState(tier));
+                setOpen(false);
+            },
         };
 
         if (tier) {
@@ -88,6 +145,7 @@ function TierFormDialog({
                 `/companies/${company.username}/dashboard/agent-tiers/${tier.id}`,
                 options,
             );
+
             return;
         }
 
@@ -98,12 +156,12 @@ function TierFormDialog({
     };
 
     return (
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog open={open} onOpenChange={handleOpenChange}>
             <DialogTrigger asChild>{children}</DialogTrigger>
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle>
-                        {tier ? 'Edit Agent Tier' : 'Add Agent Tier'}
+                        {tier ? 'Edit Agent Category' : 'Add Agent Category'}
                     </DialogTitle>
                 </DialogHeader>
                 <form onSubmit={submit} className="space-y-4">
@@ -111,10 +169,10 @@ function TierFormDialog({
                         <Label>Name</Label>
                         <Input
                             value={form.data.name}
-                            onChange={(e) =>
-                                form.setData('name', e.target.value)
+                            onChange={(event) =>
+                                form.setData('name', event.target.value)
                             }
-                            placeholder="Whole Seller"
+                            placeholder="Wholesaler"
                         />
                         {form.errors.name && (
                             <p className="text-sm text-red-500">
@@ -127,10 +185,10 @@ function TierFormDialog({
                         <Input
                             type="number"
                             value={form.data.sort_order}
-                            onChange={(e) =>
+                            onChange={(event) =>
                                 form.setData(
                                     'sort_order',
-                                    Number(e.target.value),
+                                    Number(event.target.value),
                                 )
                             }
                         />
@@ -155,48 +213,190 @@ function TierFormDialog({
     );
 }
 
-export default function Page({ tiers }: { tiers: AgentTier[] }) {
+function RowAction({ tier }: { tier: AgentTier }) {
     const { company } = usePageSharedDataProps();
+    const [deleteOpen, setDeleteOpen] = ReactLib.useState(false);
+
+    return (
+        <>
+            <div className="flex justify-center px-1">
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <button
+                            type="button"
+                            className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 shadow-sm transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+                        >
+                            <MoreHorizontal className="h-4 w-4" />
+                        </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent
+                        align="start"
+                        className="w-52 rounded-xl"
+                    >
+                        <DropdownMenuGroup>
+                            <TierFormDialog tier={tier}>
+                                <DropdownMenuItem
+                                    onSelect={(event) => event.preventDefault()}
+                                    className="cursor-pointer"
+                                >
+                                    <EditIcon className="mr-2 h-4 w-4" />
+                                    Edit
+                                </DropdownMenuItem>
+                            </TierFormDialog>
+                        </DropdownMenuGroup>
+                        <DropdownMenuGroup>
+                            <DropdownMenuItem
+                                onSelect={(event) => {
+                                    event.preventDefault();
+                                    setDeleteOpen(true);
+                                }}
+                                className="cursor-pointer text-red-600 focus:bg-red-50 focus:text-red-600"
+                            >
+                                <TrashIcon className="mr-2 h-4 w-4" />
+                                Delete
+                            </DropdownMenuItem>
+                        </DropdownMenuGroup>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+            </div>
+
+            <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>
+                            Delete Agent Category
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This action cannot be undone. The category will be
+                            removed permanently if it is not used by commission
+                            rules.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={() =>
+                                router.delete(
+                                    `/companies/${company.username}/dashboard/agent-tiers/${tier.id}`,
+                                    { preserveScroll: true },
+                                )
+                            }
+                        >
+                            Delete
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+        </>
+    );
+}
+
+export const columns: ColumnDef<AgentTier>[] = [
+    {
+        id: 'actions',
+        header: () => (
+            <div className="px-2 text-center text-[11px] font-bold tracking-wider text-primary">
+                Actions
+            </div>
+        ),
+        enableSorting: false,
+        enableHiding: false,
+        cell: ({ row }) => <RowAction tier={row.original} />,
+    },
+    {
+        accessorKey: 'name',
+        header: ({ column }) => (
+            <SortableHeader column={column} title="Agent Category" />
+        ),
+        cell: ({ row }) => (
+            <div className="flex min-w-[240px] items-center gap-3">
+                <div className="min-w-0">
+                    <p className="truncate font-semibold text-slate-900 dark:text-slate-100">
+                        {row.original.name}
+                    </p>
+                    <p className="truncate text-xs text-slate-500 dark:text-slate-400">
+                        Sort order {row.original.sort_order}
+                    </p>
+                </div>
+            </div>
+        ),
+    },
+    {
+        accessorKey: 'sort_order',
+        header: ({ column }) => (
+            <SortableHeader column={column} title="Sort Order" />
+        ),
+        cell: ({ row }) => (
+            <span className="whitespace-nowrap text-sm font-medium text-slate-600 dark:text-slate-300">
+                {row.original.sort_order}
+            </span>
+        ),
+    },
+    {
+        accessorKey: 'is_active',
+        header: ({ column }) => (
+            <SortableHeader column={column} title="Status" />
+        ),
+        cell: ({ row }) => (
+            <Badge
+                variant="secondary"
+                className={cn(
+                    'rounded-full border-0 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em]',
+                    row.original.is_active
+                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300'
+                        : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300',
+                )}
+            >
+                {row.original.is_active ? 'Active' : 'Inactive'}
+            </Badge>
+        ),
+    },
+];
+
+export default function Page({ tiers }: { tiers: AgentTier[] }) {
     const { errors } = usePage().props as any;
-    const [sortKey, setSortKey] = useState<SortKey>('sort_order');
-    const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+    const [sorting, setSorting] = ReactLib.useState<SortingState>([]);
+    const [columnFilters, setColumnFilters] =
+        ReactLib.useState<ColumnFiltersState>([]);
+    const [columnVisibility, setColumnVisibility] =
+        ReactLib.useState<VisibilityState>({});
+    const [globalFilter, setGlobalFilter] = ReactLib.useState('');
 
-    const sortedTiers = useMemo(() => {
-        return [...tiers].sort((a, b) => {
-            let comparison = 0;
+    const globalFilterFn = ReactLib.useCallback(
+        (row: any, _columnId: string, filterValue: string) => {
+            const search = filterValue.toLowerCase();
+            const item = row.original as AgentTier;
 
-            if (sortKey === 'name') {
-                comparison = a.name.localeCompare(b.name);
-            } else if (sortKey === 'is_active') {
-                comparison = Number(a.is_active) - Number(b.is_active);
-            } else {
-                comparison = a.sort_order - b.sort_order;
-            }
+            return [
+                item.name,
+                String(item.sort_order),
+                item.is_active ? 'active' : 'inactive',
+            ].some((value) => value.toLowerCase().includes(search));
+        },
+        [],
+    );
 
-            return sortDirection === 'asc' ? comparison : -comparison;
-        });
-    }, [tiers, sortDirection, sortKey]);
+    const table = useReactTable({
+        data: tiers,
+        columns,
+        onSortingChange: setSorting,
+        onColumnFiltersChange: setColumnFilters,
+        onColumnVisibilityChange: setColumnVisibility,
+        onGlobalFilterChange: setGlobalFilter,
+        globalFilterFn,
+        getCoreRowModel: getCoreRowModel(),
+        getPaginationRowModel: getPaginationRowModel(),
+        getSortedRowModel: getSortedRowModel(),
+        getFilteredRowModel: getFilteredRowModel(),
+        state: {
+            sorting,
+            columnFilters,
+            columnVisibility,
+            globalFilter,
+        },
+    });
 
-    const handleSort = (key: SortKey) => {
-        if (key === sortKey) {
-            setSortDirection((value) => (value === 'asc' ? 'desc' : 'asc'));
-            return;
-        }
-
-        setSortKey(key);
-        setSortDirection('asc');
-    };
-
-    const remove = (tier: AgentTier) => {
-        if (!confirm('Delete this tier?')) {
-            return;
-        }
-
-        router.delete(
-            `/companies/${company.username}/dashboard/agent-tiers/${tier.id}`,
-            { preserveScroll: true },
-        );
-    };
+    const tableRows = table.getRowModel().rows;
 
     return (
         <CompanyDashboardLayout
@@ -206,125 +406,164 @@ export default function Page({ tiers }: { tiers: AgentTier[] }) {
             ]}
             openMenuIds={['commission-setup']}
             activeMenuIds={['commission-setup.agent-tiers']}
-            containerClassName="w-full flex-1 bg-slate-50/30 dark:bg-slate-950"
             applet={
                 <TierFormDialog>
-                    <Button className="rounded-xl">
-                        <PlusIcon /> Add Tier
+                    <Button>
+                        <PlusIcon className="h-4 w-4" /> Add Agent Category
                     </Button>
                 </TierFormDialog>
             }
         >
-            <div className="mx-auto w-full max-w-[1400px] space-y-5 p-4 pb-20 md:p-8">
+            <div className="mx-auto flex w-full max-w-[1600px] flex-1 flex-col gap-6 p-4 pb-20 md:p-6">
                 {errors.delete_error && (
-                    <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300">
+                    <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
                         {errors.delete_error}
                     </div>
                 )}
-                {/* <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                    <p className="text-sm font-medium uppercase tracking-[0.18em] text-primary">
-                        Commission Setup
-                    </p>
-                    <h1 className="mt-2 text-2xl font-semibold text-slate-950 dark:text-slate-100">
-                        Agent Tiers
-                    </h1>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                        Manage vendor tier levels used by tour commission rules.
-                    </p>
-                </div> */}
-                <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-950">
-                    <Table>
-                        <TableHeader className="bg-slate-50/80 dark:bg-slate-900/80">
-                            <TableRow className="hover:bg-transparent">
-                                <TableHead className="h-14 px-4">
-                                    <SortableHeader
-                                        title="Name"
-                                        sortKey="name"
-                                        activeSortKey={sortKey}
-                                        onSort={handleSort}
-                                    />
-                                </TableHead>
-                                <TableHead className="h-14 px-4">
-                                    <SortableHeader
-                                        title="Sort Order"
-                                        sortKey="sort_order"
-                                        activeSortKey={sortKey}
-                                        onSort={handleSort}
-                                    />
-                                </TableHead>
-                                <TableHead className="h-14 px-4">
-                                    <SortableHeader
-                                        title="Status"
-                                        sortKey="is_active"
-                                        activeSortKey={sortKey}
-                                        onSort={handleSort}
-                                    />
-                                </TableHead>
-                                <TableHead className="w-28 text-right" />
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {sortedTiers.length === 0 ? (
-                                <TableRow>
-                                    <TableCell
-                                        colSpan={4}
-                                        className="h-24 text-center"
-                                    >
-                                        No agent tiers found.
-                                    </TableCell>
-                                </TableRow>
-                            ) : (
-                                sortedTiers.map((tier) => (
+
+                <div className="order-first flex flex-col gap-3 rounded-xl border border-slate-200/80 bg-card/95 p-3 shadow-sm dark:border-slate-800 dark:bg-slate-950/80 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="w-full min-w-0 sm:max-w-md">
+                        <div className="relative">
+                            <span className="pointer-events-none absolute left-2 top-1/2 flex size-6 -translate-y-1/2 items-center justify-center rounded-lg bg-primary/10 text-primary ring-1 ring-primary/15 dark:bg-primary/15">
+                                <Search className="size-3.5" />
+                            </span>
+                            <Input
+                                placeholder="Search category, order, or status"
+                                value={globalFilter}
+                                onChange={(event) =>
+                                    setGlobalFilter(event.target.value)
+                                }
+                                className="h-9 w-full rounded-lg border-slate-200 bg-background pl-9 pr-9 text-xs font-medium shadow-inner shadow-slate-100/70 transition-all placeholder:text-[13px] placeholder:font-normal placeholder:text-muted-foreground/70 focus-visible:border-primary/50 focus-visible:ring-2 focus-visible:ring-primary/20 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:shadow-black/20 dark:placeholder:text-slate-500"
+                            />
+                            {globalFilter.trim() !== '' && (
+                                <button
+                                    type="button"
+                                    aria-label="Clear search"
+                                    onClick={() => setGlobalFilter('')}
+                                    className="absolute right-2 top-1/2 flex size-6 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                                >
+                                    <XIcon className="size-3.5" />
+                                </button>
+                            )}
+                        </div>
+                    </div>
+
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <button
+                                type="button"
+                                className="ml-auto h-9 w-full rounded-xl border border-slate-200 bg-white px-4 text-xs font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:hover:bg-slate-900 sm:w-auto"
+                            >
+                                View Columns
+                                <ChevronDown className="ml-2 inline h-4 w-4 opacity-50" />
+                            </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent
+                            align="end"
+                            className="w-[220px] rounded-xl"
+                        >
+                            <DropdownMenuGroup>
+                                {table
+                                    .getAllColumns()
+                                    .filter((column) => column.getCanHide())
+                                    .map((column) => (
+                                        <DropdownMenuCheckboxItem
+                                            key={column.id}
+                                            className="cursor-pointer capitalize"
+                                            checked={column.getIsVisible()}
+                                            onCheckedChange={(value) =>
+                                                column.toggleVisibility(!!value)
+                                            }
+                                        >
+                                            {column.id.replace(/_/g, ' ')}
+                                        </DropdownMenuCheckboxItem>
+                                    ))}
+                            </DropdownMenuGroup>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                </div>
+
+                <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm dark:border-slate-800 dark:bg-slate-950/80 dark:shadow-none">
+                    <div className="relative max-h-[68vh] w-full overflow-auto [scrollbar-gutter:stable]">
+                        <Table
+                            unwrapped
+                            className="w-full border-separate border-spacing-0 text-sm"
+                        >
+                            <TableHeader className="sticky top-0 z-40 bg-white shadow-[0_1px_0_0_theme(colors.border)] dark:bg-slate-950/95">
+                                {table.getHeaderGroups().map((headerGroup) => (
                                     <TableRow
-                                        key={tier.id}
-                                        className="border-slate-100 hover:bg-slate-50/80 dark:border-slate-800 dark:hover:bg-slate-900/70"
+                                        key={headerGroup.id}
+                                        className="border-none bg-white hover:bg-white dark:bg-slate-950/95 dark:hover:bg-slate-950/95"
                                     >
-                                        <TableCell className="font-medium">
-                                            {tier.name}
-                                        </TableCell>
-                                        <TableCell>{tier.sort_order}</TableCell>
-                                        <TableCell>
-                                            <Badge
-                                                variant={
-                                                    tier.is_active
-                                                        ? 'default'
-                                                        : 'secondary'
-                                                }
-                                                className={
-                                                    tier.is_active
-                                                        ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950/50 dark:text-emerald-300'
-                                                        : ''
-                                                }
+                                        {headerGroup.headers.map((header) => (
+                                            <TableHead
+                                                key={header.id}
+                                                className={cn(
+                                                    'h-12 whitespace-nowrap bg-white px-4 font-bold text-primary dark:bg-slate-950/95',
+                                                    header.column.id ===
+                                                        'actions' &&
+                                                        'sticky left-0 z-50 w-[3.75rem] min-w-[3.75rem] max-w-[3.75rem] border-r border-border/70 bg-white px-0 text-center shadow-[10px_0_14px_-16px_rgba(15,23,42,0.35)] backdrop-blur dark:bg-slate-950/95',
+                                                )}
                                             >
-                                                {tier.is_active
-                                                    ? 'Active'
-                                                    : 'Inactive'}
-                                            </Badge>
-                                        </TableCell>
-                                        <TableCell>
-                                            <div className="flex justify-end gap-2">
-                                                <TierFormDialog tier={tier}>
-                                                    <Button
-                                                        size="icon"
-                                                        variant="outline"
+                                                {header.isPlaceholder
+                                                    ? null
+                                                    : flexRender(
+                                                          header.column
+                                                              .columnDef.header,
+                                                          header.getContext(),
+                                                      )}
+                                            </TableHead>
+                                        ))}
+                                    </TableRow>
+                                ))}
+                            </TableHeader>
+                            <TableBody>
+                                {tableRows.length ? (
+                                    tableRows.map((row, rowIndex) => (
+                                        <TableRow
+                                            key={row.id}
+                                            className="group border-none transition-colors hover:bg-slate-50 dark:hover:bg-slate-900/50"
+                                        >
+                                            {row
+                                                .getVisibleCells()
+                                                .map((cell) => (
+                                                    <TableCell
+                                                        key={cell.id}
+                                                        className={cn(
+                                                            'border-b border-border px-4 py-3 align-middle',
+                                                            cell.column.id ===
+                                                                'actions' &&
+                                                                'sticky left-0 z-20 w-[3.75rem] min-w-[3.75rem] max-w-[3.75rem] border-r border-border/70 bg-card px-0 text-center shadow-[10px_0_14px_-16px_rgba(15,23,42,0.35)] transition-colors group-hover:bg-slate-50 dark:bg-slate-950/95 dark:group-hover:bg-slate-900/50',
+                                                            cell.column.id ===
+                                                                'actions' &&
+                                                                rowIndex ===
+                                                                    tableRows.length -
+                                                                        1 &&
+                                                                'rounded-bl-xl',
+                                                        )}
                                                     >
-                                                        <EditIcon className="h-4 w-4" />
-                                                    </Button>
-                                                </TierFormDialog>
-                                                <Button
-                                                    size="icon"
-                                                    variant="destructive"
-                                                    onClick={() => remove(tier)}
-                                                >
-                                                    <TrashIcon className="h-4 w-4" />
-                                                </Button>
-                                            </div>
+                                                        {flexRender(
+                                                            cell.column
+                                                                .columnDef.cell,
+                                                            cell.getContext(),
+                                                        )}
+                                                    </TableCell>
+                                                ))}
+                                        </TableRow>
+                                    ))
+                                ) : (
+                                    <TableRow>
+                                        <TableCell
+                                            colSpan={columns.length}
+                                            className="h-40"
+                                        >
+                                            No results.
                                         </TableCell>
                                     </TableRow>
-                                ))
-                            )}
-                        </TableBody>
-                    </Table>
+                                )}
+                            </TableBody>
+                        </Table>
+                    </div>
                 </div>
             </div>
         </CompanyDashboardLayout>

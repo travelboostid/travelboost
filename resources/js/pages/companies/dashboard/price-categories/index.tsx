@@ -1,4 +1,3 @@
-import { router } from '@inertiajs/react';
 import type { ColumnDef } from '@tanstack/react-table';
 import {
     flexRender,
@@ -7,11 +6,22 @@ import {
     getPaginationRowModel,
     getSortedRowModel,
     useReactTable,
+    type ColumnFiltersState,
+    type SortingState,
+    type VisibilityState,
 } from '@tanstack/react-table';
 import * as React from 'react';
 
 import CompanyDashboardLayout from '@/components/layouts/company-dashboard';
 import { Button } from '@/components/ui/button';
+import {
+    DropdownMenu,
+    DropdownMenuCheckboxItem,
+    DropdownMenuContent,
+    DropdownMenuGroup,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import {
     Table,
@@ -21,17 +31,21 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
-
-import {
-    DropdownMenu,
-    DropdownMenuCheckboxItem,
-    DropdownMenuContent,
-    DropdownMenuGroup,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
-import { ChevronDown, EditIcon, PlusIcon, TrashIcon } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { router } from '@inertiajs/react';
+import {
+    ArrowDown,
+    ArrowUp,
+    ArrowUpDown,
+    ChevronDown,
+    EditIcon,
+    MoreHorizontal,
+    PlusIcon,
+    Search,
+    TrashIcon,
+    XIcon,
+} from 'lucide-react';
 
 import AddPriceCategoryDialog from './add-price-category-dialog';
 import UpdatePriceCategoryDialog from './update-price-category-dialog';
@@ -42,6 +56,36 @@ type PriceCategory = {
     room_type: string;
     description: string;
 };
+
+function SortableHeader({
+    column,
+    title,
+    className,
+}: {
+    column: any;
+    title: React.ReactNode;
+    className?: string;
+}) {
+    return (
+        <button
+            type="button"
+            onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+            className={cn(
+                'flex h-8 items-center font-bold text-primary',
+                className,
+            )}
+        >
+            <span>{title}</span>
+            {column.getIsSorted() === 'desc' ? (
+                <ArrowDown className="ml-2 h-4 w-4" />
+            ) : column.getIsSorted() === 'asc' ? (
+                <ArrowUp className="ml-2 h-4 w-4" />
+            ) : (
+                <ArrowUpDown className="ml-2 h-4 w-4 opacity-50" />
+            )}
+        </button>
+    );
+}
 
 function RowAction({ item }: { item: PriceCategory }) {
     const { company } = usePageSharedDataProps();
@@ -58,68 +102,141 @@ function RowAction({ item }: { item: PriceCategory }) {
     };
 
     return (
-        <div className="flex gap-2">
-            <Button variant="destructive" onClick={handleDelete}>
-                <TrashIcon />
-            </Button>
-
-            <UpdatePriceCategoryDialog item={item}>
-                <Button>
-                    <EditIcon />
-                </Button>
-            </UpdatePriceCategoryDialog>
+        <div className="flex justify-center px-1">
+            <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                    <button
+                        type="button"
+                        className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 shadow-sm transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+                    >
+                        <MoreHorizontal className="h-4 w-4" />
+                    </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-52 rounded-xl">
+                    <DropdownMenuGroup>
+                        <UpdatePriceCategoryDialog item={item}>
+                            <DropdownMenuItem
+                                onSelect={(event) => event.preventDefault()}
+                                className="cursor-pointer"
+                            >
+                                <EditIcon className="mr-2 h-4 w-4" />
+                                Edit
+                            </DropdownMenuItem>
+                        </UpdatePriceCategoryDialog>
+                    </DropdownMenuGroup>
+                    <DropdownMenuGroup>
+                        <DropdownMenuItem
+                            onSelect={(event) => {
+                                event.preventDefault();
+                                handleDelete();
+                            }}
+                            className="cursor-pointer text-red-600 focus:bg-red-50 focus:text-red-600"
+                        >
+                            <TrashIcon className="mr-2 h-4 w-4" />
+                            Delete
+                        </DropdownMenuItem>
+                    </DropdownMenuGroup>
+                </DropdownMenuContent>
+            </DropdownMenu>
         </div>
     );
 }
 
 export const columns: ColumnDef<PriceCategory>[] = [
     {
+        id: 'actions',
+        header: () => (
+            <div className="px-2 text-center text-[11px] font-bold tracking-wider text-primary">
+                Actions
+            </div>
+        ),
+        enableSorting: false,
+        enableHiding: false,
+        cell: ({ row }) => <RowAction item={row.original} />,
+    },
+    {
         accessorKey: 'name',
-        header: 'Name',
-        cell: ({ row }) => <div>{row.getValue('name')}</div>,
+        header: ({ column }) => (
+            <SortableHeader column={column} title="Category" />
+        ),
+        cell: ({ row }) => (
+            <div className="flex min-w-[240px] items-center gap-3">
+                <div className="min-w-0">
+                    <p
+                        className="truncate font-semibold text-slate-900 dark:text-slate-100"
+                        title={row.original.name}
+                    >
+                        {row.original.name}
+                    </p>
+                    <p
+                        className="truncate text-xs text-slate-500 dark:text-slate-400"
+                        title={row.original.description || ''}
+                    >
+                        {row.original.description || '-'}
+                    </p>
+                </div>
+            </div>
+        ),
     },
     {
         accessorKey: 'room_type',
-        header: 'Room Type',
-        cell: ({ row }) => <div>{row.getValue('room_type')}</div>,
-    },
-    {
-        accessorKey: 'description',
-        header: 'Description',
-        cell: ({ row }) => <div>{row.getValue('description')}</div>,
-    },
-    {
-        id: 'actions',
-        cell: ({ row }) => <RowAction item={row.original} />,
+        header: ({ column }) => (
+            <SortableHeader column={column} title="Room Type" />
+        ),
+        cell: ({ row }) => (
+            <span className="whitespace-nowrap text-sm font-medium text-slate-500 dark:text-slate-300">
+                {row.original.room_type}
+            </span>
+        ),
     },
 ];
 
 export default function Page({ categories }: any) {
-    const [sorting, setSorting] = React.useState([]);
-    const [columnFilters, setColumnFilters] = React.useState([]);
-    const [columnVisibility, setColumnVisibility] = React.useState({});
+    const [sorting, setSorting] = React.useState<SortingState>([]);
+    const [columnFilters, setColumnFilters] =
+        React.useState<ColumnFiltersState>([]);
+    const [columnVisibility, setColumnVisibility] =
+        React.useState<VisibilityState>({});
     const [rowSelection, setRowSelection] = React.useState({});
+    const [globalFilter, setGlobalFilter] = React.useState('');
+
+    const globalFilterFn = React.useCallback(
+        (row: any, _columnId: string, filterValue: string) => {
+            const search = filterValue.toLowerCase();
+            const item = row.original as PriceCategory;
+
+            return [
+                item.name,
+                item.room_type || '',
+                item.description || '',
+            ].some((value) => value.toLowerCase().includes(search));
+        },
+        [],
+    );
 
     const table = useReactTable({
         data: categories,
         columns,
-        getCoreRowModel: getCoreRowModel(),
-        getPaginationRowModel: getPaginationRowModel(),
-        getSortedRowModel: getSortedRowModel(),
-        getFilteredRowModel: getFilteredRowModel(),
-
         onSortingChange: setSorting,
         onColumnFiltersChange: setColumnFilters,
         onColumnVisibilityChange: setColumnVisibility,
         onRowSelectionChange: setRowSelection,
-
+        onGlobalFilterChange: setGlobalFilter,
+        globalFilterFn,
+        getCoreRowModel: getCoreRowModel(),
+        getPaginationRowModel: getPaginationRowModel(),
+        getSortedRowModel: getSortedRowModel(),
+        getFilteredRowModel: getFilteredRowModel(),
         state: {
             sorting,
             columnFilters,
             columnVisibility,
             rowSelection,
+            globalFilter,
         },
     });
+
+    const tableRows = table.getRowModel().rows;
 
     return (
         <CompanyDashboardLayout
@@ -134,44 +251,62 @@ export default function Page({ categories }: any) {
                 </AddPriceCategoryDialog>
             }
         >
-            <div className="w-full p-4">
-                {/* FILTER */}
-                <div className="flex items-center py-4">
-                    <Input
-                        placeholder="Filter name..."
-                        value={
-                            (table
-                                .getColumn('name')
-                                ?.getFilterValue() as string) ?? ''
-                        }
-                        onChange={(e) =>
-                            table
-                                .getColumn('name')
-                                ?.setFilterValue(e.target.value)
-                        }
-                        className="max-w-sm"
-                    />
+            <div className="mx-auto flex w-full max-w-[1600px] flex-1 flex-col gap-6 p-4 pb-20 md:p-6">
+                <div className="order-first flex flex-col gap-3 rounded-xl border border-slate-200/80 bg-card/95 p-3 shadow-sm dark:border-slate-800 dark:bg-slate-950/80 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="w-full min-w-0 sm:max-w-md">
+                        <div className="relative">
+                            <span className="pointer-events-none absolute left-2 top-1/2 flex size-6 -translate-y-1/2 items-center justify-center rounded-lg bg-primary/10 text-primary ring-1 ring-primary/15 dark:bg-primary/15">
+                                <Search className="size-3.5" />
+                            </span>
+                            <Input
+                                placeholder="Search category, room type, or description"
+                                value={globalFilter}
+                                onChange={(event) =>
+                                    setGlobalFilter(event.target.value)
+                                }
+                                className="h-9 w-full rounded-lg border-slate-200 bg-background pl-9 pr-9 text-xs font-medium shadow-inner shadow-slate-100/70 transition-all placeholder:text-[13px] placeholder:font-normal placeholder:text-muted-foreground/70 focus-visible:border-primary/50 focus-visible:ring-2 focus-visible:ring-primary/20 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:shadow-black/20 dark:placeholder:text-slate-500"
+                            />
+                            {globalFilter.trim() !== '' && (
+                                <button
+                                    type="button"
+                                    aria-label="Clear search"
+                                    onClick={() => setGlobalFilter('')}
+                                    className="absolute right-2 top-1/2 flex size-6 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                                >
+                                    <XIcon className="size-3.5" />
+                                </button>
+                            )}
+                        </div>
+                    </div>
 
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <Button variant="outline" className="ml-auto">
-                                Columns <ChevronDown />
-                            </Button>
+                            <button
+                                type="button"
+                                className="ml-auto h-9 w-full rounded-xl border border-slate-200 bg-white px-4 text-xs font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:hover:bg-slate-900 sm:w-auto"
+                            >
+                                View Columns
+                                <ChevronDown className="ml-2 inline h-4 w-4 opacity-50" />
+                            </button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
+                        <DropdownMenuContent
+                            align="end"
+                            className="w-[220px] rounded-xl"
+                        >
                             <DropdownMenuGroup>
                                 {table
                                     .getAllColumns()
-                                    .filter((col) => col.getCanHide())
-                                    .map((col) => (
+                                    .filter((column) => column.getCanHide())
+                                    .map((column) => (
                                         <DropdownMenuCheckboxItem
-                                            key={col.id}
-                                            checked={col.getIsVisible()}
-                                            onCheckedChange={(val) =>
-                                                col.toggleVisibility(!!val)
+                                            key={column.id}
+                                            className="cursor-pointer capitalize"
+                                            checked={column.getIsVisible()}
+                                            onCheckedChange={(value) =>
+                                                column.toggleVisibility(!!value)
                                             }
                                         >
-                                            {col.id}
+                                            {column.id.replace(/_/g, ' ')}
                                         </DropdownMenuCheckboxItem>
                                     ))}
                             </DropdownMenuGroup>
@@ -179,71 +314,87 @@ export default function Page({ categories }: any) {
                     </DropdownMenu>
                 </div>
 
-                {/* TABLE */}
-                <div className="overflow-hidden rounded-md border">
-                    <Table>
-                        <TableHeader>
-                            {table.getHeaderGroups().map((hg) => (
-                                <TableRow key={hg.id}>
-                                    {hg.headers.map((header) => (
-                                        <TableHead key={header.id}>
-                                            {flexRender(
-                                                header.column.columnDef.header,
-                                                header.getContext(),
-                                            )}
-                                        </TableHead>
-                                    ))}
-                                </TableRow>
-                            ))}
-                        </TableHeader>
-
-                        <TableBody>
-                            {table.getRowModel().rows.length ? (
-                                table.getRowModel().rows.map((row) => (
-                                    <TableRow key={row.id}>
-                                        {row.getVisibleCells().map((cell) => (
-                                            <TableCell key={cell.id}>
-                                                {flexRender(
-                                                    cell.column.columnDef.cell,
-                                                    cell.getContext(),
+                <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm dark:border-slate-800 dark:bg-slate-950/80 dark:shadow-none">
+                    <div className="relative max-h-[68vh] w-full overflow-auto [scrollbar-gutter:stable]">
+                        <Table
+                            unwrapped
+                            className="w-full border-separate border-spacing-0 text-sm"
+                        >
+                            <TableHeader className="sticky top-0 z-40 bg-white shadow-[0_1px_0_0_theme(colors.border)] dark:bg-slate-950/95">
+                                {table.getHeaderGroups().map((headerGroup) => (
+                                    <TableRow
+                                        key={headerGroup.id}
+                                        className="border-none bg-white hover:bg-white dark:bg-slate-950/95 dark:hover:bg-slate-950/95"
+                                    >
+                                        {headerGroup.headers.map((header) => (
+                                            <TableHead
+                                                key={header.id}
+                                                className={cn(
+                                                    'h-12 whitespace-nowrap bg-white px-4 font-bold text-primary dark:bg-slate-950/95',
+                                                    header.column.id ===
+                                                        'actions' &&
+                                                        'sticky left-0 z-50 w-[3.75rem] min-w-[3.75rem] max-w-[3.75rem] border-r border-border/70 bg-white px-0 text-center shadow-[10px_0_14px_-16px_rgba(15,23,42,0.35)] backdrop-blur dark:bg-slate-950/95',
                                                 )}
-                                            </TableCell>
+                                            >
+                                                {header.isPlaceholder
+                                                    ? null
+                                                    : flexRender(
+                                                          header.column
+                                                              .columnDef.header,
+                                                          header.getContext(),
+                                                      )}
+                                            </TableHead>
                                         ))}
                                     </TableRow>
-                                ))
-                            ) : (
-                                <TableRow>
-                                    <TableCell
-                                        colSpan={columns.length}
-                                        className="text-center"
-                                    >
-                                        No results
-                                    </TableCell>
-                                </TableRow>
-                            )}
-                        </TableBody>
-                    </Table>
-                </div>
-
-                {/* PAGINATION */}
-                <div className="flex justify-end gap-2 py-4">
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => table.previousPage()}
-                        disabled={!table.getCanPreviousPage()}
-                    >
-                        Previous
-                    </Button>
-
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => table.nextPage()}
-                        disabled={!table.getCanNextPage()}
-                    >
-                        Next
-                    </Button>
+                                ))}
+                            </TableHeader>
+                            <TableBody>
+                                {tableRows.length ? (
+                                    tableRows.map((row, rowIndex) => (
+                                        <TableRow
+                                            key={row.id}
+                                            className="group border-none transition-colors hover:bg-slate-50 dark:hover:bg-slate-900/50"
+                                        >
+                                            {row
+                                                .getVisibleCells()
+                                                .map((cell) => (
+                                                    <TableCell
+                                                        key={cell.id}
+                                                        className={cn(
+                                                            'border-b border-border px-4 py-3 align-middle',
+                                                            cell.column.id ===
+                                                                'actions' &&
+                                                                'sticky left-0 z-20 w-[3.75rem] min-w-[3.75rem] max-w-[3.75rem] border-r border-border/70 bg-card px-0 text-center shadow-[10px_0_14px_-16px_rgba(15,23,42,0.35)] transition-colors group-hover:bg-slate-50 dark:bg-slate-950/95 dark:group-hover:bg-slate-900/50',
+                                                            cell.column.id ===
+                                                                'actions' &&
+                                                                rowIndex ===
+                                                                    tableRows.length -
+                                                                        1 &&
+                                                                'rounded-bl-xl',
+                                                        )}
+                                                    >
+                                                        {flexRender(
+                                                            cell.column
+                                                                .columnDef.cell,
+                                                            cell.getContext(),
+                                                        )}
+                                                    </TableCell>
+                                                ))}
+                                        </TableRow>
+                                    ))
+                                ) : (
+                                    <TableRow>
+                                        <TableCell
+                                            colSpan={columns.length}
+                                            className="h-40"
+                                        >
+                                            No results.
+                                        </TableCell>
+                                    </TableRow>
+                                )}
+                            </TableBody>
+                        </Table>
+                    </div>
                 </div>
             </div>
         </CompanyDashboardLayout>

@@ -12,6 +12,13 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import { Spinner } from '@/components/ui/spinner';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { useForm } from '@inertiajs/react';
@@ -32,6 +39,8 @@ export default function AddCategoryDialog({
         name: '',
         description: '',
         position_no: '',
+        manual_reserved_limit_value: '1',
+        manual_reserved_limit_unit: 'hour',
     });
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -85,7 +94,7 @@ export default function AddCategoryDialog({
                         <InputError message={form.errors.description} />
                     </div>
                     <div className="grid gap-2">
-                        <Label htmlFor="name">Position No</Label>
+                        <Label htmlFor="position_no">Position No</Label>
                         <Input
                             id="position_no"
                             value={form.data.position_no}
@@ -95,6 +104,54 @@ export default function AddCategoryDialog({
                             placeholder="Position No"
                         />
                         <InputError message={form.errors.position_no} />
+                    </div>
+                    <div className="grid gap-2">
+                        <Label htmlFor="manual_reserved_limit_value">
+                            Manual Reservation Duration
+                        </Label>
+                        <div className="grid grid-cols-[1fr_130px] gap-2">
+                            <Input
+                                id="manual_reserved_limit_value"
+                                type="number"
+                                min="1"
+                                value={form.data.manual_reserved_limit_value}
+                                onChange={(e) =>
+                                    form.setData(
+                                        'manual_reserved_limit_value',
+                                        e.target.value,
+                                    )
+                                }
+                                placeholder="1"
+                            />
+                            <Select
+                                value={form.data.manual_reserved_limit_unit}
+                                onValueChange={(value) =>
+                                    form.setData(
+                                        'manual_reserved_limit_unit',
+                                        value,
+                                    )
+                                }
+                            >
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Unit" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="minute">
+                                        Minute
+                                    </SelectItem>
+                                    <SelectItem value="hour">Hour</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                            Leave this at 1 hour to use the default behavior.
+                        </p>
+                        <InputError
+                            message={form.errors.manual_reserved_limit_value}
+                        />
+                        <InputError
+                            message={form.errors.manual_reserved_limit_unit}
+                        />
                     </div>
                     <DialogFooter>
                         <DialogClose asChild>

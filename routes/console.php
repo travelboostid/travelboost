@@ -3,6 +3,7 @@
 use App\Actions\Booking\ExpireBookingReservationsAction;
 use App\Console\Commands\CancelOverdueDownPaymentBookings;
 use App\Console\Commands\CheckAgentSubscriptionExpiry;
+use App\Console\Commands\ExpireManualReservedAvailabilities;
 use App\Console\Commands\SendBookingDeadlineReminders;
 use App\Jobs\MarkExpiredPaymentsJob;
 use Illuminate\Foundation\Inspiring;
@@ -30,18 +31,21 @@ Schedule::call(function () {
     app(ExpireBookingReservationsAction::class)->execute();
 })->everyMinute()
     ->name('release-expired-reservations')
+    ->timezone(config('travelboost.scheduler_timezone'))
     ->withoutOverlapping()
     ->onOneServer();
 
 Schedule::command(CheckAgentSubscriptionExpiry::class)
     ->dailyAt(config('travelboost.agent_subscription_expiry_check_time', '00:00'))
     ->name('agent-subscription-expiry-check')
+    ->timezone(config('travelboost.scheduler_timezone'))
     ->withoutOverlapping()
     ->onOneServer();
 
 Schedule::command(SendBookingDeadlineReminders::class)
     ->daily()
     ->name('booking-deadline-reminders')
+    ->timezone(config('travelboost.scheduler_timezone'))
     ->withoutOverlapping()
     ->onOneServer();
 
@@ -55,5 +59,12 @@ Schedule::command(CancelOverdueDownPaymentBookings::class)
 Schedule::job(new MarkExpiredPaymentsJob)
     ->everyMinute()
     ->name('mark-expired-payments')
+    ->timezone(config('travelboost.scheduler_timezone'))
+    ->withoutOverlapping()
+    ->onOneServer();
+Schedule::command(ExpireManualReservedAvailabilities::class)
+    ->everyMinute()
+    ->name('expire-manual-reserved-availabilities')
+    ->timezone(config('travelboost.scheduler_timezone'))
     ->withoutOverlapping()
     ->onOneServer();
