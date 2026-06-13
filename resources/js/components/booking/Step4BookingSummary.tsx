@@ -528,13 +528,27 @@ export default function Step4BookingSummary({
                 formData.append(`addons[${index}][name]`, addon.label);
                 formData.append(
                     `addons[${index}][price]`,
-                    String(addon.unitPrice * addon.qty),
+                    String(addon.unitPrice),
                 );
                 formData.append(`addons[${index}][qty]`, String(addon.qty));
                 formData.append(
                     `addons[${index}][is_taxable]`,
                     addon.isTaxable ? '1' : '0',
                 );
+            });
+
+        visaBreakdown
+            .filter((visa) => !visa.isTaxable && visa.qty > 0)
+            .forEach((visa, index) => {
+                formData.append(
+                    `visa_items[${index}][description]`,
+                    visa.label,
+                );
+                formData.append(
+                    `visa_items[${index}][price]`,
+                    String(visa.unitPrice),
+                );
+                formData.append(`visa_items[${index}][qty]`, String(visa.qty));
             });
 
         try {
@@ -574,6 +588,7 @@ export default function Step4BookingSummary({
         pricing.platformFee,
         proformaInvoicePreview,
         totalPpn,
+        visaBreakdown,
     ]);
     const proformaInvoiceButton = showProformaInvoiceButton ? (
         <Tooltip>

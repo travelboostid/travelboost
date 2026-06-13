@@ -285,11 +285,16 @@
                    }
 
                    .pax-grid td {
-                       width: 25%;
-                       padding: 4px 7px;
+                       width: 16.666%;
+                       padding: 3px 6px;
                        border-bottom: 1px solid #edf0f4;
                        color: #111827;
-                       font-size: 10px;
+                       font-size: 9px;
+                       line-height: 1.25;
+                   }
+
+                   .pax-grid .pax-label {
+                       color: #344054;
                    }
 
                    .pax-grid tr:last-child td {
@@ -615,9 +620,15 @@
         @if ($isProforma)
             <div class="proforma-notice">
                 <strong>Proforma Invoice Notice</strong>
-                This booking is still in down payment status. This document is
-                issued for payment reference only and must not be used as proof
-                of full settlement.
+                @if ($invoiceStatus === 'Unpaid')
+                    This booking has not been paid yet. This document is issued
+                    for payment reference only and must not be used as proof of
+                    payment or full settlement.
+                @else
+                    This booking is still in down payment status. This document
+                    is issued for payment reference only and must not be used as
+                    proof of full settlement.
+                @endif
             </div>
         @endif
 
@@ -687,18 +698,20 @@
             <div class="panel-title">Pax Breakdown</div>
             <div class="panel-body">
                 <table class="pax-grid">
-                    @foreach (collect($priceBreakdown)->chunk(2) as $row)
+                    @foreach (collect($priceBreakdown)->chunk(3) as $row)
                         <tr>
                             @foreach ($row as $item)
-                                <td>{{ $item['category'] }}</td>
+                                <td class="pax-label">
+                                    {{ $item['category'] }}
+                                </td>
                                 <td class="pax-count">
                                     {{ $item['pax'] }} pax
                                 </td>
                             @endforeach
-                            @if ($row->count() === 1)
+                            @for ($i = $row->count(); $i < 3; $i++)
                                 <td></td>
                                 <td></td>
-                            @endif
+                            @endfor
                         </tr>
                     @endforeach
                 </table>

@@ -539,6 +539,10 @@ class BookingIndexController extends Controller
             'addons.*.price' => ['required', 'numeric', 'min:0'],
             'addons.*.qty' => ['nullable', 'integer', 'min:1'],
             'addons.*.is_taxable' => ['nullable', 'boolean'],
+            'visa_items' => ['array'],
+            'visa_items.*.description' => ['required', 'string'],
+            'visa_items.*.price' => ['required', 'numeric', 'min:0'],
+            'visa_items.*.qty' => ['nullable', 'integer', 'min:1'],
         ]);
 
         $booking->load([
@@ -568,7 +572,7 @@ class BookingIndexController extends Controller
         abort_unless($invoiceType, 404);
 
         $temporaryAddons = collect($validated['addons'] ?? [])
-            ->filter(fn (array $addon): bool => (float) $addon['price'] > 0)
+            ->filter(fn (array $addon): bool => (float) $addon['price'] * (int) ($addon['qty'] ?? 1) > 0)
             ->map(fn (array $addon): object => (object) [
                 'name' => $addon['name'],
                 'price' => (float) $addon['price'],
@@ -582,6 +586,13 @@ class BookingIndexController extends Controller
             ->values();
         $nonTaxableAddonRows = $temporaryAddons
             ->filter(fn (object $addon): bool => ! $addon->is_taxable)
+            ->values();
+        $nonTaxableVisaRows = collect($validated['visa_items'] ?? [])
+            ->filter(fn (array $visaItem): bool => (float) $visaItem['price'] * (int) ($visaItem['qty'] ?? 1) > 0)
+            ->map(fn (array $visaItem): array => [
+                'label' => 'Visa: '.$visaItem['description'].' (x'.(int) ($visaItem['qty'] ?? 1).')',
+                'amount' => (float) $visaItem['price'] * (int) ($visaItem['qty'] ?? 1),
+            ])
             ->values();
         $paymentDetails = $this->buildInvoicePaymentDetails($booking, $taxableAddonRows);
         $paymentDetailsTotal = (float) collect($paymentDetails)->sum('amount');
@@ -621,9 +632,10 @@ class BookingIndexController extends Controller
                 'platformFeeAmount' => (float) ($validated['platform_fee'] ?? $booking->platform_fee ?? 0),
                 'nonTaxableAddonSummaryRows' => $nonTaxableAddonRows
                     ->map(fn (object $addon): array => [
-                        'label' => $addon->name ?: 'Add-on',
-                        'amount' => (float) $addon->price,
+                        'label' => ($addon->name ?: 'Add-on').' (x'.(int) $addon->qty.')',
+                        'amount' => (float) $addon->price * (int) $addon->qty,
                     ])
+                    ->concat($nonTaxableVisaRows)
                     ->values()
                     ->all(),
                 'invoiceGrandTotal' => (float) $validated['grand_total'],
@@ -1578,13 +1590,18 @@ class BookingIndexController extends Controller
         $taxableVisaRows = $this->visaPaymentRows($booking->passengers, true);
 
         $addonRows = ($taxableAddons ?? $booking->addons)
-            ->map(fn ($addon): array => [
-                'description' => $addon->name ?: 'Add-on',
-                'quantity' => 1,
-                'unit_price' => (float) $addon->price,
-                'discount' => 0.0,
-                'amount' => (float) $addon->price,
-            ]);
+            ->map(function ($addon): array {
+                $quantity = (int) ($addon->qty ?? 1);
+                $unitPrice = (float) $addon->price;
+
+                return [
+                    'description' => $addon->name ?: 'Add-on',
+                    'quantity' => $quantity,
+                    'unit_price' => $unitPrice,
+                    'discount' => 0.0,
+                    'amount' => $unitPrice * $quantity,
+                ];
+            });
 
         return $passengerRows
             ->concat($taxableVisaRows)
