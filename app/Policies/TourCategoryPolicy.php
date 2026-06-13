@@ -12,7 +12,7 @@ class TourCategoryPolicy
      */
     public function viewAny(User $user): bool
     {
-        return $user->isAbleTo('tour-category.query');
+        return $user->hasRole('user:admin') || $user->isAbleTo('tour-category.query');
     }
 
     /**
@@ -20,6 +20,10 @@ class TourCategoryPolicy
      */
     public function view(User $user, TourCategory $tourCategory): bool
     {
+        if ($user->hasRole('user:admin')) {
+            return true;
+        }
+
         if (! $user->isAbleTo('tour-category.query')) {
             return false;
         }
@@ -32,7 +36,7 @@ class TourCategoryPolicy
      */
     public function create(User $user): bool
     {
-        return $user->isAbleTo('tour-category.mutation');
+        return $user->hasRole('user:admin') || $user->isAbleTo('tour-category.mutation');
     }
 
     /**
@@ -40,6 +44,10 @@ class TourCategoryPolicy
      */
     public function update(User $user, TourCategory $tourCategory): bool
     {
+        if ($user->hasRole('user:admin')) {
+            return true;
+        }
+
         if (! $user->isAbleTo('tour-category.mutation')) {
             return false;
         }
