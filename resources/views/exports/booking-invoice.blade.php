@@ -13,13 +13,13 @@
     $billedPhone = $billedToPhone ?? ($booking->contact_phone ?: $booking->user?->phone);
     $billedAddress = $billedToAddress ?? null;
     $tour = $booking->tour;
-    $vatAmount = (float) $booking->tax_amount;
+    $vatAmount = (float) ($invoiceTaxAmount ?? $booking->tax_amount);
     $grandTotal = (float) ($invoiceGrandTotal ?? $booking->grand_total);
     $invoiceNumber = $invoiceNumber ?? $booking->booking_number;
     $paidAmount = (float) ($invoicePaidAmount ?? $paidAmount);
     $isProforma = (bool) ($isProforma ?? false);
     $invoiceTitle = $isProforma ? 'PROFORMA INVOICE' : 'INVOICE';
-    $invoiceStatus = $isProforma ? 'Down Payment' : (($paidAmount >= $grandTotal) ? 'Paid' : 'Down Payment');
+    $invoiceStatus = $invoiceStatusLabel ?? ($isProforma ? 'Down Payment' : 'Paid');
     $invoiceDate = $invoiceDate ?? $booking->created_at;
     $remainingAmount = max(0, $grandTotal - $paidAmount);
     $paymentInstructions = collect($paymentInstructions ?? []);
@@ -254,8 +254,13 @@
 
                    .tour-meta-item {
                        display: table-cell;
-                       width: 25%;
+                       width: 17%;
                        padding-right: 10px;
+                   }
+
+                   .tour-meta-item.wide {
+                       width: 49%;
+                       padding-right: 0;
                    }
 
                    .meta-caption {
@@ -667,7 +672,7 @@
                             >{{ $formatDate($returnDate) }}</span
                         >
                     </div>
-                    <div class="tour-meta-item">
+                    <div class="tour-meta-item wide">
                         <span class="meta-caption">Destination</span>
                         <span
                             class="meta-value"
