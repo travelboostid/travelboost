@@ -270,7 +270,7 @@ export default function Step4BookingSummary({
         return Array.from(map.values());
     }, [guests]);
 
-    const vatPct = minimumVatPct ?? 11;
+    const vatPct = minimumVatPct ?? 0;
     const addOnPricing = useMemo(
         () => calculateAddOnPricing(displayAddOns, vatPct),
         [displayAddOns, vatPct],
@@ -287,6 +287,24 @@ export default function Step4BookingSummary({
             ),
         [displayAddOns],
     );
+    const taxableVisaBreakdown = useMemo(
+        () => visaBreakdown.filter((visa) => visa.isTaxable),
+        [visaBreakdown],
+    );
+    const nonTaxableVisaBreakdown = useMemo(
+        () => visaBreakdown.filter((visa) => !visa.isTaxable),
+        [visaBreakdown],
+    );
+    const nonTaxableAddOnsTotal = addOnsTotal - taxableAddOnsTotal;
+    const nonTaxableVisaTotal = nonTaxableVisaBreakdown.reduce(
+        (sum, visa) => sum + visa.unitPrice * visa.qty,
+        0,
+    );
+    const taxableSubtotal =
+        pricing.discountedSubtotal +
+        pricing.taxableVisaTotal +
+        taxableAddOnsTotal;
+    const otherCostsTotal = nonTaxableAddOnsTotal + nonTaxableVisaTotal;
     const totalPpn = pricing.ppn + addOnPricing.addOnsVat;
     const hasGrandTotalOverride =
         grandTotalOverride !== null && grandTotalOverride !== undefined;
@@ -879,14 +897,6 @@ export default function Step4BookingSummary({
                             <div className="mt-1 border-t border-dashed pt-2">
                                 <div className="flex justify-end">
                                     <div className="w-full max-w-xs space-y-1.5">
-                                        <div className="flex justify-between text-muted-foreground">
-                                            <span>Subtotal</span>
-                                            <span className="font-medium text-foreground">
-                                                {formatCurrency(
-                                                    pricing.subtotalGuests,
-                                                )}
-                                            </span>
-                                        </div>
                                         {pricing.promotionDiscount > 0 && (
                                             <div className="flex justify-between text-emerald-600">
                                                 <span>Promotion Discount</span>
@@ -898,7 +908,7 @@ export default function Step4BookingSummary({
                                                 </span>
                                             </div>
                                         )}
-                                        {visaBreakdown.map((visa) => (
+                                        {taxableVisaBreakdown.map((visa) => (
                                             <div
                                                 key={`visa-${visa.key}`}
                                                 className="flex items-center justify-between gap-3 text-muted-foreground"
@@ -1005,6 +1015,16 @@ export default function Step4BookingSummary({
                                                 </div>
                                             </div>
                                         ))}
+                                        <div className="border-t border-dashed pt-2">
+                                            <div className="flex justify-between text-muted-foreground">
+                                                <span>Subtotal</span>
+                                                <span className="font-medium text-foreground">
+                                                    {formatCurrency(
+                                                        taxableSubtotal,
+                                                    )}
+                                                </span>
+                                            </div>
+                                        </div>
                                         <div className="flex justify-between text-muted-foreground">
                                             <span>PPN ({vatPct}%)</span>
                                             <span className="font-medium text-foreground">
@@ -1045,86 +1065,121 @@ export default function Step4BookingSummary({
                         <p className="mb-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">
                             Add-ons Cost
                         </p>
+                        <div className="flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground">
+                                Platform Fee
+                            </span>
+                            <div className="flex items-center gap-3">
+                                <span className="text-xs font-medium text-muted-foreground">
+                                    x{pricing.paxCount}
+                                </span>
+                                <span className="min-w-[100px] text-right font-medium">
+                                    {formatCurrency(pricing.platformFee)}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
 
-                        <div className="space-y-2 text-sm">
-                            {displayAddOns.map((addon) => (
-                                <motion.div
-                                    key={addon.key}
-                                    layout
-                                    className="flex items-center justify-between"
-                                >
-                                    <div className="flex items-center gap-1.5">
-                                        <span className="text-muted-foreground">
-                                            {addon.label}
-                                        </span>
-                                        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500 dark:bg-slate-800 dark:text-slate-300">
-                                            {addon.isTaxable
-                                                ? 'Taxable'
-                                                : 'Non-taxable'}
-                                        </span>
-                                        {addon.tooltip && (
-                                            <Tooltip>
-                                                <TooltipTrigger asChild>
-                                                    <HelpCircleIcon className="size-3.5 cursor-help text-muted-foreground" />
-                                                </TooltipTrigger>
-                                                <TooltipContent
-                                                    side="right"
-                                                    className="max-w-[200px] text-xs"
-                                                >
-                                                    {addon.tooltip}
-                                                </TooltipContent>
-                                            </Tooltip>
-                                        )}
-                                    </div>
+                    {(nonTaxableVisaBreakdown.length > 0 ||
+                        nonTaxableAddOns.length > 0) && (
+                        <div className="p-4">
+                            <p className="mb-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                                Add-ons Cost
+                            </p>
 
-                                    <div className="flex items-center gap-2">
-                                        {addon.hasQty && (
-                                            <div className="flex items-center gap-1">
-                                                <Button
-                                                    type="button"
-                                                    variant="outline"
-                                                    size="icon"
-                                                    className="size-6"
-                                                    onClick={() =>
-                                                        updateAddOnQty(
-                                                            addon.key,
-                                                            -1,
-                                                        )
-                                                    }
-                                                    disabled={
-                                                        addOnsLocked ||
-                                                        addon.qty === 0
-                                                    }
-                                                >
-                                                    <MinusIcon className="size-3" />
-                                                </Button>
-                                                <span className="w-6 text-center text-xs font-semibold tabular-nums">
-                                                    {addon.qty}
-                                                </span>
-                                                <Button
-                                                    type="button"
-                                                    variant="outline"
-                                                    size="icon"
-                                                    className="size-6"
-                                                    onClick={() =>
-                                                        updateAddOnQty(
-                                                            addon.key,
-                                                            1,
-                                                        )
-                                                    }
-                                                    disabled={
-                                                        addOnsLocked ||
-                                                        addon.qty >=
-                                                            guests.length
-                                                    }
-                                                >
-                                                    <PlusIcon className="size-3" />
-                                                </Button>
-                                            </div>
-                                        )}
-                                        <span className="min-w-[100px] text-right font-medium">
-                                            {formatCurrency(
-                                                addon.unitPrice * addon.qty,
+                            <div className="space-y-2 text-sm">
+                                {nonTaxableVisaBreakdown.map((visa) => (
+                                    <motion.div
+                                        key={`non-taxable-visa-${visa.key}`}
+                                        layout
+                                        className="flex items-center justify-between gap-3"
+                                    >
+                                        <div className="min-w-0">
+                                            <span className="block truncate text-muted-foreground">
+                                                {visa.label}
+                                            </span>
+                                        </div>
+                                        <div className="flex shrink-0 items-center gap-3">
+                                            <span className="text-xs font-medium text-muted-foreground">
+                                                x{visa.qty}
+                                            </span>
+                                            <span className="min-w-[100px] text-right font-medium">
+                                                {formatCurrency(
+                                                    visa.unitPrice * visa.qty,
+                                                )}
+                                            </span>
+                                        </div>
+                                    </motion.div>
+                                ))}
+                                {nonTaxableAddOns.map((addon) => (
+                                    <motion.div
+                                        key={addon.key}
+                                        layout
+                                        className="flex items-center justify-between gap-3"
+                                    >
+                                        <div className="flex min-w-0 items-center gap-1.5">
+                                            <span className="truncate text-muted-foreground">
+                                                {addon.label}
+                                            </span>
+                                            {addon.tooltip && (
+                                                <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                        <HelpCircleIcon className="size-3.5 cursor-help text-muted-foreground" />
+                                                    </TooltipTrigger>
+                                                    <TooltipContent
+                                                        side="right"
+                                                        className="max-w-[200px] text-xs"
+                                                    >
+                                                        {addon.tooltip}
+                                                    </TooltipContent>
+                                                </Tooltip>
+                                            )}
+                                        </div>
+
+                                        <div className="flex shrink-0 items-center gap-2">
+                                            {addon.hasQty && (
+                                                <div className="flex items-center gap-1">
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        size="icon"
+                                                        className="size-6"
+                                                        onClick={() =>
+                                                            updateAddOnQty(
+                                                                addon.key,
+                                                                -1,
+                                                            )
+                                                        }
+                                                        disabled={
+                                                            addOnsLocked ||
+                                                            addon.qty === 0
+                                                        }
+                                                    >
+                                                        <MinusIcon className="size-3" />
+                                                    </Button>
+                                                    <span className="w-6 text-center text-xs font-semibold tabular-nums">
+                                                        {addon.qty}
+                                                    </span>
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        size="icon"
+                                                        className="size-6"
+                                                        onClick={() =>
+                                                            updateAddOnQty(
+                                                                addon.key,
+                                                                1,
+                                                            )
+                                                        }
+                                                        disabled={
+                                                            addOnsLocked ||
+                                                            addon.qty >=
+                                                                guests.length
+                                                        }
+                                                    >
+                                                        <PlusIcon className="size-3" />
+                                                    </Button>
+                                                </div>
                                             )}
                                         </span>
                                     </div>
@@ -1132,14 +1187,15 @@ export default function Step4BookingSummary({
                             ))}
                         </div>
 
-                        <div className="mt-3 flex justify-end border-t border-dashed pt-2">
-                            <div className="flex items-center gap-4 text-sm">
-                                <span className="text-muted-foreground">
-                                    Add-ons Total
-                                </span>
-                                <span className="font-semibold">
-                                    {formatCurrency(addOnsTotal)}
-                                </span>
+                            <div className="mt-3 flex justify-end border-t border-dashed pt-2">
+                                <div className="flex items-center gap-4 text-sm">
+                                    <span className="text-muted-foreground">
+                                        Add-ons Total
+                                    </span>
+                                    <span className="font-semibold">
+                                        {formatCurrency(otherCostsTotal)}
+                                    </span>
+                                </div>
                             </div>
                         </div>
                     </div>

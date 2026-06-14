@@ -12,7 +12,7 @@ use App\Models\Media;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\Storage;
 use Intervention\Image\Drivers\Gd\Driver;
-use Intervention\Image\Encoders\JpegEncoder;
+use Intervention\Image\Encoders\WebpEncoder;
 use Intervention\Image\ImageManager;
 
 class MediaController extends Controller
@@ -167,12 +167,12 @@ class MediaController extends Controller
                 $clone->scale(width: $variant['width']);
             }
 
-            $filename = uniqid()."_{$variant['code']}.jpg";
+            $filename = uniqid()."_{$variant['code']}.webp";
             $path = "images/{$variant['code']}_{$filename}";
 
             Storage::disk('public')->put(
                 $path,
-                (string) $clone->encode(new JpegEncoder(quality: $variant['quality']))
+                (string) $clone->encode(new WebpEncoder(quality: $variant['quality']))
             );
 
             $files[] = [
@@ -181,7 +181,7 @@ class MediaController extends Controller
                 'height' => $clone->height(),
                 'url' => Storage::url($path),
                 'size' => Storage::disk('public')->size($path),
-                'media_type' => 'image/jpeg',
+                'media_type' => 'image/webp',
             ];
         }
 

@@ -31,12 +31,21 @@ class BookingService
                 is_array(data_get($data, 'rooms')) ? data_get($data, 'rooms') : []
             );
 
+            $existingBooking = Booking::query()
+                ->where('booking_number', data_get($data, 'booking_number'))
+                ->where('user_id', $user->id)
+                ->lockForUpdate()
+                ->first();
+            $taxRate = (float) (($existingBooking && $existingBooking->tax_rate !== null)
+                ? $existingBooking->tax_rate
+                : ($tour->company?->companySetting?->minimum_vat ?? BookingPricingService::DEFAULT_PPN_RATE));
+
             $quote = app(BookingPricingService::class)->quoteForBookingData(
                 $tour,
                 (string) data_get($data, 'departure_date'),
                 data_get($data, 'passengers', []),
                 data_get($data, 'addons', []),
-                (float) ($tour->company?->companySetting?->minimum_vat ?? 11),
+                $taxRate,
                 data_get($data, 'agent_id') !== null,
                 data_get($data, 'agent_id') ? (int) data_get($data, 'agent_id') : null,
             );
@@ -56,6 +65,7 @@ class BookingService
                     'pax_child' => data_get($data, 'pax_child'),
                     'pax_infant' => data_get($data, 'pax_infant'),
                     'total_price' => $totals['total_price'],
+                    'tax_rate' => $totals['tax_rate'],
                     'tax_amount' => $totals['tax_amount'],
                     'platform_fee' => $totals['platform_fee'],
                     'commission_amount' => $totals['commission_amount'],
@@ -130,12 +140,16 @@ class BookingService
                 is_array(data_get($data, 'rooms')) ? data_get($data, 'rooms') : []
             );
 
+            $taxRate = (float) ($booking->tax_rate !== null
+                ? $booking->tax_rate
+                : ($booking->vendor?->companySetting?->minimum_vat ?? $booking->tour?->company?->companySetting?->minimum_vat ?? BookingPricingService::DEFAULT_PPN_RATE));
+
             $quote = app(BookingPricingService::class)->quoteForBookingData(
                 $booking->tour,
                 $booking->departure_date,
                 data_get($data, 'passengers', []),
                 data_get($data, 'addons', []),
-                (float) ($booking->vendor?->companySetting?->minimum_vat ?? $booking->tour?->company?->companySetting?->minimum_vat ?? 11),
+                $taxRate,
                 $booking->agent_id !== null,
                 $booking->agent_id ? (int) $booking->agent_id : null,
             );
@@ -150,6 +164,7 @@ class BookingService
                 'pax_child' => data_get($data, 'pax_child'),
                 'pax_infant' => data_get($data, 'pax_infant'),
                 'total_price' => $totals['total_price'],
+                'tax_rate' => $totals['tax_rate'],
                 'tax_amount' => $totals['tax_amount'],
                 'platform_fee' => $totals['platform_fee'],
                 'commission_amount' => $totals['commission_amount'],

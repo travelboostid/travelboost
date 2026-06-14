@@ -13,7 +13,6 @@ import {
 import { usePaymentStatusPolling } from '@/hooks/use-payment-status-polling';
 import {
     instructionKindLabel,
-    paymentInstructionPayload,
     resolveInstructionKind,
     type PaymentInstructionPayload,
 } from '@/lib/payment-instructions';
@@ -31,13 +30,14 @@ type OnlinePaymentDialogProps = {
     onOpenChange: (open: boolean) => void;
     provider?: string | null;
     amount?: number | null;
-    payload?: PaymentInstructionPayload | Record<string, unknown> | null;
+    payload?: unknown;
     paymentId?: number | string | null;
     status?: string | null;
     statusCheck?: PaymentStatusCheckConfig;
     onContinue?: () => void;
     onStatusChange?: (result: PaymentStatusSyncResult) => void;
-    onPaid?: () => void;
+    onPaid?: (result: PaymentStatusSyncResult) => void;
+    onDone?: () => void;
     reloadOnPaid?: boolean;
     continueLabel?: string;
     title?: string;
@@ -56,6 +56,7 @@ export function OnlinePaymentDialog({
     onContinue,
     onStatusChange,
     onPaid,
+    onDone,
     reloadOnPaid = true,
     continueLabel = "I've paid",
     title = 'Complete your payment',
@@ -87,14 +88,25 @@ export function OnlinePaymentDialog({
         };
     }, [open]);
 
-    const handlePaid = useCallback(() => {
-        onPaid?.();
+    const handlePaid = useCallback(
+        (result: PaymentStatusSyncResult) => {
+            onPaid?.(result);
 
-        if (reloadOnPaid && !hasReloadedAfterPaid.current) {
-            hasReloadedAfterPaid.current = true;
-            refreshPageAfterPayment();
+            if (reloadOnPaid && !hasReloadedAfterPaid.current) {
+                hasReloadedAfterPaid.current = true;
+                refreshPageAfterPayment();
+            }
+        },
+        [onPaid, reloadOnPaid],
+    );
+
+    const handleDone = useCallback(() => {
+        if (onDone) {
+            onDone();
         }
-    }, [onPaid, reloadOnPaid]);
+
+        onOpenChange(false);
+    }, [onDone, onOpenChange]);
 
     useEffect(() => {
         if (!open) {
@@ -209,7 +221,7 @@ export function OnlinePaymentDialog({
                                 type="button"
                                 className="w-full"
                                 size="lg"
-                                onClick={() => onOpenChange(false)}
+                                onClick={handleDone}
                             >
                                 Done
                             </Button>
@@ -229,6 +241,7 @@ export function OnlinePaymentDialogFromPayment({
     onContinue,
     onStatusChange,
     onPaid,
+    onDone,
     reloadOnPaid,
     continueLabel,
     title,
@@ -241,12 +254,13 @@ export function OnlinePaymentDialogFromPayment({
         status?: string | null;
         provider?: string | null;
         amount?: number | null;
-        payload?: PaymentInstructionPayload | null;
+        payload?: unknown;
     };
     statusCheck?: PaymentStatusCheckConfig;
     onContinue?: () => void;
     onStatusChange?: (result: PaymentStatusSyncResult) => void;
-    onPaid?: () => void;
+    onPaid?: (result: PaymentStatusSyncResult) => void;
+    onDone?: () => void;
     reloadOnPaid?: boolean;
     continueLabel?: string;
     title?: string;
@@ -261,10 +275,11 @@ export function OnlinePaymentDialogFromPayment({
             statusCheck={statusCheck}
             provider={payment.provider}
             amount={payment.amount}
-            payload={paymentInstructionPayload(payment)}
+            payload={payment.payload}
             onContinue={onContinue}
             onStatusChange={onStatusChange}
             onPaid={onPaid}
+            onDone={onDone}
             reloadOnPaid={reloadOnPaid}
             continueLabel={continueLabel}
             title={title}

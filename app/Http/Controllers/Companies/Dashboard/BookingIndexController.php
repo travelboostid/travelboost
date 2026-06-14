@@ -1478,7 +1478,7 @@ class BookingIndexController extends Controller
             'visaCategoryItems' => $tour ? $this->visaCategoryItemsPayload($tour) : [],
             'minimumDownPaymentPct' => $minimumDownPaymentPct,
             'downPaymentRule' => $downPaymentRule,
-            'minimumVatPct' => (float) ($tour?->company?->companySetting?->minimum_vat ?? 11),
+            'minimumVatPct' => $this->resolveInvoiceVatRate($booking),
             'platformFeePerPax' => app(BookingPricingService::class)->platformFeePerPax(),
             'downPaymentAvailable' => $downPaymentRule !== null,
             'fullPaymentAvailable' => $fullPaymentAvailable,
@@ -1658,6 +1658,10 @@ class BookingIndexController extends Controller
 
     private function resolveInvoiceVatRate(Booking $booking): float
     {
+        if ($booking->tax_rate !== null) {
+            return (float) $booking->tax_rate;
+        }
+
         $settingsRate = $booking->vendor?->companySetting?->minimum_vat
             ?? $booking->tour?->company?->companySetting?->minimum_vat;
 

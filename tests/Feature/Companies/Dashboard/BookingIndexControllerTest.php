@@ -4,6 +4,8 @@ use App\Enums\BookingStatus;
 use App\Enums\CompanyTeamStatus;
 use App\Enums\PaymentStatus;
 use App\Enums\VendorAgentPartnerStatus;
+use App\Models\AgentSubscriptionPackage;
+use App\Models\AgentTier;
 use App\Models\Booking;
 use App\Models\BookingAddon;
 use App\Models\BookingPassenger;
@@ -12,9 +14,11 @@ use App\Models\Company;
 use App\Models\CompanyTeam;
 use App\Models\Payment;
 use App\Models\PriceCategory;
+use App\Models\ProductCommissionCategory;
 use App\Models\Role;
 use App\Models\Tour;
 use App\Models\TourAvailability;
+use App\Models\TourCommissionRule;
 use App\Models\TourPrice;
 use App\Models\TourSchedule;
 use App\Models\User;
@@ -429,6 +433,115 @@ test('dashboard booking payload reconciles stale grand total with persisted add 
             ->component('companies/dashboard/bookings/show')
             ->where('booking.grand_total', fn (mixed $value): bool => (float) $value === (float) $expectedGrandTotal)
             ->where('remainingBalance', $expectedGrandTotal));
+});
+
+test('dashboard booking create payload exposes effective commission per active agent', function () {
+    $vendor = Company::factory()->create(['type' => 'vendor']);
+
+    CompanyTeam::create([
+        'company_id' => $vendor->id,
+        'user_id' => $this->user->id,
+        'status' => CompanyTeamStatus::ACTIVE,
+        'is_owner' => true,
+        'accepted_at' => now(),
+    ]);
+
+    $matrixAgent = Company::factory()->create(['type' => 'agent']);
+    $fallbackAgent = Company::factory()->create(['type' => 'agent']);
+    $package = AgentSubscriptionPackage::factory()->create();
+
+    foreach ([$matrixAgent, $fallbackAgent] as $agent) {
+        $agent->agentSubscription()->create([
+            'package_id' => $package->id,
+            'started_at' => now()->subDay(),
+            'ended_at' => now()->addYear(),
+        ]);
+    }
+
+    $tier = AgentTier::create([
+        'company_id' => $vendor->id,
+        'name' => 'Gold',
+        'slug' => 'gold',
+        'sort_order' => 1,
+        'is_active' => true,
+    ]);
+    $category = ProductCommissionCategory::create([
+        'company_id' => $vendor->id,
+        'category_name' => 'Group Tour',
+        'slug' => 'group-tour',
+        'sort_order' => 1,
+        'is_active' => true,
+    ]);
+
+    $tour = Tour::factory()->create([
+        'company_id' => $vendor->id,
+        'code' => 'PREVIEW-COMM',
+        'status' => 'active',
+        'product_commission_category_id' => $category->id,
+    ]);
+    $schedule = TourSchedule::create([
+        'company_id' => $vendor->id,
+        'tour_id' => $tour->id,
+        'tour_code' => $tour->code,
+        'departure_date' => now()->addMonths(6)->toDateString(),
+        'return_date' => now()->addMonths(6)->addDays(7)->toDateString(),
+        'is_active' => true,
+    ]);
+    TourAvailability::create([
+        'company_id' => $vendor->id,
+        'tour_id' => $tour->id,
+        'schedule_id' => $schedule->id,
+        'max_pax' => 10,
+        'available' => 10,
+    ]);
+    $priceCategory = PriceCategory::create([
+        'company_id' => $vendor->id,
+        'name' => 'Adult Single',
+        'room_type' => 'single',
+    ]);
+    TourPrice::create([
+        'company_id' => $vendor->id,
+        'tour_code' => $tour->code,
+        'schedule_id' => $schedule->id,
+        'price_category_id' => $priceCategory->id,
+        'currency' => 'IDR',
+        'price' => 10_000_000,
+        'commission' => 0,
+        'commission_rate' => 12,
+    ]);
+    TourCommissionRule::create([
+        'company_id' => $vendor->id,
+        'tour_id' => null,
+        'agent_tier_id' => $tier->id,
+        'product_commission_category_id' => $category->id,
+        'commission_type' => 'fixed',
+        'commission_value' => 750_000,
+        'is_active' => true,
+    ]);
+
+    VendorAgentPartner::create([
+        'vendor_id' => $vendor->id,
+        'agent_id' => $matrixAgent->id,
+        'agent_tier_id' => $tier->id,
+        'status' => VendorAgentPartnerStatus::ACTIVE,
+    ]);
+    VendorAgentPartner::create([
+        'vendor_id' => $vendor->id,
+        'agent_id' => $fallbackAgent->id,
+        'agent_tier_id' => null,
+        'status' => VendorAgentPartnerStatus::ACTIVE,
+    ]);
+
+    $this->actingAs($this->user)
+        ->get("/companies/{$vendor->username}/dashboard/bookings/create/{$tour->id}?date={$schedule->departure_date->toDateString()}")
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('tours/bookings/create')
+            ->where('tourPrices.0.agentCommissionsByAgentId', function (mixed $commissions) use ($matrixAgent, $fallbackAgent): bool {
+                return is_array($commissions)
+                    && (float) ($commissions[$matrixAgent->id] ?? 0) === 750_000.0
+                    && (float) ($commissions[$fallbackAgent->id] ?? 0) === 1_200_000.0;
+            }));
 });
 
 test('booking index exposes down payment and full payment details', function () {

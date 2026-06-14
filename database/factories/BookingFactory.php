@@ -33,6 +33,7 @@ class BookingFactory extends Factory
             'pax_child' => fake()->numberBetween(0, 2),
             'pax_infant' => fake()->numberBetween(0, 1),
             'total_price' => fake()->randomFloat(2, 100, 10000),
+            'tax_rate' => 0,
             'tax_amount' => fake()->randomFloat(2, 10, 500),
             'platform_fee' => fake()->randomFloat(2, 5, 50),
             'commission_amount' => fake()->randomFloat(2, 5, 200),

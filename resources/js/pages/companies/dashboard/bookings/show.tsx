@@ -333,7 +333,7 @@ function ReadOnlyWizard({
         [initialAddOns, guests.length],
     );
     const addOnPricing = useMemo(
-        () => calculateAddOnPricing(displayAddOns, minimumVatPct ?? 11),
+        () => calculateAddOnPricing(displayAddOns, minimumVatPct ?? 0),
         [displayAddOns, minimumVatPct],
     );
     const bookingGrandTotal = Number(booking.grand_total ?? 0);

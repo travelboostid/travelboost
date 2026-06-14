@@ -18,7 +18,7 @@ type UsePaymentStatusPollingOptions = {
     initialStatus?: PaymentStatus | string | null;
     statusCheck?: PaymentStatusCheckConfig;
     onStatusChange?: (result: PaymentStatusSyncResult) => void;
-    onPaid?: () => void;
+    onPaid?: (result: PaymentStatusSyncResult) => void;
 };
 
 export function usePaymentStatusPolling({
@@ -64,7 +64,7 @@ export function usePaymentStatusPolling({
                 setLastCheckedAt(new Date());
                 setNotice(paymentStatusNotice(nextStatus, changed));
 
-                if (changed || options?.announce) {
+                if (changed || nextStatus === 'paid' || options?.announce) {
                     onStatusChange?.(result);
                 }
 
@@ -75,7 +75,7 @@ export function usePaymentStatusPolling({
                         toast.success('Payment received');
                     }
 
-                    onPaid?.();
+                    onPaid?.(result);
                 }
             } catch {
                 setNotice({

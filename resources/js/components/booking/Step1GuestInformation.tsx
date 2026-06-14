@@ -65,6 +65,17 @@ function RequiredMark() {
     );
 }
 
+function VisaOptionLabel({ item }: { item: VisaCategoryItemOption }) {
+    return (
+        <span className="flex min-w-0 flex-1 items-center justify-between gap-3">
+            <span className="min-w-0 truncate">{item.description}</span>
+            <span className="shrink-0 text-xs font-semibold tabular-nums text-muted-foreground">
+                {formatCurrency(item.price)}
+            </span>
+        </span>
+    );
+}
+
 export function calculateAgeAtDeparture(
     dob: string,
     departure: string,
@@ -204,6 +215,9 @@ function GuestDetailForm({
         guest.visaTypePrice,
         visaCategoryItems,
     ]);
+    const selectedVisaOption = visaOptions.find(
+        (item) => item.id === guest.visaCategoryItemId,
+    );
 
     const computeDiscountedPrice = (
         tp: TourPrice,
@@ -621,16 +635,23 @@ function GuestDetailForm({
                             onValueChange={handleVisaTypeChange}
                             disabled={readOnly}
                         >
-                            <SelectTrigger className="h-9 w-full text-sm">
-                                <SelectValue placeholder="Select visa" />
+                            <SelectTrigger className="h-9 w-full min-w-0 text-sm">
+                                <SelectValue placeholder="Select visa">
+                                    {selectedVisaOption ? (
+                                        <VisaOptionLabel
+                                            item={selectedVisaOption}
+                                        />
+                                    ) : null}
+                                </SelectValue>
                             </SelectTrigger>
-                            <SelectContent>
+                            <SelectContent className="w-[var(--radix-select-trigger-width)] max-w-[min(92vw,34rem)]">
                                 {visaOptions.map((item) => (
                                     <SelectItem
                                         key={item.id}
                                         value={String(item.id)}
+                                        className="min-w-0"
                                     >
-                                        {item.description}
+                                        <VisaOptionLabel item={item} />
                                     </SelectItem>
                                 ))}
                             </SelectContent>

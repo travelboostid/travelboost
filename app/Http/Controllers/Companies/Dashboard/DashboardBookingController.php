@@ -27,6 +27,7 @@ use App\Models\TourPrice;
 use App\Models\TourSchedule;
 use App\Models\User;
 use App\Models\VendorAgentPartner;
+use App\Services\AgentCommissionResolver;
 use App\Services\BookingContactPaymentEmailService;
 use App\Services\BookingDownPaymentRuleService;
 use App\Services\BookingNumberService;
@@ -184,7 +185,7 @@ class DashboardBookingController extends Controller
 
         return Inertia::render('tours/bookings/create', [
             'tour' => $tour,
-            'tourPrices' => $this->tourPricesForSchedule($tour, $schedule),
+            'tourPrices' => $this->tourPricesForSchedule($tour, $schedule, $agentOptions, $agent?->id),
             'vendor' => $tour->company,
             'tenant' => $agent,
             'bookingNumber' => $bookingNumber,
@@ -202,7 +203,7 @@ class DashboardBookingController extends Controller
             'downPaymentAvailable' => $downPaymentAvailable,
             'minimumDownPaymentPct' => $minimumDownPaymentPct,
             'downPaymentRule' => $downPaymentRule,
-            'minimumVatPct' => (float) ($settings?->minimum_vat ?? BookingPricingService::DEFAULT_PPN_RATE),
+            'minimumVatPct' => (float) ($existingBooking?->tax_rate ?? $settings?->minimum_vat ?? BookingPricingService::DEFAULT_PPN_RATE),
             'platformFeePerPax' => app(BookingPricingService::class)->platformFeePerPax(),
             'vendorBankInfo' => [
                 'bankName' => $paymentReceiverSettings?->manual_bank_transfer ?? '',
@@ -313,12 +314,16 @@ class DashboardBookingController extends Controller
                 ]);
             }
 
+            $taxRate = (float) (($existingBooking && $existingBooking->tax_rate !== null)
+                ? $existingBooking->tax_rate
+                : ($tour->company?->companySetting?->minimum_vat ?? BookingPricingService::DEFAULT_PPN_RATE));
+
             $quote = app(BookingPricingService::class)->quoteForBookingData(
                 $tour,
                 (string) $data['departure_date'],
                 $data['passengers'],
                 [],
-                (float) ($tour->company?->companySetting?->minimum_vat ?? BookingPricingService::DEFAULT_PPN_RATE),
+                $taxRate,
                 $agent !== null,
                 $agent?->id,
             );
@@ -346,6 +351,7 @@ class DashboardBookingController extends Controller
                     'vendor_id' => $tour->company_id,
                     'agent_id' => $agent?->id,
                     'total_price' => $totals['total_price'],
+                    'tax_rate' => $totals['tax_rate'],
                     'tax_amount' => $totals['tax_amount'],
                     'platform_fee' => $totals['platform_fee'],
                     'commission_amount' => $totals['commission_amount'],
@@ -1440,8 +1446,16 @@ class DashboardBookingController extends Controller
             ->update(['user_id' => $owner->id]);
     }
 
-    private function tourPricesForSchedule(Tour $tour, ?TourSchedule $schedule): Collection
+    private function tourPricesForSchedule(Tour $tour, ?TourSchedule $schedule, Collection $agentOptions, ?int $selectedAgentId = null): Collection
     {
+        $agentIds = $agentOptions
+            ->pluck('id')
+            ->when($selectedAgentId !== null, fn (Collection $ids): Collection => $ids->push($selectedAgentId))
+            ->filter()
+            ->map(fn (mixed $id): int => (int) $id)
+            ->unique()
+            ->values();
+
         return TourPrice::query()
             ->with('priceCategory:id,name,description')
             ->where('tour_code', $tour->code)
@@ -1449,17 +1463,56 @@ class DashboardBookingController extends Controller
             ->orderBy('id')
             ->get()
             ->unique('price_category_id')
-            ->map(fn (TourPrice $price): array => [
-                'tourPriceId' => $price->id,
-                'categoryName' => $price->priceCategory?->name ?? 'Single',
-                'description' => $price->priceCategory?->description ?? '',
-                'price' => (float) $price->price,
-                'promotionRate' => (float) $price->promotion_rate,
-                'promotion' => (float) $price->promotion,
-                'commissionRate' => (float) $price->commission_rate,
-                'commission' => (float) $price->commission,
-            ])
+            ->map(function (TourPrice $price) use ($tour, $schedule, $agentIds, $selectedAgentId): array {
+                $agentCommissions = $this->agentCommissionsForPrice($tour, $schedule, $price, $agentIds);
+
+                return [
+                    'tourPriceId' => $price->id,
+                    'categoryName' => $price->priceCategory?->name ?? 'Single',
+                    'description' => $price->priceCategory?->description ?? '',
+                    'price' => (float) $price->price,
+                    'promotionRate' => (float) $price->promotion_rate,
+                    'promotion' => (float) $price->promotion,
+                    'commissionRate' => (float) $price->commission_rate,
+                    'commission' => (float) $price->commission,
+                    'effectiveCommission' => $selectedAgentId ? ($agentCommissions[(string) $selectedAgentId] ?? null) : null,
+                    'agentCommissionsByAgentId' => $agentCommissions,
+                ];
+            })
             ->values();
+    }
+
+    /**
+     * @param  Collection<int, int>  $agentIds
+     * @return array<string, float>
+     */
+    private function agentCommissionsForPrice(Tour $tour, ?TourSchedule $schedule, TourPrice $price, Collection $agentIds): array
+    {
+        $basePrice = $this->discountedTourPrice($price);
+
+        return $agentIds
+            ->mapWithKeys(fn (int $agentId): array => [
+                (string) $agentId => (float) app(AgentCommissionResolver::class)
+                    ->resolve($tour, $schedule, $price, $basePrice, $agentId)['amount'],
+            ])
+            ->all();
+    }
+
+    private function discountedTourPrice(TourPrice $price): float
+    {
+        $basePrice = (float) $price->price;
+        $promotionRate = (float) ($price->promotion_rate ?? 0);
+        $promotion = (float) ($price->promotion ?? 0);
+
+        if ($promotionRate > 0) {
+            return max(0.0, (float) round($basePrice - (($basePrice * $promotionRate) / 100)));
+        }
+
+        if ($promotion > 0) {
+            return max(0.0, (float) round($basePrice - $promotion));
+        }
+
+        return $basePrice;
     }
 
     private function resolveBookableSchedule(Tour $tour, string $departureDate, ?int $companyId = null): ?TourSchedule

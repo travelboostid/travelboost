@@ -1,22 +1,24 @@
-import type { PaymentResource } from '@/api/model/paymentResource';
 import {
     hasOnlinePaymentInstructions,
     isPendingOnlinePayment,
-    paymentInstructionPayload,
+    type PaymentInstructionPayload,
 } from '@/lib/payment-instructions';
-import type { PaymentStatusCheckConfig } from '@/lib/payment-status';
+import type {
+    PaymentStatusCheckConfig,
+    PaymentStatusSyncResult,
+} from '@/lib/payment-status';
 
 type OnlinePayment = {
-    id?: PaymentResource['id'];
-    status?: PaymentResource['status'];
-    provider?: PaymentResource['provider'];
-    amount?: PaymentResource['amount'];
-    payload?: PaymentResource['payload'];
+    id?: number | string | null;
+    status?: string | null;
+    provider?: string | null;
+    amount?: number | null;
+    payload?: unknown;
 };
 
 type OnlinePaymentCallbacks = {
     onComplete?: () => void;
-    onPaid?: () => void;
+    onPaid?: (result?: PaymentStatusSyncResult) => void;
     statusCheck?: PaymentStatusCheckConfig;
     /** Reload Inertia page props after payment is confirmed. Defaults to true. */
     reloadOnPaid?: boolean;
@@ -74,7 +76,7 @@ function resolvePrismaLinkPaymentPageUrl(url: string): string {
 
 function canOpenOnlinePaymentDialog(
     payment: OnlinePayment,
-    payload: ReturnType<typeof paymentInstructionPayload>,
+    payload: PaymentInstructionPayload,
 ): boolean {
     if (hasOnlinePaymentInstructions(payment.provider, payload)) {
         return true;
@@ -111,9 +113,7 @@ export function openOnlinePayment(
     callbacks?: OnlinePaymentCallbacks,
     options?: { statusCheck?: PaymentStatusCheckConfig },
 ): void {
-    const payload = paymentInstructionPayload({
-        payload: payment.payload as PaymentResource['payload'],
-    });
+    const payload = (payment.payload ?? {}) as PaymentInstructionPayload;
 
     if (canOpenOnlinePaymentDialog(payment, payload)) {
         dispatchOpenOnlinePayment(payment, callbacks, options);

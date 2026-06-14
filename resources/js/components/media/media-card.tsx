@@ -20,7 +20,11 @@ export function MediaCard({
         misc: MiscMediaCard,
     };
 
-    const key = media.type as keyof typeof componentMap;
+    const key = (
+        media.type === 'image' && media.subtype === 'photo'
+            ? 'photo'
+            : media.type
+    ) as keyof typeof componentMap;
 
     const Component = componentMap[key] || ImageMediaCard;
 
