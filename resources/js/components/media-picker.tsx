@@ -58,6 +58,9 @@ export function MediaPicker({
             },
         },
     });
+    const mediaType = type === 'photo' ? 'image' : type;
+    const mediaSubtype =
+        uploadParams?.subtype ?? (type === 'photo' ? 'photo' : 'other');
 
     const handleChange = (value?: MediaResource | string) => {
         setInternalValue(value);
@@ -71,7 +74,12 @@ export function MediaPicker({
         if (type === 'document') {
             await uploader.mutateAsync(
                 {
-                    data: { ...uploadParams, data: file, type: type } as any,
+                    data: {
+                        ...uploadParams,
+                        data: file,
+                        type: mediaType,
+                        subtype: mediaSubtype,
+                    } as any,
                 },
                 {
                     onSuccess: (data) => {
@@ -113,7 +121,8 @@ export function MediaPicker({
                     data: {
                         ...uploadParams,
                         data: croppedImage!,
-                        type: type,
+                        type: mediaType,
+                        subtype: mediaSubtype,
                     } as any,
                 },
                 {

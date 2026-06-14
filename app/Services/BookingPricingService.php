@@ -24,7 +24,7 @@ class BookingPricingService
 
     public const DEFAULT_TRAVELBOOST_COMMISSION_MAX = 75_000;
 
-    public const DEFAULT_PPN_RATE = 11;
+    public const DEFAULT_PPN_RATE = 0;
 
     /**
      * @param  array<int, array<string, mixed>>  $guests
@@ -191,12 +191,13 @@ class BookingPricingService
     }
 
     /**
-     * @return array{total_price: float, tax_amount: float, platform_fee: float, commission_amount: float, grand_total: float}
+     * @return array{total_price: float, tax_rate: float, tax_amount: float, platform_fee: float, commission_amount: float, grand_total: float}
      */
     public function bookingTotalsFromQuote(array $quote): array
     {
         return [
             'total_price' => (float) $quote['subtotal_guests'],
+            'tax_rate' => (float) $quote['tax_rate'],
             'tax_amount' => (float) $quote['tax_amount'],
             'platform_fee' => (float) $quote['platform_fee'],
             'commission_amount' => (float) $quote['agent_commission'],
@@ -216,7 +217,7 @@ class BookingPricingService
             fn ($passenger): bool => (float) $passenger->visa_type_price > 0
         );
 
-        if ($booking->addons->isEmpty() && ! $hasVisaSnapshots) {
+        if ($booking->tax_rate === null && $booking->addons->isEmpty() && ! $hasVisaSnapshots) {
             return $booking;
         }
 
@@ -435,7 +436,7 @@ class BookingPricingService
         $taxableAddonsTotal = (float) $booking->addons
             ->filter(fn ($addon): bool => (bool) $addon->is_taxable)
             ->sum('price');
-        $taxRate = (float) ($booking->vendor?->companySetting?->minimum_vat ?? $booking->tour?->company?->companySetting?->minimum_vat ?? self::DEFAULT_PPN_RATE);
+        $taxRate = $this->taxRateForBookingSnapshot($booking);
         $taxAmount = (float) round(($discountedSubtotal + $taxableAddonsTotal + $taxableVisaTotal) * ($taxRate / 100));
         $grandTotal = $discountedSubtotal + $taxAmount + (float) $booking->platform_fee + $addonsTotal + $visaTotal;
         $travelboostBreakdown = $booking->passengers
@@ -574,7 +575,7 @@ class BookingPricingService
             'platform_fee' => 0.0,
             'platform_fee_per_pax' => $this->platformFeePerPax(),
             'tax_amount' => (float) $booking->tax_amount,
-            'tax_rate' => (float) ($booking->vendor?->companySetting?->minimum_vat ?? self::DEFAULT_PPN_RATE),
+            'tax_rate' => $this->taxRateForBookingSnapshot($booking),
             'addons_total' => (float) $booking->addons->sum('price'),
             'taxable_addons_total' => (float) $booking->addons
                 ->filter(fn ($addon): bool => (bool) $addon->is_taxable)
@@ -590,5 +591,14 @@ class BookingPricingService
             'agent_commission_breakdown' => ['source' => 'legacy_booking_snapshot', 'passengers' => []],
             'travelboost_commission_breakdown' => ['source' => 'legacy_booking_snapshot', 'passengers' => []],
         ];
+    }
+
+    private function taxRateForBookingSnapshot(Booking $booking): float
+    {
+        if ($booking->tax_rate !== null) {
+            return (float) $booking->tax_rate;
+        }
+
+        return (float) ($booking->vendor?->companySetting?->minimum_vat ?? $booking->tour?->company?->companySetting?->minimum_vat ?? self::DEFAULT_PPN_RATE);
     }
 }

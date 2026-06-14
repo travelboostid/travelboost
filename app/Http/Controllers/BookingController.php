@@ -21,6 +21,7 @@ use App\Models\TourAvailability;
 use App\Models\TourPrice;
 use App\Models\TourSchedule;
 use App\Models\User;
+use App\Services\AgentCommissionResolver;
 use App\Services\BookingContactPaymentEmailService;
 use App\Services\BookingDownPaymentRuleService;
 use App\Services\BookingNumberService;
@@ -40,6 +41,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
@@ -237,27 +239,7 @@ class BookingController extends Controller
 
         return Inertia::render('tours/bookings/create', [
             'tour' => $tour,
-            'tourPrices' => TourPrice::with('priceCategory:id,name,description')
-                ->where('tour_code', $tour->code)
-                ->when($schedule, function ($query) use ($schedule) {
-                    $query->where('schedule_id', $schedule->id);
-                })
-                ->orderBy('id')
-                ->get()
-                ->unique('price_category_id')
-                ->map(function ($price) {
-                    return [
-                        'tourPriceId' => $price->id,
-                        'categoryName' => $price->priceCategory?->name ?? 'Single',
-                        'description' => $price->priceCategory?->description ?? '',
-                        'price' => (float) $price->price,
-                        'promotionRate' => (float) $price->promotion_rate,
-                        'promotion' => (float) $price->promotion,
-                        'commissionRate' => (float) $price->commission_rate,
-                        'commission' => (float) $price->commission,
-                    ];
-                })
-                ->values(),
+            'tourPrices' => $this->tourPricesForSchedule($tour, $schedule),
             'vendor' => $tour->company,
             'bookingNumber' => $bookingNumber,
             'existingBooking' => $existingBooking,
@@ -271,7 +253,7 @@ class BookingController extends Controller
             'downPaymentAvailable' => $downPaymentAvailable,
             'minimumDownPaymentPct' => $minimumDownPaymentPct,
             'downPaymentRule' => $downPaymentRule,
-            'minimumVatPct' => (float) ($settings?->minimum_vat ?? 11),
+            'minimumVatPct' => (float) ($existingBooking?->tax_rate ?? $settings?->minimum_vat ?? BookingPricingService::DEFAULT_PPN_RATE),
             'platformFeePerPax' => app(BookingPricingService::class)->platformFeePerPax(),
             'vendorBankInfo' => [
                 'bankName' => $paymentReceiverSettings?->manual_bank_transfer ?? '',
@@ -451,12 +433,16 @@ class BookingController extends Controller
                 ]);
             }
 
+            $taxRate = (float) (($existingBooking && $existingBooking->tax_rate !== null)
+                ? $existingBooking->tax_rate
+                : ($tour->company?->companySetting?->minimum_vat ?? BookingPricingService::DEFAULT_PPN_RATE));
+
             $quote = app(BookingPricingService::class)->quoteForBookingData(
                 $tour,
                 (string) $data['departure_date'],
                 $data['passengers'],
                 [],
-                (float) ($tour->company?->companySetting?->minimum_vat ?? 11),
+                $taxRate,
                 ! empty($data['agent_id']),
                 ! empty($data['agent_id']) ? (int) $data['agent_id'] : null,
             );
@@ -485,6 +471,7 @@ class BookingController extends Controller
                     'vendor_id' => $vendorId,
                     'agent_id' => $data['agent_id'] ?? null,
                     'total_price' => $totals['total_price'],
+                    'tax_rate' => $totals['tax_rate'],
                     'tax_amount' => $totals['tax_amount'],
                     'platform_fee' => $totals['platform_fee'],
                     'commission_amount' => $totals['commission_amount'],
@@ -1234,6 +1221,69 @@ class BookingController extends Controller
         Payment $payment
     ): JsonResponse {
         return $this->confirmOnlinePayment($request, $booking, $payment);
+    }
+
+    private function tourPricesForSchedule(Tour $tour, ?TourSchedule $schedule, ?int $agentId = null): Collection
+    {
+        return TourPrice::query()
+            ->with('priceCategory:id,name,description')
+            ->where('tour_code', $tour->code)
+            ->when($schedule, fn ($query) => $query->where('schedule_id', $schedule->id))
+            ->orderBy('id')
+            ->get()
+            ->unique('price_category_id')
+            ->map(function (TourPrice $price) use ($tour, $schedule, $agentId): array {
+                $agentCommissions = $agentId
+                    ? $this->agentCommissionsForPrice($tour, $schedule, $price, collect([$agentId]))
+                    : [];
+
+                return [
+                    'tourPriceId' => $price->id,
+                    'categoryName' => $price->priceCategory?->name ?? 'Single',
+                    'description' => $price->priceCategory?->description ?? '',
+                    'price' => (float) $price->price,
+                    'promotionRate' => (float) $price->promotion_rate,
+                    'promotion' => (float) $price->promotion,
+                    'commissionRate' => (float) $price->commission_rate,
+                    'commission' => (float) $price->commission,
+                    'effectiveCommission' => $agentId ? ($agentCommissions[(string) $agentId] ?? null) : null,
+                    'agentCommissionsByAgentId' => $agentCommissions,
+                ];
+            })
+            ->values();
+    }
+
+    /**
+     * @param  Collection<int, int>  $agentIds
+     * @return array<string, float>
+     */
+    private function agentCommissionsForPrice(Tour $tour, ?TourSchedule $schedule, TourPrice $price, Collection $agentIds): array
+    {
+        $basePrice = $this->discountedTourPrice($price);
+
+        return $agentIds
+            ->mapWithKeys(fn (int $agentId): array => [
+                (string) $agentId => (float) app(AgentCommissionResolver::class)
+                    ->resolve($tour, $schedule, $price, $basePrice, $agentId)['amount'],
+            ])
+            ->all();
+    }
+
+    private function discountedTourPrice(TourPrice $price): float
+    {
+        $basePrice = (float) $price->price;
+        $promotionRate = (float) ($price->promotion_rate ?? 0);
+        $promotion = (float) ($price->promotion ?? 0);
+
+        if ($promotionRate > 0) {
+            return max(0.0, (float) round($basePrice - (($basePrice * $promotionRate) / 100)));
+        }
+
+        if ($promotion > 0) {
+            return max(0.0, (float) round($basePrice - $promotion));
+        }
+
+        return $basePrice;
     }
 
     private function mapMidtransStatus(mixed $midtransStatus): PaymentStatus

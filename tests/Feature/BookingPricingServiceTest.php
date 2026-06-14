@@ -1,10 +1,13 @@
 <?php
 
+use App\Actions\Booking\FinalizeBookingPaymentAction;
 use App\Enums\BookingStatus;
+use App\Enums\PaymentStatus;
 use App\Models\AgentTier;
 use App\Models\AppConfig;
 use App\Models\Booking;
 use App\Models\Company;
+use App\Models\Payment;
 use App\Models\PriceCategory;
 use App\Models\ProductCommissionCategory;
 use App\Models\Tour;
@@ -468,6 +471,7 @@ test('booking snapshot quote recalculates vat from persisted taxable add ons', f
         'pax_child' => 0,
         'pax_infant' => 0,
         'total_price' => $quote['subtotal_guests'],
+        'tax_rate' => $quote['tax_rate'],
         'tax_amount' => 1_320_000,
         'platform_fee' => $quote['platform_fee'],
         'commission_amount' => $quote['agent_commission'],
@@ -481,6 +485,67 @@ test('booking snapshot quote recalculates vat from persisted taxable add ons', f
     expect($snapshotQuote['taxable_addons_total'])->toBe(500_000.0)
         ->and($snapshotQuote['tax_amount'])->toBe(1_375_000.0)
         ->and($snapshotQuote['grand_total'])->toBe(13_905_000.0);
+});
+
+test('booking snapshot quote and finalization keep zero tax rate after vendor vat changes', function () {
+    ['vendor' => $vendor, 'tour' => $tour, 'schedule' => $schedule] = createPricingScenario();
+    $vendor->companySetting()->update(['minimum_vat' => 0]);
+    $tour = $tour->fresh(['company.companySetting']);
+
+    $quote = app(BookingPricingService::class)->quoteForBookingData($tour, $schedule->departure_date, [
+        ['first_name' => 'Adult', 'price_category' => 'Adult Single', 'price_amount' => 1],
+    ]);
+
+    $booking = Booking::factory()->create([
+        'vendor_id' => $vendor->id,
+        'tour_id' => $tour->id,
+        'departure_date' => $schedule->departure_date,
+        'status' => BookingStatus::BOOKING_RESERVED,
+        'pax_adult' => 1,
+        'pax_child' => 0,
+        'pax_infant' => 0,
+        'total_price' => $quote['subtotal_guests'],
+        'tax_rate' => $quote['tax_rate'],
+        'tax_amount' => $quote['tax_amount'],
+        'platform_fee' => $quote['platform_fee'],
+        'commission_amount' => $quote['agent_commission'],
+        'grand_total' => $quote['grand_total'],
+    ]);
+    $booking->passengers()->createMany($quote['passengers']);
+
+    $vendor->companySetting()->update(['minimum_vat' => 20]);
+
+    $snapshotQuote = app(BookingPricingService::class)->quoteForBooking($booking->fresh());
+
+    expect($snapshotQuote['tax_rate'])->toBe(0.0)
+        ->and($snapshotQuote['tax_amount'])->toBe($quote['tax_amount'])
+        ->and($snapshotQuote['grand_total'])->toBe($quote['grand_total']);
+
+    $payment = Payment::create([
+        'owner_type' => Company::class,
+        'owner_id' => $vendor->id,
+        'payable_type' => Booking::class,
+        'payable_id' => $booking->id,
+        'provider' => 'midtrans',
+        'payment_method' => 'bank_transfer',
+        'amount' => $quote['grand_total'],
+        'status' => PaymentStatus::PAID,
+        'payload' => [
+            'booking_payment_type' => 'full_payment',
+            'payment_type' => 'full_payment',
+            'counts_toward_booking_total' => true,
+        ],
+        'paid_at' => now(),
+    ]);
+
+    app(FinalizeBookingPaymentAction::class)->execute($booking->fresh(), $payment, notify: false);
+
+    $booking->refresh();
+
+    expect($booking->status)->toBe(BookingStatus::FULL_PAYMENT)
+        ->and((float) $booking->tax_rate)->toBe(0.0)
+        ->and((float) $booking->tax_amount)->toBe($quote['tax_amount'])
+        ->and((float) $booking->grand_total)->toBe($quote['grand_total']);
 });
 
 test('booking pricing service calculates travelboost commission from admin tier parameters', function () {

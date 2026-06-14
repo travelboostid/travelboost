@@ -3,6 +3,7 @@ import {
     ONLINE_PAYMENT_OPEN_EVENT,
     type OnlinePaymentOpenDetail,
 } from '@/lib/open-online-payment';
+import type { PaymentStatusSyncResult } from '@/lib/payment-status';
 import { useEffect, useRef, useState } from 'react';
 
 export function OnlinePaymentHost() {
@@ -38,6 +39,14 @@ export function OnlinePaymentHost() {
         }
     };
 
+    const handlePaid = () => {
+        detail?.callbacks?.onPaid?.();
+    };
+
+    const handlePaidStatusChange = (result: PaymentStatusSyncResult) => {
+        detail?.callbacks?.onPaid?.(result);
+    };
+
     const payment = detail?.payment;
 
     if (!payment) {
@@ -50,8 +59,9 @@ export function OnlinePaymentHost() {
             onOpenChange={handleOpenChange}
             payment={payment}
             statusCheck={detail?.statusCheck}
-            onContinue={detail?.callbacks?.onPaid}
-            onPaid={detail?.callbacks?.onPaid}
+            onContinue={handlePaid}
+            onPaid={handlePaidStatusChange}
+            onDone={handlePaid}
             reloadOnPaid={detail?.callbacks?.reloadOnPaid}
             continueLabel="I've paid"
         />

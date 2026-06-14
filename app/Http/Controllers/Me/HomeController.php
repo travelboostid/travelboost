@@ -459,6 +459,10 @@ class HomeController extends Controller
 
     private function resolveInvoiceVatRate(Booking $booking): float
     {
+        if ($booking->tax_rate !== null) {
+            return (float) $booking->tax_rate;
+        }
+
         $settingsRate = $booking->vendor?->companySetting?->minimum_vat
             ?? $booking->tour?->company?->companySetting?->minimum_vat;
 

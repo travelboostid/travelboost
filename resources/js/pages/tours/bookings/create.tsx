@@ -39,7 +39,7 @@ import {
 import { Button } from '@/components/ui/button';
 import type { WizardStepId } from '@/constants/booking';
 import { hasOnlinePaymentInstructions } from '@/lib/payment-instructions';
-import { refreshPageAfterPayment } from '@/lib/refresh-after-payment';
+import type { PaymentStatusSyncResult } from '@/lib/payment-status';
 import type {
     BookingContact,
     BookingStatusCode,
@@ -988,11 +988,18 @@ export default function Page() {
             calculateBookingPricing(
                 guests,
                 0,
-                minimumVatPct ?? 11,
+                minimumVatPct ?? 0,
                 platformFeePerPax ?? 25_000,
                 pricingTourPrices,
+                selectedAgentId,
             ),
-        [guests, minimumVatPct, platformFeePerPax, pricingTourPrices],
+        [
+            guests,
+            minimumVatPct,
+            platformFeePerPax,
+            pricingTourPrices,
+            selectedAgentId,
+        ],
     );
     const [selectedAddOns, setSelectedAddOns] = useState<AddOnItem[]>(
         () => addOns ?? [],
@@ -1008,10 +1015,7 @@ export default function Page() {
     );
     const selectedAddOnPricing = useMemo(
         () =>
-            calculateAddOnPricing(
-                selectedAddOnsForPricing,
-                minimumVatPct ?? 11,
-            ),
+            calculateAddOnPricing(selectedAddOnsForPricing, minimumVatPct ?? 0),
         [minimumVatPct, selectedAddOnsForPricing],
     );
     const computedGrandTotal =
@@ -1746,6 +1750,40 @@ export default function Page() {
         [dashboardReturnUrl, isDashboardBooking, stopHoldTimer],
     );
 
+    const handleConfirmedOnlinePaymentResult = useCallback(
+        (nextResult?: BookingPaymentResultData) => {
+            setActiveOnlinePayment(null);
+            setIsSubmitting(false);
+            stopHoldTimer();
+
+            if (isDashboardBooking) {
+                router.visit(dashboardReturnUrl);
+
+                return;
+            }
+
+            if (nextResult) {
+                setPaymentResult(nextResult);
+            }
+        },
+        [dashboardReturnUrl, isDashboardBooking, stopHoldTimer],
+    );
+
+    const handleOnlinePaymentPaid = useCallback(
+        (result?: PaymentStatusSyncResult) => {
+            const nextResult =
+                (result?.bookingPaymentResult as
+                    | BookingPaymentResultData
+                    | undefined) ?? activeOnlinePayment?.pendingResult;
+
+            handleConfirmedOnlinePaymentResult(nextResult);
+        },
+        [
+            activeOnlinePayment?.pendingResult,
+            handleConfirmedOnlinePaymentResult,
+        ],
+    );
+
     useEffect(() => {
         if (paymentResult) {
             stopHoldTimer();
@@ -1801,11 +1839,11 @@ export default function Page() {
                         options.showPendingResult
                     ) {
                         if (nextResult) {
-                            showPaymentResult(nextResult);
-                        }
-
-                        if (isConfirmedPaymentResult(nextResult)) {
-                            refreshPageAfterPayment();
+                            if (isConfirmedPaymentResult(nextResult)) {
+                                handleConfirmedOnlinePaymentResult(nextResult);
+                            } else {
+                                showPaymentResult(nextResult);
+                            }
                         }
                     }
                 })
@@ -1819,7 +1857,11 @@ export default function Page() {
                     setIsSubmitting(false);
                 });
         },
-        [bookingActionUrl, showPaymentResult],
+        [
+            bookingActionUrl,
+            handleConfirmedOnlinePaymentResult,
+            showPaymentResult,
+        ],
     );
 
     const showOnlinePaymentInstructions = useCallback(
@@ -2210,7 +2252,7 @@ export default function Page() {
             }));
         const addOnPricing = calculateAddOnPricing(
             addOnsForPayload.filter((a) => a.qty > 0),
-            minimumVatPct ?? 11,
+            minimumVatPct ?? 0,
         );
         const totalTaxAmount = pricing.ppn + addOnPricing.addOnsVat;
         const grandTotal =
@@ -3024,24 +3066,9 @@ export default function Page() {
                     continueLabel="I've paid"
                     description="Complete the transfer below while your booking timer is still active, then confirm once finished."
                     reloadOnPaid={false}
-                    onStatusChange={(result) => {
-                        if (result.status !== 'paid') {
-                            return;
-                        }
-
-                        const nextResult =
-                            (result.bookingPaymentResult as
-                                | BookingPaymentResultData
-                                | undefined) ??
-                            activeOnlinePayment?.pendingResult;
-
-                        if (nextResult) {
-                            showPaymentResult(nextResult);
-                        }
-
-                        setActiveOnlinePayment(null);
-                        setIsSubmitting(false);
-                        refreshPageAfterPayment();
+                    onPaid={handleOnlinePaymentPaid}
+                    onDone={() => {
+                        handleOnlinePaymentPaid();
                     }}
                     onContinue={
                         activeOnlinePayment

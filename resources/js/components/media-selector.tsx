@@ -26,10 +26,16 @@ export function MediaSelector({
     value,
     onChange,
 }: MediaSelectorProps) {
+    const mediaType = type === 'photo' ? 'image' : type;
+    const mediaParams = {
+        ...params,
+        type: mediaType,
+        ...(type === 'photo' ? { subtype: params?.subtype ?? 'photo' } : {}),
+    };
     const { data, hasNextPage, fetchNextPage, isFetchingNextPage } =
         useInfiniteQuery({
             queryFn: ({ pageParam }) =>
-                getMedias({ ...params, type, page: pageParam }),
+                getMedias({ ...mediaParams, page: pageParam }),
             initialPageParam: 1,
             getNextPageParam: (lastPage) => {
                 const { current_page, last_page } = lastPage.meta || {};
@@ -41,7 +47,7 @@ export function MediaSelector({
                 firstPage.meta.current_page || 0
                     ? (firstPage.meta.current_page || 0) - 1
                     : undefined,
-            queryKey: ['medias', type],
+            queryKey: ['medias', mediaParams],
         });
     const { ref, inView } = useInView({
         rootMargin: '200px',
@@ -223,7 +229,7 @@ export function MediaCard({
                 onClick={onClick}
             />
         );
-    } else if (media.type === 'photo') {
+    } else if (media.type === 'image' && media.subtype === 'photo') {
         return (
             <PhotoMediaCard
                 media={media}

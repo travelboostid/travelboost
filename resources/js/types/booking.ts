@@ -28,6 +28,8 @@ export interface TourPrice {
     promotion: number; // fixed discount amount
     commissionRate: number; // percentage commission
     commission: number; // fixed commission amount
+    effectiveCommission?: number | null; // backend-resolved commission for current agent context
+    agentCommissionsByAgentId?: Record<string, number>; // backend-resolved commission by selectable agent id
 }
 
 export interface VisaCategoryItemOption {

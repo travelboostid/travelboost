@@ -95,7 +95,7 @@ function normalizePaymentFromResponse(
         return data.data as PaymentResource;
     }
 
-    return data as PaymentResource;
+    return data as unknown as PaymentResource;
 }
 
 export async function checkPaymentStatus(
@@ -154,6 +154,8 @@ export async function checkPaymentStatus(
             'pending',
     );
 
+    const paymentPayload = payment.payload as Record<string, unknown> | null;
+
     return {
         payment: {
             ...payment,
@@ -163,8 +165,8 @@ export async function checkPaymentStatus(
         status: nextStatus,
         changed: false,
         transactionStatus:
-            typeof payment.payload?.transaction_status === 'string'
-                ? payment.payload.transaction_status
+            typeof paymentPayload?.transaction_status === 'string'
+                ? paymentPayload.transaction_status
                 : null,
         bookingPaymentResult: response.data?.bookingPaymentResult as
             | Record<string, unknown>

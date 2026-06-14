@@ -516,10 +516,7 @@ function EditableWizard({
     );
     const selectedAddOnPricing = useMemo(
         () =>
-            calculateAddOnPricing(
-                selectedAddOnsForPricing,
-                minimumVatPct ?? 11,
-            ),
+            calculateAddOnPricing(selectedAddOnsForPricing, minimumVatPct ?? 0),
         [minimumVatPct, selectedAddOnsForPricing],
     );
     const roomsGuestFingerprint = useRef<string>(
@@ -631,8 +628,16 @@ function EditableWizard({
                 minimumVatPct,
                 platformFeePerPax,
                 tourPrices,
+                booking.agent?.id ?? null,
             ),
-        [guests, vendor, minimumVatPct, platformFeePerPax, tourPrices],
+        [
+            guests,
+            vendor,
+            minimumVatPct,
+            platformFeePerPax,
+            tourPrices,
+            booking.agent?.id,
+        ],
     );
     const liveGrandTotal =
         pricing.totalPrice +
@@ -851,7 +856,7 @@ function EditableWizard({
             }));
         const addOnPricing = calculateAddOnPricing(
             addOnsForSave.filter((addon) => addon.qty > 0),
-            minimumVatPct ?? 11,
+            minimumVatPct ?? 0,
         );
         const totalTaxAmount = pricing.ppn + addOnPricing.addOnsVat;
         const grandTotal =
