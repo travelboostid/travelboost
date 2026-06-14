@@ -287,6 +287,13 @@ export default function Step4BookingSummary({
             ),
         [displayAddOns],
     );
+
+    // FIX: taxableAddOnsTotal was used but never defined — compute it from taxableAddOns
+    const taxableAddOnsTotal = taxableAddOns.reduce(
+        (sum, a) => sum + a.unitPrice * a.qty,
+        0,
+    );
+
     const taxableVisaBreakdown = useMemo(
         () => visaBreakdown.filter((visa) => visa.isTaxable),
         [visaBreakdown],
@@ -1136,6 +1143,8 @@ export default function Step4BookingSummary({
                                             )}
                                         </div>
 
+                                        {/* FIX: was </span> mismatched closing tag — restored correct
+                                            structure: qty controls + currency span inside a </div> */}
                                         <div className="flex shrink-0 items-center gap-2">
                                             {addon.hasQty && (
                                                 <div className="flex items-center gap-1">
@@ -1181,11 +1190,15 @@ export default function Step4BookingSummary({
                                                     </Button>
                                                 </div>
                                             )}
-                                        </span>
-                                    </div>
-                                </motion.div>
-                            ))}
-                        </div>
+                                            <span className="min-w-[100px] text-right font-medium">
+                                                {formatCurrency(
+                                                    addon.unitPrice * addon.qty,
+                                                )}
+                                            </span>
+                                        </div>
+                                    </motion.div>
+                                ))}
+                            </div>
 
                             <div className="mt-3 flex justify-end border-t border-dashed pt-2">
                                 <div className="flex items-center gap-4 text-sm">
@@ -1198,7 +1211,7 @@ export default function Step4BookingSummary({
                                 </div>
                             </div>
                         </div>
-                    </div>
+                    )}
 
                     {/* ─── Payment Selection ──────────────────────────────────────── */}
                     <div className="p-4">
