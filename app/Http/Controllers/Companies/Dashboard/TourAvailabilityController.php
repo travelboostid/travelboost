@@ -41,6 +41,7 @@ class TourAvailabilityController extends Controller
 
         DB::beginTransaction();
         $availabilitySyncDates = [];
+        $immediateManualReservedRows = [];
 
         try {
             foreach ($rows as $row) {
@@ -122,6 +123,15 @@ class TourAvailabilityController extends Controller
                     ]
                 );
 
+                if ($manualReservedValue > 0 && $manualReservedPendingValue === null) {
+                    $immediateManualReservedRows[] = [
+                        'company_id' => $company->id,
+                        'tour_id' => (int) $schedule->tour_id,
+                        'schedule_id' => (int) $schedule->id,
+                        'RS' => $manualReservedValue,
+                    ];
+                }
+
                 $availabilitySyncDates[] = (string) $schedule->departure_date;
             }
 
@@ -141,7 +151,49 @@ class TourAvailabilityController extends Controller
             app(SyncAvailabilityAction::class)->execute((int) $tourId, $departureDate, $company->id);
         }
 
+        foreach ($immediateManualReservedRows as $manualReservedRow) {
+            $this->reapplyManualReservedAfterSync($manualReservedRow);
+        }
+
         return back()->with('success', 'Availability saved');
+    }
+
+    /**
+     * @param  array{company_id: int, tour_id: int, schedule_id: int, RS: int}  $manualReservedRow
+     */
+    private function reapplyManualReservedAfterSync(array $manualReservedRow): void
+    {
+        DB::transaction(function () use ($manualReservedRow): void {
+            $availability = DB::table('tour_availabilities')
+                ->where('company_id', $manualReservedRow['company_id'])
+                ->where('tour_id', $manualReservedRow['tour_id'])
+                ->where('schedule_id', $manualReservedRow['schedule_id'])
+                ->lockForUpdate()
+                ->first();
+
+            if (! $availability) {
+                return;
+            }
+
+            $reservedSeats = max(0, (int) $manualReservedRow['RS']);
+            $available = max(
+                0,
+                (int) $availability->max_pax
+                - $reservedSeats
+                - (int) $availability->BRS
+                - (int) $availability->DP
+                - (int) $availability->FP
+                - (int) $availability->WPA,
+            );
+
+            DB::table('tour_availabilities')
+                ->where('id', $availability->id)
+                ->update([
+                    'RS' => $reservedSeats,
+                    'available' => $available,
+                    'updated_at' => now(),
+                ]);
+        });
     }
 
     private function resolveManualReservedStartAt(array $row, TourSchedule $schedule): ?Carbon
