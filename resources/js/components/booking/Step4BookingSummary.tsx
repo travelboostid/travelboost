@@ -19,6 +19,7 @@ import type {
     VendorInfo,
 } from '@/types/booking';
 import { calculateAddOnPricing } from '@/utils/booking-calculations';
+import axios from 'axios';
 import { motion } from 'framer-motion';
 import {
     BanknoteIcon,
@@ -60,6 +61,12 @@ export type AddOnItem = {
     isTaxable?: boolean;
 };
 
+type ProformaInvoicePreviewConfig = {
+    submitUrl: string;
+    invoiceType?: string | null;
+    statusLabel?: string | null;
+};
+
 type Step4Props = {
     contact: BookingContact;
     guests: GuestEntry[];
@@ -99,6 +106,7 @@ type Step4Props = {
     paymentErrorMessage?: string | null;
     showProformaInvoiceButton?: boolean;
     proformaInvoiceUrl?: string | null;
+    proformaInvoicePreview?: ProformaInvoicePreviewConfig | null;
     manualPaymentAvailable?: boolean;
     onlinePaymentAvailable?: boolean;
     downPaymentPaidAt?: string | null;
@@ -161,6 +169,7 @@ export default function Step4BookingSummary({
     paymentErrorMessage = null,
     showProformaInvoiceButton = false,
     proformaInvoiceUrl = null,
+    proformaInvoicePreview = null,
     manualPaymentAvailable = true,
     onlinePaymentAvailable = true,
     downPaymentPaidAt = null,
@@ -267,13 +276,15 @@ export default function Step4BookingSummary({
         [displayAddOns, vatPct],
     );
     const addOnsTotal = addOnPricing.addOnsTotal;
-    const taxableAddOnsTotal = addOnPricing.taxableAddOnsTotal;
     const taxableAddOns = useMemo(
         () => displayAddOns.filter((addon) => addon.isTaxable),
         [displayAddOns],
     );
     const nonTaxableAddOns = useMemo(
-        () => displayAddOns.filter((addon) => !addon.isTaxable),
+        () =>
+            displayAddOns.filter(
+                (addon) => !addon.isTaxable && addon.unitPrice * addon.qty > 0,
+            ),
         [displayAddOns],
     );
     const taxableVisaBreakdown = useMemo(
@@ -502,10 +513,116 @@ export default function Step4BookingSummary({
                 )}
             </div>
         ) : null;
+    const openProformaInvoicePreview = useCallback(async () => {
+        if (
+            !proformaInvoicePreview?.submitUrl ||
+            typeof document === 'undefined'
+        ) {
+            return;
+        }
+
+        const previewWindow = window.open('', '_blank');
+        previewWindow?.document.write(
+            '<!doctype html><title>Loading...</title><body style="font-family:sans-serif;padding:24px;">Preparing proforma invoice...</body>',
+        );
+
+        const formData = new FormData();
+
+        if (proformaInvoicePreview.invoiceType) {
+            formData.append('type', proformaInvoicePreview.invoiceType);
+        }
+
+        formData.append(
+            'preview_status',
+            (proformaInvoicePreview.statusLabel ?? 'unpaid').toLowerCase(),
+        );
+        formData.append('tax_amount', String(totalPpn));
+        formData.append('grand_total', String(grandTotal));
+        formData.append('platform_fee', String(pricing.platformFee));
+
+        displayAddOns
+            .filter((addon) => addon.qty > 0)
+            .forEach((addon, index) => {
+                formData.append(`addons[${index}][name]`, addon.label);
+                formData.append(
+                    `addons[${index}][price]`,
+                    String(addon.unitPrice),
+                );
+                formData.append(`addons[${index}][qty]`, String(addon.qty));
+                formData.append(
+                    `addons[${index}][is_taxable]`,
+                    addon.isTaxable ? '1' : '0',
+                );
+            });
+
+        visaBreakdown
+            .filter((visa) => !visa.isTaxable && visa.qty > 0)
+            .forEach((visa, index) => {
+                formData.append(
+                    `visa_items[${index}][description]`,
+                    visa.label,
+                );
+                formData.append(
+                    `visa_items[${index}][price]`,
+                    String(visa.unitPrice),
+                );
+                formData.append(`visa_items[${index}][qty]`, String(visa.qty));
+            });
+
+        try {
+            const response = await axios.post(
+                proformaInvoicePreview.submitUrl,
+                formData,
+                {
+                    responseType: 'blob',
+                    withCredentials: true,
+                    withXSRFToken: true,
+                    headers: {
+                        Accept: 'application/pdf',
+                    },
+                },
+            );
+            const pdfBlob = response.data;
+            const pdfUrl = URL.createObjectURL(pdfBlob);
+
+            if (previewWindow) {
+                previewWindow.location.href = pdfUrl;
+            } else {
+                window.open(pdfUrl, '_blank');
+            }
+
+            window.setTimeout(() => URL.revokeObjectURL(pdfUrl), 60_000);
+        } catch (error) {
+            if (previewWindow) {
+                previewWindow.document.body.innerHTML =
+                    '<p style="font-family:sans-serif;padding:24px;">Unable to open proforma invoice preview. Please try again.</p>';
+            }
+
+            console.error('Failed to open proforma invoice preview', error);
+        }
+    }, [
+        displayAddOns,
+        grandTotal,
+        pricing.platformFee,
+        proformaInvoicePreview,
+        totalPpn,
+        visaBreakdown,
+    ]);
     const proformaInvoiceButton = showProformaInvoiceButton ? (
         <Tooltip>
             <TooltipTrigger asChild>
-                {proformaInvoiceUrl ? (
+                {proformaInvoicePreview?.submitUrl ? (
+                    <Button
+                        type="button"
+                        variant="outline"
+                        size="lg"
+                        className="gap-2"
+                        onClick={openProformaInvoicePreview}
+                    >
+                        <ReceiptIcon className="size-4" />
+                        Proforma Invoice
+                    </Button>
+                ) : proformaInvoiceUrl ? (
                     <Button
                         variant="outline"
                         size="lg"
@@ -538,7 +655,7 @@ export default function Step4BookingSummary({
             </TooltipTrigger>
             <TooltipContent>
                 <p>
-                    {proformaInvoiceUrl
+                    {proformaInvoicePreview?.submitUrl || proformaInvoiceUrl
                         ? 'Open proforma invoice in a new tab'
                         : 'Proforma invoice is not available yet'}
                 </p>
@@ -914,6 +1031,28 @@ export default function Step4BookingSummary({
                                                 {formatCurrency(totalPpn)}
                                             </span>
                                         </div>
+                                        {nonTaxableAddOns.map((addon) => (
+                                            <div
+                                                key={`non-taxable-${addon.key}`}
+                                                className="flex justify-between text-muted-foreground"
+                                            >
+                                                <span>{addon.label}</span>
+                                                <span className="font-medium text-foreground">
+                                                    {formatCurrency(
+                                                        addon.unitPrice *
+                                                            addon.qty,
+                                                    )}
+                                                </span>
+                                            </div>
+                                        ))}
+                                        <div className="flex justify-between text-muted-foreground">
+                                            <span>Platform Fee</span>
+                                            <span className="font-medium text-foreground">
+                                                {formatCurrency(
+                                                    pricing.platformFee,
+                                                )}
+                                            </span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -921,9 +1060,10 @@ export default function Step4BookingSummary({
                     </div>
 
                     {/* ─── Platform Fee ────────────────────────────────────────── */}
+                    {/* ─── Add-ons Cost ───────────────────────────────────────────── */}
                     <div className="p-4">
                         <p className="mb-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                            Platform Fee
+                            Add-ons Cost
                         </p>
                         <div className="flex items-center justify-between text-sm">
                             <span className="text-muted-foreground">
@@ -1041,15 +1181,11 @@ export default function Step4BookingSummary({
                                                     </Button>
                                                 </div>
                                             )}
-                                            <span className="min-w-[100px] text-right font-medium">
-                                                {formatCurrency(
-                                                    addon.unitPrice * addon.qty,
-                                                )}
-                                            </span>
-                                        </div>
-                                    </motion.div>
-                                ))}
-                            </div>
+                                        </span>
+                                    </div>
+                                </motion.div>
+                            ))}
+                        </div>
 
                             <div className="mt-3 flex justify-end border-t border-dashed pt-2">
                                 <div className="flex items-center gap-4 text-sm">
@@ -1062,7 +1198,7 @@ export default function Step4BookingSummary({
                                 </div>
                             </div>
                         </div>
-                    )}
+                    </div>
 
                     {/* ─── Payment Selection ──────────────────────────────────────── */}
                     <div className="p-4">

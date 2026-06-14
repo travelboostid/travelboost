@@ -524,6 +524,133 @@ class BookingIndexController extends Controller
         return $pdf->stream($filename);
     }
 
+    public function invoicePreview(Company $company, Booking $booking, Request $request): HttpResponse
+    {
+        $this->assertCompanyCanAccessBooking($company, $booking);
+
+        $validated = $request->validate([
+            'type' => ['nullable', 'string'],
+            'preview_status' => ['nullable', 'string'],
+            'tax_amount' => ['required', 'numeric', 'min:0'],
+            'grand_total' => ['required', 'numeric', 'min:0'],
+            'platform_fee' => ['nullable', 'numeric', 'min:0'],
+            'addons' => ['array'],
+            'addons.*.name' => ['required', 'string'],
+            'addons.*.price' => ['required', 'numeric', 'min:0'],
+            'addons.*.qty' => ['nullable', 'integer', 'min:1'],
+            'addons.*.is_taxable' => ['nullable', 'boolean'],
+            'visa_items' => ['array'],
+            'visa_items.*.description' => ['required', 'string'],
+            'visa_items.*.price' => ['required', 'numeric', 'min:0'],
+            'visa_items.*.qty' => ['nullable', 'integer', 'min:1'],
+        ]);
+
+        $booking->load([
+            'user',
+            'agent.photo',
+            'agent.companySetting',
+            'vendor.photo',
+            'vendor.companySetting',
+            'tour.company.companySetting',
+            'passengers',
+            'payments',
+        ]);
+        $booking = app(BookingPricingService::class)->reconcileSnapshotTotals($booking);
+
+        $paymentReceiver = app(BookingPaymentReceiverService::class)->resolveForBooking($booking);
+        $invoiceOptions = $this->invoiceOptions($company, $booking, $paymentReceiver['payment_mode'], true);
+        $requestedInvoiceType = (string) ($validated['type'] ?? '');
+        $preferredCustomerFacingInvoiceType = collect($invoiceOptions)
+            ->pluck('type')
+            ->first(fn (string $type): bool => in_array($type, ['agent_to_customer', 'vendor_to_customer'], true));
+        $invoiceType = collect($invoiceOptions)
+            ->pluck('type')
+            ->first(fn (string $type): bool => $type === $requestedInvoiceType)
+            ?? $preferredCustomerFacingInvoiceType
+            ?? data_get($invoiceOptions, '0.type');
+
+        abort_unless($invoiceType, 404);
+
+        $temporaryAddons = collect($validated['addons'] ?? [])
+            ->filter(fn (array $addon): bool => (float) $addon['price'] * (int) ($addon['qty'] ?? 1) > 0)
+            ->map(fn (array $addon): object => (object) [
+                'name' => $addon['name'],
+                'price' => (float) $addon['price'],
+                'qty' => (int) ($addon['qty'] ?? 1),
+                'is_taxable' => (bool) ($addon['is_taxable'] ?? false),
+            ])
+            ->values();
+
+        $taxableAddonRows = $temporaryAddons
+            ->filter(fn (object $addon): bool => (bool) $addon->is_taxable)
+            ->values();
+        $nonTaxableAddonRows = $temporaryAddons
+            ->filter(fn (object $addon): bool => ! $addon->is_taxable)
+            ->values();
+        $nonTaxableVisaRows = collect($validated['visa_items'] ?? [])
+            ->filter(fn (array $visaItem): bool => (float) $visaItem['price'] * (int) ($visaItem['qty'] ?? 1) > 0)
+            ->map(fn (array $visaItem): array => [
+                'label' => 'Visa: '.$visaItem['description'].' (x'.(int) ($visaItem['qty'] ?? 1).')',
+                'amount' => (float) $visaItem['price'] * (int) ($visaItem['qty'] ?? 1),
+            ])
+            ->values();
+        $paymentDetails = $this->buildInvoicePaymentDetails($booking, $taxableAddonRows);
+        $paymentDetailsTotal = (float) collect($paymentDetails)->sum('amount');
+        $invoiceSchedule = $this->resolveInvoiceSchedule($booking);
+        $priceBreakdown = $this->buildInvoicePriceBreakdown($booking);
+        $customerName = $booking->contact_name ?: $booking->user?->name;
+        $customerEmail = $booking->contact_email ?: $booking->user?->email;
+        $customerPhone = $booking->contact_phone ?: $booking->user?->phone;
+        $issuer = $invoiceType === 'agent_to_customer'
+            ? $booking->agent
+            : ($booking->vendor ?? $booking->tour?->company);
+        $vatRate = $this->resolveInvoiceVatRate($booking);
+        $deadline = $this->deadlinePayload($booking, $this->vendorSettings($booking)?->full_payment_deadline);
+        $invoiceNumber = $booking->booking_number;
+
+        $pdf = Pdf::setOption(['isRemoteEnabled' => true])
+            ->loadView('exports.booking-invoice', [
+                'booking' => $booking,
+                'agent' => $issuer,
+                'logoSrc' => $this->resolveCompanyLogoSrc($issuer),
+                'customerName' => $customerName,
+                'billedToName' => $customerName,
+                'billedToEmail' => $customerEmail,
+                'billedToPhone' => $customerPhone,
+                'billedToAddress' => null,
+                'paymentDate' => null,
+                'invoiceDate' => $booking->created_at,
+                'dueDate' => $deadline['date'] ?? null,
+                'returnDate' => $invoiceSchedule?->return_date,
+                'paidAmount' => 0,
+                'invoicePaidAmount' => 0,
+                'priceBreakdown' => $priceBreakdown,
+                'paymentDetails' => $paymentDetails,
+                'paymentDetailsTotal' => $paymentDetailsTotal,
+                'invoiceTaxAmount' => (float) $validated['tax_amount'],
+                'vatRate' => $vatRate,
+                'platformFeeAmount' => (float) ($validated['platform_fee'] ?? $booking->platform_fee ?? 0),
+                'nonTaxableAddonSummaryRows' => $nonTaxableAddonRows
+                    ->map(fn (object $addon): array => [
+                        'label' => ($addon->name ?: 'Add-on').' (x'.(int) $addon->qty.')',
+                        'amount' => (float) $addon->price * (int) $addon->qty,
+                    ])
+                    ->concat($nonTaxableVisaRows)
+                    ->values()
+                    ->all(),
+                'invoiceGrandTotal' => (float) $validated['grand_total'],
+                'invoiceNumber' => $invoiceNumber,
+                'isProforma' => true,
+                'invoiceStatusLabel' => $request->string('preview_status')->toString() === 'unpaid'
+                    ? 'Unpaid'
+                    : 'Down Payment',
+                'paymentInstructions' => $this->proformaPaymentInstructions($issuer, $invoiceType),
+            ])
+            ->setPaper('A4', 'portrait');
+
+        return $pdf->stream('Proforma_Invoice_'.$invoiceNumber.'.pdf');
+    }
+
     public function update(Company $company, Booking $booking, UpdateBookingRequest $request): RedirectResponse
     {
         $this->assertCompanyCanAccessBooking($company, $booking);
@@ -1328,6 +1455,9 @@ class BookingIndexController extends Controller
             ? $downPaymentRule['percent']
             : null;
         $paymentReceiver = app(BookingPaymentReceiverService::class)->resolveForBooking($booking);
+        $customerFacingInvoiceType = collect($this->invoiceOptions($company, $booking, $paymentReceiver['payment_mode'], true))
+            ->pluck('type')
+            ->first(fn (string $type): bool => in_array($type, ['agent_to_customer', 'vendor_to_customer'], true));
         $paymentReceiverSettings = $paymentReceiver['settings'];
         $paymentWorkflowService = app(BookingPaymentWorkflowService::class);
         $paidAmount = $paymentWorkflowService->finalizablePaidAmount($booking);
@@ -1362,6 +1492,7 @@ class BookingIndexController extends Controller
                 'accountName' => $paymentReceiverSettings?->manual_bank_transfer_account_name ?? '',
                 'accountNumber' => $paymentReceiverSettings?->manual_bank_transfer_account_number ?? '',
             ],
+            'customerFacingInvoiceType' => $customerFacingInvoiceType,
             'editMode' => $editMode,
             'canEditDocuments' => $this->canEditTravelDocuments($booking),
         ]);
@@ -1459,13 +1590,18 @@ class BookingIndexController extends Controller
         $taxableVisaRows = $this->visaPaymentRows($booking->passengers, true);
 
         $addonRows = ($taxableAddons ?? $booking->addons)
-            ->map(fn ($addon): array => [
-                'description' => $addon->name ?: 'Add-on',
-                'quantity' => 1,
-                'unit_price' => (float) $addon->price,
-                'discount' => 0.0,
-                'amount' => (float) $addon->price,
-            ]);
+            ->map(function ($addon): array {
+                $quantity = (int) ($addon->qty ?? 1);
+                $unitPrice = (float) $addon->price;
+
+                return [
+                    'description' => $addon->name ?: 'Add-on',
+                    'quantity' => $quantity,
+                    'unit_price' => $unitPrice,
+                    'discount' => 0.0,
+                    'amount' => $unitPrice * $quantity,
+                ];
+            });
 
         return $passengerRows
             ->concat($taxableVisaRows)

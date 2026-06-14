@@ -384,6 +384,7 @@ export default function Page() {
         paidAmount,
         remainingBalance,
         downPaymentPaidAt,
+        customerFacingInvoiceType = null,
         downPaymentAvailable = true,
         fullPaymentAvailable = true,
         paymentMethodAvailability = {
@@ -1042,6 +1043,10 @@ export default function Page() {
         (isReadOnlyBookingMode && existingBooking?.booking_number
             ? existingBooking.booking_number
             : null);
+    const proformaInvoicePreviewUrl =
+        existingBooking?.id && isDashboardBooking
+            ? `${bookingActionBaseUrl}/${existingBooking.id}/invoice-preview`
+            : null;
     const proformaInvoiceUrl = existingBooking?.id
         ? isDashboardBooking
             ? `${bookingActionBaseUrl}/${existingBooking.id}/invoice?proforma=1`
@@ -2879,6 +2884,18 @@ export default function Page() {
                                                 }
                                                 showProformaInvoiceButton={
                                                     showProformaInvoiceButton
+                                                }
+                                                proformaInvoicePreview={
+                                                    proformaInvoicePreviewUrl
+                                                        ? {
+                                                              submitUrl:
+                                                                  proformaInvoicePreviewUrl,
+                                                              invoiceType:
+                                                                  customerFacingInvoiceType,
+                                                              statusLabel:
+                                                                  'Unpaid',
+                                                          }
+                                                        : null
                                                 }
                                                 proformaInvoiceUrl={
                                                     proformaInvoiceUrl

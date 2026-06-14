@@ -1,12 +1,6 @@
 import InputError from '@/components/input-error';
 import CompanyDashboardLayout from '@/components/layouts/company-dashboard';
 import {
-    Accordion,
-    AccordionContent,
-    AccordionItem,
-    AccordionTrigger,
-} from '@/components/ui/accordion';
-import {
     AlertDialog,
     AlertDialogAction,
     AlertDialogCancel,
@@ -362,6 +356,7 @@ export default function Page({
     visaCategories: VisaCategory[];
 }) {
     const { errors } = usePage().props as any;
+    const [openCategoryIds, setOpenCategoryIds] = useState<number[]>([]);
 
     const categories = useMemo(
         () =>
@@ -370,6 +365,14 @@ export default function Page({
             ),
         [visaCategories],
     );
+
+    const toggleCategory = (categoryId: number) => {
+        setOpenCategoryIds((current) =>
+            current.includes(categoryId)
+                ? current.filter((id) => id !== categoryId)
+                : [...current, categoryId],
+        );
+    };
 
     return (
         <CompanyDashboardLayout
@@ -416,38 +419,43 @@ export default function Page({
                         start linking it to tours.
                     </div>
                 ) : (
-                    <Accordion type="multiple" className="space-y-4">
+                    <div className="space-y-4">
                         {categories.map((category) => {
                             const taxableCount = category.items.filter(
                                 (item) => item.is_taxable,
                             ).length;
                             const nonTaxableCount =
                                 category.items.length - taxableCount;
+                            const isOpen = openCategoryIds.includes(
+                                category.id,
+                            );
 
                             return (
-                                <AccordionItem
+                                <div
                                     key={category.id}
-                                    value={String(category.id)}
                                     className="group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-950"
                                 >
-                                    <div className="flex items-stretch gap-3 border-b border-slate-200 bg-slate-50/80 px-5 py-4 dark:border-slate-800 dark:bg-slate-900/70">
-                                        <AccordionTrigger
-                                            hideChevron
-                                            className="group flex flex-1 items-start py-0 pr-2 text-left hover:no-underline"
+                                    <div className="relative border-b border-slate-200 bg-slate-50/80 dark:border-slate-800 dark:bg-slate-900/70">
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                toggleCategory(category.id)
+                                            }
+                                            className="flex w-full items-center justify-between gap-4 px-5 py-4 pr-20 text-left transition hover:bg-slate-100/70 dark:hover:bg-slate-900"
                                         >
-                                            <div className="min-w-0 flex-1 pr-4 text-left">
+                                            <div className="min-w-0 flex-1">
                                                 <div className="flex min-w-0 flex-wrap items-center gap-3">
-                                                    <h2 className="min-w-0 break-words text-lg font-semibold text-slate-900 dark:text-slate-100">
+                                                    <h2 className="min-w-0 flex-1 break-words text-lg font-semibold leading-snug text-slate-900 dark:text-slate-100">
                                                         {category.name}
                                                     </h2>
-                                                    <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
+                                                    {/* <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
                                                         {category.items.length}{' '}
                                                         item
                                                         {category.items.length >
                                                         1
                                                             ? 's'
                                                             : ''}
-                                                    </span>
+                                                    </span> */}
                                                 </div>
                                                 <div className="mt-2 flex flex-wrap gap-3 text-xs text-muted-foreground">
                                                     <span>
@@ -459,14 +467,29 @@ export default function Page({
                                                     </span>
                                                 </div>
                                             </div>
-                                        </AccordionTrigger>
 
-                                        <div className="flex shrink-0 flex-col items-center gap-2">
-                                            <ChevronDown className="h-4 w-4 shrink-0 text-slate-500 transition-transform duration-200 group-data-[state=open]:rotate-180" />
+                                            <div className="sr-only">
+                                                {isOpen ? 'Collapse' : 'Expand'}
+                                            </div>
+                                        </button>
+
+                                        <div className="pointer-events-none absolute inset-y-0 right-16 flex items-center">
+                                            <ChevronDown
+                                                className={cn(
+                                                    'h-4 w-4 shrink-0 text-slate-500 transition-transform duration-200',
+                                                    isOpen && 'rotate-180',
+                                                )}
+                                            />
+                                        </div>
+
+                                        <div className="absolute inset-y-0 right-5 flex items-center">
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild>
                                                     <button
                                                         type="button"
+                                                        onClick={(event) =>
+                                                            event.stopPropagation()
+                                                        }
                                                         className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 dark:hover:bg-slate-900"
                                                     >
                                                         <MoreHorizontal className="h-4 w-4" />
@@ -497,69 +520,72 @@ export default function Page({
                                         </div>
                                     </div>
 
-                                    <AccordionContent className="p-5">
-                                        <div className="overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800">
-                                            <div className="hidden grid-cols-[minmax(0,1.5fr)_180px_160px] gap-4 bg-slate-50 px-4 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 dark:bg-slate-900/70 dark:text-slate-400 md:grid">
-                                                <span>Description</span>
-                                                <span>Price</span>
-                                                <span>Tax Status</span>
-                                            </div>
+                                    {isOpen && (
+                                        <div className="p-5">
+                                            <div className="overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800">
+                                                <div className="hidden grid-cols-[minmax(0,1.5fr)_180px_160px] gap-4 bg-slate-50 px-4 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 dark:bg-slate-900/70 dark:text-slate-400 md:grid">
+                                                    <span>Description</span>
+                                                    <span>Price</span>
+                                                    <span>Tax Status</span>
+                                                </div>
 
-                                            <div className="divide-y divide-slate-200 dark:divide-slate-800">
-                                                {category.items.map(
-                                                    (item, index) => (
-                                                        <div
-                                                            key={
-                                                                item.id ??
-                                                                `${category.id}-${index}`
-                                                            }
-                                                            className={cn(
-                                                                'grid gap-3 px-4 py-4 md:grid-cols-[minmax(0,1.5fr)_180px_160px] md:items-center',
-                                                                index % 2 ===
-                                                                    1 &&
-                                                                    'bg-slate-50/60 dark:bg-slate-900/30',
-                                                            )}
-                                                        >
-                                                            <div>
-                                                                <p className="text-sm font-medium text-slate-900 dark:text-slate-100">
-                                                                    {
-                                                                        item.description
-                                                                    }
-                                                                </p>
-                                                            </div>
-                                                            <div className="text-sm font-medium text-slate-700 dark:text-slate-200">
-                                                                Rp{' '}
-                                                                {currencyFormatter.format(
-                                                                    Number(
-                                                                        item.price ||
-                                                                            0,
-                                                                    ),
+                                                <div className="divide-y divide-slate-200 dark:divide-slate-800">
+                                                    {category.items.map(
+                                                        (item, index) => (
+                                                            <div
+                                                                key={
+                                                                    item.id ??
+                                                                    `${category.id}-${index}`
+                                                                }
+                                                                className={cn(
+                                                                    'grid gap-3 px-4 py-4 md:grid-cols-[minmax(0,1.5fr)_180px_160px] md:items-center',
+                                                                    index %
+                                                                        2 ===
+                                                                        1 &&
+                                                                        'bg-slate-50/60 dark:bg-slate-900/30',
                                                                 )}
-                                                            </div>
-                                                            <div>
-                                                                <span
-                                                                    className={cn(
-                                                                        'inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em]',
-                                                                        item.is_taxable
-                                                                            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300'
-                                                                            : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300',
+                                                            >
+                                                                <div>
+                                                                    <p className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                                                                        {
+                                                                            item.description
+                                                                        }
+                                                                    </p>
+                                                                </div>
+                                                                <div className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                                                                    Rp{' '}
+                                                                    {currencyFormatter.format(
+                                                                        Number(
+                                                                            item.price ||
+                                                                                0,
+                                                                        ),
                                                                     )}
-                                                                >
-                                                                    {item.is_taxable
-                                                                        ? 'Taxable'
-                                                                        : 'Non-taxable'}
-                                                                </span>
+                                                                </div>
+                                                                <div>
+                                                                    <span
+                                                                        className={cn(
+                                                                            'inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em]',
+                                                                            item.is_taxable
+                                                                                ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300'
+                                                                                : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300',
+                                                                        )}
+                                                                    >
+                                                                        {item.is_taxable
+                                                                            ? 'Taxable'
+                                                                            : 'Non-taxable'}
+                                                                    </span>
+                                                                </div>
                                                             </div>
-                                                        </div>
-                                                    ),
-                                                )}
+                                                        ),
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
-                                    </AccordionContent>
-                                </AccordionItem>
+                                    )}
+                                </div>
                             );
                         })}
-                    </Accordion>
+                    </div>
                 )}
             </div>
         </CompanyDashboardLayout>
