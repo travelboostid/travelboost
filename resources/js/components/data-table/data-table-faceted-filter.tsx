@@ -53,23 +53,42 @@ export function DataTableFacetedFilter<TData, TValue>({
         [columnFilterValue],
     );
 
-    const fetchOptions = useDebouncedCallback(
+    const loadOptions = React.useCallback(
         async (query: string) => {
-            if (typeof options === 'function') {
-                setLoading(true);
+            if (typeof options !== 'function') {
+                return;
+            }
+
+            setLoading(true);
+
+            try {
                 const fetchedOptions = await options(query, selectedValues);
                 setFilterOptions(fetchedOptions);
+            } finally {
                 setLoading(false);
             }
         },
-        500, // Adjust the debounce delay as needed
+        [options, selectedValues],
     );
+
+    const debouncedLoadOptions = useDebouncedCallback(loadOptions, 500);
 
     React.useEffect(() => {
         if (typeof options === 'function') {
-            fetchOptions('');
+            void loadOptions('');
         }
-    }, [options, fetchOptions]);
+    }, [options, loadOptions]);
+
+    const onOpenChange = React.useCallback(
+        (nextOpen: boolean) => {
+            setOpen(nextOpen);
+
+            if (nextOpen && typeof options === 'function') {
+                void loadOptions('');
+            }
+        },
+        [loadOptions, options],
+    );
 
     const onItemSelect = React.useCallback(
         (option: Option, isSelected: boolean) => {
@@ -103,7 +122,7 @@ export function DataTableFacetedFilter<TData, TValue>({
     );
 
     return (
-        <Popover open={open} onOpenChange={setOpen}>
+        <Popover open={open} onOpenChange={onOpenChange}>
             <PopoverTrigger asChild>
                 <Button
                     variant="outline"
@@ -168,7 +187,7 @@ export function DataTableFacetedFilter<TData, TValue>({
                 <Command shouldFilter={options instanceof Array}>
                     <CommandInput
                         placeholder={title}
-                        onValueChange={(v) => fetchOptions(v)}
+                        onValueChange={(value) => debouncedLoadOptions(value)}
                     />
                     {loading && <CommandEmpty>Loading...</CommandEmpty>}
                     {!loading && (
