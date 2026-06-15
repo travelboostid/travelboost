@@ -4,29 +4,76 @@ Release workflow for `tb-app-dev` and `tb-app-main`. Server names and IPs: [Serv
 
 Doc index: [README](../README.md)
 
-App path on servers: `/home/travelboost/travelboost`. Deploys track the **`dev`** branch unless noted otherwise.
+App path on servers: `~/travelboost` (see `DEPLOY_TARGET_PATH` in `.env.preset.*`). Deploys track the branch set in `DEPLOY_BRANCH` (`dev` or `main`).
 
 ---
 
-## Connect
+## Prerequisites (dev machine)
+
+| Tool           | Purpose                                                                         |
+| -------------- | ------------------------------------------------------------------------------- |
+| **SSH**        | Remote git pull, `.env` upload, supervisor restart                              |
+| **rsync**      | Upload `public/build/` to VPS (`scp` fallback if rsync is missing)              |
+| **AWS CLI v2** | Inspect and manage S3 media buckets — see [Object Storage](./object-storage.md) |
+
+Install AWS CLI v2:
+
+```text
+https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html
+```
+
+Verify:
 
 ```bash
-ssh <server-ip>
-cd ~/travelboost
+aws --version
+```
+
+Configure credentials for Neo object storage (use a Biznet GIO key with appropriate IAM policy):
+
+```bash
+aws configure --profile travelboost-s3
+# AWS Access Key ID: ...
+# AWS Secret Access Key: ...
+# Default region: us-east-1
+# Default output format: json
+```
+
+Example — list media bucket:
+
+```bash
+aws s3 ls s3://tb-media-dev --endpoint-url https://nos.wjv-1.neo.id --profile travelboost-s3
+```
+
+Deploy env vars live in `.env.preset.<name>` (loaded by `scripts/dev-deploy.mjs`):
+
+```env
+DEPLOY_BRANCH=dev
+DEPLOY_SSH_USER=travelboost
+DEPLOY_SSH_HOST=103.127.138.76
+DEPLOY_TARGET_PATH=~/travelboost
 ```
 
 SSH key auth is required — ask a teammate to register your key if needed.
 
 ---
 
+## Connect
+
+```bash
+ssh travelboost@<server-ip>
+cd ~/travelboost
+```
+
+---
+
 ## Backend
 
 ```bash
-git pull
-composer install --no-dev --optimize-autoloader   # omit --no-dev on dev servers if you need dev tools
+git pull origin dev    # or main on tb-app-main
+composer install --no-dev --optimize-autoloader   # omit --no-dev on dev if you need dev tools
 ```
 
-Update `.env` when new variables are introduced, then:
+Update `.env` when new variables are introduced (upload from the matching `.env.preset.*`), then:
 
 ```bash
 php artisan migrate --force
@@ -42,11 +89,11 @@ Never run `migrate:fresh` on production — it drops all data.
 Build locally (VPS has limited RAM), then upload to the server:
 
 ```bash
-pnpm dev:setenv    # pick the target environment
+pnpm dev:setenv    # pick the target environment preset
 pnpm build
 ```
 
-Copy `public/build/` to `~/travelboost/public/build/` on the server (replace existing files).
+Copy `public/build/` to `~/travelboost/public/build/` on the server (replace existing files). Assets are served from the VPS disk, not S3.
 
 ---
 
@@ -68,4 +115,19 @@ From your dev machine:
 pnpm dev:deploy
 ```
 
-Automates build upload, cache clear, and service restart where configured.
+Runs `scripts/dev-deploy.mjs` — automates prechecks, backend steps, local build, and `rsync` upload.
+
+Common options:
+
+```bash
+pnpm dev:deploy -- -e dev              # preset .env.preset.dev (default)
+pnpm dev:deploy -- -e main             # production preset
+pnpm dev:deploy -- --skip-frontend     # backend only
+pnpm dev:deploy -- --skip-backend      # frontend build + upload only
+pnpm dev:deploy -- --skip-local-branch # skip local branch vs DEPLOY_BRANCH check
+pnpm dev:deploy -- --help
+```
+
+The script uploads `.env.preset.<name>` to the server as `.env`, pulls git on the VPS, runs composer/migrate/optimize/supervisor (unless skipped), builds with pnpm, and syncs `public/build/`.
+
+User media uploads on live servers use S3 (`FILESYSTEM_DISK=s3`) — manage buckets with the AWS CLI; see [Object Storage (S3)](./object-storage.md).

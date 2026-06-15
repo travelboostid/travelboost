@@ -55,13 +55,13 @@ Other dev commands: `pnpm dev:min` (server + Vite only), `pnpm dev` (interactive
 
 ### Production
 
-| Doc                                                                | When to read                                |
-| ------------------------------------------------------------------ | ------------------------------------------- |
-| [Server Inventory](./docs/server-inventory.md)                     | Host names and IPs                          |
-| [Production App Server](./docs/production-app-server.md)           | PHP, Caddy, Supervisor, first install       |
-| [Production Database Server](./docs/production-database-server.md) | PostgreSQL, pgvector, WAL-G backups         |
-| [Object Storage (S3)](./docs/object-storage.md)                    | Media buckets, credentials, mount with s3fs |
-| [Deployment](./docs/deployment.md)                                 | Pull, migrate, build, restart after release |
+| Doc                                                                | When to read                                    |
+| ------------------------------------------------------------------ | ----------------------------------------------- |
+| [Server Inventory](./docs/server-inventory.md)                     | Host names and IPs                              |
+| [Production App Server](./docs/production-app-server.md)           | PHP, Caddy, Supervisor, first install           |
+| [Production Database Server](./docs/production-database-server.md) | PostgreSQL, pgvector, WAL-G backups             |
+| [Object Storage (S3)](./docs/object-storage.md)                    | Media buckets, AWS CLI, credentials, s3fs mount |
+| [Deployment](./docs/deployment.md)                                 | Pull, migrate, build, restart after release     |
 
 ### Debugging
 

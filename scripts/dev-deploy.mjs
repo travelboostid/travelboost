@@ -1,206 +1,154 @@
-import { execSync } from 'child_process';
-import fs from 'fs';
+import { Command } from 'commander';
+import dotenv from 'dotenv';
+import dotenvExpand from 'dotenv-expand';
+import { $ } from 'execa';
+import path from 'path';
 import process from 'process';
 
-// CONFIGS
-const DEV_CONFIG = {
-    env: 'development',
-    branch: 'dev',
-    sshUser: 'travelboost',
-    sshHost: '103.127.138.76',
-    remotePath: '~/travelboost',
-    buildPath: 'public/build',
+const root = path.resolve(import.meta.dirname, '..');
+const buildPath = 'public/build';
+
+const fail = (ok, msg) => {
+    if (!ok) {
+        throw new Error(msg);
+    }
 };
 
-const MAIN_CONFIG = {
-    env: 'production',
-    branch: 'main',
-    sshUser: 'travelboost',
-    sshHost: '103.93.163.174',
-    remotePath: '~/travelboost',
-    buildPath: 'public/build',
-};
+async function deploy() {
+    // CLI
+    const opts = new Command()
+        .name('dev-deploy')
+        .description('Deploy backend and frontend to VPS via SSH')
+        .option(
+            '-e, --env <name>',
+            'preset env file (.env.preset.<name>)',
+            'dev',
+        )
+        .option(
+            '--skip-backend',
+            'skip VPS backend (git pull, .env upload, composer, migrate)',
+        )
+        .option(
+            '--skip-frontend',
+            'skip local pnpm build and public/build upload',
+        )
+        .option(
+            '--skip-composer',
+            'skip remote composer install --no-dev',
+        )
+        .option('--skip-migrate', 'skip remote php artisan migrate --force')
+        .option(
+            '--skip-supervisor',
+            'skip remote supervisorctl restart all',
+        )
+        .option(
+            '--skip-optimize',
+            'skip remote php artisan optimize:clear',
+        )
+        .option(
+            '--skip-local-branch',
+            'skip check that local git branch matches DEPLOY_BRANCH',
+        )
+        .option(
+            '--skip-remote-branch',
+            'skip check that VPS git branch matches DEPLOY_BRANCH',
+        )
+        .parse()
+        .opts();
 
-function showHelp() {
-    console.log(`
-Usage:
-  node scripts/dev-deploy.mjs -c <dev|main> [options]
-  pnpm dev:deploy -- -c <dev|main> [options]
-
-Options:
-  -c, --config              Deployment target (default: dev)
-  --frontend-only           Only build frontend and upload assets
-  --skip-composer           Skip remote composer install
-  --skip-migrate            Skip remote php artisan migrate
-  --skip-supervisor         Skip remote supervisorctl restart
-  --skip-frontend-build     Skip local pnpm install/build and asset upload
-  -h, --help                Show this help
-`);
-}
-
-function parseArgs() {
-    const args = process.argv.slice(2);
-
-    if (args.includes('-h') || args.includes('--help')) {
-        showHelp();
-        process.exit(0);
+    // Load preset env (supports ${VAR} expansion)
+    const envFile = path.join(root, `.env.preset.${opts.env}`);
+    const loaded = dotenv.config({ path: envFile });
+    if (loaded.error) {
+        throw new Error(`Failed to read ${envFile}: ${loaded.error.message}`);
     }
+    dotenvExpand.expand(loaded);
 
-    let configName = 'dev';
+    const {
+        DEPLOY_BRANCH,
+        DEPLOY_SSH_USER,
+        DEPLOY_SSH_HOST,
+        DEPLOY_TARGET_PATH,
+    } = process.env;
 
-    for (let i = 0; i < args.length; i++) {
-        if (args[i] === '-c' || args[i] === '--config') {
-            configName = args[i + 1];
-            break;
-        }
-    }
+    // Shell helpers
+    const target = `${DEPLOY_SSH_USER}@${DEPLOY_SSH_HOST}`;
+    const exec = async (cmd) =>
+        (await $({ shell: true })`${cmd}`).stdout.trim();
+    const ssh = async (cmd) => (await $`ssh ${target} ${cmd}`).stdout.trim();
+    const scp = (from, to) => exec(`scp ${from} ${target}:${to}`);
 
-    const frontendOnly = args.includes('--frontend-only');
-
-    const skips = {
-        composer: args.includes('--skip-composer'),
-        migrate: args.includes('--skip-migrate'),
-        supervisor: args.includes('--skip-supervisor'),
-        frontendBuild: args.includes('--skip-frontend-build'),
-    };
-
-    if (frontendOnly && skips.frontendBuild) {
-        console.error(
-            '❌ --frontend-only cannot be used with --skip-frontend-build.',
+    // Prechecks: local git state + remote branch
+    if (!opts.skipLocalBranch) {
+        const current = await exec('git branch --show-current');
+        fail(
+            current === DEPLOY_BRANCH,
+            `Current branch is "${current}", must be "${DEPLOY_BRANCH}"`,
         );
-        process.exit(1);
     }
 
-    let config;
+    fail(
+        !(await exec('git status --porcelain')),
+        'You have uncommitted changes',
+    );
 
-    switch (configName) {
-        case 'dev':
-            config = DEV_CONFIG;
-            break;
-
-        case 'main':
-            config = MAIN_CONFIG;
-            break;
-
-        default:
-            console.error(
-                `❌ Invalid config "${configName}". Expected "dev" or "main".`,
-            );
-            process.exit(1);
-    }
-
-    return { config, skips, frontendOnly };
-}
-
-const { config: CONFIG, skips: SKIP, frontendOnly: FRONTEND_ONLY } =
-    parseArgs();
-
-// HELPERS
-function run(cmd, options = {}) {
-    console.log(`\n> ${cmd}`);
-    execSync(cmd, { stdio: 'inherit', ...options });
-}
-
-function getOutput(cmd) {
-    return execSync(cmd, { encoding: 'utf-8' }).trim();
-}
-
-function assert(condition, message) {
-    if (!condition) {
-        console.error(`\n❌ ${message}`);
-        process.exit(1);
-    }
-}
-
-function ssh(cmd) {
-    const { sshUser, sshHost } = CONFIG;
-
-    return `ssh ${sshUser}@${sshHost} "${cmd}"`;
-}
-
-// DEPLOY
-try {
-    const { env, branch, remotePath, buildPath, sshUser, sshHost } = CONFIG;
-
-    const skippedSteps = Object.entries(SKIP)
-        .filter(([, skipped]) => skipped)
-        .map(([step]) => step);
-
-    console.log(`🚀 Deploying ${env}${FRONTEND_ONLY ? ' (frontend only)' : ''}...`);
-
-    if (!FRONTEND_ONLY && skippedSteps.length > 0) {
-        console.log(`⏭️  Skipping: ${skippedSteps.join(', ')}`);
-    }
-
-    // --- 0. Pre-checks ---
-    const envFile = fs.readFileSync('.env', 'utf-8');
-
-    assert(envFile.includes(`APP_ENV=${env}`), `APP_ENV must be ${env}`);
-
-    if (!FRONTEND_ONLY) {
-        // --- 1. Git safety checks ---
-        const currentBranch = getOutput('git rev-parse --abbrev-ref HEAD');
-
-        assert(
-            currentBranch === branch,
-            `Current branch is "${currentBranch}", must be "${branch}"`,
+    if (!opts.skipRemoteBranch) {
+        const remoteBranch = await ssh(
+            `git -C ${DEPLOY_TARGET_PATH} rev-parse --abbrev-ref HEAD`,
         );
-
-        const status = getOutput('git status --porcelain');
-
-        assert(status === '', 'You have uncommitted changes');
-
-        run('git fetch origin');
-
-        const local = getOutput('git rev-parse HEAD');
-        const remote = getOutput(`git rev-parse origin/${branch}`);
-
-        assert(
-            local === remote,
-            `Local branch is not up-to-date with origin/${branch}`,
+        fail(
+            remoteBranch === DEPLOY_BRANCH,
+            `Remote branch is "${remoteBranch}", must be "${DEPLOY_BRANCH}"`,
         );
-
-        // --- 2. Upload .env ---
-        run(`scp .env ${sshUser}@${sshHost}:${remotePath}/.env`);
-
-        // --- 3. Update VPS backend ---
-        const remoteSteps = [`cd ${remotePath}`, `git pull origin ${branch}`];
-
-        if (!SKIP.composer) {
-            remoteSteps.push('composer install --no-dev --optimize-autoloader');
-        }
-
-        if (!SKIP.migrate) {
-            remoteSteps.push('php artisan migrate --force');
-        }
-
-        remoteSteps.push('php artisan optimize:clear');
-
-        if (!SKIP.supervisor) {
-            remoteSteps.push('sudo supervisorctl restart all');
-        }
-
-        run(ssh(remoteSteps.join(' && ')));
     }
 
-    // --- 4. Build frontend ---
-    if (FRONTEND_ONLY || !SKIP.frontendBuild) {
-        run('pnpm install --frozen-lockfile');
-        run('pnpm build');
+    // Backend: pull code, upload env, run remote steps
+    if (!opts.skipBackend) {
+        await ssh(`git -C ${DEPLOY_TARGET_PATH} pull origin ${DEPLOY_BRANCH}`);
+        await scp(envFile, `${DEPLOY_TARGET_PATH}/.env`);
 
-        // --- 5. Upload assets ---
-        const remoteBuildPath = `${sshUser}@${sshHost}:${remotePath}/${buildPath}`;
+        const steps = [`cd ${DEPLOY_TARGET_PATH}`];
+
+        if (!opts.skipComposer) {
+            steps.push('composer install --no-dev --optimize-autoloader');
+        }
+        if (!opts.skipMigrate) {
+            steps.push('php artisan migrate --force');
+        }
+        if (!opts.skipOptimize) {
+            steps.push('php artisan optimize:clear');
+        }
+        if (!opts.skipSupervisor) {
+            steps.push('sudo supervisorctl restart all');
+        }
+
+        await ssh(steps.join(' && '));
+    }
+
+    // Frontend: build locally, upload public/build to VPS
+    if (!opts.skipFrontend) {
+        await exec('pnpm install --frozen-lockfile');
+        await exec('pnpm build');
+
+        const remoteBuild = `${DEPLOY_TARGET_PATH}/${buildPath}`;
 
         try {
-            run(`rsync -avz --delete ${buildPath}/ ${remoteBuildPath}/`);
+            await exec(
+                `rsync -avz --delete ${buildPath}/ ${target}:${remoteBuild}/`,
+            );
         } catch {
-            console.log('⚠️ rsync not found, fallback to scp...');
-            run(`scp -r ${buildPath}/* ${remoteBuildPath}/`);
+            await exec(`scp -r ${buildPath}/* ${target}:${remoteBuild}/`);
         }
     }
 
     console.log('\n✅ Deploy successful');
+}
+
+$.verbose = true;
+
+try {
+    await deploy();
 } catch (err) {
-    console.error('\n❌ Deploy failed', err);
+    console.error('\n❌ Deploy failed:', err.message ?? err);
     process.exit(1);
 }

@@ -1,6 +1,6 @@
 # Object Storage (S3)
 
-User uploads and static assets on S3-compatible storage (not the app server disk).
+User uploads on S3-compatible storage (Neo). Frontend build assets are deployed to the app VPS (`public/build/`), not to the `tb-web-*` buckets unless you add a CDN later.
 
 Doc index: [README](../README.md)
 
@@ -10,21 +10,60 @@ Provider endpoint:
 https://nos.wjv-1.neo.id/
 ```
 
+## AWS CLI (required)
+
+Install **AWS CLI v2** on your dev machine and on any server where you manage buckets from the shell.
+
+```text
+https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html
+```
+
+Verify:
+
+```bash
+aws --version
+```
+
+Configure credentials from Biznet GIO (use a named profile — do not commit keys):
+
+```bash
+aws configure --profile travelboost-s3
+```
+
+Always pass the Neo endpoint and profile:
+
+```bash
+export AWS_PROFILE=travelboost-s3
+export S3_ENDPOINT=https://nos.wjv-1.neo.id
+
+aws s3 ls s3://tb-media-dev --endpoint-url "${S3_ENDPOINT}"
+aws s3 cp ./local-file.jpg s3://tb-media-dev/images/test.jpg --endpoint-url "${S3_ENDPOINT}"
+aws s3 sync ./folder s3://tb-media-dev/prefix/ --endpoint-url "${S3_ENDPOINT}"
+```
+
+On Arch Linux:
+
+```bash
+sudo pacman -S aws-cli-v2
+```
+
+---
+
 ## Buckets
 
-| Bucket          | Purpose                                     |
-| --------------- | ------------------------------------------- |
-| `tb-media-dev`  | User uploads — images, documents, raw files |
-| `tb-web-dev`    | Compiled frontend assets (`public/build`)   |
-| `tb-backup-dev` | Database backup files                       |
+| Bucket          | Purpose                                                       |
+| --------------- | ------------------------------------------------------------- |
+| `tb-media-dev`  | User uploads — images, documents, raw files                   |
+| `tb-web-dev`    | Optional CDN for frontend assets (not used by default deploy) |
+| `tb-backup-dev` | Database backup files                                         |
 
-Use the matching `-main` / `-dev` bucket names in other environments.
+Use the matching `-main` / `-dev` bucket names in other environments (`tb-media-main`, etc.).
 
 ## Credentials
 
 Access key and secret key are available in the **Biznet GIO** account.
 
-Do not commit credentials to the repository. Store them in `.env` on the app server and in local credential files only.
+Do not commit credentials to the repository. Store them in `.env` on the app server, in `aws configure`, or local credential files only.
 
 ---
 
@@ -39,9 +78,9 @@ Attach one policy per access key. Do not share one key across app, deploy, and b
 | File                                                                                      | Use for                                   | Buckets                     |
 | ----------------------------------------------------------------------------------------- | ----------------------------------------- | --------------------------- |
 | [`infra/s3/iam-app-media-dev.json`](../infra/s3/iam-app-media-dev.json)                   | Laravel app (`.env` on app server)        | `tb-media-dev`              |
-| [`infra/s3/iam-web-deploy-dev.json`](../infra/s3/iam-web-deploy-dev.json)                 | CI / deploy script syncing `public/build` | `tb-web-dev`                |
+| [`infra/s3/iam-web-deploy-dev.json`](../infra/s3/iam-web-deploy-dev.json)                 | Optional CDN / manual web asset uploads   | `tb-web-dev`                |
 | [`infra/s3/iam-backup-dev.json`](../infra/s3/iam-backup-dev.json)                         | WAL-G / database backup                   | `tb-backup-dev`             |
-| [`infra/s3/iam-developer-readonly-dev.json`](../infra/s3/iam-developer-readonly-dev.json) | Local s3fs, Cyberduck, debugging          | all dev buckets (read-only) |
+| [`infra/s3/iam-developer-readonly-dev.json`](../infra/s3/iam-developer-readonly-dev.json) | Local AWS CLI, s3fs, Cyberduck, debugging | all dev buckets (read-only) |
 
 Example — Laravel app user (`iam-app-media-dev.json`):
 
@@ -161,7 +200,9 @@ The local `php artisan storage:link` symlink is only needed when files are serve
 
 ## GUI / CLI clients
 
-Any S3-compatible client works. Configure with:
+**AWS CLI v2 is the required CLI** for bucket operations. Other clients are optional.
+
+Configure any client with:
 
 | Setting           | Value                       |
 | ----------------- | --------------------------- |
@@ -170,10 +211,9 @@ Any S3-compatible client works. Configure with:
 | Access key        | From Biznet GIO             |
 | Secret key        | From Biznet GIO             |
 
-Examples:
+Optional alternatives:
 
 - **Cyberduck** — S3 connection, set path-style / custom endpoint
-- **AWS CLI** — `aws s3 ls s3://tb-media-dev --endpoint-url https://nos.wjv-1.neo.id`
 - **rclone** — `s3` provider with `force_path_style = true`
 - **MinIO Client (`mc`)** — alias pointing at the Neo endpoint
 
@@ -249,12 +289,14 @@ Adjust the mount path and passwd file location for your user.
 
 ## Troubleshooting
 
-| Symptom              | Check                                                   |
-| -------------------- | ------------------------------------------------------- |
-| 403 on upload        | App IAM key uses `iam-app-media-dev.json` on the bucket |
-| 403 on browser URL   | Bucket policy allows `GetObject` on that prefix         |
-| Wrong URL in browser | `AWS_URL` and `AWS_USE_PATH_STYLE_ENDPOINT=true`        |
-| s3fs mount empty     | Bucket name, endpoint URL, path-style flag              |
-| s3fs read-only       | Remove `-o ro`; ensure `-o rw` is set                   |
-| Laravel cannot write | `composer require league/flysystem-aws-s3-v3` installed |
-| Backup upload fails  | WAL-G key uses `iam-backup-dev.json`, not the app key   |
+| Symptom              | Check                                                                                                                             |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| 403 on upload        | App IAM key uses `iam-app-media-dev.json` on the bucket                                                                           |
+| 403 on browser URL   | Bucket policy allows `GetObject` on that prefix                                                                                   |
+| Wrong URL in browser | `AWS_URL` and `AWS_USE_PATH_STYLE_ENDPOINT=true`                                                                                  |
+| s3fs mount empty     | Bucket name, endpoint URL, path-style flag                                                                                        |
+| s3fs read-only       | Remove `-o ro`; ensure `-o rw` is set                                                                                             |
+| Laravel cannot write | `composer require league/flysystem-aws-s3-v3` installed                                                                           |
+| Backup upload fails  | WAL-G key uses `iam-backup-dev.json`, not the app key                                                                             |
+| AWS CLI 403 / denied | Correct `--endpoint-url`, profile, and IAM policy for the bucket                                                                  |
+| AWS CLI not found    | Install AWS CLI v2 — see [Getting started install](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html) |

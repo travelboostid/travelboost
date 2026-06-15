@@ -15,6 +15,7 @@ Doc index: [README](../README.md)
 - **PostgreSQL**: v18 with pgvector extension
 - **Node.js**: Required for frontend tooling and Vite builds
 - **PNPM**: Required for frontend dependency management
+- **AWS CLI v2**: Required for S3 bucket inspection and media debugging — see [Object Storage (S3)](./object-storage.md)
 
 Verify PHP extensions:
 
@@ -125,6 +126,34 @@ Install globally:
 ```bash
 npm install -g pnpm
 ```
+
+- **AWS CLI v2**
+
+Required for working with Neo object storage (media buckets). Install from:
+
+```text
+https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html
+```
+
+Verify:
+
+```bash
+aws --version
+```
+
+Configure a named profile (recommended — do not commit keys):
+
+```bash
+aws configure --profile travelboost-s3
+```
+
+Quick test (readonly key or your dev IAM user):
+
+```bash
+aws s3 ls s3://tb-media-dev --endpoint-url https://nos.wjv-1.neo.id --profile travelboost-s3
+```
+
+Full setup: [Object Storage (S3)](./object-storage.md).
 
 ---
 
