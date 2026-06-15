@@ -14,6 +14,11 @@ const fail = (ok, msg) => {
     }
 };
 
+function cliArgs() {
+    // pnpm passes a literal `--` before script flags: pnpm dev:deploy -- --skip-backend
+    return process.argv.filter((arg, index) => index < 2 || arg !== '--');
+}
+
 async function deploy() {
     // CLI
     const opts = new Command()
@@ -53,7 +58,7 @@ async function deploy() {
             '--skip-remote-branch',
             'skip check that VPS git branch matches DEPLOY_BRANCH',
         )
-        .parse()
+        .parse(cliArgs())
         .opts();
 
     // Load preset env (supports ${VAR} expansion)
