@@ -26,15 +26,15 @@ class KnowledgeBaseService
             return false;
         }
 
-        $url = $media->data['url'];
-        $relativePath = str_starts_with($url, '/storage/') ? substr($url, 9) : $url;
-        $absolutePath = Storage::disk('public')->path($relativePath);
+        $relativePath = is_string($media->data['path'] ?? null)
+            ? $media->data['path']
+            : $this->relativePathFromUrl((string) $media->data['url']);
 
-        if (! file_exists($absolutePath)) {
+        if ($relativePath === null || ! Storage::disk('public')->exists($relativePath)) {
             return false;
         }
 
-        $text = $this->readPdfAsPlainText($absolutePath);
+        $text = $this->readPdfAsPlainText(Storage::disk('public')->get($relativePath));
         $text = $this->cleanText($text);
         $chunks = collect(
             $this->splitText($text, 1200, '.', 150)
@@ -74,13 +74,32 @@ class KnowledgeBaseService
         return true;
     }
 
-    private function readPdfAsPlainText(string $filePath): string
+    private function readPdfAsPlainText(string $contents): string
     {
         $parser = new Parser;
-        $pdf = $parser->parseFile($filePath);
-        $text = $pdf->getText();
 
-        return $text;
+        return $parser->parseContent($contents)->getText();
+    }
+
+    private function relativePathFromUrl(string $url): ?string
+    {
+        $path = ltrim((string) parse_url($url, PHP_URL_PATH), '/');
+
+        if ($path === '') {
+            return null;
+        }
+
+        $bucket = (string) config('filesystems.disks.public.bucket');
+
+        if ($bucket !== '' && str_starts_with($path, $bucket.'/')) {
+            $path = substr($path, strlen($bucket) + 1);
+        }
+
+        if (str_starts_with($path, 'storage/')) {
+            $path = substr($path, 8);
+        }
+
+        return $path !== '' ? $path : null;
     }
 
     private function splitText(string $text, int $maxLength = 1000, string $separator = ' ', int $wordOverlap = 0, bool $keepSeparator = false): array
