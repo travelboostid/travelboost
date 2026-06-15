@@ -26,6 +26,9 @@ return [
     |
     | Supported drivers: "local", "ftp", "sftp", "s3"
     |
+    | The "public" disk stores user media (images, documents). On live
+    | servers FILESYSTEM_DISK=s3 so uploads go to Neo object storage.
+    |
     */
 
     'disks' => [
@@ -37,17 +40,7 @@ return [
             'throw' => false,
             'report' => false,
         ],
-
         'public' => [
-            'driver' => 'local',
-            'root' => storage_path('app/public'),
-            'url' => rtrim(env('APP_URL', 'http://localhost'), '/').'/storage',
-            'visibility' => 'public',
-            'throw' => false,
-            'report' => false,
-        ],
-
-        's3' => [
             'driver' => 's3',
             'key' => env('S3_ACCESS_KEY_ID'),
             'secret' => env('S3_SECRET_ACCESS_KEY'),
@@ -56,10 +49,18 @@ return [
             'url' => env('S3_URL'),
             'endpoint' => env('S3_ENDPOINT'),
             'use_path_style_endpoint' => env('S3_USE_PATH_STYLE_ENDPOINT', false),
+            'visibility' => 'public',
             'throw' => false,
             'report' => false,
         ],
-
+        // 'public' => [
+        //     'driver' => 'local',
+        //     'root' => storage_path('app/public'),
+        //     'url' => rtrim(env('APP_URL', 'http://localhost'), '/').'/storage',
+        //     'visibility' => 'public',
+        //     'throw' => false,
+        //     'report' => false,
+        // ],
     ],
 
     /*

@@ -157,6 +157,27 @@ Full setup: [Object Storage (S3)](./object-storage.md).
 
 ---
 
+## Environment presets
+
+Presets live at the project root as `.env.preset.*`. Pick one with:
+
+```bash
+pnpm dev:setenv
+```
+
+This copies the selected file to `.env` for local work. Deploy uses presets directly — see [Deployment](./deployment.md).
+
+| File                 | Use for                                                               |
+| -------------------- | --------------------------------------------------------------------- |
+| `.env.preset.local`  | Normal local dev — `lvh.me`, local PostgreSQL, no outbound email      |
+| `.env.preset.tunnel` | Payment webhooks & OAuth — public URL `tunnel-8000.travelboost.co.id` |
+| `.env.preset.dev`    | Dev server deploy target (`pnpm dev:deploy -- -e dev`)                |
+| `.env.preset.main`   | Production deploy target (`pnpm dev:deploy -- -e main`)               |
+
+First-time setup runs `pnpm dev:setenv` as part of `pnpm dev:init`. Ask a teammate for preset files if they are not in your clone.
+
+---
+
 ## Running the Dev Server
 
 Start the full local stack (Reverb, queue worker, Vite, and Laravel):

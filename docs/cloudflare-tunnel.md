@@ -62,7 +62,7 @@ If payment webhooks arrive but nothing updates locally, check whether a teammate
 pnpm dev:setenv
 ```
 
-Choose **`.env.preset.tunnel_localdb_email`** (local PostgreSQL + real SMTP) or another `tunnel_*` preset if your team provides one.
+Choose **`.env.preset.tunnel`** — local PostgreSQL, real SMTP, and `APP_HOST=tunnel-8000.travelboost.co.id`.
 
 The preset sets:
 

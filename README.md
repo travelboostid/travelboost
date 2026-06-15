@@ -8,6 +8,13 @@ Multi-tenant travel platform — Laravel 13, Inertia, React 19.
 
 Ask a teammate for `.env` values. Presets live in `.env.preset.*` at the project root.
 
+| Preset   | Purpose                                      |
+| -------- | -------------------------------------------- |
+| `local`  | Default local dev (`lvh.me`)                 |
+| `tunnel` | Payment/OAuth webhooks via Cloudflare tunnel |
+| `dev`    | Deploy to dev server (`pnpm dev:deploy`)     |
+| `main`   | Deploy to production server                  |
+
 ```bash
 git clone <repository-url>
 cd travelboost
@@ -73,4 +80,11 @@ Other dev commands: `pnpm dev:min` (server + Vite only), `pnpm dev` (interactive
 
 ## Deploy
 
-See [Deployment](./docs/deployment.md) or run `pnpm dev:deploy` from the dev CLI (`pnpm dev`).
+Push your branch, then:
+
+```bash
+pnpm dev:deploy              # dev server (default preset)
+pnpm dev:deploy -- -e main     # production
+```
+
+Full workflow, skip flags, and manual steps: [Deployment](./docs/deployment.md).

@@ -22,7 +22,6 @@
         "i18n:diff": "node scripts/i18n-diff.mjs",
         "i18n:merge": "node scripts/i18n-merge.mjs",
         "dev:deploy": "node scripts/dev-deploy.mjs",
-        "dev:deploy-main": "node scripts/dev-deploy-main.mjs",
         "dev:setenv": "node scripts/dev-setenv.mjs",
         "dev": "node scripts/dev.mjs",
         "prepare": "husky"

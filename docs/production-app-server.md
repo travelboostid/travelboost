@@ -117,7 +117,7 @@ Fill all required database, cache, queue, mail, and application configuration va
 
 For live deployments, media files are stored on S3-compatible object storage. See [Object Storage (S3)](./object-storage.md) for bucket names, credentials, and client setup.
 
-Example live object storage settings:
+Example live object storage settings (dev — use `tb-media-main` on production):
 
 ```env
 FILESYSTEM_DISK=s3
@@ -130,7 +130,7 @@ AWS_ENDPOINT=https://nos.wjv-1.neo.id
 AWS_USE_PATH_STYLE_ENDPOINT=true
 ```
 
-Access key and secret are available in the Niznet GIO account.
+Access key and secret are available in the Biznet GIO account.
 
 ---
 
@@ -221,19 +221,16 @@ sudo supervisorctl start all
 
 Frontend assets are built locally because the VPS has limited resources.
 
-Select the environment configuration:
+Automated path (recommended): `pnpm dev:deploy` — see [Deployment](./deployment.md).
+
+Manual path:
 
 ```bash
-pnpm dev:setenv
-```
-
-Build the frontend assets:
-
-```bash
+pnpm dev:setenv    # pick dev or main preset for Vite env vars
 pnpm build
 ```
 
-Upload the generated build files into the server public directory.
+Upload `public/build/` to `~/travelboost/public/build/` on the server, or run `pnpm dev:deploy -- --skip-backend` to build and rsync automatically.
 
 ---
 

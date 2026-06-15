@@ -197,12 +197,19 @@ Local full stack for chat, queues, and real-time features: `pnpm dev:full` ([Loc
 
 Changes that affect production need callouts in the PR:
 
-- New or changed `.env` variables
+- New or changed `.env` variables (update matching `.env.preset.*` and `.env.example`)
 - Migrations (`php artisan migrate --force` on server)
-- Frontend build upload (`pnpm build` → `public/build/`)
+- Frontend build upload (`pnpm build` → `public/build/` on VPS)
 - Supervisor restart (`sudo supervisorctl restart all`)
 
-See [Deployment](./deployment.md) for the full release checklist.
+Release from a clean tree on the correct branch:
+
+```bash
+git push origin dev    # or main
+pnpm dev:deploy -- -e dev    # or -e main for production
+```
+
+See [Deployment](./deployment.md) for manual steps, skip flags, and server mapping.
 
 ---
 

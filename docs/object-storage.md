@@ -51,13 +51,16 @@ sudo pacman -S aws-cli-v2
 
 ## Buckets
 
-| Bucket          | Purpose                                                       |
-| --------------- | ------------------------------------------------------------- |
-| `tb-media-dev`  | User uploads — images, documents, raw files                   |
-| `tb-web-dev`    | Optional CDN for frontend assets (not used by default deploy) |
-| `tb-backup-dev` | Database backup files                                         |
+| Bucket           | Environment | Purpose                                                       |
+| ---------------- | ----------- | ------------------------------------------------------------- |
+| `tb-media-dev`   | dev         | User uploads — images, documents, raw files                   |
+| `tb-media-main`  | main        | User uploads (production)                                     |
+| `tb-web-dev`     | dev         | Optional CDN for frontend assets (not used by default deploy) |
+| `tb-web-main`    | main        | Optional CDN (not used by default deploy)                     |
+| `tb-backup-dev`  | dev         | WAL-G database backup files                                   |
+| `tb-backup-main` | main        | WAL-G database backup files (production)                      |
 
-Use the matching `-main` / `-dev` bucket names in other environments (`tb-media-main`, etc.).
+Presets set `AWS_BUCKET=tb-media-dev` or `tb-media-main` with matching `AWS_URL`. Frontend build assets go to the app VPS (`public/build/`), not these buckets.
 
 ## Credentials
 
