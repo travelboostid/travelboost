@@ -588,7 +588,7 @@ class BookingIndexController extends Controller
             ->filter(fn (object $addon): bool => ! $addon->is_taxable)
             ->values();
         $nonTaxableVisaRows = collect($validated['visa_items'] ?? [])
-            ->filter(fn (array $visaItem): bool => (float) $visaItem['price'] * (int) ($visaItem['qty'] ?? 1) > 0)
+            ->filter(fn (array $visaItem): bool => (float) $visaItem['price'] * (int) ($visaItem['qty'] ?? 1) >= 0)
             ->map(fn (array $visaItem): array => [
                 'label' => 'Visa: '.$visaItem['description'].' (x'.(int) ($visaItem['qty'] ?? 1).')',
                 'amount' => (float) $visaItem['price'] * (int) ($visaItem['qty'] ?? 1),

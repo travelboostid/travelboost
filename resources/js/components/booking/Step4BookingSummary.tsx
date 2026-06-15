@@ -243,7 +243,7 @@ export default function Step4BookingSummary({
             const label = guest.visaTypeDescription?.trim();
             const unitPrice = Number(guest.visaTypePrice ?? 0);
 
-            if (!label || unitPrice <= 0) {
+            if (!label) {
                 continue;
             }
 

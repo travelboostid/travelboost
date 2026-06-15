@@ -20,6 +20,7 @@ class CompanyController extends Controller
     public function index(CompanyIndexRequest $request): AnonymousResourceCollection
     {
         $data = Company::query()
+            ->with(['photo'])
             ->when($request->input('ids'), function ($q) use ($request) {
                 $ids = explode(',', $request->input('ids'));
                 $q->whereIn('id', $ids);
@@ -33,7 +34,7 @@ class CompanyController extends Controller
             ->when($request->input('type'), function ($q) use ($request) {
                 $q->where('type', $request->input('type'));
             })
-            ->paginate();
+            ->paginate(15);
 
         return CompanyResource::collection($data);
     }
