@@ -13,10 +13,12 @@ use App\Http\Controllers\PrismaLinkCallbackController;
 use App\Http\Controllers\Webhooks\MidtransWebhookController;
 use App\Http\Controllers\Webhooks\PrismaLinkWebhookController;
 use App\Http\Middleware\DomainResolver;
+use App\Models\Company;
 use App\Models\User;
 use Illuminate\Auth\Events\Verified;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Context;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\RateLimiter;
@@ -205,6 +207,10 @@ Route::post('/logout', function (Request $request) {
     Auth::logout();
     $request->session()->invalidate();
     $request->session()->regenerateToken();
+
+    if (Context::get('tenant') instanceof Company) {
+        return redirect('/');
+    }
 
     return redirect()->route('home');
 })->middleware('auth')->name('logout');
