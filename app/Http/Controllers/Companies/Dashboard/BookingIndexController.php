@@ -125,7 +125,11 @@ class BookingIndexController extends Controller
             return redirect('/');
         }
 
-        app(ExpireBookingReservationsAction::class)->execute($company);
+        try {
+            app(ExpireBookingReservationsAction::class)->execute($company);
+        } catch (\Throwable $e) {
+            report($e);
+        }
 
         $paymentReceiverService = app(BookingPaymentReceiverService::class);
         $paymentWorkflowService = app(BookingPaymentWorkflowService::class);
@@ -334,6 +338,7 @@ class BookingIndexController extends Controller
             ->withSum(['payments as paid_amount' => function ($query): void {
                 $query->where('status', 'paid');
             }], 'amount')
+            ->limit(500)
             ->get()
             ->map(function (Booking $booking) use ($company): Booking {
                 $booking = app(BookingPricingService::class)->reconcileSnapshotTotals($booking);
