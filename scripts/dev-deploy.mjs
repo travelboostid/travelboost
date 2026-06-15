@@ -76,16 +76,33 @@ async function deploy() {
         DEPLOY_TARGET_PATH,
     } = process.env;
 
-    // Shell helpers
+    // Shell helpers — exec/ssh stream output; pass { capture: true } to read stdout
     const target = `${DEPLOY_SSH_USER}@${DEPLOY_SSH_HOST}`;
-    const exec = async (cmd) =>
-        (await $({ shell: true })`${cmd}`).stdout.trim();
-    const ssh = async (cmd) => (await $`ssh ${target} ${cmd}`).stdout.trim();
-    const scp = (from, to) => exec(`scp ${from} ${target}:${to}`);
+    const exec = async (cmd, { capture = false } = {}) => {
+        console.log(`\n> ${cmd}`);
+        const result = await $({
+            shell: true,
+            stdio: capture ? 'pipe' : 'inherit',
+        })`${cmd}`;
+
+        return capture ? result.stdout.trim() : undefined;
+    };
+    const ssh = async (cmd, { capture = false } = {}) => {
+        console.log(`\n> ssh ${target} ${cmd}`);
+        const result = await $({
+            stdio: capture ? 'pipe' : 'inherit',
+        })`ssh ${target} ${cmd}`;
+
+        return capture ? result.stdout.trim() : undefined;
+    };
+
+    console.log(`\n🚀 Deploying (${opts.env}) → ${target}`);
 
     // Prechecks: local git state + remote branch
     if (!opts.skipLocalBranch) {
-        const current = await exec('git branch --show-current');
+        const current = await exec('git branch --show-current', {
+            capture: true,
+        });
         fail(
             current === DEPLOY_BRANCH,
             `Current branch is "${current}", must be "${DEPLOY_BRANCH}"`,
@@ -93,13 +110,14 @@ async function deploy() {
     }
 
     fail(
-        !(await exec('git status --porcelain')),
+        !(await exec('git status --porcelain', { capture: true })),
         'You have uncommitted changes',
     );
 
     if (!opts.skipRemoteBranch) {
         const remoteBranch = await ssh(
             `git -C ${DEPLOY_TARGET_PATH} rev-parse --abbrev-ref HEAD`,
+            { capture: true },
         );
         fail(
             remoteBranch === DEPLOY_BRANCH,
@@ -110,7 +128,7 @@ async function deploy() {
     // Backend: pull code, upload env, run remote steps
     if (!opts.skipBackend) {
         await ssh(`git -C ${DEPLOY_TARGET_PATH} pull origin ${DEPLOY_BRANCH}`);
-        await scp(envFile, `${DEPLOY_TARGET_PATH}/.env`);
+        await exec(`scp ${envFile} ${target}:${DEPLOY_TARGET_PATH}/.env`);
 
         const steps = [`cd ${DEPLOY_TARGET_PATH}`];
 
@@ -148,8 +166,6 @@ async function deploy() {
 
     console.log('\n✅ Deploy successful');
 }
-
-$.verbose = true;
 
 try {
     await deploy();
