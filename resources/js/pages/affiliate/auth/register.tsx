@@ -7,9 +7,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { Head, useForm, usePage } from '@inertiajs/react';
-import { Eye, EyeOff } from 'lucide-react';
-import React, { useState } from 'react';
+import { Check, Download, Eye, EyeOff, Trash, UploadCloud } from 'lucide-react';
+import React, { useRef, useState } from 'react';
 import { useIntl } from 'react-intl';
+import axios from 'axios';
 
 export default function Register() {
     const intl = useIntl();
@@ -29,8 +30,41 @@ export default function Register() {
         password_confirmation: '',
         referral_code: referralCode || '',
         ktp_number: '',
-        ktp_file: null as File | null,
+        identity_card_id: '' as string | number,
     });
+
+    const [identityMedia, setIdentityMedia] = useState<any>(null);
+    const [uploadingKtp, setUploadingKtp] = useState(false);
+    const [ktpUploadError, setKtpUploadError] = useState('');
+    const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+    const handleKtpUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setUploadingKtp(true);
+        setKtpUploadError('');
+
+        const formData = new FormData();
+        formData.append('ktp_file', file);
+
+        try {
+            const response = await axios.post('/affiliate/upload-ktp', formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+                withXSRFToken: true,
+            });
+
+            const resData = response.data;
+            setData('identity_card_id', resData.id);
+            setIdentityMedia(resData);
+        } catch (err) {
+            setKtpUploadError('Failed to upload identity photo. Please try again.');
+        } finally {
+            setUploadingKtp(false);
+        }
+    };
 
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -196,20 +230,96 @@ export default function Register() {
                                 defaultMessage: 'Upload KTP',
                             })}
                         </Label>
-                        <Input
+                        {identityMedia ? (
+                            <div className="rounded-md border border-slate-200 dark:border-white/10 bg-muted/20 p-4 text-left flex flex-row gap-3 items-center">
+                                <Check className="text-primary w-5 h-5 shrink-0" />
+                                <div className="flex-1">
+                                    <div className="font-semibold text-primary text-sm">
+                                        You've uploaded an identity card.
+                                    </div>
+                                    <div className="text-xs text-muted-foreground">
+                                        Click remove to delete the uploaded identity card and reupload, or click download to see the uploaded file.
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-2 shrink-0">
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="icon"
+                                        onClick={() => {
+                                            setIdentityMedia(null);
+                                            setData('identity_card_id', '');
+                                        }}
+                                        className="h-8 w-8 rounded-full cursor-pointer text-destructive"
+                                    >
+                                        <Trash className="w-4 h-4" />
+                                    </Button>
+                                    <a
+                                        href={identityMedia?.data?.url || '#'}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                    >
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="icon"
+                                            className="h-8 w-8 rounded-full cursor-pointer"
+                                        >
+                                            <Download className="w-4 h-4" />
+                                        </Button>
+                                    </a>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="rounded-md border border-dashed border-slate-200 dark:border-white/10 p-4 text-left flex flex-row gap-3 items-center">
+                                <UploadCloud className="text-muted-foreground w-5 h-5 shrink-0" />
+                                <div className="flex-1">
+                                    <div className="font-semibold text-sm">
+                                        Upload Identity Card
+                                    </div>
+                                    <div className="text-xs text-muted-foreground">
+                                        Please upload a clear image or scan of your identity card for verification purposes.
+                                    </div>
+                                </div>
+                                <div className="shrink-0">
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        className="cursor-pointer"
+                                        disabled={uploadingKtp}
+                                        onClick={() => fileInputRef.current?.click()}
+                                    >
+                                        {uploadingKtp ? 'Uploading...' : 'Upload'}
+                                    </Button>
+                                </div>
+                            </div>
+                        )}
+                        <input
+                            ref={fileInputRef}
                             id="ktp_file"
                             type="file"
-                            accept="image/*"
-                            onChange={(e) =>
-                                setData(
-                                    'ktp_file',
-                                    e.target.files ? e.target.files[0] : null,
-                                )
-                            }
-                            tabIndex={6}
-                            required
+                            className="hidden"
+                            accept="image/jpeg,image/png,image/jpg"
+                            onChange={handleKtpUpload}
                         />
-                        <InputError message={errors.ktp_file} />
+                        {ktpUploadError && <p className="text-xs font-semibold text-destructive mt-1">{ktpUploadError}</p>}
+                        <InputError message={errors.identity_card_id as string} />
+
+                        {identityMedia?.data?.url && (
+                            <div className="mt-2 space-y-2">
+                                <Label className="font-bold text-xs text-muted-foreground uppercase tracking-wider block">
+                                    Identity Preview
+                                </Label>
+                                <div className="relative aspect-[3/2] w-full rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-inner flex items-center justify-center">
+                                    <img
+                                        src={identityMedia.data.url}
+                                        className="w-full h-full object-cover"
+                                        alt="KTP Preview"
+                                    />
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     <div className="grid gap-2">

@@ -17,7 +17,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Head, useForm, usePage } from '@inertiajs/react';
+import { Head, router, useForm, usePage } from '@inertiajs/react';
 import { LinkIcon, Save, ShieldCheck, User as UserIcon } from 'lucide-react';
 import React, { useState } from 'react';
 import { FormattedMessage } from 'react-intl';
@@ -29,6 +29,23 @@ export default function AffiliateProfileEdit() {
     const [identityMedia, setIdentityMedia] = useState<any>(
         profile.identity_card ? profile.identity_card : null,
     );
+
+    const [verificationResending, setVerificationResending] = useState(false);
+    const [verificationSentMessage, setVerificationSentMessage] = useState<string | null>(null);
+
+    const resendEmailVerification = () => {
+        setVerificationResending(true);
+        setVerificationSentMessage(null);
+        router.post('/affiliate/email/verification-notification', {}, {
+            onSuccess: () => {
+                setVerificationSentMessage('Verification link has been sent to your email.');
+                setVerificationResending(false);
+            },
+            onError: () => {
+                setVerificationResending(false);
+            }
+        });
+    };
 
     const { data, setData, post, processing, errors, recentlySuccessful } =
         useForm({
@@ -134,12 +151,40 @@ export default function AffiliateProfileEdit() {
                                         <InputError message={errors.name} />
                                     </div>
                                     <div className="space-y-2">
-                                        <Label>Email Address</Label>
-                                        <Input
-                                            value={user.email}
-                                            disabled
-                                            className="bg-muted/50 cursor-not-allowed text-muted-foreground"
-                                        />
+                                        <div className="flex items-center justify-between">
+                                            <Label>Email Address</Label>
+                                            {user.email_verified_at ? (
+                                                <span className="inline-flex items-center text-xs text-green-600 dark:text-green-400 font-semibold gap-1">
+                                                    <ShieldCheck className="w-3.5 h-3.5" /> Verified
+                                                </span>
+                                            ) : (
+                                                <span className="inline-flex items-center text-xs text-amber-600 dark:text-amber-400 font-semibold gap-1">
+                                                    Unverified
+                                                </span>
+                                            )}
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <Input
+                                                value={user.email}
+                                                disabled
+                                                className="bg-muted/50 cursor-not-allowed text-muted-foreground flex-1"
+                                            />
+                                            {!user.email_verified_at && (
+                                                <button
+                                                    type="button"
+                                                    onClick={resendEmailVerification}
+                                                    disabled={verificationResending}
+                                                    className="px-3 rounded-lg border border-border text-xs font-bold hover:bg-muted text-foreground transition-colors disabled:opacity-55 cursor-pointer shrink-0"
+                                                >
+                                                    {verificationResending ? 'Resending...' : 'Resend Verification'}
+                                                </button>
+                                            )}
+                                        </div>
+                                        {verificationSentMessage && (
+                                            <p className="text-xs font-semibold text-green-600 dark:text-green-400 mt-1">
+                                                {verificationSentMessage}
+                                            </p>
+                                        )}
                                     </div>
 
                                     {(() => {
