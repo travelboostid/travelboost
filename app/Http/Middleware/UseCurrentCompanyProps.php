@@ -46,7 +46,7 @@ class UseCurrentCompanyProps
         if ($isAgent) {
             $subscription = $isAgent ? $company->agentSubscription : null;
             $isSubscriptionExpired = ! $subscription || $subscription->ended_at < now();
-            $isFreeTrial = ($subscription->package?->price ?? 0) <= 0;
+            $isFreeTrial = ($subscription?->package?->price ?? 0) <= 0;
             $isMarketingDisabled = $isFreeTrial || $isSubscriptionExpired;
         }
 

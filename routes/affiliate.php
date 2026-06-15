@@ -29,6 +29,7 @@ Route::prefix('affiliate')
 
             Route::get('/register', [AffiliateAuthController::class, 'showRegister'])->name('register');
             Route::post('/register', [AffiliateAuthController::class, 'register'])->name('register.store');
+            Route::post('/upload-ktp', [AffiliateAuthController::class, 'uploadKtp'])->name('upload-ktp');
 
             Route::get('/verify-notice', function () {
                 return inertia('affiliate/auth/verify-notice');
@@ -38,7 +39,19 @@ Route::prefix('affiliate')
         Route::middleware('auth')->group(function () {
             Route::post('/logout', [AffiliateAuthController::class, 'logout'])->name('logout');
 
-            Route::middleware('verified')->prefix('dashboard')->group(function () {
+            Route::get('/verify-email', function () {
+                return inertia('affiliate/auth/verify-email', [
+                    'status' => session('status'),
+                ]);
+            })->name('verify.email');
+
+            Route::post('/email/verification-notification', function () {
+                request()->user()?->sendEmailVerificationNotification();
+
+                return back()->with('status', 'verification-link-sent');
+            });
+
+            Route::prefix('dashboard')->group(function () {
                 Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
 
                 Route::prefix('setup')->name('setup.')->group(function () {

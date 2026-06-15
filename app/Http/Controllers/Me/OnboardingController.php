@@ -101,6 +101,9 @@ class OnboardingController extends Controller
             }
 
             $user->update([
+                'username' => $validated['username'] ?? $user->username,
+                'email' => $validated['email'],
+                'phone' => $validated['phone'],
                 'status' => UserStatus::ACTIVE,
             ]);
 
@@ -113,9 +116,9 @@ class OnboardingController extends Controller
 
         $this->notifyAffiliateNetwork($company);
 
-        return redirect()->route('companies.dashboard.index', [
+        return Inertia::location(route('companies.dashboard.index', [
             'company' => $company->username,
-        ]);
+        ]));
     }
 
     private function notifyAffiliateNetwork(Company $company): void
@@ -205,9 +208,9 @@ class OnboardingController extends Controller
             ->where('id', '!=', $invitation->id)
             ->update(['status' => CompanyTeamStatus::REJECTED]);
 
-        return redirect()->route('companies.dashboard.index', [
+        return Inertia::location(route('companies.dashboard.index', [
             'company' => $invitation->company->username,
-        ]);
+        ]));
     }
 
     public function declineInvitations()

@@ -11,11 +11,13 @@ use App\Http\Middleware\UseAffiliateProps;
 use App\Http\Middleware\UseAnalyticsMeasurementIdsProps;
 use App\Http\Middleware\UseCurrentCompanyProps;
 use App\Http\Middleware\UseCustomerProps;
+use App\Models\User;
 use Illuminate\Auth\Middleware\Authenticate;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
+use Illuminate\Http\Request;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -28,6 +30,36 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->validateCsrfTokens(except: [
             'webhooks/*',
         ]);
+        $middleware->redirectGuestsTo(function (Request $request) {
+            if ($request->routeIs('verification.verify')) {
+                $userId = $request->route('id');
+                if ($userId) {
+                    $user = User::find($userId);
+                    if ($user) {
+                        if ($user->hasRole('user:affiliate')) {
+                            return '/affiliate/login';
+                        }
+                        if ($user->hasRole('user:agent') || $user->hasRole('user:vendor')) {
+                            return '/companies/login';
+                        }
+                        if ($user->hasRole('user:customer')) {
+                            return '/customers/login';
+                        }
+                    }
+                }
+            }
+            if ($request->is('affiliate/*') || $request->is('affiliate')) {
+                return '/affiliate/login';
+            }
+            if ($request->is('companies/*') || $request->is('companies')) {
+                return '/companies/login';
+            }
+            if ($request->is('customers/*') || $request->is('customers')) {
+                return '/customers/login';
+            }
+
+            return '/login';
+        });
     })
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);

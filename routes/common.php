@@ -13,6 +13,7 @@ use App\Http\Controllers\PrismaLinkCallbackController;
 use App\Http\Controllers\Webhooks\MidtransWebhookController;
 use App\Http\Controllers\Webhooks\PrismaLinkWebhookController;
 use App\Http\Middleware\DomainResolver;
+use App\Models\CompanyTeam;
 use App\Models\Company;
 use App\Models\User;
 use Illuminate\Auth\Events\Verified;
@@ -198,6 +199,17 @@ Route::get('/verify-email/{id}/{hash}', function (Request $request) {
     if (! $user->hasVerifiedEmail()) {
         $user->markEmailAsVerified();
         event(new Verified($user));
+    }
+
+    if ($user->hasRole('user:affiliate')) {
+        return redirect('/affiliate/dashboard?verified=1');
+    }
+
+    if ($user->hasRole('user:agent') || $user->hasRole('user:vendor')) {
+        $team = CompanyTeam::where('user_id', $user->id)->first();
+        if ($team && $team->company) {
+            return redirect()->route('companies.dashboard.index', ['company' => $team->company->username, 'verified' => 1]);
+        }
     }
 
     return redirect(route('dashboard', absolute: false).'?verified=1');
