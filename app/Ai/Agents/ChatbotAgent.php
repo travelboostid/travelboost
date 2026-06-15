@@ -3,6 +3,8 @@
 namespace App\Ai\Agents;
 
 use App\Enums\BookingStatus;
+use App\Enums\CompanyType;
+use App\Enums\TourStatus;
 use App\Models\AiCredit;
 use App\Models\AiUsageLog;
 use App\Models\AppConfig;
@@ -16,6 +18,7 @@ use App\Models\Media;
 use App\Models\Tour;
 use App\Support\NumericStringConfig;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -157,13 +160,14 @@ class ChatbotAgent implements Agent, Conversational
         $prompt = <<<'PROMPT'
         Analyze the user messages and detect intent:
         - tour_detail(tour_id): looking for specific tour information.
-        - tour_query(...args): looking for tours based on criteria.
+        - tour_query(...args): looking for tours based on criteria, including optional keywords for free-text search.
         - booking_query(tour_id): looking for their own bookings, optionally for a specific tour.
         - booking_detail(booking_id): looking for specific booking information.
         - general(): general travel questions.
 
         If the current message has a tour attachment, use that tour_id in args when intent is tour_detail or booking_query.
         Questions about booking status, payment, or "my booking" with a tour attached should be booking_query, not tour_detail.
+        For tour_query, put destination names, tour themes, or other free-text search terms in args.keywords.
         PROMPT;
 
         if ($attachedTourId) {
@@ -189,6 +193,7 @@ class ChatbotAgent implements Agent, Conversational
                     'duration_max' => $schema->integer(),
                     'price_min' => $schema->number(),
                     'price_max' => $schema->number(),
+                    'keywords' => $schema->string(),
                 ])->withoutAdditionalProperties(),
             ],
         )->prompt(
@@ -223,14 +228,16 @@ class ChatbotAgent implements Agent, Conversational
 
     private function retrieveTourQueryContext(array $args): string
     {
-        $tours = Tour::query()
-            ->where('company_id', $this->company->id)
+        $keywords = trim((string) ($args['keywords'] ?? ''));
+
+        $tours = $this->availableToursQuery()
             ->when(! empty($args['continents'] ?? []), fn ($query) => $query->whereIn('continent_name', $args['continents']))
             ->when(! empty($args['countries'] ?? []), fn ($query) => $query->whereIn('country_name', $args['countries']))
             ->when(($args['duration_min'] ?? 0) > 0, fn ($query) => $query->where('duration_days', '>=', $args['duration_min']))
             ->when(($args['duration_max'] ?? 0) > 0, fn ($query) => $query->where('duration_days', '<=', $args['duration_max']))
             ->when(($args['price_min'] ?? 0) > 0, fn ($query) => $query->where('showprice', '>=', $args['price_min']))
             ->when(($args['price_max'] ?? 0) > 0, fn ($query) => $query->where('showprice', '<=', $args['price_max']))
+            ->when($keywords !== '', fn ($query) => $this->applyTourKeywordsFilter($query, $keywords))
             ->limit(5)
             ->get();
 
@@ -248,6 +255,43 @@ class ChatbotAgent implements Agent, Conversational
         |----|------|------|---------------|-------------|--------------|-------|
         {$rows}
         CONTEXT;
+    }
+
+    /**
+     * @return Builder<Tour>
+     */
+    private function availableToursQuery(): Builder
+    {
+        if ($this->company->type === CompanyType::AGENT) {
+            $agentTourIds = $this->company->agentTours()
+                ->where('status', TourStatus::ACTIVE)
+                ->pluck('tour_id');
+
+            return Tour::query()->where(function (Builder $query) use ($agentTourIds): void {
+                $query->where('company_id', $this->company->id)
+                    ->orWhereIn('id', $agentTourIds);
+            });
+        }
+
+        return Tour::query()->where('company_id', $this->company->id);
+    }
+
+    /**
+     * @param  Builder<Tour>  $query
+     */
+    private function applyTourKeywordsFilter($query, string $keywords): void
+    {
+        $term = '%'.addcslashes($keywords, '%_\\').'%';
+
+        $query->where(function ($query) use ($term): void {
+            $query->where('name', 'ilike', $term)
+                ->orWhere('code', 'ilike', $term)
+                ->orWhere('destination', 'ilike', $term)
+                ->orWhere('country_name', 'ilike', $term)
+                ->orWhere('region_name', 'ilike', $term)
+                ->orWhere('continent_name', 'ilike', $term)
+                ->orWhere('description', 'ilike', $term);
+        });
     }
 
     private function retrieveGeneralContext(array $args): string
