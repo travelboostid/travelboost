@@ -30,6 +30,7 @@
         "laravel/tinker": "^3.0",
         "laravel/wayfinder": "^0.1.9",
         "laravolt/indonesia": "^0.41.0",
+        "league/flysystem-aws-s3-v3": "^3.34",
         "maatwebsite/excel": "4.x-dev",
         "midtrans/midtrans-php": "*",
         "santigarcor/laratrust": "^8.5",
