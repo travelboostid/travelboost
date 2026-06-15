@@ -29,6 +29,33 @@ class DomainResolver
 
     public function handle($request, Closure $next)
     {
+        // Redirect to main domain if accessing company dashboard or other non-guest routes on a subdomain
+        if (! $this->isMainHost && ! $this->isInternalSubdomain() && $request->is('companies*')) {
+            $allowedPatterns = [
+                'companies/login*',
+                'companies/register*',
+                'companies/accept-team-invitation*',
+            ];
+
+            $isAllowed = false;
+            foreach ($allowedPatterns as $pattern) {
+                if ($request->is($pattern)) {
+                    $isAllowed = true;
+                    break;
+                }
+            }
+
+            if (! $isAllowed) {
+                $port = $request->getPort();
+                $portSuffix = in_array($port, [80, 443], true) ? '' : ':'.$port;
+
+                return redirect()->away(
+                    $request->getScheme().'://'.$this->appHost.$portSuffix.'/'.$request->path()
+                    .($request->getQueryString() ? '?'.$request->getQueryString() : '')
+                );
+            }
+        }
+
         // Main host has no tenant context
         if ($this->isMainHost || $this->isInternalSubdomain()) {
             $request->attributes->set('tenant', null);
