@@ -95,7 +95,7 @@ class AffiliateAuthController extends Controller
             'password' => 'required|string|confirmed|min:8',
             'referral_code' => 'nullable|string',
             'ktp_number' => 'required|numeric|digits:16',
-            'ktp_file' => 'required|image|mimes:jpeg,png,jpg|max:2048',
+            'identity_card_id' => 'required|exists:medias,id',
         ]);
 
         $uplineProfile = null;
@@ -122,25 +122,11 @@ class AffiliateAuthController extends Controller
 
             $user->addRole('user:affiliate');
 
-            $identityCardMedia = null;
-            if ($request->hasFile('ktp_file')) {
-                $file = $request->file('ktp_file');
-                $filename = uniqid().'.'.$file->getClientOriginalExtension();
-                $path = "media/documents/$filename";
-                Storage::disk('public')->putFileAs('media/documents', $file, $filename);
-
-                $identityCardMedia = Media::create([
-                    'owner_type' => User::class,
+            // Update the KTP media record to link it with the new user's ID
+            $media = Media::find($request->identity_card_id);
+            if ($media) {
+                $media->update([
                     'owner_id' => $user->id,
-                    'name' => $file->getClientOriginalName(),
-                    'description' => '',
-                    'type' => 'document',
-                    'subtype' => 'identity-card',
-                    'data' => [
-                        'url' => Storage::url($path),
-                        'size' => Storage::disk('public')->size($path),
-                        'media_type' => $file->getClientMimeType(),
-                    ],
                 ]);
             }
 
@@ -152,7 +138,7 @@ class AffiliateAuthController extends Controller
                 'status' => 'pending',
                 'phone' => $request->phone,
                 'identity_number' => $request->ktp_number,
-                'identity_card_id' => $identityCardMedia?->id,
+                'identity_card_id' => $request->identity_card_id,
             ]);
 
             Domain::create([
@@ -184,7 +170,38 @@ class AffiliateAuthController extends Controller
         event(new Registered($user));
         Auth::login($user);
 
-        return redirect('/affiliate/dashboard')->with('warning', 'Registration successful. Your account is awaiting team approval.');
+        return redirect('/affiliate/verify-email');
+    }
+
+    public function uploadKtp(Request $request)
+    {
+        $request->validate([
+            'ktp_file' => 'required|image|mimes:jpeg,png,jpg|max:2048',
+        ]);
+
+        $file = $request->file('ktp_file');
+        $filename = uniqid().'.'.$file->getClientOriginalExtension();
+        $path = "media/documents/$filename";
+        Storage::disk('public')->putFileAs('media/documents', $file, $filename);
+
+        $media = Media::create([
+            'owner_type' => User::class,
+            'owner_id' => 0,
+            'name' => $file->getClientOriginalName(),
+            'description' => '',
+            'type' => 'document',
+            'subtype' => 'identity-card',
+            'data' => [
+                'url' => Storage::url($path),
+                'size' => Storage::disk('public')->size($path),
+                'media_type' => $file->getClientMimeType(),
+            ],
+        ]);
+
+        return response()->json([
+            'id' => $media->id,
+            'data' => $media->data,
+        ]);
     }
 
     public function logout(Request $request)

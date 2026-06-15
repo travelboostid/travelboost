@@ -45,13 +45,14 @@ class CreateCompanyRequest extends FormRequest
                 'string',
                 'max:255',
                 Rule::unique('companies', 'username'),
-                Rule::unique('users', 'username'),
+                Rule::unique('users', 'username')->ignore(auth()->id()),
             ],
             'email' => [
                 'required',
                 'email',
                 'max:255',
                 Rule::unique('companies', 'email'),
+                Rule::unique('users', 'email')->ignore(auth()->id()),
             ],
             'subdomain' => [
                 'required',
