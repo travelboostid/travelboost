@@ -23,11 +23,36 @@ import { useAnonymousUserContext } from '../anonymous-user-context-provider';
 
 export type { Attachment, ChatActor };
 
+function isMessageFromSelf(
+    message: ChatMessageResource,
+    actor: ChatActor | null,
+    authUserId?: number | null,
+): boolean {
+    if (
+        actor &&
+        actor.type === message.sender_type &&
+        Number(actor.id) === Number(message.sender_id)
+    ) {
+        return true;
+    }
+
+    if (
+        authUserId != null &&
+        message.user_id != null &&
+        Number(authUserId) === Number(message.user_id)
+    ) {
+        return true;
+    }
+
+    return false;
+}
+
 function notifyIncomingMessage(
     message: ChatMessageResource,
     actor: ChatActor | null,
+    authUserId?: number | null,
 ): void {
-    if (actor?.type === message.sender_type && actor.id === message.sender_id) {
+    if (isMessageFromSelf(message, actor, authUserId)) {
         return;
     }
 
@@ -38,10 +63,24 @@ function notifyIncomingMessage(
     });
 }
 
+function handleIncomingChatMessage(
+    message: ChatMessageResource,
+    authUserId?: number | null,
+): void {
+    const wasAlreadyKnown =
+        useChatStore.getState().messageById[message.id] !== undefined;
+
+    useChatStore.getState().upsertMessage(message);
+
+    if (wasAlreadyKnown) {
+        return;
+    }
+
+    notifyIncomingMessage(message, useChatStore.getState().actor, authUserId);
+}
+
 function AuthenticatedChatMessageListener() {
     const { auth } = usePageSharedDataProps();
-    const actor = useChatStore((state) => state.actor);
-    const upsertMessage = useChatStore((state) => state.upsertMessage);
     const upsertRoom = useChatStore((state) => state.upsertRoom);
     const channelName = `users.${auth?.user?.id}`;
 
@@ -49,10 +88,9 @@ function AuthenticatedChatMessageListener() {
         channelName,
         '.ChatMessageCreated',
         (event: ChatMessageResource) => {
-            upsertMessage(event);
-            notifyIncomingMessage(event, actor);
+            handleIncomingChatMessage(event, auth?.user?.id);
         },
-        [channelName, actor, upsertMessage],
+        [channelName, auth?.user?.id],
     );
 
     useEcho(
@@ -77,8 +115,6 @@ function AuthenticatedChatMessageListener() {
 }
 
 function UnauthenticatedChatMessageListener() {
-    const actor = useChatStore((state) => state.actor);
-    const upsertMessage = useChatStore((state) => state.upsertMessage);
     const upsertRoom = useChatStore((state) => state.upsertRoom);
     const anonymousUser = useAnonymousUserContext();
     const channelName = `anonymous-users.${anonymousUser?.id}`;
@@ -87,8 +123,7 @@ function UnauthenticatedChatMessageListener() {
         channelName,
         '.ChatMessageCreated',
         (event: ChatMessageResource) => {
-            upsertMessage(event);
-            notifyIncomingMessage(event, actor);
+            handleIncomingChatMessage(event);
         },
     );
 

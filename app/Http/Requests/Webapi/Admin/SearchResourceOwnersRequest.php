@@ -4,7 +4,7 @@ namespace App\Http\Requests\Webapi\Admin;
 
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Str;
-use Illuminate\Validation\Validator;
+use Illuminate\Validation\Rule;
 
 class SearchResourceOwnersRequest extends FormRequest
 {
@@ -41,21 +41,17 @@ class SearchResourceOwnersRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'types' => ['nullable', 'string'],
+            'types' => ['nullable', 'array'],
+            'types.*' => ['string', Rule::in(['user', 'company', 'affiliate'])],
             'include_ids' => ['nullable', 'string'],
+            'include_user_ids' => ['nullable', 'array'],
+            'include_user_ids.*' => ['integer'],
+            'include_company_ids' => ['nullable', 'array'],
+            'include_company_ids.*' => ['integer'],
+            'include_affiliate_ids' => ['nullable', 'array'],
+            'include_affiliate_ids.*' => ['integer'],
             'keyword' => ['nullable', 'string', 'max:100'],
             'limit' => ['nullable', 'integer', 'min:1', 'max:100'],
         ];
-    }
-
-    public function withValidator(Validator $validator): void
-    {
-        $validator->after(function (Validator $validator): void {
-            foreach ($this->input('types', []) as $type) {
-                if (! in_array($type, ['user', 'company', 'affiliate'], true)) {
-                    $validator->errors()->add('types', "Invalid type [{$type}].");
-                }
-            }
-        });
     }
 }
