@@ -6,10 +6,12 @@ use App\Enums\UserStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Customers\LoginRequest;
 use App\Http\Requests\Customers\RegisterRequest;
+use App\Models\Company;
 use App\Models\User;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Context;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Inertia\Inertia;
@@ -55,7 +57,11 @@ class AuthController extends Controller
         Auth::login($user, $request->boolean('remember'));
         $request->session()->regenerate();
 
-        return redirect()->intended($request->input('redirect', route('me.index')));
+        // Clear any stale intended URL left over from a previous flow so it
+        // cannot drag the customer back to a page on the main host.
+        session()->forget('url.intended');
+
+        return redirect($this->customerPostAuthRedirect($request));
     }
 
     public function register(RegisterRequest $request)
@@ -77,6 +83,31 @@ class AuthController extends Controller
         Auth::login($user);
         $request->session()->regenerate();
 
-        return redirect()->intended(route('me.index'));
+        session()->forget('url.intended');
+
+        return redirect($this->customerPostAuthRedirect($request));
+    }
+
+    /**
+     * Pick the destination for a customer after login/register.
+     *
+     * When the request comes in on a tenant (agent) subdomain, stay on that
+     * subdomain and land on the tenant homepage ("/") instead of redirecting
+     * to the global "/me" route, which is on the main travelboost host.
+     */
+    private function customerPostAuthRedirect(Request $request): string
+    {
+        if ($this->isOnTenantSubdomain($request)) {
+            return '/';
+        }
+
+        return route('me.index');
+    }
+
+    private function isOnTenantSubdomain(Request $request): bool
+    {
+        $tenant = Context::get('tenant');
+
+        return $tenant instanceof Company;
     }
 }

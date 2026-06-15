@@ -2,6 +2,9 @@
 
 namespace App\Ai\Agents;
 
+use App\Enums\BookingStatus;
+use App\Enums\CompanyType;
+use App\Enums\TourStatus;
 use App\Models\AiCredit;
 use App\Models\AiUsageLog;
 use App\Models\AppConfig;
@@ -15,6 +18,7 @@ use App\Models\Media;
 use App\Models\Tour;
 use App\Support\NumericStringConfig;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -43,6 +47,8 @@ class ChatbotAgent implements Agent, Conversational
     private const INTENT_MESSAGE_LIMIT = 5;
 
     private const KNOWLEDGE_BASE_RESULT_LIMIT = 3;
+
+    private const BOOKING_QUERY_RESULT_LIMIT = 10;
 
     private const VECTOR_MIN_SIMILARITY = 0.1;
 
@@ -147,24 +153,26 @@ class ChatbotAgent implements Agent, Conversational
      */
     private function retrieveChatContext(): array
     {
-        if ($this->message->attachment_type === 'tour') {
-            $tourId = $this->message->attachment_data;
-
-            return [
-                'intent' => 'tour_detail',
-                'args' => ['tour_id' => $tourId],
-                'context' => $this->retrieveTourDetailContext(['tour_id' => $tourId]),
-            ];
-        }
+        $attachedTourId = $this->message->attachment_type === 'tour'
+            ? (int) $this->message->attachment_data
+            : null;
 
         $prompt = <<<'PROMPT'
         Analyze the user messages and detect intent:
         - tour_detail(tour_id): looking for specific tour information.
-        - tour_query(...args): looking for tours based on criteria.
-        - booking_query(): looking for their own bookings.
+        - tour_query(...args): looking for tours based on criteria, including optional keywords for free-text search.
+        - booking_query(tour_id): looking for their own bookings, optionally for a specific tour.
         - booking_detail(booking_id): looking for specific booking information.
         - general(): general travel questions.
+
+        If the current message has a tour attachment, use that tour_id in args when intent is tour_detail or booking_query.
+        Questions about booking status, payment, or "my booking" with a tour attached should be booking_query, not tour_detail.
+        For tour_query, put destination names, tour themes, or other free-text search terms in args.keywords.
         PROMPT;
+
+        if ($attachedTourId) {
+            $prompt .= "\n\nThe current message has an attached tour_id: {$attachedTourId}.";
+        }
 
         $response = agent(
             instructions: 'You are an assistant that retrieves relevant context from recent chat messages to help understand the user\'s current message.',
@@ -185,6 +193,7 @@ class ChatbotAgent implements Agent, Conversational
                     'duration_max' => $schema->integer(),
                     'price_min' => $schema->number(),
                     'price_max' => $schema->number(),
+                    'keywords' => $schema->string(),
                 ])->withoutAdditionalProperties(),
             ],
         )->prompt(
@@ -197,6 +206,10 @@ class ChatbotAgent implements Agent, Conversational
 
         $intent = $response['intent'] ?? 'general';
         $args = $response['args'] ?? [];
+
+        if ($attachedTourId && in_array($intent, ['tour_detail', 'booking_query'], true)) {
+            $args['tour_id'] ??= $attachedTourId;
+        }
 
         $context = match ($intent) {
             'tour_detail' => $this->retrieveTourDetailContext($args),
@@ -215,14 +228,16 @@ class ChatbotAgent implements Agent, Conversational
 
     private function retrieveTourQueryContext(array $args): string
     {
-        $tours = Tour::query()
-            ->where('company_id', $this->company->id)
+        $keywords = trim((string) ($args['keywords'] ?? ''));
+
+        $tours = $this->availableToursQuery()
             ->when(! empty($args['continents'] ?? []), fn ($query) => $query->whereIn('continent_name', $args['continents']))
             ->when(! empty($args['countries'] ?? []), fn ($query) => $query->whereIn('country_name', $args['countries']))
             ->when(($args['duration_min'] ?? 0) > 0, fn ($query) => $query->where('duration_days', '>=', $args['duration_min']))
             ->when(($args['duration_max'] ?? 0) > 0, fn ($query) => $query->where('duration_days', '<=', $args['duration_max']))
             ->when(($args['price_min'] ?? 0) > 0, fn ($query) => $query->where('showprice', '>=', $args['price_min']))
             ->when(($args['price_max'] ?? 0) > 0, fn ($query) => $query->where('showprice', '<=', $args['price_max']))
+            ->when($keywords !== '', fn ($query) => $this->applyTourKeywordsFilter($query, $keywords))
             ->limit(5)
             ->get();
 
@@ -240,6 +255,43 @@ class ChatbotAgent implements Agent, Conversational
         |----|------|------|---------------|-------------|--------------|-------|
         {$rows}
         CONTEXT;
+    }
+
+    /**
+     * @return Builder<Tour>
+     */
+    private function availableToursQuery(): Builder
+    {
+        if ($this->company->type === CompanyType::AGENT) {
+            $agentTourIds = $this->company->agentTours()
+                ->where('status', TourStatus::ACTIVE)
+                ->pluck('tour_id');
+
+            return Tour::query()->where(function (Builder $query) use ($agentTourIds): void {
+                $query->where('company_id', $this->company->id)
+                    ->orWhereIn('id', $agentTourIds);
+            });
+        }
+
+        return Tour::query()->where('company_id', $this->company->id);
+    }
+
+    /**
+     * @param  Builder<Tour>  $query
+     */
+    private function applyTourKeywordsFilter($query, string $keywords): void
+    {
+        $term = '%'.addcslashes($keywords, '%_\\').'%';
+
+        $query->where(function ($query) use ($term): void {
+            $query->where('name', 'ilike', $term)
+                ->orWhere('code', 'ilike', $term)
+                ->orWhere('destination', 'ilike', $term)
+                ->orWhere('country_name', 'ilike', $term)
+                ->orWhere('region_name', 'ilike', $term)
+                ->orWhere('continent_name', 'ilike', $term)
+                ->orWhere('description', 'ilike', $term);
+        });
     }
 
     private function retrieveGeneralContext(array $args): string
@@ -282,15 +334,15 @@ class ChatbotAgent implements Agent, Conversational
             ->where('agent_id', $this->company->id)
             ->when(($args['tour_id'] ?? 0) > 0, fn ($query) => $query->where('tour_id', $args['tour_id']))
             ->orderByDesc('created_at')
-            ->limit(3)
+            ->limit(self::BOOKING_QUERY_RESULT_LIMIT)
             ->get();
 
         if ($bookings->isEmpty()) {
-            return '';
+            return 'No bookings found for this customer with this company.';
         }
 
         $rows = $bookings
-            ->map(fn (Booking $booking): string => "| {$booking->id} | {$booking->booking_number} | {$booking->tour?->name} | {$booking->departure_date} | {$booking->status} | {$booking->total_price} |")
+            ->map(fn (Booking $booking): string => "| {$booking->id} | {$booking->booking_number} | {$booking->tour?->name} | {$booking->departure_date} | {$this->formatBookingStatus($booking)} | {$booking->total_price} |")
             ->implode("\n");
 
         return <<<CONTEXT
@@ -325,7 +377,7 @@ class ChatbotAgent implements Agent, Conversational
         Booking details retrieved from system:
         | id | booking_number | tour_name | departure_date | status | total_price | pax_adult | pax_child | pax_infant | contact_name | contact_email |
         |----|----------------|-----------|----------------|--------|-------------|-----------|-----------|-----------|--------------|----------------|
-        | {$booking->id} | {$booking->booking_number} | {$booking->tour?->name} | {$booking->departure_date} | {$booking->status} | {$booking->total_price} | {$booking->pax_adult} | {$booking->pax_child} | {$booking->pax_infant} | {$booking->contact_name} | {$booking->contact_email} |
+        | {$booking->id} | {$booking->booking_number} | {$booking->tour?->name} | {$booking->departure_date} | {$this->formatBookingStatus($booking)} | {$booking->total_price} | {$booking->pax_adult} | {$booking->pax_child} | {$booking->pax_infant} | {$booking->contact_name} | {$booking->contact_email} |
         CONTEXT;
     }
 
@@ -564,9 +616,24 @@ class ChatbotAgent implements Agent, Conversational
             && $this->embeddingModelName !== '';
     }
 
+    private function formatBookingStatus(Booking $booking): string
+    {
+        $status = $booking->status;
+
+        if ($status instanceof BookingStatus) {
+            return $status->value;
+        }
+
+        return (string) ($status ?? '');
+    }
+
     private function toAiMessage(ChatMessage $chatMessage, bool $includeBotContext = false): Message
     {
         $content = $chatMessage->message;
+
+        if ($chatMessage->attachment_type === 'tour' && $chatMessage->attachment_data) {
+            $content .= "\n[Attached tour_id: {$chatMessage->attachment_data}]";
+        }
 
         if ($includeBotContext) {
             $context = data_get($chatMessage->meta, 'bot-context');
