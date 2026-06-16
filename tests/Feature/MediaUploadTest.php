@@ -11,20 +11,22 @@ test('image uploads are stored as webp variants', function () {
 
     $user = User::factory()->create();
 
-    $response = $this->actingAs($user)->post('/webapi/medias', [
-        'owner_id' => $user->id,
-        'owner_type' => User::class,
-        'name' => 'Profile photo',
-        'type' => 'image',
-        'subtype' => 'photo',
-        'data' => UploadedFile::fake()->image('profile.jpg', 900, 900),
-    ]);
+    $response = $this->actingAs($user)
+        ->withHeader('Accept', 'application/json')
+        ->post('/webapi/medias', [
+            'owner_id' => $user->id,
+            'owner_type' => User::class,
+            'name' => 'Profile photo',
+            'type' => 'image',
+            'subtype' => 'photo',
+            'data' => UploadedFile::fake()->image('profile.jpg', 900, 900),
+        ]);
 
     $response->assertSuccessful()
-        ->assertJsonPath('data.type', 'image')
-        ->assertJsonPath('data.subtype', 'photo');
+        ->assertJsonPath('type', 'image')
+        ->assertJsonPath('subtype', 'photo');
 
-    $files = $response->json('data.data.files');
+    $files = $response->json('data.files');
 
     expect($files)->not->toBeEmpty();
 
@@ -32,7 +34,7 @@ test('image uploads are stored as webp variants', function () {
         expect($file['url'])->toEndWith('.webp')
             ->and($file['media_type'])->toBe('image/webp');
 
-        Storage::disk('public')->assertExists(str_replace('/storage/', '', $file['url']));
+        Storage::disk('public')->assertExists(Media::storageKey($file['path']) ?? '');
     }
 });
 
@@ -41,21 +43,34 @@ test('document uploads keep original pdf media type', function () {
 
     $user = User::factory()->create();
 
-    $response = $this->actingAs($user)->post('/webapi/medias', [
-        'owner_id' => $user->id,
-        'owner_type' => User::class,
-        'name' => 'Tour document',
-        'type' => 'document',
-        'subtype' => 'tour-document',
-        'data' => UploadedFile::fake()->create('itinerary.pdf', 64, 'application/pdf'),
-    ]);
+    $response = $this->actingAs($user)
+        ->withHeader('Accept', 'application/json')
+        ->post('/webapi/medias', [
+            'owner_id' => $user->id,
+            'owner_type' => User::class,
+            'name' => 'Tour document',
+            'type' => 'document',
+            'subtype' => 'tour-document',
+            'data' => UploadedFile::fake()->create('itinerary.pdf', 64, 'application/pdf'),
+        ]);
 
     $response->assertSuccessful()
-        ->assertJsonPath('data.type', 'document')
-        ->assertJsonPath('data.subtype', 'tour-document')
-        ->assertJsonPath('data.data.media_type', 'application/pdf');
+        ->assertJsonPath('type', 'document')
+        ->assertJsonPath('subtype', 'tour-document')
+        ->assertJsonPath('data.media_type', 'application/pdf');
 
-    expect($response->json('data.data.url'))->toEndWith('.pdf');
+    expect($response->json('data.url'))->toEndWith('.pdf');
+});
+
+test('public disk uses s3 driver when FILESYSTEM_DISK is s3', function () {
+    config([
+        'filesystems.disks.public' => [
+            'driver' => 's3',
+            'bucket' => 'tb-media-main',
+        ],
+    ]);
+
+    expect(config('filesystems.disks.public.driver'))->toBe('s3');
 });
 
 test('media index filters image uploads by subtype', function () {
