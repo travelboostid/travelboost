@@ -1,10 +1,54 @@
 # Debugging
 
-Xdebug setup for Laravel in VS Code / Cursor (breakpoints, queues, listeners).
+Xdebug for local breakpoints, plus production log and Telescope guidance.
 
 Doc index: [README](../README.md)
 
 Use Xdebug when print debugging (`dd()`, logs) is awkward — especially for queued jobs, event listeners, and background workers.
+
+On production servers, start with `storage/logs/laravel.log`, Supervisor logs, and Telescope (exceptions only) — see [Production debugging](#production-debugging) below.
+
+## Production debugging
+
+### Laravel log
+
+```bash
+ssh travelboost@<server-ip>
+cd ~/travelboost
+tail -f storage/logs/laravel.log
+```
+
+If the file does not grow during web requests, PHP-FPM (`www-data`) may lack write permission. Typical symptom: chat (or any web route) returns **500** with `could not be opened in append mode: Permission denied` in the exception message.
+
+```bash
+ls -la storage/logs/
+sudo -u www-data test -w storage/logs/laravel.log && echo OK
+```
+
+Fix: [Deployment — Fix storage permissions](./deployment.md#fix-storage-permissions-when-needed).
+
+### Supervisor logs
+
+Queue worker, scheduler, and Reverb stdout (including queued `ChatMessageCreated` broadcast jobs):
+
+```text
+storage/logs/queue-worker.log
+storage/logs/reverb.log
+storage/logs/scheduler.log
+```
+
+Workers run as `travelboost` per `infra/supervisor/travelboost.conf`. Log files should be `travelboost:www-data`, not `root`.
+
+### Telescope (production)
+
+- URL: `https://travelboost.co.id/telescope` (or your app host + `/telescope`)
+- Access: users with the `user:admin` role (`TelescopeServiceProvider` gate)
+- **Filtered on production** (`app/Providers/TelescopeServiceProvider.php`): only reportable exceptions, failed requests, failed jobs, scheduled tasks, and monitored tags are stored — not successful HTTP requests
+- Do not expect chat `POST` history in Telescope on live; use `laravel.log` and the database (`chat_messages`) instead
+
+Locally (tunnel preset / `local` environment), Telescope records full request history.
+
+---
 
 ## Requirements
 
@@ -267,4 +311,4 @@ php artisan tinker --execute 'dump(App\Models\ChatMessage::where("is_bot", true)
 - `app/Listeners/ChatbotAutoReply.php` — listener entry
 - `app/Ai/Agents/ChatbotAgent.php` — `setup()` (conditions gate) and `reply()` (AI call)
 
-For the full flow, prerequisites, and common errors, see [Live Chat & Chatbot](./live-chat.md).
+For the full flow, prerequisites, and common errors (including **server error but message saved**), see [Live Chat & Chatbot](./live-chat.md).

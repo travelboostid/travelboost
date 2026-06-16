@@ -176,24 +176,38 @@ On live, user media is stored in S3 (`tb-media-dev`). The symlink is not require
 
 ## Configuring Permissions
 
-Configure ownership and permissions so Laravel, queues, and Caddy can access required directories properly.
+PHP-FPM (Caddy) runs as **`www-data`**. Queue workers, scheduler, and Reverb run as **`travelboost`** via Supervisor (`infra/supervisor/travelboost.conf`). Both users must be able to write to `storage/` and `bootstrap/cache/`.
 
 ```bash
 sudo usermod -aG www-data travelboost
 
 sudo chmod 711 /home/travelboost
 
-sudo chown -R travelboost:www-data /home/travelboost/travelboost/public
 sudo chown -R travelboost:www-data /home/travelboost/travelboost
 
 sudo find /home/travelboost/travelboost -type d -exec chmod 755 {} \;
 sudo find /home/travelboost/travelboost -type f -exec chmod 644 {} \;
 
+# Writable Laravel paths — must stay group-writable after the 644 pass above
 sudo chmod -R 775 /home/travelboost/travelboost/storage
 sudo chmod -R 775 /home/travelboost/travelboost/bootstrap/cache
 
+# Log files must be group-writable: 644 laravel.log breaks PHP-FPM logging (500s on web requests)
+sudo chmod -R g+w /home/travelboost/travelboost/storage/logs
+
+# New files/dirs inherit the www-data group
 sudo find /home/travelboost/travelboost -type d -exec chmod g+s {} \;
 ```
+
+Verify PHP-FPM can append to the log:
+
+```bash
+sudo -u www-data test -w /home/travelboost/travelboost/storage/logs/laravel.log && echo "laravel.log writable"
+```
+
+Supervisor log files (`storage/logs/queue-worker.log`, `reverb.log`, `scheduler.log`) should also be owned `travelboost:www-data`. If they are owned by `root`, Supervisor was started outside the repo config — run `sudo supervisorctl restart all` after linking `infra/supervisor/travelboost.conf`.
+
+See also [Deployment — restart services](./deployment.md#restart-services) for the post-deploy permission one-liner.
 
 ---
 
