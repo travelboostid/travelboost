@@ -19,14 +19,15 @@ export default function AnonymousUserContextProvider({
 }) {
     const { auth } = usePageSharedDataProps();
     const setup = useSetupAnonymousUser();
+    const { mutate, reset } = setup;
 
     useEffect(() => {
         if (!auth?.user) {
-            setup.mutate();
+            mutate();
         } else {
-            setup.reset();
+            reset();
         }
-    }, [auth, setup]);
+    }, [auth?.user, mutate, reset]);
 
     console.log('AnonymousUserContextProvider render', {
         auth,
