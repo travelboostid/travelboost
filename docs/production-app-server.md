@@ -266,16 +266,32 @@ sudo setcap CAP_NET_BIND_SERVICE=+eip $(which caddy)
 
 ## Starting the Server
 
-Start Caddy using the appropriate configuration file.
+Caddy runs as a **systemd service** on the VPS (`caddy.service`). Do **not** run `caddy start` while the service is active — it tries to bind the admin port `127.0.0.1:2019` and fails with `address already in use`.
 
-Production:
+Install the repo config into `/etc/caddy/Caddyfile`, then reload:
+
+Production (`tb-app-main`):
 
 ```bash
-caddy start --config ./infra/caddy/Caddyfile.main
+cd ~/travelboost
+sudo cp infra/caddy/Caddyfile.main /etc/caddy/Caddyfile
+sudo caddy validate --config /etc/caddy/Caddyfile
+sudo systemctl reload caddy
+ss -tlnp | grep -E ':80|:443'
 ```
 
-Development:
+Development (`tb-app-dev`):
 
 ```bash
-caddy start --config ./infra/caddy/Caddyfile.dev
+cd ~/travelboost
+sudo cp infra/caddy/Caddyfile.dev /etc/caddy/Caddyfile
+sudo caddy validate --config /etc/caddy/Caddyfile
+sudo systemctl reload caddy
+```
+
+If you must run Caddy manually (debug only), stop the service first:
+
+```bash
+sudo systemctl stop caddy
+caddy run --config ./infra/caddy/Caddyfile.main
 ```

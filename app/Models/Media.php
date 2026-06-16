@@ -69,4 +69,47 @@ class Media extends Model
             }
         });
     }
+
+    /** Storage key for Flysystem, e.g. `images/foo.webp` */
+    public static function storageKey(?string $path): ?string
+    {
+        if ($path === null || $path === '') {
+            return null;
+        }
+
+        $key = ltrim($path, '/');
+
+        return $key !== '' ? $key : null;
+    }
+
+    /** Public path stored in media JSON, e.g. `/images/foo.webp` */
+    public static function publicPath(string $storageKey): string
+    {
+        return '/'.ltrim($storageKey, '/');
+    }
+
+    public static function storagePathFromUrl(?string $url): ?string
+    {
+        if ($url === null || $url === '') {
+            return null;
+        }
+
+        $path = ltrim((string) parse_url($url, PHP_URL_PATH), '/');
+
+        if ($path === '') {
+            return null;
+        }
+
+        $bucket = (string) config('filesystems.disks.public.bucket');
+
+        if ($bucket !== '' && str_starts_with($path, $bucket.'/')) {
+            $path = substr($path, strlen($bucket) + 1);
+        }
+
+        if (str_starts_with($path, 'storage/')) {
+            $path = substr($path, 8);
+        }
+
+        return $path !== '' ? $path : null;
+    }
 }

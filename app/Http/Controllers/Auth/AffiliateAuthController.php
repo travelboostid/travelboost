@@ -192,7 +192,7 @@ class AffiliateAuthController extends Controller
             'type' => 'document',
             'subtype' => 'identity-card',
             'data' => [
-                'path' => $path,
+                'path' => Media::publicPath($path),
                 'url' => Storage::disk('public')->url($path),
                 'size' => Storage::disk('public')->size($path),
                 'media_type' => $file->getClientMimeType(),

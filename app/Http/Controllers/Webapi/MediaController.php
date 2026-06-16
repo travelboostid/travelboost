@@ -179,7 +179,7 @@ class MediaController extends Controller
                 'code' => $variant['code'],
                 'width' => $clone->width(),
                 'height' => $clone->height(),
-                'path' => $path,
+                'path' => Media::publicPath($path),
                 'url' => Storage::disk('public')->url($path),
                 'size' => Storage::disk('public')->size($path),
                 'media_type' => 'image/webp',
@@ -201,7 +201,7 @@ class MediaController extends Controller
         Storage::disk('public')->putFileAs('media/documents', $file, $filename);
 
         return [
-            'path' => $path,
+            'path' => Media::publicPath($path),
             'url' => Storage::disk('public')->url($path),
             'size' => Storage::disk('public')->size($path),
             'media_type' => $file->getClientMimeType(),
@@ -220,7 +220,7 @@ class MediaController extends Controller
         Storage::disk('public')->putFileAs('media/raw', $file, $filename);
 
         return [
-            'path' => $path,
+            'path' => Media::publicPath($path),
             'url' => Storage::disk('public')->url($path),
             'size' => Storage::disk('public')->size($path),
             'media_type' => $file->getClientMimeType(),

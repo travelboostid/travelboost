@@ -13,8 +13,8 @@ Doc index: [README](../README.md)
 - **Server**: LAMP, WAMP, XAMPP, Laravel Herd, or equivalent
 - **SSH**: Pre-installed on most systems; install if needed
 - **PostgreSQL**: v18 with pgvector extension
-- **Node.js**: Required for frontend tooling and Vite builds
-- **PNPM**: Required for frontend dependency management
+- **Node.js**: Required for frontend tooling and Vite builds — install via [nvm](#nodejs-nvm) (recommended)
+- **PNPM**: Required for frontend dependency management — install via npm after Node.js ([nvm](#nodejs-nvm))
 - **AWS CLI v2**: Required for S3 bucket inspection and media debugging — see [Object Storage (S3)](./object-storage.md)
 
 Verify PHP extensions:
@@ -111,21 +111,38 @@ Download:
 https://filezilla-project.org/
 ```
 
-- **Node.js**
+### Node.js (nvm)
 
-Download:
-
-```text
-https://nodejs.org/
-```
-
-- **PNPM**
-
-Install globally:
+Install [nvm](https://github.com/nvm-sh/nvm) (Node Version Manager), then install the latest Node.js release (includes npm):
 
 ```bash
-npm install -g pnpm
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
 ```
+
+Reload your shell (or open a new terminal):
+
+```bash
+source ~/.bashrc   # bash
+# source ~/.zshrc  # zsh
+```
+
+Install and use the latest Node.js, then install PNPM globally via npm:
+
+```bash
+nvm install node
+nvm use node
+node -v
+npm -v
+
+npm install -g pnpm
+pnpm -v
+```
+
+`nvm install node` tracks the [current release](https://github.com/nvm-sh/nvm#usage) from nodejs.org. To pin a version later: `nvm install 22` then `nvm use 22`.
+
+Official docs: [github.com/nvm-sh/nvm](https://github.com/nvm-sh/nvm)
+
+On **Windows**, use [WSL](https://learn.microsoft.com/en-us/windows/wsl/) and follow the steps above, or [nvm-windows](https://github.com/coreybutler/nvm-windows) as a separate tool.
 
 - **AWS CLI v2**
 

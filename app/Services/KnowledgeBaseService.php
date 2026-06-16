@@ -26,15 +26,15 @@ class KnowledgeBaseService
             return false;
         }
 
-        $relativePath = is_string($media->data['path'] ?? null)
-            ? $media->data['path']
-            : $this->relativePathFromUrl((string) $media->data['url']);
+        $storageKey = is_string($media->data['path'] ?? null)
+            ? Media::storageKey($media->data['path'])
+            : Media::storagePathFromUrl((string) $media->data['url']);
 
-        if ($relativePath === null || ! Storage::disk('public')->exists($relativePath)) {
+        if ($storageKey === null || ! Storage::disk('public')->exists($storageKey)) {
             return false;
         }
 
-        $text = $this->readPdfAsPlainText(Storage::disk('public')->get($relativePath));
+        $text = $this->readPdfAsPlainText(Storage::disk('public')->get($storageKey));
         $text = $this->cleanText($text);
         $chunks = collect(
             $this->splitText($text, 1200, '.', 150)
@@ -79,27 +79,6 @@ class KnowledgeBaseService
         $parser = new Parser;
 
         return $parser->parseContent($contents)->getText();
-    }
-
-    private function relativePathFromUrl(string $url): ?string
-    {
-        $path = ltrim((string) parse_url($url, PHP_URL_PATH), '/');
-
-        if ($path === '') {
-            return null;
-        }
-
-        $bucket = (string) config('filesystems.disks.public.bucket');
-
-        if ($bucket !== '' && str_starts_with($path, $bucket.'/')) {
-            $path = substr($path, strlen($bucket) + 1);
-        }
-
-        if (str_starts_with($path, 'storage/')) {
-            $path = substr($path, 8);
-        }
-
-        return $path !== '' ? $path : null;
     }
 
     private function splitText(string $text, int $maxLength = 1000, string $separator = ' ', int $wordOverlap = 0, bool $keepSeparator = false): array

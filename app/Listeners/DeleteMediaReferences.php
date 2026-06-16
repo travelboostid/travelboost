@@ -14,17 +14,8 @@ class DeleteMediaReferences implements ShouldQueue
 {
     use InteractsWithQueue;
 
-    /**
-     * Create the event listener.
-     */
-    public function __construct()
-    {
-        //
-    }
+    public bool $deleteWhenMissingModels = true;
 
-    /**
-     * Handle the event.
-     */
     public function handle(MediaDeleting $event): void
     {
         $media = $event->media;
@@ -42,25 +33,31 @@ class DeleteMediaReferences implements ShouldQueue
         switch ($media->type) {
             case MediaType::IMAGE:
                 foreach ($media->data['files'] ?? [] as $file) {
-                    $this->deleteByUrl($file['url']);
+                    $this->deleteStoredFile(
+                        is_string($file['path'] ?? null) ? $file['path'] : null,
+                        is_string($file['url'] ?? null) ? $file['url'] : null,
+                    );
                 }
                 break;
 
             case MediaType::DOCUMENT:
             case MediaType::RAW:
-                $this->deleteByUrl($media->data['url'] ?? null);
+                $this->deleteStoredFile(
+                    is_string($media->data['path'] ?? null) ? $media->data['path'] : null,
+                    is_string($media->data['url'] ?? null) ? $media->data['url'] : null,
+                );
                 break;
         }
     }
 
-    private function deleteByUrl(?string $url): void
+    private function deleteStoredFile(?string $path, ?string $url): void
     {
-        if (! $url) {
+        $storageKey = Media::storageKey($path) ?? Media::storagePathFromUrl($url);
+
+        if ($storageKey === null) {
             return;
         }
 
-        $path = str_replace('/storage/', '', parse_url($url, PHP_URL_PATH));
-
-        Storage::disk('public')->delete($path);
+        Storage::disk('public')->delete($storageKey);
     }
 }
