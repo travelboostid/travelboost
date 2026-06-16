@@ -114,9 +114,9 @@ export const Hero3ComponentConfig: ComponentConfig<Hero3ComponentProps> = {
                             {header}
                         </h1>
 
-                        <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto text-balance leading-relaxed">
+                        <div className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto text-balance leading-relaxed">
                             {description}
-                        </p>
+                        </div>
 
                         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-8">
                             {actions.map(
