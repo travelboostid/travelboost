@@ -26,24 +26,27 @@ When a user sends a message:
 
 1. The frontend calls `POST /webapi/chat/rooms/{roomId}/messages`.
 2. Laravel creates a `ChatMessage` record.
-3. The model dispatches `ChatMessageCreated` (also broadcast via Reverb).
-4. The `ChatbotAutoReply` listener handles the event and calls `ChatbotAgent::make($message)->reply()`.
+3. The model dispatches `ChatMessageCreated`.
+4. **`ChatbotAutoReply` runs synchronously** in that same HTTP request and calls `ChatbotAgent::make($message)->reply()`.
 5. If all conditions are met, the agent generates a reply and creates a bot `ChatMessage` (`is_bot = true`).
-6. That bot message also dispatches `ChatMessageCreated`, which is broadcast to room members.
-7. The frontend Echo listener in `resources/js/components/chat/state.tsx` upserts the message into the Zustand chat store.
+6. Each `ChatMessageCreated` is **queued for broadcast** (`ShouldBroadcast`); the queue worker pushes events to Reverb.
+7. The frontend Echo listener in `resources/js/components/chat/state.tsx` upserts messages into the Zustand chat store (from the POST response and/or Reverb).
 
 ```text
 User sends message
-  → ChatMessageController::store
+  → POST /webapi/chat/rooms/{roomId}/messages
   → ChatMessage created
-  → ChatMessageCreated event
-      → ChatbotAutoReply listener
+  → ChatMessageCreated event (same request)
+      → ChatbotAutoReply listener (sync — blocks until AI finishes)
           → ChatbotAgent::reply()
               → AI completion + optional embedding lookup
-              → bot ChatMessage created
-      → Reverb broadcast to users.{id} / anonymous-users.{id}
-  → Frontend Echo listener updates chat UI
+              → bot ChatMessage created → another ChatMessageCreated
+      → Broadcast job queued (queue worker → Reverb)
+  → HTTP response with user ChatMessageResource
+  → Frontend Echo listener may upsert messages before/after POST completes
 ```
+
+The POST can take **10–30+ seconds** when the chatbot is enabled because AI generation runs before the response returns.
 
 ---
 
@@ -210,7 +213,29 @@ If you still see this error after updating, pull the latest code.
 
 ### Bot reply is slow
 
-Auto-reply runs **synchronously** in the `ChatbotAutoReply` listener during the request lifecycle. The agent may call the LLM twice (intent detection + reply) and optionally generate embeddings for knowledge-base lookup. A reply can take several seconds. The user's message returns immediately; the bot message arrives via Reverb when generation completes.
+Auto-reply runs **synchronously** in the `ChatbotAutoReply` listener during the HTTP request. The agent may call the LLM twice (intent detection + reply) and optionally generate embeddings for knowledge-base lookup. Expect **10–30+ seconds** before the POST completes when the chatbot is enabled. The bot message is usually created before the response returns; Reverb may also deliver it to other room members via the queued broadcast.
+
+### Server error toast, but the message appears
+
+Common causes:
+
+1. **`storage/logs/laravel.log` not writable by PHP-FPM** (`www-data`). The message is saved to the database, but logging in `ChatMessageController::store` (or exception handling) fails with `Permission denied` and the client sees a **500 Server Error**. Fix permissions on the server:
+
+    ```bash
+    sudo chown -R travelboost:www-data storage bootstrap/cache
+    sudo chmod -R 775 storage bootstrap/cache
+    sudo chmod -R g+w storage/logs
+    ```
+
+    See [Deployment — Fix storage permissions](./deployment.md#fix-storage-permissions-when-needed).
+
+2. **Duplicate sends** — slow POST + error toast may cause the user to retry; check for repeated identical messages in `chat_messages`.
+
+3. **Reverb broadcast ahead of POST** — queued `ChatMessageCreated` broadcast can upsert the message in the UI via Echo while the POST is still waiting on the chatbot.
+
+### Cannot read Laravel logs on production
+
+If `tail storage/logs/laravel.log` shows nothing new while chat is active, check file ownership and mode (`ls -la storage/logs/`). Log files owned by `root` or mode `644` often mean PHP-FPM cannot write. Supervisor logs are separate: `storage/logs/queue-worker.log`, `reverb.log`, `scheduler.log`.
 
 ### Anonymous users on landing pages
 

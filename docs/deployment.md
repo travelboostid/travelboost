@@ -172,3 +172,17 @@ sudo supervisorctl restart all
 ```
 
 Restarts queue workers, scheduler, and Reverb with the new code.
+
+### Fix storage permissions (when needed)
+
+Web requests run as `www-data` (PHP-FPM); workers run as `travelboost` (Supervisor). If `storage/logs/laravel.log` is mode `644`, PHP-FPM cannot append and web requests may return **500** (`Permission denied` in logs) even when the database write succeeded — common after chat message sends.
+
+```bash
+cd ~/travelboost
+sudo chown -R travelboost:www-data storage bootstrap/cache
+sudo chmod -R 775 storage bootstrap/cache
+sudo chmod -R g+w storage/logs
+sudo -u www-data test -w storage/logs/laravel.log && echo "OK"
+```
+
+Full first-time setup: [Production App Server — Configuring Permissions](./production-app-server.md#configuring-permissions).

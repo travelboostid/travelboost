@@ -1,6 +1,7 @@
 import { useGetTourCategories } from '@/api/tour-category/tour-category';
 import CompanyDashboardLayout from '@/components/layouts/company-dashboard';
 import { MediaPicker } from '@/components/media-picker';
+import { TourMediaImage } from '@/components/tours/tour-media-image';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -41,7 +42,7 @@ import {
 } from '@/components/ui/table';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
-import { extractDocumentUrl, extractImageSrc } from '@/lib/utils';
+import { extractDocumentUrl } from '@/lib/utils';
 import { router, usePage } from '@inertiajs/react';
 import {
     flexRender,
@@ -154,10 +155,6 @@ function RowActions({ row }: { row: any }) {
         );
     };
 
-    const imageSrc = tour?.image
-        ? extractImageSrc(tour.image as any).src
-        : 'https://placehold.co/800x400/e2e8f0/94a3b8?text=No+Image';
-
     return (
         <div className="flex items-center justify-end">
             <Dialog>
@@ -194,8 +191,9 @@ function RowActions({ row }: { row: any }) {
 
                 <DialogContent className="max-w-3xl p-0 overflow-hidden border-none shadow-2xl bg-slate-50 rounded-2xl">
                     <div className="relative h-64 w-full">
-                        <img
-                            src={imageSrc}
+                        <TourMediaImage
+                            media={tour?.image as any}
+                            fallbackSrc="https://placehold.co/800x400/e2e8f0/94a3b8?text=No+Image"
                             alt={
                                 tour?.name ||
                                 intl.formatMessage({
@@ -736,22 +734,16 @@ function getColumns(intl: IntlShape): ColumnDef<any>[] {
         {
             id: 'image',
             header: () => <FormattedMessage defaultMessage="Cover Image" />,
-            cell: ({ row }) => {
-                const image = row.original.tour?.image;
-                const src = image
-                    ? extractImageSrc(image as any).src
-                    : 'https://placehold.co/400x300/f8fafc/94a3b8?text=No+Image';
-
-                return (
-                    <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm w-20 h-12 flex items-center justify-center shrink-0">
-                        <img
-                            src={src}
-                            alt={intl.formatMessage({ defaultMessage: 'Tour' })}
-                            className="w-full h-full object-cover"
-                        />
-                    </div>
-                );
-            },
+            cell: ({ row }) => (
+                <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm w-20 h-12 flex items-center justify-center shrink-0">
+                    <TourMediaImage
+                        media={row.original.tour?.image as any}
+                        fallbackSrc="https://placehold.co/400x300/f8fafc/94a3b8?text=No+Image"
+                        alt={intl.formatMessage({ defaultMessage: 'Tour' })}
+                        className="w-full h-full object-cover"
+                    />
+                </div>
+            ),
             enableSorting: false,
         },
         {

@@ -3,6 +3,7 @@ import type { MediaResource } from '@/api/model';
 import InputError from '@/components/input-error';
 import CompanyDashboardLayout from '@/components/layouts/company-dashboard';
 import { MediaPicker } from '@/components/media-picker';
+import { TourMediaImage } from '@/components/tours/tour-media-image';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -24,7 +25,6 @@ import {
 import { Spinner } from '@/components/ui/spinner';
 import { Textarea } from '@/components/ui/textarea';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
-import { extractImageSrc } from '@/lib/utils';
 import { Form } from '@inertiajs/react';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { toast } from 'sonner';
@@ -85,16 +85,18 @@ export default function Page({ tour }: Props) {
                                 >
                                     {(media, change) => (
                                         <div className="flex flex-col items-center justify-items-center gap-2">
-                                            <img
-                                                className="aspect-video max-w-[360px] rounded object-cover shadow"
-                                                src={
-                                                    typeof media === 'string'
-                                                        ? media
-                                                        : extractImageSrc(
-                                                              media as any,
-                                                          ).src
-                                                }
-                                            />
+                                            {typeof media === 'string' ? (
+                                                <img
+                                                    className="aspect-video max-w-[360px] rounded object-cover shadow"
+                                                    src={media}
+                                                    alt=""
+                                                />
+                                            ) : (
+                                                <TourMediaImage
+                                                    media={media as any}
+                                                    className="aspect-video max-w-[360px] rounded object-cover shadow"
+                                                />
+                                            )}
                                             <input
                                                 type="hidden"
                                                 name="image_id"

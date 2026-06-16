@@ -557,13 +557,14 @@ function FavoriteCard({
 }) {
     const imageMedia = tour.image as any;
     const hasImage = Boolean(imageMedia?.data?.files?.length);
-    const image = extractImageSrc(imageMedia).src;
+    const { src, srcSet } = extractImageSrc(imageMedia);
 
     return (
         <div className="group overflow-hidden rounded-2xl border bg-card shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md">
             <div className="grid gap-0 sm:grid-cols-[160px_1fr]">
                 <TourImage
-                    image={image}
+                    src={src}
+                    srcSet={srcSet}
                     label={tour.name}
                     hasImage={hasImage}
                 />
@@ -620,7 +621,7 @@ function BookingCard({
     const status = normalizeStatus(booking.status);
     const imageMedia = booking.tour?.image as any;
     const hasImage = Boolean(imageMedia?.data?.files?.length);
-    const image = extractImageSrc(imageMedia).src;
+    const { src, srcSet } = extractImageSrc(imageMedia);
     const action = getBookingAction(booking, activeTab);
     const paidProgressStatuses = [
         'waiting payment approval',
@@ -726,7 +727,8 @@ function BookingCard({
         >
             <div className="grid items-stretch gap-0 md:min-h-[16rem] md:grid-cols-[220px_minmax(0,1fr)] lg:grid-cols-[280px_minmax(0,1fr)_320px] 2xl:grid-cols-[300px_minmax(0,1fr)_320px]">
                 <TourImage
-                    image={image}
+                    src={src}
+                    srcSet={srcSet}
                     label={booking.tour?.name ?? 'Tour'}
                     hasImage={hasImage}
                     landscape
@@ -1146,12 +1148,14 @@ function TripMetadataItem({
 }
 
 function TourImage({
-    image,
+    src,
+    srcSet,
     label,
     hasImage,
     landscape = false,
 }: {
-    image?: string;
+    src?: string;
+    srcSet?: string;
     label: string;
     hasImage: boolean;
     landscape?: boolean;
@@ -1164,11 +1168,12 @@ function TourImage({
         ? 'flex h-40 w-full items-center justify-center overflow-hidden bg-primary/10 px-3 text-center text-2xl font-bold text-primary md:h-full md:min-h-40'
         : 'flex h-36 items-center justify-center overflow-hidden bg-primary/10 px-3 text-center text-2xl font-bold text-primary md:h-full md:min-h-40';
 
-    if (hasImage && image) {
+    if (hasImage && src) {
         return (
             <div className={frameClassName}>
                 <img
-                    src={image}
+                    src={src}
+                    srcSet={srcSet || undefined}
                     alt={label}
                     className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                 />
