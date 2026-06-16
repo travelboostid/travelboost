@@ -50,10 +50,12 @@ export default function PaymentsPage({ data }: PaymentsPageProps) {
                         aria-label="Select all"
                     />
                 ),
-                cell: ({ row }) => (
+                cell: ({ row: _row }) => (
                     <Checkbox
-                        checked={row.getIsSelected()}
-                        onCheckedChange={(value) => row.toggleSelected(!!value)}
+                        checked={_row.getIsSelected()}
+                        onCheckedChange={(value) =>
+                            _row.toggleSelected(!!value)
+                        }
                         aria-label="Select row"
                     />
                 ),
@@ -150,7 +152,7 @@ export default function PaymentsPage({ data }: PaymentsPageProps) {
             },
             {
                 id: 'actions',
-                cell: ({ row }) => {
+                cell: ({ row: _row }) => {
                     return <div className="flex gap-2">actions</div>;
                 },
                 size: 32,

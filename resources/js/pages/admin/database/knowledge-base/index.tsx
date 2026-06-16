@@ -11,7 +11,7 @@ import { CalendarIcon } from 'lucide-react';
 import { useMemo } from 'react';
 import { EmptyKnowledgeBases } from './components/empty-knowledge-bases';
 
-const STATUS_OPTIONS = [
+const _STATUS_OPTIONS = [
     { label: 'Active', value: 'active' },
     { label: 'Inactive', value: 'inactive' },
     { label: 'Suspended', value: 'suspended' },
@@ -45,10 +45,12 @@ export default function KnowledgeBasePage({ data }: KnowledgeBasePageProps) {
                         aria-label="Select all"
                     />
                 ),
-                cell: ({ row }) => (
+                cell: ({ row: _row }) => (
                     <Checkbox
-                        checked={row.getIsSelected()}
-                        onCheckedChange={(value) => row.toggleSelected(!!value)}
+                        checked={_row.getIsSelected()}
+                        onCheckedChange={(value) =>
+                            _row.toggleSelected(!!value)
+                        }
                         aria-label="Select row"
                     />
                 ),
@@ -97,7 +99,7 @@ export default function KnowledgeBasePage({ data }: KnowledgeBasePageProps) {
             },
             {
                 id: 'actions',
-                cell: ({ row }) => {
+                cell: ({ row: _row }) => {
                     return <div></div>;
                 },
                 size: 32,

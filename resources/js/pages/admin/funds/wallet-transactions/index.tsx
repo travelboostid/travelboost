@@ -41,10 +41,12 @@ export default function WalletTransactionsPage({
                         aria-label="Select all"
                     />
                 ),
-                cell: ({ row }) => (
+                cell: ({ row: _row }) => (
                     <Checkbox
-                        checked={row.getIsSelected()}
-                        onCheckedChange={(value) => row.toggleSelected(!!value)}
+                        checked={_row.getIsSelected()}
+                        onCheckedChange={(value) =>
+                            _row.toggleSelected(!!value)
+                        }
                         aria-label="Select row"
                     />
                 ),
@@ -61,8 +63,8 @@ export default function WalletTransactionsPage({
                         label="Wallet Owner"
                     />
                 ),
-                cell: ({ row }) => (
-                    <div>{row.original.wallet?.holder?.name ?? '-'}</div>
+                cell: ({ row: _row }) => (
+                    <div>{_row.original.wallet?.holder?.name ?? '-'}</div>
                 ),
                 meta: {
                     label: 'Owner',
@@ -95,8 +97,8 @@ export default function WalletTransactionsPage({
                 header: ({ column }) => (
                     <DataTableColumnHeader column={column} label="Wallet" />
                 ),
-                cell: ({ row }) => (
-                    <div>{row.original.wallet?.name ?? '-'}</div>
+                cell: ({ row: _row }) => (
+                    <div>{_row.original.wallet?.name ?? '-'}</div>
                 ),
             },
             {
@@ -143,7 +145,7 @@ export default function WalletTransactionsPage({
             },
             {
                 id: 'actions',
-                cell: ({ row }) => {
+                cell: ({ row: _row }) => {
                     return <div className="flex gap-2">actions</div>;
                 },
                 size: 32,

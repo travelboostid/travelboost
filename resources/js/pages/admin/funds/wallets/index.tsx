@@ -40,10 +40,12 @@ export default function WalletsPage({ data }: WalletsPageProps) {
                         aria-label="Select all"
                     />
                 ),
-                cell: ({ row }) => (
+                cell: ({ row: _row }) => (
                     <Checkbox
-                        checked={row.getIsSelected()}
-                        onCheckedChange={(value) => row.toggleSelected(!!value)}
+                        checked={_row.getIsSelected()}
+                        onCheckedChange={(value) =>
+                            _row.toggleSelected(!!value)
+                        }
                         aria-label="Select row"
                     />
                 ),
@@ -57,8 +59,8 @@ export default function WalletsPage({ data }: WalletsPageProps) {
                 header: ({ column }) => (
                     <DataTableColumnHeader column={column} label="Holder" />
                 ),
-                cell: ({ row }) => (
-                    <div>{row.original.holder?.name ?? '-'}</div>
+                cell: ({ row: _row }) => (
+                    <div>{_row.original.holder?.name ?? '-'}</div>
                 ),
                 meta: {
                     label: 'Holder',
@@ -92,14 +94,14 @@ export default function WalletsPage({ data }: WalletsPageProps) {
                 header: ({ column }) => (
                     <DataTableColumnHeader column={column} label="Name" />
                 ),
-                cell: ({ row }) => (
+                cell: ({ row: _row }) => (
                     <div>
                         <div>
-                            {row.original.name ?? '-'} (
-                            {row.original.slug ?? '-'})
+                            {_row.original.name ?? '-'} (
+                            {_row.original.slug ?? '-'})
                         </div>
                         <div className="text-sm text-muted-foreground">
-                            {row.original.description ?? '-'}
+                            {_row.original.description ?? '-'}
                         </div>
                     </div>
                 ),
@@ -143,7 +145,7 @@ export default function WalletsPage({ data }: WalletsPageProps) {
             },
             {
                 id: 'actions',
-                cell: ({ row }) => {
+                cell: ({ row: _row }) => {
                     return <div className="flex gap-2">actions</div>;
                 },
                 size: 32,

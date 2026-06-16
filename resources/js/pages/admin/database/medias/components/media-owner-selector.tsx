@@ -99,7 +99,10 @@ export default function MediaOwnerSelector({
                     <CommandInput
                         placeholder="Search owners..."
                         onValueChange={(v) =>
-                            debouncedSetQueryParams((v) => ({ ...v, query: v }))
+                            debouncedSetQueryParams((_v) => ({
+                                ...v,
+                                query: v,
+                            }))
                         }
                     />
                     {query.isLoading && <CommandEmpty>Loading...</CommandEmpty>}

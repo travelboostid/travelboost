@@ -8,8 +8,6 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import type { SharedData } from '@/types';
-import { usePage } from '@inertiajs/react';
 
 interface SelectCategoryProps {
     name?: string;
@@ -24,7 +22,6 @@ export default function SelectCategory({
     defaultValue,
     onChange,
 }: SelectCategoryProps) {
-    const page = usePage<SharedData>();
     const { data, isLoading } = useGetTrips({
         duration_max,
     });

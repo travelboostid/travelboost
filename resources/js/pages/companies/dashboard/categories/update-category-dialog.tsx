@@ -70,7 +70,7 @@ export default function UpdateCategoryDialog({
                     category.manual_reserved_limit_unit ?? 'hour',
             });
         }
-    }, [category, open]);
+    }, [category, form, open]);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();

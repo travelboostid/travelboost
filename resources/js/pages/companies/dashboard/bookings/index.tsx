@@ -500,8 +500,6 @@ function PaymentDetailCell({
     detail: PaymentDetail | null;
     onViewReceipt: (detail: PaymentDetail) => void;
 }) {
-    const intl = useIntl();
-
     if (!detail) {
         return <span className="text-slate-400">—</span>;
     }

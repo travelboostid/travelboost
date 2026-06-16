@@ -285,6 +285,7 @@ export default function Page({ data }: { data: any }) {
         [],
     );
 
+    // eslint-disable-next-line react-hooks/incompatible-library
     const table = useReactTable({
         data,
         columns,

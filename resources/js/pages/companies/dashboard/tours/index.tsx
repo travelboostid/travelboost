@@ -764,6 +764,7 @@ export default function Page({ data, bookingDeadlineDays = 0 }: PageProps) {
         );
     };
 
+    // eslint-disable-next-line react-hooks/incompatible-library
     const table = useReactTable({
         data: filteredData,
         columns,
