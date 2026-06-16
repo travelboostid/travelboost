@@ -259,6 +259,7 @@ export const columns: ColumnDef<TourCategoryWithManualReservedLimit>[] = [
 export default function Page({ data }: { data: any }) {
     const intl = useIntl();
     const { errors } = usePage().props as any;
+    const { company } = usePageSharedDataProps();
     const [sorting, setSorting] = React.useState<SortingState>([]);
     const [columnFilters, setColumnFilters] =
         React.useState<ColumnFiltersState>([]);
@@ -287,7 +288,13 @@ export default function Page({ data }: { data: any }) {
 
     const table = useReactTable({
         data,
-        columns,
+        columns:
+            company?.type === 'agent'
+                ? columns.filter(
+                      (col: any) =>
+                          col.accessorKey !== 'manual_reserved_limit_value',
+                  )
+                : columns,
         onSortingChange: setSorting,
         onColumnFiltersChange: setColumnFilters,
         onColumnVisibilityChange: setColumnVisibility,
