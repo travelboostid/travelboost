@@ -3,10 +3,10 @@ import { DataTable } from '@/components/data-table/data-table';
 import { DataTableColumnHeader } from '@/components/data-table/data-table-column-header';
 import { DataTableToolbar } from '@/components/data-table/data-table-toolbar';
 import AdminDashboardLayout from '@/components/layouts/admin-dashboard';
+import { TourMediaImage } from '@/components/tours/tour-media-image';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useDataTable } from '@/hooks/use-data-table';
-import { extractImageSrc } from '@/lib/utils';
 import type { Option } from '@/types/data-table';
 import type { ColumnDef } from '@tanstack/react-table';
 import dayjs from 'dayjs';
@@ -174,16 +174,13 @@ export default function TourProductsPage({
             },
             {
                 header: 'Image',
-                cell: ({ row }) => {
-                    const { src } = extractImageSrc(row.original.image as any);
-                    return (
-                        <img
-                            src={src}
-                            className="aspect-video w-16 rounded object-cover"
-                            alt={row.original.name}
-                        />
-                    );
-                },
+                cell: ({ row }) => (
+                    <TourMediaImage
+                        media={row.original.image as any}
+                        className="aspect-video w-16 rounded object-cover"
+                        alt={row.original.name}
+                    />
+                ),
                 enableSorting: false,
             },
             {

@@ -1,3 +1,4 @@
+import { TourMediaImage } from '@/components/tours/tour-media-image';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -12,7 +13,7 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { extractImageSrc, formatIDR } from '@/lib/utils';
+import { formatIDR } from '@/lib/utils';
 import { edit } from '@/routes/admin/tours/products';
 import { Link } from '@inertiajs/react';
 import dayjs from 'dayjs';
@@ -49,7 +50,7 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 
 export function TourProductRowActions({ tour }: { tour: AdminTourProductRow }) {
     const [detailsOpen, setDetailsOpen] = useState(false);
-    const imageSrc = tour.image ? extractImageSrc(tour.image as any).src : null;
+    const hasImage = Boolean(tour.image);
 
     return (
         <>
@@ -93,9 +94,9 @@ export function TourProductRowActions({ tour }: { tour: AdminTourProductRow }) {
                         <DialogTitle>Tour product details</DialogTitle>
                     </DialogHeader>
                     <div className="space-y-5 py-1">
-                        {imageSrc ? (
-                            <img
-                                src={imageSrc}
+                        {hasImage ? (
+                            <TourMediaImage
+                                media={tour.image as any}
                                 alt={tour.name}
                                 className="aspect-video w-full max-w-sm rounded-lg border object-cover"
                             />

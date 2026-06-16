@@ -1,3 +1,4 @@
+import { TourMediaImage } from '@/components/tours/tour-media-image';
 import { Badge } from '@/components/ui/badge';
 import {
     Dialog,
@@ -7,15 +8,11 @@ import {
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui/dialog';
-import { extractImageSrc } from '@/lib/utils';
 import { FormattedMessage, useIntl } from 'react-intl';
 
 export default function TourDetailDialog({ children, tour }: any) {
     const intl = useIntl();
     const t = tour.tour || tour;
-    const image = t.image
-        ? extractImageSrc(t.image).src
-        : 'https://placehold.co/600x400/e2e8f0/94a3b8?text=No+Image';
 
     const destinationParts = [
         t.continent?.name || t.continent,
@@ -49,8 +46,9 @@ export default function TourDetailDialog({ children, tour }: any) {
                 </DialogHeader>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-2">
                     <div className="overflow-hidden rounded-xl border border-border shadow-sm">
-                        <img
-                            src={image}
+                        <TourMediaImage
+                            media={t.image}
+                            fallbackSrc="https://placehold.co/600x400/e2e8f0/94a3b8?text=No+Image"
                             alt={t.name}
                             className="w-full h-auto object-cover aspect-video"
                         />

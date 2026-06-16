@@ -123,7 +123,9 @@ export default function BookingPaymentResult({
     const copy = getResultCopy(result);
     const Icon = copy.icon;
     const hasImage = Boolean((result.image as any)?.data?.files?.length);
-    const image = hasImage ? extractImageSrc(result.image as any).src : '';
+    const { src, srcSet } = hasImage
+        ? extractImageSrc(result.image as any)
+        : { src: '', srcSet: '' };
     const dateRange =
         result.departureDate && result.returnDate
             ? `${safeDate(result.departureDate)} - ${safeDate(result.returnDate)}`
@@ -216,9 +218,10 @@ export default function BookingPaymentResult({
                     <aside className="order-2 lg:order-none">
                         <div className="overflow-hidden rounded-2xl border bg-card shadow-xl shadow-foreground/5">
                             <div className="relative aspect-[16/9] overflow-hidden bg-muted">
-                                {image ? (
+                                {src ? (
                                     <img
-                                        src={image}
+                                        src={src}
+                                        srcSet={srcSet || undefined}
                                         alt={result.tourName}
                                         className="h-full w-full object-cover"
                                     />
