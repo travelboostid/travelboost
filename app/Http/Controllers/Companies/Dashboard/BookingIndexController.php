@@ -125,21 +125,24 @@ class BookingIndexController extends Controller
             return redirect('/');
         }
 
-        try {
-            app(ExpireBookingReservationsAction::class)->execute($company);
-        } catch (\Throwable $e) {
-            report($e);
-        }
-
+        // Reservation expiry is handled by the scheduled job (every minute) in
+        // routes/console.php. Do not call it here: doing so adds DB load and
+        // row-level locks to every dashboard page request.
         $paymentReceiverService = app(BookingPaymentReceiverService::class);
         $paymentWorkflowService = app(BookingPaymentWorkflowService::class);
         $pricingService = app(BookingPricingService::class);
+        $travelDocumentService = app(BookingTravelDocumentService::class);
         $baseQuery = $this->bookingIndexBaseQuery($company, $request);
-        $followupSummary = $this->followupSummaryForQuery(clone $baseQuery, $company);
+        $followupBookings = $this->followupBookingsForQuery(clone $baseQuery, $company);
+        $followupSummary = $this->followupSummaryFromCollection($followupBookings);
 
         $bookingQuery = clone $baseQuery;
         if (filled($request->input('followup'))) {
-            $this->applyFollowupFilter($bookingQuery, $company, (string) $request->input('followup'));
+            $this->applyFollowupFilterFromCollection(
+                $bookingQuery,
+                $followupBookings,
+                (string) $request->input('followup')
+            );
         } else {
             $this->applyStatusFilter($bookingQuery, $request->input('status'));
         }
@@ -153,7 +156,7 @@ class BookingIndexController extends Controller
             ->paginate(10)
             ->withQueryString();
 
-        $bookings->getCollection()->transform(function ($booking) use ($company, $paymentReceiverService, $paymentWorkflowService, $pricingService) {
+        $bookings->getCollection()->transform(function ($booking) use ($company, $paymentReceiverService, $paymentWorkflowService, $pricingService, $travelDocumentService) {
             $booking = $pricingService->reconcileSnapshotTotals($booking);
             $booking = $this->reconcilePaidBookingStatusIfStale($booking);
             $booking->commission_amount = $this->resolveCommissionAmount($booking);
@@ -164,7 +167,7 @@ class BookingIndexController extends Controller
             $booking->full_payment_detail = $this->paymentDetailPayload($booking, 'full_payment', $paymentReceiverService);
             $booking->remaining_balance_visible = $this->bookingStatusValue($booking) === BookingStatus::DOWN_PAYMENT->value;
             $booking->continue_booking_url = $this->continueBookingUrl($company, $booking);
-            $booking->document_detail = app(BookingTravelDocumentService::class)->documentDetails($booking);
+            $booking->document_detail = $travelDocumentService->documentDetails($booking);
             $booking->payment_workflow = $paymentWorkflowService->workflowPayload($company, $booking);
             $reviewablePayment = $paymentWorkflowService->reviewablePaymentForCompany($company, $booking);
             $booking->manual_payment = $reviewablePayment
@@ -273,67 +276,13 @@ class BookingIndexController extends Controller
         ];
     }
 
-    private function applyFollowupFilter(Builder $query, Company $company, string $followup): void
-    {
-        if (! in_array($followup, self::FOLLOW_UP_FILTERS, true)) {
-            return;
-        }
-
-        $matchingBookingIds = $this->followupBookingIds(clone $query, $company, $followup);
-
-        if ($matchingBookingIds === []) {
-            $query->whereRaw('1 = 0');
-
-            return;
-        }
-
-        $query->whereIn('id', $matchingBookingIds);
-    }
-
-    /**
-     * @return array<int, int>
-     */
-    private function followupBookingIds(Builder $query, Company $company, string $followup): array
-    {
-        return $this->followupBookingsForQuery($query, $company)
-            ->filter(function (Booking $booking) use ($followup): bool {
-                return $this->matchesFollowupFilter(
-                    $booking->payment_followup,
-                    $booking->document_followup,
-                    $followup
-                );
-            })
-            ->pluck('id')
-            ->map(fn (mixed $id): int => (int) $id)
-            ->values()
-            ->all();
-    }
-
-    /**
-     * @return array<string, int|float>
-     */
-    private function followupSummaryForQuery(Builder $query, Company $company): array
-    {
-        $summary = $this->emptyFollowupSummary();
-
-        $this->followupBookingsForQuery($query, $company)
-            ->each(function (Booking $booking) use (&$summary): void {
-                $this->addToFollowupSummary(
-                    $summary,
-                    $booking->payment_followup,
-                    $booking->document_followup
-                );
-            });
-
-        return $summary;
-    }
-
     /**
      * @return Collection<int, Booking>
      */
     private function followupBookingsForQuery(Builder $query, Company $company): Collection
     {
         return $query
+            ->whereIn('status', self::FOLLOW_UP_STATUSES)
             ->with($this->bookingIndexRelationships())
             ->withSum(['payments as paid_amount' => function ($query): void {
                 $query->where('status', 'paid');
@@ -346,6 +295,57 @@ class BookingIndexController extends Controller
 
                 return $booking;
             });
+    }
+
+    /**
+     * @param  Collection<int, Booking>  $bookings
+     * @return array<string, int|float>
+     */
+    private function followupSummaryFromCollection(Collection $bookings): array
+    {
+        $summary = $this->emptyFollowupSummary();
+
+        $bookings->each(function (Booking $booking) use (&$summary): void {
+            $this->addToFollowupSummary(
+                $summary,
+                $booking->payment_followup,
+                $booking->document_followup
+            );
+        });
+
+        return $summary;
+    }
+
+    /**
+     * @param  Collection<int, Booking>  $followupBookings
+     */
+    private function applyFollowupFilterFromCollection(
+        Builder $query,
+        Collection $followupBookings,
+        string $followup
+    ): void {
+        if (! in_array($followup, self::FOLLOW_UP_FILTERS, true)) {
+            return;
+        }
+
+        $matchingIds = $followupBookings
+            ->filter(fn (Booking $booking): bool => $this->matchesFollowupFilter(
+                $booking->payment_followup,
+                $booking->document_followup,
+                $followup
+            ))
+            ->pluck('id')
+            ->map(fn (mixed $id): int => (int) $id)
+            ->values()
+            ->all();
+
+        if ($matchingIds === []) {
+            $query->whereRaw('1 = 0');
+
+            return;
+        }
+
+        $query->whereIn('id', $matchingIds);
     }
 
     private function attachFollowupPayloads(Company $company, Booking $booking): void
@@ -438,14 +438,14 @@ class BookingIndexController extends Controller
 
         $paymentDate = $paidPayments->last()?->paid_at ?? $paidPayments->last()?->created_at;
         $invoiceSchedule = $this->resolveInvoiceSchedule($booking);
-        $priceBreakdown = $this->buildInvoicePriceBreakdown($booking);
+        $priceBreakdown = $this->buildInvoicePriceBreakdown($booking, $invoiceSchedule);
         $taxableAddonRows = $booking->addons
             ->filter(fn ($addon): bool => (bool) $addon->is_taxable)
             ->values();
         $nonTaxableAddonRows = $booking->addons
             ->filter(fn ($addon): bool => ! $addon->is_taxable)
             ->values();
-        $paymentDetails = $this->buildInvoicePaymentDetails($booking, $taxableAddonRows);
+        $paymentDetails = $this->buildInvoicePaymentDetails($booking, $taxableAddonRows, $invoiceSchedule);
         $paymentDetailsTotal = (float) collect($paymentDetails)->sum('amount');
         $vatAmount = (float) $booking->tax_amount;
         $paymentReceiver = app(BookingPaymentReceiverService::class)->resolveForBooking($booking);
@@ -599,10 +599,10 @@ class BookingIndexController extends Controller
                 'amount' => (float) $visaItem['price'] * (int) ($visaItem['qty'] ?? 1),
             ])
             ->values();
-        $paymentDetails = $this->buildInvoicePaymentDetails($booking, $taxableAddonRows);
-        $paymentDetailsTotal = (float) collect($paymentDetails)->sum('amount');
         $invoiceSchedule = $this->resolveInvoiceSchedule($booking);
-        $priceBreakdown = $this->buildInvoicePriceBreakdown($booking);
+        $paymentDetails = $this->buildInvoicePaymentDetails($booking, $taxableAddonRows, $invoiceSchedule);
+        $paymentDetailsTotal = (float) collect($paymentDetails)->sum('amount');
+        $priceBreakdown = $this->buildInvoicePriceBreakdown($booking, $invoiceSchedule);
         $customerName = $booking->contact_name ?: $booking->user?->name;
         $customerEmail = $booking->contact_email ?: $booking->user?->email;
         $customerPhone = $booking->contact_phone ?: $booking->user?->phone;
@@ -1284,14 +1284,14 @@ class BookingIndexController extends Controller
 
         $paymentDate = $paidPayments->last()?->paid_at ?? $paidPayments->last()?->created_at;
         $invoiceSchedule = $this->resolveInvoiceSchedule($booking);
-        $priceBreakdown = $this->buildInvoicePriceBreakdown($booking);
+        $priceBreakdown = $this->buildInvoicePriceBreakdown($booking, $invoiceSchedule);
         $taxableAddonRows = $booking->addons
             ->filter(fn ($addon): bool => (bool) $addon->is_taxable)
             ->values();
         $nonTaxableAddonRows = $booking->addons
             ->filter(fn ($addon): bool => ! $addon->is_taxable)
             ->values();
-        $paymentDetails = $this->buildInvoicePaymentDetails($booking, $taxableAddonRows);
+        $paymentDetails = $this->buildInvoicePaymentDetails($booking, $taxableAddonRows, $invoiceSchedule);
         $paymentDetailsTotal = (float) collect($paymentDetails)->sum('amount');
         $vatAmount = (float) $booking->tax_amount;
         $isProforma = $this->bookingStatusValue($booking) === BookingStatus::DOWN_PAYMENT->value;
@@ -1503,9 +1503,9 @@ class BookingIndexController extends Controller
         ]);
     }
 
-    private function buildInvoicePriceBreakdown(Booking $booking): array
+    private function buildInvoicePriceBreakdown(Booking $booking, ?TourSchedule $schedule = null): array
     {
-        $schedule = $this->resolveInvoiceSchedule($booking);
+        $schedule ??= $this->resolveInvoiceSchedule($booking);
 
         $categories = $schedule
             ? TourPrice::query()
@@ -1559,9 +1559,9 @@ class BookingIndexController extends Controller
             ->all() ?? [];
     }
 
-    private function buildInvoicePaymentDetails(Booking $booking, ?Collection $taxableAddons = null): array
+    private function buildInvoicePaymentDetails(Booking $booking, ?Collection $taxableAddons = null, ?TourSchedule $schedule = null): array
     {
-        $schedule = $this->resolveInvoiceSchedule($booking);
+        $schedule ??= $this->resolveInvoiceSchedule($booking);
 
         $tourPrices = $schedule
             ? TourPrice::query()
@@ -1702,9 +1702,6 @@ class BookingIndexController extends Controller
         return 'data:'.$mime.';base64,'.base64_encode((string) file_get_contents($path));
     }
 
-    /**
-     * @return array<string, mixed>|null
-     */
     /**
      * @return array<string, mixed>
      */
@@ -2461,19 +2458,9 @@ class BookingIndexController extends Controller
             : (string) $booking->status;
     }
 
-    private function bookingNeedsTravelDocuments(Booking $booking): bool
-    {
-        return app(BookingTravelDocumentService::class)->bookingNeedsTravelDocuments($booking);
-    }
-
     private function missingDocumentPassengerCount(Booking $booking): int
     {
         return app(BookingTravelDocumentService::class)->missingPassengerCount($booking);
-    }
-
-    private function passengerNeedsTravelDocuments(mixed $passenger): bool
-    {
-        return app(BookingTravelDocumentService::class)->passengerNeedsTravelDocuments($passenger);
     }
 
     /**
