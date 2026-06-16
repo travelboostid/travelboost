@@ -4270,8 +4270,18 @@ export default function Page({ tour }: Props) {
                                     </div>
 
                                     {/* RIGHT */}
-                                    <div className="rounded-lg border bg-muted/40 px-3 py-2 text-sm font-medium">
-                                        <FormattedMessage defaultMessage="Quantity: pax" />
+                                    <div className="rounded-lg border bg-muted/40 px-3 py-2 text-sm font-medium whitespace-nowrap">
+                                        <FormattedMessage
+                                            defaultMessage="Total Available Pax: {total}"
+                                            values={{
+                                                total: filteredData.reduce(
+                                                    (acc, row) =>
+                                                        acc +
+                                                        (row.available || 0),
+                                                    0,
+                                                ),
+                                            }}
+                                        />
                                     </div>
                                 </div>
 
@@ -4320,9 +4330,6 @@ export default function Page({ tour }: Props) {
                                                             }
                                                         </TooltipContent>
                                                     </Tooltip>
-                                                </th>
-                                                <th className="w-[190px] min-w-[190px] max-w-[210px] border-b p-2 text-left font-semibold">
-                                                    RS Status
                                                 </th>
                                                 <th className="border-b p-2 text-right font-semibold">
                                                     <Tooltip>
@@ -4473,364 +4480,372 @@ export default function Page({ tour }: Props) {
                                                         (currentPage - 1) *
                                                             pageSize +
                                                         i;
+                                                    const bgClass =
+                                                        i % 2 === 0
+                                                            ? 'bg-transparent'
+                                                            : 'bg-muted/20';
+                                                    const status =
+                                                        getManualReservedStatus(
+                                                            row,
+                                                        );
+                                                    const hasStatus =
+                                                        status.kind !== 'idle';
 
                                                     return (
-                                                        <tr
-                                                            key={row.id}
-                                                            className="
-                              border-t
-                              odd:bg-muted/20
-                              hover:bg-muted/40
-                              transition-colors
-                            "
-                                                        >
-                                                            <td className="sticky left-0 z-20 bg-background border-b p-3 font-medium whitespace-nowrap">
-                                                                <div className="flex flex-col">
-                                                                    <span>
-                                                                        {formatDate(
-                                                                            row.departure_date,
-                                                                        )}
+                                                        <Fragment key={row.id}>
+                                                            <tr
+                                                                className={`border-t hover:bg-muted/40 transition-colors ${bgClass}`}
+                                                            >
+                                                                <td className="sticky left-0 z-20 bg-background border-b p-3 font-medium whitespace-nowrap">
+                                                                    <div className="flex flex-col">
+                                                                        <span>
+                                                                            {formatDate(
+                                                                                row.departure_date,
+                                                                            )}
+                                                                        </span>
+
+                                                                        <span>
+                                                                            {formatDate(
+                                                                                row.return_date,
+                                                                            )}
+                                                                        </span>
+                                                                    </div>
+                                                                </td>
+
+                                                                {/* max pax */}
+                                                                <td className="border-b p-3">
+                                                                    <MoneyInput
+                                                                        className="h-9 min-w-[45px] text-right text-xs"
+                                                                        value={
+                                                                            row.max_pax
+                                                                        }
+                                                                        onChange={(
+                                                                            val,
+                                                                        ) =>
+                                                                            updateAvailability(
+                                                                                realIndex,
+                                                                                'max_pax',
+                                                                                Number(
+                                                                                    val,
+                                                                                ),
+                                                                            )
+                                                                        }
+                                                                    />
+                                                                </td>
+
+                                                                {/* RS */}
+                                                                <td className="border-b p-3">
+                                                                    <MoneyInput
+                                                                        className="h-9 min-w-[45px] text-right text-xs"
+                                                                        value={
+                                                                            row.RS
+                                                                        }
+                                                                        onChange={(
+                                                                            val,
+                                                                        ) =>
+                                                                            updateAvailability(
+                                                                                realIndex,
+                                                                                'RS',
+                                                                                Number(
+                                                                                    val,
+                                                                                ),
+                                                                            )
+                                                                        }
+                                                                    />
+                                                                </td>
+
+                                                                {/* WP */}
+                                                                <td className="border-b p-2 text-right">
+                                                                    <span
+                                                                        className={`inline-flex min-w-[60px] justify-center rounded-full px-2 py-1 text-xs font-semibold'
+                                }`}
+                                                                    >
+                                                                        {row.WP}
                                                                     </span>
+                                                                </td>
 
-                                                                    <span>
-                                                                        {formatDate(
-                                                                            row.return_date,
-                                                                        )}
+                                                                {/* DP */}
+                                                                <td className="border-b p-2 text-right">
+                                                                    <span
+                                                                        className={`inline-flex min-w-[60px] justify-center rounded-full px-2 py-1 text-xs font-semibold'
+                                }`}
+                                                                    >
+                                                                        {row.DP}
                                                                     </span>
-                                                                </div>
-                                                            </td>
+                                                                </td>
 
-                                                            {/* max pax */}
-                                                            <td className="border-b p-3">
-                                                                <MoneyInput
-                                                                    className="h-9 min-w-[45px] text-right text-xs"
-                                                                    value={
-                                                                        row.max_pax
-                                                                    }
-                                                                    onChange={(
-                                                                        val,
-                                                                    ) =>
-                                                                        updateAvailability(
-                                                                            realIndex,
-                                                                            'max_pax',
-                                                                            Number(
-                                                                                val,
-                                                                            ),
-                                                                        )
-                                                                    }
-                                                                />
-                                                            </td>
+                                                                {/* FP */}
+                                                                <td className="border-b p-2 text-right">
+                                                                    <span
+                                                                        className={`inline-flex min-w-[60px] justify-center rounded-full px-2 py-1 text-xs font-semibold'
+                                }`}
+                                                                    >
+                                                                        {row.FP}
+                                                                    </span>
+                                                                </td>
 
-                                                            {/* RS */}
-                                                            <td className="border-b p-3">
-                                                                <MoneyInput
-                                                                    className="h-9 min-w-[45px] text-right text-xs"
-                                                                    value={
-                                                                        row.RS
-                                                                    }
-                                                                    onChange={(
-                                                                        val,
-                                                                    ) =>
-                                                                        updateAvailability(
-                                                                            realIndex,
-                                                                            'RS',
-                                                                            Number(
-                                                                                val,
-                                                                            ),
-                                                                        )
-                                                                    }
-                                                                />
-                                                            </td>
-                                                            <td className="w-[190px] min-w-[190px] max-w-[210px] border-b p-2 align-top">
-                                                                {(() => {
-                                                                    const status =
-                                                                        getManualReservedStatus(
-                                                                            row,
-                                                                        );
+                                                                {/* WA */}
+                                                                <td className="border-b p-2 text-right">
+                                                                    <span
+                                                                        className={`inline-flex min-w-[60px] justify-center rounded-full px-2 py-1 text-xs font-semibold'
+                                }`}
+                                                                    >
+                                                                        {
+                                                                            row.WPA
+                                                                        }
+                                                                    </span>
+                                                                </td>
 
-                                                                    if (
-                                                                        status.kind ===
-                                                                        'idle'
-                                                                    ) {
-                                                                        return (
-                                                                            <span className="text-xs text-muted-foreground">
-                                                                                -
-                                                                            </span>
-                                                                        );
-                                                                    }
+                                                                {/* BRS */}
+                                                                <td className="border-b p-2 text-right">
+                                                                    <span
+                                                                        className={`inline-flex min-w-[60px] justify-center rounded-full px-2 py-1 text-xs font-semibold'
+                                }`}
+                                                                    >
+                                                                        {
+                                                                            row.BRS
+                                                                        }
+                                                                    </span>
+                                                                </td>
 
-                                                                    return (
-                                                                        <div className="w-full max-w-[200px] space-y-2 text-left text-xs leading-5 text-muted-foreground">
-                                                                            {status.kind ===
-                                                                            'scheduled' ? (
-                                                                                <>
-                                                                                    <div className="flex items-center justify-between gap-2">
-                                                                                        <div className="flex min-w-0 items-center gap-2">
-                                                                                            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-amber-700">
+                                                                {/* CA */}
+                                                                <td className="border-b p-2 text-right">
+                                                                    <span
+                                                                        className={`inline-flex min-w-[60px] justify-center rounded-full px-2 py-1 text-xs font-semibold'
+                                }`}
+                                                                    >
+                                                                        {row.CA}
+                                                                    </span>
+                                                                </td>
+
+                                                                {/* RF */}
+                                                                <td className="border-b p-2 text-right">
+                                                                    <span
+                                                                        className={`inline-flex min-w-[60px] justify-center rounded-full px-2 py-1 text-xs font-semibold'
+                                }`}
+                                                                    >
+                                                                        {row.RF}
+                                                                    </span>
+                                                                </td>
+
+                                                                {/* EX */}
+                                                                <td className="border-b p-2 text-right">
+                                                                    <span
+                                                                        className={`inline-flex min-w-[60px] justify-center rounded-full px-2 py-1 text-xs font-semibold'
+                                }`}
+                                                                    >
+                                                                        {row.EX}
+                                                                    </span>
+                                                                </td>
+
+                                                                {/* WL */}
+                                                                <td className="border-b p-2 text-right">
+                                                                    <span
+                                                                        className={`inline-flex min-w-[60px] justify-center rounded-full px-2 py-1 text-xs font-semibold'
+                                }`}
+                                                                    >
+                                                                        {row.WL}
+                                                                    </span>
+                                                                </td>
+
+                                                                {/* available */}
+                                                                <td className="border-b p-2 text-right">
+                                                                    <span
+                                                                        className={`inline-flex min-w-[60px] justify-center rounded-full px-2 py-1 text-xs font-semibold ${
+                                                                            row.available <=
+                                                                            0
+                                                                                ? 'bg-red-100 text-red-600'
+                                                                                : row.available <=
+                                                                                    5
+                                                                                  ? 'bg-yellow-100 text-yellow-700'
+                                                                                  : 'bg-green-100 text-green-700'
+                                                                        }`}
+                                                                    >
+                                                                        {
+                                                                            row.available
+                                                                        }
+                                                                    </span>
+                                                                </td>
+                                                                <td className="sticky right-0 z-20 bg-background border-b p-2">
+                                                                    <div className="relative z-50 flex justify-end">
+                                                                        <DropdownMenu
+                                                                            modal={
+                                                                                false
+                                                                            }
+                                                                        >
+                                                                            <DropdownMenuTrigger
+                                                                                asChild
+                                                                            >
+                                                                                <Button
+                                                                                    type="button"
+                                                                                    variant="ghost"
+                                                                                    size="icon"
+                                                                                    className="h-8 w-8"
+                                                                                >
+                                                                                    <MoreVertical className="h-4 w-4" />
+                                                                                </Button>
+                                                                            </DropdownMenuTrigger>
+
+                                                                            <DropdownMenuContent
+                                                                                align="end"
+                                                                                sideOffset={
+                                                                                    5
+                                                                                }
+                                                                                className="w-52 rounded-xl shadow-lg"
+                                                                            >
+                                                                                <DropdownMenuItem
+                                                                                    className="cursor-pointer"
+                                                                                    disabled={
+                                                                                        savingAvailability
+                                                                                    }
+                                                                                    onClick={() => {
+                                                                                        handleAvailabilitySave(
+                                                                                            row,
+                                                                                        );
+                                                                                    }}
+                                                                                >
+                                                                                    {savingAvailability ? (
+                                                                                        <Spinner className="mr-2 h-4 w-4" />
+                                                                                    ) : (
+                                                                                        <Save className="mr-2 h-4 w-4" />
+                                                                                    )}
+                                                                                    <FormattedMessage defaultMessage="Save Availability" />
+                                                                                </DropdownMenuItem>
+                                                                            </DropdownMenuContent>
+                                                                        </DropdownMenu>
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                            {hasStatus && (
+                                                                <tr
+                                                                    className={`hover:bg-muted/40 transition-colors ${bgClass}`}
+                                                                >
+                                                                    <td
+                                                                        colSpan={
+                                                                            3
+                                                                        }
+                                                                        className={`sticky left-0 z-20 border-b px-3 pb-3 pt-2 align-middle ${bgClass === 'bg-muted/20' ? 'bg-muted/20' : 'bg-background'}`}
+                                                                    >
+                                                                        <div className="flex justify-center w-full">
+                                                                            <div className="flex items-center justify-center gap-4 rounded-md border bg-background/50 px-4 py-1.5 shadow-sm w-max whitespace-nowrap">
+                                                                                {status.kind ===
+                                                                                'scheduled' ? (
+                                                                                    <>
+                                                                                        <div className="flex items-center gap-2">
+                                                                                            <span className="rounded-md bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-amber-700">
                                                                                                 {status.isDue
                                                                                                     ? 'Pending'
                                                                                                     : 'Queued'}
                                                                                             </span>
-                                                                                            <span className="font-medium text-foreground">
+                                                                                            <span className="text-xs font-semibold text-foreground">
                                                                                                 RS{' '}
                                                                                                 {
                                                                                                     status.configuredValue
                                                                                                 }
                                                                                             </span>
+                                                                                            <span className="text-xs text-muted-foreground">
+                                                                                                &bull;{' '}
+                                                                                                {status.isDue
+                                                                                                    ? 'Waiting for next scheduler run'
+                                                                                                    : `Start ${formatManualReservedDateTime(status.startAt.toISOString())}`}
+                                                                                            </span>
                                                                                         </div>
+                                                                                        <div className="h-4 w-px bg-border"></div>
                                                                                         <Button
                                                                                             type="button"
-                                                                                            variant="outline"
+                                                                                            variant="ghost"
                                                                                             size="icon"
-                                                                                            className="h-7 w-7 shrink-0"
+                                                                                            className="h-6 w-6 shrink-0 text-muted-foreground hover:text-foreground"
                                                                                             onClick={() =>
                                                                                                 handleManualReservedReset(
                                                                                                     row,
                                                                                                 )
                                                                                             }
                                                                                         >
-                                                                                            <RefreshCw className="h-3.5 w-3.5" />
+                                                                                            <RefreshCw className="h-3 w-3" />
                                                                                         </Button>
-                                                                                    </div>
-                                                                                    <p>
-                                                                                        {status.isDue
-                                                                                            ? 'Waiting for next scheduler run'
-                                                                                            : `Start ${formatManualReservedDateTime(
-                                                                                                  status.startAt.toISOString(),
-                                                                                              )}`}
-                                                                                    </p>
-                                                                                </>
-                                                                            ) : null}
-                                                                            {status.kind ===
-                                                                            'active_timed' ? (
-                                                                                <>
-                                                                                    <div className="flex items-center justify-between gap-2">
-                                                                                        <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-emerald-700">
-                                                                                            Countdown
-                                                                                        </span>
+                                                                                    </>
+                                                                                ) : null}
+                                                                                {status.kind ===
+                                                                                'active_timed' ? (
+                                                                                    <>
+                                                                                        <div className="flex items-center gap-2">
+                                                                                            <span className="rounded-md bg-emerald-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-emerald-700">
+                                                                                                Countdown
+                                                                                            </span>
+                                                                                            <span className="text-xs font-semibold text-foreground">
+                                                                                                {formatManualReservedCountdown(
+                                                                                                    status.expiresAt,
+                                                                                                )}
+                                                                                            </span>
+                                                                                        </div>
+                                                                                        <div className="h-4 w-px bg-border"></div>
                                                                                         <Button
                                                                                             type="button"
-                                                                                            variant="outline"
+                                                                                            variant="ghost"
                                                                                             size="icon"
-                                                                                            className="h-7 w-7 shrink-0"
+                                                                                            className="h-6 w-6 shrink-0 text-muted-foreground hover:text-foreground"
                                                                                             onClick={() =>
                                                                                                 handleManualReservedReset(
                                                                                                     row,
                                                                                                 )
                                                                                             }
                                                                                         >
-                                                                                            <RefreshCw className="h-3.5 w-3.5" />
+                                                                                            <RefreshCw className="h-3 w-3" />
                                                                                         </Button>
-                                                                                    </div>
-                                                                                    <p className="font-medium text-foreground">
-                                                                                        {formatManualReservedCountdown(
-                                                                                            status.expiresAt,
-                                                                                        )}
-                                                                                    </p>
-                                                                                </>
-                                                                            ) : null}
-                                                                            {status.kind ===
-                                                                            'active_open' ? (
-                                                                                <>
-                                                                                    <div className="flex items-center justify-between gap-2">
-                                                                                        <div className="flex min-w-0 items-center gap-2">
-                                                                                            <span className="rounded-full bg-sky-100 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-sky-700">
+                                                                                    </>
+                                                                                ) : null}
+                                                                                {status.kind ===
+                                                                                'active_open' ? (
+                                                                                    <>
+                                                                                        <div className="flex items-center gap-2">
+                                                                                            <span className="rounded-md bg-sky-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-sky-700">
                                                                                                 Active
                                                                                             </span>
-                                                                                            <span className="font-medium text-foreground">
+                                                                                            <span className="text-xs font-semibold text-foreground">
                                                                                                 RS{' '}
                                                                                                 {
                                                                                                     status.configuredValue
                                                                                                 }
                                                                                             </span>
+                                                                                            <span className="text-xs text-muted-foreground">
+                                                                                                &bull;
+                                                                                                Start{' '}
+                                                                                                {status.startAt
+                                                                                                    ? formatManualReservedDateTime(
+                                                                                                          status.startAt.toISOString(),
+                                                                                                      )
+                                                                                                    : '-'}
+                                                                                            </span>
                                                                                         </div>
+                                                                                        <div className="h-4 w-px bg-border"></div>
                                                                                         <Button
                                                                                             type="button"
-                                                                                            variant="outline"
+                                                                                            variant="ghost"
                                                                                             size="icon"
-                                                                                            className="h-7 w-7 shrink-0"
+                                                                                            className="h-6 w-6 shrink-0 text-muted-foreground hover:text-foreground"
                                                                                             onClick={() =>
                                                                                                 handleManualReservedReset(
                                                                                                     row,
                                                                                                 )
                                                                                             }
                                                                                         >
-                                                                                            <RefreshCw className="h-3.5 w-3.5" />
+                                                                                            <RefreshCw className="h-3 w-3" />
                                                                                         </Button>
-                                                                                    </div>
-                                                                                    <p>
-                                                                                        Start{' '}
-                                                                                        {status.startAt
-                                                                                            ? formatManualReservedDateTime(
-                                                                                                  status.startAt.toISOString(),
-                                                                                              )
-                                                                                            : '-'}
-                                                                                    </p>
-                                                                                </>
-                                                                            ) : null}
+                                                                                    </>
+                                                                                ) : null}
+                                                                            </div>
                                                                         </div>
-                                                                    );
-                                                                })()}
-                                                            </td>
-
-                                                            {/* WP */}
-                                                            <td className="border-b p-2 text-right">
-                                                                <span
-                                                                    className={`inline-flex min-w-[60px] justify-center rounded-full px-2 py-1 text-xs font-semibold'
-                                }`}
-                                                                >
-                                                                    {row.WP}
-                                                                </span>
-                                                            </td>
-
-                                                            {/* DP */}
-                                                            <td className="border-b p-2 text-right">
-                                                                <span
-                                                                    className={`inline-flex min-w-[60px] justify-center rounded-full px-2 py-1 text-xs font-semibold'
-                                }`}
-                                                                >
-                                                                    {row.DP}
-                                                                </span>
-                                                            </td>
-
-                                                            {/* FP */}
-                                                            <td className="border-b p-2 text-right">
-                                                                <span
-                                                                    className={`inline-flex min-w-[60px] justify-center rounded-full px-2 py-1 text-xs font-semibold'
-                                }`}
-                                                                >
-                                                                    {row.FP}
-                                                                </span>
-                                                            </td>
-
-                                                            {/* WA */}
-                                                            <td className="border-b p-2 text-right">
-                                                                <span
-                                                                    className={`inline-flex min-w-[60px] justify-center rounded-full px-2 py-1 text-xs font-semibold'
-                                }`}
-                                                                >
-                                                                    {row.WPA}
-                                                                </span>
-                                                            </td>
-
-                                                            {/* BRS */}
-                                                            <td className="border-b p-2 text-right">
-                                                                <span
-                                                                    className={`inline-flex min-w-[60px] justify-center rounded-full px-2 py-1 text-xs font-semibold'
-                                }`}
-                                                                >
-                                                                    {row.BRS}
-                                                                </span>
-                                                            </td>
-
-                                                            {/* CA */}
-                                                            <td className="border-b p-2 text-right">
-                                                                <span
-                                                                    className={`inline-flex min-w-[60px] justify-center rounded-full px-2 py-1 text-xs font-semibold'
-                                }`}
-                                                                >
-                                                                    {row.CA}
-                                                                </span>
-                                                            </td>
-
-                                                            {/* RF */}
-                                                            <td className="border-b p-2 text-right">
-                                                                <span
-                                                                    className={`inline-flex min-w-[60px] justify-center rounded-full px-2 py-1 text-xs font-semibold'
-                                }`}
-                                                                >
-                                                                    {row.RF}
-                                                                </span>
-                                                            </td>
-
-                                                            {/* EX */}
-                                                            <td className="border-b p-2 text-right">
-                                                                <span
-                                                                    className={`inline-flex min-w-[60px] justify-center rounded-full px-2 py-1 text-xs font-semibold'
-                                }`}
-                                                                >
-                                                                    {row.EX}
-                                                                </span>
-                                                            </td>
-
-                                                            {/* WL */}
-                                                            <td className="border-b p-2 text-right">
-                                                                <span
-                                                                    className={`inline-flex min-w-[60px] justify-center rounded-full px-2 py-1 text-xs font-semibold'
-                                }`}
-                                                                >
-                                                                    {row.WL}
-                                                                </span>
-                                                            </td>
-
-                                                            {/* available */}
-                                                            <td className="border-b p-2 text-right">
-                                                                <span
-                                                                    className={`inline-flex min-w-[60px] justify-center rounded-full px-2 py-1 text-xs font-semibold ${
-                                                                        row.available <=
-                                                                        0
-                                                                            ? 'bg-red-100 text-red-600'
-                                                                            : row.available <=
-                                                                                5
-                                                                              ? 'bg-yellow-100 text-yellow-700'
-                                                                              : 'bg-green-100 text-green-700'
-                                                                    }`}
-                                                                >
-                                                                    {
-                                                                        row.available
-                                                                    }
-                                                                </span>
-                                                            </td>
-                                                            <td className="sticky right-0 z-20 bg-background border-b p-2">
-                                                                <div className="relative z-50 flex justify-end">
-                                                                    <DropdownMenu
-                                                                        modal={
-                                                                            false
+                                                                    </td>
+                                                                    <td
+                                                                        colSpan={
+                                                                            11
                                                                         }
-                                                                    >
-                                                                        <DropdownMenuTrigger
-                                                                            asChild
-                                                                        >
-                                                                            <Button
-                                                                                type="button"
-                                                                                variant="ghost"
-                                                                                size="icon"
-                                                                                className="h-8 w-8"
-                                                                            >
-                                                                                <MoreVertical className="h-4 w-4" />
-                                                                            </Button>
-                                                                        </DropdownMenuTrigger>
-
-                                                                        <DropdownMenuContent
-                                                                            align="end"
-                                                                            sideOffset={
-                                                                                5
-                                                                            }
-                                                                            className="w-52 rounded-xl shadow-lg"
-                                                                        >
-                                                                            <DropdownMenuItem
-                                                                                className="cursor-pointer"
-                                                                                disabled={
-                                                                                    savingAvailability
-                                                                                }
-                                                                                onClick={() => {
-                                                                                    handleAvailabilitySave(
-                                                                                        row,
-                                                                                    );
-                                                                                }}
-                                                                            >
-                                                                                {savingAvailability ? (
-                                                                                    <Spinner className="mr-2 h-4 w-4" />
-                                                                                ) : (
-                                                                                    <Save className="mr-2 h-4 w-4" />
-                                                                                )}
-                                                                                <FormattedMessage defaultMessage="Save Availability" />
-                                                                            </DropdownMenuItem>
-                                                                        </DropdownMenuContent>
-                                                                    </DropdownMenu>
-                                                                </div>
-                                                            </td>
-                                                        </tr>
+                                                                        className="border-b p-0"
+                                                                    ></td>
+                                                                </tr>
+                                                            )}
+                                                        </Fragment>
                                                     );
                                                 },
                                             )}
@@ -5141,9 +5156,6 @@ export default function Page({ tour }: Props) {
                                                                     </div>
 
                                                                     <div className="mt-1 text-sm text-muted-foreground">
-                                                                        {
-                                                                            rows.length
-                                                                        }{' '}
                                                                         <FormattedMessage
                                                                             defaultMessage="{count} add ons"
                                                                             values={{
