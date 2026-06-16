@@ -912,14 +912,24 @@ class BookingIndexController extends Controller
      */
     private function bookingActionRequestReviewerPayload(BookingActionRequest $request): ?array
     {
-        if (! $request->reviewerUser && ! $request->reviewerCompany) {
+        // System-generated action requests (e.g. auto-cancelled overdue down
+        // payment bookings) have no human reviewer. Surface them with a
+        // `System` marker so the booking-correction list can still render
+        // the actor and action label.
+        $isSystemAction = $request->status === 'approved'
+            && $request->reviewerUser === null
+            && $request->reviewerCompany === null;
+
+        if (! $request->reviewerUser && ! $request->reviewerCompany && ! $isSystemAction) {
             return null;
         }
 
         return [
             'user_name' => $request->reviewerUser?->name ?? 'System',
             'company_name' => $request->reviewerCompany?->name,
-            'role_label' => $this->bookingActionRequestReviewerRoleLabel($request->reviewerCompany, $request->reviewerUser),
+            'role_label' => $isSystemAction
+                ? 'System'
+                : $this->bookingActionRequestReviewerRoleLabel($request->reviewerCompany, $request->reviewerUser),
             'action_label' => $this->bookingActionRequestReviewerActionLabel($request),
             'reviewed_at' => $request->reviewed_at?->toIso8601String(),
         ];
@@ -933,6 +943,18 @@ class BookingIndexController extends Controller
 
         if ($request->status !== 'approved') {
             return 'Reviewed by';
+        }
+
+        // System actions have no human reviewer; the booking-correction
+        // list should explicitly say `Cancelled by system` etc.
+        if ($request->reviewerUser === null && $request->reviewerCompany === null) {
+            return match ($request->target_action) {
+                'cancel' => 'Cancelled by system',
+                'refund' => 'Refunded by system',
+                'reschedule' => 'Rescheduled by system',
+                'restore' => 'Reactivated by system',
+                default => 'Actioned by system',
+            };
         }
 
         if ((int) $request->requester_company_id !== (int) $request->reviewer_company_id) {
