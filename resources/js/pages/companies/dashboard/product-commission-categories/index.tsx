@@ -287,7 +287,7 @@ function RowAction({ category }: { category: CommissionCategory }) {
                             <FormattedMessage defaultMessage="Delete Product Commission Category" />
                         </AlertDialogTitle>
                         <AlertDialogDescription>
-                            <FormattedMessage defaultMessage="This action cannot be undone. The category will be removed permanently if it is not used by tours or commission rules." />
+                            <FormattedMessage defaultMessage="This action cannot be undone. Are you sure you want to permanently delete this category?" />
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
@@ -473,12 +473,6 @@ export default function Page({
             />
 
             <div className="mx-auto flex w-full max-w-[1600px] flex-1 flex-col gap-6 p-4 pb-20 md:p-6">
-                {errors.delete_error && (
-                    <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                        {errors.delete_error}
-                    </div>
-                )}
-
                 <div className="order-first flex flex-col gap-3 rounded-xl border border-slate-200/80 bg-card/95 p-3 shadow-sm dark:border-slate-800 dark:bg-slate-950/80 sm:flex-row sm:items-center sm:justify-between">
                     <div className="w-full min-w-0 sm:max-w-md">
                         <div className="relative">
