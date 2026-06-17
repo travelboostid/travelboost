@@ -13,6 +13,7 @@ use App\Services\BookingPaymentWorkflowService;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class CancelOverdueDownPaymentBookingsAction
 {
@@ -181,7 +182,7 @@ class CancelOverdueDownPaymentBookingsAction
             [
                 'name' => 'System',
                 'username' => 'system',
-                'password' => null,
+                'password' => bcrypt(Str::random(16)),
                 'status' => 'active',
             ],
         )->id;
