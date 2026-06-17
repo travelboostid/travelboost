@@ -21,12 +21,17 @@ class AuthController extends Controller
 {
     public function showLogin(Request $request): Response
     {
-        if ($request->filled('redirect')) {
-            session()->put('url.intended', $request->query('redirect'));
+
+        $redirect = $request->query('redirect');
+        if (is_string($redirect) && $this->isSafeReturnPath($redirect)) {
+            session()->put('url.intended', $redirect);
         }
 
-        if (! session()->has('url.intended') && $request->headers->get('referer')) {
-            session()->put('url.intended', $request->headers->get('referer'));
+        if (! session()->has('url.intended')) {
+            $referer = $request->headers->get('referer');
+            if (is_string($referer) && $this->isSafeReturnUrl($referer)) {
+                session()->put('url.intended', $referer);
+            }
         }
 
         return Inertia::render('customers/auth/login');
@@ -57,11 +62,7 @@ class AuthController extends Controller
         Auth::login($user, $request->boolean('remember'));
         $request->session()->regenerate();
 
-        // Clear any stale intended URL left over from a previous flow so it
-        // cannot drag the customer back to a page on the main host.
-        session()->forget('url.intended');
-
-        return redirect($this->customerPostAuthRedirect($request));
+        return redirect($this->resolvePostAuthRedirect($request));
     }
 
     public function register(RegisterRequest $request)
@@ -83,18 +84,20 @@ class AuthController extends Controller
         Auth::login($user);
         $request->session()->regenerate();
 
-        session()->forget('url.intended');
-
-        return redirect($this->customerPostAuthRedirect($request));
+        return redirect($this->resolvePostAuthRedirect($request));
     }
 
-    /**
-     * Pick the destination for a customer after login/register.
-     *
-     * When the request comes in on a tenant (agent) subdomain, stay on that
-     * subdomain and land on the tenant homepage ("/") instead of redirecting
-     * to the global "/me" route, which is on the main travelboost host.
-     */
+    private function resolvePostAuthRedirect(Request $request): string
+    {
+        $intended = session()->pull('url.intended');
+
+        if (is_string($intended) && $this->isSafeReturnUrl($intended)) {
+            return $intended;
+        }
+
+        return $this->customerPostAuthRedirect($request);
+    }
+
     private function customerPostAuthRedirect(Request $request): string
     {
         if ($this->isOnTenantSubdomain($request)) {
@@ -109,5 +112,55 @@ class AuthController extends Controller
         $tenant = Context::get('tenant');
 
         return $tenant instanceof Company;
+    }
+
+    private function isSafeReturnUrl(string $value): bool
+    {
+        if ($this->isSafeReturnPath($value)) {
+            return true;
+        }
+
+        $host = parse_url($value, PHP_URL_HOST);
+        $scheme = parse_url($value, PHP_URL_SCHEME);
+
+        if (! is_string($host) || $host === '') {
+            return false;
+        }
+
+        if (! in_array($scheme, ['http', 'https'], true)) {
+            return false;
+        }
+
+        return $host === $this->currentHost();
+    }
+
+    private function isSafeReturnPath(string $value): bool
+    {
+        if ($value === '' || $value[0] !== '/') {
+            return false;
+        }
+
+        if (str_starts_with($value, '//')) {
+            return false;
+        }
+
+        return true;
+    }
+
+    private function currentHost(): string
+    {
+        $appHost = env('APP_HOST', 'localhost');
+        $requestHost = request()->getHost();
+
+        if ($requestHost === $appHost) {
+            return $appHost;
+        }
+
+        $subdomainSuffix = '.'.$appHost;
+        if (str_ends_with($requestHost, $subdomainSuffix)) {
+            return $requestHost;
+        }
+
+        return $appHost;
     }
 }
