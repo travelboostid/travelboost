@@ -74,7 +74,7 @@ export default function UpdatePriceCategoryDialog({
                 description: item?.description || '',
             });
         }
-    }, [item, open, form]);
+    }, [item, form, open]);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();

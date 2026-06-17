@@ -52,7 +52,7 @@ export default function NetworkList() {
 
     const title =
         viewTier === 'ma' ? 'Master Affiliate List' : 'Affiliate List';
-    const _description =
+    const [_description] =
         viewTier === 'ma'
             ? 'Monitor your Master Affiliates and their network performance.'
             : 'Manage affiliators registered under your downline.';

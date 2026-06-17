@@ -24,6 +24,8 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import {
     Table,
     TableBody,
@@ -32,6 +34,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import { Textarea } from '@/components/ui/textarea';
 import {
     Tooltip,
     TooltipContent,
@@ -682,7 +685,6 @@ function FollowupSummaryCards({
             `/companies/${companyUsername}/dashboard/bookings${query ? `?${query}` : ''}`,
             {},
             {
-                preserveScroll: true,
                 preserveState: true,
             },
         );
@@ -963,9 +965,11 @@ function PaymentReviewSection({
 function RowActions({
     booking,
     companyUsername,
+    isAgent,
 }: {
     booking: BookingResource;
     companyUsername: string;
+    isAgent: boolean;
 }) {
     const intl = useIntl();
     const [reviewOpen, setReviewOpen] = React.useState(false);
@@ -980,6 +984,9 @@ function RowActions({
     const [actionDialog, setActionDialog] = React.useState<
         'cancel' | 'refund' | null
     >(null);
+    const [correctionAction, setCorrectionAction] = React.useState<
+        'cancel' | 'refund'
+    >('cancel');
     const [actionReason, setActionReason] = React.useState('');
     const [processingAction, setProcessingAction] = React.useState<
         | 'accept'
@@ -1104,6 +1111,7 @@ function RowActions({
             `/companies/${companyUsername}/dashboard/bookings/${booking.id}/reorder`,
             {},
             {
+                preserveScroll: true,
                 onFinish: () => setProcessingAction(null),
             },
         );
@@ -1177,7 +1185,7 @@ function RowActions({
 
                 if (status === 'paid') {
                     setReviewOpen(false);
-                    router.reload({ preserveScroll: true });
+                    router.reload();
                     return;
                 }
 
@@ -1391,7 +1399,49 @@ function RowActions({
                             {editLabel}
                         </Link>
                     </DropdownMenuItem>
-                    {(canCancel || canRefund || hasPendingActionRequest) && (
+                    {isAgent &&
+                        (canCancel || canRefund || hasPendingActionRequest) && (
+                            <>
+                                <DropdownMenuSeparator />
+                                {(canCancel || canRefund) && (
+                                    <DropdownMenuItem
+                                        disabled={hasPendingActionRequest}
+                                        onSelect={(event) => {
+                                            event.preventDefault();
+                                            setCorrectionAction(
+                                                canCancel && canRefund
+                                                    ? 'cancel'
+                                                    : canRefund
+                                                      ? 'refund'
+                                                      : 'cancel',
+                                            );
+                                            setActionDialog('cancel');
+                                        }}
+                                    >
+                                        <CircleSlashIcon className="mr-2 h-4 w-4" />
+                                        <FormattedMessage defaultMessage="Correction" />
+                                    </DropdownMenuItem>
+                                )}
+                                {hasPendingActionRequest && (
+                                    <DropdownMenuItem disabled>
+                                        <FormattedMessage
+                                            defaultMessage="Pending {action} request"
+                                            values={{
+                                                action:
+                                                    booking
+                                                        .pending_action_request
+                                                        ?.target_action ??
+                                                    intl.formatMessage({
+                                                        defaultMessage:
+                                                            'action',
+                                                    }),
+                                            }}
+                                        />
+                                    </DropdownMenuItem>
+                                )}
+                            </>
+                        )}
+                    {!isAgent && (canCancel || canRefund) && (
                         <>
                             <DropdownMenuSeparator />
                             {canCancel && (
@@ -1414,21 +1464,6 @@ function RowActions({
                                 >
                                     <Undo2Icon className="mr-2 h-4 w-4" />
                                     <FormattedMessage defaultMessage="Refund" />
-                                </DropdownMenuItem>
-                            )}
-                            {hasPendingActionRequest && (
-                                <DropdownMenuItem disabled>
-                                    <FormattedMessage
-                                        defaultMessage="Pending {action} request"
-                                        values={{
-                                            action:
-                                                booking.pending_action_request
-                                                    ?.target_action ??
-                                                intl.formatMessage({
-                                                    defaultMessage: 'action',
-                                                }),
-                                        }}
-                                    />
                                 </DropdownMenuItem>
                             )}
                         </>
@@ -1731,71 +1766,150 @@ function RowActions({
                     }
                 }}
             >
-                <DialogContent className="w-full max-w-md">
+                <DialogContent className="w-full max-w-sm">
                     <DialogHeader>
                         <DialogTitle className="capitalize">
-                            {actionDialog === 'cancel'
+                            {isAgent
                                 ? intl.formatMessage({
-                                      defaultMessage: 'Cancel booking',
+                                      defaultMessage: 'Booking Correction',
                                   })
-                                : intl.formatMessage({
-                                      defaultMessage: 'Refund booking',
-                                  })}
+                                : actionDialog === 'cancel'
+                                  ? intl.formatMessage({
+                                        defaultMessage: 'Cancel booking',
+                                    })
+                                  : intl.formatMessage({
+                                        defaultMessage: 'Refund booking',
+                                    })}
                         </DialogTitle>
                         <DialogDescription>
-                            {actionDialog === 'cancel'
+                            {isAgent
                                 ? intl.formatMessage({
                                       defaultMessage:
-                                          'Are you sure you want to cancel this booking?',
+                                          'Choose the type and add a reason. The vendor will review your request.',
                                   })
-                                : intl.formatMessage({
-                                      defaultMessage:
-                                          'Are you sure you want to refund this booking?',
-                                  })}
+                                : actionDialog === 'cancel'
+                                  ? intl.formatMessage({
+                                        defaultMessage:
+                                            'Are you sure you want to cancel this booking?',
+                                    })
+                                  : intl.formatMessage({
+                                        defaultMessage:
+                                            'Are you sure you want to refund this booking?',
+                                    })}
                         </DialogDescription>
                     </DialogHeader>
-                    <div className="grid gap-2">
-                        <Input
-                            value={actionReason}
-                            onChange={(event) =>
-                                setActionReason(event.target.value)
-                            }
-                            placeholder={intl.formatMessage({
-                                defaultMessage: 'Reason (optional)',
-                            })}
-                        />
+                    <div className="grid gap-3">
+                        {isAgent && (
+                            <RadioGroup
+                                value={correctionAction}
+                                onValueChange={(value) =>
+                                    setCorrectionAction(
+                                        value as 'cancel' | 'refund',
+                                    )
+                                }
+                                className="grid grid-cols-2 gap-2"
+                            >
+                                <Label
+                                    htmlFor="correction-cancel"
+                                    className="flex cursor-pointer items-center gap-2 rounded-md border px-2.5 py-1.5 text-xs font-medium transition-colors hover:bg-muted/50 has-[[data-state=checked]]:border-primary has-[[data-state=checked]]:bg-primary/5 has-[[data-state=disabled]]:cursor-not-allowed has-[[data-state=disabled]]:opacity-50"
+                                >
+                                    <RadioGroupItem
+                                        value="cancel"
+                                        id="correction-cancel"
+                                        disabled={!canCancel}
+                                        className="h-3.5 w-3.5"
+                                    />
+                                    <FormattedMessage defaultMessage="Cancellation" />
+                                </Label>
+                                <Label
+                                    htmlFor="correction-refund"
+                                    className="flex cursor-pointer items-center gap-2 rounded-md border px-2.5 py-1.5 text-xs font-medium transition-colors hover:bg-muted/50 has-[[data-state=checked]]:border-primary has-[[data-state=checked]]:bg-primary/5 has-[[data-state=disabled]]:cursor-not-allowed has-[[data-state=disabled]]:opacity-50"
+                                >
+                                    <RadioGroupItem
+                                        value="refund"
+                                        id="correction-refund"
+                                        disabled={!canRefund}
+                                        className="h-3.5 w-3.5"
+                                    />
+                                    <FormattedMessage defaultMessage="Refund" />
+                                </Label>
+                            </RadioGroup>
+                        )}
+                        <div className="grid gap-1.5">
+                            <Label
+                                htmlFor="correction-reason"
+                                className="text-xs"
+                            >
+                                <FormattedMessage defaultMessage="Reason" />
+                            </Label>
+                            <Textarea
+                                id="correction-reason"
+                                value={actionReason}
+                                onChange={(event) =>
+                                    setActionReason(event.target.value)
+                                }
+                                placeholder={intl.formatMessage({
+                                    defaultMessage: 'Reason (optional)',
+                                })}
+                                rows={3}
+                                className="text-sm"
+                            />
+                        </div>
                     </div>
                     <DialogFooter>
                         <Button
                             type="button"
-                            variant="outline"
-                            disabled={processingAction !== null}
-                            onClick={() => setActionDialog(null)}
-                        >
-                            <FormattedMessage defaultMessage="Keep Booking" />
-                        </Button>
-                        <Button
-                            type="button"
+                            size="sm"
                             variant={
-                                actionDialog === 'refund'
+                                !isAgent && actionDialog === 'refund'
                                     ? 'default'
-                                    : 'destructive'
+                                    : isAgent && correctionAction === 'refund'
+                                      ? 'default'
+                                      : 'destructive'
                             }
-                            disabled={processingAction !== null}
-                            onClick={submitBookingAction}
+                            disabled={
+                                processingAction !== null ||
+                                (isAgent &&
+                                    correctionAction === 'cancel' &&
+                                    !canCancel) ||
+                                (isAgent &&
+                                    correctionAction === 'refund' &&
+                                    !canRefund) ||
+                                (!isAgent &&
+                                    actionDialog === 'cancel' &&
+                                    !canCancel) ||
+                                (!isAgent &&
+                                    actionDialog === 'refund' &&
+                                    !canRefund)
+                            }
+                            onClick={() => {
+                                if (isAgent) {
+                                    setActionDialog(correctionAction);
+                                }
+                                submitBookingAction();
+                            }}
                             className="capitalize"
                         >
-                            {processingAction === actionDialog
+                            {processingAction !== null
                                 ? intl.formatMessage({
                                       defaultMessage: 'Processing...',
                                   })
-                                : actionDialog === 'cancel'
+                                : !isAgent && actionDialog === 'cancel'
                                   ? intl.formatMessage({
-                                        defaultMessage: 'Cancel',
+                                        defaultMessage: 'Yes, cancel booking',
                                     })
-                                  : intl.formatMessage({
-                                        defaultMessage: 'Refund',
-                                    })}
+                                  : !isAgent && actionDialog === 'refund'
+                                    ? intl.formatMessage({
+                                          defaultMessage: 'Yes, refund booking',
+                                      })
+                                    : isAgent && correctionAction === 'cancel'
+                                      ? intl.formatMessage({
+                                            defaultMessage:
+                                                'Request cancellation',
+                                        })
+                                      : intl.formatMessage({
+                                            defaultMessage: 'Request refund',
+                                        })}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
@@ -1827,6 +1941,7 @@ function buildColumns(
                     <RowActions
                         booking={row.original}
                         companyUsername={companyUsername}
+                        isAgent={isAgent}
                     />
                 </div>
             ),
@@ -2419,7 +2534,6 @@ export default function Page({ data, followupSummary }: PageProps) {
                                                     {},
                                                     {
                                                         preserveState: true,
-                                                        preserveScroll: true,
                                                     },
                                                 );
                                             }}
@@ -2642,7 +2756,6 @@ export default function Page({ data, followupSummary }: PageProps) {
                                 onClick={() => {
                                     if (link.url) {
                                         router.visit(link.url, {
-                                            preserveScroll: true,
                                             preserveState: true,
                                         });
                                     }

@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\Me;
 
-use App\Actions\Booking\ExpireBookingReservationsAction;
 use App\Enums\BookingStatus;
 use App\Http\Controllers\Controller;
 use App\Models\BankAccount;
@@ -52,7 +51,10 @@ class HomeController extends Controller
             ]);
         }
 
-        app(ExpireBookingReservationsAction::class)->execute();
+        // Reservation expiry is handled by the scheduled job (every minute) in
+        // routes/console.php. Do not call it here: doing so adds DB load and
+        // row-level locks to every customer /mybookings request, and the
+        // unconstrained `execute()` would scan the entire bookings table.
 
         $currentStatuses = [
             BookingStatus::AWAITING_PAYMENT->value,
@@ -146,14 +148,14 @@ class HomeController extends Controller
         $paymentReceiver = app(BookingPaymentReceiverService::class)->resolveForBooking($booking);
         $agent = $paymentReceiver['receiver_company'] ?? $booking->vendor ?? $booking->tour?->company;
         $invoiceSchedule = $this->resolveInvoiceSchedule($booking);
-        $priceBreakdown = $this->buildInvoicePriceBreakdown($booking);
+        $priceBreakdown = $this->buildInvoicePriceBreakdown($booking, $invoiceSchedule);
         $taxableAddonRows = $booking->addons
             ->filter(fn ($addon): bool => (bool) $addon->is_taxable)
             ->values();
         $nonTaxableAddonRows = $booking->addons
             ->filter(fn ($addon): bool => ! $addon->is_taxable)
             ->values();
-        $paymentDetails = $this->buildInvoicePaymentDetails($booking, $taxableAddonRows);
+        $paymentDetails = $this->buildInvoicePaymentDetails($booking, $taxableAddonRows, $invoiceSchedule);
         $paymentDetailsTotal = (float) collect($paymentDetails)->sum('amount');
         $platformFeeAmount = (float) $booking->platform_fee;
         $vatRate = $this->resolveInvoiceVatRate($booking);
@@ -323,9 +325,9 @@ class HomeController extends Controller
         return "/brochure/{$booking->tour->company->username}/{$booking->tour->id}";
     }
 
-    private function buildInvoicePriceBreakdown(Booking $booking): array
+    private function buildInvoicePriceBreakdown(Booking $booking, ?TourSchedule $schedule = null): array
     {
-        $schedule = $this->resolveInvoiceSchedule($booking);
+        $schedule ??= $this->resolveInvoiceSchedule($booking);
 
         $categories = $schedule
             ? TourPrice::query()
@@ -360,9 +362,9 @@ class HomeController extends Controller
             ->all();
     }
 
-    private function buildInvoicePaymentDetails(Booking $booking, ?Collection $taxableAddons = null): array
+    private function buildInvoicePaymentDetails(Booking $booking, ?Collection $taxableAddons = null, ?TourSchedule $schedule = null): array
     {
-        $schedule = $this->resolveInvoiceSchedule($booking);
+        $schedule ??= $this->resolveInvoiceSchedule($booking);
 
         $tourPrices = $schedule
             ? TourPrice::query()

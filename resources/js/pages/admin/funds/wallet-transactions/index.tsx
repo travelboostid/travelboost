@@ -43,8 +43,10 @@ export default function WalletTransactionsPage({
                 ),
                 cell: ({ row: _row }) => (
                     <Checkbox
-                        checked={row.getIsSelected()}
-                        onCheckedChange={(value) => row.toggleSelected(!!value)}
+                        checked={_row.getIsSelected()}
+                        onCheckedChange={(value) =>
+                            _row.toggleSelected(!!value)
+                        }
                         aria-label="Select row"
                     />
                 ),
@@ -62,7 +64,7 @@ export default function WalletTransactionsPage({
                     />
                 ),
                 cell: ({ row: _row }) => (
-                    <div>{row.original.wallet?.holder?.name ?? '-'}</div>
+                    <div>{_row.original.wallet?.holder?.name ?? '-'}</div>
                 ),
                 meta: {
                     label: 'Owner',
@@ -96,7 +98,7 @@ export default function WalletTransactionsPage({
                     <DataTableColumnHeader column={column} label="Wallet" />
                 ),
                 cell: ({ row: _row }) => (
-                    <div>{row.original.wallet?.name ?? '-'}</div>
+                    <div>{_row.original.wallet?.name ?? '-'}</div>
                 ),
             },
             {

@@ -1587,7 +1587,7 @@ export default function Page({ tour }: Props) {
     const [copyOpen, setCopyOpen] = useState(false);
     const [selectedDates, setSelectedDates] = useState<Date[]>([]);
     const [copySourceIndex, setCopySourceIndex] = useState<number | null>(null);
-    const [_copyDates, setCopyDates] = useState<string[]>(['']);
+    const [_copyDates, _setCopyDates] = useState<string[]>(['']);
 
     const openCopyModal = (index: number) => {
         setCopySourceIndex(index);

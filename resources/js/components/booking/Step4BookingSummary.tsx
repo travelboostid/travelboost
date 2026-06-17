@@ -271,6 +271,8 @@ export default function Step4BookingSummary({
     }, [guests]);
 
     const vatPct = minimumVatPct ?? 0;
+    const platformFeePerPax =
+        pricing.paxCount > 0 ? pricing.platformFee / pricing.paxCount : 0;
     const addOnPricing = useMemo(
         () => calculateAddOnPricing(displayAddOns, vatPct),
         [displayAddOns, vatPct],
@@ -1038,28 +1040,6 @@ export default function Step4BookingSummary({
                                                 {formatCurrency(totalPpn)}
                                             </span>
                                         </div>
-                                        {nonTaxableAddOns.map((addon) => (
-                                            <div
-                                                key={`non-taxable-${addon.key}`}
-                                                className="flex justify-between text-muted-foreground"
-                                            >
-                                                <span>{addon.label}</span>
-                                                <span className="font-medium text-foreground">
-                                                    {formatCurrency(
-                                                        addon.unitPrice *
-                                                            addon.qty,
-                                                    )}
-                                                </span>
-                                            </div>
-                                        ))}
-                                        <div className="flex justify-between text-muted-foreground">
-                                            <span>Platform Fee</span>
-                                            <span className="font-medium text-foreground">
-                                                {formatCurrency(
-                                                    pricing.platformFee,
-                                                )}
-                                            </span>
-                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -1067,25 +1047,26 @@ export default function Step4BookingSummary({
                     </div>
 
                     {/* ─── Platform Fee ────────────────────────────────────────── */}
-                    {/* ─── Add-ons Cost ───────────────────────────────────────────── */}
-                    <div className="p-4">
-                        <p className="mb-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                            Add-ons Cost
-                        </p>
-                        <div className="flex items-center justify-between text-sm">
-                            <span className="text-muted-foreground">
-                                Platform Fee
-                            </span>
-                            <div className="flex items-center gap-3">
-                                <span className="text-xs font-medium text-muted-foreground">
-                                    x{pricing.paxCount}
+                    {pricing.platformFee > 0 && (
+                        <div className="p-4">
+                            <div className="flex items-center justify-between text-sm">
+                                <span className="text-muted-foreground">
+                                    Platform Fee
                                 </span>
-                                <span className="min-w-[100px] text-right font-medium">
-                                    {formatCurrency(pricing.platformFee)}
-                                </span>
+                                <div className="flex flex-wrap items-center justify-end gap-2 text-right">
+                                    <span className="text-xs font-medium text-muted-foreground">
+                                        {formatCurrency(platformFeePerPax)}
+                                    </span>
+                                    <span className="text-xs font-medium text-muted-foreground">
+                                        x{pricing.paxCount}
+                                    </span>
+                                    <span className="min-w-[100px] text-right font-medium">
+                                        {formatCurrency(pricing.platformFee)}
+                                    </span>
+                                </div>
                             </div>
                         </div>
-                    </div>
+                    )}
 
                     {(nonTaxableVisaBreakdown.length > 0 ||
                         nonTaxableAddOns.length > 0) && (

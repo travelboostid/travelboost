@@ -42,8 +42,10 @@ export default function WalletsPage({ data }: WalletsPageProps) {
                 ),
                 cell: ({ row: _row }) => (
                     <Checkbox
-                        checked={row.getIsSelected()}
-                        onCheckedChange={(value) => row.toggleSelected(!!value)}
+                        checked={_row.getIsSelected()}
+                        onCheckedChange={(value) =>
+                            _row.toggleSelected(!!value)
+                        }
                         aria-label="Select row"
                     />
                 ),
@@ -58,7 +60,7 @@ export default function WalletsPage({ data }: WalletsPageProps) {
                     <DataTableColumnHeader column={column} label="Holder" />
                 ),
                 cell: ({ row: _row }) => (
-                    <div>{row.original.holder?.name ?? '-'}</div>
+                    <div>{_row.original.holder?.name ?? '-'}</div>
                 ),
                 meta: {
                     label: 'Holder',
@@ -95,11 +97,11 @@ export default function WalletsPage({ data }: WalletsPageProps) {
                 cell: ({ row: _row }) => (
                     <div>
                         <div>
-                            {row.original.name ?? '-'} (
-                            {row.original.slug ?? '-'})
+                            {_row.original.name ?? '-'} (
+                            {_row.original.slug ?? '-'})
                         </div>
                         <div className="text-sm text-muted-foreground">
-                            {row.original.description ?? '-'}
+                            {_row.original.description ?? '-'}
                         </div>
                     </div>
                 ),
