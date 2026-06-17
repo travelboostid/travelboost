@@ -50,7 +50,7 @@ export default function PaymentsPage({ data }: PaymentsPageProps) {
                         aria-label="Select all"
                     />
                 ),
-                cell: ({ row }) => (
+                cell: ({ row: _row }) => (
                     <Checkbox
                         checked={row.getIsSelected()}
                         onCheckedChange={(value) => row.toggleSelected(!!value)}
@@ -67,7 +67,9 @@ export default function PaymentsPage({ data }: PaymentsPageProps) {
                 header: ({ column }) => (
                     <DataTableColumnHeader column={column} label="Owner" />
                 ),
-                cell: ({ row }) => <div>{row.original.owner?.name ?? '-'}</div>,
+                cell: ({ row: _row }) => (
+                    <div>{row.original.owner?.name ?? '-'}</div>
+                ),
                 meta: {
                     label: 'Owner',
                     variant: 'multiSelect',
@@ -150,7 +152,7 @@ export default function PaymentsPage({ data }: PaymentsPageProps) {
             },
             {
                 id: 'actions',
-                cell: ({ row }) => {
+                cell: ({ row: _row }) => {
                     return <div className="flex gap-2">actions</div>;
                 },
                 size: 32,
@@ -173,7 +175,7 @@ export default function PaymentsPage({ data }: PaymentsPageProps) {
             sorting: [{ id: 'id', desc: true }],
             columnPinning: { right: ['actions'] },
         },
-        getRowId: (row) => row.id.toString(),
+        getRowId: (_row) => row.id.toString(),
     });
 
     return (

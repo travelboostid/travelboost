@@ -89,16 +89,6 @@ class ProductCommissionCategoryController extends Controller
         abort_unless($company->type === CompanyType::VENDOR, 403);
         abort_unless($product_commission_category->company_id === $company->id, 404);
 
-        $isUsed = $product_commission_category->tours()->exists()
-            || $product_commission_category->commissionRules()->exists()
-            || $product_commission_category->additionalCommissionRules()->exists();
-
-        if ($isUsed) {
-            return back()->withErrors([
-                'delete_error' => 'This category is already used. Deactivate it instead.',
-            ]);
-        }
-
         $product_commission_category->delete();
 
         return back();

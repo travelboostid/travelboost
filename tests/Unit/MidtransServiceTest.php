@@ -49,6 +49,14 @@ test('midtrans extract qris instructions materializes authenticated qr image url
 });
 
 test('midtrans extract qris instructions prefers qr string when present', function () {
+    Http::fake([
+        'https://api.sandbox.midtrans.com/v2/qris/*' => Http::response(
+            'png-bytes',
+            200,
+            ['Content-Type' => 'image/png'],
+        ),
+    ]);
+
     $paymentMethod = new PaymentMethod([
         'meta' => ['payment_type' => 'qris', 'acquirer' => 'gopay'],
     ]);

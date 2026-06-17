@@ -167,8 +167,7 @@ class RoomListingController extends Controller
                         'N' => 13,
                         'O' => 14,
                         'P' => 12,
-                        'Q' => 18,
-                        'R' => 6,
+                        'Q' => 6,
                     ];
                 }
 
@@ -184,32 +183,32 @@ class RoomListingController extends Controller
                         ->getAlignment()
                         ->setVertical(Alignment::VERTICAL_CENTER);
 
-                    $sheet->getStyle('A1:R4')->getAlignment()
+                    $sheet->getStyle('A1:Q4')->getAlignment()
                         ->setHorizontal(Alignment::HORIZONTAL_LEFT)
                         ->setVertical(Alignment::VERTICAL_CENTER);
 
-                    $sheet->getStyle('A6:R6')->getAlignment()
+                    $sheet->getStyle('A6:Q6')->getAlignment()
                         ->setHorizontal(Alignment::HORIZONTAL_CENTER)
                         ->setVertical(Alignment::VERTICAL_CENTER);
 
-                    $sheet->getStyle('A6:R6')->getFill()
+                    $sheet->getStyle('A6:Q6')->getFill()
                         ->setFillType(Fill::FILL_SOLID)
                         ->getStartColor()
                         ->setRGB('EAF2FF');
 
-                    $sheet->getStyle('A6:R6')->getBorders()->getAllBorders()
+                    $sheet->getStyle('A6:Q6')->getBorders()->getAllBorders()
                         ->setBorderStyle(Border::BORDER_THIN)
                         ->getColor()
                         ->setRGB('B8C7D9');
 
-                    $sheet->getStyle('A1:R3')->getFill()
+                    $sheet->getStyle('A1:Q3')->getFill()
                         ->setFillType(Fill::FILL_SOLID)
                         ->getStartColor()
                         ->setRGB('FFFFFF');
 
                     $highestRow = max(7, $sheet->getHighestRow());
 
-                    $sheet->getStyle('A7:R'.$highestRow)->getBorders()->getAllBorders()
+                    $sheet->getStyle('A7:Q'.$highestRow)->getBorders()->getAllBorders()
                         ->setBorderStyle(Border::BORDER_THIN)
                         ->getColor()
                         ->setRGB('D8E1EC');
@@ -253,7 +252,7 @@ class RoomListingController extends Controller
                                 ->getColor()
                                 ->setRGB('64748B');
 
-                            $worksheet->getStyle('L1:R2')->getFont()
+                            $worksheet->getStyle('L1:Q2')->getFont()
                                 ->setBold(true)
                                 ->setSize(10)
                                 ->getColor()
@@ -265,7 +264,7 @@ class RoomListingController extends Controller
                                 ->getColor()
                                 ->setRGB('334155');
 
-                            $worksheet->getStyle('A1:R4')->getBorders()->getBottom()
+                            $worksheet->getStyle('A1:Q4')->getBorders()->getBottom()
                                 ->setBorderStyle(Border::BORDER_MEDIUM)
                                 ->getColor()
                                 ->setRGB('0F172A');
@@ -402,6 +401,7 @@ class RoomListingController extends Controller
                             'room_group_key' => $roomGroup['room_key'] ?? "room-{$roomIndex}",
                             'price_category' => $passenger->price_category,
                             'visa_number' => $passenger->visa_number,
+                            'visa_type_description' => $passenger->visa_type_description,
                             'note' => $passenger->note,
                         ];
                     }

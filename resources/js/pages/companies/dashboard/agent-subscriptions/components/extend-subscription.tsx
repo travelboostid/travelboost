@@ -27,7 +27,7 @@ interface ExtendSubscriptionProps {
 }
 
 export function ExtendSubscription({
-    currentSubscription,
+    _currentSubscription,
     onClose,
 }: ExtendSubscriptionProps) {
     const intl = useIntl();

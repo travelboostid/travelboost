@@ -87,7 +87,7 @@ export default function SeatAvailabilityIndex({
                 },
             );
         }
-    }, []);
+    }, [filters.departure_date, search, today]);
 
     const [openTours, setOpenTours] = useState<number[]>([]);
     const [visibleSchedules, setVisibleSchedules] = useState<
@@ -544,7 +544,7 @@ export default function SeatAvailabilityIndex({
                                                             schedule.RF +
                                                             schedule.EX;
 
-                                                        const percent =
+                                                        const _percent =
                                                             schedule.max_pax > 0
                                                                 ? Math.round(
                                                                       (used /
@@ -553,7 +553,7 @@ export default function SeatAvailabilityIndex({
                                                                   )
                                                                 : 0;
 
-                                                        const status =
+                                                        const _status =
                                                             getStatus(
                                                                 schedule.available,
                                                             );

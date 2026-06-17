@@ -1,13 +1,14 @@
 <?php
 
+use App\Enums\MediaType;
 use App\Models\AffiliateProfile;
+use App\Models\Media;
 use App\Models\User;
 use App\Notifications\AffiliatePartnerReviewStatusNotification;
 use App\Notifications\AffiliateReferralRegistrationNotification;
 use App\Notifications\AffiliateRegistrationWelcomeNotification;
 use App\Notifications\AffiliateReviewStatusNotification;
 use Database\Seeders\Common\RolePermissionSeeder;
-use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 
@@ -51,6 +52,15 @@ it('sends welcome and network notifications when an affiliate registers with a m
         'approved_at' => now(),
     ]);
 
+    $media = Media::create([
+        'type' => MediaType::IMAGE,
+        'subtype' => 'ktp',
+        'owner_type' => 'App\Models\User',
+        'owner_id' => 1,
+        'name' => 'KTP',
+    ]);
+    $media->save();
+
     $response = $this->post('/affiliate/register', [
         'name' => 'New Affiliate',
         'email' => 'affiliate@example.com',
@@ -59,11 +69,11 @@ it('sends welcome and network notifications when an affiliate registers with a m
         'password' => 'Password123!',
         'password_confirmation' => 'Password123!',
         'referral_code' => $maProfile->referral_code,
+        'identity_card_id' => $media->id,
         'ktp_number' => '1234567890123456',
-        'ktp_file' => UploadedFile::fake()->image('ktp.jpg'),
     ]);
 
-    $response->assertRedirect('/affiliate/dashboard');
+    $response->assertRedirect('/affiliate/verify-email');
 
     $affiliateUser = User::where('email', 'affiliate@example.com')->first();
     expect($affiliateUser)->not->toBeNull();

@@ -232,6 +232,7 @@ test('owner can delete a team member and deactivate standalone login access', fu
         CompanyTeam::where('id', $team->id)->exists()
     )->toBeFalse();
 
-    $member->refresh();
-    expect($member->status)->toBe(UserStatus::INACTIVE);
+    expect(
+        User::where('id', $member->id)->exists()
+    )->toBeFalse();
 });

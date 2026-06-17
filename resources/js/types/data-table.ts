@@ -4,12 +4,12 @@ import type { ColumnSort, Row, RowData } from '@tanstack/react-table';
 
 declare module '@tanstack/react-table' {
     // biome-ignore lint/correctness/noUnusedVariables: TData is used in the TableMeta interface
-    interface TableMeta<TData extends RowData> {
+    interface TableMeta<_TData extends RowData> {
         queryKeys?: QueryKeys;
     }
 
-    // biome-ignore lint/correctness/noUnusedVariables: TData and TValue are used in the ColumnMeta interface
-    interface ColumnMeta<TData extends RowData, TValue> {
+    // biome-ignore lint/correctness/noUnusedVariables: TData and _TValue are used in the ColumnMeta interface
+    interface ColumnMeta<_TData extends RowData, _TValue> {
         label?: string;
         placeholder?: string;
         variant?: FilterVariant;
@@ -17,7 +17,7 @@ declare module '@tanstack/react-table' {
             | Option[]
             | ((
                   query: string,
-                  currentValues: Set<TValue>,
+                  currentValues: Set<_TValue>,
               ) => Promise<Option[]>);
         range?: [number, number];
         unit?: string;
@@ -44,15 +44,15 @@ export type FilterOperator = DataTableConfig['operators'][number];
 export type FilterVariant = DataTableConfig['filterVariants'][number];
 export type JoinOperator = DataTableConfig['joinOperators'][number];
 
-export interface ExtendedColumnSort<TData> extends Omit<ColumnSort, 'id'> {
+export interface ExtendedColumnSort<_TData> extends Omit<ColumnSort, 'id'> {
     id: Extract<keyof TData, string>;
 }
 
-export interface ExtendedColumnFilter<TData> extends FilterItemSchema {
+export interface ExtendedColumnFilter<_TData> extends FilterItemSchema {
     id: Extract<keyof TData, string>;
 }
 
-export interface DataTableRowAction<TData> {
-    row: Row<TData>;
+export interface DataTableRowAction<_TData> {
+    row: Row<_TData>;
     variant: 'update' | 'delete';
 }

@@ -381,8 +381,32 @@ class TeamController extends Controller
         $team->delete();
 
         if ($user && ! $user->companies()->exists()) {
-            $user->status = UserStatus::INACTIVE;
-            $user->save();
+            if (method_exists($user, 'bankAccounts')) {
+                $user->bankAccounts()->delete();
+            }
+            if (method_exists($user, 'wallets')) {
+                $user->wallets()->delete();
+            }
+            if (method_exists($user, 'affiliateProfile') && $user->affiliateProfile) {
+                $user->affiliateProfile->delete();
+            }
+            if (method_exists($user, 'medias')) {
+                $user->medias()->delete();
+            }
+            if (method_exists($user, 'savedPassengers')) {
+                $user->savedPassengers()->delete();
+            }
+            if (method_exists($user, 'tourLikes')) {
+                $user->tourLikes()->delete();
+            }
+            if (method_exists($user, 'syncRoles')) {
+                $user->syncRoles([]);
+            }
+            if (method_exists($user, 'syncPermissions')) {
+                $user->syncPermissions([]);
+            }
+
+            $user->delete();
         }
     }
 

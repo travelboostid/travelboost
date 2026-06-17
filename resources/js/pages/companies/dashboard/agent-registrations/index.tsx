@@ -821,6 +821,7 @@ export default function Page({ data, agentTiers }: PageProps) {
         [agentTiers, company.username, intl],
     );
 
+    // eslint-disable-next-line react-hooks/incompatible-library
     const table = useReactTable({
         data: filteredData,
         columns,

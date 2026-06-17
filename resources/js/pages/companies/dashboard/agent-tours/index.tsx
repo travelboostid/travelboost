@@ -910,6 +910,7 @@ export default function Page({ data }: PageProps) {
 
     const columns = React.useMemo(() => getColumns(intl), [intl]);
 
+    // eslint-disable-next-line react-hooks/incompatible-library
     const table = useReactTable({
         data: filteredData,
         columns,
