@@ -180,6 +180,7 @@ class CancelOverdueDownPaymentBookingsAction
             ['email' => $email],
             [
                 'name' => 'System',
+                'username' => 'system',
                 'password' => null,
                 'status' => 'active',
             ],

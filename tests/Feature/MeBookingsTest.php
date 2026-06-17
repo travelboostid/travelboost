@@ -736,6 +736,7 @@ test('my bookings lazily expires stale booking reserved rows before rendering', 
         'reserved_expires_at' => now()->subMinute(),
     ]);
 
+    $this->travel(10)->minutes();
     $response = $this->actingAs($user)->get('/mybookings?tab=current');
 
     $response->assertOk();
