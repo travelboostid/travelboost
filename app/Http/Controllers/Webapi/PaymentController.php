@@ -119,6 +119,24 @@ class PaymentController extends Controller
     }
 
     /**
+     * Get payment detail
+     *
+     * @operationId getPayment
+     */
+    public function show(Payment $payment): PaymentResource
+    {
+        $user = Auth::user();
+
+        if (! $user instanceof User) {
+            abort(401);
+        }
+
+        $this->authorizePaymentAccess($user, $payment);
+
+        return new PaymentResource($payment);
+    }
+
+    /**
      * Create wallet topup payment
      *
      * @operationId createTopupPayment
