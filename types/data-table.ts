@@ -4,14 +4,12 @@ import type { ColumnSort, Row, RowData } from '@tanstack/react-table';
 
 declare module '@tanstack/react-table' {
     // biome-ignore lint/correctness/noUnusedVariables: TData is used in the TableMeta interface
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    interface TableMeta<TData extends RowData> {
+    interface TableMeta<_TData extends RowData> {
         queryKeys?: QueryKeys;
     }
 
-    // biome-ignore lint/correctness/noUnusedVariables: TData and TValue are used in the ColumnMeta interface
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    interface ColumnMeta<TData extends RowData, TValue> {
+    // biome-ignore lint/correctness/noUnusedVariables: TData and _TValue are used in the ColumnMeta interface
+    interface ColumnMeta<_TData extends RowData, _TValue> {
         label?: string;
         placeholder?: string;
         variant?: FilterVariant;

@@ -21,7 +21,7 @@ function ComboboxValue({ ...props }: ComboboxPrimitive.Value.Props) {
 
 function ComboboxTrigger({
   className,
-  children,
+  _children,
   ...props
 }: ComboboxPrimitive.Trigger.Props) {
   return (
@@ -54,7 +54,7 @@ function ComboboxClear({ className, ...props }: ComboboxPrimitive.Clear.Props) {
 
 function ComboboxInput({
   className,
-  children,
+  _children,
   disabled = false,
   showTrigger = true,
   showClear = false,
@@ -141,7 +141,7 @@ function ComboboxList({ className, ...props }: ComboboxPrimitive.List.Props) {
 
 function ComboboxItem({
   className,
-  children,
+  _children,
   ...props
 }: ComboboxPrimitive.Item.Props) {
   return (
@@ -243,7 +243,7 @@ function ComboboxChips({
 
 function ComboboxChip({
   className,
-  children,
+  _children,
   showRemove = true,
   ...props
 }: ComboboxPrimitive.Chip.Props & {

@@ -191,7 +191,7 @@ export interface SearchState {
 }
 
 export interface DataGridCellProps<_TData> {
-    cell: Cell<TData, unknown>;
+    cell: Cell<_TData, unknown>;
     tableMeta: TableMeta<_TData>;
     rowIndex: number;
     columnId: string;
