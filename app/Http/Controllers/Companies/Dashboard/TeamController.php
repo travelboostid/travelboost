@@ -396,9 +396,6 @@ class TeamController extends Controller
             if (method_exists($user, 'savedPassengers')) {
                 $user->savedPassengers()->delete();
             }
-            if (method_exists($user, 'affiliateCommissionRates')) {
-                $user->affiliateCommissionRates()->delete();
-            }
             if (method_exists($user, 'tourLikes')) {
                 $user->tourLikes()->delete();
             }

@@ -313,7 +313,7 @@ export default function Page() {
     const [searchDepartureTab2, _setSearchDepartureTab2] = useState('');
     const schedulePerPage = 10;
 
-    const [currentSchedulePage, setCurrentSchedulePage] = useState(1);
+    const [currentSchedulePage, _setCurrentSchedulePage] = useState(1);
 
     const filteredSchedules = schedules.filter((item) => {
         if (!searchDepartureTab2) return true;

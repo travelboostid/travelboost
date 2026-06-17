@@ -26,7 +26,7 @@ export default function AppConfigPage() {
         })),
     );
 
-    const { put, processing } = useForm({});
+    const { processing } = useForm({});
 
     const addRow = () => {
         setItems((prev) => [

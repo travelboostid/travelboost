@@ -41,11 +41,12 @@ beforeEach(function () {
         ],
     ]);
 
-    User::factory()->create([
+    $rootUser = User::factory()->create([
         'name' => 'Travelboost Root',
         'username' => 'root',
         'email' => 'root@travelboost.co.id',
     ]);
+    $rootUser->wallet()->create(['balance' => 0, 'name' => 'Root Wallet']);
 });
 
 function createSettlementScenario(bool $withAgent = true, int $vendorBalance = 5_000_000): array
@@ -142,6 +143,7 @@ function createSettlementScenario(bool $withAgent = true, int $vendorBalance = 5
         'pax_child' => 1,
         'pax_infant' => 0,
         'total_price' => $quote['subtotal_guests'],
+        'tax_rate' => $quote['tax_rate'],
         'tax_amount' => $quote['tax_amount'],
         'platform_fee' => $quote['platform_fee'],
         'commission_amount' => $withAgent ? $quote['agent_commission'] : 0,

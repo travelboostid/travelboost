@@ -57,7 +57,7 @@ export default function UpdateBankAccountDialog({
                 is_default: bankAccount.is_default,
             });
         }
-    }, [bankAccount, open]);
+    }, [bankAccount, open, form]);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();

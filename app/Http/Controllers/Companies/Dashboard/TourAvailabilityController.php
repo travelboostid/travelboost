@@ -7,10 +7,10 @@ use App\Actions\Booking\SyncAvailabilityAction;
 use App\Http\Controllers\Controller;
 use App\Models\Company;
 use App\Models\TourSchedule;
+use Carbon\CarbonInterface;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 
 class TourAvailabilityController extends Controller
 {
@@ -138,13 +138,7 @@ class TourAvailabilityController extends Controller
             DB::commit();
         } catch (\Throwable $e) {
             DB::rollBack();
-            Log::error('TourAvailability save failed', [
-                'message' => $e->getMessage(),
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
-            ]);
-
-            return back()->withErrors('Failed to save availability: '.$e->getMessage());
+            throw $e;
         }
 
         foreach (array_unique($availabilitySyncDates) as $departureDate) {
@@ -196,7 +190,7 @@ class TourAvailabilityController extends Controller
         });
     }
 
-    private function resolveManualReservedStartAt(array $row, TourSchedule $schedule): ?Carbon
+    private function resolveManualReservedStartAt(array $row, TourSchedule $schedule): ?CarbonInterface
     {
         $hasExplicitDate = filled($row['manual_reserved_start_date'] ?? null);
         $hasExplicitTime = filled($row['manual_reserved_start_time'] ?? null);

@@ -1,13 +1,13 @@
 <?php
 
 use App\Models\AffiliateProfile;
+use App\Models\Media;
 use App\Models\User;
 use App\Notifications\AffiliatePartnerReviewStatusNotification;
 use App\Notifications\AffiliateReferralRegistrationNotification;
 use App\Notifications\AffiliateRegistrationWelcomeNotification;
 use App\Notifications\AffiliateReviewStatusNotification;
 use Database\Seeders\Common\RolePermissionSeeder;
-use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 
@@ -51,6 +51,21 @@ it('sends welcome and network notifications when an affiliate registers with a m
         'approved_at' => now(),
     ]);
 
+    $media = new Media([
+        'model_type' => 'App\Models\User',
+        'model_id' => 1,
+        'collection_name' => 'identity_card',
+        'name' => 'ktp',
+        'file_name' => 'ktp.jpg',
+        'mime_type' => 'image/jpeg',
+        'disk' => 'public',
+        'size' => 1234,
+        'manipulations' => [],
+        'custom_properties' => [],
+        'responsive_images' => [],
+    ]);
+    $media->save();
+
     $response = $this->post('/affiliate/register', [
         'name' => 'New Affiliate',
         'email' => 'affiliate@example.com',
@@ -59,8 +74,8 @@ it('sends welcome and network notifications when an affiliate registers with a m
         'password' => 'Password123!',
         'password_confirmation' => 'Password123!',
         'referral_code' => $maProfile->referral_code,
+        'identity_card_id' => $media->id,
         'ktp_number' => '1234567890123456',
-        'ktp_file' => UploadedFile::fake()->image('ktp.jpg'),
     ]);
 
     $response->assertRedirect('/affiliate/dashboard');
