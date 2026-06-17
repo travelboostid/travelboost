@@ -22,6 +22,13 @@ class HandleInertiaRequests extends Middleware
     // For example create UseCompanyProps -> Share props.company -> only applied to routes who use the middleware
     public function share(Request $request): array
     {
+        // Compute unread count once per request. Two eager count() calls
+        // would otherwise double-hit the notifications table on every
+        // Inertia response.
+        $unreadNotificationsCount = $request->user()
+            ? (int) $request->user()->unreadNotifications()->count()
+            : 0;
+
         return [
             ...parent::share($request),
             'name' => config('app.name'),
@@ -40,8 +47,8 @@ class HandleInertiaRequests extends Middleware
                 'success' => $request->session()->get('success'),
                 'bookingPaymentResult' => $request->session()->get('bookingPaymentResult'),
             ],
-            'customerUnreadNotificationsCount' => $request->user()?->unreadNotifications()->count() ?? 0,
-            'affiliateUnreadNotificationsCount' => $request->user()?->unreadNotifications()->count() ?? 0,
+            'customerUnreadNotificationsCount' => $unreadNotificationsCount,
+            'affiliateUnreadNotificationsCount' => $unreadNotificationsCount,
             'travelboostWhatsapp' => fn (): ?string => data_get(
                 AppConfig::query()->where('key', 'admin')->first()?->value,
                 'wa_cs'

@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\Me;
 
-use App\Actions\Booking\ExpireBookingReservationsAction;
 use App\Enums\BookingStatus;
 use App\Http\Controllers\Controller;
 use App\Models\BankAccount;
@@ -52,7 +51,10 @@ class HomeController extends Controller
             ]);
         }
 
-        app(ExpireBookingReservationsAction::class)->execute();
+        // Reservation expiry is handled by the scheduled job (every minute) in
+        // routes/console.php. Do not call it here: doing so adds DB load and
+        // row-level locks to every customer /mybookings request, and the
+        // unconstrained `execute()` would scan the entire bookings table.
 
         $currentStatuses = [
             BookingStatus::AWAITING_PAYMENT->value,
