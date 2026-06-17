@@ -6,7 +6,6 @@ use App\Http\Controllers\Customers\ProfileController as CustomerProfileControlle
 use App\Http\Controllers\Me\HomeController as MeHomeController;
 use App\Http\Controllers\Tenant\TourController;
 use App\Models\Booking;
-use App\Models\Tour;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Support\Facades\Route;
@@ -44,8 +43,5 @@ Route::domain('{username}.'.$appHost)->middleware(['can:access-customer-pages', 
         Route::post('/bookings/{booking}/manual-payment', [BookingController::class, 'storeManualPayment']);
         Route::post('/bookings/{booking}/online-payment', [BookingController::class, 'storeOnlinePayment']);
         Route::post('/bookings/{booking}/online-payment/{payment}/confirm', [BookingController::class, 'confirmTenantOnlinePayment']);
-        Route::post('/me/tours/{tour}/like', function (Request $request, string $username, Tour $tour) {
-            return app(MeHomeController::class)->toggleTourLike($request, $tour);
-        })->name('me.tours.like');
     });
 });
