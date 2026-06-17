@@ -1186,7 +1186,7 @@ export default function Page({ tour }: Props) {
     };
 
     const submitAvailabilityPayload = (
-        payload: ReturnType<typeof buildAvailabilityPayloadRow>[],
+        payload: ReturnType<typeof _buildAvailabilityPayloadRow>[],
         {
             onSuccess,
             onError,
@@ -1228,12 +1228,12 @@ export default function Page({ tour }: Props) {
             return;
         }
 
-        submitAvailabilityPayload([buildAvailabilityPayloadRow(row)]);
+        submitAvailabilityPayload([_buildAvailabilityPayloadRow(row)]);
     };
 
     const handleManualReservedReset = (row: AvailabilityRow): void => {
         submitAvailabilityPayload([
-            buildAvailabilityPayloadRow({
+            _buildAvailabilityPayloadRow({
                 ...row,
                 RS: 0,
                 manual_reserved_pending_value: null,
@@ -1281,7 +1281,7 @@ export default function Page({ tour }: Props) {
     };
 
     const _buildAvailabilityPayload = () => {
-        return availability.map((row) => buildAvailabilityPayloadRow(row));
+        return availability.map((row) => _buildAvailabilityPayloadRow(row));
     };
 
     const _buildAvailabilityPayloadLegacy = () => {
@@ -1313,7 +1313,7 @@ export default function Page({ tour }: Props) {
                 row.manual_reserved_start_time ?? '00:00',
         }));
     };
-    void buildAvailabilityPayloadLegacy;
+    void _buildAvailabilityPayloadLegacy;
 
     //20042026
     useEffect(() => {
@@ -1591,21 +1591,21 @@ export default function Page({ tour }: Props) {
 
     const openCopyModal = (index: number) => {
         setCopySourceIndex(index);
-        setCopyDates(['']);
+        _setCopyDates(['']);
         setSelectedSchedule(schedules[index]);
         setCopyOpen(true);
     };
 
     const _addCopyDate = () => {
-        setCopyDates((prev) => [...prev, '']);
+        _setCopyDates((prev) => [...prev, '']);
     };
 
     const _updateCopyDate = (idx: number, value: string) => {
-        setCopyDates((prev) => prev.map((d, i) => (i === idx ? value : d)));
+        _setCopyDates((prev) => prev.map((d, i) => (i === idx ? value : d)));
     };
 
     const _removeCopyDate = (idx: number) => {
-        setCopyDates((prev) => prev.filter((_, i) => i !== idx));
+        _setCopyDates((prev) => prev.filter((_, i) => i !== idx));
     };
 
     const submitCopySchedules = async () => {
@@ -5671,7 +5671,7 @@ export default function Page({ tour }: Props) {
 
                                         submitAvailabilityPayload(
                                             [
-                                                buildAvailabilityPayloadRow(
+                                                _buildAvailabilityPayloadRow(
                                                     selectedAvailability,
                                                     manualReservedEditorStartDate,
                                                     manualReservedEditorStartTime,
