@@ -83,11 +83,6 @@ class User extends Authenticatable implements Customer, LaratrustUser, MustVerif
         return $this->belongsTo(Media::class, 'photo_id');
     }
 
-    public function bankAccounts()
-    {
-        return $this->hasMany(BankAccount::class);
-    }
-
     public function affiliateProfile()
     {
         return $this->hasOne(AffiliateProfile::class);
@@ -140,10 +135,5 @@ class User extends Authenticatable implements Customer, LaratrustUser, MustVerif
     public function savedPassengers()
     {
         return $this->hasMany(SavedPassenger::class);
-    }
-
-    public function affiliateCommissionRates()
-    {
-        return $this->hasMany(AffiliateCommissionRate::class);
     }
 }

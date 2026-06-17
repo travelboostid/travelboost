@@ -55,17 +55,15 @@ export default function EditTeamAccountButton({
             payload.password_confirmation = form.data.password_confirmation;
         }
 
-        form.transform(() => payload).put(
-            update({ company: company.username, team: team.id }).url,
-            {
-                preserveScroll: true,
-                onError: () => setOpen(true),
-                onSuccess: () => {
-                    form.reset('password', 'password_confirmation');
-                    setOpen(false);
-                },
+        form.transform(() => payload);
+        form.put(update({ company: company.username, team: team.id }).url, {
+            preserveScroll: true,
+            onError: () => setOpen(true),
+            onSuccess: () => {
+                form.reset('password', 'password_confirmation');
+                setOpen(false);
             },
-        );
+        });
     };
 
     return (

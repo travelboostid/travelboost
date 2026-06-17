@@ -387,6 +387,7 @@ test('dashboard booking payload reconciles stale grand total with persisted add 
         'pax_child' => 0,
         'pax_infant' => 0,
         'total_price' => 33_400_000,
+        'tax_rate' => 1.1,
         'tax_amount' => 367_400,
         'platform_fee' => 50_000,
         'commission_amount' => 0,
@@ -448,7 +449,7 @@ test('dashboard booking create payload exposes effective commission per active a
 
     $matrixAgent = Company::factory()->create(['type' => 'agent']);
     $fallbackAgent = Company::factory()->create(['type' => 'agent']);
-    $package = AgentSubscriptionPackage::factory()->create();
+    $package = AgentSubscriptionPackage::factory()->create(['id' => 2]);
 
     foreach ([$matrixAgent, $fallbackAgent] as $agent) {
         $agent->agentSubscription()->create([
@@ -533,13 +534,14 @@ test('dashboard booking create payload exposes effective commission per active a
     ]);
 
     $this->actingAs($this->user)
-        ->get("/companies/{$vendor->username}/dashboard/bookings/create/{$tour->id}?date={$schedule->departure_date->toDateString()}")
+        ->get("/companies/{$vendor->username}/dashboard/bookings/create/{$tour->id}?date={$schedule->departure_date}")
         ->assertOk()
         ->assertInertia(fn ($page) => $page
             ->component('tours/bookings/create')
             ->where('tourPrices.0.agentCommissionsByAgentId', function (mixed $commissions) use ($matrixAgent, $fallbackAgent): bool {
-                return is_array($commissions)
-                    && (float) ($commissions[$matrixAgent->id] ?? 0) === 750_000.0
+                $commissions = collect($commissions);
+
+                return (float) ($commissions[$matrixAgent->id] ?? 0) === 750_000.0
                     && (float) ($commissions[$fallbackAgent->id] ?? 0) === 1_200_000.0;
             }));
 });
@@ -955,6 +957,11 @@ test('booking index exposes payment and document follow up payloads with summary
         'pax_adult' => 1,
         'pax_child' => 0,
         'pax_infant' => 0,
+        'total_price' => 1_000_000,
+        'tax_rate' => 0,
+        'tax_amount' => 0,
+        'platform_fee' => 0,
+        'commission_amount' => 0,
         'grand_total' => 1_000_000,
     ]);
 
@@ -3234,6 +3241,7 @@ test('vendor can update booking wizard data dynamically', function () {
         'pax_child' => 0,
         'pax_infant' => 0,
         'total_price' => 1_000_000,
+        'tax_rate' => 11,
         'tax_amount' => 110_000,
         'platform_fee' => 25_000,
         'commission_amount' => 0,
@@ -3515,6 +3523,11 @@ test('booking edit exposes customer wizard payment props for dashboard', functio
         'pax_adult' => 1,
         'pax_child' => 0,
         'pax_infant' => 0,
+        'total_price' => 1_000_000,
+        'tax_rate' => 0,
+        'tax_amount' => 0,
+        'platform_fee' => 0,
+        'commission_amount' => 0,
         'grand_total' => 1_000_000,
     ]);
     BookingPassenger::create([

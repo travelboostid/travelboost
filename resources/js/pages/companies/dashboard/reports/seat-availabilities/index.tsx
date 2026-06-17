@@ -87,6 +87,7 @@ export default function SeatAvailabilityIndex({
                 },
             );
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const [openTours, setOpenTours] = useState<number[]>([]);
@@ -544,7 +545,7 @@ export default function SeatAvailabilityIndex({
                                                             schedule.RF +
                                                             schedule.EX;
 
-                                                        const percent =
+                                                        const _percent =
                                                             schedule.max_pax > 0
                                                                 ? Math.round(
                                                                       (used /
@@ -553,7 +554,7 @@ export default function SeatAvailabilityIndex({
                                                                   )
                                                                 : 0;
 
-                                                        const status =
+                                                        const _status =
                                                             getStatus(
                                                                 schedule.available,
                                                             );

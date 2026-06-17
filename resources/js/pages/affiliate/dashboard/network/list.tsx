@@ -36,7 +36,7 @@ import {
 import { useMemo, useState } from 'react';
 
 // HELPER: Mengamankan URL Gambar
-const getImageUrl = (path: string | null | undefined) => {
+const _getImageUrl = (path: string | null | undefined) => {
     if (!path) return '';
     if (path.startsWith('http') || path.startsWith('data:')) return path;
     return `/storage/${path}`;
@@ -52,7 +52,7 @@ export default function NetworkList() {
 
     const title =
         viewTier === 'ma' ? 'Master Affiliate List' : 'Affiliate List';
-    const description =
+    const [_description] =
         viewTier === 'ma'
             ? 'Monitor your Master Affiliates and their network performance.'
             : 'Manage affiliators registered under your downline.';

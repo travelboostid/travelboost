@@ -7,10 +7,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { Head, useForm, usePage } from '@inertiajs/react';
+import axios from 'axios';
 import { Check, Download, Eye, EyeOff, Trash, UploadCloud } from 'lucide-react';
 import React, { useRef, useState } from 'react';
 import { useIntl } from 'react-intl';
-import axios from 'axios';
 
 export default function Register() {
     const intl = useIntl();
@@ -49,18 +49,24 @@ export default function Register() {
         formData.append('ktp_file', file);
 
         try {
-            const response = await axios.post('/affiliate/upload-ktp', formData, {
-                headers: {
-                    'Content-Type': 'multipart/form-data',
+            const response = await axios.post(
+                '/affiliate/upload-ktp',
+                formData,
+                {
+                    headers: {
+                        'Content-Type': 'multipart/form-data',
+                    },
+                    withXSRFToken: true,
                 },
-                withXSRFToken: true,
-            });
+            );
 
             const resData = response.data;
             setData('identity_card_id', resData.id);
             setIdentityMedia(resData);
-        } catch (err) {
-            setKtpUploadError('Failed to upload identity photo. Please try again.');
+        } catch (_err) {
+            setKtpUploadError(
+                'Failed to upload identity photo. Please try again.',
+            );
         } finally {
             setUploadingKtp(false);
         }
@@ -238,7 +244,9 @@ export default function Register() {
                                         You've uploaded an identity card.
                                     </div>
                                     <div className="text-xs text-muted-foreground">
-                                        Click remove to delete the uploaded identity card and reupload, or click download to see the uploaded file.
+                                        Click remove to delete the uploaded
+                                        identity card and reupload, or click
+                                        download to see the uploaded file.
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-2 shrink-0">
@@ -278,7 +286,9 @@ export default function Register() {
                                         Upload Identity Card
                                     </div>
                                     <div className="text-xs text-muted-foreground">
-                                        Please upload a clear image or scan of your identity card for verification purposes.
+                                        Please upload a clear image or scan of
+                                        your identity card for verification
+                                        purposes.
                                     </div>
                                 </div>
                                 <div className="shrink-0">
@@ -288,9 +298,13 @@ export default function Register() {
                                         size="sm"
                                         className="cursor-pointer"
                                         disabled={uploadingKtp}
-                                        onClick={() => fileInputRef.current?.click()}
+                                        onClick={() =>
+                                            fileInputRef.current?.click()
+                                        }
                                     >
-                                        {uploadingKtp ? 'Uploading...' : 'Upload'}
+                                        {uploadingKtp
+                                            ? 'Uploading...'
+                                            : 'Upload'}
                                     </Button>
                                 </div>
                             </div>
@@ -303,8 +317,14 @@ export default function Register() {
                             accept="image/jpeg,image/png,image/jpg"
                             onChange={handleKtpUpload}
                         />
-                        {ktpUploadError && <p className="text-xs font-semibold text-destructive mt-1">{ktpUploadError}</p>}
-                        <InputError message={errors.identity_card_id as string} />
+                        {ktpUploadError && (
+                            <p className="text-xs font-semibold text-destructive mt-1">
+                                {ktpUploadError}
+                            </p>
+                        )}
+                        <InputError
+                            message={errors.identity_card_id as string}
+                        />
 
                         {identityMedia?.data?.url && (
                             <div className="mt-2 space-y-2">

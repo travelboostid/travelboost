@@ -18,6 +18,7 @@ use App\Models\TourCommissionRule;
 use App\Models\TourCommissionRuleScheduleAdjustment;
 use App\Models\TourPrice;
 use App\Models\TourSchedule;
+use App\Models\User;
 use App\Models\VendorAgentPartner;
 use App\Models\VisaCategory;
 use App\Models\VisaCategoryItem;
@@ -41,6 +42,12 @@ beforeEach(function () {
             'commission_max' => '75000',
         ],
     ]);
+
+    $rootUser = User::factory()->create([
+        'username' => 'root',
+        'email' => 'root@travelboost.co.id',
+    ]);
+    $rootUser->wallet()->create(['balance' => 0, 'name' => 'Root Wallet']);
 });
 
 function createPricingScenario(): array
@@ -276,6 +283,7 @@ test('booking pricing service snapshots passenger visa selections and includes t
         'pax_child' => 0,
         'pax_infant' => 0,
         'total_price' => $quote['subtotal_guests'],
+        'tax_rate' => $quote['tax_rate'],
         'tax_amount' => $quote['tax_amount'],
         'platform_fee' => $quote['platform_fee'],
         'commission_amount' => $quote['agent_commission'],
@@ -430,6 +438,7 @@ test('booking snapshot quote includes persisted add ons without double counting 
         'pax_child' => 1,
         'pax_infant' => 0,
         'total_price' => $quote['subtotal_guests'],
+        'tax_rate' => $quote['tax_rate'],
         'tax_amount' => $quote['tax_amount'],
         'platform_fee' => $quote['platform_fee'],
         'commission_amount' => $quote['agent_commission'],
@@ -490,6 +499,7 @@ test('booking snapshot quote recalculates vat from persisted taxable add ons', f
 test('booking snapshot quote and finalization keep zero tax rate after vendor vat changes', function () {
     ['vendor' => $vendor, 'tour' => $tour, 'schedule' => $schedule] = createPricingScenario();
     $vendor->companySetting()->update(['minimum_vat' => 0]);
+    $vendor->deposit(5000000);
     $tour = $tour->fresh(['company.companySetting']);
 
     $quote = app(BookingPricingService::class)->quoteForBookingData($tour, $schedule->departure_date, [

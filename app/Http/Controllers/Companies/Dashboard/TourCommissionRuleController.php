@@ -22,7 +22,6 @@ class TourCommissionRuleController extends Controller
 
         return Inertia::render('companies/dashboard/tour-commission-rules/index', [
             ...$this->pageProps($company),
-            'view' => 'base',
         ]);
     }
 
@@ -30,9 +29,8 @@ class TourCommissionRuleController extends Controller
     {
         abort_unless($company->type === CompanyType::VENDOR, 403);
 
-        return Inertia::render('companies/dashboard/tour-commission-rules/index', [
+        return Inertia::render('companies/dashboard/tour-commission-rules/additional', [
             ...$this->pageProps($company),
-            'view' => 'additional',
         ]);
     }
 
@@ -68,7 +66,7 @@ class TourCommissionRuleController extends Controller
             'additionalRules' => TourCommissionAdditionalRule::query()
                 ->where('company_id', $company->id)
                 ->with([
-                    'tour:id,code,name',
+                    'tour:id,code,name,product_commission_category_id',
                     'tourSchedule:id,tour_id,departure_date,return_date',
                 ])
                 ->orderByDesc('created_at')

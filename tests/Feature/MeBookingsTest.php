@@ -1,5 +1,6 @@
 <?php
 
+use App\Actions\Booking\ExpireBookingReservationsAction;
 use App\Enums\BookingStatus;
 use App\Enums\CompanyTeamStatus;
 use App\Enums\MediaType;
@@ -735,6 +736,9 @@ test('my bookings lazily expires stale booking reserved rows before rendering', 
         'reserved_type' => 'system',
         'reserved_expires_at' => now()->subMinute(),
     ]);
+
+    $this->travelTo(now()->addMinutes(10));
+    app(ExpireBookingReservationsAction::class)->execute();
 
     $response = $this->actingAs($user)->get('/mybookings?tab=current');
 

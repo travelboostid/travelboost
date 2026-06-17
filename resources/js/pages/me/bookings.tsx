@@ -1,6 +1,7 @@
-import TenantLayout from '@/components/layouts/tenant-layout';
+﻿import TenantLayout from '@/components/layouts/tenant-layout';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/spinner';
 import {
     Tooltip,
     TooltipContent,
@@ -10,6 +11,7 @@ import { formatIDR } from '@/constants/booking';
 import { cn, extractImageSrc } from '@/lib/utils';
 import { Link, router } from '@inertiajs/react';
 import { IconPdf } from '@tabler/icons-react';
+import axios from 'axios';
 import dayjs from 'dayjs';
 import {
     ArrowRightIcon,
@@ -24,6 +26,7 @@ import {
     type LucideIcon,
 } from 'lucide-react';
 import { useEffect, useState, type ReactNode } from 'react';
+import { toast } from 'sonner';
 
 type BookingItem = {
     id: number;
@@ -356,8 +359,40 @@ export default function Page({
     const selectedBookingNumber =
         initialSelectedBookingNumber ?? params.get('booking_number') ?? null;
 
+    const [favoriteTours, setFavoriteTours] = useState<TourItem[]>(
+        () => favorites?.data ?? [],
+    );
+    const [pendingUnfavorite, setPendingUnfavorite] = useState<number | null>(
+        null,
+    );
+
+    useEffect(() => {
+        setFavoriteTours(favorites?.data ?? []);
+        setPendingUnfavorite(null);
+    }, [favorites?.data]);
+
+    const handleUnfavorite = async (tourId: number) => {
+        setPendingUnfavorite(tourId);
+
+        const previousTours = favoriteTours;
+        setFavoriteTours((current) =>
+            current.filter((tour) => tour.id !== tourId),
+        );
+
+        try {
+            await axios.post(`/me/tours/${tourId}/like`);
+        } catch {
+            setFavoriteTours(previousTours);
+            toast.error('Could not remove this tour from your favorites.');
+        } finally {
+            setPendingUnfavorite((current) =>
+                current === tourId ? null : current,
+            );
+        }
+    };
+
     const bookingCount = bookings?.data.length ?? 0;
-    const favoriteCount = favorites?.data.length ?? 0;
+    const favoriteCount = favoriteTours.length;
     const visibleCount =
         activeTab === 'favorites' ? favoriteCount : bookingCount;
 
@@ -471,16 +506,20 @@ export default function Page({
 
                     {activeTab === 'favorites' ? (
                         <div className="grid gap-4 md:grid-cols-2">
-                            {(favorites?.data ?? []).map((tour) => (
+                            {favoriteTours.map((tour) => (
                                 <FavoriteCard
                                     key={tour.id}
                                     tour={tour}
+                                    isPending={pendingUnfavorite === tour.id}
                                     onViewSchedule={() =>
                                         router.visit(`/tours?tour=${tour.id}`)
                                     }
+                                    onUnfavorite={() =>
+                                        handleUnfavorite(tour.id)
+                                    }
                                 />
                             ))}
-                            {(favorites?.data ?? []).length === 0 && (
+                            {favoriteTours.length === 0 && (
                                 <EmptyState
                                     title="No favorite tours yet"
                                     message="Tours you save from the catalog will appear here."
@@ -550,10 +589,14 @@ function SummaryTextTile({ label, value }: { label: string; value: string }) {
 
 function FavoriteCard({
     tour,
+    isPending,
     onViewSchedule,
+    onUnfavorite,
 }: {
     tour: TourItem;
+    isPending: boolean;
     onViewSchedule: () => void;
+    onUnfavorite: () => void;
 }) {
     const imageMedia = tour.image as any;
     const hasImage = Boolean(imageMedia?.data?.files?.length);
@@ -580,7 +623,30 @@ function FavoriteCard({
                                     'Saved tour'}
                             </p>
                         </div>
-                        <HeartIcon className="size-5 shrink-0 fill-rose-500 text-rose-500" />
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <button
+                                    type="button"
+                                    onClick={onUnfavorite}
+                                    disabled={isPending}
+                                    aria-label="Remove from favorites"
+                                    data-test="favorite-remove"
+                                    data-tour-id={tour.id}
+                                    className={cn(
+                                        'inline-flex size-9 shrink-0 items-center justify-center rounded-full border border-rose-200 bg-rose-50 text-rose-500 transition-all hover:scale-105 hover:border-rose-300 hover:bg-rose-100 hover:text-rose-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-300 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:scale-100 dark:border-rose-900/60 dark:bg-rose-950/30 dark:hover:bg-rose-950/50',
+                                    )}
+                                >
+                                    {isPending ? (
+                                        <Spinner className="size-4" />
+                                    ) : (
+                                        <HeartIcon className="size-5 fill-rose-500 text-rose-500" />
+                                    )}
+                                </button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                <p>Remove from favorites</p>
+                            </TooltipContent>
+                        </Tooltip>
                     </div>
                     <div className="flex items-end justify-between gap-3">
                         {tour.showprice !== null &&

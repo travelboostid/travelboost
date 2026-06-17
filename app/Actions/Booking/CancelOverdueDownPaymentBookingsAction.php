@@ -5,11 +5,15 @@ namespace App\Actions\Booking;
 use App\Enums\BookingStatus;
 use App\Enums\PaymentStatus;
 use App\Models\Booking;
+use App\Models\BookingActionRequest;
+use App\Models\Company;
 use App\Models\Payment;
+use App\Models\User;
 use App\Services\BookingPaymentWorkflowService;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class CancelOverdueDownPaymentBookingsAction
 {
@@ -67,6 +71,7 @@ class CancelOverdueDownPaymentBookingsAction
                 ->update(['status' => PaymentStatus::CANCELLED->value]);
 
             $this->markPendingAgentVendorAttemptsInactive($booking);
+            $this->recordSystemCancellation($booking, $today);
 
             Log::info('Overdue down payment booking cancelled', [
                 'booking_id' => $booking->id,
@@ -107,5 +112,79 @@ class CancelOverdueDownPaymentBookingsAction
                     ]),
                 ]);
             });
+    }
+
+    private function recordSystemCancellation(Booking $booking, CarbonImmutable $today): void
+    {
+        $vendor = $booking->vendor;
+        $deadlineDays = $vendor?->companySetting?->full_payment_deadline;
+        $reason = $this->buildSystemCancellationReason($booking, $deadlineDays);
+
+        // Use the agent that placed the booking (if any) as the requester
+        // company so the agent-side booking-correction list also surfaces
+        // the system cancellation. Fall back to the vendor otherwise.
+        $requesterCompanyId = $booking->agent_id
+            ?? $vendor?->id
+            ?? Company::query()->value('id');
+
+        BookingActionRequest::query()->create([
+            'booking_id' => $booking->id,
+            'requester_company_id' => $requesterCompanyId,
+            'requester_user_id' => $this->resolveSystemUserId(),
+            'target_action' => 'cancel',
+            'status' => 'approved',
+            'reason' => $reason,
+            'reviewer_company_id' => null,
+            'reviewer_user_id' => null,
+            'reviewed_at' => $today->toDateTimeString(),
+        ]);
+    }
+
+    private function buildSystemCancellationReason(Booking $booking, ?int $deadlineDays): string
+    {
+        $departure = $booking->departure_date
+            ? CarbonImmutable::parse($booking->departure_date)->toDateString()
+            : null;
+
+        $deadline = $departure !== null
+            ? CarbonImmutable::parse($departure)
+                ->subDays(max(0, (int) ($deadlineDays ?? 0)))
+                ->toDateString()
+            : null;
+
+        $parts = [
+            'This booking has been automatically cancelled by the system because it has passed the final payment deadline',
+        ];
+
+        if ($deadline !== null) {
+            $parts[] = "({$deadline})";
+        } elseif ($departure !== null) {
+            $parts[] = "(departure: {$departure})";
+        }
+
+        $parts[] = 'without receiving full payment.';
+
+        if ($departure !== null) {
+            $parts[] = "Scheduled departure: {$departure}.";
+        }
+
+        $parts[] = 'Cancelled by system.';
+
+        return implode(' ', $parts);
+    }
+
+    private function resolveSystemUserId(): int
+    {
+        $email = config('booking.system_actor_email', '[email protected]');
+
+        return User::query()->firstOrCreate(
+            ['email' => $email],
+            [
+                'name' => 'System',
+                'username' => 'system',
+                'password' => bcrypt(Str::random(16)),
+                'status' => 'active',
+            ],
+        )->id;
     }
 }
