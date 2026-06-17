@@ -70,7 +70,8 @@ export default function UpdateCategoryDialog({
                     category.manual_reserved_limit_unit ?? 'hour',
             });
         }
-    }, [category, form, open]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [category, open]);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -188,7 +189,7 @@ export default function UpdateCategoryDialog({
                                         onValueChange={(value) =>
                                             form.setData(
                                                 'manual_reserved_limit_unit',
-                                                value,
+                                                value as 'minute' | 'hour',
                                             )
                                         }
                                     >
