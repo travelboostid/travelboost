@@ -499,7 +499,7 @@ test('booking snapshot quote recalculates vat from persisted taxable add ons', f
 test('booking snapshot quote and finalization keep zero tax rate after vendor vat changes', function () {
     ['vendor' => $vendor, 'tour' => $tour, 'schedule' => $schedule] = createPricingScenario();
     $vendor->companySetting()->update(['minimum_vat' => 0]);
-    $vendor->depositFloat(5000000);
+    $vendor->deposit(5000000);
     $tour = $tour->fresh(['company.companySetting']);
 
     $quote = app(BookingPricingService::class)->quoteForBookingData($tour, $schedule->departure_date, [

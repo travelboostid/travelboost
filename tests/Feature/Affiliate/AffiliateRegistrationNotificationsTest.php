@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\MediaType;
 use App\Models\AffiliateProfile;
 use App\Models\Media;
 use App\Models\User;
@@ -51,18 +52,12 @@ it('sends welcome and network notifications when an affiliate registers with a m
         'approved_at' => now(),
     ]);
 
-    $media = new Media([
-        'model_type' => 'App\Models\User',
-        'model_id' => 1,
-        'collection_name' => 'identity_card',
-        'name' => 'ktp',
-        'file_name' => 'ktp.jpg',
-        'mime_type' => 'image/jpeg',
-        'disk' => 'public',
-        'size' => 1234,
-        'manipulations' => [],
-        'custom_properties' => [],
-        'responsive_images' => [],
+    $media = Media::create([
+        'type' => MediaType::IMAGE,
+        'subtype' => 'ktp',
+        'owner_type' => 'App\Models\User',
+        'owner_id' => 1,
+        'name' => 'KTP',
     ]);
     $media->save();
 
@@ -78,7 +73,7 @@ it('sends welcome and network notifications when an affiliate registers with a m
         'ktp_number' => '1234567890123456',
     ]);
 
-    $response->assertRedirect('/affiliate/dashboard');
+    $response->assertRedirect('/affiliate/verify-email');
 
     $affiliateUser = User::where('email', 'affiliate@example.com')->first();
     expect($affiliateUser)->not->toBeNull();
