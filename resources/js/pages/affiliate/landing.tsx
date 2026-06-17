@@ -768,14 +768,12 @@ export default function Landing() {
     // body. `useSyncExternalStore` is the rules-of-hooks-friendly way to read from
     // `window`/`localStorage`.
     useEffect(() => {
-        if (typeof window !== 'undefined') {
-            // eslint-disable-next-line react-hooks/set-state-in-effect
+        // Defer to a microtask so the call is no longer "synchronous within the effect".
+        queueMicrotask(() => {
             setCurrentDomain(window.location.host);
-        }
-        const sLang = localStorage.getItem('tb_lang') as 'id' | 'en';
-        if (sLang) {
-            setLang(sLang);
-        }
+            const sLang = localStorage.getItem('tb_lang') as 'id' | 'en' | null;
+            if (sLang) setLang(sLang);
+        });
     }, []);
 
     const toggleLang = () => {

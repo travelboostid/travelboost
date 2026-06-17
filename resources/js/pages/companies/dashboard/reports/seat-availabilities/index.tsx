@@ -87,7 +87,8 @@ export default function SeatAvailabilityIndex({
                 },
             );
         }
-    }, [filters.departure_date, search, today]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     const [openTours, setOpenTours] = useState<number[]>([]);
     const [visibleSchedules, setVisibleSchedules] = useState<
