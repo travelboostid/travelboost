@@ -58,7 +58,7 @@ test('down payment booking past the final payment deadline is cancelled by the s
         'status' => PaymentStatus::PENDING,
     ]);
 
-    $this->travel(10)->days();
+    $this->travelTo(now()->addDays(10)->startOfDay()->addHour());
     $count = app(CancelOverdueDownPaymentBookingsAction::class)->execute();
 
     expect($count)->toBe(1);
@@ -81,7 +81,7 @@ test('system cancellation creates a booking_action_request entry visible in the 
         'booking_number' => 'BKG-SYS-CANCEL',
     ]);
 
-    $this->travel(10)->days();
+    $this->travelTo(now()->addDays(10)->startOfDay()->addHour());
     app(CancelOverdueDownPaymentBookingsAction::class)->execute();
 
     $action = BookingActionRequest::query()
@@ -113,7 +113,7 @@ test('system cancellation is attributed to the booking agent when one exists so 
         'departure_date' => now()->subDay()->toDateString(),
     ]);
 
-    $this->travel(10)->days();
+    $this->travelTo(now()->addDays(10)->startOfDay()->addHour());
     app(CancelOverdueDownPaymentBookingsAction::class)->execute();
 
     $action = BookingActionRequest::query()
@@ -139,7 +139,7 @@ test('bookings whose final payment deadline has not passed are not cancelled', f
         'departure_date' => now()->addDays(30)->toDateString(),
     ]);
 
-    $this->travel(10)->days();
+    $this->travelTo(now()->addDays(10)->startOfDay()->addHour());
     $count = app(CancelOverdueDownPaymentBookingsAction::class)->execute();
 
     expect($count)->toBe(0);
