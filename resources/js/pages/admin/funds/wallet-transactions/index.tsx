@@ -168,7 +168,7 @@ export default function WalletTransactionsPage({
             sorting: [{ id: 'id', desc: true }],
             columnPinning: { right: ['actions'] },
         },
-        getRowId: (row) => row.id.toString(),
+        getRowId: (_row) => row.id.toString(),
     });
 
     return (

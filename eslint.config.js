@@ -75,6 +75,7 @@ export default [
             'vite.config.ts',
             'resources/js/api/**',
             'scripts/**',
+            '.tmp/**',
         ],
     },
     prettier, // Turn off all rules that might conflict with Prettier

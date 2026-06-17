@@ -69,7 +69,9 @@ export default function PaymentsPage({ data }: PaymentsPageProps) {
                 header: ({ column }) => (
                     <DataTableColumnHeader column={column} label="Owner" />
                 ),
-                cell: ({ row }) => <div>{row.original.owner?.name ?? '-'}</div>,
+                cell: ({ row: _row }) => (
+                    <div>{row.original.owner?.name ?? '-'}</div>
+                ),
                 meta: {
                     label: 'Owner',
                     variant: 'multiSelect',
@@ -175,7 +177,7 @@ export default function PaymentsPage({ data }: PaymentsPageProps) {
             sorting: [{ id: 'id', desc: true }],
             columnPinning: { right: ['actions'] },
         },
-        getRowId: (row) => row.id.toString(),
+        getRowId: (_row) => row.id.toString(),
     });
 
     return (

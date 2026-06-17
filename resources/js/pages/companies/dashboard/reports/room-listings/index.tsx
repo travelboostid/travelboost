@@ -219,8 +219,8 @@ export default function RoomListing() {
     };
 
     let globalIndex = 1;
-    let agentCounter = 0;
     let roomCounter = 0;
+    let bookingCounter = 0;
 
     return (
         <CompanyDashboardLayout
@@ -482,9 +482,7 @@ export default function RoomListing() {
                                         <TableHead className="border-r border-slate-200 px-2 py-3 text-center text-[11px] font-bold uppercase text-slate-900 dark:border-slate-800 dark:text-slate-200 print:w-[4%]">
                                             <FormattedMessage defaultMessage="Age" />
                                         </TableHead>
-                                        <TableHead className="border-r border-slate-200 px-2 py-3 text-center text-[11px] font-bold uppercase text-slate-900 dark:border-slate-800 dark:text-slate-200 print:w-[10%]">
-                                            Agent Name
-                                        </TableHead>
+
                                         <TableHead className="px-2 py-3 text-center text-[11px] font-bold uppercase text-slate-900 dark:text-slate-200 print:w-[4%]">
                                             <FormattedMessage defaultMessage="Val" />
                                         </TableHead>
@@ -492,37 +490,18 @@ export default function RoomListing() {
                                 </TableHeader>
                                 <TableBody>
                                     {groupedData.map((agentGroup: any) => {
-                                        agentCounter++;
-
-                                        const rowBgClass =
-                                            agentCounter % 2 === 0
-                                                ? 'bg-slate-50/50 dark:bg-slate-900/30'
-                                                : 'bg-white dark:bg-slate-950';
                                         const bookings =
                                             agentGroup.bookings || [];
-                                        const agentTotalPax = bookings.reduce(
-                                            (count: number, booking: any) =>
-                                                count +
-                                                Number(booking.total_pax || 0),
-                                            0,
-                                        );
 
                                         return [
-                                            <TableRow
-                                                key={`agent-${agentGroup.agent_name}`}
-                                                className="border-b border-slate-300 bg-slate-100/90 dark:border-slate-700 dark:bg-slate-900 print-agent-row"
-                                            >
-                                                <TableCell
-                                                    colSpan={18}
-                                                    className="px-3 py-2 text-[11px] font-black uppercase tracking-[0.18em] text-slate-700 dark:text-slate-200 print:text-[8pt]"
-                                                >
-                                                    Agent:{' '}
-                                                    {agentGroup.agent_name} (
-                                                    {agentTotalPax} pax)
-                                                </TableCell>
-                                            </TableRow>,
                                             ...bookings.flatMap(
                                                 (bookingData: any) => {
+                                                    bookingCounter++;
+                                                    const rowBgClass =
+                                                        bookingCounter % 2 === 0
+                                                            ? 'bg-slate-50/50 dark:bg-slate-900/30'
+                                                            : 'bg-white dark:bg-slate-950';
+
                                                     const roomGroups =
                                                         bookingData.rooms || [];
                                                     const totalPaxInBooking =
@@ -623,7 +602,10 @@ export default function RoomListing() {
                                                                                 </>
                                                                             )}
                                                                             <TableCell className="border-r border-slate-200 p-2 dark:border-slate-800" />
-                                                                            <TableCell className="border-r border-slate-200 p-2 text-center text-[11px] dark:border-slate-800 dark:text-slate-300" />
+                                                                            <TableCell className="border-r border-slate-200 p-2 text-center text-[11px] dark:border-slate-800 dark:text-slate-300">
+                                                                                {row.visa_type_description ||
+                                                                                    '-'}
+                                                                            </TableCell>
                                                                             <TableCell className="border-r border-slate-200 p-2 text-[11px] italic leading-tight text-slate-500 dark:border-slate-800 dark:text-slate-400">
                                                                                 {row.note ||
                                                                                     '-'}
@@ -680,18 +662,7 @@ export default function RoomListing() {
                                                                                 ) ||
                                                                                     '-'}
                                                                             </TableCell>
-                                                                            {isFirstInBooking && (
-                                                                                <TableCell
-                                                                                    rowSpan={
-                                                                                        totalPaxInBooking
-                                                                                    }
-                                                                                    className="border-r border-slate-200 p-2 text-center align-middle text-[11px] font-semibold dark:border-slate-800 dark:text-slate-300"
-                                                                                >
-                                                                                    {
-                                                                                        agentGroup.agent_name
-                                                                                    }
-                                                                                </TableCell>
-                                                                            )}
+
                                                                             <TableCell
                                                                                 className={`p-2 text-center text-[12px] font-black ${
                                                                                     isPassportWarning

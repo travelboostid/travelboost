@@ -4,6 +4,8 @@ namespace App\Models;
 
 use App\Enums\CompanyType;
 use App\Traits\HasBankAccounts;
+use Bavix\Wallet\Interfaces\Customer;
+use Bavix\Wallet\Interfaces\Wallet;
 use Bavix\Wallet\Traits\CanPay;
 use Bavix\Wallet\Traits\HasWallet;
 use Bavix\Wallet\Traits\HasWallets;
@@ -13,7 +15,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Notifications\Notifiable;
 
-class Company extends Model
+class Company extends Model implements Customer, Wallet
 {
     use CanPay, HasBankAccounts, HasFactory, HasWallet, HasWallets, Notifiable;
 

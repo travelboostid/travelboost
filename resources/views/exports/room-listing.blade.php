@@ -150,7 +150,7 @@
                 <td colspan="9" style="border-bottom: 2px solid #111827"></td>
             </tr>
             <tr>
-                <td colspan="18"></td>
+                <td colspan="17"></td>
             </tr>
         </table>
     @else
@@ -279,11 +279,7 @@
                     {!! !$isExcel ? 'width="4%"' : '' !!}
                     >Age
                 </th>
-                <th
-                    style="{{ $headerStyle }}"
-                    {!! !$isExcel ? 'width="11%"' : '' !!}
-                    >Agent Name
-                </th>
+
                 <th
                     style="{{ $headerStyle }}"
                     {!! !$isExcel ? 'width="4%"' : '' !!}
@@ -294,35 +290,19 @@
         <tbody>
             @php
         $globalIndex = 1;
-        $agentCounter = 0;
         $roomCounter = 0;
+        $bookingCounter = 0;
       @endphp
             @foreach ($groupedData as $agentGroup)
                 @php
-          $agentCounter++;
-          $agentBackground = $agentCounter % 2 === 0 ? '#f8fafc' : '#ffffff';
           $agentBookings = $agentGroup['bookings'];
           $agentName = $agentGroup['agent_name'];
           $agentTotalPax = collect($agentBookings)->sum('total_pax');
         @endphp
-                <tr>
-                    <td
-                        colspan="18"
-                        style="
-                            border: 1px solid #94a3b8;
-                            background-color: #e2e8f0;
-                            color: #0f172a;
-                            font-weight: 700;
-                            text-transform: uppercase;
-                            padding: 6px 8px;
-                        "
-                    >
-                        Agent: {{ $agentName }} ({{ $agentTotalPax }} pax)
-                    </td>
-                </tr>
                 @foreach ($agentBookings as $bookingData)
                     @php
-            $rowBackground = "background-color: {$agentBackground};";
+            $bookingCounter++;
+            $rowBackground = "background-color: " . ($bookingCounter % 2 === 0 ? '#f8fafc' : '#ffffff') . ";";
             $isFirstInBooking = true;
             $bookingNumber = $bookingData['booking_number'];
             $bookingRooms = $bookingData['rooms'];
@@ -391,7 +371,9 @@
                                 ></td>
                                 <td
                                     style="{{ $cellStyle }} text-align: center;"
-                                ></td>
+                                >
+                                    {{ $passenger->visa_type_description ?: '-' }}
+                                </td>
                                 <td
                                     style="{{ $cellStyle }} font-size: 7pt; font-style: italic; color: #475569;"
                                 >
@@ -437,14 +419,7 @@
                                 >
                                     {{ $age }}
                                 </td>
-                                @if ($isFirstInBooking)
-                                    <td
-                                        rowspan="{{ $totalPaxInBooking }}"
-                                        style="{{ $cellStyle }} text-align: center; font-weight: 700;"
-                                    >
-                                        {{ $agentName }}
-                                    </td>
-                                @endif
+
                                 <td
                                     style="{{ $cellStyle }} text-align: center; font-weight: 700; {{ $isWarning ? 'background-color: #fee2e2; color: #dc2626;' : '' }}"
                                 >

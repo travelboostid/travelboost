@@ -19,7 +19,7 @@ declare module '@tanstack/react-table' {
             | Option[]
             | ((
                   query: string,
-                  currentValues: Set<TValue>,
+                  currentValues: Set<_TValue>,
               ) => Promise<Option[]>);
         range?: [number, number];
         unit?: string;
