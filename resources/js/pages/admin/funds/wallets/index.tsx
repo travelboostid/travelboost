@@ -40,7 +40,7 @@ export default function WalletsPage({ data }: WalletsPageProps) {
                         aria-label="Select all"
                     />
                 ),
-                cell: ({ row }) => (
+                cell: ({ row: _row }) => (
                     <Checkbox
                         checked={row.getIsSelected()}
                         onCheckedChange={(value) => row.toggleSelected(!!value)}
@@ -57,7 +57,7 @@ export default function WalletsPage({ data }: WalletsPageProps) {
                 header: ({ column }) => (
                     <DataTableColumnHeader column={column} label="Holder" />
                 ),
-                cell: ({ row }) => (
+                cell: ({ row: _row }) => (
                     <div>{row.original.holder?.name ?? '-'}</div>
                 ),
                 meta: {
@@ -92,7 +92,7 @@ export default function WalletsPage({ data }: WalletsPageProps) {
                 header: ({ column }) => (
                     <DataTableColumnHeader column={column} label="Name" />
                 ),
-                cell: ({ row }) => (
+                cell: ({ row: _row }) => (
                     <div>
                         <div>
                             {row.original.name ?? '-'} (
@@ -143,7 +143,7 @@ export default function WalletsPage({ data }: WalletsPageProps) {
             },
             {
                 id: 'actions',
-                cell: ({ row }) => {
+                cell: ({ row: _row }) => {
                     return <div className="flex gap-2">actions</div>;
                 },
                 size: 32,
@@ -166,7 +166,7 @@ export default function WalletsPage({ data }: WalletsPageProps) {
             sorting: [{ id: 'id', desc: true }],
             columnPinning: { right: ['actions'] },
         },
-        getRowId: (row) => row.id.toString(),
+        getRowId: (_row) => row.id.toString(),
     });
 
     return (

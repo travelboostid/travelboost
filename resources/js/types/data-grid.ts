@@ -56,14 +56,14 @@ export interface CellUpdate {
 }
 
 declare module '@tanstack/react-table' {
-    // biome-ignore lint/correctness/noUnusedVariables: TData and TValue are used in the ColumnMeta interface
-    interface ColumnMeta<TData extends RowData, TValue> {
+    // biome-ignore lint/correctness/noUnusedVariables: TData and _TValue are used in the ColumnMeta interface
+    interface ColumnMeta<_TData extends RowData, _TValue> {
         label?: string;
         cell?: CellOpts;
     }
 
     // biome-ignore lint/correctness/noUnusedVariables: TData is used in the TableMeta interface
-    interface TableMeta<TData extends RowData> {
+    interface TableMeta<_TData extends RowData> {
         dataGridRef?: React.RefObject<HTMLElement | null>;
         cellMapRef?: React.RefObject<Map<string, HTMLDivElement>>;
         focusedCell?: CellPosition | null;
@@ -188,9 +188,9 @@ export interface SearchState {
     onNavigateToPrevMatch: () => void;
 }
 
-export interface DataGridCellProps<TData> {
-    cell: Cell<TData, unknown>;
-    tableMeta: TableMeta<TData>;
+export interface DataGridCellProps<_TData> {
+    cell: Cell<_TData, unknown>;
+    tableMeta: TableMeta<_TData>;
     rowIndex: number;
     columnId: string;
     rowHeight: RowHeightValue;

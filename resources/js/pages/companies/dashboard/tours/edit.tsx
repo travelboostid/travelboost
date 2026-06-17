@@ -198,7 +198,7 @@ function RequiredLabel({ children }: { children: React.ReactNode }) {
     );
 }
 
-const EDITABLE_AVAILABILITY_FIELDS: AvailabilityField[] = ['max_pax', 'RS'];
+const _EDITABLE_AVAILABILITY_FIELDS: AvailabilityField[] = ['max_pax', 'RS'];
 
 const AVAILABILITY_MOBILE_FIELDS: { key: AvailabilityField; label: string }[] =
     [
@@ -612,7 +612,7 @@ export default function Page({ tour }: Props) {
         return `${hours}:${minutes}:${seconds}`;
     };
 
-    const buildAvailabilityPayloadRow = (
+    const _buildAvailabilityPayloadRow = (
         row: AvailabilityRow,
         startDate = row.manual_reserved_start_date ?? row.departure_date,
         startTime = row.manual_reserved_start_time ?? '00:00',
@@ -871,7 +871,7 @@ export default function Page({ tour }: Props) {
 
             // CLOSE DROPDOWN
             setOpenDropdownIndex(null);
-        } catch (err) {
+        } catch (_err) {
             toast.error(
                 intl.formatMessage({
                     defaultMessage: 'Failed to save schedule',
@@ -1065,7 +1065,7 @@ export default function Page({ tour }: Props) {
         );
     };
 
-    const updateAdjustment = (
+    const _updateAdjustment = (
         index: number,
         field: 'promotion' | 'commission',
         key: 'type' | 'value',
@@ -1280,11 +1280,11 @@ export default function Page({ tour }: Props) {
         setAvailability(updated);
     };
 
-    const buildAvailabilityPayload = () => {
+    const _buildAvailabilityPayload = () => {
         return availability.map((row) => buildAvailabilityPayloadRow(row));
     };
 
-    const buildAvailabilityPayloadLegacy = () => {
+    const _buildAvailabilityPayloadLegacy = () => {
         return availability.map((row, i) => ({
             company_id: company.id,
             tour_id: tour.id,
@@ -1441,7 +1441,7 @@ export default function Page({ tour }: Props) {
         });
     };
 
-    const deleteRow = (scheduleId: number, index: number) => {
+    const _deleteRow = (scheduleId: number, index: number) => {
         setAddOns((prev) => {
             const rows = [...(prev[scheduleId] || [])];
             rows.splice(index, 1);
@@ -1521,7 +1521,7 @@ export default function Page({ tour }: Props) {
                     },
                 },
             );
-        } catch (err) {
+        } catch (_err) {
             setSavingAddOns(false);
         }
     };
@@ -1537,7 +1537,7 @@ export default function Page({ tour }: Props) {
         setAddOns((prev) => {
             const rows = [...(prev[scheduleId] || [])];
 
-            const deletedItem = rows[index];
+            const _deletedItem = rows[index];
 
             rows.splice(index, 1);
 
@@ -1553,7 +1553,7 @@ export default function Page({ tour }: Props) {
     };
 
     //copy
-    const copySchedule = (item) => {
+    const _copySchedule = (item) => {
         const addons = item.add_ons?.length
             ? item.add_ons
             : addOnsFromDb[item.id] || [];
@@ -1587,7 +1587,7 @@ export default function Page({ tour }: Props) {
     const [copyOpen, setCopyOpen] = useState(false);
     const [selectedDates, setSelectedDates] = useState<Date[]>([]);
     const [copySourceIndex, setCopySourceIndex] = useState<number | null>(null);
-    const [copyDates, setCopyDates] = useState<string[]>(['']);
+    const [_copyDates, setCopyDates] = useState<string[]>(['']);
 
     const openCopyModal = (index: number) => {
         setCopySourceIndex(index);
@@ -1596,15 +1596,15 @@ export default function Page({ tour }: Props) {
         setCopyOpen(true);
     };
 
-    const addCopyDate = () => {
+    const _addCopyDate = () => {
         setCopyDates((prev) => [...prev, '']);
     };
 
-    const updateCopyDate = (idx: number, value: string) => {
+    const _updateCopyDate = (idx: number, value: string) => {
         setCopyDates((prev) => prev.map((d, i) => (i === idx ? value : d)));
     };
 
-    const removeCopyDate = (idx: number) => {
+    const _removeCopyDate = (idx: number) => {
         setCopyDates((prev) => prev.filter((_, i) => i !== idx));
     };
 
@@ -1874,7 +1874,7 @@ export default function Page({ tour }: Props) {
                     defaultMessage: 'Schedule copied successfully',
                 }),
             );
-        } catch (err) {
+        } catch (_err) {
             toast.error(
                 intl.formatMessage({
                     defaultMessage: 'Failed to copy schedule',

@@ -764,10 +764,14 @@ export default function Landing() {
     >('all');
 
     useEffect(() => {
-        if (typeof window !== 'undefined')
+        if (typeof window !== 'undefined') {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setCurrentDomain(window.location.host);
+        }
         const sLang = localStorage.getItem('tb_lang') as 'id' | 'en';
-        if (sLang) setLang(sLang);
+        if (sLang) {
+            setLang(sLang);
+        }
     }, []);
 
     const toggleLang = () => {

@@ -24,7 +24,7 @@ export default function SelectCategory({
     defaultValue,
     onChange,
 }: SelectCategoryProps) {
-    const page = usePage<SharedData>();
+    const _page = usePage<SharedData>();
     const { data, isLoading } = useGetTrips({
         duration_max,
     });

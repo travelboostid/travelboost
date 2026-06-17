@@ -397,7 +397,7 @@ export default function Page({
     categories: CommissionCategory[];
 }) {
     const intl = useIntl();
-    const { errors } = usePage().props as any;
+    const { errors: _errors } = usePage().props as any;
     const [sorting, setSorting] = ReactLib.useState<SortingState>([]);
     const [columnFilters, setColumnFilters] =
         ReactLib.useState<ColumnFiltersState>([]);
@@ -419,6 +419,7 @@ export default function Page({
         [],
     );
 
+    // eslint-disable-next-line react-hooks/incompatible-library
     const table = useReactTable({
         data: categories,
         columns,

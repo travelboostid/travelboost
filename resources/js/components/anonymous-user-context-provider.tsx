@@ -26,7 +26,7 @@ export default function AnonymousUserContextProvider({
         } else {
             setup.reset();
         }
-    }, [auth]);
+    }, [auth, setup]);
 
     console.log('AnonymousUserContextProvider render', {
         auth,

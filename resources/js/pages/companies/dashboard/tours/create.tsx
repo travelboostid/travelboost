@@ -286,7 +286,7 @@ export default function Page() {
         setSchedules(updated);
     };
 
-    const updateAdjustment = (
+    const _updateAdjustment = (
         index: number,
         field: 'promotion' | 'commission',
         key: 'type' | 'value',
@@ -310,7 +310,7 @@ export default function Page() {
     };
 
     //paging schedule
-    const [searchDepartureTab2, setSearchDepartureTab2] = useState('');
+    const [searchDepartureTab2, _setSearchDepartureTab2] = useState('');
     const schedulePerPage = 10;
 
     const [currentSchedulePage, setCurrentSchedulePage] = useState(1);
@@ -321,18 +321,18 @@ export default function Page() {
         return item.departure_date === searchDepartureTab2;
     });
 
-    const totalSchedulePages = Math.ceil(
+    const _totalSchedulePages = Math.ceil(
         filteredSchedules.length / schedulePerPage,
     );
 
-    const paginatedSchedulesTab = filteredSchedules.slice(
+    const _paginatedSchedulesTab = filteredSchedules.slice(
         (currentSchedulePage - 1) * schedulePerPage,
         currentSchedulePage * schedulePerPage,
     );
     //
 
     //search availability
-    const [searchDeparture, setSearchDeparture] = useState('');
+    const [_searchDeparture, _setSearchDeparture] = useState('');
 
     return (
         <CompanyDashboardLayout

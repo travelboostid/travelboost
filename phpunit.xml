@@ -32,7 +32,7 @@
         <env name="DB_PORT" value="5432"/>
         <env name="DB_DATABASE" value="testing"/>
         <env name="DB_USERNAME" value="postgres"/>
-        <env name="DB_PASSWORD" value="password"/>
+        <env name="DB_PASSWORD" value="navri"/>
         <env name="WALLET_MATH_SCALE" value="0"/>
         <env name="WALLET_CACHE_DRIVER" value="array"/>
         <env name="WALLET_CACHE_TTL" value="86400"/> <env name="WALLET_LOCK_DRIVER" value="array"/>
