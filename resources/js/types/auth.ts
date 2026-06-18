@@ -22,7 +22,6 @@ export type Auth = {
     user: User;
     permissions: string[];
     roles: string[];
-    teams: string[];
 };
 
 export type TwoFactorSetupData = {
