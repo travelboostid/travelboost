@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\AdminTourScheduleController;
 use App\Http\Controllers\Admin\AffiliateController;
 use App\Http\Controllers\Admin\AgentController;
+use App\Http\Controllers\Admin\AgentSubscriptionController;
 use App\Http\Controllers\Admin\AiUsageLogController;
 use App\Http\Controllers\Admin\AppConfigAdminController;
 use App\Http\Controllers\Admin\AppConfigController;
@@ -62,6 +63,7 @@ Route::prefix('admin')
                 Route::put('agents/bulk-update', [AgentController::class, 'bulkUpdate'])->name('agents.bulk-update');
                 Route::resource('vendors', VendorController::class)->names('vendors');
                 Route::resource('agents', AgentController::class)->names('agents');
+                Route::get('subscriptions', [AgentSubscriptionController::class, 'index'])->name('subscriptions');
                 Route::get('affiliates/export-csv', [AffiliateController::class, 'exportAsCsv'])->name('affiliates.export-csv');
                 Route::put('affiliates/bulk-update', [AffiliateController::class, 'bulkUpdate'])->name('affiliates.bulk-update');
                 Route::get('affiliates', [AffiliateController::class, 'index'])->name('affiliates');
