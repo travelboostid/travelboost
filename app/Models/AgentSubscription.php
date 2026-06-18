@@ -4,11 +4,16 @@ namespace App\Models;
 
 use App\Enums\AgentSubscriptionStatus;
 use Carbon\Carbon;
+use Database\Factories\AgentSubscriptionFactory;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class AgentSubscription extends Model
 {
+    /** @use HasFactory<AgentSubscriptionFactory> */
+    use HasFactory;
+
     protected $fillable = [
         'company_id',
         'package_id',
