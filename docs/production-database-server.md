@@ -2,7 +2,7 @@
 
 First-time setup for `tb-db-dev` / `tb-db-main`: PostgreSQL 18, pgvector, WAL-G backups.
 
-Doc index: [README](../README.md) · Hosts: [Server Inventory](./server-inventory.md)
+Doc index: [README](../README.md) · Hosts: [Server Inventory](./server-inventory.md) · Admin UI: [Database Backups](./database-backups.md)
 
 ## Installing PostgreSQL
 
@@ -161,6 +161,8 @@ sudo systemctl daemon-reload
 
 sudo systemctl enable --now wal-g-backup.timer
 ```
+
+The Laravel admin panel reads this timer over SSH and can start `wal-g-backup.service` manually. See [Database Backups](./database-backups.md).
 
 ---
 

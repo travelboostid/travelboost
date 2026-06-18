@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\AiUsageLogController;
 use App\Http\Controllers\Admin\AppConfigAdminController;
 use App\Http\Controllers\Admin\AppConfigController;
 use App\Http\Controllers\Admin\AuthController;
+use App\Http\Controllers\Admin\BackupController;
 use App\Http\Controllers\Admin\BankAccountController;
 use App\Http\Controllers\Admin\HomeController;
 use App\Http\Controllers\Admin\IndexController;
@@ -120,6 +121,9 @@ Route::prefix('admin')
                 Route::get('change-password', function () {
                     return inertia('admin/settings/change-password/index');
                 })->name('change-password');
+                Route::get('backups', [BackupController::class, 'index'])->name('backups.index');
+                Route::post('backups', [BackupController::class, 'store'])->name('backups.store');
+                Route::post('backups/apply-retention', [BackupController::class, 'applyRetention'])->name('backups.apply-retention');
             });
         });
 

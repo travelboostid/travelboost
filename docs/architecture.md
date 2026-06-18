@@ -497,6 +497,7 @@ Full index: [README](../README.md)
 | Product requirements | [requirements.md](./requirements.md)                                                                                     |
 | Local development    | [local-development.md](./local-development.md)                                                                           |
 | Production servers   | [production-app-server.md](./production-app-server.md), [production-database-server.md](./production-database-server.md) |
+| Database backups     | [database-backups.md](./database-backups.md)                                                                             |
 | Object storage       | [object-storage.md](./object-storage.md)                                                                                 |
 | Debugging            | [debugging.md](./debugging.md)                                                                                           |
 | Deployment           | [deployment.md](./deployment.md)                                                                                         |
