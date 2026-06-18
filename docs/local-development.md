@@ -164,7 +164,7 @@ Configure a named profile (recommended — do not commit keys):
 aws configure --profile travelboost-s3
 ```
 
-Quick test (readonly key or your dev IAM user):
+Quick test (readonly dev key or any key with implicit access to the bucket):
 
 ```bash
 aws s3 ls s3://tb-media-dev --endpoint-url https://nos.wjv-1.neo.id --profile travelboost-s3

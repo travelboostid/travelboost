@@ -64,19 +64,71 @@ Presets set `AWS_BUCKET=tb-media-dev` or `tb-media-main` with matching `AWS_URL`
 
 ## Credentials
 
-Access key and secret key are available in the **Biznet GIO** account.
+Access key and secret key are created in the **Biznet GIO** portal (NEO Object Storage).
 
 Do not commit credentials to the repository. Store them in `.env` on the app server, in `aws configure`, or local credential files only.
 
+Create **separate access keys** for app media, backups, and optional web deploy. Do not reuse one key across roles.
+
 ---
 
-## Policies
+## Biznet GIO portal (Neo)
 
-Policy JSON files live in `infra/s3/`. Apply them in the **Biznet GIO** console (or equivalent S3 admin UI). Replace `-dev` bucket names with `-main` / `-stg` in other environments.
+The NEO console is **not** a full AWS IAM console. Access is configured in two places:
 
-### IAM user policies
+### 1. Access keys — Implicit access
 
-Attach one policy per access key. Do not share one key across app, deploy, and backup.
+When creating or editing an S3 access key, Biznet GIO offers **Implicit access** (no custom IAM policy editor in the portal).
+
+Implicit access means: the key can only reach buckets you explicitly grant to that key in the portal. Scope each key to the minimum buckets it needs.
+
+| Key purpose                 | Grant access to                                            | Typical portal buckets   |
+| --------------------------- | ---------------------------------------------------------- | ------------------------ |
+| Laravel app (media uploads) | `tb-media-dev` or `tb-media-main`                          | media bucket only        |
+| WAL-G / database backup     | `tb-backup-dev` or `tb-backup-main`                        | backup bucket only       |
+| Optional web / CDN deploy   | `tb-web-dev` or `tb-web-main`                              | web bucket only          |
+| Developer debugging         | all dev buckets (if the portal allows multi-bucket grants) | read-only where possible |
+
+Use one access key per row. Put the key/secret in the matching `.env` variables (`AWS_*` for Laravel, `WALG_*` for backups).
+
+### 2. Bucket access level
+
+Each bucket has a visibility / ACL setting in the portal, for example:
+
+| Portal setting        | Meaning                                                |
+| --------------------- | ------------------------------------------------------ |
+| **Private**           | Anonymous users cannot list or read objects by default |
+| **Public Read**       | Anyone with the object URL can read (whole bucket)     |
+| **Public Read Write** | Anonymous read and write — **do not use** for app data |
+
+Recommended settings for Travelboost:
+
+| Bucket                             | Portal bucket access                    | Why                                                                                                                                                                                               |
+| ---------------------------------- | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tb-media-dev` / `tb-media-main`   | **Private**                             | Laravel uploads set per-object `public-read` via `visibility => public` in [`config/filesystems.php`](../config/filesystems.php). Only uploaded objects are world-readable, not the whole bucket. |
+| `tb-backup-dev` / `tb-backup-main` | **Private**                             | Backups must never be public. Access only via the backup access key (implicit).                                                                                                                   |
+| `tb-web-dev` / `tb-web-main`       | **Public Read** (if used as static CDN) | Entire bucket is meant to be served to browsers. Not used by default deploy.                                                                                                                      |
+
+Prefix-level public read (`images/*` only, not `media/raw/*`) is **not** available as a single portal toggle. Options:
+
+- Keep the media bucket **Private** and rely on per-object `public-read` on upload (current Laravel setup), or
+- Apply a custom bucket policy with [S3 Browser](https://kb.biznetgio.com/98042-neo-object-storage) (Biznet KB: “Custom Policy Bucket menggunakan S3 Browser”) using the reference JSON below.
+
+Official Neo docs: [S3 API](https://kb.biznetgio.com/98042-neo-object-storage/s3-api-neo-object-storage) · [Manage objects / ACL](https://kb.biznetgio.com/98042-neo-object-storage/manage-object-on-neo-object-storage-service).
+
+---
+
+## Policy reference (`infra/s3/`)
+
+JSON files under [`infra/s3/`](../infra/s3/) document the **intended** permissions for each key and bucket. They are **not** pasted into the Biznet GIO portal when using implicit access.
+
+Use them as a checklist when creating keys and buckets, or as templates for custom bucket policies in S3 Browser.
+
+Replace `-dev` bucket names with `-main` / `-stg` in other environments.
+
+### Access key scope (reference)
+
+Maps each key to buckets and actions. In the portal: create the key with **Implicit access** and grant only the listed bucket(s).
 
 | File                                                                                      | Use for                                   | Buckets                     |
 | ----------------------------------------------------------------------------------------- | ----------------------------------------- | --------------------------- |
@@ -85,7 +137,7 @@ Attach one policy per access key. Do not share one key across app, deploy, and b
 | [`infra/s3/iam-backup-dev.json`](../infra/s3/iam-backup-dev.json)                         | WAL-G / database backup                   | `tb-backup-dev`             |
 | [`infra/s3/iam-developer-readonly-dev.json`](../infra/s3/iam-developer-readonly-dev.json) | Local AWS CLI, s3fs, Cyberduck, debugging | all dev buckets (read-only) |
 
-Example — Laravel app user (`iam-app-media-dev.json`):
+Example — intended permissions for the Laravel app key (`iam-app-media-dev.json`):
 
 ```json
 {
@@ -117,11 +169,11 @@ Example — Laravel app user (`iam-app-media-dev.json`):
 }
 ```
 
-`tb-backup-dev` has **no public bucket policy**. Access is IAM-only (same pattern as [Production Database Server](./production-database-server.md) WAL-G config).
+`tb-backup-dev` stays **Private** in the portal with a backup-only implicit key. No public bucket policy.
 
-### Bucket policies (anonymous read)
+### Bucket policies (reference — optional S3 Browser)
 
-Apply on the bucket itself for browser/CDN access to public objects.
+These JSON files describe prefix-level anonymous **read** for media and web buckets. The Biznet GIO portal bucket toggle is all-or-nothing; use these only if you apply a custom policy via S3 Browser or equivalent.
 
 | File                                                                                | Bucket         | Public prefixes                 |
 | ----------------------------------------------------------------------------------- | -------------- | ------------------------------- |
@@ -292,14 +344,14 @@ Adjust the mount path and passwd file location for your user.
 
 ## Troubleshooting
 
-| Symptom              | Check                                                                                                                             |
-| -------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| 403 on upload        | App IAM key uses `iam-app-media-dev.json` on the bucket                                                                           |
-| 403 on browser URL   | Bucket policy allows `GetObject` on that prefix                                                                                   |
-| Wrong URL in browser | `AWS_URL` and `AWS_USE_PATH_STYLE_ENDPOINT=true`                                                                                  |
-| s3fs mount empty     | Bucket name, endpoint URL, path-style flag                                                                                        |
-| s3fs read-only       | Remove `-o ro`; ensure `-o rw` is set                                                                                             |
-| Laravel cannot write | `composer require league/flysystem-aws-s3-v3` installed                                                                           |
-| Backup upload fails  | WAL-G key uses `iam-backup-dev.json`, not the app key                                                                             |
-| AWS CLI 403 / denied | Correct `--endpoint-url`, profile, and IAM policy for the bucket                                                                  |
-| AWS CLI not found    | Install AWS CLI v2 — see [Getting started install](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html) |
+| Symptom                                 | Check                                                                                                                             |
+| --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| 403 on upload                           | App key has implicit access to `tb-media-dev`; bucket is not Public Read Write only for anonymous                                 |
+| 403 on browser URL                      | Object uploaded with `public-read` ACL, or bucket/custom policy allows `GetObject` on that prefix                                 |
+| Wrong URL in browser                    | `AWS_URL` and `AWS_USE_PATH_STYLE_ENDPOINT=true`                                                                                  |
+| s3fs mount empty                        | Bucket name, endpoint URL, path-style flag                                                                                        |
+| s3fs read-only                          | Remove `-o ro`; ensure `-o rw` is set                                                                                             |
+| Laravel cannot write                    | `composer require league/flysystem-aws-s3-v3` installed                                                                           |
+| Backup upload fails / admin panel empty | Backup key has implicit access to `tb-backup-dev` only; bucket **Private**; see [Database Backups](./database-backups.md)         |
+| AWS CLI 403 / denied                    | Correct `--endpoint-url`, profile, and implicit bucket grant for that access key                                                  |
+| AWS CLI not found                       | Install AWS CLI v2 — see [Getting started install](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html) |

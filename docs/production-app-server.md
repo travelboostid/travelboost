@@ -248,6 +248,18 @@ Upload `public/build/` to `~/travelboost/public/build/` on the server, or run `p
 
 ---
 
+## WAL-G (admin backup panel)
+
+The admin **Settings → Backups** page needs WAL-G on the app server for listing backups and applying retention. Manual backups and schedule status SSH to the database server.
+
+1. Install WAL-G to `/usr/local/bin/wal-g` (same steps as [Production Database Server](./production-database-server.md#installing-wal-g)).
+2. Set `WALG_*` and `DB_SSH_*` in `.env` — see [Database Backups](./database-backups.md).
+3. Ensure SSH from `travelboost@<app>` to `travelboost@<db>` works.
+
+Do not use the media S3 key for backups; create a separate backup access key (implicit access to the backup bucket only). See [Object Storage](./object-storage.md).
+
+---
+
 ## Optional Development Configuration
 
 To allow deployment scripts to control services without entering sudo passwords, update the sudoers configuration.

@@ -173,6 +173,11 @@ export default function useAdminNavMainMenu() {
                             title: 'Vouchers',
                             urlOrAction: '/admin/vouchers',
                         },
+                        {
+                            id: 'settings.backups',
+                            title: 'Backups',
+                            urlOrAction: '/admin/settings/backups',
+                        },
                     ],
                 },
                 {

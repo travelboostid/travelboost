@@ -53,7 +53,7 @@ Verify:
 aws --version
 ```
 
-Configure credentials for Neo object storage (use a Biznet GIO key with appropriate IAM policy):
+Configure credentials for Neo object storage (Biznet GIO access key with **Implicit access** to the buckets you need — see [Object Storage](./object-storage.md)):
 
 ```bash
 aws configure --profile travelboost-s3
