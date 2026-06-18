@@ -51,10 +51,10 @@ export function Footer() {
                             </li>
                             <li>
                                 <Link
-                                    href="#"
+                                    href="/docs"
                                     className="text-background/70 hover:text-background transition-colors text-sm"
                                 >
-                                    FAQ
+                                    Dokumentasi
                                 </Link>
                             </li>
                         </ul>

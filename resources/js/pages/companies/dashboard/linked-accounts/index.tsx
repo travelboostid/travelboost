@@ -16,16 +16,17 @@ import {
     EmptyMedia,
     EmptyTitle,
 } from '@/components/ui/empty';
-import usePageProps from '@/hooks/use-page-props';
+import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { index as analyticsIndex } from '@/routes/companies/dashboard/analytics';
 import { index as metaAnalyticsIndex } from '@/routes/companies/dashboard/analytics/meta';
 import { connect as connectFacebook } from '@/routes/companies/dashboard/facebook';
-import { connect } from '@/routes/companies/dashboard/google';
+import { connect, connectAds } from '@/routes/companies/dashboard/google';
 import { Head, Link } from '@inertiajs/react';
 import {
     IconBrandFacebook,
     IconBrandGoogle,
     IconBrandGoogleAnalytics,
+    IconBrandMeta,
 } from '@tabler/icons-react';
 import { ArrowRightIcon, Link2Icon, ShieldCheckIcon } from 'lucide-react';
 import { FormattedDate, FormattedMessage, useIntl } from 'react-intl';
@@ -35,7 +36,7 @@ import { DisconnectGoogleAccountButton } from './components/disconnect-google-ac
 type LinkedIntegration = {
     key: string;
     label: string;
-    status: 'connected' | 'not_connected';
+    status: 'connected' | 'not_connected' | 'pending';
     detail: string | null;
     meta: Record<string, string | null>;
 };
@@ -59,9 +60,70 @@ export type LinkedAccountsPageProps = {
     accountGroups: LinkedAccountGroup[];
 };
 
+function isAdsIntegrationComingSoon(
+    integrationKey: string,
+    marketingFeatures?: {
+        google_ads: boolean;
+        meta_ads: boolean;
+    },
+): boolean {
+    if (integrationKey === 'google_ads') {
+        return !marketingFeatures?.google_ads;
+    }
+
+    if (integrationKey === 'meta_ads') {
+        return !marketingFeatures?.meta_ads;
+    }
+
+    return false;
+}
+
+function IntegrationStatusBadge({
+    integration,
+    marketingFeatures,
+}: {
+    integration: LinkedIntegration;
+    marketingFeatures?: {
+        google_ads: boolean;
+        meta_ads: boolean;
+    };
+}) {
+    if (isAdsIntegrationComingSoon(integration.key, marketingFeatures)) {
+        return (
+            <Badge variant="outline">
+                <FormattedMessage defaultMessage="Coming soon" />
+            </Badge>
+        );
+    }
+
+    return (
+        <Badge
+            variant={
+                integration.status === 'connected' ? 'secondary' : 'outline'
+            }
+        >
+            {integration.status === 'connected' ? (
+                <FormattedMessage defaultMessage="Connected" />
+            ) : integration.status === 'pending' ? (
+                <FormattedMessage defaultMessage="Pending" />
+            ) : (
+                <FormattedMessage defaultMessage="Not connected" />
+            )}
+        </Badge>
+    );
+}
+
 function IntegrationIcon({ integrationKey }: { integrationKey: string }) {
     if (integrationKey === 'google_analytics') {
         return <IconBrandGoogleAnalytics className="size-4 text-[#E37400]" />;
+    }
+
+    if (integrationKey === 'google_ads') {
+        return <IconBrandGoogle className="size-4 text-[#34A853]" />;
+    }
+
+    if (integrationKey === 'meta_ads') {
+        return <IconBrandMeta className="size-4 text-[#1877F2]" />;
     }
 
     if (integrationKey === 'meta_pixel') {
@@ -76,12 +138,17 @@ function IntegrationIcon({ integrationKey }: { integrationKey: string }) {
 }
 
 function GoogleAccountGroupCard({ group }: { group: LinkedAccountGroup }) {
-    const { company } = usePageProps();
+    const { company, marketingFeatures } = usePageSharedDataProps();
+    const googleAdsEnabled = marketingFeatures?.google_ads ?? false;
     const account = group.accounts[0];
     const analyticsIntegration = account?.integrations.find(
         (integration) => integration.key === 'google_analytics',
     );
+    const googleAdsIntegration = account?.integrations.find(
+        (integration) => integration.key === 'google_ads',
+    );
     const hasAnalytics = analyticsIntegration?.status === 'connected';
+    const hasGoogleAds = googleAdsIntegration?.status === 'connected';
 
     return (
         <Card className="border-slate-200/80 dark:border-slate-800">
@@ -209,21 +276,12 @@ function GoogleAccountGroupCard({ group }: { group: LinkedAccountGroup }) {
                                                 ) : null}
                                             </div>
                                         </div>
-                                        <Badge
-                                            variant={
-                                                integration.status ===
-                                                'connected'
-                                                    ? 'secondary'
-                                                    : 'outline'
+                                        <IntegrationStatusBadge
+                                            integration={integration}
+                                            marketingFeatures={
+                                                marketingFeatures
                                             }
-                                        >
-                                            {integration.status ===
-                                            'connected' ? (
-                                                <FormattedMessage defaultMessage="Connected" />
-                                            ) : (
-                                                <FormattedMessage defaultMessage="Not connected" />
-                                            )}
-                                        </Badge>
+                                        />
                                     </div>
                                 ))}
                             </div>
@@ -244,6 +302,20 @@ function GoogleAccountGroupCard({ group }: { group: LinkedAccountGroup }) {
                                 </Button>
                             </div>
                         ) : null}
+
+                        {!hasGoogleAds && googleAdsEnabled ? (
+                            <div className="flex flex-col gap-3 rounded-xl border border-dashed border-slate-200/80 bg-muted/10 p-4 sm:flex-row sm:items-center sm:justify-between dark:border-slate-800">
+                                <p className="text-sm text-muted-foreground">
+                                    <FormattedMessage defaultMessage="Enable Google Ads to create campaigns from your promotion budget." />
+                                </p>
+                                <Button asChild variant="outline" size="sm">
+                                    <a href={connectAds(company.username).url}>
+                                        <FormattedMessage defaultMessage="Connect Google Ads" />
+                                        <ArrowRightIcon className="size-4" />
+                                    </a>
+                                </Button>
+                            </div>
+                        ) : null}
                     </div>
                 )}
             </CardContent>
@@ -252,7 +324,7 @@ function GoogleAccountGroupCard({ group }: { group: LinkedAccountGroup }) {
 }
 
 function MetaAccountGroupCard({ group }: { group: LinkedAccountGroup }) {
-    const { company } = usePageProps();
+    const { company, marketingFeatures } = usePageSharedDataProps();
     const account = group.accounts[0];
     const pixelIntegration = account?.integrations.find(
         (integration) => integration.key === 'meta_pixel',
@@ -390,21 +462,12 @@ function MetaAccountGroupCard({ group }: { group: LinkedAccountGroup }) {
                                                 ) : null}
                                             </div>
                                         </div>
-                                        <Badge
-                                            variant={
-                                                integration.status ===
-                                                'connected'
-                                                    ? 'secondary'
-                                                    : 'outline'
+                                        <IntegrationStatusBadge
+                                            integration={integration}
+                                            marketingFeatures={
+                                                marketingFeatures
                                             }
-                                        >
-                                            {integration.status ===
-                                            'connected' ? (
-                                                <FormattedMessage defaultMessage="Connected" />
-                                            ) : (
-                                                <FormattedMessage defaultMessage="Not connected" />
-                                            )}
-                                        </Badge>
+                                        />
                                     </div>
                                 ))}
                             </div>

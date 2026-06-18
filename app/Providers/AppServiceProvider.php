@@ -8,6 +8,7 @@ use App\Models\AiCreditTopupPayment;
 use App\Models\AnonymousUser;
 use App\Models\Company;
 use App\Models\Media;
+use App\Models\PromotionBudgetTopupPayment;
 use App\Models\User;
 use App\Models\WalletTopupPayment;
 use App\Services\KnowledgeBaseService;
@@ -51,6 +52,7 @@ class AppServiceProvider extends ServiceProvider
             'wallet-topup-payment' => WalletTopupPayment::class,
             'agent-subscription-payment' => AgentSubscriptionPayment::class,
             'ai-credit-topup-payment' => AiCreditTopupPayment::class,
+            'promotion-budget-topup-payment' => PromotionBudgetTopupPayment::class,
             'company' => Company::class,
             'user' => User::class,
             'anonymous-user' => AnonymousUser::class,

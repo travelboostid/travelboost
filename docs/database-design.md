@@ -323,7 +323,7 @@ erDiagram
 
 ## Chat, AI & subscriptions
 
-Real-time messaging, AI credit billing with usage logs, pgvector knowledge base, agent subscriptions, and Google Analytics integration.
+Real-time messaging, AI credit billing with usage logs, pgvector knowledge base, agent subscriptions, Google Analytics integration, Meta Pixel integration, and promotion budget with gated Google/Meta ads. See [Paid Ads & Promotion Budget](./google-ads-marketing.md).
 
 ```mermaid
 erDiagram
@@ -337,6 +337,8 @@ erDiagram
     companies ||--o{ agent_subscriptions : subscribed
     companies ||--|| company_google_accounts : oauth
     company_google_accounts ||--o{ google_analytics_connections : ga
+    companies ||--|| promotion_budgets : balance
+    companies ||--o{ promotion_budget_transactions : ledger
 
     knowledge_bases {
         text content
@@ -352,15 +354,18 @@ erDiagram
     }
 ```
 
-| Table                         | Key columns                | Notes                           |
-| ----------------------------- | -------------------------- | ------------------------------- |
-| `chat_rooms`                  | `type`, `last_message_id`  | Private or group                |
-| `chat_room_members`           | `member` (morph)           | User, Company, or AnonymousUser |
-| `chat_messages`               | `is_bot`, `reply_to`       | Bot and threaded replies        |
-| `knowledge_bases`             | `embedding` (vector)       | RAG for chatbot                 |
-| `ai_credits`                  | `balance`                  | Per-company AI wallet           |
-| `agent_subscription_packages` | `duration_months`, `price` | SaaS tiers for agents           |
-| `company_google_accounts`     | `google_id`, tokens        | OAuth for GA setup              |
+| Table                             | Key columns                | Notes                           |
+| --------------------------------- | -------------------------- | ------------------------------- |
+| `chat_rooms`                      | `type`, `last_message_id`  | Private or group                |
+| `chat_room_members`               | `member` (morph)           | User, Company, or AnonymousUser |
+| `chat_messages`                   | `is_bot`, `reply_to`       | Bot and threaded replies        |
+| `knowledge_bases`                 | `embedding` (vector)       | RAG for chatbot                 |
+| `ai_credits`                      | `balance`                  | Per-company AI wallet           |
+| `promotion_budgets`               | `balance`                  | Per-company ad promotion wallet |
+| `promotion_budget_transactions`   | `type`, `amount`           | Top-up / spend ledger           |
+| `promotion_budget_topup_payments` | `amount`                   | Midtrans payable morph          |
+| `agent_subscription_packages`     | `duration_months`, `price` | SaaS tiers for agents           |
+| `company_google_accounts`         | `google_id`, tokens        | OAuth for GA setup              |
 
 ---
 

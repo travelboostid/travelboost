@@ -51,6 +51,9 @@ export default function PaymentCard({ payment }: { payment: Payment }) {
             'ai-credit-topup-payment': intl.formatMessage({
                 defaultMessage: 'AI credits top-up',
             }),
+            'promotion-budget-topup-payment': intl.formatMessage({
+                defaultMessage: 'Promotion budget top-up',
+            }),
         }),
         [intl],
     );

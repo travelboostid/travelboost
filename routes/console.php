@@ -6,6 +6,8 @@ use App\Console\Commands\CheckAgentSubscriptionExpiry;
 use App\Console\Commands\ExpireManualReservedAvailabilities;
 use App\Console\Commands\SendBookingDeadlineReminders;
 use App\Jobs\MarkExpiredPaymentsJob;
+use App\Jobs\SyncGoogleAdsSpendJob;
+use App\Jobs\SyncMetaAdsSpendJob;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
@@ -59,6 +61,19 @@ Schedule::command(CancelOverdueDownPaymentBookings::class)
 Schedule::job(new MarkExpiredPaymentsJob)
     ->everyMinute()
     ->name('mark-expired-payments')
+    ->timezone(config('travelboost.scheduler_timezone'))
+    ->withoutOverlapping()
+    ->onOneServer();
+
+Schedule::job(new SyncGoogleAdsSpendJob)
+    ->hourly()
+    ->name('sync-google-ads-spend')
+    ->timezone(config('travelboost.scheduler_timezone'))
+    ->withoutOverlapping()
+    ->onOneServer();
+Schedule::job(new SyncMetaAdsSpendJob)
+    ->hourly()
+    ->name('sync-meta-ads-spend')
     ->timezone(config('travelboost.scheduler_timezone'))
     ->withoutOverlapping()
     ->onOneServer();

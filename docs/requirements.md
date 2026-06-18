@@ -29,3 +29,11 @@ For implementation details, local setup, prerequisites, and troubleshooting, see
 ## Wallet
 
 Both users and companies can have wallets. We use the Bavix Wallet package, which supports polymorphic (morph) relationships. This allows a wallet to be owned by either a user or a company.
+
+## Promotion ads
+
+Agent companies will run **Google Performance Max** and **Meta traffic** campaigns funded by a **promotion budget** (separate from the Bavix wallet and AI credits). Users top up via Midtrans; TravelBoost pays ad platforms through platform-owned manager accounts.
+
+**Current state:** Promotion budget top-up is live. Google/Meta ad connections and campaign creation are implemented in code but **disabled by default** (`MARKETING_*_ADS_ENABLED=false`) and shown as **Coming soon** in the dashboard. Google Analytics and Meta Pixel integrations are live for measurement.
+
+See [Paid Ads & Promotion Budget](./google-ads-marketing.md) for architecture, env vars, and rollout.

@@ -14,6 +14,7 @@ use App\Models\Booking;
 use App\Models\Company;
 use App\Models\Payment;
 use App\Models\PaymentMethod;
+use App\Models\PromotionBudgetTopupPayment;
 use App\Models\User;
 use App\Models\WalletTopupPayment;
 use App\Services\MidtransException;
@@ -411,6 +412,116 @@ class PaymentController extends Controller
                 ],
             ],
             'remarks' => 'AI credit topup',
+        ];
+
+        if ($paymentMethod->provider === 'midtrans') {
+            $context['selected_payment_method'] = $paymentMethod;
+        }
+
+        try {
+            $this->initiateGatewayPayment($payment, $request, $user, $context);
+        } catch (PrismaLinkException $exception) {
+            Log::warning('PrismaLink payment initiation failed', [
+                'payment_id' => $payment->id,
+                'provider' => 'prismalink',
+                'message' => $exception->getMessage(),
+                'response_code' => $exception->responseCode,
+            ]);
+
+            $payment->loadMissing('payable');
+            $payment->payable?->delete();
+            $payment->delete();
+
+            return response()->json([
+                'message' => $exception->getMessage(),
+                'response_code' => $exception->responseCode,
+                'response_description' => data_get($exception->response, 'response_description'),
+            ], 422);
+        } catch (MidtransException $exception) {
+            Log::warning('Midtrans payment initiation failed', [
+                'payment_id' => $payment->id,
+                'provider' => 'midtrans',
+                'message' => $exception->getMessage(),
+                'status_code' => $exception->statusCode,
+            ]);
+
+            $payment->loadMissing('payable');
+            $payment->payable?->delete();
+            $payment->delete();
+
+            return response()->json([
+                'message' => $exception->getMessage(),
+                'status_code' => $exception->statusCode,
+            ], 422);
+        } catch (Throwable $exception) {
+            Log::warning('Payment gateway initiation failed', [
+                'payment_id' => $payment->id,
+                'provider' => $paymentMethod->provider,
+                'message' => $exception->getMessage(),
+            ]);
+
+            $payment->loadMissing('payable');
+            $payment->payable?->delete();
+            $payment->delete();
+
+            return response()->json([
+                'message' => 'Payment gateway is temporarily unavailable.',
+            ], 422);
+        }
+
+        return new PaymentResource($payment->fresh());
+    }
+
+    /**
+     * Create payment for promotion budget topup
+     *
+     * @operationId createPromotionBudgetTopupPayment
+     */
+    public function createPromotionBudgetTopupPayment(Request $request): PaymentResource|JsonResponse
+    {
+        $validated = $request->validate([
+            'company_id' => ['required', 'exists:companies,id'],
+            'amount' => ['required', 'integer', 'min:100000'],
+            'payment_method_id' => ['required', 'exists:payment_methods,id'],
+        ]);
+
+        $user = Auth::user();
+        $paymentMethod = PaymentMethod::query()->findOrFail($validated['payment_method_id']);
+
+        if ($paymentMethod->status !== PaymentMethodStatus::ENABLED) {
+            return response()->json([
+                'message' => 'Selected payment method is not available.',
+            ], 422);
+        }
+
+        $payment = DB::transaction(function () use ($validated, $paymentMethod): Payment {
+            $topup = PromotionBudgetTopupPayment::create([
+                'amount' => $validated['amount'],
+            ]);
+
+            return $topup->payment()->create([
+                'owner_id' => $validated['company_id'],
+                'owner_type' => 'company',
+                'provider' => $paymentMethod->provider,
+                'payment_method' => $paymentMethod->method,
+                'amount' => $topup->amount,
+                'status' => 'unpaid',
+            ]);
+        });
+
+        $context = [
+            'finish_url' => $this->paymentFinishUrl(),
+            'invoice_number' => 'PB-'.$payment->id,
+            'product_details' => [
+                [
+                    'item_code' => 'promotion-budget-topup',
+                    'item_title' => 'Promotion Budget Topup',
+                    'quantity' => 1,
+                    'total' => (string) (int) $payment->amount,
+                    'currency' => 'IDR',
+                ],
+            ],
+            'remarks' => 'Promotion budget topup',
         ];
 
         if ($paymentMethod->provider === 'midtrans') {

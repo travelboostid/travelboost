@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Tenant\TourController as TenantTourController;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -46,6 +47,13 @@ class HomeController extends Controller
     public function cookiePolicy(): Response
     {
         return Inertia::render('cookie-policy/index');
+    }
+
+    public function docs(Request $request): Response
+    {
+        return Inertia::render('docs/index', [
+            'topic' => $request->query('topic'),
+        ]);
     }
 
     public function tours(): Response

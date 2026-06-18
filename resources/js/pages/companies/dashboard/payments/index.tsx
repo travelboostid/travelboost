@@ -38,7 +38,8 @@ export type PaymentTypeFilter =
     | 'all'
     | 'wallet-topup-payment'
     | 'agent-subscription-payment'
-    | 'ai-credit-topup-payment';
+    | 'ai-credit-topup-payment'
+    | 'promotion-budget-topup-payment';
 
 export type PaymentsPageProps = {
     payments: Array<Record<string, unknown>>;
@@ -73,6 +74,10 @@ const TYPE_FILTERS: Array<{
     {
         id: 'ai-credit-topup-payment',
         label: <FormattedMessage defaultMessage="AI credits" />,
+    },
+    {
+        id: 'promotion-budget-topup-payment',
+        label: <FormattedMessage defaultMessage="Promotion budget" />,
     },
 ];
 

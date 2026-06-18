@@ -3,6 +3,10 @@
 return [
     'scheduler_timezone' => env('SCHEDULER_TIMEZONE', 'Asia/Jakarta'),
     'agent_subscription_expiry_check_time' => env('AGENT_SUBSCRIPTION_EXPIRY_CHECK_TIME', '00:00'),
+    'marketing' => [
+        'google_ads_enabled' => env('MARKETING_GOOGLE_ADS_ENABLED', false),
+        'meta_ads_enabled' => env('MARKETING_META_ADS_ENABLED', false),
+    ],
     'permissions' => [
         ['name' => 'user.query', 'display_name' => 'Query User', 'description' => 'Allow viewing users'],
         ['name' => 'user.mutation', 'display_name' => 'Mutate User', 'description' => 'Allow creating, editing, or deleting users'],
