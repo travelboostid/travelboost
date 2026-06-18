@@ -9,22 +9,39 @@ import {
     DialogTrigger,
 } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useClipboard } from '@/hooks/use-clipboard';
-import { Check, CircleHelp, Copy } from 'lucide-react';
+import { copyToClipboard } from '@/hooks/use-clipboard';
+import { CircleHelp, Copy } from 'lucide-react';
 import type React from 'react';
-import { FormattedMessage } from 'react-intl';
+import { FormattedMessage, useIntl } from 'react-intl';
+import { toast } from 'sonner';
 
-const appHost = import.meta.env.VITE_APP_HOST;
-const appIpHost = import.meta.env.VITE_APP_IP_HOST;
+const appHost = import.meta.env.VITE_APP_HOST ?? '';
+const appIpHost = import.meta.env.VITE_APP_IP_HOST ?? '';
 
-function getCustomSubdomainFqdn(domain: string, rootDomain: string): string {
+function getCustomSubdomainHost(domain: string): string {
     const normalized = domain.trim().toLowerCase();
 
-    if (normalized && normalized.split('.').length > 2) {
-        return normalized;
+    if (!normalized) {
+        return 'subdomain';
     }
 
-    return `subdomain.${rootDomain}`;
+    const parts = normalized.split('.');
+
+    if (parts.length <= 2) {
+        return 'www';
+    }
+
+    return parts[0];
+}
+
+function getCustomSubdomainFqdn(domain: string, rootDomain: string): string {
+    const host = getCustomSubdomainHost(domain);
+
+    if (host === 'www' && !domain.trim()) {
+        return `www.${rootDomain}`;
+    }
+
+    return `${host}.${rootDomain}`;
 }
 
 function getAppSubdomainTarget(appSubdomain: string): string {
@@ -55,14 +72,14 @@ function getRootDomain(domain: string): string {
 
 function DnsRecordRow({
     label,
+    copyLabel,
     value,
     onCopy,
-    copied,
 }: {
     label: React.ReactNode;
+    copyLabel: string;
     value: string;
-    onCopy: (value: string) => void;
-    copied: boolean;
+    onCopy: (value: string, label: string) => void;
 }) {
     return (
         <div className="grid gap-1 sm:grid-cols-[5.5rem_1fr_auto] sm:items-center sm:gap-3">
@@ -77,13 +94,9 @@ function DnsRecordRow({
                 variant="ghost"
                 size="icon"
                 className="size-7 shrink-0 justify-self-end sm:justify-self-auto"
-                onClick={() => onCopy(value)}
+                onClick={() => onCopy(value, copyLabel)}
             >
-                {copied ? (
-                    <Check className="size-3.5" />
-                ) : (
-                    <Copy className="size-3.5" />
-                )}
+                <Copy className="size-3.5" />
                 <span className="sr-only">
                     <FormattedMessage defaultMessage="Copy" />
                 </span>
@@ -96,7 +109,7 @@ function DnsRecordGroup({
     title,
     records,
     onCopy,
-    copiedText,
+    labels,
 }: {
     title: React.ReactNode;
     records: Array<{
@@ -104,34 +117,38 @@ function DnsRecordGroup({
         host: string;
         target: string;
     }>;
-    onCopy: (value: string) => void;
-    copiedText: string | null;
+    onCopy: (value: string, label: string) => void;
+    labels: {
+        type: string;
+        host: string;
+        target: string;
+    };
 }) {
     return (
         <div className="space-y-2.5 rounded-lg border bg-muted/30 p-3">
             <p className="text-xs font-medium text-foreground">{title}</p>
             {records.map((record) => (
                 <div
-                    key={`${record.type}-${record.host}`}
+                    key={`${record.type}-${record.host}-${record.target}`}
                     className="space-y-2.5"
                 >
                     <DnsRecordRow
                         label={<FormattedMessage defaultMessage="Type" />}
+                        copyLabel={labels.type}
                         value={record.type}
                         onCopy={onCopy}
-                        copied={copiedText === record.type}
                     />
                     <DnsRecordRow
                         label={<FormattedMessage defaultMessage="Host" />}
+                        copyLabel={labels.host}
                         value={record.host}
                         onCopy={onCopy}
-                        copied={copiedText === record.host}
                     />
                     <DnsRecordRow
                         label={<FormattedMessage defaultMessage="Target" />}
+                        copyLabel={labels.target}
                         value={record.target}
                         onCopy={onCopy}
-                        copied={copiedText === record.target}
                     />
                 </div>
             ))}
@@ -198,8 +215,9 @@ export function CustomDomainDnsGuideDialog({
     domain: string;
     subdomain: string;
 }) {
-    const [copiedText, copy] = useClipboard();
+    const intl = useIntl();
     const rootDomain = getRootDomain(domain);
+    const customSubdomainHost = getCustomSubdomainHost(domain);
     const customSubdomainFqdn = getCustomSubdomainFqdn(domain, rootDomain);
     const appSubdomainTarget = getAppSubdomainTarget(subdomain);
     const subdomainExample = domain.trim() || customSubdomainFqdn;
@@ -208,6 +226,43 @@ export function CustomDomainDnsGuideDialog({
         normalizedDomain.split('.').length === 2
             ? normalizedDomain
             : rootDomain;
+
+    const dnsLabels = {
+        type: intl.formatMessage({ defaultMessage: 'Type' }),
+        host: intl.formatMessage({ defaultMessage: 'Host' }),
+        target: intl.formatMessage({ defaultMessage: 'Target' }),
+    };
+
+    const handleCopy = (value: string, label: string) => {
+        if (String(value ?? '') === '') {
+            toast.error(
+                intl.formatMessage({
+                    defaultMessage: 'Nothing to copy for this field',
+                }),
+            );
+
+            return;
+        }
+
+        void copyToClipboard(value).then((success) => {
+            if (success) {
+                toast.success(
+                    intl.formatMessage(
+                        { defaultMessage: '{label} copied' },
+                        { label },
+                    ),
+                );
+
+                return;
+            }
+
+            toast.error(
+                intl.formatMessage({
+                    defaultMessage: 'Could not copy to clipboard',
+                }),
+            );
+        });
+    };
 
     return (
         <Dialog>
@@ -262,8 +317,8 @@ export function CustomDomainDnsGuideDialog({
                                             target: appIpHost,
                                         },
                                     ]}
-                                    onCopy={copy}
-                                    copiedText={copiedText}
+                                    onCopy={handleCopy}
+                                    labels={dnsLabels}
                                 />
                                 <DnsRecordGroup
                                     title={
@@ -276,8 +331,8 @@ export function CustomDomainDnsGuideDialog({
                                             target: rootDomain,
                                         },
                                     ]}
-                                    onCopy={copy}
-                                    copiedText={copiedText}
+                                    onCopy={handleCopy}
+                                    labels={dnsLabels}
                                 />
                             </div>
                             <p className="text-xs text-muted-foreground">
@@ -306,7 +361,13 @@ export function CustomDomainDnsGuideDialog({
                                 />
                             </p>
                             <p className="text-xs text-muted-foreground">
-                                <FormattedMessage defaultMessage="Choose one of the options below." />
+                                <FormattedMessage
+                                    defaultMessage="In the Host field, enter only the subdomain label (e.g. {host}), not the full domain. Your registrar already applies it to {rootDomain}."
+                                    values={{
+                                        host: customSubdomainHost,
+                                        rootDomain,
+                                    }}
+                                />
                             </p>
                             <div className="space-y-3">
                                 <DnsRecordGroup
@@ -316,12 +377,12 @@ export function CustomDomainDnsGuideDialog({
                                     records={[
                                         {
                                             type: 'A',
-                                            host: customSubdomainFqdn,
+                                            host: customSubdomainHost,
                                             target: appIpHost,
                                         },
                                     ]}
-                                    onCopy={copy}
-                                    copiedText={copiedText}
+                                    onCopy={handleCopy}
+                                    labels={dnsLabels}
                                 />
                                 <DnsRecordGroup
                                     title={
@@ -330,12 +391,12 @@ export function CustomDomainDnsGuideDialog({
                                     records={[
                                         {
                                             type: 'CNAME',
-                                            host: customSubdomainFqdn,
+                                            host: customSubdomainHost,
                                             target: appSubdomainTarget,
                                         },
                                     ]}
-                                    onCopy={copy}
-                                    copiedText={copiedText}
+                                    onCopy={handleCopy}
+                                    labels={dnsLabels}
                                 />
                             </div>
                         </SetupSteps>
