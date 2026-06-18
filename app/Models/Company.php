@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\AdPlatform;
 use App\Enums\CompanyType;
 use App\Traits\HasBankAccounts;
 use Bavix\Wallet\Interfaces\Customer;
@@ -64,6 +65,10 @@ class Company extends Model implements Customer, Wallet
             // AI
             $company->aiCredit()->create([
                 'balance' => 10000, // Default AI free credit balance for new companies
+            ]);
+
+            $company->promotionBudget()->create([
+                'balance' => 0,
             ]);
 
             $roles = config('travelboost.company_default_roles', []);
@@ -168,6 +173,33 @@ class Company extends Model implements Customer, Wallet
     public function aiCredit()
     {
         return $this->hasOne(AiCredit::class, 'company_id');
+    }
+
+    public function promotionBudget()
+    {
+        return $this->hasOne(PromotionBudget::class, 'company_id');
+    }
+
+    public function adPlatformConnections()
+    {
+        return $this->hasMany(AdPlatformConnection::class, 'company_id');
+    }
+
+    public function googleAdsConnection(): HasOne
+    {
+        return $this->hasOne(AdPlatformConnection::class, 'company_id')
+            ->where('platform', AdPlatform::Google);
+    }
+
+    public function metaAdsConnection(): HasOne
+    {
+        return $this->hasOne(AdPlatformConnection::class, 'company_id')
+            ->where('platform', AdPlatform::Meta);
+    }
+
+    public function adCampaigns()
+    {
+        return $this->hasMany(AdCampaign::class, 'company_id');
     }
 
     public function aiUsageLogs()

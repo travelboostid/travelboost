@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\AdPlatformConnectionStatus;
 use App\Models\Company;
 
 class LinkedAccountsService
@@ -60,6 +61,8 @@ class LinkedAccountsService
             ->with('analyticsConnection')
             ->first();
 
+        $googleAds = $company->googleAdsConnection()->first();
+
         $accounts = [];
 
         if ($googleAccount !== null) {
@@ -93,6 +96,37 @@ class LinkedAccountsService
                 $integrations[] = [
                     'key' => 'google_analytics',
                     'label' => 'Google Analytics',
+                    'status' => 'not_connected',
+                    'detail' => null,
+                    'meta' => [],
+                ];
+            }
+
+            if ($googleAds !== null && $googleAds->status->value === 'connected') {
+                $integrations[] = [
+                    'key' => 'google_ads',
+                    'label' => 'Google Ads',
+                    'status' => 'connected',
+                    'detail' => $googleAds->external_account_id,
+                    'meta' => [
+                        'external_account_name' => $googleAds->external_account_name,
+                        'provisioned_at' => $googleAds->provisioned_at?->toIso8601String(),
+                    ],
+                ];
+            } elseif ($googleAds !== null) {
+                $integrations[] = [
+                    'key' => 'google_ads',
+                    'label' => 'Google Ads',
+                    'status' => 'pending',
+                    'detail' => $googleAds->status->value,
+                    'meta' => [
+                        'message' => data_get($googleAds->meta, 'message'),
+                    ],
+                ];
+            } else {
+                $integrations[] = [
+                    'key' => 'google_ads',
+                    'label' => 'Google Ads',
                     'status' => 'not_connected',
                     'detail' => null,
                     'meta' => [],
@@ -140,6 +174,7 @@ class LinkedAccountsService
     {
         $facebookAccount = $company->facebookAccount;
         $pixel = $company->metaPixelConnection;
+        $metaAds = $company->metaAdsConnection()->first();
 
         $accounts = [];
 
@@ -172,6 +207,34 @@ class LinkedAccountsService
                 $integrations[] = [
                     'key' => 'meta_pixel',
                     'label' => 'Meta Pixel',
+                    'status' => 'not_connected',
+                    'detail' => null,
+                    'meta' => [],
+                ];
+            }
+
+            if ($metaAds?->status === AdPlatformConnectionStatus::Connected) {
+                $integrations[] = [
+                    'key' => 'meta_ads',
+                    'label' => 'Meta Ads',
+                    'status' => 'connected',
+                    'detail' => $metaAds->external_account_id,
+                    'meta' => [],
+                ];
+            } elseif ($metaAds !== null) {
+                $integrations[] = [
+                    'key' => 'meta_ads',
+                    'label' => 'Meta Ads',
+                    'status' => 'pending',
+                    'detail' => $metaAds->status->value,
+                    'meta' => [
+                        'message' => data_get($metaAds->meta, 'message'),
+                    ],
+                ];
+            } else {
+                $integrations[] = [
+                    'key' => 'meta_ads',
+                    'label' => 'Meta Ads',
                     'status' => 'not_connected',
                     'detail' => null,
                     'meta' => [],

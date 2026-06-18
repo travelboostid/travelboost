@@ -7,6 +7,7 @@ use App\Enums\VendorAgentPartnerStatus;
 use App\Models\BookingActionRequest;
 use App\Models\Company;
 use App\Models\VendorAgentPartner;
+use App\Support\MarketingFeatures;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -57,6 +58,7 @@ class UseCurrentCompanyProps
                 'isMarketingDisabled' => $isMarketingDisabled,
                 'isExpired' => $isSubscriptionExpired,
             ],
+            'marketingFeatures' => MarketingFeatures::toArray(),
             'bookingModificationRequestCounts' => fn (): array => $this->bookingModificationRequestCounts($company),
         ]);
 

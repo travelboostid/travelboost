@@ -1,7 +1,7 @@
 <?php
 
 use App\Http\Controllers\Companies\AuthController;
-use App\Http\Controllers\Companies\Dashboard\AgentCommissionHistoryController;
+use App\Http\Controllers\Companies\Dashboard\AdCampaignController;
 use App\Http\Controllers\Companies\Dashboard\AgentRegistrationController;
 use App\Http\Controllers\Companies\Dashboard\AgentSubscriptionController;
 use App\Http\Controllers\Companies\Dashboard\AgentTierController;
@@ -28,6 +28,7 @@ use App\Http\Controllers\Companies\Dashboard\PaymentController;
 use App\Http\Controllers\Companies\Dashboard\PriceCategoryController;
 use App\Http\Controllers\Companies\Dashboard\ProductCommissionCategoryController;
 use App\Http\Controllers\Companies\Dashboard\ProfileController;
+use App\Http\Controllers\Companies\Dashboard\PromotionBudgetController;
 use App\Http\Controllers\Companies\Dashboard\RoleController;
 use App\Http\Controllers\Companies\Dashboard\RoomListingController;
 use App\Http\Controllers\Companies\Dashboard\SalesReportController;
@@ -218,12 +219,23 @@ Route::prefix('companies')->middleware(['can:access-company-pages', 'use-analyti
         Route::post('analytics/select-account', [GoogleAnalyticsController::class, 'selectAccount'])->name('analytics.selectAccount');
         Route::delete('analytics/connection', [GoogleAnalyticsController::class, 'unlinkConnection'])->name('analytics.unlinkConnection');
         Route::get('analytics/meta', [MetaAnalyticsController::class, 'index'])->name('analytics.meta.index');
+        Route::singleton('marketing/budget', PromotionBudgetController::class)->names('marketing.budget');
+        Route::post('marketing/budget/google/retry-provision', [PromotionBudgetController::class, 'retryGoogleAdsProvisioning'])
+            ->name('marketing.budget.google.retry-provision');
+        Route::post('marketing/budget/meta/retry-provision', [PromotionBudgetController::class, 'retryMetaAdsProvisioning'])
+            ->name('marketing.budget.meta.retry-provision');
+        Route::get('marketing/campaigns', [AdCampaignController::class, 'index'])->name('marketing.campaigns.index');
+        Route::get('marketing/campaigns/create', [AdCampaignController::class, 'create'])->name('marketing.campaigns.create');
+        Route::post('marketing/campaigns', [AdCampaignController::class, 'store'])->name('marketing.campaigns.store');
+        Route::post('marketing/campaigns/{campaign}/pause', [AdCampaignController::class, 'pause'])->name('marketing.campaigns.pause');
         Route::get('analytics/meta/select-pixel', [MetaAnalyticsController::class, 'showPixelSelection'])->name('analytics.meta.selectPixel');
         Route::post('analytics/meta/select-pixel', [MetaAnalyticsController::class, 'selectPixel'])->name('analytics.meta.selectPixel.store');
         Route::delete('analytics/meta/connection', [MetaAnalyticsController::class, 'unlinkConnection'])->name('analytics.meta.unlinkConnection');
         Route::get('google/connect', [GoogleAccountController::class, 'connect'])->name('google.connect');
+        Route::get('google/connect-ads', [GoogleAccountController::class, 'connectAds'])->name('google.connect-ads');
         Route::delete('google/disconnect', [GoogleAccountController::class, 'disconnect'])->name('google.disconnect');
         Route::get('facebook/connect', [FacebookAccountController::class, 'connect'])->name('facebook.connect');
+        Route::get('facebook/connect-ads', [FacebookAccountController::class, 'connectAds'])->name('facebook.connect-ads');
         Route::delete('facebook/disconnect', [FacebookAccountController::class, 'disconnect'])->name('facebook.disconnect');
     });
 });

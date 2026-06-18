@@ -15,5 +15,10 @@ export type SharedData = {
         photo_url: string | null;
         [key: string]: any;
     };
+    marketingFeatures?: {
+        google_ads: boolean;
+        meta_ads: boolean;
+        ad_campaigns: boolean;
+    };
     [key: string]: any;
 };

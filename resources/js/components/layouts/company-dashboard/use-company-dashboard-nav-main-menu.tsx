@@ -329,17 +329,28 @@ export function useCompanyDashboardNavMainMenu() {
                         : `/companies/${company.username}/dashboard/analytics`,
                     disabled: isMarketingDisabled,
                 },
-                // {
-                //     id: 'marketings.budgeting',
-                //     title: renderTitle(
-                //         <FormattedMessage defaultMessage="Promotion Budgetting" />,
-                //         isMarketingDisabled,
-                //     ),
-                //     urlOrAction: isMarketingDisabled
-                //         ? (handleLockedClick as any)
-                //         : '#',
-                //     disabled: isMarketingDisabled,
-                // },
+                {
+                    id: 'marketings.budgeting',
+                    title: renderTitle(
+                        <FormattedMessage defaultMessage="Promotion Budget" />,
+                        isMarketingDisabled,
+                    ),
+                    urlOrAction: isMarketingDisabled
+                        ? (handleLockedClick as any)
+                        : `/companies/${company.username}/dashboard/marketing/budget`,
+                    disabled: isMarketingDisabled,
+                },
+                {
+                    id: 'marketings.campaigns',
+                    title: renderTitle(
+                        <FormattedMessage defaultMessage="Ad Campaigns" />,
+                        isMarketingDisabled,
+                    ),
+                    urlOrAction: isMarketingDisabled
+                        ? (handleLockedClick as any)
+                        : `/companies/${company.username}/dashboard/marketing/campaigns`,
+                    disabled: isMarketingDisabled,
+                },
             ],
             shouldDisplay: (roles, _permissions) =>
                 roles.includes('user:agent'),

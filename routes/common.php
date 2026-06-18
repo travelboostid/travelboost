@@ -39,6 +39,7 @@ Route::get('/pricing', [BaseHomeController::class, 'pricing'])->name('pricing');
 Route::get('/privacy', [BaseHomeController::class, 'privacy'])->name('privacy');
 Route::get('/terms-and-conditions', [BaseHomeController::class, 'termsAndConditions'])->name('terms-and-conditions');
 Route::get('/cookie-policy', [BaseHomeController::class, 'cookiePolicy'])->name('cookie-policy');
+Route::get('/docs', [BaseHomeController::class, 'docs'])->name('docs');
 Route::get('/tours', [BaseHomeController::class, 'tours'])->name('tours');
 
 Route::middleware('guest')->group(function () {

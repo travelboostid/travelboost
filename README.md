@@ -40,12 +40,13 @@ Other dev commands: `pnpm dev:min` (server + Vite only), `pnpm dev` (interactive
 
 ### Architecture & product
 
-| Doc                                            | When to read                            |
-| ---------------------------------------------- | --------------------------------------- |
-| [Architecture](./docs/architecture.md)         | Stack, tenancy, auth, major subsystems  |
-| [Database Design](./docs/database-design.md)   | ER diagrams, tables by domain           |
-| [Routing](./docs/routing.md)                   | Why `routes/tenant.php` runs first      |
-| [Product Requirements](./docs/requirements.md) | Landing pages, customers, chatbot scope |
+| Doc                                                             | When to read                                              |
+| --------------------------------------------------------------- | --------------------------------------------------------- |
+| [Architecture](./docs/architecture.md)                          | Stack, tenancy, auth, major subsystems                    |
+| [Database Design](./docs/database-design.md)                    | ER diagrams, tables by domain                             |
+| [Routing](./docs/routing.md)                                    | Why `routes/tenant.php` runs first                        |
+| [Product Requirements](./docs/requirements.md)                  | Landing pages, customers, chatbot scope                   |
+| [Google Ads & Promotion Budget](./docs/google-ads-marketing.md) | Planned PMax ads, platform MCC, promotion budget (design) |
 
 ### Frontend & API
 

@@ -187,6 +187,7 @@ class MidtransWebhookController extends Controller
             'agent-subscription-payment' => $this->processAgentSubscription($payment),
             'wallet-topup-payment' => $this->settlementService->settle($payment),
             'ai-credit-topup-payment' => $this->settlementService->settle($payment),
+            'promotion-budget-topup-payment' => $this->settlementService->settle($payment),
             default => $this->logUnknownPayableType($payment),
         };
     }

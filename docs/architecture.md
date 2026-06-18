@@ -439,20 +439,22 @@ Changes to `chatbot` invalidate the config cache used by `ChatbotAgent`.
 
 ## Third-Party Integrations
 
-| Service            | Package / path                               | Purpose                             |
-| ------------------ | -------------------------------------------- | ----------------------------------- |
-| Midtrans           | `midtrans/midtrans-php`, `MidtransService`   | Online payments (VA, etc.)          |
-| PrismaLink         | `PrismaLinkService`                          | Alternative payment gateway         |
-| OpenRouter         | `laravel/ai`, `config/openrouter-models.php` | Chatbot LLM + embeddings            |
-| Google Analytics   | `google/analytics-*`, dashboard OAuth        | Per-company GA4 reports             |
-| Google OAuth       | `laravel/socialite`                          | GA account connection               |
-| Bavix Wallet       | `bavix/laravel-wallet`                       | User/company balances               |
-| Laratrust          | `santigarcor/laratrust`                      | RBAC                                |
-| Laravolt Indonesia | `laravolt/indonesia`                         | Province/city/district/village data |
-| DomPDF             | `barryvdh/laravel-dompdf`                    | Booking invoices / PDFs             |
+| Service            | Package / path                               | Purpose                                                                                                                  |
+| ------------------ | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| Midtrans           | `midtrans/midtrans-php`, `MidtransService`   | Online payments (VA, etc.)                                                                                               |
+| PrismaLink         | `PrismaLinkService`                          | Alternative payment gateway                                                                                              |
+| OpenRouter         | `laravel/ai`, `config/openrouter-models.php` | Chatbot LLM + embeddings                                                                                                 |
+| Google Analytics   | `google/analytics-*`, dashboard OAuth        | Per-company GA4 reports                                                                                                  |
+| Google OAuth       | `laravel/socialite`                          | GA account connection                                                                                                    |
+| Google Ads         | Platform MCC + `GoogleAdsService`            | PMax campaigns — gated by `MARKETING_GOOGLE_ADS_ENABLED` — see [Paid Ads & Promotion Budget](./google-ads-marketing.md)  |
+| Meta Ads           | Business Manager + `MetaAdsService`          | Traffic campaigns — gated by `MARKETING_META_ADS_ENABLED` — see [Paid Ads & Promotion Budget](./google-ads-marketing.md) |
+| Bavix Wallet       | `bavix/laravel-wallet`                       | User/company balances                                                                                                    |
+| Laratrust          | `santigarcor/laratrust`                      | RBAC                                                                                                                     |
+| Laravolt Indonesia | `laravolt/indonesia`                         | Province/city/district/village data                                                                                      |
+| DomPDF             | `barryvdh/laravel-dompdf`                    | Booking invoices / PDFs                                                                                                  |
 | Maatwebsite Excel  | Report exports from dashboards               |
-| Caddy              | `CaddyController`, production server         | Reverse proxy + on-demand TLS       |
-| Intervention Image | `AppServiceProvider` ImageManager            | Media processing                    |
+| Caddy              | `CaddyController`, production server         | Reverse proxy + on-demand TLS                                                                                            |
+| Intervention Image | `AppServiceProvider` ImageManager            | Media processing                                                                                                         |
 
 ---
 

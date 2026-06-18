@@ -86,6 +86,14 @@ export function Footer() {
                                     Contact
                                 </Link>
                             </li>
+                            <li>
+                                <Link
+                                    href="/docs"
+                                    className="text-sm text-background/70 transition-colors hover:text-background"
+                                >
+                                    Dokumentasi
+                                </Link>
+                            </li>
                         </ul>
                     </div>
 
@@ -156,6 +164,12 @@ export function Footer() {
                                     className="text-sm text-background/70 transition-colors hover:text-background"
                                 >
                                     Kebijakan Cookie
+                                </Link>
+                                <Link
+                                    href="/docs"
+                                    className="text-sm text-background/70 transition-colors hover:text-background"
+                                >
+                                    Dokumentasi
                                 </Link>
                             </div>
                             <p className="text-sm text-background/70">

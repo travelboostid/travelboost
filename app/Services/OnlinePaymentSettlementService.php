@@ -6,10 +6,13 @@ use App\Actions\Booking\FinalizeBookingPaymentAction;
 use App\Actions\Booking\NotifyBookingPaymentEventAction;
 use App\Enums\BookingStatus;
 use App\Enums\PaymentStatus;
+use App\Enums\PromotionBudgetTransactionType;
 use App\Models\AgentSubscriptionPayment;
 use App\Models\AiCreditTopupPayment;
 use App\Models\Booking;
 use App\Models\Payment;
+use App\Models\PromotionBudgetTopupPayment;
+use App\Models\PromotionBudgetTransaction;
 use App\Models\WalletTopupPayment;
 use Bavix\Wallet\Models\Transaction;
 use Illuminate\Support\Facades\Log;
@@ -29,6 +32,7 @@ class OnlinePaymentSettlementService
             'wallet-topup' => $this->settleWalletTopupPayment($payment),
             'agent-subscription' => $payment->payable?->onPaid($payment),
             'ai-credit-topup' => $this->settleAiCreditTopupPayment($payment),
+            'promotion-budget-topup' => $this->settlePromotionBudgetTopupPayment($payment),
             default => $this->logUnknownPayableType($payment),
         };
     }
@@ -40,6 +44,7 @@ class OnlinePaymentSettlementService
             WalletTopupPayment::class, 'wallet-topup-payment' => 'wallet-topup',
             AgentSubscriptionPayment::class, 'agent-subscription-payment' => 'agent-subscription',
             AiCreditTopupPayment::class, 'ai-credit-topup-payment' => 'ai-credit-topup',
+            PromotionBudgetTopupPayment::class, 'promotion-budget-topup-payment' => 'promotion-budget-topup',
             default => 'unknown',
         };
     }
@@ -165,6 +170,68 @@ class OnlinePaymentSettlementService
     private function isAiCreditTopupSettled(Payment $payment): bool
     {
         return filled(data_get($payment->payload, 'settled_at'));
+    }
+
+    private function settlePromotionBudgetTopupPayment(Payment $payment): void
+    {
+        if ($this->isPromotionBudgetTopupSettled($payment)) {
+            return;
+        }
+
+        $owner = $payment->owner;
+
+        if (! $owner) {
+            Log::error('Owner not found for promotion budget topup', ['payment_id' => $payment->id]);
+
+            return;
+        }
+
+        if (! $payment->payable instanceof PromotionBudgetTopupPayment) {
+            Log::error('Promotion budget topup payable not found', ['payment_id' => $payment->id]);
+
+            return;
+        }
+
+        $promotionBudget = $owner->promotionBudget()->first();
+
+        if (! $promotionBudget) {
+            $promotionBudget = $owner->promotionBudget()->create([
+                'balance' => $payment->payable->amount,
+            ]);
+        } else {
+            $promotionBudget->increment('balance', $payment->payable->amount);
+        }
+
+        PromotionBudgetTransaction::query()->create([
+            'company_id' => $owner->id,
+            'type' => PromotionBudgetTransactionType::Topup,
+            'amount' => $payment->payable->amount,
+            'reference_type' => $payment->getMorphClass(),
+            'reference_id' => $payment->id,
+            'description' => 'Promotion budget top-up',
+            'meta' => [
+                'payment_id' => $payment->id,
+            ],
+        ]);
+
+        $payment->update([
+            'payload' => array_merge($payment->payload ?? [], [
+                'settled_at' => now()->toISOString(),
+            ]),
+        ]);
+    }
+
+    private function isPromotionBudgetTopupSettled(Payment $payment): bool
+    {
+        if (filled(data_get($payment->payload, 'settled_at'))) {
+            return true;
+        }
+
+        return PromotionBudgetTransaction::query()
+            ->where('type', PromotionBudgetTransactionType::Topup)
+            ->where('reference_type', $payment->getMorphClass())
+            ->where('reference_id', $payment->id)
+            ->exists();
     }
 
     private function logUnknownPayableType(Payment $payment): void

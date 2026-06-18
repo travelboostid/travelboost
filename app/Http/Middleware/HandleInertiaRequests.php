@@ -45,6 +45,7 @@ class HandleInertiaRequests extends Middleware
                 'account_inactive' => $request->session()->get('account_inactive'),
                 'warning' => $request->session()->get('warning'),
                 'success' => $request->session()->get('success'),
+                'error' => $request->session()->get('error'),
                 'bookingPaymentResult' => $request->session()->get('bookingPaymentResult'),
             ],
             'customerUnreadNotificationsCount' => $unreadNotificationsCount,

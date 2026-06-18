@@ -34,6 +34,7 @@ class PaymentController extends Controller
             'wallet-topup-payment',
             'agent-subscription-payment',
             'ai-credit-topup-payment',
+            'promotion-budget-topup-payment',
         ];
         if (! in_array($type, $allowedTypes, true)) {
             $type = 'all';
