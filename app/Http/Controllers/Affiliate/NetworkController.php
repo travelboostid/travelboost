@@ -9,6 +9,7 @@ use App\Models\Domain;
 use App\Notifications\AffiliatePartnerReviewStatusNotification;
 use App\Notifications\AffiliateReviewStatusNotification;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -42,31 +43,22 @@ class NetworkController extends Controller
             }
         }
 
-        $networks = $query->get()->map(function ($profile) {
-            $networkId = $profile->user_id;
+        $profiles = $query->get();
 
-            $affiliatesQuery = AffiliateProfile::where('upline_id', $networkId)
-                ->where('tier', 'affiliate')
-                ->where('status', 'approved');
+        if ($profiles->isEmpty()) {
+            return Inertia::render('affiliate/dashboard/network/list', [
+                'networks' => collect(),
+            ]);
+        }
 
-            $total_affiliators = $affiliatesQuery->count();
+        $networkStats = $this->networkStatsForProfiles($profiles);
 
-            $referrerIds = [$networkId];
-            if ($profile->tier === 'master_affiliate') {
-                $downlineAffiliateIds = $affiliatesQuery->pluck('user_id')->toArray();
-                $referrerIds = array_merge($referrerIds, $downlineAffiliateIds);
-            }
-
-            $total_agents = Company::where('type', 'agent')
-                ->whereIn('referred_by', $referrerIds)
-                ->count();
-
-            $subscribed_agents = Company::where('type', 'agent')
-                ->whereIn('referred_by', $referrerIds)
-                ->whereHas('agentSubscription', function ($q) {
-                    $q->whereNotNull('package_id')->where('package_id', '!=', 1);
-                })
-                ->count();
+        $networks = $profiles->map(function ($profile) use ($networkStats) {
+            $stats = $networkStats[$profile->user_id] ?? [
+                'total_affiliators' => 0,
+                'total_agents' => 0,
+                'subscribed_agents' => 0,
+            ];
 
             $photoUrl = null;
             if ($profile->photo) {
@@ -107,9 +99,9 @@ class NetworkController extends Controller
                 'tier' => $profile->tier,
                 'created_at' => $profile->user->created_at ?? null,
                 'approved_at' => $profile->approved_at,
-                'total_affiliators' => $total_affiliators,
-                'total_agents' => $total_agents,
-                'subscribed_agents' => $subscribed_agents,
+                'total_affiliators' => $stats['total_affiliators'],
+                'total_agents' => $stats['total_agents'],
+                'subscribed_agents' => $stats['subscribed_agents'],
             ];
         });
 
@@ -307,5 +299,86 @@ class NetworkController extends Controller
         }
 
         return back()->with('success', 'Account has been deactivated and domain access restricted.');
+    }
+
+    /**
+     * @param  Collection<int, AffiliateProfile>  $profiles
+     * @return array<int, array{total_affiliators: int, total_agents: int, subscribed_agents: int}>
+     */
+    private function networkStatsForProfiles(Collection $profiles): array
+    {
+        $networkIds = $profiles->pluck('user_id');
+
+        $affiliatorCounts = AffiliateProfile::query()
+            ->whereIn('upline_id', $networkIds)
+            ->where('tier', 'affiliate')
+            ->where('status', 'approved')
+            ->groupBy('upline_id')
+            ->selectRaw('upline_id, count(*) as aggregate')
+            ->pluck('aggregate', 'upline_id');
+
+        $downlineAffiliatesByUpline = AffiliateProfile::query()
+            ->whereIn('upline_id', $networkIds)
+            ->where('tier', 'affiliate')
+            ->where('status', 'approved')
+            ->get(['upline_id', 'user_id'])
+            ->groupBy('upline_id')
+            ->map(fn (Collection $rows): Collection => $rows->pluck('user_id'));
+
+        $referrerIdsByNetwork = $profiles->mapWithKeys(function (AffiliateProfile $profile) use ($downlineAffiliatesByUpline): array {
+            $referrerIds = [$profile->user_id];
+
+            if ($profile->tier === 'master_affiliate') {
+                $referrerIds = array_merge(
+                    $referrerIds,
+                    $downlineAffiliatesByUpline->get($profile->user_id, collect())->all()
+                );
+            }
+
+            return [$profile->user_id => $referrerIds];
+        });
+
+        $allReferrerIds = $referrerIdsByNetwork->flatten()->unique()->values();
+
+        $agentCountsByReferrer = Company::query()
+            ->where('type', 'agent')
+            ->whereIn('referred_by', $allReferrerIds)
+            ->groupBy('referred_by')
+            ->selectRaw('referred_by, count(*) as aggregate')
+            ->pluck('aggregate', 'referred_by');
+
+        $subscribedAgentCountsByReferrer = Company::query()
+            ->where('type', 'agent')
+            ->whereIn('referred_by', $allReferrerIds)
+            ->whereHas('agentSubscription', function ($query): void {
+                $query->whereNotNull('package_id')->where('package_id', '!=', 1);
+            })
+            ->groupBy('referred_by')
+            ->selectRaw('referred_by, count(*) as aggregate')
+            ->pluck('aggregate', 'referred_by');
+
+        $sumForReferrers = function (array $referrerIds, Collection $countsByReferrer): int {
+            return (int) collect($referrerIds)->sum(
+                fn (int $referrerId): int => (int) ($countsByReferrer[$referrerId] ?? 0)
+            );
+        };
+
+        return $profiles->mapWithKeys(function (AffiliateProfile $profile) use (
+            $affiliatorCounts,
+            $referrerIdsByNetwork,
+            $agentCountsByReferrer,
+            $subscribedAgentCountsByReferrer,
+            $sumForReferrers,
+        ): array {
+            $referrerIds = $referrerIdsByNetwork->get($profile->user_id, [$profile->user_id]);
+
+            return [
+                $profile->user_id => [
+                    'total_affiliators' => (int) ($affiliatorCounts[$profile->user_id] ?? 0),
+                    'total_agents' => $sumForReferrers($referrerIds, $agentCountsByReferrer),
+                    'subscribed_agents' => $sumForReferrers($referrerIds, $subscribedAgentCountsByReferrer),
+                ],
+            ];
+        })->all();
     }
 }

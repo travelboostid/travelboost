@@ -37,7 +37,6 @@ class HandleInertiaRequests extends Middleware
                 'user' => $request->user()?->load(['companies']),
                 'permissions' => $request->user()?->allPermissions()->pluck('name')->toArray(),
                 'roles' => $request->user()?->roles->pluck('name')->toArray(),
-                'teams' => $request->user()?->allTeams()->pluck('name')->toArray(),
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
             'flash' => [

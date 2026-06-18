@@ -121,6 +121,85 @@ test('agent subdomain catalog exposes schedule price from minimum active price c
         ->where('data.0.tour.schedules.0.price', 3_000_000));
 });
 
+test('agent subdomain catalog marks liked tours for authenticated customers', function () {
+    $agent = Company::factory()->create([
+        'type' => 'agent',
+        'username' => 'likedcatalog',
+    ]);
+    $vendor = Company::factory()->create([
+        'type' => 'vendor',
+    ]);
+    $vendor->companySetting()->updateOrCreate([], [
+        'booking_deadline' => 0,
+    ]);
+
+    Domain::create([
+        'subdomain' => $agent->username,
+        'owner_type' => Company::class,
+        'owner_id' => $agent->id,
+        'subdomain_enabled' => true,
+    ]);
+
+    $likedTour = Tour::factory()->create([
+        'company_id' => $vendor->id,
+        'status' => 'active',
+    ]);
+    $otherTour = Tour::factory()->create([
+        'company_id' => $vendor->id,
+        'status' => 'active',
+    ]);
+
+    foreach ([$likedTour, $otherTour] as $tour) {
+        AgentTour::create([
+            'company_id' => $agent->id,
+            'tour_id' => $tour->id,
+            'status' => 'active',
+        ]);
+
+        $schedule = TourSchedule::create([
+            'tour_id' => $tour->id,
+            'tour_code' => $tour->code,
+            'company_id' => $vendor->id,
+            'departure_date' => now()->addDays(30)->toDateString(),
+            'return_date' => now()->addDays(34)->toDateString(),
+            'is_active' => true,
+        ]);
+
+        TourAvailability::create([
+            'company_id' => $vendor->id,
+            'tour_id' => $tour->id,
+            'schedule_id' => $schedule->id,
+            'max_pax' => 10,
+            'available' => 10,
+        ]);
+    }
+
+    $customer = User::factory()->create();
+
+    DB::table('tour_likes')->insert([
+        'user_id' => $customer->id,
+        'tour_id' => $likedTour->id,
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    $appHost = env('APP_HOST', 'localhost');
+
+    $response = $this->actingAs($customer)
+        ->get("http://{$agent->username}.{$appHost}/tours");
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->component('companies/agent-tours')
+        ->has('data', 2)
+        ->where('data', function ($data) use ($likedTour, $otherTour): bool {
+            $byTourId = collect($data)->keyBy(fn (array $item): int => (int) $item['tour']['id']);
+
+            return ($byTourId[$likedTour->id]['tour']['is_liked'] ?? null) === true
+                && ($byTourId[$otherTour->id]['tour']['is_liked'] ?? null) === false;
+        }));
+});
+
 test('customer can open booking create wizard from agent subdomain schedule', function () {
     $agent = Company::factory()->create([
         'type' => 'agent',
