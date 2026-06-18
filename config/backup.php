@@ -17,6 +17,9 @@ return [
     'remote' => [
         'user' => env('DB_SSH_USER'),
         'host' => env('DB_SSH_HOST'),
+        'run_as' => env('DB_SSH_RUN_AS'),
+        'identity_file' => env('DB_SSH_IDENTITY_FILE'),
+        'known_hosts_file' => env('DB_SSH_KNOWN_HOSTS_FILE'),
         'backup_service' => env('WALG_BACKUP_SERVICE', 'wal-g-backup.service'),
         'backup_timer' => env('WALG_BACKUP_TIMER', 'wal-g-backup.timer'),
     ],

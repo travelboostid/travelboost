@@ -57,6 +57,7 @@ WALG_BACKUP_SERVICE=wal-g-backup.service
 WALG_BACKUP_TIMER=wal-g-backup.timer
 DB_SSH_USER=travelboost
 DB_SSH_HOST=103.93.160.139                 # tb-db-dev; use 103.150.92.211 for main
+DB_SSH_RUN_AS=travelboost                  # app server only — PHP-FPM runs as www-data
 ```
 
 | Variable                                                         | Required for                | Notes                                                                                                       |
@@ -64,6 +65,7 @@ DB_SSH_HOST=103.93.160.139                 # tb-db-dev; use 103.150.92.211 for m
 | `WALG_S3_PREFIX`, `WALG_ACCESS_KEY_ID`, `WALG_SECRET_ACCESS_KEY` | List backups, retention     | Use **backup** bucket (`tb-backup-dev` / `tb-backup-main`) and a backup-only implicit key, not `tb-media-*` |
 | `WALG_BINARY`                                                    | List backups, retention     | WAL-G must be installed on the machine running PHP                                                          |
 | `DB_SSH_USER`, `DB_SSH_HOST`                                     | Manual backup, timer status | Must point at the **database** server, not the app server                                                   |
+| `DB_SSH_RUN_AS`                                                  | Manual backup, timer status | On app servers set to `travelboost` so PHP-FPM (`www-data`) uses the deploy user's SSH keys via `sudo`      |
 
 IAM policy: [`infra/s3/iam-backup-dev.json`](../infra/s3/iam-backup-dev.json) (reference — in Biznet GIO use a backup access key with **Implicit access** to the backup bucket only). See [Object Storage](./object-storage.md).
 
@@ -88,6 +90,18 @@ travelboost ALL=NOPASSWD: /bin/systemctl start wal-g-backup.service
 
 Add via `sudo visudo` on `tb-db-dev` / `tb-db-main`.
 
+### SSH sudo on the app server (admin panel)
+
+Web requests run as **`www-data`** (PHP-FPM). The admin backup panel runs SSH as the deploy user via `sudo`:
+
+```text
+www-data ALL=(travelboost) NOPASSWD: /usr/bin/ssh
+```
+
+Set `DB_SSH_RUN_AS=travelboost` in the app server `.env`. Ensure `travelboost` can SSH to the DB host (same key as manual deploy/debug).
+
+Add via `sudo visudo` on `tb-app-dev` / `tb-app-main`.
+
 ## App server setup
 
 In addition to normal app server setup ([Production App Server](./production-app-server.md)):
@@ -103,7 +117,10 @@ In addition to normal app server setup ([Production App Server](./production-app
 
 2. **Set backup env vars** in `~/travelboost/.env` (backup IAM key + `WALG_S3_PREFIX`).
 
-3. **Configure SSH** from the app user to the DB host (key in `~/.ssh/authorized_keys` on the DB server).
+3. **Configure SSH** from the deploy user to the DB host:
+    - Generate a key on the app server if missing: `ssh-keygen -t ed25519 -f ~/.ssh/id_ed25519 -N ""`
+    - Add `~/.ssh/id_ed25519.pub` to `~/.ssh/authorized_keys` on the DB server for `DB_SSH_USER`
+    - Set `DB_SSH_RUN_AS=travelboost` on the app server — see [SSH sudo on the app server](#ssh-sudo-on-the-app-server-admin-panel)
 
 4. **Clear config** after env changes: `php artisan config:clear`.
 
@@ -141,14 +158,15 @@ ssh travelboost@103.93.160.139 "sudo systemctl start wal-g-backup.service"
 
 ## Troubleshooting
 
-| Symptom                                           | Likely cause                             | Fix                                                                           |
-| ------------------------------------------------- | ---------------------------------------- | ----------------------------------------------------------------------------- |
-| `/usr/local/bin/wal-g: No such file or directory` | WAL-G not installed where PHP runs       | Install on app server (or local machine)                                      |
-| No backups listed / S3 errors                     | Wrong bucket or access key               | Use `tb-backup-*` + backup implicit key, not media credentials                |
-| Timer shows **Inactive** / empty dates            | Wrong `DB_SSH_HOST` or timer not enabled | Point SSH at DB server; run `systemctl enable --now wal-g-backup.timer` on DB |
-| "Unable to load timer status"                     | SSH failed                               | Check keys, firewall, `DB_SSH_USER` / `DB_SSH_HOST`                           |
-| Manual backup fails                               | Missing sudoers on DB                    | Add NOPASSWD rule for `systemctl start wal-g-backup.service`                  |
-| Panel shows "WAL-G is not configured"             | Missing `WALG_S3_PREFIX` or credentials  | Fill required env vars                                                        |
+| Symptom                                            | Likely cause                                    | Fix                                                                                                                           |
+| -------------------------------------------------- | ----------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `/usr/local/bin/wal-g: No such file or directory`  | WAL-G not installed where PHP runs              | Install on app server (or local machine)                                                                                      |
+| No backups listed / S3 errors                      | Wrong bucket or access key                      | Use `tb-backup-*` + backup implicit key, not media credentials                                                                |
+| Timer shows **Inactive** / empty dates             | Wrong `DB_SSH_HOST` or timer not enabled        | Point SSH at DB server; run `systemctl enable --now wal-g-backup.timer` on DB                                                 |
+| "Unable to load timer status"                      | SSH failed                                      | Check keys, firewall, `DB_SSH_USER` / `DB_SSH_HOST`; on app server set `DB_SSH_RUN_AS=travelboost` and sudoers for `www-data` |
+| `/var/www/.ssh` or `Permission denied (publickey)` | PHP-FPM (`www-data`) cannot use deploy SSH keys | Set `DB_SSH_RUN_AS=travelboost`; add `www-data ALL=(travelboost) NOPASSWD: /usr/bin/ssh` on app server                        |
+| Manual backup fails                                | Missing sudoers on DB                           | Add NOPASSWD rule for `systemctl start wal-g-backup.service`                                                                  |
+| Panel shows "WAL-G is not configured"              | Missing `WALG_S3_PREFIX` or credentials         | Fill required env vars                                                                                                        |
 
 ## Related code
 

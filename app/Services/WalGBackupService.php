@@ -156,21 +156,53 @@ class WalGBackupService
         );
 
         $process = Process::timeout(120)
-            ->run([
-                'ssh',
-                '-o',
-                'BatchMode=yes',
-                '-o',
-                'StrictHostKeyChecking=accept-new',
-                $target,
-                $command,
-            ]);
+            ->run($this->buildRemoteSshCommand($target, $command));
 
         if (! $process->successful()) {
             throw new WalGBackupException(trim($process->errorOutput() ?: $process->output()));
         }
 
         return trim($process->output());
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function buildRemoteSshCommand(string $target, string $command): array
+    {
+        $sshCommand = array_merge($this->sshArguments(), [$target, $command]);
+
+        if ($runAs = config('backup.remote.run_as')) {
+            return array_merge(['sudo', '-n', '-u', (string) $runAs, '--'], $sshCommand);
+        }
+
+        return $sshCommand;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function sshArguments(): array
+    {
+        $arguments = [
+            'ssh',
+            '-o',
+            'BatchMode=yes',
+            '-o',
+            'StrictHostKeyChecking=accept-new',
+        ];
+
+        if ($knownHostsFile = config('backup.remote.known_hosts_file')) {
+            $arguments[] = '-o';
+            $arguments[] = 'UserKnownHostsFile='.(string) $knownHostsFile;
+        }
+
+        if ($identityFile = config('backup.remote.identity_file')) {
+            $arguments[] = '-i';
+            $arguments[] = (string) $identityFile;
+        }
+
+        return $arguments;
     }
 
     /**

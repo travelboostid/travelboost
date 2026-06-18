@@ -18,11 +18,15 @@ cd ~/travelboost
 tail -f storage/logs/laravel.log
 ```
 
-If the file does not grow during web requests, PHP-FPM (`www-data`) may lack write permission. Typical symptom: chat (or any web route) returns **500** with `could not be opened in append mode: Permission denied` in the exception message.
+If the file does not grow during web requests, PHP-FPM (`www-data`) may lack write permission. Typical symptoms:
+
+- **500** with `could not be opened in append mode: Permission denied` (cannot write `storage/logs/laravel.log`)
+- **500** with `tempnam(): file created in the system's temporary directory` (cannot write compiled Blade views under `storage/framework/views`)
 
 ```bash
 ls -la storage/logs/
-sudo -u www-data test -w storage/logs/laravel.log && echo OK
+sudo -u www-data test -w storage/logs/laravel.log && echo "log OK"
+sudo -u www-data test -w storage/framework/views && echo "views OK"
 ```
 
 Fix: [Deployment — Fix storage permissions](./deployment.md#fix-storage-permissions-when-needed).

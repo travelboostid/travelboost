@@ -141,6 +141,11 @@ async function deploy() {
         if (!opts.skipOptimize) {
             steps.push('php artisan optimize:clear');
         }
+        steps.push(
+            'sudo chown -R travelboost:www-data storage bootstrap/cache',
+            'sudo chmod -R 775 storage bootstrap/cache',
+            'sudo chmod -R g+w storage/logs',
+        );
         if (!opts.skipSupervisor) {
             steps.push('sudo supervisorctl restart all');
         }

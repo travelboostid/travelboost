@@ -101,6 +101,9 @@ Runs `scripts/dev-deploy.mjs`. Each step prints `> command` and streams output s
     - `composer install --no-dev --optimize-autoloader`
     - `php artisan migrate --force`
     - `php artisan optimize:clear`
+    - `sudo chown -R travelboost:www-data storage bootstrap/cache`
+    - `sudo chmod -R 775 storage bootstrap/cache`
+    - `sudo chmod -R g+w storage/logs`
     - `sudo supervisorctl restart all`
 3. **Frontend** (unless `--skip-frontend`):
     - `pnpm install --frozen-lockfile` and `pnpm build` locally
@@ -151,6 +154,9 @@ Update `.env` when new variables are introduced (copy from the matching `.env.pr
 ```bash
 php artisan migrate --force
 php artisan optimize:clear
+sudo chown -R travelboost:www-data storage bootstrap/cache
+sudo chmod -R 775 storage bootstrap/cache
+sudo chmod -R g+w storage/logs
 ```
 
 Never run `migrate:fresh` on production — it drops all data.
@@ -176,7 +182,11 @@ Restarts queue workers, scheduler, and Reverb with the new code.
 
 ### Fix storage permissions (when needed)
 
-Web requests run as `www-data` (PHP-FPM); workers run as `travelboost` (Supervisor). If `storage/logs/laravel.log` is mode `644`, PHP-FPM cannot append and web requests may return **500** (`Permission denied` in logs) even when the database write succeeded — common after chat message sends.
+Web requests run as `www-data` (PHP-FPM); workers run as `travelboost` (Supervisor). `storage/` and `bootstrap/cache/` must be group-writable by `www-data` (owner `travelboost:www-data`, mode `775`).
+
+If permissions drift after deploy, you may see **500** with `tempnam(): file created in the system's temporary directory` (Blade cannot write compiled views) or `Permission denied` in `storage/logs/laravel.log`.
+
+`pnpm dev:deploy` reapplies ownership and permissions automatically after `optimize:clear`. To fix manually:
 
 ```bash
 cd ~/travelboost

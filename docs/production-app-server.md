@@ -199,15 +199,16 @@ sudo chmod -R g+w /home/travelboost/travelboost/storage/logs
 sudo find /home/travelboost/travelboost -type d -exec chmod g+s {} \;
 ```
 
-Verify PHP-FPM can append to the log:
+Verify PHP-FPM can write logs and compiled views:
 
 ```bash
 sudo -u www-data test -w /home/travelboost/travelboost/storage/logs/laravel.log && echo "laravel.log writable"
+sudo -u www-data test -w /home/travelboost/travelboost/storage/framework/views && echo "views writable"
 ```
 
 Supervisor log files (`storage/logs/queue-worker.log`, `reverb.log`, `scheduler.log`) should also be owned `travelboost:www-data`. If they are owned by `root`, Supervisor was started outside the repo config — run `sudo supervisorctl restart all` after linking `infra/supervisor/travelboost.conf`.
 
-See also [Deployment — restart services](./deployment.md#restart-services) for the post-deploy permission one-liner.
+See also [Deployment](./deployment.md) — automated deploy reapplies storage permissions; [Fix storage permissions](./deployment.md#fix-storage-permissions-when-needed) for manual recovery.
 
 ---
 
@@ -253,7 +254,7 @@ Upload `public/build/` to `~/travelboost/public/build/` on the server, or run `p
 The admin **Settings → Backups** page needs WAL-G on the app server for listing backups and applying retention. Manual backups and schedule status SSH to the database server.
 
 1. Install WAL-G to `/usr/local/bin/wal-g` (same steps as [Production Database Server](./production-database-server.md#installing-wal-g)).
-2. Set `WALG_*` and `DB_SSH_*` in `.env` — see [Database Backups](./database-backups.md).
+2. Set `WALG_*` and `DB_SSH_*` in `.env` — see [Database Backups](./database-backups.md). On the app server, set `DB_SSH_RUN_AS=travelboost` and allow `www-data` to run SSH as that user (`sudo visudo`).
 3. Ensure SSH from `travelboost@<app>` to `travelboost@<db>` works.
 
 Do not use the media S3 key for backups; create a separate backup access key (implicit access to the backup bucket only). See [Object Storage](./object-storage.md).
