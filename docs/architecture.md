@@ -122,6 +122,7 @@ Bootstrap configuration lives in `bootstrap/app.php` (middleware aliases, routin
 - Environment-specific seeders under `database/seeders/Local/`, `Development/`, `Production/`
 - Shared seed data in `database/seeders/Common/` (roles, AppConfig, sample companies/tours)
 - Factories for Pest feature tests
+- ER diagrams and table reference: [Database Design](./database-design.md)
 
 ---
 
@@ -381,6 +382,8 @@ Local dev runs queue + Reverb via `pnpm dev:full`.
 ---
 
 ## Data Layer
+
+Full entity-relationship diagrams grouped by domain: [Database Design](./database-design.md).
 
 ### PostgreSQL features
 
