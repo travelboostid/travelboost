@@ -39,6 +39,7 @@ import {
 import React from 'react';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { toast } from 'sonner';
+import { CustomDomainDnsGuideDialog } from './components/custom-domain-dns-guide-dialog';
 
 export type ProfilePageProps = {
     profile: any;
@@ -391,9 +392,19 @@ export default function Profile({ profile, account_status }: ProfilePageProps) {
                                     <div className="space-y-3 sm:col-span-2">
                                         <div className="flex items-center justify-between rounded-lg border p-4">
                                             <div className="space-y-0.5 pr-4">
-                                                <Label>
-                                                    <FormattedMessage defaultMessage="Custom domain" />
-                                                </Label>
+                                                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                                                    <Label>
+                                                        <FormattedMessage defaultMessage="Custom domain" />
+                                                    </Label>
+                                                    <CustomDomainDnsGuideDialog
+                                                        domain={
+                                                            form.data.domain
+                                                        }
+                                                        subdomain={
+                                                            form.data.subdomain
+                                                        }
+                                                    />
+                                                </div>
                                                 <FieldDescription>
                                                     <FormattedMessage defaultMessage="Use your own domain instead of the default subdomain." />
                                                 </FieldDescription>

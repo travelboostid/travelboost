@@ -23,8 +23,9 @@ Deploy-specific variables in each preset:
 
 ```env
 DEPLOY_BRANCH=dev
+APP_IP_HOST=103.127.138.76
 DEPLOY_SSH_USER=travelboost
-DEPLOY_SSH_HOST=103.127.138.76
+DEPLOY_SSH_HOST=${APP_IP_HOST}
 DEPLOY_TARGET_PATH=~/travelboost
 ```
 
