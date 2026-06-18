@@ -73,8 +73,10 @@ export default function UpdatePriceCategoryDialog({
                 room_type: item?.room_type,
                 description: item?.description || '',
             });
+            form.clearErrors();
         }
-    }, [item, form, open]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [item, open]);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
