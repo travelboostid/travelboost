@@ -45,7 +45,12 @@ class TourController extends Controller
             })
             ->groupBy('tour_id');
 
-        $tenant->agentTours->each(function ($agentTour) use ($availabilities, $partnerships) {
+        $user = request()->user();
+        $likedTourIds = $user && $tourIds->isNotEmpty()
+            ? $user->tourLikes()->whereIn('tour_id', $tourIds)->pluck('tour_id')
+            : collect();
+
+        $tenant->agentTours->each(function ($agentTour) use ($availabilities, $likedTourIds, $partnerships) {
             if (! $agentTour->tour) {
                 return;
             }
@@ -73,9 +78,7 @@ class TourController extends Controller
                 ])
                 ->values();
 
-            $agentTour->tour->is_liked = request()->user()
-              ? $agentTour->tour->likes()->where('user_id', request()->user()->id)->exists()
-              : false;
+            $agentTour->tour->is_liked = $likedTourIds->contains($agentTour->tour_id);
 
             $statusVal = is_object($agentTour->status) ? $agentTour->status->value : $agentTour->status;
             $agentTour->tour->agent_status = $statusVal;
