@@ -121,6 +121,11 @@ class MediaPolicy
             return false;
         }
 
+        if ($user->hasRole("company:{$company->id}:superadmin") ||
+        $user->hasRole("company:{$company->id}:admin")) {
+            return true;
+        }
+
         $permission = $action === 'mutation' ? 'media.mutation' : 'media.query';
 
         if (! $user->isAbleTo($permission, "company:{$company->id}")) {
