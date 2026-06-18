@@ -19,6 +19,9 @@ type AnalyticsSetupLayoutProps = {
     title: ReactNode;
     description: ReactNode;
     connectedAccountEmail?: string | null;
+    connectedAccountLabel?: ReactNode;
+    step1Label?: ReactNode;
+    step2Label?: ReactNode;
     benefits: AnalyticsSetupBenefit[];
     actions: ReactNode;
     className?: string;
@@ -84,6 +87,9 @@ export function AnalyticsSetupLayout({
     title,
     description,
     connectedAccountEmail,
+    connectedAccountLabel,
+    step1Label = <FormattedMessage defaultMessage="Connect Google" />,
+    step2Label = <FormattedMessage defaultMessage="Link Analytics property" />,
     benefits,
     actions,
     className,
@@ -95,17 +101,13 @@ export function AnalyticsSetupLayout({
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
                         <SetupStep
                             step={1}
-                            label={
-                                <FormattedMessage defaultMessage="Connect Google" />
-                            }
+                            label={step1Label}
                             status={currentStep === 1 ? 'current' : 'complete'}
                         />
                         <div className="hidden h-px min-w-8 flex-1 bg-slate-200 sm:block dark:bg-slate-800" />
                         <SetupStep
                             step={2}
-                            label={
-                                <FormattedMessage defaultMessage="Link Analytics property" />
-                            }
+                            label={step2Label}
                             status={
                                 currentStep === 1
                                     ? 'upcoming'
@@ -138,18 +140,20 @@ export function AnalyticsSetupLayout({
                                 </p>
                             </div>
 
-                            {connectedAccountEmail ? (
+                            {connectedAccountEmail || connectedAccountLabel ? (
                                 <Badge
                                     variant="secondary"
                                     className="gap-1.5 px-3 py-1.5 text-xs font-normal"
                                 >
                                     <CheckCircle2Icon className="size-3.5 text-emerald-600 dark:text-emerald-400" />
-                                    <FormattedMessage
-                                        defaultMessage="Signed in as {email}"
-                                        values={{
-                                            email: connectedAccountEmail,
-                                        }}
-                                    />
+                                    {connectedAccountLabel ?? (
+                                        <FormattedMessage
+                                            defaultMessage="Signed in as {email}"
+                                            values={{
+                                                email: connectedAccountEmail,
+                                            }}
+                                        />
+                                    )}
                                 </Badge>
                             ) : null}
                         </div>

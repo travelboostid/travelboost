@@ -33,6 +33,7 @@ import {
 import { useMemo, useState } from 'react';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { toast } from 'sonner';
+import { AnalyticsProviderTabs } from './components/analytics-provider-tabs';
 
 type GaStream = {
     id: string;
@@ -524,6 +525,8 @@ export default function SelectOrSetupAccountPage({
                         <FormattedMessage defaultMessage="Step 2 of 2 · Analytics property" />
                     </Badge>
                 </header>
+
+                <AnalyticsProviderTabs activeProvider="google" />
 
                 {googleAccount.email ? (
                     <div className="flex items-center gap-2 rounded-xl border border-emerald-200/80 bg-emerald-50/60 px-4 py-3 text-sm dark:border-emerald-900/50 dark:bg-emerald-950/20">

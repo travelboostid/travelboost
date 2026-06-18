@@ -18,11 +18,18 @@ import {
 } from '@/components/ui/empty';
 import usePageProps from '@/hooks/use-page-props';
 import { index as analyticsIndex } from '@/routes/companies/dashboard/analytics';
+import { index as metaAnalyticsIndex } from '@/routes/companies/dashboard/analytics/meta';
+import { connect as connectFacebook } from '@/routes/companies/dashboard/facebook';
 import { connect } from '@/routes/companies/dashboard/google';
 import { Head, Link } from '@inertiajs/react';
-import { IconBrandGoogle, IconBrandGoogleAnalytics } from '@tabler/icons-react';
+import {
+    IconBrandFacebook,
+    IconBrandGoogle,
+    IconBrandGoogleAnalytics,
+} from '@tabler/icons-react';
 import { ArrowRightIcon, Link2Icon, ShieldCheckIcon } from 'lucide-react';
 import { FormattedDate, FormattedMessage, useIntl } from 'react-intl';
+import { DisconnectFacebookAccountButton } from './components/disconnect-facebook-account-button';
 import { DisconnectGoogleAccountButton } from './components/disconnect-google-account-button';
 
 type LinkedIntegration = {
@@ -55,6 +62,14 @@ export type LinkedAccountsPageProps = {
 function IntegrationIcon({ integrationKey }: { integrationKey: string }) {
     if (integrationKey === 'google_analytics') {
         return <IconBrandGoogleAnalytics className="size-4 text-[#E37400]" />;
+    }
+
+    if (integrationKey === 'meta_pixel') {
+        return <IconBrandFacebook className="size-4 text-[#1877F2]" />;
+    }
+
+    if (integrationKey === 'facebook_account') {
+        return <IconBrandFacebook className="size-4 text-[#1877F2]" />;
     }
 
     return <IconBrandGoogle className="size-4 text-[#4285F4]" />;
@@ -236,6 +251,189 @@ function GoogleAccountGroupCard({ group }: { group: LinkedAccountGroup }) {
     );
 }
 
+function MetaAccountGroupCard({ group }: { group: LinkedAccountGroup }) {
+    const { company } = usePageProps();
+    const account = group.accounts[0];
+    const pixelIntegration = account?.integrations.find(
+        (integration) => integration.key === 'meta_pixel',
+    );
+    const hasPixel = pixelIntegration?.status === 'connected';
+    const hasFacebookAccount = account?.integrations.some(
+        (integration) =>
+            integration.key === 'facebook_account' &&
+            integration.status === 'connected',
+    );
+
+    return (
+        <Card className="border-slate-200/80 dark:border-slate-800">
+            <CardHeader className="gap-4 sm:flex-row sm:items-start sm:justify-between">
+                <div className="flex items-start gap-3">
+                    <div className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-[#1877F2]/10">
+                        <IconBrandFacebook className="size-5 text-[#1877F2]" />
+                    </div>
+                    <div className="space-y-1">
+                        <CardTitle>{group.title}</CardTitle>
+                        <CardDescription>{group.description}</CardDescription>
+                    </div>
+                </div>
+                {hasFacebookAccount ? (
+                    <DisconnectFacebookAccountButton
+                        email={account?.email}
+                        name={account?.name}
+                        hasPixel={hasPixel}
+                    />
+                ) : null}
+            </CardHeader>
+            <CardContent>
+                {!account ? (
+                    <Empty className="border border-dashed border-slate-200/80 bg-muted/20 dark:border-slate-800">
+                        <EmptyHeader>
+                            <EmptyMedia variant="icon">
+                                <Link2Icon />
+                            </EmptyMedia>
+                            <EmptyTitle>
+                                <FormattedMessage defaultMessage="No Facebook account linked" />
+                            </EmptyTitle>
+                            <EmptyDescription>
+                                <FormattedMessage defaultMessage="Connect Facebook to discover Meta Pixels and view pixel insights for your company." />
+                            </EmptyDescription>
+                        </EmptyHeader>
+                        <EmptyContent>
+                            <Button asChild>
+                                <a href={connectFacebook(company.username).url}>
+                                    <IconBrandFacebook className="size-4" />
+                                    <FormattedMessage defaultMessage="Connect Facebook account" />
+                                </a>
+                            </Button>
+                        </EmptyContent>
+                    </Empty>
+                ) : (
+                    <div className="space-y-4">
+                        <div className="rounded-xl border border-slate-200/80 bg-muted/20 p-4 dark:border-slate-800">
+                            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                <div className="min-w-0">
+                                    <p className="truncate font-medium text-foreground">
+                                        {account.name ??
+                                            account.email ??
+                                            'Facebook account'}
+                                    </p>
+                                    {account.email ? (
+                                        <p className="truncate text-sm text-muted-foreground">
+                                            {account.email}
+                                        </p>
+                                    ) : null}
+                                    {account.connected_at ? (
+                                        <p className="mt-1 text-xs text-muted-foreground">
+                                            <FormattedMessage
+                                                defaultMessage="Linked {date}"
+                                                values={{
+                                                    date: (
+                                                        <FormattedDate
+                                                            value={
+                                                                account.connected_at
+                                                            }
+                                                            dateStyle="medium"
+                                                        />
+                                                    ),
+                                                }}
+                                            />
+                                        </p>
+                                    ) : null}
+                                </div>
+                                <Badge variant="secondary">
+                                    <FormattedMessage defaultMessage="Active" />
+                                </Badge>
+                            </div>
+                        </div>
+
+                        <div className="space-y-3">
+                            <p className="text-sm font-medium text-foreground">
+                                <FormattedMessage defaultMessage="Connected services" />
+                            </p>
+                            <div className="grid gap-3">
+                                {account.integrations.map((integration) => (
+                                    <div
+                                        key={integration.key}
+                                        className="flex flex-col gap-3 rounded-xl border border-slate-200/80 p-4 sm:flex-row sm:items-center sm:justify-between dark:border-slate-800"
+                                    >
+                                        <div className="flex min-w-0 items-start gap-3">
+                                            <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted">
+                                                <IntegrationIcon
+                                                    integrationKey={
+                                                        integration.key
+                                                    }
+                                                />
+                                            </div>
+                                            <div className="min-w-0 space-y-1">
+                                                <p className="font-medium text-foreground">
+                                                    {integration.label}
+                                                </p>
+                                                {integration.status ===
+                                                    'connected' &&
+                                                integration.detail ? (
+                                                    <p className="truncate font-mono text-xs text-muted-foreground">
+                                                        {integration.detail}
+                                                    </p>
+                                                ) : (
+                                                    <p className="text-sm text-muted-foreground">
+                                                        <FormattedMessage defaultMessage="Not connected yet" />
+                                                    </p>
+                                                )}
+                                                {integration.meta
+                                                    .website_url ? (
+                                                    <p className="truncate text-xs text-muted-foreground">
+                                                        {
+                                                            integration.meta
+                                                                .website_url
+                                                        }
+                                                    </p>
+                                                ) : null}
+                                            </div>
+                                        </div>
+                                        <Badge
+                                            variant={
+                                                integration.status ===
+                                                'connected'
+                                                    ? 'secondary'
+                                                    : 'outline'
+                                            }
+                                        >
+                                            {integration.status ===
+                                            'connected' ? (
+                                                <FormattedMessage defaultMessage="Connected" />
+                                            ) : (
+                                                <FormattedMessage defaultMessage="Not connected" />
+                                            )}
+                                        </Badge>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {!hasPixel ? (
+                            <div className="flex flex-col gap-3 rounded-xl border border-dashed border-slate-200/80 bg-muted/10 p-4 sm:flex-row sm:items-center sm:justify-between dark:border-slate-800">
+                                <p className="text-sm text-muted-foreground">
+                                    <FormattedMessage defaultMessage="Facebook is linked, but a Meta Pixel is not set up yet." />
+                                </p>
+                                <Button asChild variant="outline" size="sm">
+                                    <Link
+                                        href={metaAnalyticsIndex(
+                                            company.username,
+                                        )}
+                                    >
+                                        <FormattedMessage defaultMessage="Set up Meta Pixel" />
+                                        <ArrowRightIcon className="size-4" />
+                                    </Link>
+                                </Button>
+                            </div>
+                        ) : null}
+                    </div>
+                )}
+            </CardContent>
+        </Card>
+    );
+}
+
 export default function LinkedAccountsPage({
     accountGroups,
 }: LinkedAccountsPageProps) {
@@ -283,16 +481,23 @@ export default function LinkedAccountsPage({
 
                 <p className="flex items-center gap-2 text-xs text-muted-foreground">
                     <ShieldCheckIcon className="size-3.5 shrink-0" />
-                    <FormattedMessage defaultMessage="Unlinking Google also removes any linked Analytics property and stops tracking on public pages." />
+                    <FormattedMessage defaultMessage="Unlinking Google or Facebook also removes linked analytics integrations and stops tracking on public pages." />
                 </p>
 
                 <div className="space-y-6">
-                    {accountGroups.map((group) => (
-                        <GoogleAccountGroupCard
-                            key={group.type}
-                            group={group}
-                        />
-                    ))}
+                    {accountGroups.map((group) =>
+                        group.type === 'meta' ? (
+                            <MetaAccountGroupCard
+                                key={group.type}
+                                group={group}
+                            />
+                        ) : (
+                            <GoogleAccountGroupCard
+                                key={group.type}
+                                group={group}
+                            />
+                        ),
+                    )}
                 </div>
             </div>
         </CompanyDashboardLayout>

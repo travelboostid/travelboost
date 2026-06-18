@@ -23,6 +23,8 @@ router.on('navigate', (event) => {
         page_location: window.location.href,
         page_path: event.detail.page.url,
     });
+
+    window.fbq?.('track', 'PageView');
 });
 
 const queryClient = new QueryClient();

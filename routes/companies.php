@@ -14,10 +14,12 @@ use App\Http\Controllers\Companies\Dashboard\ChatbotController;
 use App\Http\Controllers\Companies\Dashboard\CommissionReportController;
 use App\Http\Controllers\Companies\Dashboard\CustomerController;
 use App\Http\Controllers\Companies\Dashboard\DashboardBookingController;
+use App\Http\Controllers\Companies\Dashboard\FacebookAccountController;
 use App\Http\Controllers\Companies\Dashboard\GoogleAccountController;
 use App\Http\Controllers\Companies\Dashboard\GoogleAnalyticsController;
 use App\Http\Controllers\Companies\Dashboard\HomeController;
 use App\Http\Controllers\Companies\Dashboard\LinkedAccountsController;
+use App\Http\Controllers\Companies\Dashboard\MetaAnalyticsController;
 use App\Http\Controllers\Companies\Dashboard\NotificationController;
 use App\Http\Controllers\Companies\Dashboard\PageController;
 use App\Http\Controllers\Companies\Dashboard\ParameterAgentController;
@@ -215,8 +217,14 @@ Route::prefix('companies')->middleware(['can:access-company-pages', 'use-analyti
         Route::get('analytics/setup-account', [GoogleAnalyticsController::class, 'setupAccount'])->name('analytics.setupAccount');
         Route::post('analytics/select-account', [GoogleAnalyticsController::class, 'selectAccount'])->name('analytics.selectAccount');
         Route::delete('analytics/connection', [GoogleAnalyticsController::class, 'unlinkConnection'])->name('analytics.unlinkConnection');
+        Route::get('analytics/meta', [MetaAnalyticsController::class, 'index'])->name('analytics.meta.index');
+        Route::get('analytics/meta/select-pixel', [MetaAnalyticsController::class, 'showPixelSelection'])->name('analytics.meta.selectPixel');
+        Route::post('analytics/meta/select-pixel', [MetaAnalyticsController::class, 'selectPixel'])->name('analytics.meta.selectPixel.store');
+        Route::delete('analytics/meta/connection', [MetaAnalyticsController::class, 'unlinkConnection'])->name('analytics.meta.unlinkConnection');
         Route::get('google/connect', [GoogleAccountController::class, 'connect'])->name('google.connect');
         Route::delete('google/disconnect', [GoogleAccountController::class, 'disconnect'])->name('google.disconnect');
+        Route::get('facebook/connect', [FacebookAccountController::class, 'connect'])->name('facebook.connect');
+        Route::delete('facebook/disconnect', [FacebookAccountController::class, 'disconnect'])->name('facebook.disconnect');
     });
 });
 

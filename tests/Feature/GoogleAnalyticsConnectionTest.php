@@ -148,7 +148,7 @@ test('company owner can view linked accounts settings page', function () {
     $response->assertOk()
         ->assertInertia(fn ($page) => $page
             ->component('companies/dashboard/linked-accounts/index')
-            ->has('accountGroups', 1)
+            ->has('accountGroups', 2)
             ->where('accountGroups.0.type', 'google')
             ->where('accountGroups.0.accounts.0.email', 'owner@example.com')
             ->where('accountGroups.0.accounts.0.integrations.1.status', 'not_connected'));
