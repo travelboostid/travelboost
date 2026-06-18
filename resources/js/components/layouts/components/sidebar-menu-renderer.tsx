@@ -295,9 +295,9 @@ export function SidebarMenuRenderer({
                     side={isMobile ? 'bottom' : 'right'}
                     align={isMobile ? 'end' : 'start'}
                 >
-                    {actions.map((action) => (
+                    {actions.map((action, actionIndex) => (
                         <DropdownMenuItem
-                            key={action.id}
+                            key={action.id || actionIndex}
                             asChild
                             onClick={
                                 typeof action.urlOrAction === 'function' &&
@@ -346,11 +346,11 @@ export function SidebarMenuRenderer({
 
     return (
         <SidebarMenu>
-            {menu.map((item) => {
+            {menu.map((item, index) => {
                 if (item.items?.length) {
                     if (isCollapsed) {
                         return (
-                            <SidebarMenuItem key={item.id}>
+                            <SidebarMenuItem key={item.id || index}>
                                 {renderCollapsedSubmenu(item)}
                             </SidebarMenuItem>
                         );
@@ -358,7 +358,7 @@ export function SidebarMenuRenderer({
 
                     return (
                         <Collapsible
-                            key={item.id}
+                            key={item.id || index}
                             asChild
                             open={isItemActive(item) ? true : undefined}
                             defaultOpen={
@@ -389,8 +389,10 @@ export function SidebarMenuRenderer({
 
                                 <CollapsibleContent>
                                     <SidebarMenuSub className="mr-0 mt-0.5 border-slate-200/80 pr-0 dark:border-slate-800">
-                                        {item.items.map((sub) => (
-                                            <SidebarMenuSubItem key={sub.id}>
+                                        {item.items.map((sub, subIndex) => (
+                                            <SidebarMenuSubItem
+                                                key={sub.id || subIndex}
+                                            >
                                                 {renderLink(sub, true)}
                                                 {renderActions(sub.actions)}
                                             </SidebarMenuSubItem>
@@ -403,7 +405,7 @@ export function SidebarMenuRenderer({
                 }
 
                 return (
-                    <SidebarMenuItem key={item.id}>
+                    <SidebarMenuItem key={item.id || index}>
                         {renderLink(item)} {renderActions(item.actions)}
                     </SidebarMenuItem>
                 );
