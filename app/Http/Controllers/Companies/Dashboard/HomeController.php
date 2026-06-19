@@ -8,6 +8,7 @@ use App\Enums\VendorAgentPartnerStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Booking;
 use App\Models\Company;
+use App\Models\User;
 use Illuminate\Contracts\Database\Query\Expression;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -85,12 +86,15 @@ class HomeController extends Controller
 
         $monthlyProfit = $isVendor ? max(0, $monthlyRevenue - $monthlyCommission) : $monthlyCommission;
 
-        $networkCount = (int) (clone $baseQuery)->distinct('user_id')->count('user_id');
-        $activeAgentsCount = $isVendor
+        $activeAgentIds = $isVendor
             ? $company->agentPartners()
                 ->where('status', VendorAgentPartnerStatus::ACTIVE)
-                ->count()
-            : 0;
+                ->pluck('agent_id')
+            : collect();
+        $customersCount = $isVendor
+            ? (int) User::query()->whereIn('company_id', $activeAgentIds)->count()
+            : (int) User::query()->where('company_id', $company->id)->count();
+        $activeAgentsCount = $isVendor ? $activeAgentIds->count() : 0;
 
         $credit = $company->aiCredit;
 
@@ -113,7 +117,7 @@ class HomeController extends Controller
                 'yearly' => $isVendor ? $totalCommission : $yearlyCommission,
             ],
             'counters' => [
-                'customers' => $networkCount,
+                'customers' => $customersCount,
                 'active_agents' => $activeAgentsCount,
             ],
             'wallet' => [

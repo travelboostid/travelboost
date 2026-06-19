@@ -125,10 +125,12 @@ export function SectionCards({ stats, company }: any) {
                   className: 'md:col-span-1',
               },
               {
-                  key: 'network',
-                  label: <FormattedMessage defaultMessage="Network" />,
+                  key: 'customers',
+                  label: <FormattedMessage defaultMessage="Customers" />,
                   value: stats.counters?.customers || 0,
-                  sub: <FormattedMessage defaultMessage="Active Customers" />,
+                  sub: (
+                      <FormattedMessage defaultMessage="Registered Customers" />
+                  ),
                   icon: <Users className="text-orange-500" size={16} />,
                   color: 'bg-orange-50 dark:bg-orange-500/10',
                   className: 'md:col-span-1',
@@ -171,10 +173,12 @@ export function SectionCards({ stats, company }: any) {
                   control: periodToggle(commissionPeriod, setCommissionPeriod),
               },
               {
-                  key: 'network',
-                  label: <FormattedMessage defaultMessage="Network" />,
+                  key: 'customers',
+                  label: <FormattedMessage defaultMessage="Customers" />,
                   value: stats.counters?.customers || 0,
-                  sub: <FormattedMessage defaultMessage="Active Customers" />,
+                  sub: (
+                      <FormattedMessage defaultMessage="Registered Customers" />
+                  ),
                   icon: <Users className="text-orange-500" size={16} />,
                   color: 'bg-orange-50 dark:bg-orange-500/10',
                   className: 'md:col-span-1',

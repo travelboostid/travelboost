@@ -96,14 +96,15 @@ class CustomerController extends Controller
         Collection $agentIds,
         array $validated,
     ): Builder {
-        return User::query()
-            ->where(function (Builder $query) use ($company, $agentIds): void {
-                $query->where('company_id', $company->id);
+        $companyType = strtolower($company->type->value ?? $company->type);
+        $customerCompanyIds = $this->customerCompanyIds($company, $agentIds);
 
-                if ($agentIds->isNotEmpty()) {
-                    $query->orWhereIn('company_id', $agentIds);
-                }
-            })
+        return User::query()
+            ->when(
+                $customerCompanyIds->isEmpty(),
+                fn (Builder $query) => $query->whereRaw('1 = 0'),
+                fn (Builder $query) => $query->whereIn('company_id', $customerCompanyIds),
+            )
             ->with('company:id,name')
             ->when($validated['name'] ?? null, function (Builder $query, string $name): void {
                 $query->where('name', 'ilike', '%'.$name.'%');
@@ -119,8 +120,14 @@ class CustomerController extends Controller
                     $companyQuery->where('name', 'ilike', '%'.$agentName.'%');
                 });
             })
-            ->when($validated['registration_source'] ?? null, function (Builder $query, string $source) use ($company, $agentIds): void {
+            ->when($validated['registration_source'] ?? null, function (Builder $query, string $source) use ($company, $agentIds, $companyType): void {
                 if ($source === 'direct') {
+                    if ($companyType === 'vendor') {
+                        $query->whereRaw('1 = 0');
+
+                        return;
+                    }
+
                     $query->where('company_id', $company->id);
 
                     return;
@@ -217,12 +224,27 @@ class CustomerController extends Controller
         return [
             'title' => 'Customers',
             'subtitle' => $companyType === 'vendor'
-                ? 'Customer list across direct and agent registrations.'
-                : 'Customer list registered under your agent account.',
+                ? 'Customer list registered through your active agents landing pages.'
+                : 'Customer list registered through your landing page.',
             'reportKey' => 'customers',
             'columns' => $rows->isNotEmpty() ? array_keys($rows->first()) : [],
             'rows' => $rows,
         ];
+    }
+
+    /**
+     * @param  Collection<int, int|string>  $agentIds
+     * @return Collection<int, int|string>
+     */
+    private function customerCompanyIds(Company $company, Collection $agentIds): Collection
+    {
+        $companyType = strtolower($company->type->value ?? $company->type);
+
+        if ($companyType === 'vendor') {
+            return $agentIds->values();
+        }
+
+        return collect([$company->id]);
     }
 
     /**
@@ -265,11 +287,8 @@ class CustomerController extends Controller
     private function customerBelongsToCompanyNetwork(Company $company, User $customer): bool
     {
         $agentIds = $this->activeAgentIds($company);
+        $customerCompanyIds = $this->customerCompanyIds($company, $agentIds);
 
-        if ((int) $customer->company_id === (int) $company->id) {
-            return true;
-        }
-
-        return $agentIds->contains(fn ($agentId) => (int) $agentId === (int) $customer->company_id);
+        return $customerCompanyIds->contains(fn ($companyId) => (int) $companyId === (int) $customer->company_id);
     }
 }
