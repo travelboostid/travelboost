@@ -7,6 +7,7 @@ import Step1GuestInformation, {
     calculateAgeAtDeparture,
 } from '@/components/booking/Step1GuestInformation';
 import Step2RoomConfiguration, {
+    buildRoomsGuestFingerprint,
     getRoomNumberByGuestId,
     isRoomArrangementComplete,
     loadRoomsFromBooking,
@@ -884,7 +885,7 @@ export default function Page() {
     );
     const roomsGuestFingerprint = useRef<string>(
         rooms.length > 0 && isRoomArrangementComplete(rooms, guests)
-            ? JSON.stringify(guests.map((g) => `${g.id}-${g.priceCategory}`))
+            ? buildRoomsGuestFingerprint(guests)
             : '',
     );
     const skipGuestSyncRef = useRef(false);
@@ -1529,9 +1530,7 @@ export default function Page() {
             return;
         }
 
-        const currentFingerprint = JSON.stringify(
-            guests.map((g) => `${g.id}-${g.priceCategory}`),
-        );
+        const currentFingerprint = buildRoomsGuestFingerprint(guests);
 
         setRooms(recommendRoomsForGuests(guests));
         roomsGuestFingerprint.current = currentFingerprint;
@@ -1584,9 +1583,7 @@ export default function Page() {
             return;
         }
 
-        const currentFingerprint = JSON.stringify(
-            guests.map((g) => `${g.id}-${g.priceCategory}`),
-        );
+        const currentFingerprint = buildRoomsGuestFingerprint(guests);
         if (
             !isRoomArrangementComplete(rooms, guests) ||
             roomsGuestFingerprint.current !== currentFingerprint

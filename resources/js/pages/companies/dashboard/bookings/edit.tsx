@@ -5,6 +5,7 @@ import Step1GuestInformation, {
     calculateAgeAtDeparture,
 } from '@/components/booking/Step1GuestInformation';
 import Step2RoomConfiguration, {
+    buildRoomsGuestFingerprint,
     getRoomNumberByGuestId,
     isRoomArrangementComplete,
     loadRoomsFromBooking,
@@ -539,9 +540,7 @@ function EditableWizard({
     );
     const roomsGuestFingerprint = useRef<string>(
         rooms.length > 0 && isRoomArrangementComplete(rooms, initialGuests)
-            ? JSON.stringify(
-                  initialGuests.map((g) => `${g.id}-${g.priceCategory}`),
-              )
+            ? buildRoomsGuestFingerprint(initialGuests)
             : '',
     );
     const skipGuestSyncRef = useRef(false);
@@ -675,9 +674,7 @@ function EditableWizard({
     const goNext = () => {
         if (currentStep === 1) {
             // Auto-recommend rooms when entering step 2
-            const currentFingerprint = JSON.stringify(
-                guests.map((g) => `${g.id}-${g.priceCategory}`),
-            );
+            const currentFingerprint = buildRoomsGuestFingerprint(guests);
             if (
                 !isRoomArrangementComplete(rooms, guests) ||
                 roomsGuestFingerprint.current !== currentFingerprint
@@ -694,9 +691,7 @@ function EditableWizard({
         setDirection(step > currentStep ? 1 : -1);
 
         if (step === 2) {
-            const currentFingerprint = JSON.stringify(
-                guests.map((g) => `${g.id}-${g.priceCategory}`),
-            );
+            const currentFingerprint = buildRoomsGuestFingerprint(guests);
             if (
                 !isRoomArrangementComplete(rooms, guests) ||
                 roomsGuestFingerprint.current !== currentFingerprint
