@@ -1426,8 +1426,7 @@ class DashboardBookingController extends Controller
 
     private function eligibleAgentSubscriptionConstraint(Builder $query): Builder
     {
-        return $query->whereNotNull('package_id')
-            ->where('package_id', '!=', 1);
+        return $query->whereNotNull('package_id');
     }
 
     private function transferDashboardPlaceholderOwnership(string $bookingNumber, ?User $dashboardUser, User $owner): void

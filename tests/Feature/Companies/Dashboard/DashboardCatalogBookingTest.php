@@ -346,7 +346,7 @@ test('dashboard booking create resume exposes stored input by audit payload', fu
         ->where('inputBy.created_at', $booking->fresh()->created_at->toJSON()));
 });
 
-test('vendor dashboard booking create exposes only customers from eligible agent partners', function () {
+test('vendor dashboard booking create exposes customers from all subscribed agent partners', function () {
     ['vendor' => $vendor, 'tour' => $tour, 'schedule' => $schedule] = createPricedDashboardTour();
     $user = User::factory()->create();
     attachDashboardUserToCompany($user, $vendor);
@@ -362,7 +362,7 @@ test('vendor dashboard booking create exposes only customers from eligible agent
         'name' => 'Paid Agent Customer',
         'email' => 'paid-agent-customer@example.test',
     ]);
-    User::factory()->create([
+    $freeTrialCustomer = User::factory()->create([
         'company_id' => $freeTrialAgent->id,
         'name' => 'Free Trial Customer',
         'email' => 'free-trial-customer@example.test',
@@ -374,10 +374,11 @@ test('vendor dashboard booking create exposes only customers from eligible agent
     $response->assertOk();
     $response->assertInertia(fn ($page) => $page
         ->component('tours/bookings/create')
-        ->has('customerOptions', 1)
-        ->where('customerOptions.0.id', $paidAgentCustomer->id)
-        ->where('customerOptions.0.company_id', $paidAgent->id)
-        ->where('customerOptions.0.email', 'paid-agent-customer@example.test'));
+        ->has('customerOptions', 2)
+        ->where('customerOptions', fn ($customers) => collect($customers)->pluck('id')->sort()->values()->all() === collect([
+            $freeTrialCustomer->id,
+            $paidAgentCustomer->id,
+        ])->sort()->values()->all()));
 });
 
 test('dashboard booking create exposes saved passengers scoped to eligible agent customers', function () {
@@ -418,10 +419,10 @@ test('dashboard booking create exposes saved passengers scoped to eligible agent
         'passport_number' => 'OTHER-PASSPORT',
     ]);
     $freeTrialCustomer->savedPassengers()->create([
-        'first_name' => 'Hidden',
+        'first_name' => 'Trial',
         'last_name' => 'Passenger',
         'dob' => now()->subYears(30)->toDateString(),
-        'passport_number' => 'HIDDEN-PASSPORT',
+        'passport_number' => 'TRIAL-PASSPORT',
     ]);
 
     $response = $this->actingAs($user)
@@ -430,20 +431,19 @@ test('dashboard booking create exposes saved passengers scoped to eligible agent
     $response->assertOk();
     $response->assertInertia(fn ($page) => $page
         ->component('tours/bookings/create')
-        ->has('savedPassengers', 2)
-        ->where('savedPassengers.0.firstName', 'Other')
-        ->where('savedPassengers.0.ownerCompanyId', $otherPaidAgent->id)
-        ->where('savedPassengers.1.firstName', 'Paid')
-        ->where('savedPassengers.1.ownerUserId', $paidAgentCustomer->id)
-        ->where('savedPassengers.1.ownerCompanyId', $paidAgent->id)
-        ->where('savedPassengers.1.customerNote', 'Prefers aisle seats.'));
+        ->has('savedPassengers', 3)
+        ->where('savedPassengers', fn ($passengers) => collect($passengers)->pluck('passportNumber')->sort()->values()->all() === [
+            'OTHER-PASSPORT',
+            'PAID-PASSPORT',
+            'TRIAL-PASSPORT',
+        ]));
 });
 
-test('vendor dashboard booking create only exposes active partners with paid subscription packages', function () {
+test('vendor dashboard booking create exposes active partners including free trial package', function () {
     ['vendor' => $vendor, 'tour' => $tour, 'schedule' => $schedule] = createPricedDashboardTour();
     $user = User::factory()->create();
     attachDashboardUserToCompany($user, $vendor);
-    createActiveDashboardAgentPartner($vendor, 1, ['name' => 'Free Trial Agent']);
+    $freeTrialAgent = createActiveDashboardAgentPartner($vendor, 1, ['name' => 'Free Trial Agent']);
     $paidAgent = createActiveDashboardAgentPartner($vendor, 2, ['name' => 'Paid Agent']);
 
     $response = $this->actingAs($user)
@@ -453,9 +453,11 @@ test('vendor dashboard booking create only exposes active partners with paid sub
     $response->assertInertia(fn ($page) => $page
         ->component('tours/bookings/create')
         ->where('requiresAgentSelection', true)
-        ->has('agentOptions', 1)
-        ->where('agentOptions.0.id', $paidAgent->id)
-        ->where('agentOptions.0.name', 'Paid Agent'));
+        ->has('agentOptions', 2)
+        ->where('agentOptions', fn ($agents) => collect($agents)->pluck('id')->sort()->values()->all() === collect([
+            $freeTrialAgent->id,
+            $paidAgent->id,
+        ])->sort()->values()->all()));
 });
 
 test('vendor dashboard booking create exposes no agent options when there are no active partners', function () {
@@ -759,7 +761,7 @@ test('vendor dashboard booking reserve requires an active agent partner', functi
     expect(Booking::query()->count())->toBe(0);
 });
 
-test('vendor dashboard booking reserve rejects active partners on the free trial package', function () {
+test('vendor dashboard booking reserve accepts active partners on the free trial package', function () {
     ['vendor' => $vendor, 'tour' => $tour, 'schedule' => $schedule] = createPricedDashboardTour();
     $dashboardUser = User::factory()->create();
     attachDashboardUserToCompany($dashboardUser, $vendor);
@@ -769,9 +771,11 @@ test('vendor dashboard booking reserve rejects active partners on the free trial
     $this->actingAs($dashboardUser)
         ->from("/companies/{$vendor->username}/dashboard/bookings/create/{$tour->id}?date={$schedule->departure_date}")
         ->post("/companies/{$vendor->username}/dashboard/bookings/create/{$tour->id}/reserve", $payload)
-        ->assertSessionHasErrors('agent_id');
+        ->assertRedirect();
 
-    expect(Booking::query()->count())->toBe(0);
+    $booking = Booking::query()->sole();
+    expect($booking->agent_id)->toBe($agent->id)
+        ->and($booking->status)->toBe(BookingStatus::BOOKING_RESERVED);
 });
 
 test('dashboard booking store attaches existing contact customer as booking owner', function () {
@@ -878,7 +882,7 @@ test('vendor dashboard booking store requires an active agent partner', function
     expect(Booking::query()->count())->toBe(0);
 });
 
-test('vendor dashboard booking store rejects active partners on the free trial package', function () {
+test('vendor dashboard booking store accepts active partners on the free trial package', function () {
     ['vendor' => $vendor, 'tour' => $tour, 'schedule' => $schedule] = createPricedDashboardTour();
     $dashboardUser = User::factory()->create();
     attachDashboardUserToCompany($dashboardUser, $vendor);
@@ -893,9 +897,10 @@ test('vendor dashboard booking store rejects active partners on the free trial p
             $agent,
             'guest-without-account@example.test'
         ))
-        ->assertSessionHasErrors('agent_id');
+        ->assertRedirect();
 
-    expect(Booking::query()->count())->toBe(0);
+    $booking = Booking::query()->sole();
+    expect($booking->agent_id)->toBe($agent->id);
 });
 
 test('dashboard booking store without booking number generates one booking number', function () {

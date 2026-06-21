@@ -351,7 +351,7 @@ class NetworkController extends Controller
             ->where('type', 'agent')
             ->whereIn('referred_by', $allReferrerIds)
             ->whereHas('agentSubscription', function ($query): void {
-                $query->whereNotNull('package_id')->where('package_id', '!=', 1);
+                $query->whereNotNull('package_id');
             })
             ->groupBy('referred_by')
             ->selectRaw('referred_by, count(*) as aggregate')
