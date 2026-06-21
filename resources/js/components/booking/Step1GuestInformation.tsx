@@ -555,7 +555,7 @@ function GuestDetailForm({
                 </div>
                 <div className="grid gap-1">
                     <Label className="text-[11px] text-muted-foreground">
-                        Last Name
+                        Last Name{' '}
                     </Label>
                     <Input
                         placeholder="Doe"
@@ -745,6 +745,7 @@ type Step1Props = {
     tourPrices: TourPrice[];
     visaCategoryItems?: VisaCategoryItemOption[];
     maxGuests?: number;
+    maxInfants?: number;
     departureDate: string;
     showAddAsGuest?: boolean;
     contactGuestId?: string | null;
@@ -780,6 +781,7 @@ export default function Step1GuestInformation({
     tourPrices,
     visaCategoryItems = [],
     maxGuests = 99,
+    maxInfants = 99,
     departureDate,
     showAddAsGuest = true,
     contactGuestId,
@@ -1163,7 +1165,7 @@ export default function Step1GuestInformation({
                         icon={Baby}
                         value={infants}
                         min={0}
-                        max={Math.max(0, maxGuests - adults - children)}
+                        max={Math.max(0, maxInfants)}
                         onChange={onInfantsChange}
                         disabled={readOnly}
                     />

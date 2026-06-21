@@ -7,6 +7,7 @@ import Step1GuestInformation, {
     calculateAgeAtDeparture,
 } from '@/components/booking/Step1GuestInformation';
 import Step2RoomConfiguration, {
+    buildRoomsGuestFingerprint,
     getRoomNumberByGuestId,
     isRoomArrangementComplete,
     loadRoomsFromBooking,
@@ -216,13 +217,20 @@ function splitContactName(
     };
 }
 
-function makeDefaultTravelDocument(guestId: string): TravelDocumentEntry {
+function makeDefaultTravelDocument(
+    guestId: string,
+    guest: GuestEntry | null = null,
+): TravelDocumentEntry {
     return {
         guestId,
         passportNumber: '',
         passportIssueDate: '',
         passportExpiryDate: '',
         visaNumber: '',
+        visaCategoryItemId: guest?.visaCategoryItemId ?? null,
+        visaTypeDescription: guest?.visaTypeDescription ?? null,
+        visaTypePrice: guest?.visaTypePrice ?? 0,
+        visaTypeIsTaxable: guest?.visaTypeIsTaxable ?? false,
         passportFile: null,
         passportFileName: '',
         passportFilePath: null,
@@ -231,7 +239,6 @@ function makeDefaultTravelDocument(guestId: string): TravelDocumentEntry {
         visaFilePath: null,
     };
 }
-
 function fileNameFromPath(path: string | null | undefined): string {
     if (!path) {
         return '';
@@ -878,7 +885,7 @@ export default function Page() {
     );
     const roomsGuestFingerprint = useRef<string>(
         rooms.length > 0 && isRoomArrangementComplete(rooms, guests)
-            ? JSON.stringify(guests.map((g) => `${g.id}-${g.priceCategory}`))
+            ? buildRoomsGuestFingerprint(guests)
             : '',
     );
     const skipGuestSyncRef = useRef(false);
@@ -892,9 +899,8 @@ export default function Page() {
                 (item: any) =>
                     Number(item.id) === Number(guest.bookingPassengerId),
             );
-
             if (!passenger) {
-                return makeDefaultTravelDocument(guest.id);
+                return makeDefaultTravelDocument(guest.id, guest);
             }
 
             return {
@@ -913,6 +919,25 @@ export default function Page() {
                 ),
                 visaFilePath: passenger.visa_file_path ?? null,
                 visaFileName: fileNameFromPath(passenger.visa_file_path),
+                visaCategoryItemId:
+                    passenger.visa_category_item_id !== null &&
+                    passenger.visa_category_item_id !== undefined
+                        ? Number(passenger.visa_category_item_id)
+                        : (guest.visaCategoryItemId ?? null),
+                visaTypeDescription:
+                    passenger.visa_type_description ??
+                    guest.visaTypeDescription ??
+                    null,
+                visaTypePrice:
+                    passenger.visa_type_price !== null &&
+                    passenger.visa_type_price !== undefined
+                        ? Number(passenger.visa_type_price)
+                        : (guest.visaTypePrice ?? 0),
+                visaTypeIsTaxable:
+                    passenger.visa_type_is_taxable !== null &&
+                    passenger.visa_type_is_taxable !== undefined
+                        ? Boolean(passenger.visa_type_is_taxable)
+                        : (guest.visaTypeIsTaxable ?? false),
             };
         }),
     );
@@ -965,7 +990,7 @@ export default function Page() {
             guests.map((g) => {
                 const existing = previousDocs.find((d) => d.guestId === g.id);
 
-                return existing ?? makeDefaultTravelDocument(g.id);
+                return existing ?? makeDefaultTravelDocument(g.id, g);
             }),
         );
     }, [guests]);
@@ -1009,7 +1034,7 @@ export default function Page() {
     const selectedAddOnsForPricing = useMemo(
         () =>
             selectedAddOns.map((addon) =>
-                addon.hasQty === false && addon.qty > 0
+                addon.hasQty === false
                     ? { ...addon, qty: guests.length }
                     : addon,
             ),
@@ -1505,9 +1530,7 @@ export default function Page() {
             return;
         }
 
-        const currentFingerprint = JSON.stringify(
-            guests.map((g) => `${g.id}-${g.priceCategory}`),
-        );
+        const currentFingerprint = buildRoomsGuestFingerprint(guests);
 
         setRooms(recommendRoomsForGuests(guests));
         roomsGuestFingerprint.current = currentFingerprint;
@@ -1560,9 +1583,7 @@ export default function Page() {
             return;
         }
 
-        const currentFingerprint = JSON.stringify(
-            guests.map((g) => `${g.id}-${g.priceCategory}`),
-        );
+        const currentFingerprint = buildRoomsGuestFingerprint(guests);
         if (
             !isRoomArrangementComplete(rooms, guests) ||
             roomsGuestFingerprint.current !== currentFingerprint
@@ -1705,7 +1726,51 @@ export default function Page() {
         setGuests((prev) =>
             prev.map((g) => (g.id === updated.id ? updated : g)),
         );
+
+        // Keep step 3's visa selection aligned with the value chosen in step 1.
+        setTravelDocuments((previousDocs) =>
+            previousDocs.map((doc) =>
+                doc.guestId === updated.id
+                    ? {
+                          ...doc,
+                          visaCategoryItemId: updated.visaCategoryItemId,
+                          visaTypeDescription: updated.visaTypeDescription,
+                          visaTypePrice: updated.visaTypePrice,
+                          visaTypeIsTaxable: updated.visaTypeIsTaxable,
+                      }
+                    : doc,
+            ),
+        );
     }, []);
+
+    const handleVisaSelectionFromStep3 = useCallback(
+        (
+            guestId: string,
+            visa: {
+                visaCategoryItemId: number | null;
+                visaTypeDescription: string | null;
+                visaTypePrice: number;
+                visaTypeIsTaxable: boolean;
+            },
+        ) => {
+            // Mirror step 3's visa pick onto the guest record so step 1's
+            // dropdown, pricing totals, and downstream payload stay in sync.
+            setGuests((prev) =>
+                prev.map((g) =>
+                    g.id === guestId
+                        ? {
+                              ...g,
+                              visaCategoryItemId: visa.visaCategoryItemId,
+                              visaTypeDescription: visa.visaTypeDescription,
+                              visaTypePrice: visa.visaTypePrice,
+                              visaTypeIsTaxable: visa.visaTypeIsTaxable,
+                          }
+                        : g,
+                ),
+            );
+        },
+        [],
+    );
 
     const handleAdultsChange = useCallback((nextAdults: number) => {
         if (nextAdults <= 0) {
@@ -2985,6 +3050,12 @@ export default function Page() {
                                                 }
                                                 onTravelDocumentsChange={
                                                     setTravelDocuments
+                                                }
+                                                visaCategoryItems={
+                                                    visaTypeOptions
+                                                }
+                                                onVisaSelectionChange={
+                                                    handleVisaSelectionFromStep3
                                                 }
                                                 departureDate={preselectedDate}
                                                 readOnly={

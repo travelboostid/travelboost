@@ -166,6 +166,25 @@ function passengersToTravelDocs(
                     ? p.passport_expiry_date.split('T')[0]
                     : '',
                 visaNumber: p.visa_number ?? '',
+                visaCategoryItemId:
+                    p.visa_category_item_id !== null &&
+                    p.visa_category_item_id !== undefined
+                        ? Number(p.visa_category_item_id)
+                        : (guest?.visaCategoryItemId ?? null),
+                visaTypeDescription:
+                    p.visa_type_description ??
+                    guest?.visaTypeDescription ??
+                    null,
+                visaTypePrice:
+                    p.visa_type_price !== null &&
+                    p.visa_type_price !== undefined
+                        ? Number(p.visa_type_price)
+                        : (guest?.visaTypePrice ?? 0),
+                visaTypeIsTaxable:
+                    p.visa_type_is_taxable !== null &&
+                    p.visa_type_is_taxable !== undefined
+                        ? Boolean(p.visa_type_is_taxable)
+                        : (guest?.visaTypeIsTaxable ?? false),
                 passportFile: null,
                 passportFileName: p.passport_file_path
                     ? p.passport_file_path.split('/').pop() || ''
@@ -547,6 +566,10 @@ function ReadOnlyWizard({
                                                     travelDocuments
                                                 }
                                                 onTravelDocumentsChange={() => {}}
+                                                visaCategoryItems={
+                                                    visaCategoryItems
+                                                }
+                                                onVisaSelectionChange={() => {}}
                                                 departureDate={departureDate}
                                                 readOnly
                                             />

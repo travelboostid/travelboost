@@ -365,6 +365,8 @@ class DashboardBookingController extends Controller
             $booking->passengers()->delete();
             $booking->passengers()->createMany($quote['passengers']);
 
+            $booking->rooms()->delete();
+
             $booking->addons()->delete();
             if (! empty($quote['addons'])) {
                 $booking->addons()->createMany($quote['addons']);

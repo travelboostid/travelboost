@@ -2,13 +2,25 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+import {
     Tooltip,
     TooltipContent,
     TooltipProvider,
     TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { formatCurrency } from '@/constants/booking';
 import { cn } from '@/lib/utils';
-import type { GuestEntry, TravelDocumentEntry } from '@/types/booking';
+import type {
+    GuestEntry,
+    TravelDocumentEntry,
+    VisaCategoryItemOption,
+} from '@/types/booking';
 import { motion } from 'framer-motion';
 import {
     FileTextIcon,
@@ -17,7 +29,7 @@ import {
     UploadCloudIcon,
     XIcon,
 } from 'lucide-react';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 
 const MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024;
 const MAX_ATTACHMENT_LABEL = '5 MB';
@@ -46,9 +58,30 @@ type Step3Props = {
     guests: GuestEntry[];
     travelDocuments: TravelDocumentEntry[];
     onTravelDocumentsChange: (docs: TravelDocumentEntry[]) => void;
+    visaCategoryItems?: VisaCategoryItemOption[];
+    onVisaSelectionChange?: (
+        guestId: string,
+        visa: {
+            visaCategoryItemId: number | null;
+            visaTypeDescription: string | null;
+            visaTypePrice: number;
+            visaTypeIsTaxable: boolean;
+        },
+    ) => void;
     departureDate: string;
     readOnly?: boolean;
 };
+
+function VisaOptionLabel({ item }: { item: VisaCategoryItemOption }) {
+    return (
+        <span className="flex min-w-0 flex-1 items-center justify-between gap-3">
+            <span className="min-w-0 truncate">{item.description}</span>
+            <span className="shrink-0 text-xs font-semibold tabular-nums text-muted-foreground">
+                {formatCurrency(item.price)}
+            </span>
+        </span>
+    );
+}
 
 // ─── Travel Document Card ───────────────────────────────────────────────────────
 
@@ -58,6 +91,8 @@ function TravelDocumentCard({
     guestName,
     guestType,
     onChange,
+    onVisaChange,
+    visaOptions,
     departureDate,
     readOnly,
 }: {
@@ -66,6 +101,13 @@ function TravelDocumentCard({
     guestName: string;
     guestType: 'adult' | 'child' | 'infant';
     onChange: (updated: TravelDocumentEntry) => void;
+    onVisaChange: (visa: {
+        visaCategoryItemId: number | null;
+        visaTypeDescription: string | null;
+        visaTypePrice: number;
+        visaTypeIsTaxable: boolean;
+    }) => void;
+    visaOptions: VisaCategoryItemOption[];
     departureDate: string;
     readOnly: boolean;
 }) {
@@ -79,6 +121,9 @@ function TravelDocumentCard({
     const isAdult = guestType === 'adult';
     const passportFileUrl = storageUrlFromPath(doc.passportFilePath);
     const visaFileUrl = storageUrlFromPath(doc.visaFilePath);
+    const selectedVisaOption = visaOptions.find(
+        (item) => item.id === doc.visaCategoryItemId,
+    );
 
     const handleFileSelect = (
         field: 'passportFile' | 'visaFile',
@@ -128,6 +173,37 @@ function TravelDocumentCard({
         if (inputRef.current) {
             inputRef.current.value = '';
         }
+    };
+
+    const handleVisaTypeChange = (visaCategoryItemId: string) => {
+        if (readOnly) {
+            return;
+        }
+
+        if (visaCategoryItemId === '__none__') {
+            onVisaChange({
+                visaCategoryItemId: null,
+                visaTypeDescription: null,
+                visaTypePrice: 0,
+                visaTypeIsTaxable: false,
+            });
+            return;
+        }
+
+        const selected = visaOptions.find(
+            (item) => item.id === Number(visaCategoryItemId),
+        );
+
+        if (!selected) {
+            return;
+        }
+
+        onVisaChange({
+            visaCategoryItemId: selected.id,
+            visaTypeDescription: selected.description,
+            visaTypePrice: selected.price,
+            visaTypeIsTaxable: selected.isTaxable,
+        });
     };
 
     return (
@@ -355,6 +431,43 @@ function TravelDocumentCard({
                     <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                         Visa
                     </p>
+                    {visaOptions.length > 0 && (
+                        <div className="grid gap-1">
+                            <Label className="text-[11px] text-muted-foreground">
+                                Visa Type
+                            </Label>
+                            <Select
+                                value={
+                                    doc.visaCategoryItemId !== null
+                                        ? String(doc.visaCategoryItemId)
+                                        : ''
+                                }
+                                onValueChange={handleVisaTypeChange}
+                                disabled={readOnly}
+                            >
+                                <SelectTrigger className="h-9 w-full min-w-0 text-sm">
+                                    <SelectValue placeholder="Select visa type">
+                                        {selectedVisaOption ? (
+                                            <VisaOptionLabel
+                                                item={selectedVisaOption}
+                                            />
+                                        ) : null}
+                                    </SelectValue>
+                                </SelectTrigger>
+                                <SelectContent className="w-[var(--radix-select-trigger-width)] max-w-[min(92vw,34rem)]">
+                                    {visaOptions.map((item) => (
+                                        <SelectItem
+                                            key={item.id}
+                                            value={String(item.id)}
+                                            className="min-w-0"
+                                        >
+                                            <VisaOptionLabel item={item} />
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    )}
                     <div className="grid gap-1">
                         <Label className="text-[11px] text-muted-foreground">
                             Visa Number
@@ -445,9 +558,17 @@ export default function Step3TravelDocuments({
     guests,
     travelDocuments,
     onTravelDocumentsChange,
+    visaCategoryItems = [],
+    onVisaSelectionChange,
     departureDate,
     readOnly = false,
 }: Step3Props) {
+    const visaOptions = useMemo(() => {
+        return [...visaCategoryItems].filter(
+            (item) => Number.isFinite(item.id) && item.id > 0,
+        );
+    }, [visaCategoryItems]);
+
     const handleDocUpdate = useCallback(
         (updated: TravelDocumentEntry) => {
             const newDocs = travelDocuments.map((d) =>
@@ -456,6 +577,36 @@ export default function Step3TravelDocuments({
             onTravelDocumentsChange(newDocs);
         },
         [travelDocuments, onTravelDocumentsChange],
+    );
+
+    const handleVisaSelection = useCallback(
+        (
+            guestId: string,
+            visa: {
+                visaCategoryItemId: number | null;
+                visaTypeDescription: string | null;
+                visaTypePrice: number;
+                visaTypeIsTaxable: boolean;
+            },
+        ) => {
+            // Persist the selection inside the travel document so it survives
+            // navigation between steps and matches what step 1 stores.
+            const newDocs = travelDocuments.map((d) =>
+                d.guestId === guestId
+                    ? {
+                          ...d,
+                          visaCategoryItemId: visa.visaCategoryItemId,
+                          visaTypeDescription: visa.visaTypeDescription,
+                          visaTypePrice: visa.visaTypePrice,
+                          visaTypeIsTaxable: visa.visaTypeIsTaxable,
+                      }
+                    : d,
+            );
+            onTravelDocumentsChange(newDocs);
+
+            onVisaSelectionChange?.(guestId, visa);
+        },
+        [onTravelDocumentsChange, onVisaSelectionChange, travelDocuments],
     );
 
     return (
@@ -506,6 +657,10 @@ export default function Step3TravelDocuments({
                             guestName={guestName}
                             guestType={guest.type}
                             onChange={handleDocUpdate}
+                            onVisaChange={(visa) =>
+                                handleVisaSelection(guest.id, visa)
+                            }
+                            visaOptions={visaOptions}
                             departureDate={departureDate}
                             readOnly={readOnly}
                         />

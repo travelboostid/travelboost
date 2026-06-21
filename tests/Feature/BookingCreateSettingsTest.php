@@ -1246,6 +1246,122 @@ test('reserve allows infants without consuming seat availability', function () {
     ]);
 });
 
+test('reserve clears stale room arrangements when passenger count changes', function () {
+    ['user' => $user, 'company' => $company, 'tour' => $tour, 'schedule' => $schedule] = createBookingCreateScenario('stale-room-reserve-vendor');
+
+    $booking = Booking::factory()->create([
+        'booking_number' => 'BKG-STALE-ROOMS',
+        'user_id' => $user->id,
+        'vendor_id' => $company->id,
+        'tour_id' => $tour->id,
+        'departure_date' => $schedule->departure_date,
+        'status' => BookingStatus::BOOKING_RESERVED,
+        'reserved_type' => 'system',
+        'reserved_expires_at' => now()->addMinutes(10),
+        'pax_adult' => 3,
+        'pax_child' => 0,
+        'pax_infant' => 0,
+    ]);
+
+    foreach (range(1, 3) as $roomNumber) {
+        $booking->rooms()->create([
+            'room_type' => 'single',
+            'room_label' => "Room {$roomNumber}",
+            'bed_layout' => [
+                ['bedType' => 'single', 'guestId' => (string) $roomNumber, 'position' => ['x' => 0, 'y' => 0]],
+            ],
+        ]);
+    }
+
+    expect($booking->fresh()->rooms)->toHaveCount(3);
+
+    $response = $this->actingAs($user)
+        ->from(route('bookings.create', [
+            'username' => $company->username,
+            'tour' => $tour,
+            'date' => $schedule->departure_date,
+            'booking_number' => 'BKG-STALE-ROOMS',
+        ]))
+        ->post(route('bookings.reserve', [
+            'username' => $company->username,
+            'tour' => $tour,
+        ]), [
+            'tour_id' => $tour->id,
+            'departure_date' => $schedule->departure_date,
+            'pax_adult' => 1,
+            'pax_child' => 0,
+            'pax_infant' => 0,
+            'booking_number' => 'BKG-STALE-ROOMS',
+            'vendor_id' => $company->id,
+            'passengers' => [
+                [
+                    'first_name' => 'Solo',
+                    'last_name' => null,
+                    'price_category' => 'Adult Single',
+                    'room_type' => 'Single',
+                    'price_amount' => 1_000_000,
+                ],
+            ],
+        ]);
+
+    $response->assertRedirect();
+    $response->assertSessionHasNoErrors();
+
+    expect($booking->fresh()->rooms)->toHaveCount(0)
+        ->and($booking->fresh()->passengers)->toHaveCount(1)
+        ->and($booking->fresh()->passengers->first()->last_name)->toBeNull();
+});
+
+test('store accepts passengers without a last name', function () {
+    ['user' => $user, 'company' => $company, 'tour' => $tour, 'schedule' => $schedule] = createBookingCreateScenario('optional-last-name-vendor');
+
+    $response = $this->actingAs($user)
+        ->post(route('bookings.store', [
+            'username' => $company->username,
+            'tour' => $tour,
+        ]), [
+            'booking_number' => 'BKG-OPTIONAL-LAST-NAME',
+            'tour_id' => $tour->id,
+            'departure_date' => $schedule->departure_date,
+            'pax_adult' => 1,
+            'pax_child' => 0,
+            'pax_infant' => 0,
+            'vendor_id' => $company->id,
+            'contact_name' => 'Optional Last Name',
+            'contact_email' => 'optional-last-name@example.com',
+            'contact_phone' => '08123456789',
+            'payment_type' => 'full_payment',
+            'payment_method' => 'manual_transfer',
+            'passengers' => [
+                [
+                    'client_guest_id' => 'adult-0',
+                    'title' => 'Mr',
+                    'first_name' => 'Mono',
+                    'last_name' => null,
+                    'pob' => 'Jakarta',
+                    'price_category' => 'Adult Single',
+                    'price_amount' => 1_000_000,
+                ],
+            ],
+            'total_price' => 1_000_000,
+            'tax_amount' => 0,
+            'platform_fee' => 0,
+            'commission_amount' => 0,
+            'grand_total' => 1_000_000,
+        ]);
+
+    $response->assertRedirect();
+    $response->assertSessionHasNoErrors();
+
+    $passenger = Booking::where('booking_number', 'BKG-OPTIONAL-LAST-NAME')
+        ->firstOrFail()
+        ->passengers
+        ->first();
+
+    expect($passenger->first_name)->toBe('Mono')
+        ->and($passenger->last_name)->toBeNull();
+});
+
 test('reserve rejects expanding the same booking beyond free seats plus its current hold', function () {
     ['user' => $user, 'company' => $company, 'tour' => $tour, 'schedule' => $schedule] = createBookingCreateScenario('oversameholdvendor');
 

@@ -5,6 +5,7 @@ import Step1GuestInformation, {
     calculateAgeAtDeparture,
 } from '@/components/booking/Step1GuestInformation';
 import Step2RoomConfiguration, {
+    buildRoomsGuestFingerprint,
     getRoomNumberByGuestId,
     isRoomArrangementComplete,
     loadRoomsFromBooking,
@@ -262,6 +263,25 @@ function passengersToTravelDocs(
                     ? p.passport_expiry_date.split('T')[0]
                     : '',
                 visaNumber: p.visa_number ?? '',
+                visaCategoryItemId:
+                    p.visa_category_item_id !== null &&
+                    p.visa_category_item_id !== undefined
+                        ? Number(p.visa_category_item_id)
+                        : (guest?.visaCategoryItemId ?? null),
+                visaTypeDescription:
+                    p.visa_type_description ??
+                    guest?.visaTypeDescription ??
+                    null,
+                visaTypePrice:
+                    p.visa_type_price !== null &&
+                    p.visa_type_price !== undefined
+                        ? Number(p.visa_type_price)
+                        : (guest?.visaTypePrice ?? 0),
+                visaTypeIsTaxable:
+                    p.visa_type_is_taxable !== null &&
+                    p.visa_type_is_taxable !== undefined
+                        ? Boolean(p.visa_type_is_taxable)
+                        : (guest?.visaTypeIsTaxable ?? false),
                 passportFile: null,
                 passportFileName: p.passport_file_path
                     ? p.passport_file_path.split('/').pop() || ''
@@ -520,9 +540,7 @@ function EditableWizard({
     );
     const roomsGuestFingerprint = useRef<string>(
         rooms.length > 0 && isRoomArrangementComplete(rooms, initialGuests)
-            ? JSON.stringify(
-                  initialGuests.map((g) => `${g.id}-${g.priceCategory}`),
-              )
+            ? buildRoomsGuestFingerprint(initialGuests)
             : '',
     );
     const skipGuestSyncRef = useRef(false);
@@ -596,6 +614,10 @@ function EditableWizard({
                         passportIssueDate: '',
                         passportExpiryDate: '',
                         visaNumber: '',
+                        visaCategoryItemId: g.visaCategoryItemId ?? null,
+                        visaTypeDescription: g.visaTypeDescription ?? null,
+                        visaTypePrice: g.visaTypePrice ?? 0,
+                        visaTypeIsTaxable: g.visaTypeIsTaxable ?? false,
                         passportFile: null,
                         passportFileName: '',
                         passportFilePath: null,
@@ -652,9 +674,7 @@ function EditableWizard({
     const goNext = () => {
         if (currentStep === 1) {
             // Auto-recommend rooms when entering step 2
-            const currentFingerprint = JSON.stringify(
-                guests.map((g) => `${g.id}-${g.priceCategory}`),
-            );
+            const currentFingerprint = buildRoomsGuestFingerprint(guests);
             if (
                 !isRoomArrangementComplete(rooms, guests) ||
                 roomsGuestFingerprint.current !== currentFingerprint
@@ -671,9 +691,7 @@ function EditableWizard({
         setDirection(step > currentStep ? 1 : -1);
 
         if (step === 2) {
-            const currentFingerprint = JSON.stringify(
-                guests.map((g) => `${g.id}-${g.priceCategory}`),
-            );
+            const currentFingerprint = buildRoomsGuestFingerprint(guests);
             if (
                 !isRoomArrangementComplete(rooms, guests) ||
                 roomsGuestFingerprint.current !== currentFingerprint
@@ -701,7 +719,49 @@ function EditableWizard({
                     : g,
             ),
         );
+
+        // Keep step 3 aligned with the visa choice made in step 1.
+        setTravelDocuments((previousDocs) =>
+            previousDocs.map((doc) =>
+                doc.guestId === updated.id
+                    ? {
+                          ...doc,
+                          visaCategoryItemId: updated.visaCategoryItemId,
+                          visaTypeDescription: updated.visaTypeDescription,
+                          visaTypePrice: updated.visaTypePrice,
+                          visaTypeIsTaxable: updated.visaTypeIsTaxable,
+                      }
+                    : doc,
+            ),
+        );
     }, []);
+
+    const handleVisaSelectionFromStep3 = useCallback(
+        (
+            guestId: string,
+            visa: {
+                visaCategoryItemId: number | null;
+                visaTypeDescription: string | null;
+                visaTypePrice: number;
+                visaTypeIsTaxable: boolean;
+            },
+        ) => {
+            setGuests((prev) =>
+                prev.map((g) =>
+                    g.id === guestId
+                        ? {
+                              ...g,
+                              visaCategoryItemId: visa.visaCategoryItemId,
+                              visaTypeDescription: visa.visaTypeDescription,
+                              visaTypePrice: visa.visaTypePrice,
+                              visaTypeIsTaxable: visa.visaTypeIsTaxable,
+                          }
+                        : g,
+                ),
+            );
+        },
+        [],
+    );
 
     const handleGuestRemove = useCallback(
         (guestId: string) => {
@@ -788,7 +848,6 @@ function EditableWizard({
             if (
                 g.title.trim() === '' ||
                 g.firstName.trim() === '' ||
-                g.lastName.trim() === '' ||
                 g.dateOfBirth.trim() === '' ||
                 g.placeOfBirth.trim() === '' ||
                 g.priceCategory === null ||
@@ -1513,6 +1572,12 @@ function EditableWizard({
                                                 }
                                                 onTravelDocumentsChange={
                                                     setTravelDocuments
+                                                }
+                                                visaCategoryItems={
+                                                    visaCategoryItems
+                                                }
+                                                onVisaSelectionChange={
+                                                    handleVisaSelectionFromStep3
                                                 }
                                                 departureDate={departureDate}
                                                 readOnly={false}

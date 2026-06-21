@@ -182,7 +182,7 @@ export default function Step4BookingSummary({
     const displayAddOns = useMemo(
         () =>
             addOns.map((addon) =>
-                addon.hasQty === false && addon.qty > 0
+                addon.hasQty === false
                     ? { ...addon, qty: guests.length }
                     : addon,
             ),

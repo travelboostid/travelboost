@@ -209,39 +209,44 @@ export default function TourBookingModal({
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-            <DialogContent className="flex h-[calc(100dvh-2rem)] max-h-[44rem] w-[calc(100%-2rem)] max-w-2xl flex-col gap-0 overflow-hidden p-0 sm:h-[90vh] sm:max-w-2xl md:max-w-3xl">
-                {/* Header Section (Centered) */}
-                <div className="relative shrink-0 border-b bg-card px-4 pb-3 pt-4 sm:px-6 sm:pb-4 sm:pt-5">
-                    <DialogHeader className="flex flex-col items-center justify-center text-center">
-                        <div className="mb-2 aspect-[16/9] w-full max-w-[140px] overflow-hidden rounded-lg border bg-muted sm:max-w-[200px] md:max-w-[240px]">
-                            <img
-                                src={tourImage.src}
-                                srcSet={tourImage.srcSet || undefined}
-                                alt={tour.name}
-                                className="h-full w-full object-cover"
-                            />
+            <DialogContent className="flex max-h-[90dvh] w-[calc(100%-1.5rem)] max-w-lg flex-col gap-0 overflow-hidden p-0 sm:max-w-2xl md:max-w-4xl">
+                {/* Header Section — stacked on mobile, image left on desktop */}
+                <div className="relative shrink-0 border-b bg-card px-4 pb-4 pt-4 sm:px-6 sm:pb-5 sm:pt-5">
+                    <DialogHeader className="space-y-0 text-left">
+                        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-5 md:gap-6">
+                            <div className="aspect-[3/2] w-full shrink-0 overflow-hidden rounded-xl border bg-muted sm:w-[clamp(18rem,56%,26rem)] md:w-[clamp(22rem,58%,28rem)]">
+                                <img
+                                    src={tourImage.src}
+                                    srcSet={tourImage.srcSet || undefined}
+                                    alt={tour.name}
+                                    className="h-full w-full object-cover"
+                                />
+                            </div>
+                            <div className="flex min-w-0 flex-1 flex-col justify-start gap-1.5 sm:gap-2">
+                                <DialogTitle className="line-clamp-2 text-left text-xl font-bold leading-snug tracking-tight text-foreground sm:text-2xl">
+                                    {tour.name}
+                                </DialogTitle>
+                                {tour.code && (
+                                    <DialogDescription className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                                        {tour.code}
+                                    </DialogDescription>
+                                )}
+                                {tour.destination && (
+                                    <DialogDescription className="text-sm font-bold uppercase tracking-widest text-foreground">
+                                        {tour.destination}
+                                    </DialogDescription>
+                                )}
+                                <DialogDescription className="flex items-center gap-1.5 text-sm font-medium uppercase tracking-widest text-muted-foreground/80">
+                                    <CalendarIcon className="size-4 shrink-0" />
+                                    <span>{dateRangeText}</span>
+                                </DialogDescription>
+                            </div>
                         </div>
-                        <DialogTitle className="flex flex-col items-center justify-center text-center text-lg font-bold tracking-tight text-foreground sm:text-xl md:text-2xl">
-                            {tour.name}
-                        </DialogTitle>
-                        {tour.code && (
-                            <DialogDescription className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                                {tour.code}
-                            </DialogDescription>
-                        )}
-                        {tour.destination && (
-                            <DialogDescription className="text-sm font-bold uppercase tracking-widest text-foreground">
-                                {tour.destination}
-                            </DialogDescription>
-                        )}
-                        <DialogDescription className="mt-1 text-sm font-medium uppercase tracking-widest text-muted-foreground/80 md:text-base">
-                            {dateRangeText}
-                        </DialogDescription>
                     </DialogHeader>
                 </div>
 
                 {/* Schedule List Section */}
-                <div className="min-h-0 flex-1 overflow-y-auto bg-muted/5 px-4 py-3 sm:px-6">
+                <div className="max-h-[min(55vh,24rem)] overflow-y-auto bg-muted/5 px-4 py-4 sm:px-6">
                     <div className="mb-3 text-center">
                         <span className="text-sm font-medium tracking-wide text-foreground/70">
                             Select Departure Date
@@ -253,7 +258,7 @@ export default function TourBookingModal({
                             <motion.div
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
-                                className="flex flex-col items-center justify-center py-16 text-center"
+                                className="flex flex-col items-center justify-center py-8 text-center"
                             >
                                 <div className="mb-4 flex size-16 items-center justify-center rounded-full bg-muted/50 ring-1 ring-border">
                                     <CalendarIcon className="size-7 text-muted-foreground" />
@@ -263,7 +268,7 @@ export default function TourBookingModal({
                                 </p>
                             </motion.div>
                         ) : (
-                            <div className="flex flex-col gap-2.5 pb-6">
+                            <div className="flex flex-col gap-2.5 pb-3">
                                 {activeSchedules.map((schedule, index) => {
                                     const departDate = parseISO(
                                         schedule.departure_date,

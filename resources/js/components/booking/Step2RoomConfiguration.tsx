@@ -1032,12 +1032,26 @@ const groupGuestsForRoomRecommendation = (guests: GuestEntry[]) => {
     };
 };
 
+const roomHasAssignedGuests = (room: RoomConfig): boolean =>
+    room.guestIds.some(Boolean) || (room.sharingGuestIds?.length ?? 0) > 0;
+
+export function buildRoomsGuestFingerprint(guests: GuestEntry[]): string {
+    return JSON.stringify({
+        count: guests.length,
+        guests: guests.map((guest) => `${guest.id}-${guest.priceCategory}`),
+    });
+}
+
 export function isRoomArrangementComplete(
     rooms: RoomConfig[],
     guests: GuestEntry[],
 ): boolean {
     if (guests.length === 0) {
         return true;
+    }
+
+    if (rooms.some((room) => !roomHasAssignedGuests(room))) {
+        return false;
     }
 
     const assignedGuestIds = new Set([

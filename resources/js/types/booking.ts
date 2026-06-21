@@ -95,6 +95,10 @@ export interface TravelDocumentEntry {
     passportIssueDate: string;
     passportExpiryDate: string;
     visaNumber: string;
+    visaCategoryItemId: number | null;
+    visaTypeDescription: string | null;
+    visaTypePrice: number;
+    visaTypeIsTaxable: boolean;
     passportFile: File | null;
     passportFileName: string;
     passportFilePath: string | null;
