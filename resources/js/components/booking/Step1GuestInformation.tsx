@@ -555,7 +555,7 @@ function GuestDetailForm({
                 </div>
                 <div className="grid gap-1">
                     <Label className="text-[11px] text-muted-foreground">
-                        Last Name <RequiredMark />
+                        Last Name
                     </Label>
                     <Input
                         placeholder="Doe"
@@ -811,7 +811,6 @@ export default function Step1GuestInformation({
         (g) =>
             g.title.trim() !== '' &&
             g.firstName.trim() !== '' &&
-            g.lastName.trim() !== '' &&
             g.dateOfBirth.trim() !== '' &&
             g.priceCategory !== null &&
             (visaCategoryItems.length === 0 || g.visaCategoryItemId !== null),
@@ -862,7 +861,7 @@ export default function Step1GuestInformation({
         setContactAsGuestAdded(true);
     };
 
-    const hasSeatForContactGuest = adults + children + infants < maxGuests;
+    const hasSeatForContactGuest = adults + children < maxGuests;
     const canAddContactAsGuest =
         showAddAsGuest &&
         !readOnly &&
@@ -1144,7 +1143,7 @@ export default function Step1GuestInformation({
                         icon={UserIcon}
                         value={adults}
                         min={0}
-                        max={Math.max(0, maxGuests - children - infants)}
+                        max={Math.max(0, maxGuests - children)}
                         onChange={onAdultsChange}
                         disabled={readOnly}
                     />
@@ -1154,7 +1153,7 @@ export default function Step1GuestInformation({
                         icon={UserMinusIcon}
                         value={children}
                         min={0}
-                        max={Math.max(0, maxGuests - adults - infants)}
+                        max={Math.max(0, maxGuests - adults)}
                         onChange={onChildrenChange}
                         disabled={readOnly}
                     />
