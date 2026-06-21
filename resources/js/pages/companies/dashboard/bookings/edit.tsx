@@ -848,7 +848,6 @@ function EditableWizard({
             if (
                 g.title.trim() === '' ||
                 g.firstName.trim() === '' ||
-                g.lastName.trim() === '' ||
                 g.dateOfBirth.trim() === '' ||
                 g.placeOfBirth.trim() === '' ||
                 g.priceCategory === null ||
